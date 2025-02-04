@@ -11,7 +11,7 @@ class MainApplication : Application() {
         super.onCreate()
 
         // TODO: Replace with your own API Key
-        val API_KEY = "REMOVED_LEGACY_SECRET_10"
+        val API_KEY = "REMOVED_LEGACY_SECRET_08"
         Grovs.configure(this, API_KEY, useTestEnvironment = true)
         //Grovs.useTestEnvironment = true
 
