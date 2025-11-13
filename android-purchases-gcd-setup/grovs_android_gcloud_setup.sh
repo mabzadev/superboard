@@ -22,7 +22,7 @@ print_error() {
 # Check if project ID is provided
 if [ -z "$1" ]; then
     print_error "Usage: ./grovs_android_gcloud_setup.sh <project-id>"
-    echo "Example: ./grovs_android_gcloud_setup.sh terraform-testapp-477213"
+    echo "Example: ./grovs_android_gcloud_setup.sh my-app-477213"
     exit 1
 fi
 
