@@ -1,0 +1,9 @@
+node_modules
+.git
+.next
+.DS_Store
+*.log
+.env*
+!.env.production
+!.env.preview
+!.env.test
