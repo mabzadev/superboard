@@ -88,7 +88,7 @@ const metricMeta: Record<string, Partial<Card>> = {
     tooltip:
       "The total number of first-time users who installed your app, including both organic installs and installs driven by Grovs links.",
   },
-  returning_users: {
+  returning_rate: {
     title: "Returning users",
     secondaryValueType: "percent",
     tooltip:
@@ -165,7 +165,7 @@ function generateCardsFromMetrics(
 
       const meta = metricMeta[key] || { title: key };
 
-      const isRate = key === "returning_users";
+      const isRate = key === "returning_rate";
 
       let value: number | string = currentValue;
 
@@ -216,7 +216,7 @@ export default function DashboardPage() {
     "installs",
     "app_opens",
     "new_users",
-    "returning_users",
+    "returning_rate",
     "referred_users",
     ...(IS_ENTERPRISE
       ? [
@@ -261,7 +261,7 @@ export default function DashboardPage() {
     { label: "App installs", value: "installs" },
     { label: "App opens", value: "app_opens" },
     { label: "New users", value: "new_users" },
-    { label: "Returning users", value: "returning_users" },
+    { label: "Returning users", value: "returning_rate" },
     { label: "Referred users", value: "referred_users" },
     { label: "Organic installs", value: "organic_users" },
     ...(IS_ENTERPRISE && selectedInstance?.revenue_collection_enabled
@@ -348,7 +348,7 @@ export default function DashboardPage() {
       "installs",
       "app_opens",
       "new_users",
-      "returning_users",
+      "returning_rate",
       "referred_users",
       ...(IS_ENTERPRISE
         ? [
@@ -374,7 +374,10 @@ export default function DashboardPage() {
     const savedCards = LocalStorage.getDashboardCards();
 
     if (savedCards) {
-      let cards = savedCards;
+      // Migrate renamed key: returning_users → returning_rate
+      let cards = savedCards.map((k: string) =>
+        k === "returning_users" ? "returning_rate" : k
+      );
 
       if (IS_ENTERPRISE && selectedInstance.revenue_collection_enabled) {
         // Ensure revenue cards are present when revenue is enabled

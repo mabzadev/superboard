@@ -1,5 +1,6 @@
 "use client";
 import Account2FADialog from "@/components/account/Account2FADialog";
+import McpTokensSection from "@/components/account/McpTokensSection";
 
 import AppHeader from "@/components/layout/app-header";
 import { Button } from "@/components/ui/button";
@@ -257,6 +258,10 @@ const AccountPage = () => {
                   </div>
                 </>
               )}
+
+              {/* Connected Apps (MCP) */}
+              <Separator className="my-8" />
+              <McpTokensSection />
 
               {/* Danger Zone */}
               <Separator className="my-8" />

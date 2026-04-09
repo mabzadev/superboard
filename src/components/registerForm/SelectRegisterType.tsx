@@ -194,7 +194,7 @@ export function SelectRegisterType({ className, ...props }: LoginFormProps) {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={(e) => loginWithSSO(e, "microsoft_office365")}
+                  onClick={(e) => loginWithSSO(e, "microsoft_graph")}
                 >
                   <Image
                     src={microsoftIcon}

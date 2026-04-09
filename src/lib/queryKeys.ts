@@ -133,4 +133,8 @@ export const queryKeys = {
     otpEnabled: (email: string) => ["user", "otpEnabled", email] as const,
     otpQrCode: ["user", "otpQrCode"] as const,
   },
+
+  mcp: {
+    tokens: ["mcp", "tokens"] as const,
+  },
 } as const;

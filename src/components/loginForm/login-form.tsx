@@ -69,7 +69,7 @@ export function LoginForm({
                   variant="outline"
                   className="w-full"
                   type="button"
-                  onClick={() => loginWithSSO("microsoft_office365")}
+                  onClick={() => loginWithSSO("microsoft_graph")}
                 >
                   <Image
                     src={microsoftIcon}

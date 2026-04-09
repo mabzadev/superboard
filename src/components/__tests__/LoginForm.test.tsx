@@ -98,7 +98,7 @@ describe("LoginForm", () => {
     expect(loginWithSSO).toHaveBeenCalledWith("google_oauth2");
 
     fireEvent.click(screen.getByText("Login with Microsoft"));
-    expect(loginWithSSO).toHaveBeenCalledWith("microsoft_office365");
+    expect(loginWithSSO).toHaveBeenCalledWith("microsoft_graph");
   });
 
   it("submit button is disabled when form is invalid", () => {

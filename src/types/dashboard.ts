@@ -6,6 +6,7 @@ export interface MetricValues {
   app_opens: number;
   new_users: number;
   returning_users: number;
+  returning_rate: number;
   referred_users: number;
   revenue: number;
   arpu: number;
