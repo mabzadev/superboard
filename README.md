@@ -5,6 +5,15 @@
   </picture>
 </p>
 
+<p align="center">
+  <a href="https://github.com/grovs-io/dashboard/releases"><img src="https://img.shields.io/github/v/release/grovs-io/dashboard?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/Next.js-15-4F46E5?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 15"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/React-19-4F46E5?style=flat-square&logo=react&logoColor=white" alt="React 19"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/shadcn%2Fui-latest-4F46E5?style=flat-square" alt="shadcn/ui"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/dashboard?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/grovs-io/dashboard/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/dashboard?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+</p>
+
 **Open-source dashboard for mobile app growth** — deep links, messaging campaigns, revenue tracking, and audience analytics.
 
 Grovs helps mobile developers grow their apps by providing a single dashboard to manage deep links, send targeted push notifications, track revenue, and understand their audience. Self-host it or connect it to the [Grovs](https://grovs.io) managed backend.
