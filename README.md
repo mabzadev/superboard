@@ -6,6 +6,15 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/grovs-io/mcp/releases"><img src="https://img.shields.io/github/v/release/grovs-io/mcp?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/MCP-1.0-4F46E5?style=flat-square" alt="MCP 1.0"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/Claude%20Code-supported-4F46E5?style=flat-square" alt="Claude Code"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/Cursor-supported-4F46E5?style=flat-square" alt="Cursor"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/mcp?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/grovs-io/mcp/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/mcp?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+</p>
+
+<p align="center">
   MCP server for managing deep links, analytics, and app configuration on <a href="https://grovs.io">Grovs</a>.
   <br />
   Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client.
