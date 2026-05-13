@@ -1,4 +1,9 @@
-# Grovs
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
+    <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
+  </picture>
+</p>
 
 **Open-source dashboard for mobile app growth** — deep links, messaging campaigns, revenue tracking, and audience analytics.
 
