@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   showErrorNotification,
@@ -38,6 +38,7 @@ import {
 import { ApiError } from "@/lib/ApiError";
 import { useProjectSelection } from "@/context/useProjectSelection";
 import { useInstanceConfigQuery } from "@/hooks/queries/useInstanceQueries";
+import { useCustomDomainsQuery } from "@/hooks/queries/useConfigurationQueries";
 import {
   useSetIosConfigMutation,
   useSetIosPushConfigMutation,
@@ -314,7 +315,34 @@ const SetupOverview = ({
 
 const IosSetupPage = () => {
   const { selectedInstance } = useProjectSelection();
+  // Captured once at mount so subsequent navigation inside the wizard
+  // doesn't keep re-snapping back to the deep-linked step.
+  const searchParams = useSearchParams();
+  const initialStepParam = useRef(searchParams.get("step"));
+  const deepLinkAppliedRef = useRef(false);
   const { data: instanceConfig } = useInstanceConfigQuery(selectedInstance?.id);
+  // When a project has an active custom subdomain or migrated hostname,
+  // surface them as extra associated-domain entries so deep links on them
+  // resolve in the app.
+  const { data: domainsProd } = useCustomDomainsQuery(
+    selectedInstance?.production?.id
+  );
+  const { data: domainsTest } = useCustomDomainsQuery(
+    selectedInstance?.test?.id
+  );
+  const activeApplinks = (
+    domains: typeof domainsProd,
+    purpose: "primary" | "migration"
+  ) => {
+    const hostname = domains?.find(
+      (d) => d.purpose === purpose && d.status === "active"
+    )?.hostname;
+    return hostname ? "applinks:" + hostname : undefined;
+  };
+  const customAssociatedDomainProd = activeApplinks(domainsProd, "primary");
+  const customAssociatedDomainTest = activeApplinks(domainsTest, "primary");
+  const migratedAssociatedDomainProd = activeApplinks(domainsProd, "migration");
+  const migratedAssociatedDomainTest = activeApplinks(domainsTest, "migration");
   const iosConfigMutation = useSetIosConfigMutation(selectedInstance?.id);
   const removeIosConfigMutation = useRemoveIosConfigMutation(
     selectedInstance?.id
@@ -616,6 +644,24 @@ const IosSetupPage = () => {
       setWizardMode(true);
     }
   }, [sdkConfigured, instanceConfig]);
+
+  // Deep-link from elsewhere (e.g. the custom domain modal): jump straight to
+  // the requested step once instanceConfig is ready. Only applies once.
+  useEffect(() => {
+    if (deepLinkAppliedRef.current) return;
+    const targetId = initialStepParam.current;
+    if (!targetId || !instanceConfig) return;
+    const idx = STEPS.findIndex((s) => s.identifier === targetId);
+    if (idx < 0) return;
+    setCurrentStep(idx);
+    setVisitedSteps((prev) => {
+      const next = new Set(prev);
+      for (let i = 0; i <= idx; i++) next.add(i);
+      return next;
+    });
+    setWizardMode(true);
+    deepLinkAppliedRef.current = true;
+  }, [instanceConfig]);
 
   const goToStep = useCallback(
     (step: number) => {
@@ -954,8 +1000,15 @@ const IosSetupPage = () => {
   const initializeValuesRef = useRef(initializeValues);
   initializeValuesRef.current = initializeValues;
 
+  // Skip the initial mount so we don't clobber state set by the deep-link
+  // effect when this page is opened with ?step=... via client-side nav.
+  const lastResetInstanceIdRef = useRef<string | undefined>(
+    selectedInstance?.id
+  );
   useEffect(() => {
     if (!selectedInstance) return;
+    if (lastResetInstanceIdRef.current === selectedInstance.id) return;
+    lastResetInstanceIdRef.current = selectedInstance.id;
     setIosConfig(null);
     setCurrentStep(0);
     setVisitedSteps(new Set([0]));
@@ -1052,6 +1105,10 @@ const IosSetupPage = () => {
                     urlScheme={urlScheme}
                     associatedDomainProd={associatedDomainProd}
                     associatedDomainTest={associatedDomainTest}
+                    customAssociatedDomainProd={customAssociatedDomainProd}
+                    customAssociatedDomainTest={customAssociatedDomainTest}
+                    migratedAssociatedDomainProd={migratedAssociatedDomainProd}
+                    migratedAssociatedDomainTest={migratedAssociatedDomainTest}
                   />
                 )}
 

@@ -19,6 +19,7 @@ import isURL from "validator/lib/isURL";
 import {
   useDomainConfigQuery,
   useDomainDefaultsQuery,
+  useCustomDomainQuery,
 } from "@/hooks/queries/useConfigurationQueries";
 import { useProjectSelection } from "@/context/useProjectSelection";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,10 @@ const CreateLinkSocialMediaPreview = React.memo(
     const { data: domainDefaults } = useDomainDefaultsQuery(
       selectedProject?.id
     );
+    // When a custom subdomain is active it becomes the link base URL.
+    const { data: customDomain } = useCustomDomainQuery(selectedProject?.id);
+    const customActiveHostname =
+      customDomain?.status === "active" ? customDomain.hostname : null;
     const [previewPlatform, setPreviewPlatform] = useState("facebook");
 
     const handleSetImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +150,9 @@ const CreateLinkSocialMediaPreview = React.memo(
       }
     }, [imageFile, imageType, setImagePreview]);
 
-    const domainUrl = `http://${projectDomain?.subdomain}.${projectDomain?.domain}`;
+    const domainUrl = customActiveHostname
+      ? `https://${customActiveHostname}`
+      : `http://${projectDomain?.subdomain}.${projectDomain?.domain}`;
 
     const platforms = [
       {

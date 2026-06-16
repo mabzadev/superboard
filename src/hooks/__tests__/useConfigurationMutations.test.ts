@@ -9,7 +9,10 @@ import {
   useSetSubdomainMutation,
   useSetGoogleTrackingIDMutation,
   useVerifySubdomainMutation,
+  useAddCustomDomainMutation,
+  useRemoveCustomDomainMutation,
 } from "../mutations/useConfigurationMutations";
+import { queryKeys } from "@/lib/queryKeys";
 
 vi.mock("@/api/configurations/redirect/configRedirectService", () => ({
   setDefaultRedirectAPICall: vi.fn(),
@@ -20,6 +23,8 @@ vi.mock("@/api/configurations/domains/configDomainsService", () => ({
   setSubdomainAPICall: vi.fn(),
   setGoogleTrackingIDAPICall: vi.fn(),
   verifySubdomainAvailabilityAPICall: vi.fn(),
+  addCustomDomainWithPurposeAPICall: vi.fn(),
+  removeCustomDomainByPurposeAPICall: vi.fn(),
 }));
 
 vi.mock("@/analytics", () => ({
@@ -38,6 +43,8 @@ import {
   setSubdomainAPICall,
   setGoogleTrackingIDAPICall,
   verifySubdomainAvailabilityAPICall,
+  addCustomDomainWithPurposeAPICall,
+  removeCustomDomainByPurposeAPICall,
 } from "@/api/configurations/domains/configDomainsService";
 import type { GoogleTrackingIdPayload } from "@/types";
 
@@ -48,6 +55,8 @@ const mockedSetRedirect = vi.mocked(setRedirectAPICall);
 const mockedSetSubdomain = vi.mocked(setSubdomainAPICall);
 const mockedSetGoogleTrackingID = vi.mocked(setGoogleTrackingIDAPICall);
 const mockedVerifySubdomain = vi.mocked(verifySubdomainAvailabilityAPICall);
+const mockedAddCustomDomain = vi.mocked(addCustomDomainWithPurposeAPICall);
+const mockedRemoveCustomDomain = vi.mocked(removeCustomDomainByPurposeAPICall);
 const mockedTrackEvent = vi.mocked(trackEvent);
 
 function createWrapper(queryClient: QueryClient) {
@@ -315,6 +324,142 @@ describe("useConfigurationMutations", () => {
         await result.current.mutateAsync("test-sub");
       });
 
+      expect(invalidateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("useAddCustomDomainMutation", () => {
+    it("calls addCustomDomainWithPurposeAPICall with hostname and purpose", async () => {
+      mockedAddCustomDomain.mockResolvedValueOnce({ data: {} } as never);
+      const { result } = renderHook(
+        () => useAddCustomDomainMutation("proj-1"),
+        { wrapper: createWrapper(queryClient) }
+      );
+      await act(async () => {
+        await result.current.mutateAsync({
+          hostname: "links.acme.com",
+          purpose: "primary",
+        });
+      });
+      expect(mockedAddCustomDomain).toHaveBeenCalledWith(
+        "proj-1",
+        "links.acme.com",
+        "primary"
+      );
+    });
+
+    it("defaults purpose to primary when omitted", async () => {
+      mockedAddCustomDomain.mockResolvedValueOnce({ data: {} } as never);
+      const { result } = renderHook(
+        () => useAddCustomDomainMutation("proj-1"),
+        { wrapper: createWrapper(queryClient) }
+      );
+      await act(async () => {
+        await result.current.mutateAsync({ hostname: "links.acme.com" });
+      });
+      expect(mockedAddCustomDomain).toHaveBeenCalledWith(
+        "proj-1",
+        "links.acme.com",
+        "primary"
+      );
+    });
+
+    it("invalidates the custom domains query on success", async () => {
+      mockedAddCustomDomain.mockResolvedValueOnce({ data: {} } as never);
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderHook(
+        () => useAddCustomDomainMutation("proj-1"),
+        { wrapper: createWrapper(queryClient) }
+      );
+      await act(async () => {
+        await result.current.mutateAsync({
+          hostname: "links.acme.com",
+          purpose: "primary",
+        });
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.projects.customDomains("proj-1"),
+      });
+    });
+
+    it("does not invalidate when projectId is undefined", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+      const { result } = renderHook(
+        () => useAddCustomDomainMutation(undefined),
+        { wrapper: createWrapper(queryClient) }
+      );
+
+      await act(async () => {
+        await expect(
+          result.current.mutateAsync({
+            hostname: "links.acme.com",
+            purpose: "primary",
+          })
+        ).rejects.toThrow("No project selected");
+      });
+
+      expect(mockedAddCustomDomain).not.toHaveBeenCalled();
+      expect(invalidateSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("useRemoveCustomDomainMutation", () => {
+    it("calls removeCustomDomainByPurposeAPICall and invalidates", async () => {
+      mockedRemoveCustomDomain.mockResolvedValueOnce({
+        status: 202,
+        data: undefined,
+      } as never);
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderHook(
+        () => useRemoveCustomDomainMutation("proj-1"),
+        { wrapper: createWrapper(queryClient) }
+      );
+      await act(async () => {
+        await result.current.mutateAsync("primary");
+      });
+      expect(mockedRemoveCustomDomain).toHaveBeenCalledWith(
+        "proj-1",
+        "primary"
+      );
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.projects.customDomains("proj-1"),
+      });
+    });
+
+    it("defaults purpose to primary when not passed", async () => {
+      mockedRemoveCustomDomain.mockResolvedValueOnce({
+        status: 202,
+        data: undefined,
+      } as never);
+      const { result } = renderHook(
+        () => useRemoveCustomDomainMutation("proj-1"),
+        { wrapper: createWrapper(queryClient) }
+      );
+      await act(async () => {
+        await result.current.mutateAsync(undefined as never);
+      });
+      expect(mockedRemoveCustomDomain).toHaveBeenCalledWith(
+        "proj-1",
+        "primary"
+      );
+    });
+
+    it("does not invalidate when projectId is undefined", async () => {
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+      const { result } = renderHook(
+        () => useRemoveCustomDomainMutation(undefined),
+        { wrapper: createWrapper(queryClient) }
+      );
+
+      await act(async () => {
+        await expect(result.current.mutateAsync("primary")).rejects.toThrow(
+          "No project selected"
+        );
+      });
+
+      expect(mockedRemoveCustomDomain).not.toHaveBeenCalled();
       expect(invalidateSpy).not.toHaveBeenCalled();
     });
   });

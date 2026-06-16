@@ -9,8 +9,14 @@ import {
   setSubdomainAPICall,
   setGoogleTrackingIDAPICall,
   verifySubdomainAvailabilityAPICall,
+  addCustomDomainWithPurposeAPICall,
+  removeCustomDomainByPurposeAPICall,
 } from "@/api/configurations/domains/configDomainsService";
-import type { SubdomainPayload, GoogleTrackingIdPayload } from "@/types";
+import type {
+  SubdomainPayload,
+  GoogleTrackingIdPayload,
+  CustomDomainPurpose,
+} from "@/types";
 
 export function useSetDefaultRedirectMutation(projectId: string | undefined) {
   return useMutation({
@@ -106,6 +112,54 @@ export function useVerifySubdomainMutation(projectId: string | undefined) {
     mutationFn: (subdomain: string) => {
       if (!projectId) return Promise.reject(new Error("No project selected"));
       return verifySubdomainAvailabilityAPICall(projectId, subdomain);
+    },
+  });
+}
+
+export function useAddCustomDomainMutation(projectId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { hostname: string; purpose?: CustomDomainPurpose }) => {
+      if (!projectId) return Promise.reject(new Error("No project selected"));
+      return addCustomDomainWithPurposeAPICall(
+        projectId,
+        args.hostname,
+        args.purpose ?? "primary"
+      );
+    },
+    onSuccess: () => {
+      if (projectId) {
+        // Invalidate both keys: the plural list is the source of truth, and
+        // the singular shim still backs the existing dialog read path.
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.customDomains(projectId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.customDomain(projectId),
+        });
+      }
+    },
+  });
+}
+
+export function useRemoveCustomDomainMutation(projectId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (purpose: CustomDomainPurpose = "primary") => {
+      if (!projectId) return Promise.reject(new Error("No project selected"));
+      return removeCustomDomainByPurposeAPICall(projectId, purpose);
+    },
+    onSuccess: () => {
+      if (projectId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.customDomains(projectId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.projects.customDomain(projectId),
+        });
+      }
     },
   });
 }

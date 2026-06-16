@@ -4,7 +4,7 @@ import {
   RenderCodeBlock,
   SectionHeader,
 } from "@/components/developers/SetupShared";
-import { ExternalLink, FileCode2 } from "lucide-react";
+import { AlertCircle, ExternalLink, FileCode2 } from "lucide-react";
 
 interface Step1IntentFiltersProps {
   packageNameCode: {
@@ -13,9 +13,13 @@ interface Step1IntentFiltersProps {
     filename: string;
     code: string;
   }[];
+  hasCustom?: boolean;
 }
 
-const Step1IntentFilters = ({ packageNameCode }: Step1IntentFiltersProps) => {
+const Step1IntentFilters = ({
+  packageNameCode,
+  hasCustom,
+}: Step1IntentFiltersProps) => {
   return (
     <div className="flex flex-col gap-5">
       <SectionHeader
@@ -23,6 +27,17 @@ const Step1IntentFilters = ({ packageNameCode }: Step1IntentFiltersProps) => {
         title="Add intent filters"
         subtitle="Enable your app to open deep links by adding intent filters to AndroidManifest.xml."
       />
+
+      {hasCustom && (
+        <div className="flex gap-2 rounded-md border border-sidebar-border bg-muted/40 px-3 py-2 text-xs leading-relaxed">
+          <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+          <span>
+            <span className="font-medium">Already shipped?</span> Add these to
+            your app and release an update. Old builds won&apos;t open links on
+            the custom or migrated domains.
+          </span>
+        </div>
+      )}
 
       <RenderCodeBlock data={packageNameCode} />
 

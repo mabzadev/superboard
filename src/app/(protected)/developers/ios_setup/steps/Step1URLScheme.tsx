@@ -4,19 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/developers/SetupShared";
 import { handleCopyText } from "@/lib/copyTextHelper";
-import { Copy, ExternalLink, Link } from "lucide-react";
+import { AlertCircle, Copy, ExternalLink, Link } from "lucide-react";
 
 interface Step1URLSchemeProps {
   urlScheme: string;
   associatedDomainProd: string;
   associatedDomainTest: string;
+  customAssociatedDomainProd?: string;
+  customAssociatedDomainTest?: string;
+  migratedAssociatedDomainProd?: string;
+  migratedAssociatedDomainTest?: string;
 }
 
 const Step1URLScheme = ({
   urlScheme,
   associatedDomainProd,
   associatedDomainTest,
+  customAssociatedDomainProd,
+  customAssociatedDomainTest,
+  migratedAssociatedDomainProd,
+  migratedAssociatedDomainTest,
 }: Step1URLSchemeProps) => {
+  const hasCustom = Boolean(
+    customAssociatedDomainProd ||
+    customAssociatedDomainTest ||
+    migratedAssociatedDomainProd ||
+    migratedAssociatedDomainTest
+  );
   return (
     <div className="flex flex-col gap-5">
       <SectionHeader
@@ -56,6 +70,18 @@ const Step1URLScheme = ({
 
       <div className="flex flex-col gap-2">
         <label className="text-sm font-medium">Associated Domains</label>
+
+        {hasCustom && (
+          <div className="flex gap-2 rounded-md border border-sidebar-border bg-muted/40 px-3 py-2 text-xs leading-relaxed">
+            <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+            <span>
+              <span className="font-medium">Already shipped?</span> Add these to
+              your app and release an update. Old builds won&apos;t open links
+              on the custom or migrated domains.
+            </span>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <div className="flex w-full relative">
             <Input
@@ -77,6 +103,52 @@ const Step1URLScheme = ({
             Copy
           </Button>
         </div>
+        {customAssociatedDomainProd && (
+          <div className="flex gap-2">
+            <div className="flex w-full relative">
+              <Input
+                value={customAssociatedDomainProd}
+                readOnly
+                className="font-mono text-xs pr-36"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-valid-green/10 text-valid-green">
+                Production custom
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="pl-3 pr-4 shrink-0 h-9"
+              onClick={() => handleCopyText(customAssociatedDomainProd)}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy
+            </Button>
+          </div>
+        )}
+        {migratedAssociatedDomainProd && (
+          <div className="flex gap-2">
+            <div className="flex w-full relative">
+              <Input
+                value={migratedAssociatedDomainProd}
+                readOnly
+                className="font-mono text-xs pr-40"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-orange-500/10 text-orange-700 dark:text-orange-400">
+                Production migrated
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="pl-3 pr-4 shrink-0 h-9"
+              onClick={() => handleCopyText(migratedAssociatedDomainProd)}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy
+            </Button>
+          </div>
+        )}
         <div className="flex gap-2">
           <div className="flex w-full relative">
             <Input
@@ -98,6 +170,52 @@ const Step1URLScheme = ({
             Copy
           </Button>
         </div>
+        {customAssociatedDomainTest && (
+          <div className="flex gap-2">
+            <div className="flex w-full relative">
+              <Input
+                value={customAssociatedDomainTest}
+                readOnly
+                className="font-mono text-xs pr-28"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                Test custom
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="pl-3 pr-4 shrink-0 h-9"
+              onClick={() => handleCopyText(customAssociatedDomainTest)}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy
+            </Button>
+          </div>
+        )}
+        {migratedAssociatedDomainTest && (
+          <div className="flex gap-2">
+            <div className="flex w-full relative">
+              <Input
+                value={migratedAssociatedDomainTest}
+                readOnly
+                className="font-mono text-xs pr-32"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-orange-500/10 text-orange-700 dark:text-orange-400">
+                Test migrated
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="pl-3 pr-4 shrink-0 h-9"
+              onClick={() => handleCopyText(migratedAssociatedDomainTest)}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy
+            </Button>
+          </div>
+        )}
         <span className="text-xs text-muted-foreground">
           To add a new associated domain to your iOS app, enable the Associated
           Domains capability in Xcode, and add the domain above to the list.

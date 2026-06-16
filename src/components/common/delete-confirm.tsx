@@ -1,4 +1,5 @@
 import { useState, ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -65,7 +66,9 @@ const DeleteConfirm = ({
             variant="destructive"
             onClick={handleConfirm}
             disabled={loading}
+            className="gap-1.5"
           >
+            {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {loading ? "Deleting..." : confirmText}
           </Button>
         </DialogFooter>

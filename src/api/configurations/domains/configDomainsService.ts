@@ -1,4 +1,4 @@
-import { GET, POST, PUT } from "@/lib/api";
+import { GET, POST, PUT, DELETE } from "@/lib/api";
 import type { AxiosResponse } from "axios";
 import { config } from "@/lib/config";
 import type {
@@ -6,6 +6,10 @@ import type {
   DomainDefaults,
   SubdomainPayload,
   GoogleTrackingIdPayload,
+  CustomDomainResponse,
+  CustomDomainsListResponse,
+  CustomDomainPreflightResponse,
+  CustomDomainPurpose,
 } from "@/types";
 
 interface DomainResponse {
@@ -56,5 +60,63 @@ export const setGoogleTrackingIDAPICall = async (
   return PUT(
     config.apiPath + `/projects/${projectId}/domain/google_tracking_id`,
     formData
+  );
+};
+
+export const getCustomDomainAPICall = async (
+  projectId: string
+): Promise<AxiosResponse<CustomDomainResponse>> => {
+  return GET(config.apiPath + `/projects/${projectId}/custom_domain`);
+};
+
+export const addCustomDomainAPICall = async (
+  projectId: string,
+  hostname: string
+): Promise<AxiosResponse<CustomDomainResponse>> => {
+  return POST(config.apiPath + `/projects/${projectId}/custom_domain`, {
+    hostname,
+  });
+};
+
+export const removeCustomDomainAPICall = async (
+  projectId: string
+): Promise<AxiosResponse<void>> => {
+  return DELETE(config.apiPath + `/projects/${projectId}/custom_domain`);
+};
+
+export const getCustomDomainsAPICall = async (
+  projectId: string
+): Promise<AxiosResponse<CustomDomainsListResponse>> => {
+  return GET(config.apiPath + `/projects/${projectId}/custom_domains`);
+};
+
+export const getCustomDomainPreflightAPICall = async (
+  projectId: string,
+  hostname: string
+): Promise<AxiosResponse<CustomDomainPreflightResponse>> => {
+  return GET(
+    config.apiPath +
+      `/projects/${projectId}/custom_domains/preflight?hostname=${encodeURIComponent(hostname)}`,
+    { maxRetries: 0 }
+  );
+};
+
+export const addCustomDomainWithPurposeAPICall = async (
+  projectId: string,
+  hostname: string,
+  purpose: CustomDomainPurpose
+): Promise<AxiosResponse<CustomDomainResponse>> => {
+  return POST(config.apiPath + `/projects/${projectId}/custom_domains`, {
+    hostname,
+    purpose,
+  });
+};
+
+export const removeCustomDomainByPurposeAPICall = async (
+  projectId: string,
+  purpose: CustomDomainPurpose
+): Promise<AxiosResponse<void>> => {
+  return DELETE(
+    config.apiPath + `/projects/${projectId}/custom_domains?purpose=${purpose}`
   );
 };

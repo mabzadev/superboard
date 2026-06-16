@@ -3,15 +3,18 @@ import AppHeader from "@/components/layout/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import DeleteConfirm from "@/components/common/delete-confirm";
-import { Separator } from "@/components/ui/separator";
 import { useProjectSelection } from "@/context/useProjectSelection";
 import { showGenericError } from "@/lib/Notifications";
 import { cn } from "@/lib/utils";
-import { config } from "@/lib/config";
+import CustomDomainSetup from "@/components/configuration/CustomDomainSetup";
+import MigrationEntry from "@/components/migration/MigrationEntry";
 
-import { AlertCircle, Check, Globe, Mail, Save, Undo2 } from "lucide-react";
+import { AlertCircle, Check, Globe, Save, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useDomainConfigQuery } from "@/hooks/queries/useConfigurationQueries";
+import {
+  useDomainConfigQuery,
+  useCustomDomainQuery,
+} from "@/hooks/queries/useConfigurationQueries";
 import {
   useSetSubdomainMutation,
   useVerifySubdomainMutation,
@@ -23,6 +26,10 @@ const DomainPage = () => {
   const projectId = selectedProject?.id;
 
   const { data: projectDomain } = useDomainConfigQuery(projectId);
+  // When a custom subdomain is active it becomes the link base URL, so it
+  // takes over the Subdomain field instead of the default grovs one.
+  const { data: customDomain } = useCustomDomainQuery(projectId);
+  const customActive = customDomain?.status === "active";
 
   const setSubdomainMutation = useSetSubdomainMutation(projectId);
   const verifySubdomainMutation = useVerifySubdomainMutation(projectId);
@@ -197,92 +204,70 @@ const DomainPage = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  <div
-                    className={cn(
-                      "flex items-center rounded-md border bg-muted/30 px-4 py-3 transition-all",
-                      subdomainTooShort || subdomainUnavailable
-                        ? "border-destructive/50 ring-[3px] ring-destructive/10"
-                        : isCurrentSettingValid
-                          ? "border-valid-green/30 ring-[2px] ring-valid-green/5"
-                          : "border-sidebar-border"
-                    )}
-                  >
-                    <span className="text-sm text-muted-foreground select-none">
-                      https://
-                    </span>
-                    <input
-                      className="text-sm font-medium bg-transparent outline-none border-b border-dashed border-muted-foreground/40 focus:border-primary px-0.5 mx-0.5 transition-colors"
-                      style={{ width: `${Math.max(appSubdomain.length, 8)}ch` }}
-                      placeholder="subdomain"
-                      value={appSubdomain}
-                      onChange={(e) => {
-                        const val = e.target.value
-                          .toLowerCase()
-                          .replace(/[^a-z0-9_-]/g, "");
-                        setAppSubdomain(val);
-                      }}
-                    />
-                    <span className="text-sm text-muted-foreground select-none">
-                      .{appDomain}
-                    </span>
-                    <div className="ml-auto pl-3">
-                      {isCurrentSettingValid && (
-                        <div className="flex items-center justify-center h-5 w-5 rounded-full bg-valid-green-light">
-                          <Check className="h-3 w-3 text-valid-green" />
-                        </div>
+                {!customActive && (
+                  <div className="flex flex-col gap-3">
+                    <div
+                      className={cn(
+                        "flex items-center rounded-md border bg-muted/30 px-4 py-3 transition-all",
+                        subdomainTooShort || subdomainUnavailable
+                          ? "border-destructive/50 ring-[3px] ring-destructive/10"
+                          : isCurrentSettingValid
+                            ? "border-valid-green/30 ring-[2px] ring-valid-green/5"
+                            : "border-sidebar-border"
                       )}
+                    >
+                      <span className="text-sm text-muted-foreground select-none">
+                        https://
+                      </span>
+                      <input
+                        className="text-sm font-medium bg-transparent outline-none border-b border-dashed border-muted-foreground/40 focus:border-primary px-0.5 mx-0.5 transition-colors"
+                        style={{
+                          width: `${Math.max(appSubdomain.length, 8)}ch`,
+                        }}
+                        placeholder="subdomain"
+                        value={appSubdomain}
+                        onChange={(e) => {
+                          const val = e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9_-]/g, "");
+                          setAppSubdomain(val);
+                        }}
+                      />
+                      <span className="text-sm text-muted-foreground select-none">
+                        .{appDomain}
+                      </span>
+                      <div className="ml-auto pl-3">
+                        {isCurrentSettingValid && (
+                          <div className="flex items-center justify-center h-5 w-5 rounded-full bg-valid-green-light">
+                            <Check className="h-3 w-3 text-valid-green" />
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    {subdomainTooShort && (
+                      <Badge
+                        variant="destructive"
+                        className="w-fit gap-1.5 py-1 px-2.5"
+                      >
+                        <AlertCircle className="h-3 w-3" />
+                        Subdomain must be at least 5 characters
+                      </Badge>
+                    )}
+                    {subdomainUnavailable && (
+                      <Badge
+                        variant="destructive"
+                        className="w-fit gap-1.5 py-1 px-2.5"
+                      >
+                        <AlertCircle className="h-3 w-3" />
+                        This subdomain is not available
+                      </Badge>
+                    )}
                   </div>
-                  {subdomainTooShort && (
-                    <Badge
-                      variant="destructive"
-                      className="w-fit gap-1.5 py-1 px-2.5"
-                    >
-                      <AlertCircle className="h-3 w-3" />
-                      Subdomain must be at least 5 characters
-                    </Badge>
-                  )}
-                  {subdomainUnavailable && (
-                    <Badge
-                      variant="destructive"
-                      className="w-fit gap-1.5 py-1 px-2.5"
-                    >
-                      <AlertCircle className="h-3 w-3" />
-                      This subdomain is not available
-                    </Badge>
-                  )}
-                </div>
-              </div>
+                )}
 
-              <Separator className="my-6" />
-
-              {/* Custom domain section */}
-              <div className="flex flex-col gap-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-muted shrink-0">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-semibold">Custom domain</span>
-                    <span className="text-xs text-muted-foreground leading-snug">
-                      Use your own domain for branded links.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-sidebar-border bg-muted/30 p-5">
-                  <span className="text-sm text-muted-foreground leading-relaxed">
-                    Custom domains require an enterprise subscription. Contact{" "}
-                    <a
-                      href={`mailto:${config.supportEmail}`}
-                      className="text-blue-600 dark:text-blue-400 underline underline-offset-4 hover:opacity-80 transition-opacity"
-                    >
-                      {config.supportEmail}
-                    </a>{" "}
-                    to learn more.
-                  </span>
-                </div>
+                {/* Use your own subdomain (replaces the field when active) */}
+                <CustomDomainSetup projectId={projectId} />
+                <MigrationEntry projectId={projectId} />
               </div>
             </div>
           </div>

@@ -25,7 +25,10 @@ const RedirectPreviewModal = dynamic(
   { ssr: false, loading: () => null }
 );
 import { resolveRedirects } from "@/hooks/useResolvedRedirects";
-import { useRedirectConfigQuery } from "@/hooks/queries/useConfigurationQueries";
+import {
+  useRedirectConfigQuery,
+  useCustomDomainQuery,
+} from "@/hooks/queries/useConfigurationQueries";
 import { NO_CHECK, PARTIAL_CHECK } from "@/constants/OptionsConstants";
 import LinkDialogContent from "@/components/dynamic_links/links/create_link/LinkDialogContent";
 import CreateLinkCreatedSuccessfully from "@/components/dynamic_links/links/create_link/CreateLinkCreatedSuccessfully";
@@ -84,6 +87,10 @@ const LinkDialogProvider = ({ children }: { children: ReactNode }) => {
   const projectId = selectedProject?.id;
 
   const { data: projectRedirectsConfig } = useRedirectConfigQuery(projectId);
+  // When a custom subdomain is active it becomes the link base URL.
+  const { data: customDomain } = useCustomDomainQuery(projectId);
+  const customActiveHostname =
+    customDomain?.status === "active" ? customDomain.hostname : null;
 
   const createLinkMutation = useCreateLinkMutation(
     projectId,
@@ -371,8 +378,9 @@ const LinkDialogProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!selectedProject) return;
-    setDomain("https://" + selectedProject.domain + "/");
-  }, [selectedProject]);
+    const base = customActiveHostname ?? selectedProject.domain;
+    setDomain("https://" + base + "/");
+  }, [selectedProject, customActiveHostname]);
 
   const { setPath, setPathAvailable, path: formPath } = form;
 

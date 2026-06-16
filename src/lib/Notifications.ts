@@ -30,3 +30,15 @@ export const showErrorNotificationWithLink = (
     },
   });
 };
+
+export const showRetryableError = (
+  message: string,
+  onRetry: () => void
+): void => {
+  toast.error(message, {
+    action: {
+      label: "Retry",
+      onClick: onRetry,
+    },
+  });
+};

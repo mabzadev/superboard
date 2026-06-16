@@ -27,6 +27,7 @@ import { useTheme } from "next-themes";
 import {
   useDomainConfigQuery,
   useDomainDefaultsQuery,
+  useCustomDomainQuery,
 } from "@/hooks/queries/useConfigurationQueries";
 import { useSetSubdomainMutation } from "@/hooks/mutations/useConfigurationMutations";
 import { useForm } from "react-hook-form";
@@ -49,6 +50,10 @@ const SocialMediaPreviewPage = () => {
 
   const { data: projectDomain } = useDomainConfigQuery(projectId);
   const { data: domainDefaults } = useDomainDefaultsQuery(projectId);
+  // When a custom subdomain is active it becomes the link base URL for previews.
+  const { data: customDomain } = useCustomDomainQuery(projectId);
+  const customActiveHostname =
+    customDomain?.status === "active" ? customDomain.hostname : null;
 
   const setSubdomainMutation = useSetSubdomainMutation(projectId);
 
@@ -241,7 +246,9 @@ const SocialMediaPreviewPage = () => {
     }
   };
 
-  const domainUrl = `${projectDomain?.subdomain}.${projectDomain?.domain}`;
+  const domainUrl =
+    customActiveHostname ??
+    `${projectDomain?.subdomain}.${projectDomain?.domain}`;
 
   const platforms = [
     {

@@ -56,6 +56,11 @@ export type {
   RedirectPlatformConfig,
   DomainConfig,
   DomainDefaults,
+  CustomDomainStatus,
+  CustomDomain,
+  CustomDomainResponse,
+  CustomDomainPreflight,
+  CustomDomainPreflightResponse,
 } from "./configuration";
 export type {
   DateRangeQuery,
@@ -78,3 +83,23 @@ export type SortType = {
   sortKey: string;
   ascending: boolean;
 };
+
+export type {
+  CustomDomainPurpose,
+  CustomDomainSource,
+  CustomDomainsListResponse,
+} from "./configuration";
+export type {
+  MigrationProvider,
+  MigrationHealth,
+  MigrationTestOutcome,
+  MigrationSource,
+  MigrationCredentials,
+  MigrationSourceResponse,
+  MigrationSourceEnvelope,
+  CreateMigrationPayload,
+  CreateMigrationResponse,
+  CreateMigrationSourcePayload,
+  UpdateMigrationSourcePayload,
+  MigrationTestResponse,
+} from "./migration";

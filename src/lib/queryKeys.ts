@@ -99,6 +99,18 @@ export const queryKeys = {
       [...queryKeys.projects.detail(projectId), "domainConfig"] as const,
     domainDefaults: (projectId: string) =>
       [...queryKeys.projects.detail(projectId), "domainDefaults"] as const,
+    customDomain: (projectId: string) =>
+      [...queryKeys.projects.detail(projectId), "customDomain"] as const,
+    customDomains: (projectId: string) =>
+      [...queryKeys.projects.detail(projectId), "customDomains"] as const,
+    customDomainPreflight: (projectId: string, hostname: string) =>
+      [
+        ...queryKeys.projects.detail(projectId),
+        "customDomainPreflight",
+        hostname,
+      ] as const,
+    migrationSource: (projectId: string) =>
+      [...queryKeys.projects.detail(projectId), "migrationSource"] as const,
   },
 
   instances: {

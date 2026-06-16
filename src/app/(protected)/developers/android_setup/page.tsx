@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { deepClone, deepEqual } from "@/lib/utils";
 import { useProjectSelection } from "@/context/useProjectSelection";
@@ -43,7 +43,10 @@ import {
 } from "@/hooks/mutations/useInstanceMutations";
 import { ANDROID_SETUP_CATEGORY } from "@/constants/SetupStepConstants";
 import { useSetupProgress } from "@/hooks/useSetupProgress";
-import { useDomainConfigQuery } from "@/hooks/queries/useConfigurationQueries";
+import {
+  useDomainConfigQuery,
+  useCustomDomainsQuery,
+} from "@/hooks/queries/useConfigurationQueries";
 import {
   showErrorNotification,
   showGenericError,
@@ -332,6 +335,32 @@ const SetupOverview = ({
 
 const AndroidSetupPage = () => {
   const { selectedInstance, selectedProject } = useProjectSelection();
+  // Captured once at mount so subsequent in-wizard navigation doesn't keep
+  // snapping back to the deep-linked step.
+  const searchParams = useSearchParams();
+  const initialStepParam = useRef(searchParams.get("step"));
+  const deepLinkAppliedRef = useRef(false);
+  // Surface active custom subdomains and migrated hostnames as additional
+  // app-link intent filters.
+  const { data: domainsProd } = useCustomDomainsQuery(
+    selectedInstance?.production?.id
+  );
+  const { data: domainsTest } = useCustomDomainsQuery(
+    selectedInstance?.test?.id
+  );
+  const activeHost = (
+    domains: typeof domainsProd,
+    purpose: "primary" | "migration"
+  ) =>
+    domains?.find((d) => d.purpose === purpose && d.status === "active")
+      ?.hostname ?? null;
+  const customProdHost = activeHost(domainsProd, "primary");
+  const customTestHost = activeHost(domainsTest, "primary");
+  const migratedProdHost = activeHost(domainsProd, "migration");
+  const migratedTestHost = activeHost(domainsTest, "migration");
+  const hasCustomIntentFilters = Boolean(
+    customProdHost || customTestHost || migratedProdHost || migratedTestHost
+  );
   const { data: instanceConfig } = useInstanceConfigQuery(selectedInstance?.id);
   const androidConfigMutation = useSetAndroidConfigMutation(
     selectedInstance?.id
@@ -637,6 +666,24 @@ const AndroidSetupPage = () => {
       setWizardMode(true);
     }
   }, [sdkConfigured, instanceConfig]);
+
+  // Deep-link from elsewhere (e.g. the custom domain modal): jump straight to
+  // the requested step once instanceConfig is ready. Only applies once.
+  useEffect(() => {
+    if (deepLinkAppliedRef.current) return;
+    const targetId = initialStepParam.current;
+    if (!targetId || !instanceConfig) return;
+    const idx = STEPS.findIndex((s) => s.identifier === targetId);
+    if (idx < 0) return;
+    setCurrentStep(idx);
+    setVisitedSteps((prev) => {
+      const next = new Set(prev);
+      for (let i = 0; i <= idx; i++) next.add(i);
+      return next;
+    });
+    setWizardMode(true);
+    deepLinkAppliedRef.current = true;
+  }, [instanceConfig]);
 
   const goToStep = useCallback(
     (step: number) => {
@@ -1098,14 +1145,38 @@ const AndroidSetupPage = () => {
   <category android:name="android.intent.category.DEFAULT" />
   <category android:name="android.intent.category.BROWSABLE" />
   <data android:scheme="https" android:host="${selectedInstance?.production?.domain}" />
-</intent-filter>
+</intent-filter>${[customProdHost, migratedProdHost]
+        .filter(Boolean)
+        .map(
+          (host) => `
+
+<intent-filter android:autoVerify="true">
+  <action android:name="android.intent.action.VIEW" />
+  <category android:name="android.intent.category.DEFAULT" />
+  <category android:name="android.intent.category.BROWSABLE" />
+  <data android:scheme="https" android:host="${host}" />
+</intent-filter>`
+        )
+        .join("")}
 
 <intent-filter android:autoVerify="true">
   <action android:name="android.intent.action.VIEW" />
   <category android:name="android.intent.category.DEFAULT" />
   <category android:name="android.intent.category.BROWSABLE" />
   <data android:scheme="https" android:host="${selectedInstance?.test?.domain}" />
-</intent-filter>
+</intent-filter>${[customTestHost, migratedTestHost]
+        .filter(Boolean)
+        .map(
+          (host) => `
+
+<intent-filter android:autoVerify="true">
+  <action android:name="android.intent.action.VIEW" />
+  <category android:name="android.intent.category.DEFAULT" />
+  <category android:name="android.intent.category.BROWSABLE" />
+  <data android:scheme="https" android:host="${host}" />
+</intent-filter>`
+        )
+        .join("")}
 `,
     },
   ];
@@ -1191,8 +1262,15 @@ const AndroidSetupPage = () => {
   const initializeValuesRef = useRef(initializeValues);
   initializeValuesRef.current = initializeValues;
 
+  // Skip the initial mount so we don't clobber state set by the deep-link
+  // effect when this page is opened with ?step=... via client-side nav.
+  const lastResetInstanceIdRef = useRef<string | undefined>(
+    selectedInstance?.id
+  );
   useEffect(() => {
     if (!selectedInstance) return;
+    if (lastResetInstanceIdRef.current === selectedInstance.id) return;
+    lastResetInstanceIdRef.current = selectedInstance.id;
     setAndroidConfig(null);
     setCurrentStep(0);
     setVisitedSteps(new Set([0]));
@@ -1291,7 +1369,10 @@ const AndroidSetupPage = () => {
 
                 {/* Step: Intent Filters */}
                 {stepName(currentStep) === "Intent Filters" && (
-                  <Step1IntentFilters packageNameCode={package_name_code} />
+                  <Step1IntentFilters
+                    packageNameCode={package_name_code}
+                    hasCustom={hasCustomIntentFilters}
+                  />
                 )}
 
                 {/* Step: Add the SDK */}

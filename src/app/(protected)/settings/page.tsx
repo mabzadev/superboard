@@ -53,6 +53,7 @@ import SessionStorage from "@/lib/SessionStorage";
 import RevenueTracking from "@/components/settings/RevenueTracking";
 import ActionConfirm from "@/components/common/action-confirm";
 import { IS_ENTERPRISE } from "@/lib/edition";
+import MigrationDeepLinkRedirect from "./MigrationDeepLinkRedirect";
 
 const SettingsPage = () => {
   const { selectedInstance, setSelectedInstance } = useProjectSelection();
@@ -286,6 +287,7 @@ const SettingsPage = () => {
 
   return (
     <div className="flex flex-col relative overflow-hidden h-dvh">
+      <MigrationDeepLinkRedirect />
       {IS_ENTERPRISE && (
         <ActionConfirm
           title="Are you sure you want to disable revenue tracking?"
