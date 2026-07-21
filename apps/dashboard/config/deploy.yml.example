@@ -1,0 +1,35 @@
+# Kamal deploy configuration template
+# Copy to config/deploy.yml and fill in your values.
+
+service: grovs-web-app
+image: your-dockerhub-username/grovs-web-app
+
+servers:
+  web:
+    - your-server-ip
+
+builder:
+  arch: amd64
+  remote: ssh://root@your-server-ip
+  dockerfile: "Dockerfile"
+  context: "."
+
+proxy:
+  ssl: true
+  app_port: 3000
+  forward_headers: true
+  hosts:
+    - your-domain.example.com
+  healthcheck:
+    interval: 10
+    path: /api/health
+    timeout: 15
+
+registry:
+  # Specify the registry server, if you're not using Docker Hub
+  # server: registry.digitalocean.com / ghcr.io / ...
+  username: your-dockerhub-username
+
+  # Always use an access token rather than real password (pulled from .kamal/secrets).
+  password:
+    - KAMAL_REGISTRY_PASSWORD
