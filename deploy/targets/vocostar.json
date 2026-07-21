@@ -14,7 +14,7 @@
       "production": "opengrow-api"
     },
     "dashboard": {
-      "production": "opengrow-dashboard"
+      "production": "opengrow"
     }
   },
   "oauth": {
