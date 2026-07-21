@@ -11,40 +11,16 @@
   },
   "workers": {
     "api": {
-      "staging": "opengrow-vocostar-api-staging",
-      "production": "opengrow-vocostar-api"
+      "production": "opengrow-api"
     },
     "dashboard": {
-      "staging": "opengrow-vocostar-dashboard-staging",
-      "production": "opengrow-vocostar-dashboard"
+      "production": "opengrow-dashboard"
     }
   },
   "oauth": {
     "dashboardClientId": "opengrow-vocostar"
   },
   "environments": {
-    "staging": {
-      "d1": {
-        "name": "opengrow-vocostar-staging",
-        "id": "3f83285b-2f24-45f2-af3f-ce85c7250b26"
-      },
-      "kv": {
-        "name": "opengrow-vocostar-staging",
-        "id": "b5e34021707d42429b466780a857a66f"
-      },
-      "r2": { "name": "opengrow-vocostar-staging" },
-      "dashboardCache": { "name": "opengrow-vocostar-dashboard-cache-staging" },
-      "queues": {
-        "events": "opengrow-vocostar-events-staging",
-        "eventsDlq": "opengrow-vocostar-events-staging-dlq",
-        "push": "opengrow-vocostar-push-staging",
-        "pushDlq": "opengrow-vocostar-push-staging-dlq",
-        "maintenance": "opengrow-vocostar-maintenance-staging",
-        "maintenanceDlq": "opengrow-vocostar-maintenance-staging-dlq",
-        "billing": "opengrow-vocostar-billing-staging",
-        "billingDlq": "opengrow-vocostar-billing-staging-dlq"
-      }
-    },
     "production": {
       "d1": {
         "name": "grovs-db",
