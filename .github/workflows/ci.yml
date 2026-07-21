@@ -81,7 +81,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - run: xcodebuild -workspace sdks/ios/.swiftpm/xcode/package.xcworkspace -scheme OpenGrow -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
+      - run: xcodebuild -project sdks/ios/OpenGrow.xcodeproj -scheme OpenGrow -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
 
   android:
     name: Android SDK
@@ -93,6 +93,8 @@ jobs:
           distribution: temurin
           java-version: 17
           cache: gradle
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
       - run: ./gradlew :OpenGrow:testDebugUnitTest
         working-directory: sdks/android/OpenGrow
 

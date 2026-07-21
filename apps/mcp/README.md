@@ -6,12 +6,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/mcp/releases"><img src="https://img.shields.io/github/v/release/mbzadev/mcp?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/opengrow/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="Latest release"/></a>
   <a href="#"><img src="https://img.shields.io/badge/MCP-1.0-4F46E5?style=flat-square" alt="MCP 1.0"/></a>
   <a href="#"><img src="https://img.shields.io/badge/Claude%20Code-supported-4F46E5?style=flat-square" alt="Claude Code"/></a>
   <a href="#"><img src="https://img.shields.io/badge/Cursor-supported-4F46E5?style=flat-square" alt="Cursor"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/mcp?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/mcp/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/mcp?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
 <p align="center">
   <a href="https://github.com/mbzadev/opengrow">Website</a> &middot;
   <a href="https://docs.opengrow.io">Documentation</a> &middot;
-  <a href="https://github.com/mbzadev/mcp/issues">Issues</a>
+  <a href="https://github.com/mbzadev/opengrow/issues">Issues</a>
 </p>
 
 ---
@@ -37,7 +37,7 @@
 - **Revenue Analytics** — in-app purchases, subscriptions, and custom revenue events matched back to the campaign that drove the install.
 - **Campaigns** — group links, track performance, and compare results across channels.
 
-EU-hosted, open-source SDKs, 20M+ daily active users in production. See the [backend repo](https://github.com/mbzadev/backend) for self-hosting.
+EU-hosted, open-source SDKs, 20M+ daily active users in production. See the [Worker source](https://github.com/mbzadev/opengrow/tree/main/workers/api) for self-hosting.
 
 ## What is this MCP server?
 
@@ -110,8 +110,8 @@ https://mcp.opengrow.io/mcp
 If you're running your own OpenGrow backend, run the MCP server locally and point your client to it:
 
 ```bash
-git clone https://github.com/mbzadev/mcp.git
-cd mcp
+git clone https://github.com/mbzadev/opengrow.git
+cd opengrow/apps/mcp
 npm install && npm run build
 npm start
 ```
@@ -201,10 +201,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for project structure and PR guidelines.
 
 | Platform | Repository |
 |----------|-----------|
-| iOS | [mbzadev/mbzadevs](https://github.com/mbzadev/mbzadevs) |
-| Android | [mbzadev/opengrow-android](https://github.com/mbzadev/opengrow-android) |
-| React Native | [mbzadev/opengrow-react-native](https://github.com/mbzadev/opengrow-react-native) |
-| Flutter | [mbzadev/opengrow-flutter](https://github.com/mbzadev/opengrow-flutter) |
+| iOS | [`sdks/ios`](https://github.com/mbzadev/opengrow/tree/main/sdks/ios) |
+| Android | [`sdks/android`](https://github.com/mbzadev/opengrow/tree/main/sdks/android) |
+| React Native | [`sdks/react-native`](https://github.com/mbzadev/opengrow/tree/main/sdks/react-native) |
+| Flutter | [`sdks/flutter`](https://github.com/mbzadev/opengrow/tree/main/sdks/flutter) |
 
 ## License
 

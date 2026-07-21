@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.homepage     = 'https://github.com/mbzadev/opengrow'
   s.license      = { :type => 'MIT', :file => 'LICENSE' }
   s.author       = { 'OpenGrow' => 'support@vocostar.com' }
-  s.source       = { :git => 'https://github.com/mbzadev/opengrow.git', :tag => s.version.to_s }
+  s.source       = { :git => 'https://github.com/mbzadev/opengrow.git', :tag => "sdk-ios-v#{s.version}" }
   s.swift_version = '5.9'
   s.module_name  = 'OpenGrow' 
 

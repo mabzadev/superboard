@@ -118,7 +118,7 @@ dependencies {
         implementation jscFlavor
     }
 
-    implementation 'io.opengrow:OpenGrow:1.1.0'
+    implementation 'io.opengrow:opengrow-android:1.0.0'
 }
 
 repositories {

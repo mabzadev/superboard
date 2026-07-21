@@ -344,7 +344,7 @@ Full API reference: [docs.opengrow.io/docs/sdk/react-native/api-reference](https
 
 ## Example App
 
-A demo project is available at [mbzadev/opengrow-react-native-example-app](https://github.com/mbzadev/opengrow-react-native-example-app).
+A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/opengrow/tree/main/sdks/react-native/example).
 
 ## Migration Guides
 

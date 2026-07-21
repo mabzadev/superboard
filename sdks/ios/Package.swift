@@ -25,7 +25,7 @@ let package = Package(
                 .process("view/MessageTableViewCell.xib"),
             ]),
         .testTarget(
-            name: "mbzadevsTests",
+            name: "OpenGrowTests",
             dependencies: ["OpenGrow"]),
     ],
     swiftLanguageVersions: [.v5]
