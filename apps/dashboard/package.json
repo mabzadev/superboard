@@ -1,16 +1,17 @@
 {
-  "name": "grovs",
+  "name": "@opengrow/dashboard",
   "version": "0.1.1",
   "description": "SaaS dashboard for mobile app growth — deep links, messaging campaigns, revenue tracking, and audience analytics",
   "author": "appssemble",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/grovs-io/dashboard.git"
+    "url": "https://github.com/mbzadev/opengrow.git",
+    "directory": "apps/dashboard"
   },
-  "homepage": "https://github.com/grovs-io/dashboard#readme",
+  "homepage": "https://github.com/mbzadev/opengrow",
   "bugs": {
-    "url": "https://github.com/grovs-io/dashboard/issues"
+    "url": "https://github.com/mbzadev/opengrow/issues"
   },
   "scripts": {
     "clean": "rm -rf .next out",
@@ -20,6 +21,8 @@
     "lint": "eslint .",
     "build:test": "cross-env NEXT_PUBLIC_ENV=test next build",
     "build:prod": "cross-env NEXT_PUBLIC_ENV=production next build",
+    "cf:build": "opennextjs-cloudflare build --config ../../deploy/generated/vocostar-dashboard-production.jsonc",
+    "cf:preview": "opennextjs-cloudflare build --config ../../deploy/generated/vocostar-dashboard-staging.jsonc && opennextjs-cloudflare preview --config ../../deploy/generated/vocostar-dashboard-staging.jsonc",
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -30,6 +33,7 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.1",
     "@craftjs/core": "^0.2.12",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -65,13 +69,14 @@
     "date-fns": "^4.1.0",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.525.0",
-    "next": "^16.2.0",
+    "next": "^15.3.2",
     "next-themes": "^0.4.6",
     "posthog-js": "^1.337.0",
-    "react": "^19.2.3",
+    "react": "^18.3.1",
     "react-day-picker": "^9.8.1",
-    "react-dom": "^19.2.3",
+    "react-dom": "^18.3.1",
     "react-hook-form": "^7.71.2",
+    "react-is": "^19.2.6",
     "react-password-checklist": "^1.8.1",
     "recharts": "^3.0.2",
     "sonner": "^2.0.7",
@@ -80,34 +85,38 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^16.2.0",
+    "@next/bundle-analyzer": "^15.3.2",
     "@playwright/test": "^1.58.2",
-    "@shikijs/transformers": "^3.9.2",
+    "@shikijs/transformers": "^3.23.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
     "@types/validator": "^13.15.2",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.0",
     "dotenv-cli": "^8.0.0",
-    "eslint-config-next": "^16.2.0",
+    "eslint": "^10.3.0",
+    "eslint-config-next": "^15.3.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
+    "esbuild": "0.25.4",
     "husky": "^9.1.7",
     "jsdom": "^29.0.0",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
-    "shiki": "^3.9.2",
+    "shiki": "^3.23.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "wrangler": "^4.112.0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

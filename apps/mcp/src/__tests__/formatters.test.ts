@@ -72,7 +72,7 @@ describe("slugify", () => {
 
 describe("extractPath", () => {
   it("extracts path from full URL", () => {
-    expect(extractPath("https://myapp.grovs.io/summer-sale")).toBe("summer-sale");
+    expect(extractPath("https://myapp.opengrow.io/summer-sale")).toBe("summer-sale");
   });
 
   it("returns slug as-is", () => {
@@ -84,11 +84,11 @@ describe("extractPath", () => {
   });
 
   it("handles URL with https and subdomain", () => {
-    expect(extractPath("https://test.myapp.grovs.io/promo-link")).toBe("promo-link");
+    expect(extractPath("https://test.myapp.opengrow.io/promo-link")).toBe("promo-link");
   });
 
   it("handles URL with trailing slash", () => {
-    expect(extractPath("https://myapp.grovs.io/sale/")).toBe("sale/");
+    expect(extractPath("https://myapp.opengrow.io/sale/")).toBe("sale/");
   });
 
   it("handles URL with http", () => {
@@ -109,7 +109,7 @@ describe("formatStatus", () => {
     expect(out).toContain("Account Overview");
     expect(out).toContain("Alice");
     expect(out).toContain("alice@test.com");
-    expect(out).toContain("myapp.grovs.io");
+    expect(out).toContain("myapp.opengrow.io");
     expect(out).toContain("inst1");
     expect(out).toContain("prod1");
     expect(out).toContain("test1");
@@ -215,7 +215,7 @@ describe("formatLink", () => {
           id: 42,
           name: "Sale Link",
           path: "summer-sale",
-          access_path: "https://myapp.grovs.io/summer-sale",
+          access_path: "https://myapp.opengrow.io/summer-sale",
           title: "Summer Sale",
           tags: ["promo"],
           data: { screen: "sale" },

@@ -1,9 +1,9 @@
-name: grovs_flutter_plugin
-description: Flutter plugin for Grovs SDK - Deep linking, smart links, user messaging, and campaign tracking for mobile apps.
-version: 1.1.0
-homepage: https://grovs.io
-repository: https://github.com/grovs-io/grovs-flutter
-issue_tracker: https://github.com/grovs-io/grovs-flutter/issues
+name: opengrow_flutter
+description: Flutter plugin for OpenGrow SDK - verified iOS/Android purchases, deep links, messaging, and campaign tracking.
+version: 1.0.0
+homepage: https://github.com/mbzadev/opengrow
+repository: https://github.com/mbzadev/opengrow
+issue_tracker: https://github.com/mbzadev/opengrow/issues
 
 environment:
   sdk: ^3.9.2
@@ -13,6 +13,11 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
+  http: ^1.6.0
+  in_app_purchase: ^3.3.0
+  in_app_purchase_android: ^0.5.0
+  shared_preferences: ^2.5.5
+  uuid: ^4.6.0
 
 dev_dependencies:
   flutter_test:
@@ -37,10 +42,10 @@ flutter:
   plugin:
     platforms:
       android:
-        package: io.grovs.wrapper
-        pluginClass: GrovsPlugin
+        package: io.opengrow.wrapper
+        pluginClass: OpenGrowPlugin
       ios:
-        pluginClass: GrovsPlugin
+        pluginClass: OpenGrowPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

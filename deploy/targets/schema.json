@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mbzadev/opengrow/deploy/targets/schema.json",
+  "title": "OpenGrow deployment target",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "target", "accountId", "workersDevSubdomain", "domains", "workers", "oauth", "environments"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
+    "accountId": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "workersDevSubdomain": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "domains": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shortlinks", "sdk", "dashboard"],
+      "properties": {
+        "shortlinks": { "$ref": "#/$defs/hostname" },
+        "sdk": { "$ref": "#/$defs/hostname" },
+        "dashboard": { "$ref": "#/$defs/hostname" }
+      }
+    },
+    "workers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["api", "dashboard"],
+      "properties": {
+        "api": { "$ref": "#/$defs/workerNames" },
+        "dashboard": { "$ref": "#/$defs/workerNames" }
+      }
+    },
+    "oauth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dashboardClientId"],
+      "properties": {
+        "dashboardClientId": { "type": "string", "minLength": 3 }
+      }
+    },
+    "environments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staging", "production"],
+      "properties": {
+        "staging": { "$ref": "#/$defs/environment" },
+        "production": { "$ref": "#/$defs/environment" }
+      }
+    }
+  },
+  "$defs": {
+    "hostname": {
+      "type": "string",
+      "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"
+    },
+    "workerNames": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staging", "production"],
+      "properties": {
+        "staging": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "production": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+      }
+    },
+    "namedResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "id": { "type": ["string", "null"] },
+        "legacyName": { "type": "boolean", "default": false }
+      }
+    },
+    "queues": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "eventsDlq", "push", "pushDlq", "maintenance", "maintenanceDlq", "billing", "billingDlq"],
+      "properties": {
+        "events": { "type": "string" },
+        "eventsDlq": { "type": "string" },
+        "push": { "type": "string" },
+        "pushDlq": { "type": "string" },
+        "maintenance": { "type": "string" },
+        "maintenanceDlq": { "type": "string" },
+        "billing": { "type": "string" },
+        "billingDlq": { "type": "string" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["d1", "kv", "r2", "dashboardCache", "queues"],
+      "properties": {
+        "d1": { "$ref": "#/$defs/namedResource" },
+        "kv": { "$ref": "#/$defs/namedResource" },
+        "r2": { "$ref": "#/$defs/namedResource" },
+        "dashboardCache": { "$ref": "#/$defs/namedResource" },
+        "queues": { "$ref": "#/$defs/queues" }
+      }
+    }
+  }
+}

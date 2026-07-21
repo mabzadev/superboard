@@ -1,8 +1,8 @@
-const DEFAULT_BASE_URL = "https://mcp.grovs.io";
+const DEFAULT_BASE_URL = "https://mcp.opengrow.io";
 const REQUEST_TIMEOUT_MS = 30_000;
 
 function baseUrl(): string {
-  return process.env.GROVS_API_URL || DEFAULT_BASE_URL;
+  return process.env.OPENGROW_API_URL || DEFAULT_BASE_URL;
 }
 
 export class ApiError extends Error {

@@ -14,7 +14,7 @@ const Step1AddSDK = () => {
       <SectionHeader
         icon={Package}
         title="Add the SDK"
-        subtitle="Install the grovs SDK using NPM."
+        subtitle="Install the opengrow SDK using NPM."
       />
 
       <Tabs defaultValue={NPM} className="gap-4">
@@ -25,7 +25,7 @@ const Step1AddSDK = () => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value={"npm install grovs"}
+                value={"npm install opengrow"}
                 readOnly
                 className="font-mono text-xs"
               />
@@ -33,7 +33,7 @@ const Step1AddSDK = () => {
                 variant="outline"
                 size="sm"
                 className="pl-3 pr-4 shrink-0 h-9"
-                onClick={() => handleCopyText("npm install grovs")}
+                onClick={() => handleCopyText("npm install opengrow")}
               >
                 <Copy className="h-3.5 w-3.5" />
                 Copy

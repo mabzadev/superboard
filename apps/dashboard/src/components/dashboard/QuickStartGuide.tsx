@@ -210,7 +210,7 @@ const QuickStartGuide = () => {
           </div>
           <div className="flex flex-col gap-0.5 flex-1">
             <h3 className="text-lg font-semibold text-foreground tracking-tight">
-              Get started with Grovs
+              Get started with OpenGrow
             </h3>
             <p className="text-sm text-muted-foreground">
               Integrate your app, configure redirect rules, and create your

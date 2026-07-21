@@ -1,0 +1,187 @@
+import { Hono } from 'hono';
+import { AppVariables, Env } from '../types';
+import { applyVerifiedPurchase, identifyCustomer, offeringsForCustomer, type BillingEnvironment } from '../lib/billing';
+import { resolveSdkCustomer, signedCustomerInfo, verifiedAppUserId } from '../lib/billing-identity';
+import { finalizeGooglePurchase, verifyAppleTransaction, verifyGooglePurchase } from '../lib/store-verification';
+
+const purchases = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+
+async function jsonBody(c: any): Promise<Record<string, any>> {
+  return c.req.json().catch(() => ({}));
+}
+
+async function context(c: any) {
+  const projectId = c.get('projectId');
+  if (!projectId) throw new Error('Invalid project for SDK credentials');
+  const project = await c.env.DB.prepare(`
+    SELECT p.id, COALESCE(p.is_test, p.test, 0) AS is_test,
+           COALESCE(s.purchases_enabled, 0) AS purchases_enabled
+    FROM projects p LEFT JOIN billing_project_settings s ON s.project_id = p.id
+    WHERE p.id = ? LIMIT 1
+  `).bind(String(projectId)).first() as { id: number; is_test: number; purchases_enabled: number } | null;
+  if (!project) throw new Error('Invalid project for SDK credentials');
+  if (Number(project.purchases_enabled) !== 1) throw new Error('OpenGrow Purchases is not enabled for this project');
+  const anonymousId = c.req.header('X-OpenGrow-Anonymous-ID') || undefined;
+  const resolved = await resolveSdkCustomer(c.env, {
+    projectId,
+    authorization: c.req.header('Authorization'),
+    anonymousId,
+  });
+  const environment: BillingEnvironment = Number(project.is_test) === 1 ? 'sandbox' : 'production';
+  return { projectId, environment, ...resolved };
+}
+
+function purchaseError(c: any, error: unknown) {
+  const message = error instanceof Error ? error.message : 'Purchase request failed';
+  const status = /required|invalid|incomplete|not configured|not bound/i.test(message) ? 422
+    : /blocked|not enabled/i.test(message) ? 403
+      : /verification failed|identity token|issuer|JWKS|authenticate/i.test(message) ? 401
+        : 500;
+  console.error(JSON.stringify({ event: 'purchase_api_failed', path: c.req.path, message }));
+  return c.json({ error: message }, status);
+}
+
+purchases.get('/offerings', async (c) => {
+  try {
+    const ctx = await context(c);
+    const platform = c.get('sdkPlatform') || c.req.header('PLATFORM') || '';
+    if (platform !== 'ios' && platform !== 'android') return c.json({ error: 'iOS or Android platform required' }, 422);
+    const placement = c.req.query('placement') || 'default';
+    const data = await offeringsForCustomer(c.env.DB, ctx.projectId, platform, ctx.environment, placement);
+    return c.json({ ...data, customer_id: String(ctx.customer.id), environment: ctx.environment });
+  } catch (error) {
+    return purchaseError(c, error);
+  }
+});
+
+purchases.get('/customer-info', async (c) => {
+  try {
+    const ctx = await context(c);
+    return c.json({ ...(await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id))), customer_id: String(ctx.customer.id) });
+  } catch (error) {
+    return purchaseError(c, error);
+  }
+});
+
+purchases.post('/identify', async (c) => {
+  try {
+    const projectId = c.get('projectId');
+    if (!projectId) throw new Error('Invalid project for SDK credentials');
+    const targetAppUserId = await verifiedAppUserId(c.env, projectId, c.req.header('Authorization'));
+    if (!targetAppUserId) return c.json({ error: 'A verified identity token is required' }, 401);
+    const body = await jsonBody(c);
+    const currentAppUserId = String(body.current_app_user_id || c.req.header('X-OpenGrow-Anonymous-ID') || targetAppUserId);
+    const customer = await identifyCustomer(c.env.DB, projectId, currentAppUserId, targetAppUserId);
+    return c.json({ ...(await signedCustomerInfo(c.env, projectId, String(customer?.id))), customer_id: String(customer?.id), created: false });
+  } catch (error) {
+    return purchaseError(c, error);
+  }
+});
+
+purchases.post('/apple/transactions', async (c) => {
+  try {
+    const ctx = await context(c);
+    const body = await jsonBody(c);
+    if (typeof body.signed_transaction !== 'string' || !body.signed_transaction) {
+      return c.json({ error: 'signed_transaction is required' }, 422);
+    }
+    const verified = await verifyAppleTransaction(c.env, {
+      projectId: ctx.projectId,
+      customerId: String(ctx.customer.id),
+      signedTransaction: body.signed_transaction,
+      environment: ctx.environment,
+    });
+    const result = await applyVerifiedPurchase(c.env, verified.purchase);
+    return c.json({
+      result: verified.purchase.status === 'pending' ? 'pending' : 'purchased',
+      finish_transaction: verified.purchase.status !== 'pending',
+      transaction_id: result.transactionId,
+      duplicate: result.duplicate,
+      customer_info: await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)),
+    });
+  } catch (error) {
+    return purchaseError(c, error);
+  }
+});
+
+purchases.post('/google/purchases', async (c) => {
+  try {
+    const ctx = await context(c);
+    const body = await jsonBody(c);
+    if (!body.purchase_token || !body.product_id || !body.product_type) {
+      return c.json({ error: 'purchase_token, product_id and product_type are required' }, 422);
+    }
+    if (!['subscription', 'non_consumable', 'consumable'].includes(body.product_type)) {
+      return c.json({ error: 'product_type is invalid' }, 422);
+    }
+    const verified = await verifyGooglePurchase(c.env, {
+      projectId: ctx.projectId,
+      customerId: String(ctx.customer.id),
+      purchaseToken: String(body.purchase_token),
+      storeProductId: String(body.product_id),
+      productType: body.product_type,
+      environment: ctx.environment,
+    });
+    const result = await applyVerifiedPurchase(c.env, verified.purchase);
+    await finalizeGooglePurchase(verified);
+    return c.json({
+      result: verified.purchase.status === 'pending' ? 'pending' : 'purchased',
+      transaction_id: result.transactionId,
+      duplicate: result.duplicate,
+      customer_info: await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)),
+    });
+  } catch (error) {
+    return purchaseError(c, error);
+  }
+});
+
+async function restore(c: any) {
+  try {
+    const ctx = await context(c);
+    const body = await jsonBody(c);
+    const apple = Array.isArray(body.apple_transactions) ? body.apple_transactions : [];
+    const google = Array.isArray(body.google_purchases) ? body.google_purchases : [];
+    const settings = await c.env.DB.prepare('SELECT restore_behavior FROM billing_project_settings WHERE project_id = ?')
+      .bind(String(ctx.projectId)).first() as { restore_behavior?: string } | null;
+    const allowTransfer = settings?.restore_behavior !== 'block';
+    const results: Array<Record<string, unknown>> = [];
+    for (const signedTransaction of apple) {
+      const verified = await verifyAppleTransaction(c.env, {
+        projectId: ctx.projectId,
+        customerId: String(ctx.customer.id),
+        signedTransaction: String(signedTransaction),
+        environment: ctx.environment,
+        allowTransfer,
+      });
+      const applied = await applyVerifiedPurchase(c.env, verified.purchase);
+      results.push({ store: 'apple', transaction_id: applied.transactionId, duplicate: applied.duplicate });
+    }
+    for (const item of google) {
+      if (!item?.purchase_token || !item?.product_id || !item?.product_type) continue;
+      const verified = await verifyGooglePurchase(c.env, {
+        projectId: ctx.projectId,
+        customerId: String(ctx.customer.id),
+        purchaseToken: String(item.purchase_token),
+        storeProductId: String(item.product_id),
+        productType: item.product_type,
+        environment: ctx.environment,
+        allowTransfer,
+      });
+      const applied = await applyVerifiedPurchase(c.env, verified.purchase);
+      await finalizeGooglePurchase(verified);
+      results.push({ store: 'google', transaction_id: applied.transactionId, duplicate: applied.duplicate });
+    }
+    return c.json({
+      result: 'purchased',
+      restored: results,
+      customer_info: await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)),
+    });
+  } catch (error) {
+    return purchaseError(c, error);
+  }
+}
+
+purchases.post('/restore', restore);
+purchases.post('/sync', restore);
+
+export default purchases;

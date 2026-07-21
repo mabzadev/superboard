@@ -467,7 +467,7 @@ const IosSetupPage = () => {
       language: "swift",
       filename: "AppDelegate.swift",
       code: appDelegateContent.replace(
-        "_GROVS_API_KEY_",
+        "_OPENGROW_API_KEY_",
         selectedInstance?.api_key ?? "YOUR_API_KEY"
       ),
     },
@@ -479,7 +479,7 @@ const IosSetupPage = () => {
       language: "swift",
       filename: "SceneDelegate.swift",
       code: sceneDelegateContent.replace(
-        "_GROVS_API_KEY_",
+        "_OPENGROW_API_KEY_",
         selectedInstance?.api_key ?? "YOUR_API_KEY"
       ),
     },
@@ -491,7 +491,7 @@ const IosSetupPage = () => {
       language: "swift",
       filename: "AppDelegate.swift",
       code: reactNativeContent.replace(
-        "_GROVS_API_KEY_",
+        "_OPENGROW_API_KEY_",
         selectedInstance?.api_key ?? "YOUR_API_KEY"
       ),
     },

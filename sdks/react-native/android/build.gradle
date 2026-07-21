@@ -1,6 +1,6 @@
 buildscript {
   ext.getExtOrDefault = {name ->
-    return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['GrovsWrapper_' + name]
+    return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['OpenGrowWrapper_' + name]
   }
 
   repositories {
@@ -29,7 +29,7 @@ if (isNewArchitectureEnabled()) {
 }
 
 def getExtOrIntegerDefault(name) {
-  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["GrovsWrapper_" + name]).toInteger()
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["OpenGrowWrapper_" + name]).toInteger()
 }
 
 def supportsNamespace() {
@@ -43,7 +43,7 @@ def supportsNamespace() {
 
 android {
   if (supportsNamespace()) {
-    namespace "com.grovswrapper"
+    namespace "com.opengrowwrapper"
 
     sourceSets {
       main {
@@ -108,13 +108,13 @@ def kotlin_version = getExtOrDefault("kotlinVersion")
 dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-  implementation "io.grovs:Grovs:1.1.1"
+  implementation "io.opengrow:OpenGrow:1.1.1"
 }
 
 if (isNewArchitectureEnabled()) {
   react {
     jsRootDir = file("../src/")
-    libraryName = "GrovsWrapper"
-    codegenJavaPackageName = "com.grovswrapper"
+    libraryName = "OpenGrowWrapper"
+    codegenJavaPackageName = "com.opengrowwrapper"
   }
 }

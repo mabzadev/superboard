@@ -1,0 +1,4 @@
+<resources>
+    <string name="opengrow_messages">Messages</string>
+    <string name="opengrow_messages_empty">Your notifications inbox is currently empty.</string>
+</resources>

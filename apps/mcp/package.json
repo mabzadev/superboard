@@ -1,8 +1,8 @@
 {
-  "name": "@grovs/mcp-server",
-  "mcpName": "io.grovs/mcp",
+  "name": "@opengrow/mcp-server",
+  "mcpName": "io.opengrow/mcp",
   "version": "1.0.0",
-  "description": "MCP server for managing deep links, attribution, analytics, campaigns, and app configuration on Grovs — an open-source, privacy-first alternative to Branch and AppsFlyer.",
+  "description": "MCP server for managing deep links, attribution, analytics, campaigns, and app configuration on OpenGrow — an open-source, privacy-first alternative to Branch and AppsFlyer.",
   "type": "module",
   "main": "dist/index.js",
   "engines": {
@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/grovs-io/mcp.git"
+    "url": "git+https://github.com/mbzadev/mcp.git"
   },
   "keywords": [
     "mcp",
@@ -36,14 +36,14 @@
     "mobile-attribution",
     "tracking-links",
     "campaigns",
-    "grovs"
+    "opengrow"
   ],
-  "author": "Grovs",
+  "author": "OpenGrow",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/grovs-io/mcp/issues"
+    "url": "https://github.com/mbzadev/mcp/issues"
   },
-  "homepage": "https://github.com/grovs-io/mcp#readme",
+  "homepage": "https://github.com/mbzadev/mcp#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^17.4.1",

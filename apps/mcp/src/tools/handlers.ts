@@ -32,7 +32,7 @@ function success(text: string): ToolResult {
 /**
  * Stringify non-object API responses; pass objects to the formatter.
  *
- * The Grovs backend may inject a `_warning` string into any response (e.g., quota exceeded,
+ * The OpenGrow backend may inject a `_warning` string into any response (e.g., quota exceeded,
  * upcoming deprecation). When present, it's appended after the formatted output so the user
  * always sees it regardless of which tool was called.
  */

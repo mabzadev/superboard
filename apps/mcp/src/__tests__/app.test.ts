@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import { createApp, _ipRequests, _tokenCache } from "../app.js";
 
-const app = createApp("https://api.grovs.io", "https://mcp.grovs.io");
+const app = createApp("https://api.opengrow.io", "https://mcp.opengrow.io");
 
 // Build a Response-like object for mocking global fetch.
 function mockFetchResponse(status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -40,8 +40,8 @@ describe("GET /.well-known/oauth-protected-resource", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      resource: "https://mcp.grovs.io",
-      authorization_servers: ["https://api.grovs.io"],
+      resource: "https://mcp.opengrow.io",
+      authorization_servers: ["https://api.opengrow.io"],
       scopes_supported: ["mcp:full"],
     });
   });
@@ -65,7 +65,7 @@ describe("auth middleware", () => {
     const res = await request(app).post("/mcp").send({});
 
     expect(res.headers["www-authenticate"]).toBe(
-      'Bearer resource_metadata="https://mcp.grovs.io/.well-known/oauth-protected-resource"',
+      'Bearer resource_metadata="https://mcp.opengrow.io/.well-known/oauth-protected-resource"',
     );
   });
 
@@ -97,7 +97,7 @@ describe("auth middleware", () => {
         { error: "Invalid, revoked, or expired token" },
         {
           "WWW-Authenticate":
-            'Bearer resource_metadata="https://api.grovs.io/.well-known/oauth-protected-resource", scope="mcp:full", error="invalid_token", error_description="Invalid, revoked, or expired token"',
+            'Bearer resource_metadata="https://api.opengrow.io/.well-known/oauth-protected-resource", scope="mcp:full", error="invalid_token", error_description="Invalid, revoked, or expired token"',
         },
       ),
     );
@@ -134,7 +134,7 @@ describe("auth middleware", () => {
 
     expect(fetchSpy).toHaveBeenCalled();
     const [url, opts] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe("https://api.grovs.io/api/v1/mcp/validate");
+    expect(String(url)).toBe("https://api.opengrow.io/api/v1/mcp/validate");
     expect((opts as RequestInit).headers).toMatchObject({ Authorization: "Bearer some-token" });
   });
 

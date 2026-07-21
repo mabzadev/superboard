@@ -1,8 +1,8 @@
-# Grovs iOS SDK
+# OpenGrow iOS SDK
 
 ## Overview
 
-Grovs is an iOS SDK library for deep linking, universal linking, in-app messaging, and event tracking. Distributed via SPM and CocoaPods. No external dependencies.
+OpenGrow is an iOS SDK library for deep linking, universal linking, in-app messaging, and event tracking. Distributed via SPM and CocoaPods. No external dependencies.
 
 ## Tech Stack
 
@@ -19,8 +19,8 @@ Grovs is an iOS SDK library for deep linking, universal linking, in-app messagin
 **Pattern:** Service layer with static facade and protocol-based DI.
 
 ```
-Grovs.swift (Public static facade)
-  └── GrovsManager (Coordinator)
+OpenGrow.swift (Public static facade)
+  └── OpenGrowManager (Coordinator)
         ├── EventsHandler (Lifecycle event tracking)
         ├── PaymentEventsHandler (IAP & custom transactions)
         ├── APIService (REST client)
@@ -32,16 +32,16 @@ All major components have protocol interfaces (`APIServiceProtocol`, `EventsStor
 ## Project Structure
 
 ```
-Sources/Grovs/
-├── Grovs.swift                    # Public API facade (static methods)
+Sources/OpenGrow/
+├── OpenGrow.swift                    # Public API facade (static methods)
 ├── controllers/                   # UIKit view controllers + XIBs
 ├── helpers/                       # UI helpers (alerts, presentation)
 ├── extensions/                    # UIKit extensions
 ├── view/                          # Table view cells
 └── model/
-    ├── Grovs.swift                # Duplicate name - main SDK entry
+    ├── OpenGrow.swift                # Duplicate name - main SDK entry
     ├── handlers/
-    │   ├── GrovsManager.swift     # SDK coordinator
+    │   ├── OpenGrowManager.swift     # SDK coordinator
     │   ├── EventsHandler.swift    # Event dispatch (5s batching)
     │   ├── PaymentEventsHandler.swift
     │   └── Context.swift          # Global session state
@@ -53,7 +53,7 @@ Sources/Grovs/
     ├── entities/                  # Data models
     └── extensions/                # Foundation extensions
 
-Tests/grovs-iosTests/
+Tests/mbzadevsTests/
 ├── *Tests.swift                   # 20 unit test files
 ├── Mock*.swift                    # Protocol-based mocks
 └── XCTestCase+Helpers.swift       # Test utilities
@@ -71,7 +71,7 @@ Tests/grovs-iosTests/
 
 ### Testing
 - All handlers/services have protocol interfaces for mock injection
-- Mocks are in `Tests/grovs-iosTests/Mock*.swift`
+- Mocks are in `Tests/mbzadevsTests/Mock*.swift`
 - No external test frameworks - plain XCTest only
 - Tests create mocks inline, no shared test data factories
 - DataCache does NOT auto-clear between tests - manage cleanup manually
@@ -85,25 +85,25 @@ swift build
 swift test
 
 # Run specific test
-swift test --filter GrovsManagerTests
+swift test --filter OpenGrowManagerTests
 ```
 
 ## Important Gotchas
 
 1. **Bundle.module:** Conditional compilation handles SPM (`Bundle.module`) vs Xcode project (`Bundle.framework`) for XIB resources
-2. **Notification naming:** `GrovsNotification` (not `Notification`) to avoid Foundation namespace collision
+2. **Notification naming:** `OpenGrowNotification` (not `Notification`) to avoid Foundation namespace collision
 3. **Event queuing:** Events created before SDK auth are held and linked once authenticated
 4. **Request retries:** Failed network requests queue and retry on app reactivation
 5. **Background sessions:** Separate URLSession instance for background requests with custom delegate
 6. **NSCoding:** Events persist using NSCoding (legacy but stable pattern)
-7. **Static facade:** `GrovsManager` is internal; public API is the static `Grovs` class only
+7. **Static facade:** `OpenGrowManager` is internal; public API is the static `OpenGrow` class only
 
 ## Branching
 
 - **Main branch:** `main`
 - **Active development:** `development/v2.x` branches
 - **Feature branches:** `feature/*` (e.g., `feature/iap`)
-- **Remotes:** `origin`, `internal`, `internal-sdk-on-grovs`
+- **Remotes:** `origin`, `internal`, `internal-sdk-on-opengrow`
 
 ## Git Commit Rules
 

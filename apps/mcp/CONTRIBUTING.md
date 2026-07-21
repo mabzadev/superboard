@@ -1,9 +1,9 @@
-# Contributing to Grovs MCP Server
+# Contributing to OpenGrow MCP Server
 
 ## Setup
 
 ```bash
-git clone https://github.com/grovs-io/mcp.git
+git clone https://github.com/mbzadev/mcp.git
 cd mcp
 npm install
 ```
@@ -26,7 +26,7 @@ src/
   index.ts              # Entry point — starts the HTTP server
   app.ts                # Express app factory (routes, OAuth, /mcp endpoint)
   server.ts             # MCP server factory — tool registration, runWithAuth, shared types
-  api-client.ts         # HTTP client for the Grovs backend API
+  api-client.ts         # HTTP client for the OpenGrow backend API
   tools/
     handlers.ts         # Tool handlers — thin wrappers: call API, format result
     formatters.ts       # Human-readable formatters with runtime shape validation (expectKey/expectArray)
@@ -40,7 +40,7 @@ src/
     server.test.ts      # MCP server tests
 plugin/
   README.md             # Claude Code plugin documentation
-  skills/               # Skills that teach Claude non-obvious Grovs workflows
+  skills/               # Skills that teach Claude non-obvious OpenGrow workflows
 ```
 
 ## Architecture
@@ -49,7 +49,7 @@ plugin/
 - **`runWithAuth`** is the single error boundary: extracts the auth token, calls the handler, catches all errors
 - **Handlers** (`tools/handlers.ts`) are plain async functions that call the API client, pass the result through a formatter, and return a `ToolResult`. They throw on error (caught by `runWithAuth`)
 - **Formatters** (`tools/formatters.ts`) convert raw API JSON into concise text. They use `expectKey`/`expectArray` to warn when the API shape changes instead of silently producing broken output
-- **`api-client.ts`** handles HTTP communication with the Grovs backend. All functions return `Promise<unknown>` — shape validation happens in the formatter layer
+- **`api-client.ts`** handles HTTP communication with the OpenGrow backend. All functions return `Promise<unknown>` — shape validation happens in the formatter layer
 
 ## Pull requests
 
@@ -60,7 +60,7 @@ plugin/
 
 ## Reporting issues
 
-Use [GitHub Issues](https://github.com/grovs-io/mcp/issues). Include steps to reproduce, expected behavior, and actual behavior.
+Use [GitHub Issues](https://github.com/mbzadev/mcp/issues). Include steps to reproduce, expected behavior, and actual behavior.
 
 ## License
 

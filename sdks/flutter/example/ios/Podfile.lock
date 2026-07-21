@@ -1,9 +1,9 @@
 PODS:
   - Flutter (1.0.0)
-  - Grovs (2.3)
-  - grovs_flutter_plugin (0.0.1):
+  - OpenGrow (2.3)
+  - opengrow_flutter (0.0.1):
     - Flutter
-    - Grovs (~> 2.3)
+    - OpenGrow (~> 2.3)
   - integration_test (0.0.1):
     - Flutter
   - url_launcher_ios (0.0.1):
@@ -11,19 +11,19 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - grovs_flutter_plugin (from `.symlinks/plugins/grovs_flutter_plugin/ios`)
+  - opengrow_flutter (from `.symlinks/plugins/opengrow_flutter/ios`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
 
 SPEC REPOS:
   trunk:
-    - Grovs
+    - OpenGrow
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  grovs_flutter_plugin:
-    :path: ".symlinks/plugins/grovs_flutter_plugin/ios"
+  opengrow_flutter:
+    :path: ".symlinks/plugins/opengrow_flutter/ios"
   integration_test:
     :path: ".symlinks/plugins/integration_test/ios"
   url_launcher_ios:
@@ -31,8 +31,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  Grovs: 9f3e1c90b77a59caa6f39eb54b2c32dd4586a000
-  grovs_flutter_plugin: 9cb129c18ab975684c8ad3adea7b856675890233
+  OpenGrow: 9f3e1c90b77a59caa6f39eb54b2c32dd4586a000
+  opengrow_flutter: 9cb129c18ab975684c8ad3adea7b856675890233
   integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
 

@@ -48,7 +48,7 @@ export const LINKEDIN = "linkedin" as const;
 export const GOOGLE = "google" as const;
 export const META = "meta" as const;
 export const TIKTOK = "tiktok" as const;
-export const GROVS = "grovs" as const;
+export const OPENGROW = "opengrow" as const;
 export const QUICK_LINK = "quick-link" as const;
 
 //image Type

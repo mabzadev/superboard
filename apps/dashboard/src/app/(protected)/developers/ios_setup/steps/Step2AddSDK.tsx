@@ -14,7 +14,7 @@ const Step2AddSDK = () => {
       <SectionHeader
         icon={Package}
         title="Add the SDK"
-        subtitle="Install the grovs SDK using your preferred package manager."
+        subtitle="Install the opengrow SDK using your preferred package manager."
       />
 
       <Tabs defaultValue={SPM} className="gap-4">
@@ -28,7 +28,7 @@ const Step2AddSDK = () => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value={"https://github.com/grovs-io"}
+                value={"https://github.com/mbzadev"}
                 readOnly
                 className="font-mono text-xs"
               />
@@ -36,7 +36,7 @@ const Step2AddSDK = () => {
                 variant="outline"
                 size="sm"
                 className="pl-3 pr-4 shrink-0 h-9"
-                onClick={() => handleCopyText("https://github.com/grovs-io")}
+                onClick={() => handleCopyText("https://github.com/mbzadev")}
               >
                 <Copy className="h-3.5 w-3.5" />
                 Copy
@@ -61,7 +61,7 @@ const Step2AddSDK = () => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value={"pod 'Grovs'"}
+                value={"pod 'OpenGrow'"}
                 readOnly
                 className="font-mono text-xs"
               />
@@ -69,7 +69,7 @@ const Step2AddSDK = () => {
                 variant="outline"
                 size="sm"
                 className="pl-3 pr-4 shrink-0 h-9"
-                onClick={() => handleCopyText("pod 'Grovs'")}
+                onClick={() => handleCopyText("pod 'OpenGrow'")}
               >
                 <Copy className="h-3.5 w-3.5" />
                 Copy
@@ -93,7 +93,7 @@ const Step2AddSDK = () => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value={"npm install react-native-grovs-wrapper"}
+                value={"npm install @mbzadev/opengrow-react-native"}
                 readOnly
                 className="font-mono text-xs"
               />
@@ -102,7 +102,7 @@ const Step2AddSDK = () => {
                 size="sm"
                 className="pl-3 pr-4 shrink-0 h-9"
                 onClick={() =>
-                  handleCopyText("npm install react-native-grovs-wrapper")
+                  handleCopyText("npm install @mbzadev/opengrow-react-native")
                 }
               >
                 <Copy className="h-3.5 w-3.5" />
@@ -128,7 +128,7 @@ const Step2AddSDK = () => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value={"yarn add react-native-grovs-wrapper"}
+                value={"yarn add @mbzadev/opengrow-react-native"}
                 readOnly
                 className="font-mono text-xs"
               />
@@ -137,7 +137,7 @@ const Step2AddSDK = () => {
                 size="sm"
                 className="pl-3 pr-4 shrink-0 h-9"
                 onClick={() =>
-                  handleCopyText("yarn add react-native-grovs-wrapper")
+                  handleCopyText("yarn add @mbzadev/opengrow-react-native")
                 }
               >
                 <Copy className="h-3.5 w-3.5" />

@@ -1,7 +1,7 @@
 {
-  "name": "react-native-grovs-wrapper",
-  "version": "1.0.2",
-  "description": "Grovs react native SDK",
+  "name": "@mbzadev/opengrow-react-native",
+  "version": "1.0.0",
+  "description": "OpenGrow react native SDK",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -39,8 +39,8 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace react-native-grovs-wrapper-example",
-    "example-old-arch": "yarn workspace react-native-grovs-wrapper-example-old-arch",
+    "example": "yarn workspace @mbzadev/opengrow-react-native-example",
+    "example-old-arch": "yarn workspace @mbzadev/opengrow-react-native-example-old-arch",
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -52,7 +52,7 @@
     "react-native",
     "ios",
     "android",
-    "grovs",
+    "opengrow",
     "deeplink",
     "attribution",
     "dynamic link",
@@ -61,16 +61,17 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/grovs-io/grovs-react-native.git"
+    "url": "git+https://github.com/mbzadev/opengrow.git",
+    "directory": "sdks/react-native"
   },
-  "author": "Grovs <razvan@appssemble.com> (https://grovs.io)",
+  "author": "OpenGrow <razvan@appssemble.com> (https://github.com/mbzadev/opengrow)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/grovs-io/grovs-react-native/issues"
+    "url": "https://github.com/mbzadev/opengrow/issues"
   },
-  "homepage": "https://github.com/grovs-io/grovs-react-native#readme",
+  "homepage": "https://github.com/mbzadev/opengrow",
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://npm.pkg.github.com"
   },
   "devDependencies": {
     "@commitlint/config-conventional": "^17.0.2",
@@ -211,7 +212,7 @@
     ]
   },
   "codegenConfig": {
-    "name": "RNGrovsWrapperSpec",
+    "name": "RNOpenGrowWrapperSpec",
     "type": "modules",
     "jsSrcsDir": "src",
     "outputDir": {
@@ -219,7 +220,7 @@
       "android": "android/generated"
     },
     "android": {
-      "javaPackageName": "com.grovswrapper"
+      "javaPackageName": "com.opengrowwrapper"
     },
     "includesGeneratedCode": true
   },

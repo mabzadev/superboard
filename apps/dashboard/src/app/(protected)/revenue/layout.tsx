@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { IS_ENTERPRISE } from "@/lib/edition";

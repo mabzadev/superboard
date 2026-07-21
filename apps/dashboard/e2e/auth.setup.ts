@@ -1,13 +1,20 @@
 import { test as setup } from "@playwright/test";
 import { setupApiMocks } from "./fixtures/api-mocks";
+import { createRealAuthState, isRealBackendE2E } from "./fixtures/real-auth";
 import { MOCK_TOKENS, TEST_USER } from "./fixtures/test-data";
 
 const authFile = "e2e/.auth/user.json";
 
-setup("authenticate", async ({ page }) => {
-  await setupApiMocks(page);
+setup("authenticate", async ({ page, request }) => {
+  if (isRealBackendE2E) {
+    await createRealAuthState(page, request);
+    await page.goto("/");
+    await page.context().storageState({ path: authFile });
+    return;
+  }
 
   // Inject auth tokens into localStorage
+  await setupApiMocks(page);
   await page.addInitScript(
     ({ tokens, user }) => {
       localStorage.setItem("access_token", tokens.access_token);

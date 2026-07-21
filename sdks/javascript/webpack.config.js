@@ -6,8 +6,8 @@ module.exports = {
   entry: "./src/index.js",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "grovs.js",
-    library: "Grovs",
+    filename: "opengrow.js",
+    library: "OpenGrow",
     libraryTarget: "umd",
     globalObject: "this",
     publicPath: "/dist/", // Required for webpack-dev-server

@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pub
+    directory: /sdks/flutter
+    schedule:
+      interval: weekly
+  - package-ecosystem: pub
+    directory: /sdks/flutterflow
+    schedule:
+      interval: weekly
+  - package-ecosystem: gradle
+    directory: /sdks/android/OpenGrow
+    schedule:
+      interval: weekly
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: weekly

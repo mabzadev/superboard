@@ -1,0 +1,326 @@
+package com.opengrowwrapper
+
+import android.app.Activity
+import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.ReadableType
+import com.facebook.react.bridge.WritableArray
+import com.facebook.react.bridge.WritableMap
+import com.facebook.react.modules.core.DeviceEventManagerModule
+import io.opengrow.OpenGrow
+import io.opengrow.model.CustomLinkRedirect
+import io.opengrow.service.CustomRedirects
+import io.opengrow.service.TrackingParams
+import io.opengrow.model.events.PaymentEventType
+import io.opengrow.utils.flow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import java.io.Serializable
+
+fun ReadableMap.toMap(): Map<String, Any?> {
+  val result = mutableMapOf<String, Any?>()
+  val iterator = this.entryIterator
+
+  while (iterator.hasNext()) {
+    val entry = iterator.next()
+    result[entry.key] = when (val value = entry.value) {
+      is ReadableMap -> value.toMap() // Recursively convert nested objects
+      is ReadableArray -> value.toList() // Convert arrays
+      else -> value // Directly use other values
+    }
+  }
+
+  return result
+}
+
+// Helper function for ReadableArray
+fun ReadableArray.toList(): List<Any?> {
+  val result = mutableListOf<Any?>()
+  for (i in 0 until this.size()) {
+    result.add(
+      when (this.getType(i)) {
+        ReadableType.Map -> this.getMap(i)?.toMap()
+        ReadableType.Array -> this.getArray(i)?.toList()
+        ReadableType.String -> this.getString(i)
+        ReadableType.Number -> this.getDouble(i)
+        ReadableType.Boolean -> this.getBoolean(i)
+        else -> null
+      }
+    )
+  }
+  return result
+}
+
+fun Map<String, Any?>.toSerializableMap(): Map<String, Serializable> {
+  return this.mapNotNull { (key, value) ->
+    if (value is Serializable) key to value else null // Only keep serializable values
+  }.toMap()
+}
+
+fun List<Any?>.toStringList(): List<String> {
+  return this.mapNotNull { it?.toString() } // Converts all non-null elements to String
+}
+
+fun Map<String, Any?>.toWritableMap(): WritableMap {
+  val writableMap = Arguments.createMap()
+
+  for ((key, value) in this) {
+    when (value) {
+      is String -> writableMap.putString(key, value)
+      is Int -> writableMap.putInt(key, value)
+      is Double -> writableMap.putDouble(key, value)
+      is Boolean -> writableMap.putBoolean(key, value)
+      is Map<*, *> -> (value as? Map<String, Any?>)?.let { writableMap.putMap(key, it.toWritableMap()) }
+      is List<*> -> writableMap.putArray(key, value.toWritableArray())
+      else -> writableMap.putNull(key) // Unsupported types will be set to null
+    }
+  }
+
+  return writableMap
+}
+
+// Helper function: Convert List to WritableArray
+fun List<*>.toWritableArray(): WritableArray {
+  val writableArray = Arguments.createArray()
+
+  for (value in this) {
+    when (value) {
+      is String -> writableArray.pushString(value)
+      is Int -> writableArray.pushInt(value)
+      is Double -> writableArray.pushDouble(value)
+      is Boolean -> writableArray.pushBoolean(value)
+      is Map<*, *> -> (value as? Map<String, Any?>)?.let { writableArray.pushMap(it.toWritableMap()) }
+      is List<*> -> writableArray.pushArray(value.toWritableArray())
+      else -> writableArray.pushNull()
+    }
+  }
+
+  return writableArray
+}
+
+class OpenGrowWrapperModule(private val reactContext: ReactApplicationContext) :
+  ReactContextBaseJavaModule(reactContext) {
+
+  private var incomingDeeplinksJob: Job? = null
+
+  init {
+
+  }
+
+  override fun getName(): String = "OpenGrowWrapper"
+
+  // Use this because in init activity is null
+  @ReactMethod
+  fun addDeeplinkListener() {
+    val activity: Activity? = reactContext.currentActivity
+    activity?.let {
+      OpenGrow.setOnDeeplinkReceivedListener(it) { details ->
+        val writableMap = Arguments.createMap()
+        writableMap.putString("opengrow_link", details.link)
+        details.data?.let { writableMap.putMap("data", it.toWritableMap()) }
+        details.tracking?.let { writableMap.putMap("tracking", it.toWritableMap()) }
+
+        emitOnDeeplinkReceived(writableMap)
+      }
+    }
+  }
+
+  @ReactMethod
+  fun setIdentifier(identifier: String?) {
+    OpenGrow.identifier = identifier
+  }
+
+  @ReactMethod
+  fun setPushToken(pushToken: String?) {
+    OpenGrow.pushToken = pushToken
+  }
+
+  @ReactMethod
+  fun setAttributes(attributes: ReadableMap?) {
+    OpenGrow.attributes = attributes?.toMap()?.toSerializableMap()
+  }
+
+  @ReactMethod
+  fun setSDK(enabled: Boolean) {
+    OpenGrow.setSDK(enabled = enabled)
+  }
+
+  @ReactMethod
+  fun setDebug(level: String) {
+    when (level) {
+      "info" -> OpenGrow.setDebug(io.opengrow.model.LogLevel.INFO)
+      "error" -> OpenGrow.setDebug(io.opengrow.model.LogLevel.ERROR)
+    }
+  }
+
+  @ReactMethod
+  fun generateLink(
+    title: String?,
+    subtitle: String?,
+    imageURL: String?,
+    data: ReadableMap?,
+    tags: ReadableArray?,
+    customRedirects: ReadableMap?,
+    showPreviewIos: Boolean?,
+    showPreviewAndroid: Boolean?,
+    tracking: ReadableMap?,
+    promise: Promise
+  ) {
+    val redirects = customRedirects?.toMap()?.toSerializableMap()
+    val ios = redirects?.get("ios") as? Map<*, *>
+    val iosUrl = ios?.get("link") as? String
+    val iosOpenIfInstalled = ios?.get("open_if_app_installed") as? Boolean
+
+    val android = redirects?.get("android") as? Map<*, *>
+    val androidUrl = android?.get("link") as? String
+    val androidOpenIfInstalled = android?.get("open_if_app_installed") as? Boolean
+
+    val desktop = redirects?.get("desktop") as? Map<*, *>
+    val desktopUrl = desktop?.get("link") as? String
+
+    val nativeCustomRedirect = CustomRedirects(
+      ios = iosUrl?.let {
+        CustomLinkRedirect(it, iosOpenIfInstalled ?: true)
+      },
+      android = androidUrl?.let {
+        CustomLinkRedirect(it, androidOpenIfInstalled ?: true)
+      },
+      desktop = desktopUrl?.let {
+        CustomLinkRedirect(it) // Using iOS flag for desktop
+      }
+    )
+
+    val trackingParams = tracking?.toMap()?.toSerializableMap()
+    val utmCampaign = trackingParams?.get("utm_campaign") as? String
+    val utmSource = trackingParams?.get("utm_source") as? String
+    val utmMedium = trackingParams?.get("utm_medium") as? String
+
+    val nativeTracking = TrackingParams(
+      utmCampaign = utmCampaign,
+      utmSource = utmSource,
+      utmMedium = utmMedium
+    )
+
+    OpenGrow.generateLink(
+      title = title,
+      subtitle = subtitle,
+      imageURL = imageURL,
+      data = data?.toMap()?.toSerializableMap(),
+      tags = tags?.toList()?.toStringList(),
+      customRedirects = nativeCustomRedirect,
+      showPreviewIos = showPreviewIos,
+      showPreviewAndroid = showPreviewAndroid,
+      tracking = nativeTracking,
+      lifecycleOwner = null,
+      listener = { link, error ->
+        link?.let {
+          promise.resolve(it)
+        } ?: error?.let {
+          promise.reject("Error", it.toString())
+        } ?: promise.reject("Error", "Failed to generate link.")
+      }
+    )
+  }
+
+  @ReactMethod
+  fun displayMessages(promise: Promise) {
+    OpenGrow.displayMessagesFragment {
+      promise.resolve(null)
+    }
+  }
+
+  @ReactMethod
+  fun numberOfUnreadMessages(promise: Promise) {
+    OpenGrow.numberOfUnreadMessages {
+      it?.let { promise.resolve(it) } ?: promise.reject("Error", "Failed to fetch messages number.")
+    }
+  }
+
+  @ReactMethod
+  fun logInAppPurchase(transactionId: String?, promise: Promise) {
+    if (transactionId == null) {
+      promise.resolve(false)
+      return
+    }
+    OpenGrow.logInAppPurchase(originalJson = transactionId)
+    promise.resolve(true)
+  }
+
+  @ReactMethod
+  fun logCustomPurchase(
+    type: String,
+    priceInCents: Double,
+    currency: String,
+    productId: String,
+    startDate: String?,
+    promise: Promise
+  ) {
+    val paymentType = when (type) {
+      "cancel" -> PaymentEventType.CANCEL
+      "refund" -> PaymentEventType.REFUND
+      else -> PaymentEventType.BUY
+    }
+
+    OpenGrow.logCustomPurchase(
+      type = paymentType,
+      priceInCents = priceInCents.toInt(),
+      currency = currency,
+      productId = productId
+    )
+    promise.resolve(true)
+  }
+
+  @ReactMethod
+  fun markReadyToHandleDeeplinks(promise: Promise) {
+    val activity: AppCompatActivity? = reactApplicationContext.currentActivity as? AppCompatActivity
+    activity?.let { activity ->
+      incomingDeeplinksJob?.cancel()
+      incomingDeeplinksJob = activity.lifecycleScope.launchWhenStarted {
+        OpenGrow.Companion::openedLinkDetails.flow.collect { deeplinkDetails ->
+          deeplinkDetails?.let {
+            val writableMap = Arguments.createMap()
+            writableMap.putString("link", it.link)
+            it.data?.let { writableMap.putMap("data", it.toWritableMap()) }
+            it.tracking?.let { writableMap.putMap("tracking", it.toWritableMap()) }
+
+            if (!isActive) {
+              return@collect
+            }
+
+            reactContext
+              .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+              .emit("onOpenGrowDeeplinkReceived", writableMap)
+            //emitOnDeeplinkReceived(writableMap)
+          }
+        }
+      }
+    }
+
+    promise.resolve(null)
+  }
+
+  @ReactMethod
+  fun addListener(eventName: String?, promise: Promise) {
+    promise.resolve(null)
+  }
+
+  @ReactMethod
+  fun removeListeners(count: Double, promise: Promise) {
+    promise.resolve(null)
+  }
+
+  // Emit event to JS
+  private fun emitOnDeeplinkReceived(data: WritableMap) {
+    reactContext
+      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+      .emit("onOpenGrowDeeplinkReceived", data)
+  }
+}

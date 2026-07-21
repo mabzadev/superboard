@@ -13,14 +13,14 @@
     }
   </style>
   <body>
-    <script src="/dist/grovs.js"></script>
+    <script src="/dist/opengrow.js"></script>
 
     <script>
       const APIKey =
-        "REMOVED_LEGACY_SECRET_08";
+        "opengrowt_06e36086dad3e934289560e3ca59527282030868f8c844629516c6e6c67bbf1f";
 
-      const sdk = new Grovs.default(APIKey, false, (data) => {
-        console.log("Link data:", data); // Callback to handle data from Grovs
+      const sdk = new OpenGrow.default(APIKey, false, (data) => {
+        console.log("Link data:", data); // Callback to handle data from OpenGrow
       });
 
       sdk.start(() => {

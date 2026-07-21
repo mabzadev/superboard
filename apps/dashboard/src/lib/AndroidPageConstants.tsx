@@ -1,54 +1,54 @@
-export const sdkAndroidValue = `import io.grovs.Grovs
+export const sdkAndroidValue = `import io.opengrow.OpenGrow
 class MainApplication : Application() {
 
   override fun onCreate() {
     super.onCreate()
-    Grovs.configure(this, "_GROVS_API_KEY_", useTestEnvironment = false)
+    OpenGrow.configure(this, "_OPENGROW_API_KEY_", useTestEnvironment = false)
   }
 }
 `;
 
-export const googleCloudScript = `chmod +x grovs_android_gcloud_setup.sh
-./grovs_android_gcloud_setup.sh`;
+export const googleCloudScript = `chmod +x opengrow_android_gcloud_setup.sh
+./opengrow_android_gcloud_setup.sh`;
 
-export const sdkLauncherActivityValue = `import io.grovs.Grovs
+export const sdkLauncherActivityValue = `import io.opengrow.OpenGrow
 class MainActivity : ComponentActivity() {
   override fun onStart() {
     super.onStart()
-    Grovs.onStart()
+    OpenGrow.onStart()
   }
     override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
 
-    Grovs.onNewIntent(intent)
+    OpenGrow.onNewIntent(intent)
   }
 }
 `;
 export const sdkHandleDeepLinksValue = `// Listen for open from link events using listeners
 
-Grovs.setOnDeeplinkReceivedListener(this) {
+OpenGrow.setOnDeeplinkReceivedListener(this) {
   link, payload ->
   val message = "Got link from listener: $link payload: $payload"
-  Log.d("Grovs", message)
+  Log.d("OpenGrow", message)
 }
 
 // OR
 
 //Listen for open from link events using kotlin coroutines
 
-Grovs.Companion:: openedLinkDetails.flow.collect {
+OpenGrow.Companion:: openedLinkDetails.flow.collect {
   deeplinkDetails ->
   val message = "Got link from flow: \${deeplinkDetails?.link} payload: 
   \${ deeplinkDetails?.data } "
-  Log.d("Grovs", message)
+  Log.d("OpenGrow", message)
 }
 `;
 
-export const sdkReactNativeAppValue = `// Once configured, you can utilize the various functionalities provided by Grovs.
-import Grovs from 'react-native-grovs-wrapper';
+export const sdkReactNativeAppValue = `// Once configured, you can utilize the various functionalities provided by OpenGrow.
+import OpenGrow from '@mbzadev/opengrow-react-native';
 
 // You can receive deep link events by registering a listener. Here's how you can implement it:
-const listener = Grovs.onDeeplinkReceived((data) => {
+const listener = OpenGrow.onDeeplinkReceived((data) => {
 });
 
 // When you don't want to receive events anymore

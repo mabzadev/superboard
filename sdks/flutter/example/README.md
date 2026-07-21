@@ -1,6 +1,6 @@
-# grovs_example
+# opengrow_example
 
-Demonstrates how to use the grovs plugin.
+Demonstrates how to use the opengrow plugin.
 
 ## Getting Started
 
