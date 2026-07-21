@@ -734,8 +734,8 @@ public class OpenGrow: ActivityProvider {
                             DebugLogger.instance.log(LogLevel.INFO,"App NOT opened from deeplink.")
                         }
                     }
-                    if (!ignoredDuplicate) {
-                        lastLinkMatched = result?.link
+                    if (!ignoredDuplicate && result?.link != null) {
+                        lastLinkMatched = result.link
                         lastMatchedLinkWasDelivered = deliveredToListener
                     }
                 }
