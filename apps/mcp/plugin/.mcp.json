@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "grovs": {
+      "type": "http",
+      "url": "https://mcp.grovs.io/mcp"
+    }
+  }
+}
