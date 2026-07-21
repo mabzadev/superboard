@@ -318,7 +318,7 @@ public class OpenGrow: ActivityProvider {
     private var handleIntentConflict = false
     private var lastOnStartTime: Long = 0
     private var lastLinkMatched: String? = null
-    private var lastMatchedIntentWasExplicit = false
+    private var lastMatchedLinkWasDelivered = false
     private val defaultIntent = Intent()
 
     private var opengrowContext = OpenGrowContext()
@@ -704,33 +704,40 @@ public class OpenGrow: ActivityProvider {
 
     private fun handleIntent(intent: Intent?, delayEvents: Boolean, cacheIntent: Boolean = false) {
         val intent = intent ?: defaultIntent
-        val explicitIntent = intent.data != null
         opengrowManager?.let { opengrowManager ->
             (launcherActivityReference?.get() as? LifecycleOwner)?.let { lifecycleOwner ->
                 lifecycleOwner.lifecycleScope.launch(opengrowContext.serialDispatcher) {
                     authenticationJob?.join()
                     val result = opengrowManager.handleIntent(intent, delayEvents = delayEvents, cacheIntent = cacheIntent)
+                    var deliveredToListener = false
+                    var ignoredDuplicate = false
                     result?.let { deeplinkDetails ->
-                        deeplinkDetails.link?.let { link ->
+                        deeplinkDetails.link?.let {
                             if (
                                 handleIntentConflict &&
-                                lastMatchedIntentWasExplicit &&
+                                lastMatchedLinkWasDelivered &&
                                 lastLinkMatched == deeplinkDetails.link
                             ) {
                                 DebugLogger.instance.log(LogLevel.INFO,"Ignoring double intent handling.")
                                 handleIntentConflict = false
+                                ignoredDuplicate = true
                             } else {
                                 withContext(Dispatchers.Main) {
                                     openedLinkDetails = deeplinkDetails
-                                    deeplinkListener?.onDeeplinkReceived(deeplinkDetails)
+                                    deeplinkListener?.let { listener ->
+                                        deliveredToListener = true
+                                        listener.onDeeplinkReceived(deeplinkDetails)
+                                    }
                                 }
                             }
                         } ?: run {
                             DebugLogger.instance.log(LogLevel.INFO,"App NOT opened from deeplink.")
                         }
                     }
-                    lastLinkMatched = result?.link
-                    lastMatchedIntentWasExplicit = explicitIntent && result?.link != null
+                    if (!ignoredDuplicate) {
+                        lastLinkMatched = result?.link
+                        lastMatchedLinkWasDelivered = deliveredToListener
+                    }
                 }
             } ?: run {
                 DebugLogger.instance.log(LogLevel.ERROR,"The SDK is not properly configured. Call OpenGrow.configure(application: Application, apiKey: String) first.")
