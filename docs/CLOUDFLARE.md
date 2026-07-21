@@ -50,8 +50,9 @@ in Worker secrets; build variables are not runtime secrets.
 1. Provision staging idempotently and deploy both staging Workers.
 2. Apply migrations and run purchase, restore, OAuth, dashboard, queue and data
    isolation tests against `workers.dev` previews.
-3. Generate production configs with `--no-routes`, deploy both new Workers, upload
-   their runtime secrets, and run direct Worker health checks.
+3. Deploy both new Workers with `--preflight`. This omits custom domains, API queue
+   consumers and API cron triggers while keeping direct `workers.dev` health checks
+   available. Upload their runtime secrets and validate them directly.
 4. Export production D1, rotate dashboard OAuth, then deploy the production API
    config with routes and queue consumers.
 5. Deploy the dashboard production config with `grow.vocostar.com`.
