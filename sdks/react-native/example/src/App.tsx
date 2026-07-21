@@ -7,11 +7,11 @@ import {
   Button,
   Clipboard,
 } from 'react-native';
-import Grovs from 'react-native-grovs-wrapper';
+import OpenGrow from '@mbzadev/opengrow-react-native';
 import { useEffect, useState } from 'react';
 
-Grovs.setIdentifier('React native id');
-Grovs.setAttributes({
+OpenGrow.setIdentifier('React native id');
+OpenGrow.setAttributes({
   'string': 'string value',
   'boolean': true,
   'number': 13,
@@ -23,7 +23,7 @@ export default function App() {
   useEffect(() => {
     fetchUnreadMessages();
 
-    const listener = Grovs.onDeeplinkReceived((data) => {
+    const listener = OpenGrow.onDeeplinkReceived((data) => {
       console.log(`Opened link data: ${JSON.stringify(data)}`);
       setLabel1(`Opened link data: ${JSON.stringify(data)}`);
     });
@@ -43,7 +43,7 @@ export default function App() {
   };
 
   const handleShowNotificationsPress = () => {
-    Grovs.displayMessages();
+    OpenGrow.displayMessages();
   };
 
   const copyToClipboard = (text: string) => {
@@ -53,7 +53,7 @@ export default function App() {
 
   async function generateLink() {
     try {
-      const link = await Grovs.generateLink(
+      const link = await OpenGrow.generateLink(
         'Test link',
         'Test subtitle',
         undefined,
@@ -61,15 +61,15 @@ export default function App() {
         undefined,
         {
           android: {
-            link: 'https://www.grovs.io/android',
+            link: 'https://www.opengrow.io/android',
             open_if_app_installed: true,
           },
           ios: {
-            link: 'https://www.grovs.io/ios',
+            link: 'https://www.opengrow.io/ios',
             open_if_app_installed: true,
           },
           desktop: {
-            link: 'https://www.grovs.io/desktop',
+            link: 'https://www.opengrow.io/desktop',
             open_if_app_installed: true,
           },
         },
@@ -90,7 +90,7 @@ export default function App() {
 
   async function handleLogInAppPurchase() {
     try {
-      const success = await Grovs.logInAppPurchase('123456789');
+      const success = await OpenGrow.logInAppPurchase('123456789');
       setLabel4(`In-app purchase: ${success}`);
       console.log('In-app purchase tracked:', success);
     } catch (error) {
@@ -101,7 +101,7 @@ export default function App() {
 
   async function handleLogCustomPurchase() {
     try {
-      const success = await Grovs.logCustomPurchase(
+      const success = await OpenGrow.logCustomPurchase(
         'buy',
         999,
         'USD',
@@ -117,7 +117,7 @@ export default function App() {
 
   async function fetchUnreadMessages() {
     try {
-      const unreadCount = await Grovs.numberOfUnreadMessages();
+      const unreadCount = await OpenGrow.numberOfUnreadMessages();
       console.log(`Unread messages: ${unreadCount}`);
       setLabel3(`Unread messages: ${unreadCount}`);
     } catch (error) {

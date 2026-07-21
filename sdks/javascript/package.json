@@ -1,19 +1,27 @@
 {
-  "name": "grovs",
-  "version": "1.0.1",
-  "description": "Grovs generates dynamic links, tracks attributions, and analyzes referrals, seamlessly directing users to your app or the app store for downloads.",
-  "main": "dist/grovs.js",
+  "name": "@mbzadev/opengrow-js",
+  "version": "1.0.0",
+  "description": "OpenGrow generates dynamic links, tracks attributions, and analyzes referrals, seamlessly directing users to your app or the app store for downloads.",
+  "main": "dist/opengrow.js",
   "scripts": {
     "start": "webpack-dev-server --open",
     "build": "webpack"
   },
   "keywords": [
-    "grovs",
+    "opengrow",
     "javascript",
     "library"
   ],
-  "author": "Grovs",
+  "author": "OpenGrow",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mbzadev/opengrow.git",
+    "directory": "sdks/javascript"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "devDependencies": {
     "copy-webpack-plugin": "^12.0.2",
     "webpack": "^5.0.0",

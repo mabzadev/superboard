@@ -7,15 +7,15 @@ import type {
   Tracking,
   TransactionType,
   Any,
-} from './NativeGrovsWrapper';
+} from './NativeOpenGrowWrapper';
 import { log } from './Logger';
 
-const LINKING_ERROR = `The package 'react-native-grovs-wrapper' doesn't seem to be linked. Make sure you properly integrated the native bindings.`;
+const LINKING_ERROR = `The package '@mbzadev/opengrow-react-native' doesn't seem to be linked. Make sure you properly integrated the native bindings.`;
 
 // Feature detection for Turbo Modules
 const isTurboModuleEnabled = (global as any).RN$Bridgeless === true;
 
-interface GrovsWrapperInterface {
+interface OpenGrowWrapperInterface {
   setIdentifier(identifier?: string): void;
   setPushToken(pushToken?: string): void;
   setAttributes(attributes?: { [key: string]: Any }): void;
@@ -73,37 +73,37 @@ function hasAddDeeplinkListener(
   );
 }
 
-let GrovsWrapperModule: GrovsWrapperInterface;
+let OpenGrowWrapperModule: OpenGrowWrapperInterface;
 
 if (isTurboModuleEnabled) {
   try {
     // Try to import Turbo Module
-    GrovsWrapperModule = require('./NativeGrovsWrapper').default;
+    OpenGrowWrapperModule = require('./NativeOpenGrowWrapper').default;
     log('info', 'Turbo modules enabled - using Turbo modules');
   } catch (e) {
     log(
       'info',
       'Turbo modules enabled but not available - falling back to legacy bridge'
     );
-    GrovsWrapperModule = NativeModules.GrovsWrapper;
+    OpenGrowWrapperModule = NativeModules.OpenGrowWrapper;
   }
 } else {
   // Use legacy bridge
-  GrovsWrapperModule = NativeModules.GrovsWrapper;
+  OpenGrowWrapperModule = NativeModules.OpenGrowWrapper;
   log('info', 'Turbo modules disabled - falling back to legacy bridge');
 }
 
-if (!GrovsWrapperModule) {
+if (!OpenGrowWrapperModule) {
   log('error', LINKING_ERROR);
   throw new Error(LINKING_ERROR);
 }
 
-class GrovsWrapper implements GrovsWrapperInterface {
-  private module: GrovsWrapperInterface;
+class OpenGrowWrapper implements OpenGrowWrapperInterface {
+  private module: OpenGrowWrapperInterface;
   private listeners: Set<(data: DeeplinkResponse) => void> = new Set();
 
   constructor() {
-    this.module = GrovsWrapperModule;
+    this.module = OpenGrowWrapperModule;
 
     if (hasAddDeeplinkListener(this.module)) {
       log(
@@ -113,13 +113,13 @@ class GrovsWrapper implements GrovsWrapperInterface {
       this.module.addDeeplinkListener();
     }
 
-    if (NativeModules.GrovsWrapper) {
+    if (NativeModules.OpenGrowWrapper) {
       log(
         'info',
-        'Has NativeModules.GrovsWrapper - registering adding event listener'
+        'Has NativeModules.OpenGrowWrapper - registering adding event listener'
       );
-      const emitter = new NativeEventEmitter(NativeModules.GrovsWrapper);
-      emitter.addListener('onGrovsDeeplinkReceived', (data) => {
+      const emitter = new NativeEventEmitter(NativeModules.OpenGrowWrapper);
+      emitter.addListener('onOpenGrowDeeplinkReceived', (data) => {
         this.triggerDeeplink(data);
       });
     }
@@ -301,10 +301,10 @@ class GrovsWrapper implements GrovsWrapperInterface {
 }
 
 // Export singleton instance
-export default new GrovsWrapper();
+export default new OpenGrowWrapper();
 
 // Also export class for advanced usage
-export { GrovsWrapper };
+export { OpenGrowWrapper };
 
 // Export types for TypeScript users
 export type {
@@ -315,4 +315,4 @@ export type {
   CustomLinkRedirect,
   CustomRedirects,
   TransactionType,
-} from './NativeGrovsWrapper';
+} from './NativeOpenGrowWrapper';

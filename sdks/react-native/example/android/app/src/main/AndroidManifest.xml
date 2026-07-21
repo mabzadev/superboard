@@ -24,7 +24,7 @@
 
         <!-- TODO: Replace this with your links -->
         <intent-filter>
-            <data android:scheme="grovst5abed1b0fdf8" android:host="open" />
+            <data android:scheme="opengrowt5abed1b0fdf8" android:host="open" />
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
             <category android:name="android.intent.category.BROWSABLE" />

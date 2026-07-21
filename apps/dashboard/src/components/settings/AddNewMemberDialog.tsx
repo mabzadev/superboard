@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ChangeEvent } from "react";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -38,9 +38,17 @@ const AddNewMemberDialog = ({
     mode: "onChange",
   });
 
-  const email = form.watch("email");
+  const email = form.watch("email") ?? "";
   const role = form.watch("role");
   const isEmailFieldValid = !form.formState.errors.email && email.length > 0;
+
+  const handleEmailChange = (event: ChangeEvent<HTMLInputElement>) => {
+    form.setValue("email", event.target.value, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
 
   useEffect(() => {
     if (!open) {
@@ -84,12 +92,15 @@ const AddNewMemberDialog = ({
                     className={cn(
                       "pr-10 transition-all",
                       isEmailFieldValid
-                        ? "border-valid-green/30 ring-[2px] ring-valid-green/5"
+                        ? "border-valid-green ring-[2px] ring-valid-green/5"
                         : ""
                     )}
                     placeholder="Email address"
                     aria-label="Member email address"
-                    {...form.register("email")}
+                    name="email"
+                    value={email}
+                    onChange={handleEmailChange}
+                    onBlur={() => form.trigger("email")}
                   />
                   {isEmailFieldValid && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center h-5 w-5 rounded-full bg-valid-green-light">

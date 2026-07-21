@@ -1,3 +1,0 @@
-:concurrency: 40
-:queues:
-  - [events, 100]

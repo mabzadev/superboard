@@ -77,13 +77,14 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "grovswrapper.example"
+    namespace "opengrowwrapper.example"
     defaultConfig {
-        applicationId "io.grovs.example"
+        applicationId "io.opengrow.example"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        buildConfigField "String", "OPENGROW_API_KEY", "\"${System.getenv('OPENGROW_API_KEY') ?: ''}\""
     }
     // signingConfigs {
     //     debug {
@@ -117,7 +118,7 @@ dependencies {
         implementation jscFlavor
     }
 
-    implementation 'io.grovs:Grovs:1.1.0'
+    implementation 'io.opengrow:OpenGrow:1.1.0'
 }
 
 repositories {

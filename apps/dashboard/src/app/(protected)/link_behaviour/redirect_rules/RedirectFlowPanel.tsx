@@ -225,7 +225,7 @@ function DesktopFlow({
       <Node>
         <div className="flex items-center gap-1.5">
           <QrCode className="h-3 w-3 text-muted-foreground shrink-0" />
-          Grovs page
+          OpenGrow page
         </div>
       </Node>
     );
@@ -399,7 +399,7 @@ const RedirectFlowPanel = ({
               label="Desktops & Laptops"
               description={
                 desktopGeneratedPage
-                  ? "Link shows Grovs landing page"
+                  ? "Link shows OpenGrow landing page"
                   : "Link redirects to a web URL"
               }
             >

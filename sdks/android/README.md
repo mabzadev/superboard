@@ -1,39 +1,39 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
+    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
+    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/grovs-io/grovs-Android/releases"><img src="https://img.shields.io/github/v/release/grovs-io/grovs-Android?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://central.sonatype.com/artifact/io.grovs/Grovs"><img src="https://img.shields.io/maven-central/v/io.grovs/Grovs?style=flat-square&color=4F46E5&label=maven%20central" alt="Maven Central"/></a>
+  <a href="https://github.com/mbzadev/opengrow-Android/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-Android?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://central.sonatype.com/artifact/io.opengrow/OpenGrow"><img src="https://img.shields.io/maven-central/v/io.opengrow/OpenGrow?style=flat-square&color=4F46E5&label=maven%20central" alt="Maven Central"/></a>
   <a href="#"><img src="https://img.shields.io/badge/API-21%2B-4F46E5?style=flat-square" alt="API 21+"/></a>
   <a href="#"><img src="https://img.shields.io/badge/kotlin-1.9%2B-4F46E5?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/grovs-Android?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/grovs-io/grovs-Android/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/grovs-Android?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-Android?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow-Android/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-Android?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for Android.<br/>
-  Part of the <a href="https://github.com/grovs-io">Grovs</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mbzadev">OpenGrow</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://docs.grovs.io/docs/sdk/android/quick-start">Quick Start</a> ·
-  <a href="https://docs.grovs.io/docs/sdk/android/api-reference">API Reference</a> ·
-  <a href="https://docs.grovs.io">Full Docs</a>
+  <a href="https://docs.opengrow.io/docs/sdk/android/quick-start">Quick Start</a> ·
+  <a href="https://docs.opengrow.io/docs/sdk/android/api-reference">API Reference</a> ·
+  <a href="https://docs.opengrow.io">Full Docs</a>
 </p>
 
 ---
 
-The Grovs Android SDK provides deep linking, app links, link generation, in-app messaging, revenue tracking, and attribution for your Android apps. It supports both Kotlin and Java.
+The OpenGrow Android SDK provides deep linking, app links, link generation, in-app messaging, revenue tracking, and attribution for your Android apps. It supports both Kotlin and Java.
 
 ## Features
 
 - **Deep linking & app links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the Grovs dashboard
+- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages via Firebase Cloud Messaging
 - **Revenue tracking** — log Google Play Billing and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -49,11 +49,11 @@ The Grovs Android SDK provides deep linking, app links, link generation, in-app 
 
 ### Gradle
 
-Add the Grovs dependency to your app-level `build.gradle`:
+Add the OpenGrow dependency to your app-level `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation("io.grovs:Grovs:1.1.1")
+    implementation("io.opengrow:OpenGrow:1.1.1")
 }
 ```
 
@@ -64,19 +64,19 @@ dependencies {
 Configure the SDK in your `Application` class:
 
 ```kotlin
-import io.grovs.Grovs
+import io.opengrow.OpenGrow
 
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        Grovs.configure(this, "your-api-key", useTestEnvironment = false)
+        OpenGrow.configure(this, "your-api-key", useTestEnvironment = false)
 
         // Optional: enable debug logging
-        Grovs.setDebug(LogLevel.INFO)
+        OpenGrow.setDebug(LogLevel.INFO)
 
         // Optional: set user identity for analytics
-        Grovs.identifier = "user_id_from_your_app"
-        Grovs.attributes = mapOf("name" to "John Doe", "plan" to "premium")
+        OpenGrow.identifier = "user_id_from_your_app"
+        OpenGrow.attributes = mapOf("name" to "John Doe", "plan" to "premium")
     }
 }
 ```
@@ -84,7 +84,7 @@ class MyApplication : Application() {
 For self-hosted backends, pass the `baseURL` parameter (domain only — the SDK appends the API path):
 
 ```kotlin
-Grovs.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
+OpenGrow.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
 ```
 
 ### 2. Forward lifecycle events
@@ -95,12 +95,12 @@ In your **launcher activity**, forward lifecycle events to the SDK:
 class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
-        Grovs.onStart(this)
+        OpenGrow.onStart(this)
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        Grovs.onNewIntent(intent, this)
+        OpenGrow.onNewIntent(intent, this)
     }
 }
 ```
@@ -140,7 +140,7 @@ Add these intent filters to your launcher activity in `AndroidManifest.xml`:
 Register a listener in your launcher activity to receive deep link events:
 
 ```kotlin
-Grovs.setOnDeeplinkReceivedListener(this) { deeplinkDetails ->
+OpenGrow.setOnDeeplinkReceivedListener(this) { deeplinkDetails ->
     // Route the user based on payload data
     val link = deeplinkDetails.link
     val payload = deeplinkDetails.data
@@ -156,9 +156,9 @@ Or use Kotlin Flow for a coroutine-based approach:
 
 ```kotlin
 lifecycleScope.launch {
-    Grovs.Companion::openedLinkDetails.flow.collect { deeplinkDetails ->
+    OpenGrow.Companion::openedLinkDetails.flow.collect { deeplinkDetails ->
         deeplinkDetails?.let {
-            Log.d("Grovs", "Link: ${it.link}, data: ${it.data}")
+            Log.d("OpenGrow", "Link: ${it.link}, data: ${it.data}")
         }
     }
 }
@@ -168,12 +168,12 @@ You can also retrieve details for a specific link path:
 
 ```kotlin
 // Using a callback
-Grovs.linkDetails(path = "/my-link-path", lifecycleOwner = this) { details, error ->
-    details?.let { Log.d("Grovs", "Details: $it") }
+OpenGrow.linkDetails(path = "/my-link-path", lifecycleOwner = this) { details, error ->
+    details?.let { Log.d("OpenGrow", "Details: $it") }
 }
 
 // Using coroutines
-val details = Grovs.linkDetails(path = "/my-link-path")
+val details = OpenGrow.linkDetails(path = "/my-link-path")
 ```
 
 ## Link Generation
@@ -181,7 +181,7 @@ val details = Grovs.linkDetails(path = "/my-link-path")
 Create smart links with metadata, payload data, and tracking parameters:
 
 ```kotlin
-Grovs.generateLink(
+OpenGrow.generateLink(
     title = "Check out this product",
     subtitle = "Limited time offer",
     imageURL = "https://example.com/image.jpg",
@@ -194,8 +194,8 @@ Grovs.generateLink(
     ),
     lifecycleOwner = this,
     listener = { link, error ->
-        link?.let { Log.d("Grovs", "Generated: $it") }
-        error?.let { Log.e("Grovs", "Error: $it") }
+        link?.let { Log.d("OpenGrow", "Generated: $it") }
+        error?.let { Log.e("OpenGrow", "Error: $it") }
     }
 )
 ```
@@ -205,7 +205,7 @@ Or using coroutines:
 ```kotlin
 lifecycleScope.launch {
     try {
-        val link = Grovs.generateLink(
+        val link = OpenGrow.generateLink(
             title = "Check out this product",
             subtitle = "Limited time offer",
             imageURL = "https://example.com/image.jpg",
@@ -217,9 +217,9 @@ lifecycleScope.launch {
                 utmMedium = "share_button"
             )
         )
-        Log.d("Grovs", "Generated: $link")
-    } catch (e: GrovsException) {
-        Log.e("Grovs", "Error: ${e.message}")
+        Log.d("OpenGrow", "Generated: $link")
+    } catch (e: OpenGrowException) {
+        Log.e("OpenGrow", "Error: ${e.message}")
     }
 }
 ```
@@ -235,13 +235,13 @@ val redirects = CustomRedirects(
     desktop = CustomLinkRedirect(link = "https://example.com/desktop-promo", openAppIfInstalled = false)
 )
 
-Grovs.generateLink(
+OpenGrow.generateLink(
     title = "Special offer",
     data = mapOf("promoId" to "summer25"),
     customRedirects = redirects,
     lifecycleOwner = this,
     listener = { link, error ->
-        link?.let { Log.d("Grovs", "Generated: $it") }
+        link?.let { Log.d("OpenGrow", "Generated: $it") }
     }
 )
 ```
@@ -251,7 +251,7 @@ Grovs.generateLink(
 Launch a share intent after generating a link:
 
 ```kotlin
-Grovs.generateLink(
+OpenGrow.generateLink(
     title = "Share this",
     data = mapOf("itemId" to "abc"),
     lifecycleOwner = this,
@@ -274,7 +274,7 @@ Grovs.generateLink(
 
 ### Push notifications
 
-To receive push notifications for messages sent from the Grovs dashboard:
+To receive push notifications for messages sent from the OpenGrow dashboard:
 
 **1. Add Firebase Cloud Messaging** — If your app doesn't already use Firebase, add your app in the [Firebase Console](https://console.firebase.google.com), download `google-services.json`, and add the dependencies:
 
@@ -295,7 +295,7 @@ dependencies {
 }
 ```
 
-**2. Upload your Firebase credentials** — In the [Firebase Console](https://console.firebase.google.com), go to **Project Settings → Service Accounts** and generate a new private key. Upload the JSON key file and enter your Firebase Project ID in the [Grovs dashboard](https://app.grovs.io) under **Android Setup → Push Notifications**.
+**2. Upload your Firebase credentials** — In the [Firebase Console](https://console.firebase.google.com), go to **Project Settings → Service Accounts** and generate a new private key. Upload the JSON key file and enter your Firebase Project ID in the [OpenGrow dashboard](https://app.opengrow.io) under **Android Setup → Push Notifications**.
 
 **3. Request notification permission** (Android 13+):
 
@@ -314,11 +314,11 @@ Add to your `AndroidManifest.xml`:
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 ```
 
-**4. Pass the FCM token to Grovs:**
+**4. Pass the FCM token to OpenGrow:**
 
 ```kotlin
 FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-    Grovs.pushToken = token
+    OpenGrow.pushToken = token
 }
 ```
 
@@ -328,7 +328,7 @@ Also update the token when it refreshes:
 class MyMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Grovs.pushToken = token
+        OpenGrow.pushToken = token
     }
 }
 ```
@@ -351,14 +351,14 @@ Register the service in `AndroidManifest.xml`:
 
 ```kotlin
 // Show the messages list as a modal fragment
-Grovs.displayMessagesFragment {
+OpenGrow.displayMessagesFragment {
     // Fragment was dismissed
 }
 
 // Get unread count for badges
 lifecycleScope.launch {
-    val count = Grovs.numberOfUnreadMessages()
-    Log.d("Grovs", "Unread: $count")
+    val count = OpenGrow.numberOfUnreadMessages()
+    Log.d("OpenGrow", "Unread: $count")
 }
 ```
 
@@ -368,8 +368,8 @@ lifecycleScope.launch {
 
 ### Setup
 
-1. Enable revenue tracking in the [Grovs dashboard](https://app.grovs.io) under **Settings → Revenue Tracking**
-2. Configure Google Play Real-Time Developer Notifications — the Grovs dashboard provides an automated setup script under **Developers → Android Setup → Revenue**, or you can configure Pub/Sub manually
+1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
+2. Configure Google Play Real-Time Developer Notifications — the OpenGrow dashboard provides an automated setup script under **Developers → Android Setup → Revenue**, or you can configure Pub/Sub manually
 
 ### Google Play purchases
 
@@ -378,7 +378,7 @@ lifecycleScope.launch {
 override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
     if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
         for (purchase in purchases) {
-            Grovs.logInAppPurchase(purchase.originalJson)
+            OpenGrow.logInAppPurchase(purchase.originalJson)
         }
     }
 }
@@ -389,7 +389,7 @@ override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Pu
 ### Custom purchases
 
 ```kotlin
-Grovs.logCustomPurchase(
+OpenGrow.logCustomPurchase(
     type = PaymentEventType.BUY,
     priceInCents = 999,       // $9.99
     currency = "USD",
@@ -428,31 +428,31 @@ Use `CANCELLATION` and `REFUND` payment event types for cancellations and refund
 | `logInAppPurchase(originalJson)` | Log a Google Play Billing purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [docs.grovs.io/docs/sdk/android/api-reference](https://docs.grovs.io/docs/sdk/android/api-reference)
+Full API reference: [docs.opengrow.io/docs/sdk/android/api-reference](https://docs.opengrow.io/docs/sdk/android/api-reference)
 
 ## Example App
 
-A demo project is available at [grovs-io/grovs-android-example-app](https://github.com/grovs-io/grovs-android-example-app).
+A demo project is available at [mbzadev/opengrow-android-example-app](https://github.com/mbzadev/opengrow-android-example-app).
 
 ## Setup Guides
 
-- [Adding a Gradle Dependency](https://docs.grovs.io/docs/how-to-guides/android/gradle) — add the SDK to your project
-- [Getting the Package Name](https://docs.grovs.io/docs/how-to-guides/android/package-name) — find your application ID
-- [Getting the SHA-256 Fingerprint](https://docs.grovs.io/docs/how-to-guides/android/sha256-fingerprint) — get your signing certificate fingerprint
-- [Adding an Intent Filter](https://docs.grovs.io/docs/how-to-guides/android/intent-filter) — set up deep link intent filters
+- [Adding a Gradle Dependency](https://docs.opengrow.io/docs/how-to-guides/android/gradle) — add the SDK to your project
+- [Getting the Package Name](https://docs.opengrow.io/docs/how-to-guides/android/package-name) — find your application ID
+- [Getting the SHA-256 Fingerprint](https://docs.opengrow.io/docs/how-to-guides/android/sha256-fingerprint) — get your signing certificate fingerprint
+- [Adding an Intent Filter](https://docs.opengrow.io/docs/how-to-guides/android/intent-filter) — set up deep link intent filters
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.grovs.io/docs/migration-guides/firebase-dynamic-links/android)
-- [Migrate from Branch.io](https://docs.grovs.io/docs/migration-guides/branch-io/android)
+- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/android)
+- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/android)
 
 ## Documentation
 
-Full documentation at [docs.grovs.io](https://docs.grovs.io).
+Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
 
 ## Support
 
-For technical support and inquiries, contact [support@grovs.io](mailto:support@grovs.io).
+For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
 
 ## License
 

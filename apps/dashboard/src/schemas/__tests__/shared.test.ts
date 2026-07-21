@@ -72,7 +72,7 @@ describe("httpUrlSchema", () => {
 describe("bundleIdSchema", () => {
   it("accepts valid bundle IDs", () => {
     expect(bundleIdSchema.safeParse("com.example.app").success).toBe(true);
-    expect(bundleIdSchema.safeParse("io.grovs.test").success).toBe(true);
+    expect(bundleIdSchema.safeParse("io.opengrow.test").success).toBe(true);
     expect(bundleIdSchema.safeParse("MyApp").success).toBe(true);
   });
 

@@ -1,11 +1,11 @@
-export const integrateWebSdkValue = `import Grovs from 'grovs';
-const APIKey = "_GROVS_API_KEY_"
-const grovs = new Grovs(APIKey, (data) => {
+export const integrateWebSdkValue = `import OpenGrow from 'opengrow';
+const APIKey = "_OPENGROW_API_KEY_"
+const opengrow = new OpenGrow(APIKey, (data) => {
 })
 
 // Start the SDK
-grovs.start();
+opengrow.start();
 
 // Set the user attributes
-grovs.setUserIdentifier('YOUR_USER_ID');
-grovs.setUserAttributes({ KEY: VALUE });`;
+opengrow.setUserIdentifier('YOUR_USER_ID');
+opengrow.setUserAttributes({ KEY: VALUE });`;

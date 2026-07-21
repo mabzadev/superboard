@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -22,18 +23,18 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Grovs",
-    template: "%s | Grovs",
+    default: "OpenGrow",
+    template: "%s | OpenGrow",
   },
   description:
     "SaaS dashboard for mobile app growth — deep links, messaging campaigns, revenue tracking, and audience analytics.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://app.grovs.io"
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://app.opengrow.io"
   ),
   openGraph: {
     type: "website",
-    siteName: "Grovs",
-    title: "Grovs — App Growth. Solved",
+    siteName: "OpenGrow",
+    title: "OpenGrow — App Growth. Solved",
     description:
       "Deep links, messaging campaigns, revenue tracking, and audience analytics for mobile apps.",
   },

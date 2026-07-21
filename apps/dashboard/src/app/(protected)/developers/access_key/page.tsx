@@ -29,7 +29,7 @@ const AccessKeyPage = () => {
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-semibold">Access Key</span>
                     <span className="text-xs text-muted-foreground leading-snug">
-                      Use this key to authenticate with the grovs SDK. Only
+                      Use this key to authenticate with the opengrow SDK. Only
                       share it with developers.
                     </span>
                   </div>

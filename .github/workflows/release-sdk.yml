@@ -1,0 +1,103 @@
+name: Release private SDK
+
+on:
+  push:
+    tags:
+      - flutter-v*
+      - flutterflow-v*
+      - ios-v*
+      - android-v*
+      - js-v*
+      - react-native-v*
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      sdk: ${{ steps.tag.outputs.sdk }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - id: tag
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          sdk="${tag%-v*}"
+          version="${tag#*-v}"
+          test "$version" = "1.0.0" || [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
+          echo "sdk=$sdk" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  flutter:
+    if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow'
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get && flutter analyze && flutter test
+        working-directory: sdks/${{ needs.validate-tag.outputs.sdk }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(needs.validate-tag.outputs.version, '-') }}
+
+  ios:
+    if: needs.validate-tag.outputs.sdk == 'ios'
+    needs: validate-tag
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -workspace sdks/ios/.swiftpm/xcode/package.xcworkspace -scheme OpenGrow -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+
+  android:
+    if: needs.validate-tag.outputs.sdk == 'android'
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: ./gradlew :OpenGrow:testDebugUnitTest :OpenGrow:publishReleasePublicationToGithubPackagesPrivateRepository -PlibraryVersion=${{ needs.validate-tag.outputs.version }}
+        working-directory: sdks/android/OpenGrow
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+
+  npm:
+    if: needs.validate-tag.outputs.sdk == 'js' || needs.validate-tag.outputs.sdk == 'react-native'
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: '@mbzadev'
+      - run: npm ci && npm run build
+        if: needs.validate-tag.outputs.sdk == 'js'
+        working-directory: sdks/javascript
+      - run: corepack enable && yarn install --immutable && yarn prepare
+        if: needs.validate-tag.outputs.sdk == 'react-native'
+        working-directory: sdks/react-native
+      - run: npm version ${{ needs.validate-tag.outputs.version }} --no-git-tag-version && npm publish
+        working-directory: sdks/${{ needs.validate-tag.outputs.sdk == 'js' && 'javascript' || 'react-native' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

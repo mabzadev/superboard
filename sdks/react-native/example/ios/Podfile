@@ -17,7 +17,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'GrovsWrapperExample' do
+target 'OpenGrowWrapperExample' do
   config = use_native_modules!
   
   use_react_native!(

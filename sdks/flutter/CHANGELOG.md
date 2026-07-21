@@ -1,3 +1,10 @@
+## 1.2.0
+
+* Added server-verified StoreKit 2 and Google Play purchases
+* Added offerings, packages, entitlements, and signed customer information
+* Added login/logout, restore, sync, offline cache, and customer info stream
+* Added explicit purchased, cancelled, pending, and failed outcomes
+
 ## 1.1.0
 
 * Added custom base URL support via Info.plist (iOS) and AndroidManifest.xml (Android)
@@ -15,7 +22,7 @@
 
 ## 1.0.0
 
-* Initial release of Grovs Flutter Plugin
+* Initial release of OpenGrow Flutter Plugin
 * Deep linking support for iOS and Android
 * Link generation with custom redirects and tracking parameters
 * UTM campaign tracking (utm_campaign, utm_source, utm_medium)

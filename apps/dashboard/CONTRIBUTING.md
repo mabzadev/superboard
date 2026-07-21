@@ -1,8 +1,8 @@
-# Contributing to Grovs
+# Contributing to OpenGrow
 
 ## Setup
 
-1. Fork and clone the repo (`grovs-io/dashboard`)
+1. Fork and clone the repo (`mbzadev/dashboard`)
 2. `npm install`
 3. `cp .env.example .env.local` and configure
 4. `npm run dev`

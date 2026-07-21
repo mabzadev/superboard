@@ -37,7 +37,7 @@ test.describe("Create Link", () => {
               id: "new-link-001",
               name: "New Test Link",
               path: "random-path-123",
-              url: "https://test.grovs.io/random-path-123",
+              url: "https://test.opengrow.io/random-path-123",
             },
           }),
         });

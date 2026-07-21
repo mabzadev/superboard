@@ -22,7 +22,7 @@ jest.mock('react-native', () => {
 
   return {
     NativeModules: {
-      GrovsWrapper: {
+      OpenGrowWrapper: {
         setIdentifier: mockSetIdentifier,
         setPushToken: mockSetPushToken,
         setAttributes: mockSetAttributes,
@@ -48,50 +48,50 @@ jest.mock('react-native', () => {
 (global as any).RN$Bridgeless = false;
 
 // Must import after mocks are set up
-let Grovs: typeof import('../../src/index').default;
-let GrovsWrapper: typeof import('../../src/index').GrovsWrapper;
+let OpenGrow: typeof import('../../src/index').default;
+let OpenGrowWrapper: typeof import('../../src/index').OpenGrowWrapper;
 
 beforeAll(() => {
   const mod = require('../index');
-  Grovs = mod.default;
-  GrovsWrapper = mod.GrovsWrapper;
+  OpenGrow = mod.default;
+  OpenGrowWrapper = mod.OpenGrowWrapper;
 });
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('GrovsWrapper', () => {
+describe('OpenGrowWrapper', () => {
   describe('exports', () => {
     it('exports a default singleton instance', () => {
-      expect(Grovs).toBeDefined();
+      expect(OpenGrow).toBeDefined();
     });
 
-    it('exports the GrovsWrapper class', () => {
-      expect(GrovsWrapper).toBeDefined();
+    it('exports the OpenGrowWrapper class', () => {
+      expect(OpenGrowWrapper).toBeDefined();
     });
   });
 
   describe('setIdentifier', () => {
     it('forwards identifier to native module', () => {
-      Grovs.setIdentifier('user-123');
+      OpenGrow.setIdentifier('user-123');
       expect(mockSetIdentifier).toHaveBeenCalledWith('user-123');
     });
 
     it('forwards undefined when no identifier provided', () => {
-      Grovs.setIdentifier();
+      OpenGrow.setIdentifier();
       expect(mockSetIdentifier).toHaveBeenCalledWith(undefined);
     });
   });
 
   describe('setPushToken', () => {
     it('forwards push token to native module', () => {
-      Grovs.setPushToken('fcm-token-abc');
+      OpenGrow.setPushToken('fcm-token-abc');
       expect(mockSetPushToken).toHaveBeenCalledWith('fcm-token-abc');
     });
 
     it('forwards undefined when no token provided', () => {
-      Grovs.setPushToken();
+      OpenGrow.setPushToken();
       expect(mockSetPushToken).toHaveBeenCalledWith(undefined);
     });
   });
@@ -99,49 +99,49 @@ describe('GrovsWrapper', () => {
   describe('setAttributes', () => {
     it('forwards attributes to native module', () => {
       const attrs = { name: 'John', age: 30, premium: true };
-      Grovs.setAttributes(attrs);
+      OpenGrow.setAttributes(attrs);
       expect(mockSetAttributes).toHaveBeenCalledWith(attrs);
     });
 
     it('handles array values in attributes', () => {
       const attrs = { tags: ['a', 'b', 'c'] };
-      Grovs.setAttributes(attrs);
+      OpenGrow.setAttributes(attrs);
       expect(mockSetAttributes).toHaveBeenCalledWith(attrs);
     });
 
     it('forwards undefined when no attributes provided', () => {
-      Grovs.setAttributes();
+      OpenGrow.setAttributes();
       expect(mockSetAttributes).toHaveBeenCalledWith(undefined);
     });
   });
 
   describe('setSDK', () => {
     it('enables SDK', () => {
-      Grovs.setSDK(true);
+      OpenGrow.setSDK(true);
       expect(mockSetSDK).toHaveBeenCalledWith(true);
     });
 
     it('disables SDK', () => {
-      Grovs.setSDK(false);
+      OpenGrow.setSDK(false);
       expect(mockSetSDK).toHaveBeenCalledWith(false);
     });
   });
 
   describe('setDebug', () => {
     it('sets info log level', () => {
-      Grovs.setDebug('info');
+      OpenGrow.setDebug('info');
       expect(mockSetDebug).toHaveBeenCalledWith('info');
     });
 
     it('sets error log level', () => {
-      Grovs.setDebug('error');
+      OpenGrow.setDebug('error');
       expect(mockSetDebug).toHaveBeenCalledWith('error');
     });
   });
 
   describe('generateLink', () => {
     it('generates a link with all parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://grovs.io/abc123');
+      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/opengrow/abc123');
 
       const customRedirects = {
         ios: { link: 'https://ios.example.com', open_if_app_installed: true },
@@ -160,7 +160,7 @@ describe('GrovsWrapper', () => {
         utm_campaign: 'launch',
       };
 
-      const link = await Grovs.generateLink(
+      const link = await OpenGrow.generateLink(
         'Title',
         'Subtitle',
         'https://img.example.com/pic.png',
@@ -172,7 +172,7 @@ describe('GrovsWrapper', () => {
         tracking
       );
 
-      expect(link).toBe('https://grovs.io/abc123');
+      expect(link).toBe('https://github.com/mbzadev/opengrow/abc123');
       expect(mockGenerateLink).toHaveBeenCalledWith(
         'Title',
         'Subtitle',
@@ -187,16 +187,16 @@ describe('GrovsWrapper', () => {
     });
 
     it('generates a link with minimal parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://grovs.io/minimal');
+      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/opengrow/minimal');
 
-      const link = await Grovs.generateLink('Title');
-      expect(link).toBe('https://grovs.io/minimal');
+      const link = await OpenGrow.generateLink('Title');
+      expect(link).toBe('https://github.com/mbzadev/opengrow/minimal');
     });
 
     it('throws on native error', async () => {
       mockGenerateLink.mockRejectedValue(new Error('Network error'));
 
-      await expect(Grovs.generateLink('Title')).rejects.toThrow(
+      await expect(OpenGrow.generateLink('Title')).rejects.toThrow(
         'Failed to generate link: Network error'
       );
     });
@@ -205,14 +205,14 @@ describe('GrovsWrapper', () => {
   describe('displayMessages', () => {
     it('calls native displayMessages', async () => {
       mockDisplayMessages.mockResolvedValue(undefined);
-      await Grovs.displayMessages();
+      await OpenGrow.displayMessages();
       expect(mockDisplayMessages).toHaveBeenCalled();
     });
 
     it('throws on native error', async () => {
       mockDisplayMessages.mockRejectedValue(new Error('Display failed'));
 
-      await expect(Grovs.displayMessages()).rejects.toThrow(
+      await expect(OpenGrow.displayMessages()).rejects.toThrow(
         'Failed to display messages: Display failed'
       );
     });
@@ -222,21 +222,21 @@ describe('GrovsWrapper', () => {
     it('returns unread count', async () => {
       mockNumberOfUnreadMessages.mockResolvedValue(5);
 
-      const count = await Grovs.numberOfUnreadMessages();
+      const count = await OpenGrow.numberOfUnreadMessages();
       expect(count).toBe(5);
     });
 
     it('returns zero when no unread messages', async () => {
       mockNumberOfUnreadMessages.mockResolvedValue(0);
 
-      const count = await Grovs.numberOfUnreadMessages();
+      const count = await OpenGrow.numberOfUnreadMessages();
       expect(count).toBe(0);
     });
 
     it('throws on native error', async () => {
       mockNumberOfUnreadMessages.mockRejectedValue(new Error('Fetch failed'));
 
-      await expect(Grovs.numberOfUnreadMessages()).rejects.toThrow(
+      await expect(OpenGrow.numberOfUnreadMessages()).rejects.toThrow(
         'Failed to get unread messages count: Fetch failed'
       );
     });
@@ -245,7 +245,7 @@ describe('GrovsWrapper', () => {
   describe('onDeeplinkReceived', () => {
     it('registers a listener and returns remove handle', () => {
       const callback = jest.fn();
-      const subscription = Grovs.onDeeplinkReceived(callback);
+      const subscription = OpenGrow.onDeeplinkReceived(callback);
 
       expect(subscription).toBeDefined();
       expect(typeof subscription.remove).toBe('function');
@@ -253,33 +253,33 @@ describe('GrovsWrapper', () => {
 
     it('calls markReadyToHandleDeeplinks on registration', () => {
       const callback = jest.fn();
-      Grovs.onDeeplinkReceived(callback);
+      OpenGrow.onDeeplinkReceived(callback);
 
       expect(mockMarkReadyToHandleDeeplinks).toHaveBeenCalled();
     });
 
     it('triggers callback when deeplink event is emitted', () => {
       const callback = jest.fn();
-      Grovs.onDeeplinkReceived(callback);
+      OpenGrow.onDeeplinkReceived(callback);
 
       const deeplinkData = {
-        link: 'https://grovs.io/deep',
+        link: 'https://github.com/mbzadev/opengrow/deep',
         data: { screen: 'profile' },
       };
       // Simulate the NativeEventEmitter firing — triggerDeeplink fans out to listeners
-      (Grovs as any).triggerDeeplink(deeplinkData);
+      (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(callback).toHaveBeenCalledWith(deeplinkData);
     });
 
     it('stops receiving events after remove is called', () => {
       const callback = jest.fn();
-      const subscription = Grovs.onDeeplinkReceived(callback);
+      const subscription = OpenGrow.onDeeplinkReceived(callback);
       subscription.remove();
 
-      const deeplinkData = { link: 'https://grovs.io/after-remove' };
+      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow/after-remove' };
       // Trigger on any remaining listeners — callback should not be in set
-      (Grovs as any).triggerDeeplink(deeplinkData);
+      (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(callback).not.toHaveBeenCalledWith(deeplinkData);
     });
@@ -287,11 +287,11 @@ describe('GrovsWrapper', () => {
     it('supports multiple concurrent listeners', () => {
       const cb1 = jest.fn();
       const cb2 = jest.fn();
-      Grovs.onDeeplinkReceived(cb1);
-      Grovs.onDeeplinkReceived(cb2);
+      OpenGrow.onDeeplinkReceived(cb1);
+      OpenGrow.onDeeplinkReceived(cb2);
 
-      const deeplinkData = { link: 'https://grovs.io/multi' };
-      (Grovs as any).triggerDeeplink(deeplinkData);
+      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow/multi' };
+      (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).toHaveBeenCalledWith(deeplinkData);
       expect(cb2).toHaveBeenCalledWith(deeplinkData);
@@ -300,13 +300,13 @@ describe('GrovsWrapper', () => {
     it('only removes the specific listener on remove', () => {
       const cb1 = jest.fn();
       const cb2 = jest.fn();
-      const sub1 = Grovs.onDeeplinkReceived(cb1);
-      Grovs.onDeeplinkReceived(cb2);
+      const sub1 = OpenGrow.onDeeplinkReceived(cb1);
+      OpenGrow.onDeeplinkReceived(cb2);
 
       sub1.remove();
 
-      const deeplinkData = { link: 'https://grovs.io/partial' };
-      (Grovs as any).triggerDeeplink(deeplinkData);
+      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow/partial' };
+      (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).not.toHaveBeenCalled();
       expect(cb2).toHaveBeenCalledWith(deeplinkData);
@@ -315,7 +315,7 @@ describe('GrovsWrapper', () => {
 
   describe('markReadyToHandleDeeplinks', () => {
     it('forwards to native module', () => {
-      Grovs.markReadyToHandleDeeplinks();
+      OpenGrow.markReadyToHandleDeeplinks();
       expect(mockMarkReadyToHandleDeeplinks).toHaveBeenCalled();
     });
   });
@@ -323,14 +323,14 @@ describe('GrovsWrapper', () => {
   describe('logInAppPurchase', () => {
     it('resolves with true on success', async () => {
       mockLogInAppPurchase.mockResolvedValue(true);
-      const result = await Grovs.logInAppPurchase('12345');
+      const result = await OpenGrow.logInAppPurchase('12345');
       expect(result).toBe(true);
       expect(mockLogInAppPurchase).toHaveBeenCalledWith('12345');
     });
 
     it('throws on native error', async () => {
       mockLogInAppPurchase.mockRejectedValue(new Error('Purchase failed'));
-      await expect(Grovs.logInAppPurchase('12345')).rejects.toThrow(
+      await expect(OpenGrow.logInAppPurchase('12345')).rejects.toThrow(
         'Failed to log in-app purchase: Purchase failed'
       );
     });
@@ -339,7 +339,7 @@ describe('GrovsWrapper', () => {
   describe('logCustomPurchase', () => {
     it('resolves with true on success', async () => {
       mockLogCustomPurchase.mockResolvedValue(true);
-      const result = await Grovs.logCustomPurchase(
+      const result = await OpenGrow.logCustomPurchase(
         'buy',
         999,
         'USD',
@@ -357,7 +357,7 @@ describe('GrovsWrapper', () => {
 
     it('passes startDate when provided', async () => {
       mockLogCustomPurchase.mockResolvedValue(true);
-      await Grovs.logCustomPurchase(
+      await OpenGrow.logCustomPurchase(
         'buy',
         999,
         'USD',
@@ -375,7 +375,7 @@ describe('GrovsWrapper', () => {
 
     it('supports cancel type', async () => {
       mockLogCustomPurchase.mockResolvedValue(true);
-      await Grovs.logCustomPurchase('cancel', 999, 'USD', 'premium_monthly');
+      await OpenGrow.logCustomPurchase('cancel', 999, 'USD', 'premium_monthly');
       expect(mockLogCustomPurchase).toHaveBeenCalledWith(
         'cancel',
         999,
@@ -387,7 +387,7 @@ describe('GrovsWrapper', () => {
 
     it('supports refund type', async () => {
       mockLogCustomPurchase.mockResolvedValue(true);
-      await Grovs.logCustomPurchase('refund', 999, 'USD', 'premium_monthly');
+      await OpenGrow.logCustomPurchase('refund', 999, 'USD', 'premium_monthly');
       expect(mockLogCustomPurchase).toHaveBeenCalledWith(
         'refund',
         999,
@@ -400,7 +400,7 @@ describe('GrovsWrapper', () => {
     it('throws on native error', async () => {
       mockLogCustomPurchase.mockRejectedValue(new Error('Track failed'));
       await expect(
-        Grovs.logCustomPurchase('buy', 999, 'USD', 'product')
+        OpenGrow.logCustomPurchase('buy', 999, 'USD', 'product')
       ).rejects.toThrow('Failed to log custom purchase: Track failed');
     });
   });

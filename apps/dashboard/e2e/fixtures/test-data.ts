@@ -25,7 +25,7 @@ export const TEST_LINK = {
   id: "link-test-001",
   name: "Test Link",
   path: "test-link",
-  url: "https://test.grovs.io/test-link",
+  url: "https://test.opengrow.io/test-link",
   views: 42,
   installs: 10,
   created_at: new Date().toISOString(),

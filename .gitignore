@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+.vercel/
+.open-next/
+.wrangler/
+deploy/generated/
+.backups/
+dist/
+out/
+.build/
+coverage/
+tsconfig.tsbuildinfo
+test-results/
+playwright-report/
+apps/dashboard/e2e/.auth/
+apps/dashboard/test-results/
+apps/dashboard/playwright-report/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Logs and OS files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Runtime caches
+.cache/
+.turbo/

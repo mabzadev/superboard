@@ -1,3 +1,3 @@
-import Grovs from "./grovs.js"; // Assuming your class is in Grovs.js
+import OpenGrow from "./opengrow.js"; // Assuming your class is in OpenGrow.js
 
-export default Grovs; // Ensure this line correctly exports the class
+export default OpenGrow; // Ensure this line correctly exports the class

@@ -1,8 +1,9 @@
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Login",
-  description: "Sign in to your Grovs dashboard.",
+  description: "Sign in to your OpenGrow dashboard.",
 };
 
 export default function LoginLayout({

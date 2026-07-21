@@ -64,7 +64,7 @@ export { ipRequests as _ipRequests };
 /** Exported for tests — clear to reset token validation cache between test suites. */
 export { tokenCache as _tokenCache };
 
-export function createApp(grovsApiUrl: string, publicUrl: string): Express {
+export function createApp(opengrowApiUrl: string, publicUrl: string): Express {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
 
@@ -88,7 +88,7 @@ export function createApp(grovsApiUrl: string, publicUrl: string): Express {
   app.get("/.well-known/oauth-protected-resource", (_req, res) => {
     res.json({
       resource: publicUrl,
-      authorization_servers: [grovsApiUrl],
+      authorization_servers: [opengrowApiUrl],
       scopes_supported: ["mcp:full"],
     });
   });
@@ -143,7 +143,7 @@ export function createApp(grovsApiUrl: string, publicUrl: string): Express {
     // Validate with Rails.
     let validateRes: Response;
     try {
-      validateRes = await fetch(`${grovsApiUrl}/api/v1/mcp/validate`, {
+      validateRes = await fetch(`${opengrowApiUrl}/api/v1/mcp/validate`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(TOKEN_VALIDATE_TIMEOUT_MS),

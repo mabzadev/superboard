@@ -1074,7 +1074,7 @@ const AndroidSetupPage = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "grovs_android_gcloud_setup.sh";
+    a.download = "opengrow_android_gcloud_setup.sh";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1116,7 +1116,7 @@ const AndroidSetupPage = () => {
       language: "kotlin",
       filename: "MainApplication.kt",
       code: sdkAndroidValue.replace(
-        "_GROVS_API_KEY_",
+        "_OPENGROW_API_KEY_",
         selectedInstance?.api_key ?? "YOUR_API_KEY"
       ),
     },
@@ -1136,7 +1136,7 @@ const AndroidSetupPage = () => {
       language: "kotlin",
       filename: "MainApplication.kt",
       code: sdkAndroidValue.replace(
-        "_GROVS_API_KEY_",
+        "_OPENGROW_API_KEY_",
         selectedInstance?.api_key ?? "YOUR_API_KEY"
       ),
     },
@@ -1172,7 +1172,7 @@ const AndroidSetupPage = () => {
     const fetchGradleReleaseData = async () => {
       try {
         const response = await fetch(
-          "https://api.github.com/repos/grovs-io/grovs-Android/releases/latest"
+          "https://api.github.com/repos/mbzadev/opengrow-Android/releases/latest"
         );
         if (!response.ok) return;
         const data = await response.json();

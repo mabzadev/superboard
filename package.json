@@ -1,0 +1,41 @@
+{
+  "name": "opengrow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenGrow Cloudflare deployment: dashboard, OpenGrow-compatible API, SDK, and short links.",
+  "scripts": {
+    "dashboard:dev": "npm --prefix apps/dashboard run dev",
+    "dashboard:build": "npm --prefix apps/dashboard run build",
+    "dashboard:cf-build": "npm run cloudflare:config:dashboard && cross-env NEXT_PUBLIC_API_URL=https://go.vocostar.com NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-vocostar NEXT_PUBLIC_APP_URL=https://grow.vocostar.com NEXT_PUBLIC_ENV=production npm --prefix apps/dashboard run cf:build",
+    "dashboard:test": "npm --prefix apps/dashboard test",
+    "dashboard:typecheck": "cd apps/dashboard && npx tsc --noEmit",
+    "worker:dev": "npm --prefix workers/api run dev",
+    "worker:test": "npx vitest run --config workers/api/vitest.config.ts",
+    "worker:check": "npm run worker:typecheck && npm run worker:test && npm run cloudflare:config:api && cd workers/api && npx wrangler deploy --dry-run --config ../../deploy/generated/vocostar-api-production.jsonc",
+    "worker:typecheck": "cd workers/api && npx tsc --noEmit",
+    "worker:migrate:local": "npm --prefix workers/api run migrate:local",
+    "worker:migrate:prod": "npm --prefix workers/api run migrate:prod",
+    "worker:deploy": "npm run cloudflare:deploy -- --service api --target vocostar --environment production",
+    "migration:inventory": "node scripts/opengrow-inventory.mjs --summary",
+    "cloudflare:config:api": "node scripts/cloudflare-config.mjs --service api --target vocostar --environment production",
+    "cloudflare:config:dashboard": "node scripts/cloudflare-config.mjs --service dashboard --target vocostar --environment production",
+    "cloudflare:bootstrap": "node scripts/cloudflare-bootstrap.mjs",
+    "cloudflare:deploy": "node scripts/cloudflare-deploy.mjs",
+    "cloudflare:set-secret": "node scripts/cloudflare-set-secret.mjs",
+    "cloudflare:rotate-oauth": "node scripts/cloudflare-rotate-oauth.mjs",
+    "cloudflare:connect-builds": "node scripts/cloudflare-connect-builds.mjs",
+    "target:register": "node scripts/opengrow-register-target.mjs",
+    "secrets:scan": "gitleaks detect --source . --no-banner --redact",
+    "typecheck": "npm run worker:typecheck && npm run dashboard:typecheck",
+    "test": "npm run dashboard:test && npm run worker:test",
+    "test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 npm run test:e2e",
+    "test:all": "npm run migration:inventory && npm run typecheck && npm run test && npm run dashboard:cf-build && npm run worker:check"
+  },
+  "workspaces": [
+    "apps/dashboard",
+    "workers/api"
+  ],
+  "devDependencies": {
+    "ajv": "^8.17.1"
+  }
+}

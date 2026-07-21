@@ -1,14 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const DashboardLinksView = dynamic(
-  () => import("@/components/dashboard/DashboardActiveUsers"),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-[300px] w-full rounded-md" />,
-  }
-);
+import DashboardLinksView from "@/components/dashboard/DashboardActiveUsers";
 import QuickStartGuide from "@/components/dashboard/QuickStartGuide";
 import TopPerformingLinks from "@/components/dashboard/TopPerformingLinks";
 import { DateRangePicker } from "@/components/dateRangePicker/DateRangePicker";
@@ -22,13 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-const SectionCards = dynamic(
-  () =>
-    import("@/components/layout/section-cards").then((mod) => ({
-      default: mod.SectionCards,
-    })),
-  { ssr: false }
-);
+import { SectionCards } from "@/components/layout/section-cards";
 import { Skeleton } from "@/components/ui/skeleton";
 import { platformsFilterList } from "@/constants/FilterOptions";
 import {
@@ -68,25 +54,25 @@ const metricMeta: Record<string, Partial<Card>> = {
     title: "Link views",
     secondaryValueType: "percent",
     tooltip:
-      "Counts how many times your Grovs links were opened in a browser, whether they were created in the dashboard, through the API, or via the SDK.",
+      "Counts how many times your OpenGrow links were opened in a browser, whether they were created in the dashboard, through the API, or via the SDK.",
   },
   installs: {
     title: "App installs",
     secondaryValueType: "percent",
     tooltip:
-      "The total number of times your app was installed or reinstalled, covering both organic installs and those driven by Grovs links.",
+      "The total number of times your app was installed or reinstalled, covering both organic installs and those driven by OpenGrow links.",
   },
   app_opens: {
     title: "App opens",
     secondaryValueType: "percent",
     tooltip:
-      "The total number of times your app was opened, including both organic opens and opens driven by Grovs links.",
+      "The total number of times your app was opened, including both organic opens and opens driven by OpenGrow links.",
   },
   new_users: {
     title: "New users",
     secondaryValueType: "percent",
     tooltip:
-      "The total number of first-time users who installed your app, including both organic installs and installs driven by Grovs links.",
+      "The total number of first-time users who installed your app, including both organic installs and installs driven by OpenGrow links.",
   },
   returning_rate: {
     title: "Returning users",
@@ -98,19 +84,19 @@ const metricMeta: Record<string, Partial<Card>> = {
     title: "Referred users",
     secondaryValueType: "percent",
     tooltip:
-      "The total number of users who were invited by an existing user through Grovs links (not dashboard- or API-generated links).",
+      "The total number of users who were invited by an existing user through OpenGrow links (not dashboard- or API-generated links).",
   },
   organic_users: {
     title: "Organic installs",
     secondaryValueType: "percent",
     tooltip:
-      "The total number of users who installed your app without using Grovs links.",
+      "The total number of users who installed your app without using OpenGrow links.",
   },
   link_driven_installs: {
     title: "Link-driven installs",
     secondaryValueType: "percent",
     tooltip:
-      "Installs attributed to Grovs links (App installs minus Organic installs).",
+      "Installs attributed to OpenGrow links (App installs minus Organic installs).",
   },
   revenue: {
     title: "Revenue",

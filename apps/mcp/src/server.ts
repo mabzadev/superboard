@@ -62,7 +62,7 @@ export async function runWithAuth(
 
 export function createServer(): McpServer {
   const server = new McpServer({
-    name: "grovs-mcp",
+    name: "opengrow-mcp",
     version: "1.0.0",
   });
 
@@ -73,7 +73,7 @@ export function createServer(): McpServer {
     {
       title: "Get Account & Projects",
       description:
-        "Returns the authenticated user's account info and all their Grovs projects with domains. Call this first to discover available project IDs before using other tools.",
+        "Returns the authenticated user's account info and all their OpenGrow projects with domains. Call this first to discover available project IDs before using other tools.",
     },
     (extra) => runWithAuth(extra, (token) => handleGetStatus(token)),
   );
@@ -101,7 +101,7 @@ export function createServer(): McpServer {
     {
       title: "Create Project",
       description:
-        "Create a new Grovs project. This provisions a production and test environment with their own domains for deep links.",
+        "Create a new OpenGrow project. This provisions a production and test environment with their own domains for deep links.",
       inputSchema: {
         name: z.string().describe("Project name (e.g. 'My App')"),
       },
@@ -174,7 +174,7 @@ export function createServer(): McpServer {
       description: "Look up a deep link by its path slug or full URL. Returns full link details including preview metadata, tags, data payload, and custom redirects.",
       inputSchema: {
         project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
-        path: z.string().describe("Link path slug (e.g. 'summer-sale') or full URL (e.g. 'https://myapp.grovs.io/summer-sale')"),
+        path: z.string().describe("Link path slug (e.g. 'summer-sale') or full URL (e.g. 'https://myapp.opengrow.io/summer-sale')"),
       },
     },
     ({ project_id, path }, extra) =>
@@ -301,7 +301,7 @@ export function createServer(): McpServer {
         "Get analytics for a specific link by its path slug or full URL: views, opens, installs, engagement time, referrals. Defaults to last 30 days.",
       inputSchema: {
         project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
-        path: z.string().describe("Link path slug (e.g. 'summer-sale') or full URL (e.g. 'https://myapp.grovs.io/summer-sale')"),
+        path: z.string().describe("Link path slug (e.g. 'summer-sale') or full URL (e.g. 'https://myapp.opengrow.io/summer-sale')"),
         start_date: z.string().optional().describe("Start date (YYYY-MM-DD)"),
         end_date: z.string().optional().describe("End date (YYYY-MM-DD)"),
       },

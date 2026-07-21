@@ -1,58 +1,58 @@
-# Grovs Plugin for Claude Code
+# OpenGrow Plugin for Claude Code
 
 Manage deep links, analytics, and app configuration for your mobile apps — directly from Claude Code.
 
-## What is Grovs?
+## What is OpenGrow?
 
-[Grovs](https://grovs.io) is a deep linking platform for mobile apps. It provides Universal Links (iOS), App Links (Android), deferred deep linking, analytics, and social preview configuration.
+[OpenGrow](https://github.com/mbzadev/opengrow) is a deep linking platform for mobile apps. It provides Universal Links (iOS), App Links (Android), deferred deep linking, analytics, and social preview configuration.
 
 ## Installation
 
 ```bash
-claude plugin install grovs
+claude plugin install opengrow
 ```
 
-This installs the Grovs MCP server and a set of skills that teach Claude how to use it.
+This installs the OpenGrow MCP server and a set of skills that teach Claude how to use it.
 
 ## Authentication
 
-On first use, Claude Code will open a browser window to authenticate with your Grovs account via OAuth. No API keys needed.
+On first use, Claude Code will open a browser window to authenticate with your OpenGrow account via OAuth. No API keys needed.
 
 ## Available Skills
 
-### grovs-setup-project
-Set up a new Grovs project for your mobile app. Creates an instance, configures SDK settings for iOS/Android, and sets up redirect behavior.
+### opengrow-setup-project
+Set up a new OpenGrow project for your mobile app. Creates an instance, configures SDK settings for iOS/Android, and sets up redirect behavior.
 
-**Try:** "Set up Grovs for my iOS app with bundle ID com.mycompany.myapp"
+**Try:** "Set up OpenGrow for my iOS app with bundle ID com.mycompany.myapp"
 
-### grovs-create-link
+### opengrow-create-link
 Create deep links with social previews, tags, custom data, and redirect overrides.
 
 **Try:** "Create a deep link for our summer sale that opens the promotions screen"
 
-### grovs-analytics
+### opengrow-analytics
 View link performance — overview metrics, top links, and per-link analytics.
 
 **Try:** "How are my deep links performing this month?"
 
-### grovs-manage-links
+### opengrow-manage-links
 Search, view, update, and archive your existing links.
 
 **Try:** "Show me all links tagged 'marketing'" or "Update the title on my /summer-sale link"
 
-### grovs-campaigns
+### opengrow-campaigns
 Group links into campaigns and track them as a whole — views, opens, installs, and revenue.
 
 **Try:** "Create a Summer Sale campaign and add these links to it"
 
-### grovs-configure-platform
+### opengrow-configure-platform
 Configure iOS/Android SDK settings, Universal Links, App Links, and redirect behavior.
 
 **Try:** "Set up Android App Links for package com.mycompany.myapp"
 
 ## MCP Tools
 
-The plugin connects to the Grovs MCP server which provides these tools:
+The plugin connects to the OpenGrow MCP server which provides these tools:
 
 | Tool | Description |
 |------|-------------|
@@ -75,6 +75,6 @@ The plugin connects to the Grovs MCP server which provides these tools:
 
 ## Links
 
-- [Grovs Documentation](https://docs.grovs.io)
-- [Grovs Dashboard](https://app.grovs.io)
-- [MCP Server Source](https://github.com/grovs-io/mcp)
+- [OpenGrow Documentation](https://docs.opengrow.io)
+- [OpenGrow Dashboard](https://app.opengrow.io)
+- [MCP Server Source](https://github.com/mbzadev/mcp)

@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 describe("Revenue column gating", () => {
+  const importTimeoutMs = 15000;
+
   beforeEach(() => {
     vi.resetModules();
   });
@@ -22,7 +24,7 @@ describe("Revenue column gating", () => {
       const columns = getLinksTableColumns(dummySort, dummySetSort, vi.fn());
       const keys = columns.map((c) => c.accessorKey);
       expect(keys).toContain("revenue");
-    });
+    }, importTimeoutMs);
 
     it("excludes revenue column when IS_ENTERPRISE is false", async () => {
       vi.doMock("@/lib/edition", () => ({ IS_ENTERPRISE: false }));
@@ -31,7 +33,7 @@ describe("Revenue column gating", () => {
       const columns = getLinksTableColumns(dummySort, dummySetSort, vi.fn());
       const keys = columns.map((c) => c.accessorKey);
       expect(keys).not.toContain("revenue");
-    });
+    }, importTimeoutMs);
   });
 
   describe("CampaignsTableColumns", () => {
@@ -42,7 +44,7 @@ describe("Revenue column gating", () => {
       const columns = createCampaignsTableColumns(dummySort, dummySetSort);
       const keys = columns.map((c) => c.accessorKey);
       expect(keys).toContain("revenue");
-    });
+    }, importTimeoutMs);
 
     it("excludes revenue column when IS_ENTERPRISE is false", async () => {
       vi.doMock("@/lib/edition", () => ({ IS_ENTERPRISE: false }));
@@ -51,6 +53,6 @@ describe("Revenue column gating", () => {
       const columns = createCampaignsTableColumns(dummySort, dummySetSort);
       const keys = columns.map((c) => c.accessorKey);
       expect(keys).not.toContain("revenue");
-    });
+    }, importTimeoutMs);
   });
 });

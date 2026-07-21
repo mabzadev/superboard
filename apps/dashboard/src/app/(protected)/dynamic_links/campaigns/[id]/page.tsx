@@ -1,4 +1,4 @@
-import LinksPage from "../../links/page";
+import LinksPageContent from "../../links/LinksPageContent";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -6,5 +6,5 @@ type PageProps = {
 
 export default async function CampaignDetailPage({ params }: PageProps) {
   const { id } = await params;
-  return <LinksPage campaignId={id} />;
+  return <LinksPageContent campaignId={id} />;
 }

@@ -51,7 +51,7 @@ const ComputersRedirect = ({ showErrors }: { showErrors?: boolean }) => {
               setValue("desktop.generatedPage", true, { shouldDirty: true })
             }
             icon={LayoutTemplate}
-            title="Grovs Page"
+            title="OpenGrow Page"
             description="QR code and download links"
           />
           <OptionCard

@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "grovs": {
+    "opengrow": {
       "type": "http",
-      "url": "https://mcp.grovs.io/mcp"
+      "url": "https://mcp.opengrow.io/mcp"
     }
   }
 }
