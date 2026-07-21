@@ -7,6 +7,7 @@ const environment = environmentFromArgs(args);
 const apply = Boolean(args.apply);
 const { path, target } = await loadTarget(targetName);
 const resources = target.environments[environment];
+if (!resources) throw new Error(`${targetName} does not define a ${environment} environment`);
 const token = process.env.CLOUDFLARE_API_TOKEN;
 
 if (apply && !token) throw new Error("CLOUDFLARE_API_TOKEN is required with --apply");

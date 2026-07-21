@@ -41,7 +41,7 @@
     "environments": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["staging", "production"],
+      "required": ["production"],
       "properties": {
         "staging": { "$ref": "#/$defs/environment" },
         "production": { "$ref": "#/$defs/environment" }
@@ -56,7 +56,7 @@
     "workerNames": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["staging", "production"],
+      "required": ["production"],
       "properties": {
         "staging": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "production": { "type": "string", "pattern": "^[a-z0-9-]+$" }

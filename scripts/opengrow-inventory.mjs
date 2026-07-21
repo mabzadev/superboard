@@ -4,6 +4,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
+const upstreamBackend = "upstream/opengrow/backend";
+const workerRoot = "workers/api";
 
 const read = (file) => readFileSync(path.join(root, file), "utf8");
 const listFiles = (dir, suffix) => {
@@ -24,6 +26,7 @@ const listFiles = (dir, suffix) => {
 const rel = (file) => path.relative(root, file);
 
 function gitRev(dir) {
+  if (!existsSync(path.join(root, dir))) return null;
   try {
     return execFileSync("git", ["-C", path.join(root, dir), "rev-parse", "HEAD"], {
       encoding: "utf8",
@@ -34,7 +37,8 @@ function gitRev(dir) {
 }
 
 function parseRailsRoutes() {
-  const file = "upstream/opengrow/backend/config/routes.rb";
+  const file = `${upstreamBackend}/config/routes.rb`;
+  if (!existsSync(path.join(root, file))) return [];
   const lines = read(file).split(/\r?\n/);
   const routes = [];
   const blocks = [];
@@ -94,11 +98,12 @@ function normalizedRouteKey(route) {
 }
 
 function parseWorkerRoutes() {
-  const index = read("workers/opengrow/src/index.ts");
+  const indexPath = `${workerRoot}/src/index.ts`;
+  const index = read(indexPath);
   const mounts = new Map();
   const imports = new Map();
   for (const match of index.matchAll(/import\s+([a-zA-Z0-9_]+)\s+from\s+['"]\.\/routes\/([^'"]+)['"]/g)) {
-    imports.set(`workers/opengrow/src/routes/${match[2]}.ts`, match[1]);
+    imports.set(`${workerRoot}/src/routes/${match[2]}.ts`, match[1]);
   }
   for (const match of index.matchAll(/app\.route\(["']([^"']*)["'],\s*([a-zA-Z0-9_]+)Routes\)/g)) {
     mounts.set(match[2], match[1]);
@@ -113,12 +118,12 @@ function parseWorkerRoutes() {
       path: match[2],
       localPath: match[2],
       mount: "",
-      file: "workers/opengrow/src/index.ts",
+      file: indexPath,
       line: indexLine + 1,
     });
   });
 
-  for (const file of listFiles("workers/opengrow/src/routes", ".ts").filter((file) => !file.endsWith(".test.ts"))) {
+  for (const file of listFiles(`${workerRoot}/src/routes`, ".ts").filter((file) => !file.endsWith(".test.ts"))) {
     const source = read(rel(file));
     const varName = source.match(/const\s+([a-zA-Z0-9_]+)\s*=\s*new Hono/)?.[1];
     const importName = imports.get(rel(file));
@@ -147,7 +152,9 @@ function parseWorkerRoutes() {
 }
 
 function parseRailsTables() {
-  const lines = read("upstream/opengrow/backend/db/schema.rb").split(/\r?\n/);
+  const file = `${upstreamBackend}/db/schema.rb`;
+  if (!existsSync(path.join(root, file))) return {};
+  const lines = read(file).split(/\r?\n/);
   const tables = {};
   let current = null;
 
@@ -174,7 +181,7 @@ function parseRailsTables() {
 
 function parseD1Tables() {
   const tables = {};
-  for (const file of listFiles("workers/opengrow/migrations", ".sql")) {
+  for (const file of listFiles(`${workerRoot}/migrations`, ".sql")) {
     const lines = read(rel(file)).split(/\r?\n/);
     let current = null;
 
@@ -233,8 +240,8 @@ function parseD1Tables() {
 }
 
 function listUpstream(kind) {
-  return listFiles(`upstream/opengrow/backend/app/${kind}`, ".rb")
-    .map((file) => rel(file).replace(`upstream/opengrow/backend/app/${kind}/`, ""))
+  return listFiles(`${upstreamBackend}/app/${kind}`, ".rb")
+    .map((file) => rel(file).replace(`${upstreamBackend}/app/${kind}/`, ""))
     .sort();
 }
 
@@ -243,7 +250,7 @@ function markerRoutes() {
   const placeholderPattern =
     /not available|not supported|emptyMetrics|emptyConfig\(|metrics:\s*\{\s*\}|return c\.json\(\{\s*(tokens|visitors|data|notifications):\s*\[\]|message:\s*['"]ok['"]/i;
 
-  for (const file of listFiles("workers/opengrow/src/routes", ".ts").filter((file) => !file.endsWith(".test.ts"))) {
+  for (const file of listFiles(`${workerRoot}/src/routes`, ".ts").filter((file) => !file.endsWith(".test.ts"))) {
     const lines = read(rel(file)).split(/\r?\n/);
     lines.forEach((line, index) => {
       if (placeholderPattern.test(line)) {
@@ -256,6 +263,7 @@ function markerRoutes() {
 
 const railsRoutes = parseRailsRoutes();
 const workerRoutes = parseWorkerRoutes();
+const upstreamAvailable = existsSync(path.join(root, upstreamBackend));
 const workerRouteKeys = new Set(workerRoutes.map(normalizedRouteKey));
 const railsRouteKeys = new Set(railsRoutes.map(normalizedRouteKey));
 const railsTables = parseRailsTables();
@@ -265,6 +273,7 @@ const d1TableNames = Object.keys(d1Tables).sort();
 
 const inventory = {
   generatedAt: new Date().toISOString(),
+  upstreamAvailable,
   upstream: {
     backend: gitRev("upstream/opengrow/backend"),
     dashboard: gitRev("upstream/opengrow/dashboard"),
@@ -290,11 +299,15 @@ const inventory = {
     upstream: railsRoutes,
     worker: workerRoutes,
     missingFromWorker: railsRoutes.filter((route) => !workerRouteKeys.has(normalizedRouteKey(route))),
-    extraInWorker: workerRoutes.filter((route) => !railsRouteKeys.has(normalizedRouteKey(route))),
+    extraInWorker: upstreamAvailable
+      ? workerRoutes.filter((route) => !railsRouteKeys.has(normalizedRouteKey(route)))
+      : [],
   },
   schema: {
     missingTables: railsTableNames.filter((name) => !d1TableNames.includes(name)),
-    extraTables: d1TableNames.filter((name) => !railsTableNames.includes(name)),
+    extraTables: upstreamAvailable
+      ? d1TableNames.filter((name) => !railsTableNames.includes(name))
+      : [],
     tables: Object.fromEntries(
       railsTableNames.map((name) => [
         name,
@@ -320,6 +333,7 @@ const inventory = {
 if (process.argv.includes("--summary")) {
   console.log(JSON.stringify({
     generatedAt: inventory.generatedAt,
+    upstreamAvailable: inventory.upstreamAvailable,
     upstream: inventory.upstream,
     counts: inventory.counts,
     missingRoutes: inventory.routes.missingFromWorker,
