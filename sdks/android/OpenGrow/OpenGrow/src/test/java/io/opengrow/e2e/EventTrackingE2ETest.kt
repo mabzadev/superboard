@@ -971,7 +971,9 @@ class EventTrackingE2ETest {
                 "opengrow_last_start_timestamp",
                 InstantCompat(System.currentTimeMillis() - daysAgo.toLong() * 24 * 60 * 60 * 1000).toString()
             )
-            .apply()
+            // Authentication runs on the SDK serial dispatcher immediately after
+            // configure(). Persist synchronously so it cannot observe stale values.
+            .commit()
     }
 
     @Test
