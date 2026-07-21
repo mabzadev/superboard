@@ -39,21 +39,22 @@ function run(command, commandArgs) {
 
 function newManifest() {
   const prefix = `opengrow-${target}`;
+  const resourcePrefix = (environment) => environment === "production" ? "opengrow" : `opengrow-${environment}`;
   const queues = (environment) => ({
-    events: `${prefix}-events-${environment}`,
-    eventsDlq: `${prefix}-events-${environment}-dlq`,
-    push: `${prefix}-push-${environment}`,
-    pushDlq: `${prefix}-push-${environment}-dlq`,
-    maintenance: `${prefix}-maintenance-${environment}`,
-    maintenanceDlq: `${prefix}-maintenance-${environment}-dlq`,
-    billing: `${prefix}-billing-${environment}`,
-    billingDlq: `${prefix}-billing-${environment}-dlq`,
+    events: `${resourcePrefix(environment)}-events`,
+    eventsDlq: `${resourcePrefix(environment)}-events-dlq`,
+    push: `${resourcePrefix(environment)}-push`,
+    pushDlq: `${resourcePrefix(environment)}-push-dlq`,
+    maintenance: `${resourcePrefix(environment)}-maintenance`,
+    maintenanceDlq: `${resourcePrefix(environment)}-maintenance-dlq`,
+    billing: `${resourcePrefix(environment)}-billing`,
+    billingDlq: `${resourcePrefix(environment)}-billing-dlq`,
   });
   const environment = (name) => ({
-    d1: { name: `${prefix}-${name}`, id: null },
-    kv: { name: `${prefix}-${name}`, id: null },
-    r2: { name: `${prefix}-${name}` },
-    dashboardCache: { name: `${prefix}-dashboard-cache-${name}` },
+    d1: { name: `${resourcePrefix(name)}-db`, id: null },
+    kv: { name: resourcePrefix(name), id: null },
+    r2: { name: resourcePrefix(name) },
+    dashboardCache: { name: resourcePrefix(name) },
     queues: queues(name),
   });
   return {

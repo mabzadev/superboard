@@ -7,9 +7,9 @@ is optional and may be omitted for production-only accounts such as Vocostar.
 Secret values are never accepted by the schema. `OPENGROW_TARGET` selects the
 manifest in Workers Builds.
 
-For Vocostar the production storage identifiers are intentionally the existing
-resources. Their historical infrastructure names are opaque Cloudflare IDs and do
-not expose a compatibility API.
+Vocostar uses the canonical production names `opengrow-db` for D1, `opengrow` for
+KV and the single R2 bucket, and `opengrow-*` for queues. The API and dashboard
+share the same R2 bucket through separate bindings.
 
 ## Workers Builds
 

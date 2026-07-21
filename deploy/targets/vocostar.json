@@ -23,26 +23,24 @@
   "environments": {
     "production": {
       "d1": {
-        "name": "grovs-db",
-        "id": "ce7fbaad-9f73-49ff-9b33-fb820c33c051",
-        "legacyName": true
+        "name": "opengrow-db",
+        "id": "0eafa441-cc8b-4da1-9db5-37a82642d69a"
       },
       "kv": {
-        "name": "GROVS_KV",
-        "id": "21faee2703d54c58a7cc1d46e56391cc",
-        "legacyName": true
+        "name": "opengrow",
+        "id": "72a311dd206d47538688937943f44553"
       },
-      "r2": { "name": "grovs-files", "legacyName": true },
-      "dashboardCache": { "name": "opengrow-vocostar-dashboard-cache" },
+      "r2": { "name": "opengrow" },
+      "dashboardCache": { "name": "opengrow" },
       "queues": {
-        "events": "grovs-events",
-        "eventsDlq": "grovs-events-dlq",
-        "push": "grovs-push",
-        "pushDlq": "grovs-push-dlq",
-        "maintenance": "grovs-maintenance",
-        "maintenanceDlq": "grovs-maintenance-dlq",
-        "billing": "grovs-billing",
-        "billingDlq": "grovs-billing-dlq"
+        "events": "opengrow-events",
+        "eventsDlq": "opengrow-events-dlq",
+        "push": "opengrow-push",
+        "pushDlq": "opengrow-push-dlq",
+        "maintenance": "opengrow-maintenance",
+        "maintenanceDlq": "opengrow-maintenance-dlq",
+        "billing": "opengrow-billing",
+        "billingDlq": "opengrow-billing-dlq"
       }
     }
   }
