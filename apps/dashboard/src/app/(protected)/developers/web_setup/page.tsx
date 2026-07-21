@@ -254,7 +254,7 @@ const WebSetupPage = () => {
       language: "jsx",
       filename: "index.jsx",
       code: integrateWebSdkValue.replace(
-        "_GROVS_API_KEY_",
+        "_OPENGROW_API_KEY_",
         selectedInstance?.api_key ?? "YOUR_API_KEY"
       ),
     },

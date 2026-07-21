@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="opengrow_transparent">#00000000</color>
+    <color name="opengrow_background_deep">#1A1D24</color>
+    <color name="opengrow_secondary_secondary">#2F3239</color>
+    <color name="opengrow_border">#5454585C</color>
+    <color name="opengrow_main_text">#FFFFFFFF</color>
+    <color name="opengrow_secondary_text">#97989C</color>
+    <color name="opengrow_unseen_notification_indicator">#FF1A1A</color>
+    <color name="opengrow_push_notification_icon_tint">#97989C</color>
+    <color name="opengrow_ripple_effect">?android:attr/colorControlHighlight</color>
+</resources>

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Builds and runs the Grovs iOS SDK tests via SPM.
+# Builds and runs the OpenGrow iOS SDK tests via SPM.
 #
 # The Xcode project (.xcodeproj) doesn't include the test target,
 # so we temporarily hide it so xcodebuild picks up Package.swift instead.
@@ -13,8 +13,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-XCODEPROJ="$PROJECT_DIR/Grovs.xcodeproj"
-XCODEPROJ_BAK="$PROJECT_DIR/Grovs.xcodeproj.bak"
+XCODEPROJ="$PROJECT_DIR/OpenGrow.xcodeproj"
+XCODEPROJ_BAK="$PROJECT_DIR/OpenGrow.xcodeproj.bak"
 
 # Find an available iPhone simulator
 SIMULATOR_ID=$(xcrun simctl list devices available -j 2>/dev/null \
@@ -42,7 +42,7 @@ echo "Using simulator: $SIMULATOR_ID"
 # Build the test filter flag if a class name was provided
 ONLY_TESTING=""
 if [ -n "${1:-}" ]; then
-    ONLY_TESTING="-only-testing:grovs-iosTests/$1"
+    ONLY_TESTING="-only-testing:mbzadevsTests/$1"
     echo "Running only: $1"
 fi
 
@@ -62,7 +62,7 @@ fi
 
 # Build and test
 xcodebuild test \
-    -scheme Grovs \
+    -scheme OpenGrow \
     -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
     $ONLY_TESTING \
     2>&1 | tee /dev/stderr | tail -5

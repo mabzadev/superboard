@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const realBackend = process.env.PLAYWRIGHT_REAL_BACKEND === "1";
+const workerPort = process.env.PLAYWRIGHT_WORKER_PORT || "8787";
+const workerUrl = process.env.PLAYWRIGHT_API_URL || `http://127.0.0.1:${workerPort}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -16,31 +20,54 @@ export default defineConfig({
     video: "on-first-retry",
   },
 
-  projects: [
-    {
-      name: "setup",
-      testMatch: /auth\.setup\.ts/,
-    },
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-      dependencies: ["setup"],
-    },
-    ...(process.env.CI
-      ? []
-      : [
-          {
-            name: "firefox",
-            use: { ...devices["Desktop Firefox"] },
-            dependencies: ["setup"],
-          },
-        ]),
-  ],
+  projects: realBackend
+    ? [
+        {
+          name: "chromium",
+          testMatch: /real\/.*\.spec\.ts/,
+          use: { ...devices["Desktop Chrome"] },
+        },
+      ]
+    : [
+        {
+          name: "setup",
+          testMatch: /auth\.setup\.ts/,
+        },
+        {
+          name: "chromium",
+          use: { ...devices["Desktop Chrome"] },
+          dependencies: ["setup"],
+        },
+        ...(process.env.CI
+          ? []
+          : [
+              {
+                name: "firefox",
+                use: { ...devices["Desktop Firefox"] },
+                dependencies: ["setup"],
+              },
+            ]),
+      ],
 
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3001",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: realBackend
+    ? [
+        {
+          command: `cd ../../workers/opengrow && npm run migrate:local && npx wrangler dev --port ${workerPort}`,
+          url: `${workerUrl}/health`,
+          reuseExistingServer: true,
+          timeout: 120_000,
+        },
+        {
+          command: `NEXT_PUBLIC_API_URL=${workerUrl} NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-dashboard-vocostar CLIENT_SECRET=opengrow-dashboard-secret-vocostar-2025 npm run dev`,
+          url: "http://localhost:3001",
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      ]
+    : {
+        command: "npm run dev",
+        url: "http://localhost:3001",
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });

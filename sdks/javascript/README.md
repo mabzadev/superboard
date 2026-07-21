@@ -1,33 +1,33 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
+    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
+    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/types-included-4F46E5?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/grovs-js?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/grovs-io/grovs-js/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/grovs-js?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-js?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow-js/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-js?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 ## Overview
 
-The Grovs SDK is a JavaScript module designed to integrate with the Grovs API, providing functionality for creating and managing links, handling user information, and managing authentication. This documentation covers the main methods and usage of the SDK.
+The OpenGrow SDK is a JavaScript module designed to integrate with the OpenGrow API, providing functionality for creating and managing links, handling user information, and managing authentication. This documentation covers the main methods and usage of the SDK.
 
 ## Installation
 
-To install the Grovs SDK, use the following command to add it as a dependency to your project:
+To install the OpenGrow SDK, use the following command to add it as a dependency to your project:
 
 ```bash
-npm install grovs --save
+npm install opengrow --save
 ```
 
-This will add the Grovs SDK to your dependencies in package.json.
+This will add the OpenGrow SDK to your dependencies in package.json.
 
 After installation, you can include the SDK in your project:
 
 ```javascript
-import Grovs from "Grovs";
+import OpenGrow from "OpenGrow";
 ```
 
 ## Documentation
@@ -38,10 +38,10 @@ import Grovs from "Grovs";
 constructor(APIKey, linkHandlingCallback);
 ```
 
-Creates a new instance of the grovs SDK.
+Creates a new instance of the opengrow SDK.
 
-- **APIKey** (string): Your API key provided by grovs for authentication.
-- **linkHandlingCallback** (Function): A callback function that handles the data received from grovs.
+- **APIKey** (string): Your API key provided by opengrow for authentication.
+- **linkHandlingCallback** (Function): A callback function that handles the data received from opengrow.
 
 #### Example
 
@@ -51,26 +51,26 @@ const handleLinkData = (data) => {
   console.log("Link data received:", data);
 };
 
-const grovs = new Grovs(APIKey, handleLinkData);
+const opengrow = new OpenGrow(APIKey, handleLinkData);
 ```
 
 ## Methods
 
 ### start()
 
-Initializes and starts the Grovs SDK by authenticating with the provided API key.
+Initializes and starts the OpenGrow SDK by authenticating with the provided API key.
 
 - **succesfullAuthenticatedCallback** (Function, optional): Callback to invoke on successful authentication.
 
 #### Example
 
 ```javascript
-grovs.start();
+opengrow.start();
 ```
 
 ### createLink(title, subtitle, imageURL, data, success, error)
 
-Creates a new link using the Grovs API.
+Creates a new link using the OpenGrow API.
 
 - **title** (string): The title of the link.
 - **subtitle** (Function): The subtitle of the link.
@@ -87,7 +87,7 @@ const linkData = {
   category: "Demo",
 };
 
-grovs.createLink(
+opengrow.createLink(
   "Sample Link",
   "This is a subtitle",
   "https://example.com/image.jpg",
@@ -110,7 +110,7 @@ Retrieves the current user identifier.
 #### Example
 
 ```javascript
-const userId = grovs.userIdentifier();
+const userId = opengrow.userIdentifier();
 console.log("Current user ID:", userId);
 ```
 
@@ -123,7 +123,7 @@ Retrieves the current user attributes.
 #### Example
 
 ```javascript
-const userAttributes = grovs.userAttributes();
+const userAttributes = opengrow.userAttributes();
 console.log("User attributes:", userAttributes);
 ```
 
@@ -136,7 +136,7 @@ Sets the user identifier.
 #### Example
 
 ```javascript
-grovs.setUserIdentifier("user-12345");
+opengrow.setUserIdentifier("user-12345");
 ```
 
 ### setUserAttributes(attributes)
@@ -153,7 +153,7 @@ const attributes = {
   email: "john.doe@example.com",
 };
 
-grovs.setUserAttributes(attributes);
+opengrow.setUserAttributes(attributes);
 ```
 
 ### authenticated()
@@ -165,7 +165,7 @@ Checks if the SDK is currently authenticated.
 #### Example
 
 ```javascript
-const isAuthenticated = grovs.authenticated();
+const isAuthenticated = opengrow.authenticated();
 console.log("Is authenticated:", isAuthenticated);
 ```
 
@@ -176,7 +176,7 @@ Displays the messages list using the manager.
 #### Example
 
 ```javascript
-grovs.showMessagesList();
+opengrow.showMessagesList();
 ```
 
 ### getMessages(page, response, error)
@@ -190,7 +190,7 @@ Retrieves messages for a specific page using the manager.
 #### Example
 
 ```javascript
-grovs.getMessages(
+opengrow.getMessages(
   1,
   (messages) => {
     console.log("Retrieved messages:", messages);
@@ -211,7 +211,7 @@ Retrieves the number of unread messages using the manager.
 #### Example
 
 ```javascript
-grovs.getNumberOfUnreadMessages(
+opengrow.getNumberOfUnreadMessages(
   (count) => {
     console.log("Number of unread messages:", count);
   },
@@ -224,17 +224,17 @@ grovs.getNumberOfUnreadMessages(
 ## Usage Example
 
 ```javascript
-import grovs from "grovs";
+import opengrow from "opengrow";
 
 const APIKey = "your-api-key";
-const grovs = new grovs(APIKey, (data) => {
+const opengrow = new opengrow(APIKey, (data) => {
   console.log("Link data:", data);
 });
 
-grovs.start();
+opengrow.start();
 
-if (grovs.authenticated()) {
-  grovs.createLink(
+if (opengrow.authenticated()) {
+  opengrow.createLink(
     "Sample Link",
     "Subtitle",
     "https://example.com/image.jpg",
@@ -244,9 +244,9 @@ if (grovs.authenticated()) {
   );
 }
 
-grovs.setUserIdentifier("user-123");
-grovs.setUserAttributes({ name: "John Doe", age: 30 });
+opengrow.setUserIdentifier("user-123");
+opengrow.setUserAttributes({ name: "John Doe", age: 30 });
 
-console.log("User ID:", grovs.userIdentifier());
-console.log("User Attributes:", grovs.userAttributes());
+console.log("User ID:", opengrow.userIdentifier());
+console.log("User Attributes:", opengrow.userAttributes());
 ```

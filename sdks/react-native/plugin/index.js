@@ -1,31 +1,31 @@
 const { createRunOncePlugin } = require('expo/config-plugins');
-const withGrovsIOS = require('./withGrovsIOS');
-const withGrovsAndroid = require('./withGrovsAndroid');
+const withOpenGrowIOS = require('./withOpenGrowIOS');
+const withOpenGrowAndroid = require('./withOpenGrowAndroid');
 
 const pkg = require('../package.json');
 
 /**
- * Expo Config Plugin for react-native-grovs-wrapper.
+ * Expo Config Plugin for @mbzadev/opengrow-react-native.
  *
- * Configures native iOS and Android projects for the Grovs SDK.
+ * Configures native iOS and Android projects for the OpenGrow SDK.
  *
  * @param {import('expo/config-plugins').ExpoConfig} config
  * @param {Object} props
- * @param {string} props.apiKey - Grovs API key
- * @param {string} props.scheme - Custom URL scheme (e.g., "grovst5abed1b0fdf8")
+ * @param {string} props.apiKey - OpenGrow API key
+ * @param {string} props.scheme - Custom URL scheme (e.g., "opengrowt5abed1b0fdf8")
  * @param {boolean} [props.useTestEnvironment=false] - Use test environment
- * @param {string|null} [props.baseURL=null] - Optional custom base URL for the Grovs SDK
+ * @param {string|null} [props.baseURL=null] - Optional custom base URL for the OpenGrow SDK
  * @param {string[]} [props.associatedDomains] - Universal link domains (e.g., ["grovdc41.sqd.link"])
  */
-function withGrovs(config, props) {
+function withOpenGrow(config, props) {
   if (!props?.apiKey) {
     throw new Error(
-      'react-native-grovs-wrapper plugin requires an "apiKey" property.'
+      '@mbzadev/opengrow-react-native plugin requires an "apiKey" property.'
     );
   }
   if (!props?.scheme) {
     throw new Error(
-      'react-native-grovs-wrapper plugin requires a "scheme" property.'
+      '@mbzadev/opengrow-react-native plugin requires a "scheme" property.'
     );
   }
 
@@ -37,10 +37,10 @@ function withGrovs(config, props) {
     associatedDomains: props.associatedDomains ?? [],
   };
 
-  config = withGrovsIOS(config, pluginProps);
-  config = withGrovsAndroid(config, pluginProps);
+  config = withOpenGrowIOS(config, pluginProps);
+  config = withOpenGrowAndroid(config, pluginProps);
 
   return config;
 }
 
-module.exports = createRunOncePlugin(withGrovs, pkg.name, pkg.version);
+module.exports = createRunOncePlugin(withOpenGrow, pkg.name, pkg.version);

@@ -1,22 +1,8 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
-  </picture>
-</p>
-
-<p align="center">
-  <a href="https://github.com/grovs-io/dashboard/releases"><img src="https://img.shields.io/github/v/release/grovs-io/dashboard?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="#"><img src="https://img.shields.io/badge/Next.js-15-4F46E5?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 15"/></a>
-  <a href="#"><img src="https://img.shields.io/badge/React-19-4F46E5?style=flat-square&logo=react&logoColor=white" alt="React 19"/></a>
-  <a href="#"><img src="https://img.shields.io/badge/shadcn%2Fui-latest-4F46E5?style=flat-square" alt="shadcn/ui"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/dashboard?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/grovs-io/dashboard/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/dashboard?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
-</p>
+# OpenGrow
 
 **Open-source dashboard for mobile app growth** — deep links, messaging campaigns, revenue tracking, and audience analytics.
 
-Grovs helps mobile developers grow their apps by providing a single dashboard to manage deep links, send targeted push notifications, track revenue, and understand their audience. Self-host it or connect it to the [Grovs](https://grovs.io) managed backend.
+OpenGrow helps mobile developers grow their apps by providing a single dashboard to manage deep links, send targeted push notifications, track revenue, and understand their audience. Self-host it or connect it to the [OpenGrow](https://github.com/mbzadev/opengrow) managed backend.
 
 ## Tech Stack
 
@@ -36,7 +22,7 @@ Grovs helps mobile developers grow their apps by providing a single dashboard to
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/grovs-io/dashboard.git
+   git clone https://github.com/mbzadev/dashboard.git
    cd dashboard
    ```
 

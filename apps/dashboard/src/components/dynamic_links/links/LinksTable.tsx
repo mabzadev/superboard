@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import type { AccessorKeyColumnDef } from "@tanstack/react-table";
-import { LinkData } from "@/app/(protected)/dynamic_links/links/page";
+import type { LinkData } from "@/app/(protected)/dynamic_links/links/LinksPageContent";
 import DataTable from "@/components/common/DataTable";
 import LinksEmptyState from "./LinksEmptyState";
 

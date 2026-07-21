@@ -18,7 +18,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
       <SectionHeader
         icon={Package}
         title="Add the SDK"
-        subtitle="Install the grovs SDK using your preferred package manager."
+        subtitle="Install the opengrow SDK using your preferred package manager."
       />
 
       <Tabs defaultValue={GRADLE} className="gap-4">
@@ -31,7 +31,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value={`implementation(io.grovs:Grovs:${releaseTagName})`}
+                value={`implementation(io.opengrow:OpenGrow:${releaseTagName})`}
                 readOnly
                 className="font-mono text-xs"
               />
@@ -41,7 +41,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
                 className="pl-3 pr-4 shrink-0 h-9"
                 onClick={() =>
                   handleCopyText(
-                    `implementation(io.grovs:Grovs:${releaseTagName})`
+                    `implementation(io.opengrow:OpenGrow:${releaseTagName})`
                   )
                 }
               >
@@ -67,7 +67,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value="npm install react-native-grovs-wrapper"
+                value="npm install @mbzadev/opengrow-react-native"
                 readOnly
                 className="font-mono text-xs"
               />
@@ -76,7 +76,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
                 size="sm"
                 className="pl-3 pr-4 shrink-0 h-9"
                 onClick={() =>
-                  handleCopyText("npm install react-native-grovs-wrapper")
+                  handleCopyText("npm install @mbzadev/opengrow-react-native")
                 }
               >
                 <Copy className="h-3.5 w-3.5" />
@@ -86,7 +86,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
             <span className="text-xs text-muted-foreground">
               For React Native apps, also add{" "}
               <span className="font-mono">
-                implementation(io.grovs:Grovs:
+                implementation(io.opengrow:OpenGrow:
                 {releaseTagName})
               </span>{" "}
               in your Android app gradle file.
@@ -105,7 +105,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <Input
-                value="yarn add react-native-grovs-wrapper"
+                value="yarn add @mbzadev/opengrow-react-native"
                 readOnly
                 className="font-mono text-xs"
               />
@@ -114,7 +114,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
                 size="sm"
                 className="pl-3 pr-4 shrink-0 h-9"
                 onClick={() =>
-                  handleCopyText("yarn add react-native-grovs-wrapper")
+                  handleCopyText("yarn add @mbzadev/opengrow-react-native")
                 }
               >
                 <Copy className="h-3.5 w-3.5" />
@@ -124,7 +124,7 @@ const Step2AddSDK = ({ releaseTagName }: Step2AddSDKProps) => {
             <span className="text-xs text-muted-foreground">
               For React Native apps, also add{" "}
               <span className="font-mono">
-                implementation(io.grovs:Grovs:
+                implementation(io.opengrow:OpenGrow:
                 {releaseTagName})
               </span>{" "}
               in your Android app gradle file.

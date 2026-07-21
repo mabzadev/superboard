@@ -11,8 +11,8 @@ export const statusWithProjects = {
     {
       id: "inst1",
       name: "My App",
-      production: { id: "prod1", name: "My App", domain: "myapp.grovs.io", hash_id: "prod1" },
-      test: { id: "test1", name: "My App (test)", domain: "test.myapp.grovs.io", hash_id: "test1" },
+      production: { id: "prod1", name: "My App", domain: "myapp.opengrow.io", hash_id: "prod1" },
+      test: { id: "test1", name: "My App (test)", domain: "test.myapp.opengrow.io", hash_id: "test1" },
     },
   ],
 };
@@ -40,7 +40,7 @@ export const createdLink = {
     id: 42,
     name: "Summer Sale",
     path: "summer-sale",
-    access_path: "https://myapp.grovs.io/summer-sale",
+    access_path: "https://myapp.opengrow.io/summer-sale",
     title: "Summer Sale",
     tags: ["promo"],
     data: { screen: "sale" },
@@ -56,7 +56,7 @@ export const archivedLink = {
     id: 55,
     name: "Old Promo",
     path: "old-promo",
-    access_path: "https://myapp.grovs.io/old-promo",
+    access_path: "https://myapp.opengrow.io/old-promo",
   },
 };
 
@@ -182,8 +182,8 @@ export const statusWithUsageWarning = {
     {
       id: "inst1",
       name: "My App",
-      production: { name: "My App", domain: "myapp.grovs.io", hash_id: "prod1" },
-      test: { name: "My App (test)", domain: "test.myapp.grovs.io", hash_id: "test1" },
+      production: { name: "My App", domain: "myapp.opengrow.io", hash_id: "prod1" },
+      test: { name: "My App (test)", domain: "test.myapp.opengrow.io", hash_id: "test1" },
       usage: {
         current_mau: 12000,
         mau_limit: 10000,
@@ -200,8 +200,8 @@ export const statusWithSubscription = {
     {
       id: "inst1",
       name: "My App",
-      production: { name: "My App", domain: "myapp.grovs.io", hash_id: "prod1" },
-      test: { name: "My App (test)", domain: "test.myapp.grovs.io", hash_id: "test1" },
+      production: { name: "My App", domain: "myapp.opengrow.io", hash_id: "prod1" },
+      test: { name: "My App (test)", domain: "test.myapp.opengrow.io", hash_id: "test1" },
       usage: {
         current_mau: 12000,
         mau_limit: 10000,

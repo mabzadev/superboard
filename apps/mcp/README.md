@@ -1,58 +1,58 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
+    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
+    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/grovs-io/mcp/releases"><img src="https://img.shields.io/github/v/release/grovs-io/mcp?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/mcp/releases"><img src="https://img.shields.io/github/v/release/mbzadev/mcp?style=flat-square&color=4F46E5" alt="Latest release"/></a>
   <a href="#"><img src="https://img.shields.io/badge/MCP-1.0-4F46E5?style=flat-square" alt="MCP 1.0"/></a>
   <a href="#"><img src="https://img.shields.io/badge/Claude%20Code-supported-4F46E5?style=flat-square" alt="Claude Code"/></a>
   <a href="#"><img src="https://img.shields.io/badge/Cursor-supported-4F46E5?style=flat-square" alt="Cursor"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/mcp?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/grovs-io/mcp/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/mcp?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/mcp?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/mcp/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/mcp?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
-  MCP server for managing deep links, analytics, and app configuration on <a href="https://grovs.io">Grovs</a>.
+  MCP server for managing deep links, analytics, and app configuration on <a href="https://github.com/mbzadev/opengrow">OpenGrow</a>.
   <br />
   Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client.
 </p>
 
 <p align="center">
-  <a href="https://grovs.io">Website</a> &middot;
-  <a href="https://docs.grovs.io">Documentation</a> &middot;
-  <a href="https://github.com/grovs-io/mcp/issues">Issues</a>
+  <a href="https://github.com/mbzadev/opengrow">Website</a> &middot;
+  <a href="https://docs.opengrow.io">Documentation</a> &middot;
+  <a href="https://github.com/mbzadev/mcp/issues">Issues</a>
 </p>
 
 ---
 
-## What is Grovs?
+## What is OpenGrow?
 
-[Grovs](https://grovs.io) is an open-source, privacy-first growth platform for mobile apps — a self-hostable alternative to Branch.io and AppsFlyer. It provides:
+[OpenGrow](https://github.com/mbzadev/opengrow) is an open-source, privacy-first growth platform for mobile apps — a self-hostable alternative to Branch.io and AppsFlyer. It provides:
 
 - **Deep Linking** — one link that routes users to the right content across iOS, Android, and web. Deferred deep links survive the install flow so users land on the right screen on first open.
 - **Attribution** — deterministic, first-party install and event attribution. No fingerprinting, no data sharing with ad networks.
 - **Revenue Analytics** — in-app purchases, subscriptions, and custom revenue events matched back to the campaign that drove the install.
 - **Campaigns** — group links, track performance, and compare results across channels.
 
-EU-hosted, open-source SDKs, 20M+ daily active users in production. See the [backend repo](https://github.com/grovs-io/backend) for self-hosting.
+EU-hosted, open-source SDKs, 20M+ daily active users in production. See the [backend repo](https://github.com/mbzadev/backend) for self-hosting.
 
 ## What is this MCP server?
 
-This is an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that lets AI assistants manage your Grovs platform through natural language. Create deep links, check analytics, configure redirects, run campaigns — without leaving your editor.
+This is an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that lets AI assistants manage your OpenGrow platform through natural language. Create deep links, check analytics, configure redirects, run campaigns — without leaving your editor.
 
 ## Quick Start
 
 ### Claude Code
 
 ```
-/plugin marketplace add grovs-io/mcp
-/plugin install grovs@grovs
+/plugin marketplace add mbzadev/mcp
+/plugin install opengrow@opengrow
 ```
 
-Installs the MCP server and skills that teach Claude how to use Grovs. On first use, a browser window opens for OAuth — no API keys needed.
+Installs the MCP server and skills that teach Claude how to use OpenGrow. On first use, a browser window opens for OAuth — no API keys needed.
 
 ### Cursor
 
@@ -61,8 +61,8 @@ Open **Settings > MCP** and add a new server:
 ```json
 {
   "mcpServers": {
-    "grovs": {
-      "url": "https://mcp.grovs.io/mcp"
+    "opengrow": {
+      "url": "https://mcp.opengrow.io/mcp"
     }
   }
 }
@@ -75,8 +75,8 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 ```json
 {
   "mcpServers": {
-    "grovs": {
-      "serverUrl": "https://mcp.grovs.io/mcp"
+    "opengrow": {
+      "serverUrl": "https://mcp.opengrow.io/mcp"
     }
   }
 }
@@ -89,9 +89,9 @@ Add to your `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "grovs": {
+    "opengrow": {
       "type": "http",
-      "url": "https://mcp.grovs.io/mcp"
+      "url": "https://mcp.opengrow.io/mcp"
     }
   }
 }
@@ -102,15 +102,15 @@ Add to your `.vscode/mcp.json`:
 Open **Settings > MCP Servers > Add Server** and enter:
 
 ```
-https://mcp.grovs.io/mcp
+https://mcp.opengrow.io/mcp
 ```
 
 ### Self-Hosted
 
-If you're running your own Grovs backend, run the MCP server locally and point your client to it:
+If you're running your own OpenGrow backend, run the MCP server locally and point your client to it:
 
 ```bash
-git clone https://github.com/grovs-io/mcp.git
+git clone https://github.com/mbzadev/mcp.git
 cd mcp
 npm install && npm run build
 npm start
@@ -119,20 +119,20 @@ npm start
 Or with Docker:
 
 ```bash
-docker build -t grovs-mcp .
-docker run -p 8080:8080 grovs-mcp
+docker build -t opengrow-mcp .
+docker run -p 8080:8080 opengrow-mcp
 ```
 
 Then use `http://localhost:8080/mcp` as the server URL in any of the client configs above.
 
-> All clients will trigger an OAuth flow on first use — a browser window opens to authenticate with your Grovs account.
+> All clients will trigger an OAuth flow on first use — a browser window opens to authenticate with your OpenGrow account.
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | Server port |
-| `GROVS_API_URL` | `https://mcp.grovs.io` | Grovs backend URL (override for self-hosted) |
+| `OPENGROW_API_URL` | `https://mcp.opengrow.io` | OpenGrow backend URL (override for self-hosted) |
 | `PUBLIC_URL` | `http://localhost:8080` | Public URL of this MCP server (used for OAuth callbacks) |
 
 Copy `.env.example` to `.env` for local development.
@@ -181,7 +181,7 @@ Express app (src/app.ts)
             │       Convert API JSON to human-readable text
             │
             └── API client (src/api-client.ts)
-                    HTTP calls to Grovs backend
+                    HTTP calls to OpenGrow backend
 ```
 
 ## Development
@@ -201,10 +201,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for project structure and PR guidelines.
 
 | Platform | Repository |
 |----------|-----------|
-| iOS | [grovs-io/grovs-ios](https://github.com/grovs-io/grovs-ios) |
-| Android | [grovs-io/grovs-android](https://github.com/grovs-io/grovs-android) |
-| React Native | [grovs-io/grovs-react-native](https://github.com/grovs-io/grovs-react-native) |
-| Flutter | [grovs-io/grovs-flutter](https://github.com/grovs-io/grovs-flutter) |
+| iOS | [mbzadev/mbzadevs](https://github.com/mbzadev/mbzadevs) |
+| Android | [mbzadev/opengrow-android](https://github.com/mbzadev/opengrow-android) |
+| React Native | [mbzadev/opengrow-react-native](https://github.com/mbzadev/opengrow-react-native) |
+| Flutter | [mbzadev/opengrow-flutter](https://github.com/mbzadev/opengrow-flutter) |
 
 ## License
 

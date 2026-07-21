@@ -4,29 +4,29 @@
 import PackageDescription
 
 let package = Package(
-    name: "Grovs",
+    name: "OpenGrow",
     platforms: [
            .iOS(.v13)
        ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "Grovs",
-            targets: ["Grovs"]),
+            name: "OpenGrow",
+            targets: ["OpenGrow"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "Grovs",
+            name: "OpenGrow",
             resources: [
                 .process("controllers/MessagesViewController.xib"),
                 .process("controllers/MessageDetailsViewController.xib"),
                 .process("view/MessageTableViewCell.xib"),
             ]),
         .testTarget(
-            name: "grovs-iosTests",
-            dependencies: ["Grovs"]),
+            name: "mbzadevsTests",
+            dependencies: ["OpenGrow"]),
     ],
     swiftLanguageVersions: [.v5]
 )

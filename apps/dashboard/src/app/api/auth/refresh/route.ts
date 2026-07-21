@@ -1,8 +1,11 @@
+
 import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const API_PATH = process.env.NEXT_PUBLIC_API_PATH ?? "/api/v1";
-const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID;
+const env = (value: string | undefined, fallback: string) =>
+  value && value.trim() !== "" ? value : fallback;
+
+const API_URL = env(process.env.NEXT_PUBLIC_API_URL, "https://go.vocostar.com");
+const CLIENT_ID = env(process.env.NEXT_PUBLIC_CLIENT_ID, "opengrow-vocostar");
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 export async function POST(request: NextRequest) {
@@ -25,22 +28,16 @@ export async function POST(request: NextRequest) {
 
   let response: Response;
   try {
-    response = await fetch(
-      `${API_URL}${API_PATH}/identity/sso/tokens/refresh`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(body.token ? { Authorization: `Bearer ${body.token}` } : {}),
-        },
-        body: JSON.stringify({
-          grant_type: "refresh_token",
-          refresh_token: body.refresh_token,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
-        }),
-      }
-    );
+    response = await fetch(`${API_URL}/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        refresh_token: body.refresh_token,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+      }),
+    });
   } catch {
     return NextResponse.json(
       { error: "Upstream service unavailable" },

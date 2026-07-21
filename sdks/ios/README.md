@@ -1,39 +1,39 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
+    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
+    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/grovs-io/grovs-iOS/releases"><img src="https://img.shields.io/github/v/release/grovs-io/grovs-iOS?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://swiftpackageindex.com/grovs-io/grovs-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fgrovs-io%2Fgrovs-iOS%2Fbadge%3Ftype%3Dswift-versions" alt="Swift versions"/></a>
-  <a href="https://swiftpackageindex.com/grovs-io/grovs-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fgrovs-io%2Fgrovs-iOS%2Fbadge%3Ftype%3Dplatforms" alt="Platforms"/></a>
-  <a href="https://cocoapods.org/pods/Grovs"><img src="https://img.shields.io/cocoapods/v/Grovs.svg?style=flat-square&color=4F46E5" alt="CocoaPods"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/grovs-iOS?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/grovs-io/grovs-iOS/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/grovs-iOS?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="https://github.com/mbzadev/opengrow-iOS/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-iOS?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dswift-versions" alt="Swift versions"/></a>
+  <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dplatforms" alt="Platforms"/></a>
+  <a href="https://cocoapods.org/pods/OpenGrow"><img src="https://img.shields.io/cocoapods/v/OpenGrow.svg?style=flat-square&color=4F46E5" alt="CocoaPods"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-iOS?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow-iOS/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-iOS?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for iOS.<br/>
-  Part of the <a href="https://github.com/grovs-io">Grovs</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mbzadev">OpenGrow</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://docs.grovs.io/docs/sdk/ios/quick-start">Quick Start</a> ·
-  <a href="https://docs.grovs.io/docs/sdk/ios/api-reference">API Reference</a> ·
-  <a href="https://docs.grovs.io">Full Docs</a>
+  <a href="https://docs.opengrow.io/docs/sdk/ios/quick-start">Quick Start</a> ·
+  <a href="https://docs.opengrow.io/docs/sdk/ios/api-reference">API Reference</a> ·
+  <a href="https://docs.opengrow.io">Full Docs</a>
 </p>
 
 ---
 
-The Grovs iOS SDK provides deep linking, universal linking, link generation, in-app messaging, revenue tracking, and attribution for your iOS apps. It supports both Swift and Objective-C.
+The OpenGrow iOS SDK provides deep linking, universal linking, link generation, in-app messaging, revenue tracking, and attribution for your iOS apps. It supports both Swift and Objective-C.
 
 ## Features
 
 - **Deep linking & universal links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the Grovs dashboard
+- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages
 - **Revenue tracking** — log StoreKit 2 and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -50,7 +50,7 @@ The Grovs iOS SDK provides deep linking, universal linking, link generation, in-
 ### Swift Package Manager
 
 1. In Xcode, go to **File → Swift Packages → Add Package Dependency**
-2. Enter the repository URL: `https://github.com/grovs-io/grovs-iOS.git`
+2. Enter the repository URL: `https://github.com/mbzadev/opengrow-iOS.git`
 3. Select the version range that fits your project
 4. Click **Next**, then **Finish**
 
@@ -59,7 +59,7 @@ The Grovs iOS SDK provides deep linking, universal linking, link generation, in-
 Add the pod to your `Podfile`:
 
 ```ruby
-pod 'Grovs'
+pod 'OpenGrow'
 ```
 
 Then run:
@@ -75,21 +75,21 @@ pod install
 Import the module and configure the SDK in your `AppDelegate`:
 
 ```swift
-import Grovs
+import OpenGrow
 
 func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    Grovs.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self) { success in
+    OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self) { success in
         if success {
-            print("Grovs SDK is ready")
+            print("OpenGrow SDK is ready")
         }
     }
 
     // Optional: enable debug logging
-    Grovs.setDebug(level: .info)
+    OpenGrow.setDebug(level: .info)
 
     // Optional: set user identity for analytics
-    Grovs.userIdentifier = "user_id_from_your_app"
-    Grovs.userAttributes = ["name": "John Doe", "plan": "premium"]
+    OpenGrow.userIdentifier = "user_id_from_your_app"
+    OpenGrow.userAttributes = ["name": "John Doe", "plan": "premium"]
 
     return true
 }
@@ -98,7 +98,7 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 For self-hosted backends, pass the `baseURL` parameter (domain only — the SDK appends the API path):
 
 ```swift
-Grovs.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
+OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
 ```
 
 ### 2. Forward delegate calls
@@ -107,15 +107,15 @@ Grovs.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "htt
 
 ```swift
 func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-    Grovs.handleSceneDelegate(openURLContexts: URLContexts)
+    OpenGrow.handleSceneDelegate(openURLContexts: URLContexts)
 }
 
 func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
-    Grovs.handleSceneDelegate(continue: userActivity)
+    OpenGrow.handleSceneDelegate(continue: userActivity)
 }
 
 func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-    Grovs.handleSceneDelegate(options: connectionOptions)
+    OpenGrow.handleSceneDelegate(options: connectionOptions)
 }
 ```
 
@@ -123,27 +123,27 @@ func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options conn
 
 ```swift
 func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-    return Grovs.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
+    return OpenGrow.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
 }
 
 func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-    return Grovs.handleAppDelegate(open: url, options: options)
+    return OpenGrow.handleAppDelegate(open: url, options: options)
 }
 ```
 
 ### 3. Handle deep links
 
-Conform to the `GrovsDelegate` protocol to receive deep link callbacks:
+Conform to the `OpenGrowDelegate` protocol to receive deep link callbacks:
 
 ```swift
-class YourViewController: UIViewController, GrovsDelegate {
+class YourViewController: UIViewController, OpenGrowDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        Grovs.delegate = self
+        OpenGrow.delegate = self
     }
 
-    func grovsReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
+    func opengrowReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
         // Route the user based on payload data
         if let screen = payload?["screen"] as? String {
             navigateTo(screen)
@@ -156,12 +156,12 @@ You can also retrieve past payloads:
 
 ```swift
 // Get the most recent payload
-Grovs.lastReceivedPayload { payload in
+OpenGrow.lastReceivedPayload { payload in
     print("Last payload: \(payload)")
 }
 
 // Get all payloads received since app launch
-Grovs.allReceivedPayloadsSinceStartup { payloads in
+OpenGrow.allReceivedPayloadsSinceStartup { payloads in
     guard let payloads = payloads else { return }
     for payload in payloads {
         print("Payload: \(payload)")
@@ -174,7 +174,7 @@ Grovs.allReceivedPayloadsSinceStartup { payloads in
 Create smart links with metadata, payload data, and tracking parameters:
 
 ```swift
-Grovs.generateLink(
+OpenGrow.generateLink(
     title: "Check out this product",
     subtitle: "Limited time offer",
     imageURL: "https://example.com/image.jpg",
@@ -200,7 +200,7 @@ let redirects = CustomRedirects(
     desktop: CustomLinkRedirect(link: "https://example.com/desktop-promo", openAppIfInstalled: false)
 )
 
-Grovs.generateLink(title: "Special offer", data: ["promoId": "summer25"], customRedirects: redirects) { url in
+OpenGrow.generateLink(title: "Special offer", data: ["promoId": "summer25"], customRedirects: redirects) { url in
     guard let url = url else { return }
     print("Generated link: \(url)")
 }
@@ -211,7 +211,7 @@ Grovs.generateLink(title: "Special offer", data: ["promoId": "summer25"], custom
 Present a share sheet after generating a link:
 
 ```swift
-Grovs.generateLink(title: "Share this", data: ["itemId": "abc"]) { url in
+OpenGrow.generateLink(title: "Share this", data: ["itemId": "abc"]) { url in
     guard let url = url else { return }
     let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
     self.present(activityVC, animated: true)
@@ -224,11 +224,11 @@ Grovs.generateLink(title: "Share this", data: ["itemId": "abc"]) { url in
 
 ### Push notifications
 
-To receive push notifications for messages sent from the Grovs dashboard:
+To receive push notifications for messages sent from the OpenGrow dashboard:
 
 **1. Add capabilities** — In Xcode, add the **Push Notifications** capability and enable **Remote notifications** under **Background Modes**.
 
-**2. Upload your APNs key** — In [Apple Developer → Keys](https://developer.apple.com/account/resources/authkeys/list), create a key with APNs enabled. Upload the `.p8` file, Key ID, and Team ID in your [Grovs dashboard](https://app.grovs.io) under **Settings → Push Notifications**.
+**2. Upload your APNs key** — In [Apple Developer → Keys](https://developer.apple.com/account/resources/authkeys/list), create a key with APNs enabled. Upload the `.p8` file, Key ID, and Team ID in your [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Push Notifications**.
 
 **3. Request permission and register:**
 
@@ -244,12 +244,12 @@ UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge
 }
 ```
 
-**4. Pass the device token to Grovs:**
+**4. Pass the device token to OpenGrow:**
 
 ```swift
 func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-    Grovs.pushToken = token
+    OpenGrow.pushToken = token
 }
 ```
 
@@ -259,12 +259,12 @@ func application(_ application: UIApplication, didRegisterForRemoteNotifications
 
 ```swift
 // Show the messages list as a modal
-Grovs.displayMessagesViewController {
+OpenGrow.displayMessagesViewController {
     // Modal was dismissed
 }
 
 // Get unread count for badges
-Grovs.numberOfUnreadMessages { count in
+OpenGrow.numberOfUnreadMessages { count in
     print("Unread: \(count)")
 }
 ```
@@ -275,8 +275,8 @@ Grovs.numberOfUnreadMessages { count in
 
 ### Setup
 
-1. Enable revenue tracking in the [Grovs dashboard](https://app.grovs.io) under **Settings → Revenue Tracking**
-2. Configure App Store Server Notifications in [App Store Connect](https://appstoreconnect.apple.com) — set the production and sandbox URLs shown in the Grovs dashboard under **Developers → iOS Setup → Revenue**
+1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
+2. Configure App Store Server Notifications in [App Store Connect](https://appstoreconnect.apple.com) — set the production and sandbox URLs shown in the OpenGrow dashboard under **Developers → iOS Setup → Revenue**
 
 ### App Store purchases (StoreKit 2)
 
@@ -288,7 +288,7 @@ let result = try await Product.purchase(...)
 if case .success(let verification) = result,
    case .verified(let transaction) = verification {
 
-    Grovs.logInAppPurchase(transactionID: transaction.id) { success in
+    OpenGrow.logInAppPurchase(transactionID: transaction.id) { success in
         if success {
             Task { await transaction.finish() }
         }
@@ -301,7 +301,7 @@ if case .success(let verification) = result,
 ### Custom purchases
 
 ```swift
-Grovs.logCustomPurchase(
+OpenGrow.logCustomPurchase(
     type: .buy,
     priceInCents: 999,       // $9.99
     currency: "USD",
@@ -319,7 +319,7 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 
 | Property | Type | Description |
 |---|---|---|
-| `delegate` | `GrovsDelegate?` | Receives deep link callbacks |
+| `delegate` | `OpenGrowDelegate?` | Receives deep link callbacks |
 | `userIdentifier` | `String?` | User ID shown in dashboard and reports |
 | `userAttributes` | `[String: Any]?` | User attributes for analytics |
 | `pushToken` | `String?` | APNs device token for push notifications |
@@ -340,31 +340,31 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionID:completion:)` | Log a StoreKit 2 purchase |
 | `logCustomPurchase(type:priceInCents:currency:productID:startDate:completion:)` | Log a custom purchase |
 
-Full API reference: [docs.grovs.io/docs/sdk/ios/api-reference](https://docs.grovs.io/docs/sdk/ios/api-reference)
+Full API reference: [docs.opengrow.io/docs/sdk/ios/api-reference](https://docs.opengrow.io/docs/sdk/ios/api-reference)
 
 ## Example App
 
-A demo project is available at [grovs-io/grovs-ios-example-app](https://github.com/grovs-io/grovs-ios-example-app).
+A demo project is available at [mbzadev/mbzadevs-example-app](https://github.com/mbzadev/mbzadevs-example-app).
 
 ## Setup Guides
 
-- [Custom URL Scheme](https://docs.grovs.io/docs/how-to-guides/ios/url-scheme) — configure deep link URL schemes
-- [Associated Domains](https://docs.grovs.io/docs/how-to-guides/ios/associated-domain) — set up universal links
-- [Apple App Prefix](https://docs.grovs.io/docs/how-to-guides/ios/apple-app-prefix) — find your Team ID
-- [Bundle Identifier](https://docs.grovs.io/docs/how-to-guides/ios/bundle-identifier) — find your bundle ID
+- [Custom URL Scheme](https://docs.opengrow.io/docs/how-to-guides/ios/url-scheme) — configure deep link URL schemes
+- [Associated Domains](https://docs.opengrow.io/docs/how-to-guides/ios/associated-domain) — set up universal links
+- [Apple App Prefix](https://docs.opengrow.io/docs/how-to-guides/ios/apple-app-prefix) — find your Team ID
+- [Bundle Identifier](https://docs.opengrow.io/docs/how-to-guides/ios/bundle-identifier) — find your bundle ID
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.grovs.io/docs/migration-guides/firebase-dynamic-links/ios)
-- [Migrate from Branch.io](https://docs.grovs.io/docs/migration-guides/branch-io/ios)
+- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/ios)
+- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/ios)
 
 ## Documentation
 
-Full documentation at [docs.grovs.io](https://docs.grovs.io).
+Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
 
 ## Support
 
-For technical support and inquiries, contact [support@grovs.io](mailto:support@grovs.io).
+For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
 
 ## License
 

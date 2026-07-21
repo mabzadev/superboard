@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+
+  worker:
+    name: API Worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run cloudflare:config:api
+      - run: npm run worker:typecheck
+      - run: npm run worker:test
+      - run: npx wrangler deploy --dry-run --config deploy/generated/vocostar-api-production.jsonc
+
+  dashboard:
+    name: Dashboard OpenNext
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: https://go.vocostar.com
+      NEXT_PUBLIC_API_PATH: /api/v1
+      NEXT_PUBLIC_CLIENT_ID: opengrow-vocostar
+      NEXT_PUBLIC_APP_URL: https://grow.vocostar.com
+      NEXT_PUBLIC_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run dashboard:typecheck
+      - run: npm run dashboard:test
+      - run: npm run cloudflare:config:dashboard
+      - run: npm run dashboard:cf-build
+
+  flutter:
+    name: Flutter and FlutterFlow
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: sdks/flutter
+      - run: flutter analyze
+        working-directory: sdks/flutter
+      - run: flutter test
+        working-directory: sdks/flutter
+      - run: flutter pub get
+        working-directory: sdks/flutterflow
+      - run: flutter analyze
+        working-directory: sdks/flutterflow
+      - run: flutter test
+        working-directory: sdks/flutterflow
+
+  ios:
+    name: Swift SDK
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -workspace sdks/ios/.swiftpm/xcode/package.xcworkspace -scheme OpenGrow -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
+
+  android:
+    name: Android SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - run: ./gradlew :OpenGrow:testDebugUnitTest
+        working-directory: sdks/android/OpenGrow
+
+  javascript:
+    name: JavaScript SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdks/javascript/package-lock.json
+      - run: npm ci
+        working-directory: sdks/javascript
+      - run: npm run build
+        working-directory: sdks/javascript
+
+  react-native:
+    name: React Native SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: sdks/react-native/yarn.lock
+      - run: corepack enable
+      - run: yarn install --immutable
+        working-directory: sdks/react-native
+      - run: yarn typecheck
+        working-directory: sdks/react-native
+      - run: yarn test --runInBand
+        working-directory: sdks/react-native
+
+  mcp:
+    name: MCP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mcp/package-lock.json
+      - run: npm ci
+        working-directory: apps/mcp
+      - run: npm test
+        working-directory: apps/mcp
+      - run: npm run build
+        working-directory: apps/mcp

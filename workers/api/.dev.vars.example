@@ -1,0 +1,41 @@
+JWT_SECRET=local-development-secret-change-me
+
+# Mail delivery for reset password and dashboard invitations.
+# Pick one provider and keep real tokens as Cloudflare Worker secrets in prod.
+MAIL_PROVIDER=webhook
+MAIL_FROM="OpenGrow <noreply@opengrow.io>"
+MAIL_WEBHOOK_URL=http://127.0.0.1:9999/mail
+# RESEND_API_KEY=
+# POSTMARK_SERVER_TOKEN=
+# SENDGRID_API_KEY=
+APP_URL=http://localhost:3001
+SERVER_HOST=127.0.0.1:8796
+SERVER_HOST_PROTOCOL=http://
+SSO_AUTHENTICATION_ENDPOINT=http://localhost:3001
+
+# Real SSO provider credentials. Leave empty locally unless testing SSO against
+# Google/Microsoft apps configured with the callback URLs below.
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# MICROSOFT_CLIENT_ID=
+# MICROSOFT_CLIENT_SECRET=
+
+# Protected OpenGrow admin and automation endpoints.
+ADMIN_API_KEY=local-admin-secret
+
+# Protected local/manual maintenance job trigger.
+MAINTENANCE_PROCESS_KEY=local-maintenance-secret
+
+# Protected diagnostics endpoints equivalent to OpenGrow diagnostics controller.
+DIAGNOSTICS_API_KEY=local-diagnostics-secret
+
+# OpenGrow Purchases. Use independent, randomly generated secrets in production.
+STORE_CREDENTIALS_ENCRYPTION_KEY=local-store-credentials-key-change-me
+# For rotation, prefer a JSON keyring plus its active version. Keep old entries
+# until every encrypted credential has been re-saved.
+# STORE_CREDENTIALS_ENCRYPTION_KEYS={"2026-01":"old-key","2026-07":"new-key"}
+# STORE_CREDENTIALS_ACTIVE_KEY_VERSION=2026-07
+PURCHASES_SIGNING_SECRET=local-purchases-signing-key-change-me
+# JSON array of Apple Root Certificate DER values encoded as base64.
+# Download current roots from https://www.apple.com/certificateauthority/
+# APPLE_ROOT_CERTIFICATES_B64=["..."]

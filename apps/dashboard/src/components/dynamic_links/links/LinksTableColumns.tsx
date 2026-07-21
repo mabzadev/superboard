@@ -21,11 +21,11 @@ import LinkedInIconWhite from "@/assets/icons/ads_platform/linkedIn_dark_mode.sv
 import TikTokIconWhite from "@/assets/icons/ads_platform/tiktok_dark_mode.svg";
 import MetaIconcWhite from "@/assets/icons/ads_platform/meta_dark_mode.svg";
 
-import Grovs from "@/assets/icons/ads_platform/grovs.svg";
+import OpenGrow from "@/assets/icons/ads_platform/opengrow.svg";
 import React from "react";
 import Image from "next/image";
 import type { SortType } from "@/types";
-import { LinkData } from "@/app/(protected)/dynamic_links/links/page";
+import type { LinkData } from "@/app/(protected)/dynamic_links/links/LinksPageContent";
 import { Badge } from "@/components/ui/badge";
 import { numberFormatter } from "@/utils/numberFormatter";
 import { formatCurrencyFromCents } from "@/utils/formatCurrency";
@@ -178,7 +178,7 @@ export const getLinksTableColumns = (
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            This represents the number of app opens that occurred from a grovs
+            This represents the number of app opens that occurred from a opengrow
             link.
           </p>
         </TooltipContent>
@@ -422,7 +422,7 @@ const getPlatformIconSrc = (
       return resolvedTheme === "dark" ? TikTokIconWhite : TikTokIcon;
 
     case QUICK_LINK:
-      return Grovs;
+      return OpenGrow;
     default:
       return null;
   }

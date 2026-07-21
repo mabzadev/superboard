@@ -1,0 +1,9 @@
+{
+  "project_info": {
+    "project_number": "REPLACE_WITH_FIREBASE_PROJECT_NUMBER",
+    "project_id": "REPLACE_WITH_FIREBASE_PROJECT_ID",
+    "storage_bucket": "REPLACE_WITH_FIREBASE_STORAGE_BUCKET"
+  },
+  "client": [],
+  "configuration_version": "1"
+}

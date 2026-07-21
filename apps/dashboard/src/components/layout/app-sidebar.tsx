@@ -10,6 +10,7 @@ import {
   Settings2,
   PencilRuler,
   SquareTerminal,
+  ShoppingBag,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
@@ -77,6 +78,13 @@ const data = {
           },
         ]
       : []),
+    {
+      title: "Purchases",
+      url: "/purchases",
+      icon: ShoppingBag,
+      itemType: "simple",
+      badge: "New",
+    },
     {
       title: "Messaging",
       url: "/messaging",

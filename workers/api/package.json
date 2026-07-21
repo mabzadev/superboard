@@ -1,0 +1,25 @@
+{
+  "name": "@opengrow/api-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --config ../../deploy/generated/vocostar-api-production.jsonc",
+    "typecheck": "tsc --noEmit",
+    "test": "npx vitest run --config vitest.config.ts",
+    "deploy": "node ../../scripts/cloudflare-deploy.mjs --service api --target vocostar --environment production",
+    "migrate:local": "wrangler d1 migrations apply DB --local --config ../../deploy/generated/vocostar-api-production.jsonc",
+    "migrate:prod": "wrangler d1 migrations apply DB --remote --config ../../deploy/generated/vocostar-api-production.jsonc"
+  },
+  "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
+    "bcryptjs": "^3.0.2",
+    "hono": "^4.7.4",
+    "jose": "^5.10.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260721.1",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.112.0"
+  }
+}

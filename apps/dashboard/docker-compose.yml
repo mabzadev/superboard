@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   web:
-    container_name: grovs-dashboard-nextjs-app
+    container_name: opengrow-dashboard-nextjs-app
     build:
       context: . # build from current directory
       dockerfile: Dockerfile.preview # explicitly specify your Dockerfile (optional if named 'Dockerfile')

@@ -2,27 +2,27 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:grovs_flutter_plugin/grovs.dart';
-import 'package:grovs_flutter_plugin/models/grovs_link.dart';
+import 'package:opengrow_flutter/opengrow.dart';
+import 'package:opengrow_flutter/models/opengrow_link.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Grovs SDK
-  final grovs = Grovs();
+  // Initialize OpenGrow SDK
+  final opengrow = OpenGrow();
   try {
-    await grovs.setDebugLevel('info');
+    await opengrow.setDebugLevel('info');
 
     // Set user information (optional)
-    await grovs.setUserIdentifier('demo-user-123');
-    await grovs.setUserAttributes({
+    await opengrow.setUserIdentifier('demo-user-123');
+    await opengrow.setUserAttributes({
       'name': 'Demo User',
       'email': 'demo@example.com',
       'app': 'Flutter Demo',
     });
   } catch (e) {
-    print('Failed to configure Grovs: $e');
+    debugPrint('Failed to configure OpenGrow: $e');
   }
 
   runApp(const MyApp());
@@ -39,7 +39,7 @@ class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   String _generatedLink = '';
   String _lastDeeplinkReceived = 'None';
-  final _grovs = Grovs();
+  final _opengrow = OpenGrow();
   StreamSubscription<DeeplinkDetails>? _deeplinkSubscription;
   bool _isGenerating = false;
 
@@ -57,7 +57,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void setupDeeplinkListener() {
-    _deeplinkSubscription = _grovs.onDeeplinkReceived.listen((deeplinkDetails) {
+    _deeplinkSubscription = _opengrow.onDeeplinkReceived.listen((deeplinkDetails) {
       setState(() {
         _lastDeeplinkReceived =
             'Link: ${deeplinkDetails.link}\nData: ${deeplinkDetails.data}\nTracking: ${deeplinkDetails.tracking?.toMap()}';
@@ -93,7 +93,7 @@ class _MyAppState extends State<MyApp> {
     String platformVersion;
     try {
       platformVersion =
-          await _grovs.getPlatformVersion() ?? 'Unknown platform version';
+          await _opengrow.getPlatformVersion() ?? 'Unknown platform version';
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
     }
@@ -111,10 +111,10 @@ class _MyAppState extends State<MyApp> {
     });
 
     try {
-      final link = await _grovs.generateLink(
+      final link = await _opengrow.generateLink(
         GenerateLinkParams(
           title: 'Check out this Flutter app!',
-          subtitle: 'Built with Grovs SDK',
+          subtitle: 'Built with OpenGrow SDK',
           imageURL:
               'https://flutter.dev/assets/images/shared/brand/flutter/logo/flutter-lockup.png',
           data: {
@@ -157,7 +157,7 @@ class _MyAppState extends State<MyApp> {
           const SnackBar(content: Text('Link generated successfully!')),
         );
       }
-    } on GrovsException catch (e) {
+    } on OpenGrowException catch (e) {
       if (mounted) {
         setState(() {
           _isGenerating = false;
@@ -175,7 +175,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: Scaffold(
-        appBar: AppBar(title: const Text('Grovs Flutter Example'), actions: []),
+        appBar: AppBar(title: const Text('OpenGrow Flutter Example'), actions: []),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -225,7 +225,7 @@ class _MyAppState extends State<MyApp> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Generate Grovs Link'),
+                            : const Text('Generate OpenGrow Link'),
                       ),
                       if (_generatedLink.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -311,23 +311,24 @@ class _MyAppState extends State<MyApp> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
-                            await _grovs.logCustomPurchase(
+                            await _opengrow.logCustomPurchase(
                               type: TransactionType.buy,
                               priceInCents: 999,
                               currency: 'USD',
                               productId: 'premium_monthly',
                             );
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(
                                   content: Text('Custom purchase logged!'),
                                 ),
                               );
                             }
-                          } on GrovsException catch (e) {
+                          } on OpenGrowException catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     'Failed to log purchase: ${e.message}',

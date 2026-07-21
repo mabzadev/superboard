@@ -1,4 +1,4 @@
-import type { LogLevel } from './NativeGrovsWrapper';
+import type { LogLevel } from './NativeOpenGrowWrapper';
 
 function createLogger(libraryName: string) {
   function getCallerInfo() {
@@ -38,4 +38,4 @@ function createLogger(libraryName: string) {
   };
 }
 
-export const log = createLogger('GROVS JS');
+export const log = createLogger('OPENGROW JS');

@@ -308,7 +308,7 @@ export async function setupApiMocks(page: Page) {
           domain: {
             id: "domain-001",
             subdomain: "test",
-            domain: "grovs.io",
+            domain: "opengrow.io",
           },
         }),
       });

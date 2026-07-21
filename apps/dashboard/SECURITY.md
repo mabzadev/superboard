@@ -2,9 +2,9 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Grovs, please report it responsibly.
+If you discover a security vulnerability in OpenGrow, please report it responsibly.
 
-**Email:** [support@grovs.io](mailto:support@grovs.io)
+**Email:** [support@opengrow.io](mailto:support@opengrow.io)
 
 Please include:
 

@@ -1,39 +1,66 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
+    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
+    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://pub.dev/packages/grovs_flutter_plugin"><img src="https://img.shields.io/pub/v/grovs_flutter_plugin?style=flat-square&color=4F46E5" alt="Pub version"/></a>
-  <a href="https://pub.dev/packages/grovs_flutter_plugin/score"><img src="https://img.shields.io/pub/points/grovs_flutter_plugin?style=flat-square&color=4F46E5" alt="Pub points"/></a>
+  <a href="https://pub.dev/packages/opengrow_flutter"><img src="https://img.shields.io/pub/v/opengrow_flutter?style=flat-square&color=4F46E5" alt="Pub version"/></a>
+  <a href="https://pub.dev/packages/opengrow_flutter/score"><img src="https://img.shields.io/pub/points/opengrow_flutter?style=flat-square&color=4F46E5" alt="Pub points"/></a>
   <a href="#"><img src="https://img.shields.io/badge/platforms-iOS%20%7C%20Android-4F46E5?style=flat-square" alt="Platforms"/></a>
   <a href="#"><img src="https://img.shields.io/badge/flutter-3.0%2B-4F46E5?style=flat-square&logo=flutter&logoColor=white" alt="Flutter"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/grovs-io/grovs-flutter?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/grovs-io/grovs-flutter/stargazers"><img src="https://img.shields.io/github/stars/grovs-io/grovs-flutter?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-flutter?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow-flutter/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-flutter?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for Flutter.<br/>
-  Part of the <a href="https://github.com/grovs-io">Grovs</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mbzadev">OpenGrow</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://docs.grovs.io/docs/sdk/flutter/quick-start">Quick Start</a> ·
-  <a href="https://docs.grovs.io/docs/sdk/flutter/api-reference">API Reference</a> ·
-  <a href="https://docs.grovs.io">Full Docs</a>
+  <a href="https://docs.opengrow.io/docs/sdk/flutter/quick-start">Quick Start</a> ·
+  <a href="https://docs.opengrow.io/docs/sdk/flutter/api-reference">API Reference</a> ·
+  <a href="https://docs.opengrow.io">Full Docs</a>
 </p>
 
 ---
 
-The Grovs Flutter SDK provides deep linking, app links, universal links, link generation, in-app messaging, revenue tracking, and attribution for your Flutter apps. It wraps the native iOS and Android SDKs.
+## OpenGrow Purchases
+
+Version 1.2 adds server-verified App Store and Google Play purchases:
+
+```dart
+final purchases = OpenGrowPurchases.instance;
+await purchases.configure(
+  projectKey: 'my_project_key',
+  platformIdentifier: 'com.example.app',
+  identityToken: myOidcJwt,
+);
+
+final offerings = await purchases.getOfferings();
+final result = await purchases.purchasePackage(
+  offerings.current!.packages.first,
+);
+final premium = result.customerInfo?.isEntitled('premium') == true;
+```
+
+Available APIs: `configure`, `logIn`, `logOut`, `getOfferings`,
+`getCustomerInfo`, `isEntitled`, `purchasePackage`, `restorePurchases`,
+`syncPurchases`, and `customerInfoStream`.
+
+The SDK sends StoreKit 2 JWS transactions or Google purchase tokens to OpenGrow.
+It completes a purchase only after server verification. Never put App Store
+Connect or Google service-account credentials in the application.
+
+The OpenGrow Flutter SDK provides deep linking, app links, universal links, link generation, in-app messaging, revenue tracking, and attribution for your Flutter apps. It wraps the native iOS and Android SDKs.
 
 ## Features
 
 - **Deep linking & universal links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the Grovs dashboard
+- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages
 - **Revenue tracking** — log App Store, Google Play, and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -53,7 +80,7 @@ Add the dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  grovs_flutter_plugin: ^1.1.0
+  opengrow_flutter: ^1.1.0
 ```
 
 Then run:
@@ -68,20 +95,20 @@ flutter pub get
 
 **1. Add configuration to `AndroidManifest.xml`**
 
-Add the Grovs API key and environment setting inside the `<application>` tag in `android/app/src/main/AndroidManifest.xml`:
+Add the OpenGrow API key and environment setting inside the `<application>` tag in `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <application>
     <meta-data
-        android:name="grovs_api_key"
+        android:name="opengrow_api_key"
         android:value="YOUR_API_KEY" />
     <meta-data
-        android:name="grovs_use_test_environment"
+        android:name="opengrow_use_test_environment"
         android:value="true" /> <!-- Set to false for production -->
 
     <!-- Optional: Custom base URL for self-hosted backends -->
     <meta-data
-        android:name="grovs_base_url"
+        android:name="opengrow_base_url"
         android:value="https://your-domain.com" />
 </application>
 ```
@@ -125,13 +152,13 @@ Add these to your main activity for deep link handling:
 Add to `ios/Runner/Info.plist`:
 
 ```xml
-<key>GrovsApiKey</key>
+<key>OpenGrowApiKey</key>
 <string>YOUR_API_KEY</string>
-<key>GrovsUseTestEnvironment</key>
+<key>OpenGrowUseTestEnvironment</key>
 <true/> <!-- Set to <false/> for production -->
 
 <!-- Optional: Custom base URL for self-hosted backends -->
-<key>GrovsBaseURL</key>
+<key>OpenGrowBaseURL</key>
 <string>https://your-domain.com</string>
 ```
 
@@ -163,16 +190,16 @@ Add custom URL scheme support to `Info.plist`:
 ### Initialize and configure
 
 ```dart
-import 'package:grovs_flutter_plugin/grovs.dart';
+import 'package:opengrow_flutter/opengrow.dart';
 
-final grovs = Grovs();
+final opengrow = OpenGrow();
 
 // Optional: enable debug logging
-await grovs.setDebugLevel('info');
+await opengrow.setDebugLevel('info');
 
 // Optional: set user identity for analytics
-await grovs.setUserIdentifier('user_id_from_your_app');
-await grovs.setUserAttributes({
+await opengrow.setUserIdentifier('user_id_from_your_app');
+await opengrow.setUserAttributes({
   'name': 'John Doe',
   'plan': 'premium',
 });
@@ -184,14 +211,14 @@ Subscribe to the `onDeeplinkReceived` stream to handle incoming deep links:
 
 ```dart
 import 'dart:async';
-import 'package:grovs_flutter_plugin/grovs.dart';
+import 'package:opengrow_flutter/opengrow.dart';
 
 StreamSubscription<DeeplinkDetails>? _subscription;
 
 @override
 void initState() {
   super.initState();
-  _subscription = grovs.onDeeplinkReceived.listen((details) {
+  _subscription = opengrow.onDeeplinkReceived.listen((details) {
     final link = details.link;
     final payload = details.data;
     final tracking = details.tracking;
@@ -217,11 +244,11 @@ void dispose() {
 Create smart links with metadata, payload data, and tracking parameters:
 
 ```dart
-import 'package:grovs_flutter_plugin/grovs.dart';
-import 'package:grovs_flutter_plugin/models/grovs_link.dart';
+import 'package:opengrow_flutter/opengrow.dart';
+import 'package:opengrow_flutter/models/opengrow_link.dart';
 
 try {
-  final link = await grovs.generateLink(
+  final link = await opengrow.generateLink(
     GenerateLinkParams(
       title: 'Check out this product',
       subtitle: 'Limited time offer',
@@ -239,7 +266,7 @@ try {
     ),
   );
   print('Generated: $link');
-} on GrovsException catch (e) {
+} on OpenGrowException catch (e) {
   print('Error: ${e.message}');
 }
 ```
@@ -249,7 +276,7 @@ try {
 Override where a link sends users on each platform:
 
 ```dart
-final link = await grovs.generateLink(
+final link = await opengrow.generateLink(
   GenerateLinkParams(
     title: 'Special offer',
     data: {'promoId': 'summer25'},
@@ -269,7 +296,7 @@ Launch the platform share sheet after generating a link:
 ```dart
 import 'package:share_plus/share_plus.dart';
 
-final link = await grovs.generateLink(
+final link = await opengrow.generateLink(
   GenerateLinkParams(title: 'Share this', data: {'itemId': 'abc'}),
 );
 Share.share(link);
@@ -289,16 +316,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 // Get and set the token
 final token = await FirebaseMessaging.instance.getToken();
 if (token != null) {
-  await grovs.setPushToken(token);
+  await opengrow.setPushToken(token);
 }
 
 // Listen for token refreshes
 FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-  grovs.setPushToken(newToken);
+  opengrow.setPushToken(newToken);
 });
 ```
 
-Upload your Firebase or APNs credentials in the [Grovs dashboard](https://app.grovs.io) under your platform's push notification settings.
+Upload your Firebase or APNs credentials in the [OpenGrow dashboard](https://app.opengrow.io) under your platform's push notification settings.
 
 > Push notifications require a physical device. They do not work in the iOS Simulator.
 
@@ -308,7 +335,7 @@ Upload your Firebase or APNs credentials in the [Grovs dashboard](https://app.gr
 
 ### Setup
 
-1. Enable revenue tracking in the [Grovs dashboard](https://app.grovs.io) under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
 2. Configure platform notifications:
    - **Android** — Set up Google Play Real-Time Developer Notifications
    - **iOS** — Configure App Store Server Notifications in App Store Connect
@@ -318,7 +345,7 @@ Upload your Firebase or APNs credentials in the [Grovs dashboard](https://app.gr
 ```dart
 // iOS: pass the StoreKit transaction ID as a string
 // Android: pass the purchase originalJson string
-await grovs.logInAppPurchase('transaction_id_or_json');
+await opengrow.logInAppPurchase('transaction_id_or_json');
 ```
 
 > The SDK automatically extracts price, currency, and product info. Duplicates are filtered.
@@ -326,9 +353,9 @@ await grovs.logInAppPurchase('transaction_id_or_json');
 ### Custom purchases
 
 ```dart
-import 'package:grovs_flutter_plugin/models/grovs_link.dart';
+import 'package:opengrow_flutter/models/opengrow_link.dart';
 
-await grovs.logCustomPurchase(
+await opengrow.logCustomPurchase(
   type: TransactionType.buy,
   priceInCents: 999,       // $9.99
   currency: 'USD',
@@ -358,7 +385,7 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [docs.grovs.io/docs/sdk/flutter/api-reference](https://docs.grovs.io/docs/sdk/flutter/api-reference)
+Full API reference: [docs.opengrow.io/docs/sdk/flutter/api-reference](https://docs.opengrow.io/docs/sdk/flutter/api-reference)
 
 ## Example App
 
@@ -366,16 +393,16 @@ A demo project is included in the [`example/`](example/) directory.
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.grovs.io/docs/migration-guides/firebase-dynamic-links/android)
-- [Migrate from Branch.io](https://docs.grovs.io/docs/migration-guides/branch-io/android)
+- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/android)
+- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/android)
 
 ## Documentation
 
-Full documentation at [docs.grovs.io](https://docs.grovs.io).
+Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
 
 ## Support
 
-For technical support and inquiries, contact [support@grovs.io](mailto:support@grovs.io).
+For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
 
 ## License
 

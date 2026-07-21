@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import LinkTypeElement from "./LinkTypeElement";
-import QcLinkIcon from "@/assets/icons/ads_platform/grovs.svg";
+import QcLinkIcon from "@/assets/icons/ads_platform/opengrow.svg";
 import GoogleIcon from "@/assets/icons/ads_platform/google.svg";
 import GoogleIconWhite from "@/assets/icons/ads_platform/google_dark_mode.svg";
 import FacebookIcon from "@/assets/icons/ads_platform/facebook.svg";

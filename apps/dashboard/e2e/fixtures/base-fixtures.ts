@@ -1,5 +1,6 @@
 import { test as base } from "@playwright/test";
 import { setupApiMocks } from "./api-mocks";
+import { createRealAuthState, isRealBackendE2E } from "./real-auth";
 import { MOCK_TOKENS, TEST_USER } from "./test-data";
 
 type Fixtures = {
@@ -13,11 +14,15 @@ type Fixtures = {
  * with API mocks pre-configured.
  */
 export const test = base.extend<Fixtures>({
-  authenticatedPage: async ({ page }, use) => {
-    // Set up API mocks before any navigation
-    await setupApiMocks(page);
+  authenticatedPage: async ({ page, request }, use) => {
+    if (isRealBackendE2E) {
+      await createRealAuthState(page, request);
+      await use(page);
+      return;
+    }
 
     // Inject auth tokens into localStorage before navigating
+    await setupApiMocks(page);
     await page.addInitScript(
       ({ tokens, user }) => {
         localStorage.setItem("access_token", tokens.access_token);

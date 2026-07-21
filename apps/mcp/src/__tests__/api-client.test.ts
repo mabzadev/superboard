@@ -32,11 +32,11 @@ function jsonResponse(data: unknown, status = 200, statusText = "OK") {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  process.env.GROVS_API_URL = "https://api.test.com";
+  process.env.OPENGROW_API_URL = "https://api.test.com";
 });
 
 afterEach(() => {
-  delete process.env.GROVS_API_URL;
+  delete process.env.OPENGROW_API_URL;
 });
 
 // --- request() core behavior ---

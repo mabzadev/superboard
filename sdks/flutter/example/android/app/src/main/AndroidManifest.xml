@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="grovs_example"
+        android:label="opengrow_example"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -50,10 +50,10 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <meta-data
-            android:name="grovs_api_key"
-            android:value="REMOVED_LEGACY_SECRET_08" />
+            android:name="opengrow_api_key"
+            android:value="${OPENGROW_API_KEY}" />
         <meta-data
-            android:name="grovs_use_test_environment"
+            android:name="opengrow_use_test_environment"
             android:value="true" />
     </application>
     <!-- Required to query activities that can process text, see:

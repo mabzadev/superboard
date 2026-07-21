@@ -1,32 +1,32 @@
 <p align="center">
-  <a href="https://grovs.io">
+  <a href="https://github.com/mbzadev/opengrow">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/grovs.io/full-white.svg">
-      <img src="https://s3.eu-north-1.amazonaws.com/grovs.io/full-black.svg" width="120" alt="Grovs">
+      <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
+      <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
     </picture>
   </a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for React Native.<br/>
-  Part of the <a href="https://github.com/grovs-io">Grovs</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mbzadev">OpenGrow</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://docs.grovs.io/docs/sdk/react-native/quick-start">Quick Start</a> ·
-  <a href="https://docs.grovs.io/docs/sdk/react-native/api-reference">API Reference</a> ·
-  <a href="https://docs.grovs.io">Full Docs</a>
+  <a href="https://docs.opengrow.io/docs/sdk/react-native/quick-start">Quick Start</a> ·
+  <a href="https://docs.opengrow.io/docs/sdk/react-native/api-reference">API Reference</a> ·
+  <a href="https://docs.opengrow.io">Full Docs</a>
 </p>
 
 ---
 
-The Grovs React Native SDK provides deep linking, universal links, app links, link generation, in-app messaging, revenue tracking, and attribution for your React Native apps.
+The OpenGrow React Native SDK provides deep linking, universal links, app links, link generation, in-app messaging, revenue tracking, and attribution for your React Native apps.
 
 ## Features
 
 - **Deep linking & universal links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the Grovs dashboard
+- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages
 - **Revenue tracking** — log App Store, Google Play, and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -43,19 +43,19 @@ The Grovs React Native SDK provides deep linking, universal links, app links, li
 
 ```bash
 # Using npm
-npm install react-native-grovs-wrapper
+npm install @mbzadev/opengrow-react-native
 
 # Using yarn
-yarn add react-native-grovs-wrapper
+yarn add @mbzadev/opengrow-react-native
 ```
 
 ### Android dependency
 
-Add the Grovs Android SDK to `android/app/build.gradle`:
+Add the OpenGrow Android SDK to `android/app/build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'io.grovs:Grovs:1.1.1'
+    implementation 'io.opengrow:OpenGrow:1.1.1'
 }
 ```
 
@@ -70,7 +70,7 @@ If you're using Expo with a development build, the config plugin automates all n
 ```json
 {
   "plugins": [
-    ["react-native-grovs-wrapper", {
+    ["@mbzadev/opengrow-react-native", {
       "apiKey": "your-api-key",
       "scheme": "your_app_scheme",
       "useTestEnvironment": false,
@@ -83,7 +83,7 @@ If you're using Expo with a development build, the config plugin automates all n
 
 | Property | Required | Description |
 |---|---|---|
-| `apiKey` | Yes | Your Grovs API key |
+| `apiKey` | Yes | Your OpenGrow API key |
 | `scheme` | Yes | Custom URL scheme for deep links |
 | `useTestEnvironment` | No | Use test environment (default: `false`) |
 | `associatedDomains` | No | Universal link domains for deep linking |
@@ -102,9 +102,9 @@ Then run `npx expo prebuild` and build with `npx expo run:ios` / `npx expo run:a
 ```kotlin
 override fun onCreate() {
     super.onCreate()
-    Grovs.configure(this, "your-api-key", useTestEnvironment = false)
+    OpenGrow.configure(this, "your-api-key", useTestEnvironment = false)
     // Optional: use a custom base URL for self-hosted backends
-    // Grovs.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
+    // OpenGrow.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
 }
 ```
 
@@ -113,12 +113,12 @@ override fun onCreate() {
 ```kotlin
 override fun onStart() {
     super.onStart()
-    Grovs.onStart(this)
+    OpenGrow.onStart(this)
 }
 
 override fun onNewIntent(intent: Intent?) {
     super.onNewIntent(intent)
-    Grovs.onNewIntent(intent, this)
+    OpenGrow.onNewIntent(intent, this)
 }
 ```
 
@@ -155,17 +155,17 @@ override fun onNewIntent(intent: Intent?) {
 **1. Initialize the SDK** in `AppDelegate.swift`:
 
 ```swift
-import Grovs
+import OpenGrow
 
 func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    Grovs.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self)
+    OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, delegate: self)
     // Optional: use a custom base URL for self-hosted backends
-    // Grovs.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
-    Grovs.setDebug(level: .info)
+    // OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
+    OpenGrow.setDebug(level: .info)
     return true
 }
 
-func grovsReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
+func opengrowReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tracking: [String: Any]?) {
     // Native delegate callback
 }
 ```
@@ -174,11 +174,11 @@ func grovsReceivedPayloadFromDeeplink(link: String?, payload: [String: Any]?, tr
 
 ```swift
 func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-    return Grovs.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
+    return OpenGrow.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler)
 }
 
 func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-    return Grovs.handleAppDelegate(open: url, options: options)
+    return OpenGrow.handleAppDelegate(open: url, options: options)
 }
 ```
 
@@ -191,16 +191,16 @@ func application(_ app: UIApplication, open url: URL, options: [UIApplication.Op
 **4. Configure URL scheme:**
 
 1. In Xcode, select your target → **Info** tab
-2. Under **URL Types**, click **+** and add the URL scheme from your Grovs dashboard
+2. Under **URL Types**, click **+** and add the URL scheme from your OpenGrow dashboard
 
 ## Usage
 
 ### Handle deep links
 
 ```typescript
-import Grovs from 'react-native-grovs-wrapper';
+import OpenGrow from '@mbzadev/opengrow-react-native';
 
-const listener = Grovs.onDeeplinkReceived((response) => {
+const listener = OpenGrow.onDeeplinkReceived((response) => {
     console.log('Link:', response.link);
     console.log('Data:', response.data);
 
@@ -217,8 +217,8 @@ listener.remove();
 ### Set user identity
 
 ```typescript
-Grovs.setIdentifier('user-123');
-Grovs.setAttributes({
+OpenGrow.setIdentifier('user-123');
+OpenGrow.setAttributes({
     name: 'John Doe',
     plan: 'premium',
 });
@@ -230,7 +230,7 @@ Create smart links with metadata, payload data, and tracking parameters:
 
 ```typescript
 try {
-    const link = await Grovs.generateLink(
+    const link = await OpenGrow.generateLink(
         'Check out this product',           // title
         'Limited time offer',               // subtitle
         'https://example.com/image.jpg',    // imageURL
@@ -271,20 +271,20 @@ import messaging from '@react-native-firebase/messaging';
 
 const token = await messaging().getToken();
 if (token) {
-    Grovs.setPushToken(token);
+    OpenGrow.setPushToken(token);
 }
 ```
 
-Upload your Firebase or APNs credentials in the [Grovs dashboard](https://app.grovs.io).
+Upload your Firebase or APNs credentials in the [OpenGrow dashboard](https://app.opengrow.io).
 
 ### Display messages
 
 ```typescript
 // Show the messages list as a modal
-await Grovs.displayMessages();
+await OpenGrow.displayMessages();
 
 // Get unread count for badges
-const count = await Grovs.numberOfUnreadMessages();
+const count = await OpenGrow.numberOfUnreadMessages();
 console.log(`Unread: ${count}`);
 ```
 
@@ -294,7 +294,7 @@ console.log(`Unread: ${count}`);
 
 ### Setup
 
-1. Enable revenue tracking in the [Grovs dashboard](https://app.grovs.io) under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
 2. Configure platform notifications:
    - **Android** — Set up Google Play Real-Time Developer Notifications
    - **iOS** — Configure App Store Server Notifications in App Store Connect
@@ -304,7 +304,7 @@ console.log(`Unread: ${count}`);
 ```typescript
 // iOS: pass the StoreKit 2 transaction ID as a string
 // Android: pass the Google Play purchase.originalJson string
-const success = await Grovs.logInAppPurchase(transactionId);
+const success = await OpenGrow.logInAppPurchase(transactionId);
 ```
 
 > The SDK automatically extracts price, currency, and product info. Duplicates are filtered.
@@ -312,7 +312,7 @@ const success = await Grovs.logInAppPurchase(transactionId);
 ### Custom purchases
 
 ```typescript
-const success = await Grovs.logCustomPurchase(
+const success = await OpenGrow.logCustomPurchase(
     'buy',              // type: 'buy' | 'cancel' | 'refund'
     999,                // priceInCents: $9.99
     'USD',              // currency code
@@ -340,24 +340,24 @@ Use `'cancel'` and `'refund'` types for cancellations and refunds. For store pur
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [docs.grovs.io/docs/sdk/react-native/api-reference](https://docs.grovs.io/docs/sdk/react-native/api-reference)
+Full API reference: [docs.opengrow.io/docs/sdk/react-native/api-reference](https://docs.opengrow.io/docs/sdk/react-native/api-reference)
 
 ## Example App
 
-A demo project is available at [grovs-io/grovs-react-native-example-app](https://github.com/grovs-io/grovs-react-native-example-app).
+A demo project is available at [mbzadev/opengrow-react-native-example-app](https://github.com/mbzadev/opengrow-react-native-example-app).
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.grovs.io/docs/migration-guides/firebase-dynamic-links/android)
-- [Migrate from Branch.io](https://docs.grovs.io/docs/migration-guides/branch-io/android)
+- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/android)
+- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/android)
 
 ## Documentation
 
-Full documentation at [docs.grovs.io](https://docs.grovs.io).
+Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
 
 ## Support
 
-For technical support and inquiries, contact [support@grovs.io](mailto:support@grovs.io).
+For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
 
 ## License
 

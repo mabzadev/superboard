@@ -12,4 +12,4 @@ Disallow: /audience
 Disallow: /accept-invite
 Disallow: /new_password
 
-Sitemap: https://app.grovs.io/sitemap.xml
+Sitemap: https://app.opengrow.io/sitemap.xml

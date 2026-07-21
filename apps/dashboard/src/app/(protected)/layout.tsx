@@ -1,5 +1,4 @@
 "use client";
-
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import ProtectedRoute from "@/lib/ProtectedRoute";
@@ -7,11 +6,9 @@ import ClientLayout from "./ClientLayout";
 import { ProjectSelectionProvider } from "@/context/useProjectSelection";
 import React, { Suspense } from "react";
 import PageSkeleton from "@/components/common/PageSkeleton";
-
 import CreateCampaignGlobalDialogProvider from "@/context/useCreateCampaignDialogContext";
 import LinkDialogProvider from "@/context/useLinkDialogContext";
 import { ChatwootProvider } from "@/context/useChatwoot";
-
 export default function DashboardLayout({
   children,
 }: {

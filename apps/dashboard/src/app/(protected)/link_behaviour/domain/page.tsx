@@ -171,7 +171,7 @@ const DomainPage = () => {
                 <DeleteConfirm
                   confirmText="Yes, Change domain"
                   title="Warning"
-                  description="This will invalidate all your previous links. Changing the domain will require updating the app links as well. Be aware that previously released apps won't be able to open the links anymore, and developers will need to reconfigure the grovs SDK to accommodate this change. Are you sure you want to proceed?"
+                  description="This will invalidate all your previous links. Changing the domain will require updating the app links as well. Be aware that previously released apps won't be able to open the links anymore, and developers will need to reconfigure the opengrow SDK to accommodate this change. Are you sure you want to proceed?"
                   onConfirm={handleSetSubdomain}
                 >
                   <Button size="sm" className="pl-3 pr-4">

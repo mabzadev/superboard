@@ -71,7 +71,7 @@ export function FileUpload({
       {/* Hidden native file input */}
       <input
         type="file"
-        ref={inputRef}
+        ref={inputRef as React.Ref<HTMLInputElement>}
         className="hidden"
         onChange={handleChange}
         accept={accept}

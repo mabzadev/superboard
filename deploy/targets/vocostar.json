@@ -1,0 +1,73 @@
+{
+  "$schema": "./schema.json",
+  "schemaVersion": 1,
+  "target": "vocostar",
+  "accountId": "4fec11873e7130ab0e44e795e3e3afd3",
+  "workersDevSubdomain": "vocostar",
+  "domains": {
+    "shortlinks": "go.vocostar.com",
+    "sdk": "sdk.vocostar.com",
+    "dashboard": "grow.vocostar.com"
+  },
+  "workers": {
+    "api": {
+      "staging": "opengrow-vocostar-api-staging",
+      "production": "opengrow-vocostar-api"
+    },
+    "dashboard": {
+      "staging": "opengrow-vocostar-dashboard-staging",
+      "production": "opengrow-vocostar-dashboard"
+    }
+  },
+  "oauth": {
+    "dashboardClientId": "opengrow-vocostar"
+  },
+  "environments": {
+    "staging": {
+      "d1": {
+        "name": "opengrow-vocostar-staging",
+        "id": "3f83285b-2f24-45f2-af3f-ce85c7250b26"
+      },
+      "kv": {
+        "name": "opengrow-vocostar-staging",
+        "id": "b5e34021707d42429b466780a857a66f"
+      },
+      "r2": { "name": "opengrow-vocostar-staging" },
+      "dashboardCache": { "name": "opengrow-vocostar-dashboard-cache-staging" },
+      "queues": {
+        "events": "opengrow-vocostar-events-staging",
+        "eventsDlq": "opengrow-vocostar-events-staging-dlq",
+        "push": "opengrow-vocostar-push-staging",
+        "pushDlq": "opengrow-vocostar-push-staging-dlq",
+        "maintenance": "opengrow-vocostar-maintenance-staging",
+        "maintenanceDlq": "opengrow-vocostar-maintenance-staging-dlq",
+        "billing": "opengrow-vocostar-billing-staging",
+        "billingDlq": "opengrow-vocostar-billing-staging-dlq"
+      }
+    },
+    "production": {
+      "d1": {
+        "name": "grovs-db",
+        "id": "ce7fbaad-9f73-49ff-9b33-fb820c33c051",
+        "legacyName": true
+      },
+      "kv": {
+        "name": "GROVS_KV",
+        "id": "21faee2703d54f58a7cc1d46e56391cc",
+        "legacyName": true
+      },
+      "r2": { "name": "grovs-files", "legacyName": true },
+      "dashboardCache": { "name": "opengrow-vocostar-dashboard-cache" },
+      "queues": {
+        "events": "grovs-events",
+        "eventsDlq": "grovs-events-dlq",
+        "push": "grovs-push",
+        "pushDlq": "grovs-push-dlq",
+        "maintenance": "grovs-maintenance",
+        "maintenanceDlq": "grovs-maintenance-dlq",
+        "billing": "grovs-billing",
+        "billingDlq": "grovs-billing-dlq"
+      }
+    }
+  }
+}

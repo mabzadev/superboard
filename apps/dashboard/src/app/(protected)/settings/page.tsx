@@ -227,7 +227,7 @@ const SettingsPage = () => {
           <Alert variant={"destructive"}>
             <ChartNoAxesColumnDecreasingIcon />
             <AlertTitle>
-              You need to increase your plan to keep using grovs this month!
+              You need to increase your plan to keep using opengrow this month!
             </AlertTitle>
           </Alert>
         );
