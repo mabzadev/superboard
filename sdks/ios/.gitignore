@@ -1,3 +1,4 @@
 .build/
-OpenGrow.xcodeproj
+**/xcuserdata/
+*.xcuserstate
 *.bak
