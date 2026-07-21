@@ -268,15 +268,25 @@ class OpenGrowManager(
 
         // avoid handling same link multiple times (onStart gives same intent each time)
         if (intent.hashCode() == lastIntentHandledReference?.get()?.hashCode()) {
-            DebugLogger.instance.log(LogLevel.INFO, "Intent already handled, ignoring it.")
-            return null
+            if (intent.data != null) {
+                DebugLogger.instance.log(LogLevel.INFO, "Explicit deeplink intent already handled, ignoring it.")
+                return null
+            }
+
+            // An empty launcher intent can still resolve deferred attribution.
+            // Keep that lookup available when Android reuses the same Intent object.
+            return getDataForDevice(null, delayEvents = delayEvents)
         }
         lastIntentHandledReference = WeakReference(intent)
 
         if (cacheIntent) {
             if (handledIntentTokens.contains(intent.hashCode())) {
-                DebugLogger.instance.log(LogLevel.INFO, "Intent already handled, ignoring it.")
-                return null
+                if (intent.data != null) {
+                    DebugLogger.instance.log(LogLevel.INFO, "Explicit deeplink intent already handled, ignoring it.")
+                    return null
+                }
+
+                return getDataForDevice(null, delayEvents = delayEvents)
             } else {
                 handledIntentTokens.add(intent.hashCode())
             }
