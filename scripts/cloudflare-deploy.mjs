@@ -17,6 +17,7 @@ run("node", [
   "--service", service,
   "--environment", environment,
   ...(args["no-routes"] ? ["--no-routes"] : []),
+  ...(args.preflight ? ["--preflight"] : []),
 ]);
 
 if (service === "dashboard") {

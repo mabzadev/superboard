@@ -6,6 +6,7 @@ const args = parseArgs();
 const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const service = args.service ?? "api";
 const environment = environmentFromArgs(args);
+const preflight = Boolean(args.preflight);
 if (!new Set(["api", "dashboard"]).has(service)) throw new Error("--service must be api or dashboard");
 
 const { target } = await loadTarget(targetName);
@@ -49,7 +50,6 @@ function apiConfig() {
       APP_URL: appUrl,
       DASHBOARD_CLIENT_ID: target.oauth.dashboardClientId,
     },
-    triggers: { crons: ["*/10 * * * *"] },
     d1_databases: [{
       binding: "DB",
       database_name: resources.d1.name,
@@ -65,15 +65,18 @@ function apiConfig() {
         { binding: "MAINTENANCE_QUEUE", queue: resources.queues.maintenance },
         { binding: "BILLING_QUEUE", queue: resources.queues.billing },
       ],
-      consumers: [
-        queueConsumer(resources.queues.events, resources.queues.eventsDlq, 25, 10, 5),
-        queueConsumer(resources.queues.push, resources.queues.pushDlq, 10, 5, 5),
-        queueConsumer(resources.queues.maintenance, resources.queues.maintenanceDlq, 5, 10, 3),
-        queueConsumer(resources.queues.billing, resources.queues.billingDlq, 10, 5, 8),
-      ],
     },
   };
-  if (environment === "production" && !args["no-routes"]) {
+  if (!preflight) {
+    config.triggers = { crons: ["*/10 * * * *"] };
+    config.queues.consumers = [
+      queueConsumer(resources.queues.events, resources.queues.eventsDlq, 25, 10, 5),
+      queueConsumer(resources.queues.push, resources.queues.pushDlq, 10, 5, 5),
+      queueConsumer(resources.queues.maintenance, resources.queues.maintenanceDlq, 5, 10, 3),
+      queueConsumer(resources.queues.billing, resources.queues.billingDlq, 10, 5, 8),
+    ];
+  }
+  if (environment === "production" && !args["no-routes"] && !preflight) {
     config.routes = [
       { pattern: target.domains.shortlinks, custom_domain: true },
       { pattern: target.domains.sdk, custom_domain: true },
@@ -114,7 +117,7 @@ function dashboardConfig() {
       NEXT_PUBLIC_ENV: environment,
     },
   };
-  if (environment === "production" && !args["no-routes"]) {
+  if (environment === "production" && !args["no-routes"] && !preflight) {
     config.routes = [{ pattern: target.domains.dashboard, custom_domain: true }];
   }
   return config;
