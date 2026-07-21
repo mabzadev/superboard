@@ -50,7 +50,7 @@ in Worker secrets; build variables are not runtime secrets.
 ## Vocostar production deployment
 
 Vocostar is production-only. Its canonical Workers are `opengrow-api` and
-`opengrow-dashboard`; no Vocostar staging resource belongs in Cloudflare.
+`opengrow`; no Vocostar staging resource belongs in Cloudflare.
 
 1. Deploy both new Workers with `--preflight`. This omits custom domains, API queue
    consumers and API cron triggers while keeping direct `workers.dev` health checks
