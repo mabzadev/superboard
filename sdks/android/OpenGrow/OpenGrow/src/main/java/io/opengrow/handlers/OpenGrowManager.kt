@@ -268,15 +268,15 @@ class OpenGrowManager(
 
         // avoid handling same link multiple times (onStart gives same intent each time)
         if (intent.hashCode() == lastIntentHandledReference?.get()?.hashCode()) {
-            DebugLogger.instance.log(LogLevel.INFO, " Avoid double handling assume, no link provided, trying to infer it.")
-            return getDataForDevice(null, delayEvents = delayEvents)
+            DebugLogger.instance.log(LogLevel.INFO, "Intent already handled, ignoring it.")
+            return null
         }
         lastIntentHandledReference = WeakReference(intent)
 
         if (cacheIntent) {
             if (handledIntentTokens.contains(intent.hashCode())) {
                 DebugLogger.instance.log(LogLevel.INFO, "Intent already handled, ignoring it.")
-                return getDataForDevice(null, delayEvents = delayEvents)
+                return null
             } else {
                 handledIntentTokens.add(intent.hashCode())
             }
