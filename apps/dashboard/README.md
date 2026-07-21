@@ -22,8 +22,8 @@ OpenGrow helps mobile developers grow their apps by providing a single dashboard
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/mbzadev/dashboard.git
-   cd dashboard
+   git clone https://github.com/mbzadev/opengrow.git
+   cd opengrow/apps/dashboard
    ```
 
 2. Install dependencies:

@@ -6,12 +6,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-Android/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-Android?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://central.sonatype.com/artifact/io.opengrow/OpenGrow"><img src="https://img.shields.io/maven-central/v/io.opengrow/OpenGrow?style=flat-square&color=4F46E5&label=maven%20central" alt="Maven Central"/></a>
+  <a href="https://github.com/mbzadev/opengrow/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/opengrow/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-private-4F46E5?style=flat-square" alt="GitHub Packages"/></a>
   <a href="#"><img src="https://img.shields.io/badge/API-21%2B-4F46E5?style=flat-square" alt="API 21+"/></a>
   <a href="#"><img src="https://img.shields.io/badge/kotlin-1.9%2B-4F46E5?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-Android?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow-Android/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-Android?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -53,7 +53,7 @@ Add the OpenGrow dependency to your app-level `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation("io.opengrow:OpenGrow:1.1.1")
+    implementation("io.opengrow:opengrow-android:1.0.0")
 }
 ```
 
@@ -432,7 +432,7 @@ Full API reference: [docs.opengrow.io/docs/sdk/android/api-reference](https://do
 
 ## Example App
 
-A demo project is available at [mbzadev/opengrow-android-example-app](https://github.com/mbzadev/opengrow-android-example-app).
+A demo project is included in [`sdks/android/OpenGrow/app`](https://github.com/mbzadev/opengrow/tree/main/sdks/android/OpenGrow/app).
 
 ## Setup Guides
 

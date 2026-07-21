@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Vendored, checksummed Yarn 3.6.1 bundle false positive"
+paths = ['''(^|/)\.yarn/releases/yarn-3\.6\.1\.cjs$''']

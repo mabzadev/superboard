@@ -77,4 +77,4 @@ The plugin connects to the OpenGrow MCP server which provides these tools:
 
 - [OpenGrow Documentation](https://docs.opengrow.io)
 - [OpenGrow Dashboard](https://app.opengrow.io)
-- [MCP Server Source](https://github.com/mbzadev/mcp)
+- [MCP Server Source](https://github.com/mbzadev/opengrow/tree/main/apps/mcp)

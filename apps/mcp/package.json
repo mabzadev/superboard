@@ -23,7 +23,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mbzadev/mcp.git"
+    "url": "git+https://github.com/mbzadev/opengrow.git",
+    "directory": "apps/mcp"
   },
   "keywords": [
     "mcp",
@@ -41,9 +42,9 @@
   "author": "OpenGrow",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mbzadev/mcp/issues"
+    "url": "https://github.com/mbzadev/opengrow/issues"
   },
-  "homepage": "https://github.com/mbzadev/mcp#readme",
+  "homepage": "https://github.com/mbzadev/opengrow/tree/main/apps/mcp#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^17.4.1",

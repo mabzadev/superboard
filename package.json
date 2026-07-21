@@ -25,7 +25,7 @@
     "cloudflare:rotate-oauth": "node scripts/cloudflare-rotate-oauth.mjs",
     "cloudflare:connect-builds": "node scripts/cloudflare-connect-builds.mjs",
     "target:register": "node scripts/opengrow-register-target.mjs",
-    "secrets:scan": "gitleaks detect --source . --no-banner --redact",
+    "secrets:scan": "gitleaks git . --no-banner --redact",
     "typecheck": "npm run worker:typecheck && npm run dashboard:typecheck",
     "test": "npm run dashboard:test && npm run worker:test",
     "test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 npm run test:e2e",

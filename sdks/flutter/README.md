@@ -6,12 +6,12 @@
 </p>
 
 <p align="center">
-  <a href="https://pub.dev/packages/opengrow_flutter"><img src="https://img.shields.io/pub/v/opengrow_flutter?style=flat-square&color=4F46E5" alt="Pub version"/></a>
-  <a href="https://pub.dev/packages/opengrow_flutter/score"><img src="https://img.shields.io/pub/points/opengrow_flutter?style=flat-square&color=4F46E5" alt="Pub points"/></a>
+  <a href="https://github.com/mbzadev/opengrow/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/opengrow"><img src="https://img.shields.io/badge/distribution-private%20Git-4F46E5?style=flat-square" alt="Private Git"/></a>
   <a href="#"><img src="https://img.shields.io/badge/platforms-iOS%20%7C%20Android-4F46E5?style=flat-square" alt="Platforms"/></a>
   <a href="#"><img src="https://img.shields.io/badge/flutter-3.0%2B-4F46E5?style=flat-square&logo=flutter&logoColor=white" alt="Flutter"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-flutter?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow-flutter/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-flutter?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -80,7 +80,11 @@ Add the dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  opengrow_flutter: ^1.1.0
+  opengrow_flutter:
+    git:
+      url: git@github.com:mbzadev/opengrow.git
+      ref: sdk-flutter-v1.0.0
+      path: sdks/flutter
 ```
 
 Then run:

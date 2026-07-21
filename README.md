@@ -32,8 +32,8 @@ npm run dashboard:cf-build
 
 cd sdks/flutter && flutter test
 cd ../flutterflow && flutter test
-cd ../.. && xcodebuild -workspace sdks/ios/.swiftpm/xcode/package.xcworkspace -scheme OpenGrow \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
+cd ../.. && xcodebuild -project sdks/ios/OpenGrow.xcodeproj -scheme OpenGrow \
+  -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
 ```
 
 Android, JavaScript, React Native and MCP validation commands are mirrored in
@@ -81,8 +81,8 @@ See `docs/CLOUDFLARE.md` for blue/green rollout and Workers Builds settings.
 
 All OpenGrow SDKs start at `1.0.0` and remain private.
 
-- `android-v1.0.0`, `js-v1.0.0`, `react-native-v1.0.0` publish to GitHub Packages.
-- `ios-v1.0.0`, `flutter-v1.0.0`, `flutterflow-v1.0.0` create immutable GitHub releases.
+- `sdk-android-v1.0.0`, `sdk-js-v1.0.0`, `sdk-react-native-v1.0.0` publish to GitHub Packages.
+- `sdk-ios-v1.0.0`, `sdk-flutter-v1.0.0`, `sdk-flutterflow-v1.0.0` create immutable GitHub releases.
 - FlutterFlow consumes the private repository by immutable `ref` and package
   `path`; the fine-grained read token belongs in FlutterFlow's private dependency
   authentication, never in exported source.

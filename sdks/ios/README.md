@@ -6,12 +6,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-iOS/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-iOS?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/opengrow/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="Latest release"/></a>
   <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dswift-versions" alt="Swift versions"/></a>
   <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dplatforms" alt="Platforms"/></a>
   <a href="https://cocoapods.org/pods/OpenGrow"><img src="https://img.shields.io/cocoapods/v/OpenGrow.svg?style=flat-square&color=4F46E5" alt="CocoaPods"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-iOS?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow-iOS/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-iOS?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -50,7 +50,7 @@ The OpenGrow iOS SDK provides deep linking, universal linking, link generation, 
 ### Swift Package Manager
 
 1. In Xcode, go to **File → Swift Packages → Add Package Dependency**
-2. Enter the repository URL: `https://github.com/mbzadev/opengrow-iOS.git`
+2. Enter the repository URL: `https://github.com/mbzadev/opengrow.git`
 3. Select the version range that fits your project
 4. Click **Next**, then **Finish**
 
@@ -344,7 +344,7 @@ Full API reference: [docs.opengrow.io/docs/sdk/ios/api-reference](https://docs.o
 
 ## Example App
 
-A demo project is available at [mbzadev/mbzadevs-example-app](https://github.com/mbzadev/mbzadevs-example-app).
+A demo project is included in [`sdks/ios`](https://github.com/mbzadev/opengrow/tree/main/sdks/ios).
 
 ## Setup Guides
 
