@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  web:
+    container_name: grovs-dashboard-nextjs-app
+    build:
+      context: . # build from current directory
+      dockerfile: Dockerfile.preview # explicitly specify your Dockerfile (optional if named 'Dockerfile')
+    ports:
+      - "3036:3000" # host:container
+    env_file:
+      - .env.local # automatically load env vars from here
+    restart: unless-stopped # auto-restart if crashed
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # optional volume mounting for local logs or static files
+    # volumes:
+    #   - ./logs:/app/logs
