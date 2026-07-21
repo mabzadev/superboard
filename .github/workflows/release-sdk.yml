@@ -3,12 +3,12 @@ name: Release private SDK
 on:
   push:
     tags:
-      - flutter-v*
-      - flutterflow-v*
-      - ios-v*
-      - android-v*
-      - js-v*
-      - react-native-v*
+      - sdk-flutter-v*
+      - sdk-flutterflow-v*
+      - sdk-ios-v*
+      - sdk-android-v*
+      - sdk-js-v*
+      - sdk-react-native-v*
 
 permissions:
   contents: write
@@ -25,8 +25,9 @@ jobs:
         shell: bash
         run: |
           tag="${GITHUB_REF_NAME}"
-          sdk="${tag%-v*}"
-          version="${tag#*-v}"
+          sdk="${tag#sdk-}"
+          sdk="${sdk%-v*}"
+          version="${tag##*-v}"
           test "$version" = "1.0.0" || [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
           echo "sdk=$sdk" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -53,7 +54,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - run: xcodebuild -workspace sdks/ios/.swiftpm/xcode/package.xcworkspace -scheme OpenGrow -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
+      - run: xcodebuild -project sdks/ios/OpenGrow.xcodeproj -scheme OpenGrow -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
@@ -68,6 +69,8 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
       - run: ./gradlew :OpenGrow:testDebugUnitTest :OpenGrow:publishReleasePublicationToGithubPackagesPrivateRepository -PlibraryVersion=${{ needs.validate-tag.outputs.version }}
         working-directory: sdks/android/OpenGrow
         env:

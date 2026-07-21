@@ -5,13 +5,13 @@
   "description": "Manage deep links, attribution, analytics, and campaigns on OpenGrow — open-source Branch alternative.",
   "version": "1.0.1",
   "repository": {
-    "url": "https://github.com/mbzadev/mcp",
+    "url": "https://github.com/mbzadev/opengrow/tree/main/apps/mcp",
     "source": "github"
   },
   "websiteUrl": "https://github.com/mbzadev/opengrow",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/mbzadev/mcp/main/.github/logo.svg",
+      "src": "https://raw.githubusercontent.com/mbzadev/opengrow/main/.github/logo.svg",
       "type": "image/svg+xml"
     }
   ],
