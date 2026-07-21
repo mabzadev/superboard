@@ -83,6 +83,7 @@ All OpenGrow SDKs start at `1.0.0` and remain private.
 
 - `sdk-android-v1.0.0`, `sdk-js-v1.0.0`, `sdk-react-native-v1.0.0` publish to GitHub Packages.
 - `sdk-ios-v1.0.0`, `sdk-flutter-v1.0.0`, `sdk-flutterflow-v1.0.0` create immutable GitHub releases.
+- The root SemVer tag `1.0.0` exposes the same iOS release to Swift Package Manager.
 - FlutterFlow consumes the private repository by immutable `ref` and package
   `path`; the fine-grained read token belongs in FlutterFlow's private dependency
   authentication, never in exported source.
