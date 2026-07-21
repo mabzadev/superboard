@@ -1013,14 +1013,19 @@ class EventTrackingE2ETest {
             activityController.pause().stop()
             activityController.start().resume()
 
-            // Wait for reactivation event with the resolved link
-            E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "reactivation event with link") {
+            // Both events are sent sequentially; wait for the complete launch batch.
+            E2ETestUtils.waitForCondition(timeoutMs = 10_000, description = "reactivation launch events with link") {
                 E2ETestUtils.enableImmediateEventSending()
                 synchronized(capturedEventBodies) {
-                    capturedEventBodies.any {
+                    val hasReactivation = capturedEventBodies.any {
                         it.contains("\"event\":\"reactivation\"") &&
                             it.contains("\"link\":\"https://test.opengrow.io/reactivation-campaign\"")
                     }
+                    val hasAppOpen = capturedEventBodies.any {
+                        it.contains("\"event\":\"app_open\"") &&
+                            it.contains("\"link\":\"https://test.opengrow.io/reactivation-campaign\"")
+                    }
+                    hasReactivation && hasAppOpen
                 }
             }
 
