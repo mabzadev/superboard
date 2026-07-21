@@ -1,0 +1,24 @@
+{
+  "name": "grovs",
+  "version": "1.0.0",
+  "description": "Create tracking links for your mobile app and see exactly how much traffic, installs, and app opens each link drives. Set up iOS Universal Links and Android App Links, manage deep links with custom metadata, and get real-time analytics — all from your editor.",
+  "author": {
+    "name": "Grovs",
+    "url": "https://grovs.io"
+  },
+  "homepage": "https://grovs.io",
+  "repository": "https://github.com/grovs-io/mcp",
+  "license": "MIT",
+  "keywords": [
+    "deep-links",
+    "mobile",
+    "analytics",
+    "app-links",
+    "universal-links",
+    "tracking-links",
+    "mobile-attribution",
+    "installs",
+    "app-opens",
+    "campaigns"
+  ]
+}
