@@ -68,8 +68,8 @@ function newManifest() {
       dashboard: args["dashboard-domain"],
     },
     workers: {
-      api: { staging: `${prefix}-api-staging`, production: `${prefix}-api` },
-      dashboard: { staging: `${prefix}-dashboard-staging`, production: `${prefix}-dashboard` },
+      api: { staging: "opengrow-api-staging", production: "opengrow-api" },
+      dashboard: { staging: "opengrow-dashboard-staging", production: "opengrow-dashboard" },
     },
     oauth: { dashboardClientId: `${prefix}-dashboard` },
     environments: { staging: environment("staging"), production: environment("production") },

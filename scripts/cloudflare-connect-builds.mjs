@@ -50,20 +50,22 @@ await upsertTrigger("OpenGrow production", {
   path_excludes: [],
   build_caching_enabled: true,
 });
-await upsertTrigger("OpenGrow previews", {
-  external_script_id: worker.tag,
-  repo_connection_uuid: connection.repo_connection_uuid,
-  build_token_uuid: buildTokenUuid,
-  trigger_name: "OpenGrow previews",
-  build_command: buildCommand(service),
-  deploy_command: `npm run cloudflare:deploy -- --target ${targetName} --service ${service} --environment staging --upload-only`,
-  root_directory: "/",
-  branch_includes: ["*"],
-  branch_excludes: ["main"],
-  path_includes: watchPaths(service),
-  path_excludes: [],
-  build_caching_enabled: true,
-});
+if (target.environments.staging && target.workers[service].staging) {
+  await upsertTrigger("OpenGrow previews", {
+    external_script_id: worker.tag,
+    repo_connection_uuid: connection.repo_connection_uuid,
+    build_token_uuid: buildTokenUuid,
+    trigger_name: "OpenGrow previews",
+    build_command: buildCommand(service),
+    deploy_command: `npm run cloudflare:deploy -- --target ${targetName} --service ${service} --environment staging --upload-only`,
+    root_directory: "/",
+    branch_includes: ["*"],
+    branch_excludes: ["main"],
+    path_includes: watchPaths(service),
+    path_excludes: [],
+    build_caching_enabled: true,
+  });
+}
 
 console.log(`Connected ${productionWorker} to ${githubAccount}/${githubRepository}`);
 

@@ -11,6 +11,9 @@ if (!new Set(["api", "dashboard"]).has(service)) throw new Error("--service must
 
 const { target } = await loadTarget(targetName);
 const resources = target.environments[environment];
+if (!resources || !target.workers.api[environment] || !target.workers.dashboard[environment]) {
+  throw new Error(`${targetName} does not define a ${environment} environment`);
+}
 if (!resources.d1.id || !resources.kv.id) {
   throw new Error(`Run cloudflare-bootstrap for ${targetName}/${environment} before generating configuration`);
 }
