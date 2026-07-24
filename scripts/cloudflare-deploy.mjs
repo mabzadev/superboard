@@ -10,6 +10,10 @@ const uploadOnly = Boolean(args["upload-only"]);
 if (!new Set(["api", "dashboard"]).has(service)) throw new Error("--service must be api or dashboard");
 
 const { target } = await loadTarget(targetName);
+const cloudflareEnv = {
+  ...process.env,
+  CLOUDFLARE_ACCOUNT_ID: target.accountId,
+};
 const configPath = resolve(root, "deploy", "generated", `${targetName}-${service}-${environment}.jsonc`);
 run("node", [
   resolve(root, "scripts", "cloudflare-config.mjs"),
@@ -18,7 +22,7 @@ run("node", [
   "--environment", environment,
   ...(args["no-routes"] ? ["--no-routes"] : []),
   ...(args.preflight ? ["--preflight"] : []),
-]);
+], cloudflareEnv);
 
 if (service === "dashboard") {
   const apiUrl = environment === "production"
@@ -28,7 +32,7 @@ if (service === "dashboard") {
     ? `https://${target.domains.dashboard}`
     : `https://${target.workers.dashboard.staging}.${target.workersDevSubdomain}.workers.dev`;
   const publicEnvironment = {
-    ...process.env,
+    ...cloudflareEnv,
     NEXT_PUBLIC_API_URL: apiUrl,
     NEXT_PUBLIC_API_PATH: "/api/v1",
     NEXT_PUBLIC_CLIENT_ID: target.oauth.dashboardClientId,
@@ -44,22 +48,34 @@ if (service === "dashboard") {
 }
 
 if (service === "api" && environment === "production" && !args["skip-backup"]) {
-  run("node", [resolve(root, "scripts", "cloudflare-d1-backup.mjs"), "--target", targetName]);
+  run(
+    "node",
+    [resolve(root, "scripts", "cloudflare-d1-backup.mjs"), "--target", targetName],
+    cloudflareEnv,
+  );
 }
 
 if (service === "api" && !args["skip-migrations"]) {
-  run("npx", ["wrangler", "d1", "migrations", "apply", "DB", "--remote", "--config", configPath]);
+  run(
+    "npx",
+    ["wrangler", "d1", "migrations", "apply", "DB", "--remote", "--config", configPath],
+    cloudflareEnv,
+  );
 }
 
 if (service === "dashboard") {
   run(
     "npx",
     ["opennextjs-cloudflare", uploadOnly ? "upload" : "deploy", "--config", configPath],
-    process.env,
+    cloudflareEnv,
     resolve(root, "apps", "dashboard"),
   );
 } else {
-  run("npx", ["wrangler", ...(uploadOnly ? ["versions", "upload"] : ["deploy"]), "--config", configPath]);
+  run(
+    "npx",
+    ["wrangler", ...(uploadOnly ? ["versions", "upload"] : ["deploy"]), "--config", configPath],
+    cloudflareEnv,
+  );
 }
 
 function run(command, commandArgs, env = process.env, cwd = root) {
