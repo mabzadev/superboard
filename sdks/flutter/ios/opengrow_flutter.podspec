@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'opengrow_flutter'
-  s.version          = '1.1.0'
+  s.version          = '1.1.1'
   s.summary          = 'OpenGrow SDK integration for Flutter.'
   s.description      = <<-DESC
 Private Flutter SDK for OpenGrow links, messaging, attribution, and purchases.

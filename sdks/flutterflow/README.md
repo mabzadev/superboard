@@ -8,7 +8,7 @@ Bibliothèque prête à importer pour remplacer les actions RevenueCat dans Flut
    opengrow_flutterflow:
      git:
        url: git@github.com:mbzadev/opengrow.git
-       ref: sdk-flutterflow-v1.1.0
+       ref: sdk-flutterflow-v1.1.1
        path: sdks/flutterflow
    ```
 

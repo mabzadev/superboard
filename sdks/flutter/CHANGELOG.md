@@ -1,3 +1,7 @@
+## 1.1.1
+
+* Relaxed the `shared_preferences` constraint for FlutterFlow 2.5.3 compatibility
+
 ## 1.1.0
 
 * Added automatic Bundle ID / Package Name discovery
