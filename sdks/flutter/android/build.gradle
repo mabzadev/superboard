@@ -68,7 +68,7 @@ android {
         consumerProguardFiles "../../android/OpenGrow/OpenGrow/consumer-rules.pro"
         buildConfigField "String", "SERVER_URL", "\"https://sdk.vocostar.com/api/v1/sdk/\""
         buildConfigField "String", "TEST_SERVER_URL", "\"http://localhost:8080/\""
-        buildConfigField "String", "SDK_VERSION", "\"1.1.0\""
+        buildConfigField "String", "SDK_VERSION", "\"1.1.1\""
         buildConfigField "boolean", "NETWORK_LOGGING", "false"
     }
 
