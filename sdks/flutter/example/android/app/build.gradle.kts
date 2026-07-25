@@ -27,6 +27,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["OPENGROW_API_KEY"] =
+            System.getenv("OPENGROW_API_KEY") ?: "opengrow-example-key"
     }
 
     buildTypes {

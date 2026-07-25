@@ -28,6 +28,11 @@ abstract class OpenGrowPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
+  /// Returns the app Bundle ID on iOS or package name on Android.
+  Future<String> getPlatformIdentifier() {
+    throw UnimplementedError('getPlatformIdentifier() has not been implemented.');
+  }
+
   /// Generate a OpenGrow link with the specified parameters
   Future<String> generateLink(GenerateLinkParams params) {
     throw UnimplementedError('generateLink() has not been implemented.');
@@ -51,6 +56,18 @@ abstract class OpenGrowPlatform extends PlatformInterface {
   /// Set debug level
   Future<void> setDebugLevel(String level) {
     throw UnimplementedError('setDebugLevel() has not been implemented.');
+  }
+
+  /// Returns the number of unread OpenGrow messages.
+  Future<int> getUnreadMessageCount() {
+    throw UnimplementedError(
+      'getUnreadMessageCount() has not been implemented.',
+    );
+  }
+
+  /// Presents the native OpenGrow message center.
+  Future<void> displayMessages() {
+    throw UnimplementedError('displayMessages() has not been implemented.');
   }
 
   /// Log an in-app purchase from the platform store

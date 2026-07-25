@@ -1,5 +1,6 @@
 import 'opengrow_platform_interface.dart';
 import 'models/opengrow_link.dart';
+export 'models/opengrow_link.dart';
 export 'opengrow_purchases.dart';
 export 'models/opengrow_purchases.dart';
 
@@ -8,6 +9,14 @@ class OpenGrow {
   /// Get the platform version
   Future<String?> getPlatformVersion() {
     return OpenGrowPlatform.instance.getPlatformVersion();
+  }
+
+  /// Bundle ID on iOS or package name on Android.
+  ///
+  /// This is read directly from the native application, so FlutterFlow does not
+  /// need a duplicated platform identifier value.
+  Future<String> getPlatformIdentifier() {
+    return OpenGrowPlatform.instance.getPlatformIdentifier();
   }
 
   /// Generate a OpenGrow link with the specified parameters
@@ -116,6 +125,16 @@ class OpenGrow {
   /// ```
   Future<void> setPushToken(String token) {
     return OpenGrowPlatform.instance.setPushToken(token);
+  }
+
+  /// Returns the number of unread OpenGrow messages.
+  Future<int> getUnreadMessageCount() {
+    return OpenGrowPlatform.instance.getUnreadMessageCount();
+  }
+
+  /// Opens the native OpenGrow message center.
+  Future<void> displayMessages() {
+    return OpenGrowPlatform.instance.displayMessages();
   }
 
   /// Log an in-app purchase from the platform store

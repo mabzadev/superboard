@@ -34,7 +34,7 @@ function fail(c: any, error: unknown) {
 admin.get('/:projectId', async (c) => {
   try {
     const project = await projectFor(c);
-    const [settings, products, entitlements, offerings, metrics] = await Promise.all([
+    const [settings, products, entitlements, offerings, metrics, appleCredentials, googleCredentials] = await Promise.all([
       c.env.DB.prepare('SELECT * FROM billing_project_settings WHERE project_id = ?').bind(project.id).first(),
       c.env.DB.prepare('SELECT * FROM billing_products WHERE project_id = ? ORDER BY created_at DESC').bind(project.id).all(),
       c.env.DB.prepare('SELECT * FROM billing_entitlements WHERE project_id = ? ORDER BY identifier').bind(project.id).all(),
@@ -47,8 +47,57 @@ admin.get('/:projectId', async (c) => {
           COUNT(DISTINCT CASE WHEN status IN ('refunded','revoked') THEN id END) AS refunds
         FROM billing_transactions WHERE project_id = ?
       `).bind(project.id).first(),
+      c.env.DB.prepare(`
+        SELECT isak.key_id, isak.issuer_id, isak.filename, ic.app_apple_id, ic.bundle_id
+        FROM applications a
+        JOIN ios_configurations ic ON ic.application_id = a.id
+        LEFT JOIN ios_server_api_keys isak
+          ON isak.ios_configuration_id = ic.id OR isak.instance_id = a.instance_id
+        WHERE a.instance_id = ? AND a.platform = 'ios'
+        LIMIT 1
+      `).bind(project.instanceId).first<Record<string, unknown>>(),
+      c.env.DB.prepare(`
+        SELECT asak.name, asak.client_email, asak.project_id, ac.identifier
+        FROM applications a
+        JOIN android_configurations ac ON ac.application_id = a.id
+        LEFT JOIN android_server_api_keys asak
+          ON asak.android_configuration_id = ac.id OR asak.instance_id = a.instance_id
+        WHERE a.instance_id = ? AND a.platform = 'android'
+        LIMIT 1
+      `).bind(project.instanceId).first<Record<string, unknown>>(),
     ]);
-    return c.json({ project, settings, products: products.results, entitlements: entitlements.results, offerings: offerings.results, metrics });
+    return c.json({
+      project,
+      settings,
+      products: products.results,
+      entitlements: entitlements.results,
+      offerings: offerings.results,
+      metrics,
+      credentials: {
+        ios: {
+          configured: Boolean(
+            appleCredentials?.key_id &&
+            appleCredentials?.issuer_id &&
+            appleCredentials?.app_apple_id
+          ),
+          key_id: appleCredentials?.key_id ?? null,
+          issuer_id: appleCredentials?.issuer_id ?? null,
+          app_apple_id: appleCredentials?.app_apple_id ?? null,
+          bundle_id: appleCredentials?.bundle_id ?? null,
+          filename: appleCredentials?.filename ?? null,
+        },
+        android: {
+          configured: Boolean(
+            googleCredentials?.client_email &&
+            googleCredentials?.project_id
+          ),
+          client_email: googleCredentials?.client_email ?? null,
+          project_id: googleCredentials?.project_id ?? null,
+          package_name: googleCredentials?.identifier ?? null,
+          filename: googleCredentials?.name ?? null,
+        },
+      },
+    });
   } catch (error) { return fail(c, error); }
 });
 

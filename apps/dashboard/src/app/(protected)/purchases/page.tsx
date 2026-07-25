@@ -34,6 +34,9 @@ const PurchasesPage = () => {
   const [offeringId, setOfferingId] = useState("default");
   const [packageId, setPackageId] = useState("monthly");
   const [customers, setCustomers] = useState<Array<Record<string, unknown>>>([]);
+  const [credentialTests, setCredentialTests] = useState<
+    Partial<Record<"ios" | "android", "passed" | "failed">>
+  >({});
 
   const load = useCallback(async () => {
     if (!selectedProject?.id) return;
@@ -86,8 +89,10 @@ const PurchasesPage = () => {
     if (!selectedProject?.id) return;
     try {
       await testBillingCredentials(selectedProject.id, platform);
+      setCredentialTests((current) => ({ ...current, [platform]: "passed" }));
       showSuccessNotification(`${platform === "ios" ? "App Store" : "Google Play"} credentials verified`);
     } catch (error) {
+      setCredentialTests((current) => ({ ...current, [platform]: "failed" }));
       showErrorNotification(error instanceof Error ? error.message : "Credential test failed");
     }
   };
@@ -142,6 +147,44 @@ const PurchasesPage = () => {
           {metricCards.map(([label, value, Icon]) => (
             <Card key={String(label)}><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{String(label)}</CardTitle></CardHeader><CardContent className="flex items-center justify-between"><span className="text-2xl font-semibold">{String(value)}</span><Icon className="h-5 w-5 text-muted-foreground" /></CardContent></Card>
           ))}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {(["ios", "android"] as const).map((platform) => {
+            const value = overview?.credentials?.[platform];
+            const label = platform === "ios" ? "App Store Connect" : "Google Play";
+            const detail =
+              platform === "ios"
+                ? value && "key_id" in value
+                  ? value.key_id
+                  : null
+                : value && "client_email" in value
+                  ? value.client_email
+                  : null;
+            return (
+              <Card key={platform}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{label}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className={value?.configured ? "text-sm text-emerald-600" : "text-sm text-amber-600"}>
+                      {value?.configured ? "Identifiants configurés" : "Configuration requise"}
+                    </div>
+                    {detail && <div className="text-xs text-muted-foreground">{detail}</div>}
+                    {credentialTests[platform] && (
+                      <div className={credentialTests[platform] === "passed" ? "text-xs text-emerald-600" : "text-xs text-destructive"}>
+                        Dernier test : {credentialTests[platform] === "passed" ? "réussi" : "échoué"}
+                      </div>
+                    )}
+                  </div>
+                  <Button variant="outline" onClick={() => void testCredentials(platform)}>
+                    Tester
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         <Tabs defaultValue="catalog">

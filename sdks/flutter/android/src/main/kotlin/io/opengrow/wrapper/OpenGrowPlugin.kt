@@ -99,6 +99,10 @@ class OpenGrowPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "getPlatformVersion" -> {
                 result.success("Android ${android.os.Build.VERSION.RELEASE}")
             }
+
+            "getPlatformIdentifier" -> {
+                result.success(context.packageName)
+            }
             
             "generateLink" -> {
                 val title = call.argument<String>("title")
@@ -196,6 +200,25 @@ class OpenGrowPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     result.success(null)
                 } catch (e: Exception) {
                     result.error("TOKEN_ERROR", e.message, null)
+                }
+            }
+
+            "numberOfUnreadMessages" -> {
+                OpenGrow.numberOfUnreadMessages(onResult = { count ->
+                    result.success(count ?: 0)
+                })
+            }
+
+            "displayMessages" -> {
+                try {
+                    val displayed = OpenGrow.displayMessagesFragment {
+                        result.success(null)
+                    }
+                    if (!displayed) {
+                        result.error("MESSAGES_ERROR", "The OpenGrow message center is unavailable", null)
+                    }
+                } catch (e: Exception) {
+                    result.error("MESSAGES_ERROR", e.message, null)
                 }
             }
             

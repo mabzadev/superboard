@@ -14,6 +14,7 @@ import {
 import {
   setIOSAppConfigAPICall,
   setIOSPushConfigAPICall,
+  setIOSApiAccessKeyAPICall,
   setAndroidAppConfigAPICall,
   setAndroidPushConfigAPICall,
   setAndroidAppWebhookAccessKeyAPICall,
@@ -203,6 +204,26 @@ export function useSetIosPushConfigMutation(instanceId: string | undefined) {
     mutationFn: (data: FormData | IosConfigPayload) => {
       if (!instanceId) throw new Error("Instance ID is required");
       return setIOSPushConfigAPICall(instanceId, data);
+    },
+    onSuccess: () => {
+      if (instanceId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.instances.config(instanceId),
+        });
+      }
+    },
+  });
+}
+
+export function useSetIosApiAccessKeyMutation(
+  instanceId: string | undefined
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: FormData) => {
+      if (!instanceId) throw new Error("Instance ID is required");
+      return setIOSApiAccessKeyAPICall(instanceId, data);
     },
     onSuccess: () => {
       if (instanceId) {

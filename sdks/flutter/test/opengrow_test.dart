@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opengrow_flutter/opengrow.dart';
 import 'package:opengrow_flutter/opengrow_platform_interface.dart';
 import 'package:opengrow_flutter/opengrow_method_channel.dart';
-import 'package:opengrow_flutter/models/opengrow_link.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockOpenGrowPlatform
@@ -10,6 +9,9 @@ class MockOpenGrowPlatform
     implements OpenGrowPlatform {
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+  @override
+  Future<String> getPlatformIdentifier() => Future.value('com.example.app');
 
   @override
   Future<String> generateLink(GenerateLinkParams params) =>
@@ -27,6 +29,12 @@ class MockOpenGrowPlatform
 
   @override
   Future<void> setDebugLevel(String level) => Future.value();
+
+  @override
+  Future<int> getUnreadMessageCount() => Future.value(3);
+
+  @override
+  Future<void> displayMessages() => Future.value();
 
   @override
   Future<void> logInAppPurchase(String transactionId) => Future.value();

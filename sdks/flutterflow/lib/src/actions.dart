@@ -4,6 +4,14 @@ import 'package:opengrow_flutter/opengrow.dart';
 
 import 'models.dart';
 
+/// Ephemeral values emitted by native callbacks for no-code action flows.
+///
+/// Deep-link payloads are deliberately kept in memory and are never persisted.
+abstract final class OpenGrowFlutterFlowState {
+  static String lastDeepLinkJson = '';
+  static String lastError = '';
+}
+
 Future<bool> opengrowInitialize({
   required String projectKey,
   required String platformIdentifier,
@@ -17,6 +25,141 @@ Future<bool> opengrowInitialize({
     identityToken: identityToken.isEmpty ? null : identityToken,
   );
   return true;
+}
+
+/// Initializes OpenGrow Purchases using the Bundle ID/package name reported by
+/// the native app. The native OpenGrow SDK itself is configured automatically
+/// from Info.plist/AndroidManifest.xml before this action runs.
+Future<bool> opengrowInitializeAuto({
+  required String projectKey,
+  String sdkBaseUrl = 'https://sdk.vocostar.com',
+  String identityToken = '',
+}) async {
+  final platformIdentifier = await OpenGrow().getPlatformIdentifier();
+  final trimmedBaseUrl = sdkBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+  final purchasesBaseUrl = trimmedBaseUrl.endsWith('/purchases/v1')
+      ? trimmedBaseUrl
+      : '$trimmedBaseUrl/purchases/v1';
+  return opengrowInitialize(
+    projectKey: projectKey,
+    platformIdentifier: platformIdentifier,
+    purchasesBaseUrl: purchasesBaseUrl,
+    identityToken: identityToken,
+  );
+}
+
+/// Associates both OpenGrow attribution and verified purchases with a user.
+///
+/// Pass the server-issued OpenGrow identity JWT when purchase identity should
+/// be merged. The JWT is never persisted by this wrapper.
+Future<bool> opengrowIdentify({
+  required String userIdentifier,
+  String identityToken = '',
+}) async {
+  await OpenGrow().setUserIdentifier(userIdentifier);
+  if (identityToken.isNotEmpty) {
+    await OpenGrowPurchases.instance.logIn(identityToken);
+  }
+  return true;
+}
+
+Future<bool> opengrowPurchaseLogin(String identityToken) async {
+  await OpenGrowPurchases.instance.logIn(identityToken);
+  return true;
+}
+
+Future<bool> opengrowPurchaseLogout() async {
+  await OpenGrowPurchases.instance.logOut();
+  return true;
+}
+
+Future<bool> opengrowSetUserAttributesJson(String attributesJson) async {
+  final decoded = jsonDecode(attributesJson);
+  if (decoded is! Map) {
+    throw const FormatException('User attributes must be a JSON object');
+  }
+  await OpenGrow().setUserAttributes(decoded.cast<String, dynamic>());
+  return true;
+}
+
+Future<bool> opengrowSetPushToken(String token) async {
+  await OpenGrow().setPushToken(token);
+  return true;
+}
+
+Future<String> opengrowGenerateLinkJson(String paramsJson) async {
+  final decoded = jsonDecode(paramsJson);
+  if (decoded is! Map) {
+    throw const FormatException('Link parameters must be a JSON object');
+  }
+  final params = decoded.cast<String, dynamic>();
+  final title = params['title']?.toString();
+  if (title == null || title.isEmpty) {
+    throw const FormatException('Link title is required');
+  }
+
+  CustomLinkRedirect? redirect(dynamic value) {
+    if (value is! Map) return null;
+    final map = value.cast<String, dynamic>();
+    final url = map['url']?.toString();
+    if (url == null || url.isEmpty) return null;
+    return CustomLinkRedirect(
+      url: url,
+      openAppIfInstalled: map['openAppIfInstalled'] as bool? ?? true,
+    );
+  }
+
+  final redirects = params['customRedirects'] is Map
+      ? (params['customRedirects'] as Map).cast<String, dynamic>()
+      : null;
+  final tracking = params['tracking'] is Map
+      ? (params['tracking'] as Map).cast<String, dynamic>()
+      : null;
+  final data = params['data'] is Map
+      ? (params['data'] as Map).cast<String, dynamic>()
+      : null;
+
+  return OpenGrow().generateLink(
+    GenerateLinkParams(
+      title: title,
+      subtitle: params['subtitle']?.toString(),
+      imageURL: params['imageURL']?.toString(),
+      data: data,
+      tags: (params['tags'] as List?)?.map((value) => value.toString()).toList(),
+      customRedirects: redirects == null
+          ? null
+          : CustomRedirects(
+              ios: redirect(redirects['ios']),
+              android: redirect(redirects['android']),
+              desktop: redirect(redirects['desktop']),
+            ),
+      showPreviewIos: params['showPreviewIos'] as bool?,
+      showPreviewAndroid: params['showPreviewAndroid'] as bool?,
+      tracking: tracking == null
+          ? null
+          : TrackingParams(
+              utmCampaign:
+                  (tracking['utm_campaign'] ?? tracking['campaign'])?.toString(),
+              utmSource:
+                  (tracking['utm_source'] ?? tracking['source'])?.toString(),
+              utmMedium:
+                  (tracking['utm_medium'] ?? tracking['medium'])?.toString(),
+            ),
+    ),
+  );
+}
+
+Future<int> opengrowGetUnreadMessageCount() {
+  return OpenGrow().getUnreadMessageCount();
+}
+
+Future<bool> opengrowDisplayMessages() async {
+  await OpenGrow().displayMessages();
+  return true;
+}
+
+Future<String> opengrowGetLastDeepLinkJson() async {
+  return OpenGrowFlutterFlowState.lastDeepLinkJson;
 }
 
 Future<String> opengrowPurchase({
