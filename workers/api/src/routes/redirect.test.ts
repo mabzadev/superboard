@@ -45,6 +45,7 @@ function redirectFixture(overrides: Record<string, unknown> = {}) {
     API_DOMAIN: 'api.test',
     SDK_DOMAIN: 'sdk.test',
     CORS_ORIGIN: '*',
+    APP_URL: 'https://dashboard.test',
     JWT_SECRET: 'redirect-secret',
   } satisfies Env;
   return { env, state };
@@ -129,6 +130,21 @@ function redirectD1Handler(call: FakeD1Call, state: ReturnType<typeof redirectFi
 }
 
 describe('public redirects', () => {
+  it('redirects the short-link root and unknown links to the dashboard', async () => {
+    const { env } = redirectFixture();
+    const root = await redirectRoutes.request('/', { redirect: 'manual' }, env);
+    const unknown = await redirectRoutes.request(
+      '/unknown',
+      { redirect: 'manual' },
+      env,
+    );
+
+    expect(root.status).toBe(302);
+    expect(root.headers.get('location')).toBe('https://dashboard.test');
+    expect(unknown.status).toBe(302);
+    expect(unknown.headers.get('location')).toBe('https://dashboard.test');
+  });
+
   it('stops before side effects when quota is exceeded', async () => {
     const { env, state } = redirectFixture({ quota_exceeded: 1 });
     const response = await redirectRoutes.request('/promo', {

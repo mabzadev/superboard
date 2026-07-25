@@ -9,6 +9,10 @@ function requestOrigin(c: any) {
   return `${url.protocol}//${url.host}`;
 }
 
+function dashboardUrl(c: any): string {
+  return String(c.env.APP_URL || `https://${c.env.SHORTLINK_DOMAIN}`);
+}
+
 async function readBody(c: any): Promise<Record<string, any>> {
   const type = c.req.header('content-type') || '';
   if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
@@ -115,11 +119,11 @@ function serializeQuickLink(row: any, c: any) {
 }
 
 redirect.get('/', async (c) => {
-  return c.redirect(`https://${c.env.SHORTLINK_DOMAIN}`, 302);
+  return c.redirect(dashboardUrl(c), 302);
 });
 
 redirect.get('/public', async (c) => {
-  return c.redirect(`https://${c.env.SHORTLINK_DOMAIN}`, 302);
+  return c.redirect(dashboardUrl(c), 302);
 });
 
 redirect.get('/quick-link-assets/*', async (c) => {
@@ -290,7 +294,7 @@ redirect.get('/:code', async (c) => {
   }>();
 
   if (!link) {
-    return c.redirect(`https://${c.env.SHORTLINK_DOMAIN}`, 302);
+    return c.redirect(dashboardUrl(c), 302);
   }
 
   if (link.quota_exceeded === 1) {
@@ -371,7 +375,7 @@ redirect.get('/:code', async (c) => {
     // Fallback to App Store / Play Store if no URL configured
     if (isIOS) targetUrl = 'https://apps.apple.com';
     else if (isAndroid) targetUrl = 'https://play.google.com';
-    else targetUrl = `https://${c.env.SHORTLINK_DOMAIN}`;
+    else targetUrl = dashboardUrl(c);
   }
 
   if (isIOS || isAndroid) {
@@ -397,10 +401,10 @@ redirect.get('/:code', async (c) => {
 
 redirect.get('/*', async (c) => {
   const path = new URL(c.req.url).pathname.replace(/^\/+/, '');
-  if (!path) return c.redirect(`https://${c.env.SHORTLINK_DOMAIN}`, 302);
+  if (!path) return c.redirect(dashboardUrl(c), 302);
   const quickLink = await quickLinkResponse(c, path);
   if (quickLink) return quickLink;
-  return c.redirect(`https://${c.env.SHORTLINK_DOMAIN}`, 302);
+  return c.redirect(dashboardUrl(c), 302);
 });
 
 function sanitizeMarketingHtml(html: string): string {
