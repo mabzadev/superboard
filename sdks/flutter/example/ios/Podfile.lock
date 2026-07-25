@@ -1,40 +1,47 @@
 PODS:
   - Flutter (1.0.0)
-  - OpenGrow (2.3)
-  - opengrow_flutter (0.0.1):
+  - in_app_purchase_storekit (0.0.1):
     - Flutter
-    - OpenGrow (~> 2.3)
+    - FlutterMacOS
   - integration_test (0.0.1):
     - Flutter
+  - opengrow_flutter (1.1.0):
+    - Flutter
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - url_launcher_ios (0.0.1):
     - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - opengrow_flutter (from `.symlinks/plugins/opengrow_flutter/ios`)
+  - in_app_purchase_storekit (from `.symlinks/plugins/in_app_purchase_storekit/darwin`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - opengrow_flutter (from `.symlinks/plugins/opengrow_flutter/ios`)
+  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
-
-SPEC REPOS:
-  trunk:
-    - OpenGrow
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  opengrow_flutter:
-    :path: ".symlinks/plugins/opengrow_flutter/ios"
+  in_app_purchase_storekit:
+    :path: ".symlinks/plugins/in_app_purchase_storekit/darwin"
   integration_test:
     :path: ".symlinks/plugins/integration_test/ios"
+  opengrow_flutter:
+    :path: ".symlinks/plugins/opengrow_flutter/ios"
+  shared_preferences_foundation:
+    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  OpenGrow: 9f3e1c90b77a59caa6f39eb54b2c32dd4586a000
-  opengrow_flutter: 9cb129c18ab975684c8ad3adea7b856675890233
-  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
-  url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
+  in_app_purchase_storekit: 22cca7d08eebca9babdf4d07d0baccb73325d3c8
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  opengrow_flutter: 13502a6f639e6f2eb851d651cd13d8759404cd72
+  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 

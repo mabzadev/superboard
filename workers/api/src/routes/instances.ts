@@ -1188,7 +1188,21 @@ instances.put('/:id/configurations/ios/api_access_key', async (c) => {
     iosConfigId = await findConfigId(c.env.DB, 'ios_configurations', appId);
   }
   const content = typeof file === 'string' ? file : await (file as File).text();
+  if (!/-----BEGIN PRIVATE KEY-----[\s\S]+-----END PRIVATE KEY-----/.test(content)) {
+    return c.json({ error: 'file must be a valid App Store Connect .p8 private key' }, 422);
+  }
+  const keyId = String(pick(body, 'key_id') || '').trim();
+  const issuerId = String(pick(body, 'issuer_id') || '').trim();
+  const appleAppId = String(pick(body, 'app_apple_id') || '').trim();
+  if (!keyId || !issuerId || !appleAppId) {
+    return c.json({ error: 'key_id, issuer_id and app_apple_id are required' }, 422);
+  }
   const encrypted = await encryptCredential(c.env, content);
+  await c.env.DB.prepare(`
+    UPDATE ios_configurations
+    SET app_apple_id = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(appleAppId, iosConfigId).run();
   await c.env.DB.prepare('DELETE FROM ios_server_api_keys WHERE ios_configuration_id = ? OR instance_id = ?')
     .bind(iosConfigId, instanceId).run();
   await c.env.DB.prepare(`
@@ -1201,10 +1215,10 @@ instances.put('/:id/configurations/ios/api_access_key', async (c) => {
     pick(body, 'name') || pick(body, 'filename') || 'App Store Connect API Key',
     encrypted,
     null,
-    pick(body, 'key_id') || null,
-    pick(body, 'issuer_id') || null,
+    keyId,
+    issuerId,
     pick(body, 'bundle_id') || null,
-    pick(body, 'filename') || null,
+    pick(body, 'filename') || (typeof file === 'string' ? 'AuthKey.p8' : (file as File).name),
   ).run();
   return c.json(configPayload(await loadApplicationConfig(c.env.DB, instanceId, 'ios')));
 });
