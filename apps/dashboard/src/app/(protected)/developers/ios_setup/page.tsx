@@ -41,6 +41,7 @@ import { useInstanceConfigQuery } from "@/hooks/queries/useInstanceQueries";
 import {
   useSetIosConfigMutation,
   useSetIosPushConfigMutation,
+  useSetIosApiAccessKeyMutation,
   useRemoveIosConfigMutation,
 } from "@/hooks/mutations/useInstanceMutations";
 import { IOS_SETUP_CATEGORY } from "@/constants/SetupStepConstants";
@@ -58,7 +59,6 @@ import {
 import Image from "next/image";
 import iosIcon from "@/assets/icons/generic/Apple.svg";
 import type { PlatformAppConfig } from "@/types";
-import { IS_ENTERPRISE } from "@/lib/edition";
 import Step0RegisterApp from "./steps/Step0RegisterApp";
 import Step1URLScheme from "./steps/Step1URLScheme";
 import Step2AddSDK from "./steps/Step2AddSDK";
@@ -101,16 +101,12 @@ const STEPS: Step[] = [
     icon: Bell,
     optional: true,
   },
-  ...(IS_ENTERPRISE
-    ? ([
-        {
-          name: "Revenue",
-          identifier: "appstore_notifications",
-          icon: Store,
-          optional: true,
-        },
-      ] satisfies Step[])
-    : []),
+  {
+    name: "Revenue",
+    identifier: "appstore_notifications",
+    icon: Store,
+    optional: true,
+  },
   {
     name: "Initialize SDK",
     identifier: "initialize_sdk",
@@ -139,6 +135,7 @@ const SetupOverview = ({
   onRemoveRegistration: () => void;
 }) => {
   const pushConfig = iosConfig?.configuration?.push_configuration;
+  const serverKey = iosConfig?.configuration?.server_api_key;
   const findStep = (name: IosStepName): number | null => {
     const idx = STEPS.findIndex((s) => s.name === name);
     return idx === -1 ? null : idx;
@@ -288,23 +285,29 @@ const SetupOverview = ({
                 </Button>
               }
             />
-            {IS_ENTERPRISE && (
-              <OverviewRow
-                title="Revenue"
-                description="Server notification URLs"
-                configured={stepCompleted[findStep("Revenue")!] ?? false}
-                action={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEditStep(findStep("Revenue")!)}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                    View
-                  </Button>
-                }
-              />
-            )}
+            <OverviewRow
+              title="App Store Purchases"
+              description={
+                serverKey?.configured
+                  ? `Credentials configured · ${serverKey.key_id ?? "Key ID saved"}`
+                  : "Credentials not configured"
+              }
+              configured={stepCompleted[findStep("Revenue")!] ?? false}
+              action={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEditStep(findStep("Revenue")!)}
+                >
+                  {serverKey?.configured ? (
+                    <Pencil className="h-3.5 w-3.5" />
+                  ) : (
+                    <Settings className="h-3.5 w-3.5" />
+                  )}
+                  {serverKey?.configured ? "Edit" : "Set up"}
+                </Button>
+              }
+            />
           </div>
         </div>
       </div>
@@ -322,6 +325,9 @@ const IosSetupPage = () => {
   const iosPushConfigMutation = useSetIosPushConfigMutation(
     selectedInstance?.id
   );
+  const iosApiAccessKeyMutation = useSetIosApiAccessKeyMutation(
+    selectedInstance?.id
+  );
 
   const {
     walkedSteps,
@@ -337,6 +343,7 @@ const IosSetupPage = () => {
 
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const apiKeyFileInputRef = useRef<HTMLInputElement>(null);
   const [bundleId, setBundleId] = useState<string>("");
   const [appleAppPrefix, setAppleAppPrefix] = useState<string>("");
   const [pushNotificationCertificateFile, setPushNotificationCertificateFile] =
@@ -350,11 +357,20 @@ const IosSetupPage = () => {
 
   const [detailsChanged, setDetailsChanged] = useState<boolean>(false);
   const [certificateChanged, setCertificateChanged] = useState<boolean>(false);
+  const [apiKeyChanged, setApiKeyChanged] = useState<boolean>(false);
   const [urlScheme, setUrlScheme] = useState<string>("");
 
   const [appstoreURLProduction, setAppstoreURLProduction] =
     useState<string>("");
   const [appstoreURLSandbox, setAppstoreURLSandbox] = useState<string>("");
+  const [appleAppId, setAppleAppId] = useState<string>("");
+  const [appStoreKeyId, setAppStoreKeyId] = useState<string>("");
+  const [appStoreIssuerId, setAppStoreIssuerId] = useState<string>("");
+  const [apiKeyFilename, setApiKeyFilename] = useState<string>("");
+  const [apiKeyFile, setApiKeyFile] = useState<File | null>(null);
+  const [apiKeyServerError, setApiKeyServerError] = useState<string | null>(
+    null
+  );
 
   const [iosConfig, setIosConfig] = useState<PlatformAppConfig | null>(null);
 
@@ -387,6 +403,16 @@ const IosSetupPage = () => {
       onSuccess?: () => void
     ) => void
   >(null!);
+  const handleSaveApiKeyRef = useRef<
+    (
+      projectId: string,
+      file: File | null,
+      keyId: string,
+      issuerId: string,
+      appId: string,
+      onSuccess?: () => void
+    ) => void
+  >(null!);
 
   const sdkConfigured = !!iosConfig?.configuration?.bundle_id;
 
@@ -402,7 +428,7 @@ const IosSetupPage = () => {
       case "Push Notifications":
         return !!iosConfig?.configuration?.push_configuration;
       case "Revenue":
-        return walkedSteps.has(idx);
+        return !!iosConfig?.configuration?.server_api_key?.configured;
       case "Initialize SDK":
         return walkedSteps.has(idx);
       default: {
@@ -420,16 +446,22 @@ const IosSetupPage = () => {
           return detailsChanged;
         case "Push Notifications":
           return certificateChanged;
+        case "Revenue":
+          return apiKeyChanged;
         default:
           return false;
       }
     },
-    [detailsChanged, certificateChanged]
+    [detailsChanged, certificateChanged, apiKeyChanged]
   );
 
   const stepIsInteractive = (step: number): boolean => {
     const name = stepName(step);
-    return name === "Register App" || name === "Push Notifications";
+    return (
+      name === "Register App" ||
+      name === "Push Notifications" ||
+      name === "Revenue"
+    );
   };
 
   const stepFormValid = useCallback(
@@ -445,6 +477,14 @@ const IosSetupPage = () => {
             (pushNotificationCertificateFile != null || certificate != null) &&
             certificatePassword !== ""
           );
+        case "Revenue":
+          return (
+            appleAppId.trim().length > 0 &&
+            appStoreKeyId.trim().length > 0 &&
+            appStoreIssuerId.trim().length > 0 &&
+            (apiKeyFile != null ||
+              !!iosConfig?.configuration?.server_api_key?.configured)
+          );
         default:
           return true;
       }
@@ -455,10 +495,15 @@ const IosSetupPage = () => {
       pushNotificationCertificateFile,
       certificate,
       certificatePassword,
+      appleAppId,
+      appStoreKeyId,
+      appStoreIssuerId,
+      apiKeyFile,
+      iosConfig,
     ]
   );
 
-  const hasAnyChanges = detailsChanged || certificateChanged;
+  const hasAnyChanges = detailsChanged || certificateChanged || apiKeyChanged;
 
   // Code blocks
   const app_delegate_code = [
@@ -514,6 +559,7 @@ const IosSetupPage = () => {
     setUnsavedDialogOpen(false);
     initializeValuesRef.current(iosConfig);
     setPushServerError(null);
+    setApiKeyServerError(null);
     pendingNavigationRef.current?.();
     pendingNavigationRef.current = null;
   }, [iosConfig]);
@@ -544,6 +590,16 @@ const IosSetupPage = () => {
           saveAndNavigate
         );
         break;
+      case "Revenue":
+        handleSaveApiKeyRef.current(
+          selectedInstance.id,
+          apiKeyFile,
+          appStoreKeyId,
+          appStoreIssuerId,
+          appleAppId,
+          saveAndNavigate
+        );
+        break;
       default:
         navigate?.();
     }
@@ -554,6 +610,10 @@ const IosSetupPage = () => {
     appleAppPrefix,
     certificatePassword,
     pushNotificationCertificateFile,
+    apiKeyFile,
+    appStoreKeyId,
+    appStoreIssuerId,
+    appleAppId,
   ]);
 
   // Guard all navigation when there are unsaved changes
@@ -673,6 +733,13 @@ const IosSetupPage = () => {
     setPushNotificationCertificateFile(e.currentTarget.files?.[0] ?? null);
   };
 
+  const handleSetApiKeyFile = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setApiKeyServerError(null);
+    setApiKeyFile(event.currentTarget.files?.[0] ?? null);
+  };
+
   const monitorDetailsChange = useCallback(
     (config: PlatformAppConfig | null) => {
       if (!config || !config.configuration) {
@@ -713,6 +780,20 @@ const IosSetupPage = () => {
     [pushNotificationCertificateFile, certificatePassword]
   );
 
+  const monitorApiKeyChange = useCallback(
+    (config: PlatformAppConfig | null) => {
+      const saved = config?.configuration?.server_api_key;
+      const savedAppId = config?.configuration?.app_apple_id ?? "";
+      setApiKeyChanged(
+        apiKeyFile != null ||
+          appleAppId !== savedAppId ||
+          appStoreKeyId !== (saved?.key_id ?? "") ||
+          appStoreIssuerId !== (saved?.issuer_id ?? "")
+      );
+    },
+    [apiKeyFile, appleAppId, appStoreKeyId, appStoreIssuerId]
+  );
+
   const handleSetIosConfig = async (
     _instanceId: string,
     enabled: boolean,
@@ -723,6 +804,7 @@ const IosSetupPage = () => {
       enabled: enabled,
       bundle_id: bundle_id,
       app_prefix: app_prefix,
+      app_apple_id: appleAppId || undefined,
     };
 
     if (!bundle_id && !app_prefix) {
@@ -772,6 +854,7 @@ const IosSetupPage = () => {
       enabled: enabled,
       bundle_id: bundle_id,
       app_prefix: app_prefix,
+      app_apple_id: appleAppId || undefined,
     };
 
     if (
@@ -859,9 +942,61 @@ const IosSetupPage = () => {
     );
   };
 
+  const handleSaveApiKey = async (
+    _projectId: string,
+    file: File | null,
+    keyId: string,
+    issuerId: string,
+    appId: string,
+    onSuccess?: () => void
+  ) => {
+    if (!file) {
+      showErrorNotification(
+        "Select the App Store Connect .p8 key before saving credential changes."
+      );
+      return;
+    }
+    if (!bundleId || !keyId.trim() || !issuerId.trim() || !appId.trim()) {
+      showErrorNotification(
+        "Bundle ID, Apple App ID, Key ID and Issuer ID are required."
+      );
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("filename", file.name);
+    formData.append("bundle_id", bundleId);
+    formData.append("app_apple_id", appId.trim());
+    formData.append("key_id", keyId.trim());
+    formData.append("issuer_id", issuerId.trim());
+
+    try {
+      const response = await iosApiAccessKeyMutation.mutateAsync(formData);
+      setIosConfig(response.data.config);
+      setApiKeyFilename(file.name);
+      setApiKeyFile(null);
+      if (apiKeyFileInputRef.current) apiKeyFileInputRef.current.value = "";
+      setApiKeyServerError(null);
+      showSuccessNotification(
+        "App Store credentials encrypted and saved successfully"
+      );
+      onSuccess?.();
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 422) {
+        const message =
+          (error.data as { error?: string })?.error ?? "Invalid Apple key";
+        setApiKeyServerError(message);
+        showErrorNotification(message);
+      } else {
+        showGenericError();
+      }
+    }
+  };
+
   // Keep refs in sync so useCallback closures always call the latest version
   handleSaveConfigurationRef.current = handleSaveConfiguration;
   handleSaveCertificateRef.current = handleSaveCertificate;
+  handleSaveApiKeyRef.current = handleSaveApiKey;
 
   const handleSaveAndContinue = () => {
     if (!selectedInstance) return;
@@ -888,6 +1023,16 @@ const IosSetupPage = () => {
           selectedInstance.id,
           certificatePassword,
           pushNotificationCertificateFile,
+          saveAndAdvance
+        );
+        break;
+      case "Revenue":
+        handleSaveApiKey(
+          selectedInstance.id,
+          apiKeyFile,
+          appStoreKeyId,
+          appStoreIssuerId,
+          appleAppId,
           saveAndAdvance
         );
         break;
@@ -933,6 +1078,12 @@ const IosSetupPage = () => {
       setCertificate(null);
       setCertificatePassword("");
       setPushNotificationCertificateFile(null);
+      setAppleAppId("");
+      setAppStoreKeyId("");
+      setAppStoreIssuerId("");
+      setApiKeyFilename("");
+      setApiKeyFile(null);
+      if (apiKeyFileInputRef.current) apiKeyFileInputRef.current.value = "";
     } else {
       const cfg = config.configuration;
       setBundleId(cfg?.bundle_id ?? "");
@@ -945,6 +1096,21 @@ const IosSetupPage = () => {
         setCertificatePassword("");
         setPushNotificationCertificateFile(null);
       }
+      setAppleAppId(cfg.app_apple_id ?? "");
+      if (cfg.server_api_key) {
+        setAppStoreKeyId(cfg.server_api_key.key_id ?? "");
+        setAppStoreIssuerId(cfg.server_api_key.issuer_id ?? "");
+        setApiKeyFilename(
+          cfg.server_api_key.filename ?? cfg.server_api_key.file ?? ""
+        );
+        setApiKeyFile(null);
+      } else {
+        setAppStoreKeyId("");
+        setAppStoreIssuerId("");
+        setApiKeyFilename("");
+        setApiKeyFile(null);
+      }
+      if (apiKeyFileInputRef.current) apiKeyFileInputRef.current.value = "";
     }
   };
 
@@ -962,6 +1128,7 @@ const IosSetupPage = () => {
     setWizardMode(false);
     setDetailsChanged(false);
     setCertificateChanged(false);
+    setApiKeyChanged(false);
     initializeValuesRef.current(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset when instance ID changes, not on every selectedInstance reference change
   }, [selectedInstance?.id]);
@@ -990,6 +1157,10 @@ const IosSetupPage = () => {
   useEffect(() => {
     monitorCertificateChange(iosConfig);
   }, [monitorCertificateChange, iosConfig]);
+
+  useEffect(() => {
+    monitorApiKeyChange(iosConfig);
+  }, [monitorApiKeyChange, iosConfig]);
 
   // Scroll to top and reset validation errors when step changes
   useEffect(() => {
@@ -1081,6 +1252,18 @@ const IosSetupPage = () => {
                   <Step4Revenue
                     appstoreURLProduction={appstoreURLProduction}
                     appstoreURLSandbox={appstoreURLSandbox}
+                    appleAppId={appleAppId}
+                    setAppleAppId={setAppleAppId}
+                    appStoreKeyId={appStoreKeyId}
+                    setAppStoreKeyId={setAppStoreKeyId}
+                    appStoreIssuerId={appStoreIssuerId}
+                    setAppStoreIssuerId={setAppStoreIssuerId}
+                    apiKeyFilename={apiKeyFilename}
+                    apiKeyFile={apiKeyFile}
+                    fileInputRef={apiKeyFileInputRef}
+                    onApiKeyFileChange={handleSetApiKeyFile}
+                    showValidationErrors={showValidationErrors}
+                    serverError={apiKeyServerError}
                   />
                 )}
 
@@ -1103,7 +1286,9 @@ const IosSetupPage = () => {
               hasChanges={stepHasChanges(currentStep)}
               isInteractive={stepIsInteractive(currentStep)}
               isSaving={
-                iosConfigMutation.isPending || iosPushConfigMutation.isPending
+                iosConfigMutation.isPending ||
+                iosPushConfigMutation.isPending ||
+                iosApiAccessKeyMutation.isPending
               }
               onBack={() => goToStep(currentStep - 1)}
               onContinue={advanceStep}

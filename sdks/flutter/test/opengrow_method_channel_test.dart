@@ -11,7 +11,16 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-          return '42';
+          switch (methodCall.method) {
+            case 'getPlatformVersion':
+              return '42';
+            case 'getPlatformIdentifier':
+              return 'com.example.app';
+            case 'numberOfUnreadMessages':
+              return 3;
+            default:
+              return null;
+          }
         });
   });
 
@@ -22,5 +31,17 @@ void main() {
 
   test('getPlatformVersion', () async {
     expect(await platform.getPlatformVersion(), '42');
+  });
+
+  test('getPlatformIdentifier', () async {
+    expect(await platform.getPlatformIdentifier(), 'com.example.app');
+  });
+
+  test('getUnreadMessageCount', () async {
+    expect(await platform.getUnreadMessageCount(), 3);
+  });
+
+  test('displayMessages', () async {
+    await expectLater(platform.displayMessages(), completes);
   });
 }

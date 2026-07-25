@@ -30,6 +30,22 @@ export interface BillingOverview {
   entitlements: BillingEntitlement[];
   offerings: BillingOffering[];
   metrics?: { revenue_micros: number; paying_customers: number; trials: number; refunds: number };
+  credentials?: {
+    ios: {
+      configured: boolean;
+      key_id?: string | null;
+      app_apple_id?: string | null;
+      bundle_id?: string | null;
+      filename?: string | null;
+    };
+    android: {
+      configured: boolean;
+      client_email?: string | null;
+      project_id?: string | null;
+      package_name?: string | null;
+      filename?: string | null;
+    };
+  };
 }
 
 export const getBillingOverview = async (projectId: string): Promise<BillingOverview> =>

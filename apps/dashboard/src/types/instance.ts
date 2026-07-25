@@ -57,6 +57,7 @@ export interface PlatformAppConfig {
     identifier?: string;
     bundle_id?: string;
     app_prefix?: string;
+    app_apple_id?: string;
     sha256s?: string[];
     domains?: string[];
     push_configuration?: {
@@ -66,6 +67,10 @@ export interface PlatformAppConfig {
     };
     server_api_key?: {
       file?: string;
+      filename?: string;
+      key_id?: string;
+      issuer_id?: string;
+      configured?: boolean;
       [key: string]: unknown;
     };
     [key: string]: unknown;

@@ -13,9 +13,10 @@ class TrackingParams {
 
   factory TrackingParams.fromMap(Map<String, dynamic> map) {
     return TrackingParams(
-      utmCampaign: map['campaign'] as String?,
-      utmSource: map['source'] as String?,
-      utmMedium: map['medium'] as String?,
+      utmCampaign:
+          (map['utm_campaign'] ?? map['campaign'])?.toString(),
+      utmSource: (map['utm_source'] ?? map['source'])?.toString(),
+      utmMedium: (map['utm_medium'] ?? map['medium'])?.toString(),
     );
   }
 

@@ -3,7 +3,6 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:opengrow_flutter/opengrow.dart';
-import 'package:opengrow_flutter/models/opengrow_link.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() async {

@@ -1,16 +1,16 @@
-## 1.2.0
+## 1.1.0
 
+* Added automatic Bundle ID / Package Name discovery
+* Added native-configuration initialization
+* Added Flutter message-center count and display methods
 * Added server-verified StoreKit 2 and Google Play purchases
 * Added offerings, packages, entitlements, and signed customer information
 * Added login/logout, restore, sync, offline cache, and customer info stream
 * Added explicit purchased, cancelled, pending, and failed outcomes
-
-## 1.1.0
-
 * Added custom base URL support via Info.plist (iOS) and AndroidManifest.xml (Android)
 * Added revenue tracking with `logInAppPurchase` and `logCustomPurchase` methods
 * Added `TransactionType` enum (buy, cancel, refund)
-* Bumped iOS SDK to ~> 2.3 and Android SDK to 1.1.1
+* Embedded the native Android implementation for credential-free private Git builds
 
 ## 1.0.1
 

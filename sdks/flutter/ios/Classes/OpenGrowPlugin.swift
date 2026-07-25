@@ -1,6 +1,8 @@
 import Flutter
 import UIKit
+#if canImport(OpenGrow)
 import OpenGrow
+#endif
 
 extension Array where Element == Any {
     func toArray<T>(of type: T.Type) -> [T] {
@@ -73,9 +75,16 @@ public class OpenGrowPlugin: NSObject, FlutterPlugin {
         switch call.method {
         case "getPlatformVersion":
             result("iOS " + UIDevice.current.systemVersion)
+
+        case "getPlatformIdentifier":
+            if let identifier = Bundle.main.bundleIdentifier, !identifier.isEmpty {
+                result(identifier)
+            } else {
+                result(FlutterError(code: "MISSING_IDENTIFIER", message: "The iOS Bundle ID is missing", details: nil))
+            }
             
         case "configure":
-            break
+            result(nil)
             
         case "generateLink":
             guard let args = call.arguments as? [String: Any],

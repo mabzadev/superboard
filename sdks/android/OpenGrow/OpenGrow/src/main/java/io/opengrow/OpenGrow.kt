@@ -248,8 +248,8 @@ public class OpenGrow: ActivityProvider {
         ///
         /// - Parameters:
         ///   - listener: A lambda function to be called when the screen is dismissed.
-        fun displayMessagesFragment(onDismissed: (()->Unit)?) {
-            instance.displayMessagesFragment(onDismissed)
+        fun displayMessagesFragment(onDismissed: (()->Unit)?): Boolean {
+            return instance.displayMessagesFragment(onDismissed)
         }
 
         /// Get the number of unread notifications this device currently has.

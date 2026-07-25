@@ -48,6 +48,17 @@ export const setIOSPushConfigAPICall = async (
   );
 };
 
+export const setIOSApiAccessKeyAPICall = async (
+  instanceId: string,
+  data: FormData
+): Promise<AxiosResponse> => {
+  return PUT(
+    config.apiPath +
+      `/instances/${instanceId}/configurations/ios/api_access_key`,
+    data
+  );
+};
+
 export const setAndroidPushConfigAPICall = async (
   instanceId: string,
   data: FormData | AndroidPushConfigPayload

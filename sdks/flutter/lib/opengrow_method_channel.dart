@@ -25,6 +25,17 @@ class MethodChannelOpenGrow extends OpenGrowPlatform {
   }
 
   @override
+  Future<String> getPlatformIdentifier() async {
+    final identifier = await methodChannel.invokeMethod<String>(
+      'getPlatformIdentifier',
+    );
+    if (identifier == null || identifier.trim().isEmpty) {
+      throw OpenGrowException('The native application identifier is missing');
+    }
+    return identifier;
+  }
+
+  @override
   Future<String> generateLink(GenerateLinkParams params) async {
     try {
       final result = await methodChannel.invokeMethod<String>(
@@ -90,6 +101,31 @@ class MethodChannelOpenGrow extends OpenGrowPlatform {
     } on PlatformException catch (e) {
       throw OpenGrowException(
         e.message ?? 'Failed to set debug level',
+        code: e.code,
+      );
+    }
+  }
+
+  @override
+  Future<int> getUnreadMessageCount() async {
+    try {
+      return await methodChannel.invokeMethod<int>('numberOfUnreadMessages') ??
+          0;
+    } on PlatformException catch (e) {
+      throw OpenGrowException(
+        e.message ?? 'Failed to get unread message count',
+        code: e.code,
+      );
+    }
+  }
+
+  @override
+  Future<void> displayMessages() async {
+    try {
+      await methodChannel.invokeMethod<void>('displayMessages');
+    } on PlatformException catch (e) {
+      throw OpenGrowException(
+        e.message ?? 'Failed to display messages',
         code: e.code,
       );
     }
