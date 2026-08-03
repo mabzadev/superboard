@@ -1,4 +1,4 @@
-import { Env } from '../types';
+import type { BillingEnv } from '../types';
 import { entitlementIsActive } from './billing-state';
 import { recordCanonicalBillingEvent } from './purchases-v2';
 import { recordRefundCaseForPurchase } from './refunds';
@@ -266,7 +266,7 @@ type OutboundWebhookEvent = {
   payload: Record<string, unknown>;
 };
 
-async function queueOutboundWebhookEvent(env: Env, event: OutboundWebhookEvent) {
+async function queueOutboundWebhookEvent(env: BillingEnv, event: OutboundWebhookEvent) {
   const endpoints = await env.DB.prepare(`
     SELECT id, environments, event_types
     FROM billing_webhook_endpoints
@@ -298,7 +298,7 @@ async function queueOutboundWebhookEvent(env: Env, event: OutboundWebhookEvent) 
   }
 }
 
-async function queuePurchaseWebhook(env: Env, purchase: VerifiedPurchase, transactionId: string) {
+async function queuePurchaseWebhook(env: BillingEnv, purchase: VerifiedPurchase, transactionId: string) {
   await queueOutboundWebhookEvent(env, {
     projectId: purchase.projectId,
     environment: purchase.environment,
@@ -318,7 +318,7 @@ async function queuePurchaseWebhook(env: Env, purchase: VerifiedPurchase, transa
  * The delivery layer signs the exact body and timestamp with the endpoint HMAC
  * secret, so consumers never need access to a Billing signing private key.
  */
-export async function queueCustomerEntitlementChanged(env: Env, params: {
+export async function queueCustomerEntitlementChanged(env: BillingEnv, params: {
   projectId: string | number;
   customerId: string;
   environment: BillingEnvironment;
@@ -348,7 +348,7 @@ export async function queueCustomerEntitlementChanged(env: Env, params: {
   });
 }
 
-export async function applyVerifiedPurchase(env: Env, purchase: VerifiedPurchase) {
+export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedPurchase) {
   if (!BILLING_STATUSES.includes(purchase.status)) throw new Error(`Unsupported billing status: ${purchase.status}`);
   const product = await getOrCreateProduct(env.DB, purchase);
   if (!product?.id) throw new Error('Unable to resolve billing product');

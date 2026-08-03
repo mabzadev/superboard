@@ -1,4 +1,4 @@
-import type { Env } from '../types';
+import type { BillingEnv } from '../types';
 import type { BillingStatus, VerifiedPurchase } from './billing';
 
 export const PURCHASE_EVENT_TYPES = [
@@ -187,7 +187,7 @@ export function normalizeBillingEventType(eventType: string, status: BillingStat
 }
 
 export async function recordCanonicalBillingEvent(
-  env: Env,
+  env: BillingEnv,
   purchase: VerifiedPurchase,
   transactionId: string,
 ) {

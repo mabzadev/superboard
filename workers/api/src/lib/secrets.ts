@@ -1,4 +1,4 @@
-import { Env } from '../types';
+import type { BillingEnv } from '../types';
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -16,14 +16,16 @@ async function encryptionKey(material: string): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
 
-export function credentialKeyMaterial(env: Env): string {
+export function credentialKeyMaterial(env: BillingEnv): string {
   const keyring = credentialKeyring(env);
   const version = env.STORE_CREDENTIALS_ACTIVE_KEY_VERSION || Object.keys(keyring).sort().at(-1);
   if (version && keyring[version]) return keyring[version];
-  return env.STORE_CREDENTIALS_ENCRYPTION_KEY || env.JWT_SECRET;
+  const legacy = env.STORE_CREDENTIALS_ENCRYPTION_KEY;
+  if (!legacy) throw new Error('Store credential encryption key is not configured');
+  return legacy;
 }
 
-function credentialKeyring(env: Env): Record<string, string> {
+function credentialKeyring(env: BillingEnv): Record<string, string> {
   if (!env.STORE_CREDENTIALS_ENCRYPTION_KEYS) return {};
   try {
     const parsed = JSON.parse(env.STORE_CREDENTIALS_ENCRYPTION_KEYS);
@@ -34,7 +36,7 @@ function credentialKeyring(env: Env): Record<string, string> {
   }
 }
 
-export async function encryptCredential(env: Env, secret: string): Promise<string> {
+export async function encryptCredential(env: BillingEnv, secret: string): Promise<string> {
   const keyring = credentialKeyring(env);
   const version = env.STORE_CREDENTIALS_ACTIVE_KEY_VERSION || Object.keys(keyring).sort().at(-1) || 'v1';
   const key = keyring[version] || credentialKeyMaterial(env);
@@ -42,7 +44,7 @@ export async function encryptCredential(env: Env, secret: string): Promise<strin
   return `${version}.${encrypted.slice(3)}`;
 }
 
-export async function decryptCredential(env: Env, ciphertext: string): Promise<string> {
+export async function decryptCredential(env: BillingEnv, ciphertext: string): Promise<string> {
   const separator = ciphertext.indexOf('.');
   const version = separator > 0 ? ciphertext.slice(0, separator) : '';
   const keyring = credentialKeyring(env);

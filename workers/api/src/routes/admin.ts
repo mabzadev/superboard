@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { Env } from '../types';
 import { getOrCreateRedirectConfig, parseJsonObject, resolveProject } from '../lib/db';
 import { runMaintenance } from '../lib/maintenance';
+import { decryptCredential, encryptSecret, timingSafeEqual } from '../lib/secrets';
 
 const admin = new Hono<{ Bindings: Env }>();
 
@@ -13,10 +14,10 @@ type ProjectRecord = {
   identifier: string;
 };
 
-function adminDenied(c: any): Response | null {
+async function adminDenied(c: any): Promise<Response | null> {
   const expected = c.env.ADMIN_API_KEY;
   const provided = c.req.header('X-AUTH') || c.req.header('x-auth');
-  if (!expected || provided !== expected) return c.json({ error: 'Invalid credentials' }, 403);
+  if (!expected || !provided || !await timingSafeEqual(expected, provided)) return c.json({ error: 'Invalid credentials' }, 403);
   return null;
 }
 
@@ -111,7 +112,7 @@ async function domainForProject(db: D1Database, projectId: number): Promise<numb
 }
 
 admin.post('/create_enterprise_subscription', async (c) => {
-  const denied = adminDenied(c);
+  const denied = await adminDenied(c);
   if (denied) return denied;
   const body = await readBody(c);
   const missing = ['start_date', 'end_date', 'total_maus'].filter((key) => body[key] === undefined || body[key] === null || body[key] === '');
@@ -148,7 +149,7 @@ admin.post('/create_enterprise_subscription', async (c) => {
 });
 
 admin.patch('/update_enterprise_subscription', async (c) => {
-  const denied = adminDenied(c);
+  const denied = await adminDenied(c);
   if (denied) return denied;
   const body = await readBody(c);
   const current = await c.env.DB.prepare('SELECT * FROM enterprise_subscriptions WHERE id = ? LIMIT 1').bind(body.id).first<any>();
@@ -175,7 +176,7 @@ admin.patch('/update_enterprise_subscription', async (c) => {
 });
 
 admin.post('/migrate_firebase_links', async (c) => {
-  const denied = adminDenied(c);
+  const denied = await adminDenied(c);
   if (denied) return denied;
   const body = await readBody(c);
   const file = body.file as File | string | undefined;
@@ -243,7 +244,7 @@ admin.post('/migrate_firebase_links', async (c) => {
 });
 
 admin.post('/flush_events', async (c) => {
-  const denied = adminDenied(c);
+  const denied = await adminDenied(c);
   if (denied) return denied;
   const body = await readBody(c);
   const days = Math.max(1, Math.min(7, Number(body.aggregate_days || 1)));
@@ -261,6 +262,41 @@ admin.post('/flush_events', async (c) => {
     discarded: discarded.meta?.changes || 0,
     dates_aggregated: summary.dates,
   });
+});
+
+admin.post('/billing/rewrap_credentials', async (c) => {
+  const denied = await adminDenied(c);
+  if (denied) return denied;
+  const targetKey = c.env.BILLING_CREDENTIALS_REWRAP_KEY;
+  if (!targetKey) return c.json({ error: 'Billing credential rewrap key is unavailable' }, 503);
+  const body = await readBody(c);
+  const targetVersion = String(body.target_version || 'billing-v1');
+  if (!/^[a-z][a-z0-9-]{1,31}$/.test(targetVersion)) return c.json({ error: 'Invalid target key version' }, 422);
+  const sources = [
+    { table: 'ios_server_api_keys', rows: await c.env.DB.prepare('SELECT id, encrypted_key FROM ios_server_api_keys WHERE encrypted_key IS NOT NULL').all<{ id: string; encrypted_key: string }>() },
+    { table: 'android_server_api_keys', rows: await c.env.DB.prepare('SELECT id, encrypted_key FROM android_server_api_keys WHERE encrypted_key IS NOT NULL').all<{ id: string; encrypted_key: string }>() },
+  ] as const;
+  const updates: D1PreparedStatement[] = [];
+  const counts: Record<string, number> = {};
+  for (const source of sources) {
+    counts[source.table] = source.rows.results?.length || 0;
+    for (const row of source.rows.results || []) {
+      const clear = await decryptCredential(c.env, row.encrypted_key);
+      const encrypted = await encryptSecret(clear, targetKey);
+      const scoped = `${targetVersion}.${encrypted.slice('v1.'.length)}`;
+      updates.push(
+        c.env.DB.prepare(`UPDATE ${source.table} SET billing_encrypted_key = ?, updated_at = datetime('now') WHERE id = ?`)
+          .bind(scoped, row.id),
+        c.env.DB.prepare(`
+          INSERT INTO billing_credential_rewrap_audit
+            (id, source_table, source_id, target_key_version, actor)
+          VALUES (?, ?, ?, ?, 'admin_api')
+        `).bind(crypto.randomUUID(), source.table, row.id, targetVersion),
+      );
+    }
+  }
+  if (updates.length) await c.env.DB.batch(updates);
+  return c.json({ rewrapped: counts, target_version: targetVersion, plaintext_exposed: false });
 });
 
 export default admin;
