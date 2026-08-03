@@ -5,6 +5,25 @@ export type ReleaseGateCheckDefinition = {
   label: string;
   description: string;
   required_evidence: Array<'build' | 'device' | 'reference'>;
+  reference_types: CertificationReferenceType[];
+};
+
+export type CertificationReferenceType =
+  | 'billing_transaction'
+  | 'billing_event'
+  | 'paywall_event'
+  | 'legacy_inventory'
+  | 'test_run';
+
+export type ReleaseGateCertificationObservation = {
+  id: string;
+  run_id: string;
+  check_key: string;
+  outcome: string;
+  evidence_json?: string;
+  evidence_sha256: string;
+  run_status: string;
+  digest_valid: boolean;
 };
 
 export type StoredReleaseGateCheck = {
@@ -60,6 +79,17 @@ const nativeScenarios = [
   ['out_of_order_event', 'Out-of-order provider event', 'Apply events according to provider occurrence time.'],
 ] as const;
 
+const nativeReferenceTypes = (key: typeof nativeScenarios[number][0]): CertificationReferenceType[] => {
+  if (['pending', 'user_cancelled', 'restore'].includes(key)) {
+    return ['paywall_event', 'test_run'];
+  }
+  if (['device_change', 'reinstall', 'interrupted_purchase', 'network_loss'].includes(key)) return ['test_run'];
+  if (['duplicate_event', 'out_of_order_event'].includes(key)) return ['test_run'];
+  return key === 'weekly_purchase' || key === 'yearly_purchase'
+    ? ['billing_transaction']
+    : ['billing_transaction', 'billing_event'];
+};
+
 export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
   ...(['apple', 'google'] as const).flatMap((provider) => nativeScenarios.map(([key, label, description]) => ({
     key: `${provider}.${key}`,
@@ -68,6 +98,7 @@ export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
     label,
     description,
     required_evidence: ['build', 'device', 'reference'] as Array<'build' | 'device' | 'reference'>,
+    reference_types: nativeReferenceTypes(key),
   }))),
   ...([
     ['checkout', 'Checkout', 'Complete a Stripe Checkout session and redeem it for the identified customer.'],
@@ -79,6 +110,7 @@ export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
   ] as const).map(([key, label, description]) => ({
     key: `stripe.${key}`, provider: 'stripe' as const, group: 'Stripe Web', label, description,
     required_evidence: ['reference'] as Array<'reference'>,
+    reference_types: (key === 'portal' ? ['test_run'] : ['billing_transaction', 'billing_event']) as CertificationReferenceType[],
   })),
   ...([
     ['identity_sync', 'Authenticated identity', 'A failed identity synchronization blocks a new purchase.'],
@@ -94,6 +126,11 @@ export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
     required_evidence: (key === 'flutterflow_ios' || key === 'flutterflow_android'
       ? ['build', 'device', 'reference']
       : key === 'revenuecat_inventory' ? ['reference'] : ['build', 'reference']) as Array<'build' | 'device' | 'reference'>,
+    reference_types: (key === 'revenuecat_inventory'
+      ? ['legacy_inventory']
+      : key === 'authority_convergence'
+        ? ['billing_transaction', 'billing_event', 'test_run']
+        : ['test_run']) as CertificationReferenceType[],
   })),
 ];
 
@@ -105,20 +142,37 @@ export function validateReleaseGateEvidence(definition: ReleaseGateCheckDefiniti
   return { valid: missing.length === 0, missing };
 }
 
-export function buildReleaseGate(stored: StoredReleaseGateCheck[], prerequisites: ReleaseGatePrerequisite[]) {
+export function buildReleaseGate(
+  stored: StoredReleaseGateCheck[],
+  prerequisites: ReleaseGatePrerequisite[],
+  certificationObservations: ReleaseGateCertificationObservation[] = [],
+) {
   const byKey = new Map(stored.map((row) => [row.check_key, row]));
+  const observationById = new Map(certificationObservations.map((row) => [row.id, row]));
   const checks = RELEASE_GATE_CHECKS.map((definition) => {
     const row = byKey.get(definition.key);
     const evidence = parseObject(row?.evidence_json);
     const evidenceValidation = validateReleaseGateEvidence(definition, evidence);
+    const observation = observationById.get(String(evidence.observation_id || ''));
+    const certificationValid = Boolean(observation
+      && observation.check_key === definition.key
+      && observation.outcome === 'passed'
+      && observation.run_status === 'completed'
+      && observation.run_id === evidence.run_id
+      && observation.evidence_sha256 === evidence.evidence_sha256
+      && observation.digest_valid);
     const status = row?.status === 'passed' || row?.status === 'failed' ? row.status : 'pending';
-    const certified = status === 'passed' && evidenceValidation.valid;
+    const missingEvidence = [
+      ...evidenceValidation.missing,
+      ...(!certificationValid ? ['certification_observation'] : []),
+    ];
+    const certified = status === 'passed' && evidenceValidation.valid && certificationValid;
     return {
       ...definition,
       status,
       evidence,
-      evidence_valid: evidenceValidation.valid,
-      missing_evidence: evidenceValidation.missing,
+      evidence_valid: evidenceValidation.valid && certificationValid,
+      missing_evidence: missingEvidence,
       certified,
       notes: row?.notes || null,
       verified_by: row?.verified_by || null,
@@ -146,6 +200,30 @@ export function buildReleaseGate(stored: StoredReleaseGateCheck[], prerequisites
           : `${item.group}: ${item.label}`,
       })),
     ],
+  };
+}
+
+export function certificationRunCompatibility(
+  definition: ReleaseGateCheckDefinition,
+  platform: string,
+  environment: string,
+) {
+  const expectedEnvironment = definition.key === 'cross_platform.revenuecat_inventory' ? 'production' : 'sandbox';
+  const expectedPlatform = definition.provider === 'apple'
+    ? 'ios'
+    : definition.provider === 'google'
+      ? 'android'
+      : definition.provider === 'stripe'
+        ? 'web'
+        : definition.key === 'cross_platform.flutterflow_ios'
+          ? 'ios'
+          : definition.key === 'cross_platform.flutterflow_android'
+            ? 'android'
+            : 'cross_platform';
+  return {
+    valid: platform === expectedPlatform && environment === expectedEnvironment,
+    expected_platform: expectedPlatform,
+    expected_environment: expectedEnvironment,
   };
 }
 
@@ -181,6 +259,10 @@ function productCadences(product: ReleaseGateCatalogProduct) {
   // Older imported Google catalog rows did not persist the base-plan period.
   // The current default offering is the canonical fallback until the next sync.
   return providerCadences.size > 0 ? providerCadences : packageTypes(product);
+}
+
+export function releaseGateProductCadences(product: ReleaseGateCatalogProduct) {
+  return [...productCadences(product)];
 }
 
 function packageTypes(product: ReleaseGateCatalogProduct) {
