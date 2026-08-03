@@ -292,7 +292,7 @@ admin.get('/:projectId/release-gate', async (c) => {
     ] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
       c.env.DB.prepare(`
-        SELECT project_id, provider, environment, status, last_tested_at, billing_configuration_encrypted FROM billing_store_connections
+        SELECT project_id, provider, environment, status, last_tested_at, last_synced_at, billing_configuration_encrypted FROM billing_store_connections
         WHERE project_id IN (${projectPlaceholders || "''"}) AND provider IN ('apple', 'google', 'stripe')
       `).bind(...scopedProjectIds).all<Record<string, any>>(),
       c.env.DB.prepare(`
