@@ -85,7 +85,7 @@ dependencies:
   opengrow_flutter:
     git:
       url: git@github.com:mbzadev/opengrow.git
-      ref: sdk-flutter-v2.1.0
+      ref: sdk-flutter-v2.1.1
       path: sdks/flutter
 ```
 
