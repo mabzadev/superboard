@@ -42,10 +42,11 @@
     "target:register": "node scripts/opengrow-register-target.mjs",
     "allowlist": "node scripts/opengrow-allowlist.mjs",
     "secrets:scan": "gitleaks git . --no-banner --redact",
+    "copy:check": "node scripts/check-product-copy.mjs",
     "typecheck": "npm run worker:typecheck && npm run billing:typecheck && npm run messaging:typecheck && npm run growth:typecheck && npm run dashboard:typecheck && npm run purchases-js:typecheck",
     "test": "npm run dashboard:test && npm run worker:test && npm run billing:test && npm run messaging:test && npm run growth:test",
     "test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 npm run test:e2e",
-    "test:all": "npm run migration:inventory && npm run typecheck && npm run test && npm run dashboard:cf-build && npm run worker:check"
+    "test:all": "npm run copy:check && npm run migration:inventory && npm run typecheck && npm run test && npm run dashboard:cf-build && npm run worker:check"
   },
   "workspaces": [
     "apps/dashboard",

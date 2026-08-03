@@ -419,11 +419,11 @@ function generatePreviewPage(link: {
   title: string | null; subtitle: string | null; image_url: string | null; path: string
 }, targetUrl: string, platform: string): string {
   return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${link.title || 'Ouvrir'}</title>
+  <title>${link.title || 'Open'}</title>
   <meta property="og:title" content="${link.title || ''}">
   <meta property="og:description" content="${link.subtitle || ''}">
   ${link.image_url ? `<meta property="og:image" content="${link.image_url}">` : ''}
@@ -441,9 +441,9 @@ function generatePreviewPage(link: {
 <body>
   <div class="card">
     ${link.image_url ? `<img src="${link.image_url}" alt="">` : ''}
-    <h1>${link.title || 'Ouvrir'}</h1>
+    <h1>${link.title || 'Open'}</h1>
     ${link.subtitle ? `<p>${link.subtitle}</p>` : ''}
-    <a href="${targetUrl}">Ouvrir ${platform === 'ios' ? "l'App Store" : 'le Play Store'}</a>
+    <a href="${targetUrl}">Open ${platform === 'ios' ? 'the App Store' : 'Google Play'}</a>
   </div>
 </body>
 </html>`;
