@@ -23,6 +23,10 @@ Billing does not depend on any Messaging component.
 - Status, priority, labels, assignment, and actions are recorded in an immutable audit log.
 - Public failures expose stable `code`, `message`, `retryable`, and `request_id` fields.
 
+## Runtime certification
+
+`npm run messaging:test:runtime` executes the Messaging D1 migrations and `ConversationRoom` inside Cloudflare's Workers runtime. The suite certifies per-conversation isolation, concurrent message ordering, attachment ownership, WebSocket hibernation, and reconnection. `npm run messaging:check` also runs the Node unit tests, both TypeScript checks, and a Wrangler deployment dry run.
+
 ## FlutterFlow
 
 `sdks/flutterflow_messaging` is separate from Purchases. Its initialization talks only to the existing authentication gateway, then exposes conversations, messages, attachments, and WebSocket updates without increasing the financial SDK surface.
