@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { evaluateEvent, markRun } from './automations';
+import { claimRun, evaluateEvent, markRun, releaseRun } from './automations';
 import { audit, enqueueAllProjects, syncProject } from './sync';
 import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, type Env, type GrowthQueueJob } from './types';
 import {
@@ -238,6 +238,8 @@ app.patch('/internal/projects/:projectId/automations/:id', async (c) => {
 
 app.delete('/internal/projects/:projectId/automations/:id', async (c) => deleteRow(c, 'growth_automations', 'automation'));
 app.post('/internal/projects/:projectId/events', async (c) => c.json({ data: await evaluateEvent(c.env, project(c), await boundedJson(c.req.raw)) }, 202));
+app.post('/internal/projects/:projectId/automation-runs/:id/claim', async (c) => c.json({ data: await claimRun(c.env, project(c), c.req.param('id')) }));
+app.post('/internal/projects/:projectId/automation-runs/:id/release', async (c) => c.json({ data: await releaseRun(c.env, project(c), c.req.param('id'), await boundedJson(c.req.raw)) }));
 app.patch('/internal/projects/:projectId/automation-runs/:id', async (c) => c.json({ data: await markRun(c.env, project(c), c.req.param('id'), await boundedJson(c.req.raw)) }));
 
 app.onError((error, c) => {
