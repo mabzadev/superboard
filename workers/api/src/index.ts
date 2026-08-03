@@ -68,6 +68,10 @@ app.all('*', async (c, next) => {
 
   // sdk.vocostar.com — Mobile SDK
   if (host.startsWith('sdk.')) {
+    const pathname = new URL(c.req.url).pathname;
+    if (pathname === '/api/v1/sdk' || pathname.startsWith('/api/v1/sdk/')) {
+      return next();
+    }
     return sdkRoutes.fetch(c.req.raw, c.env);
   }
 
