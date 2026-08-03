@@ -8,7 +8,7 @@ Bibliothèque prête à importer pour remplacer les actions RevenueCat dans Flut
    opengrow_flutterflow:
      git:
        url: git@github.com:mbzadev/opengrow.git
-       ref: sdk-flutterflow-v1.1.1
+       ref: sdk-flutterflow-v2.0.0
        path: sdks/flutterflow
    ```
 
@@ -17,9 +17,11 @@ Bibliothèque prête à importer pour remplacer les actions RevenueCat dans Flut
 2. Ajoutez `OpenGrowBootstrap` une seule fois sur la page initiale. Le
    Bundle ID/package name est détecté automatiquement ; aucune valeur dupliquée
    n'est nécessaire.
-3. Utilisez `OpenGrowPaywall`, ou appelez `opengrowGetOfferings` puis `opengrowPurchase`.
+3. Utilisez `OpenGrowPaywall` avec un `placement`. Son contenu, son offering et
+   son expérience sont récupérés à distance avec fallback hors ligne.
 4. Protégez une page avec `opengrowHasEntitlement('premium')` et redirigez vers le paywall si la valeur est fausse.
-5. Ajoutez `OpenGrowRestorePurchasesButton` dans les réglages et sur le paywall.
+5. Ajoutez `OpenGrowCustomerCenter` dans les réglages. Il inclut historique,
+   abonnements, soldes et restauration.
 
 Actions prêtes pour FlutterFlow :
 
@@ -33,5 +35,9 @@ Actions prêtes pour FlutterFlow :
 - `opengrowGetLastDeepLinkJson`
 - `opengrowPurchaseLogin`, `opengrowPurchaseLogout`, achat, restauration,
   synchronisation, offres et entitlements
+- `opengrowGetPurchaseConfigurationJson`
+- `opengrowGetCustomerInfoJson`
+- `opengrowGetVirtualCurrenciesJson`
+- `opengrowGetCustomerCenterJson`
 
 Le JWT d’identité doit être émis par l’issuer OIDC configuré dans OpenGrow. Aucun secret Apple ou Google n’est embarqué dans l’application.

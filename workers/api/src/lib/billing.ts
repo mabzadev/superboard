@@ -1,5 +1,6 @@
 import { Env } from '../types';
 import { entitlementIsActive } from './billing-state';
+import { recordCanonicalBillingEvent } from './purchases-v2';
 
 export const BILLING_STATUSES = [
   'pending',
@@ -15,7 +16,7 @@ export const BILLING_STATUSES = [
 ] as const;
 
 export type BillingStatus = typeof BILLING_STATUSES[number];
-export type BillingStore = 'apple' | 'google' | 'promotional';
+export type BillingStore = 'apple' | 'google' | 'stripe' | 'paddle' | 'amazon' | 'roku' | 'opengrow_web' | 'promotional';
 export type BillingEnvironment = 'sandbox' | 'production';
 
 export type VerifiedPurchase = {
@@ -116,6 +117,12 @@ export async function identifyCustomer(
       .bind(destination.id, merged.id),
     db.prepare('UPDATE billing_transactions SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
     db.prepare('UPDATE billing_subscriptions SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
+    db.prepare('UPDATE billing_events SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
+    db.prepare('UPDATE billing_paywall_events SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
+    db.prepare('UPDATE billing_checkout_sessions SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
+    db.prepare('UPDATE billing_redemptions SET redeemed_by_customer_id = ? WHERE redeemed_by_customer_id = ?').bind(destination.id, merged.id),
+    db.prepare('UPDATE OR IGNORE billing_experiment_assignments SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
+    db.prepare('DELETE FROM billing_experiment_assignments WHERE customer_id = ?').bind(merged.id),
     db.prepare('UPDATE OR IGNORE billing_customer_entitlements SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
     db.prepare('UPDATE billing_balance_ledger SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
     db.prepare('DELETE FROM billing_customer_entitlements WHERE customer_id = ?').bind(merged.id),
@@ -190,13 +197,47 @@ async function syncEntitlements(db: D1Database, purchase: VerifiedPurchase, prod
   }
 }
 
-async function creditConsumable(
+async function creditProductCurrencies(
   db: D1Database,
   purchase: VerifiedPurchase,
   product: Record<string, unknown>,
   transactionId: string,
 ) {
-  if (!purchase.customerId || purchase.productType !== 'consumable' || purchase.status !== 'active') return;
+  if (!purchase.customerId || !['active', 'trialing'].includes(purchase.status)) return;
+  const configured = await db.prepare(`
+    SELECT vc.code, vcp.grant_amount, vcp.trial_grant_amount, vcp.grant_cadence,
+      vcp.expires_after_seconds
+    FROM billing_virtual_currency_products vcp
+    JOIN billing_virtual_currencies vc ON vc.id = vcp.currency_id AND vc.active = 1
+    WHERE vcp.product_id = ?
+  `).bind(String(product.id)).all<Record<string, unknown>>();
+  if ((configured.results || []).length > 0) {
+    for (const currency of configured.results || []) {
+      const cadence = String(currency.grant_cadence || 'purchase');
+      if (cadence === 'renewal' && !/renew/i.test(purchase.eventType)) continue;
+      if (cadence === 'initial' && /renew/i.test(purchase.eventType)) continue;
+      const baseAmount = purchase.status === 'trialing' && currency.trial_grant_amount != null
+        ? Number(currency.trial_grant_amount)
+        : Number(currency.grant_amount || 0);
+      const units = baseAmount * Math.max(1, purchase.quantity || 1);
+      if (!Number.isSafeInteger(units) || units <= 0) continue;
+      const expiresAt = Number(currency.expires_after_seconds || 0) > 0
+        ? new Date(Date.now() + Number(currency.expires_after_seconds) * 1000).toISOString()
+        : null;
+      await db.prepare(`
+        INSERT OR IGNORE INTO billing_balance_ledger (
+          project_id, customer_id, product_id, transaction_id, currency_identifier,
+          amount, reason, idempotency_key, expires_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        String(purchase.projectId), purchase.customerId, product.id, transactionId,
+        currency.code, units, purchase.status === 'trialing' ? 'trial_grant' : 'purchase_grant',
+        `${purchase.store}:${purchase.environment}:${purchase.storeTransactionId}:${currency.code}:credit`, expiresAt,
+      ).run();
+    }
+    return;
+  }
+  if (purchase.productType !== 'consumable') return;
   const metadata = parseJson(product.metadata);
   const currencyIdentifier = typeof metadata.currency_identifier === 'string' ? metadata.currency_identifier : purchase.storeProductId;
   const units = Number(metadata.credit_amount || 1) * Math.max(1, purchase.quantity || 1);
@@ -357,7 +398,8 @@ export async function applyVerifiedPurchase(env: Env, purchase: VerifiedPurchase
     `).bind(String(product.id), purchase.customerId).run();
   }
   if (subscriptionAccepted) await syncEntitlements(env.DB, purchase, String(product.id));
-  await creditConsumable(env.DB, purchase, product, stored.id);
+  await creditProductCurrencies(env.DB, purchase, product, stored.id);
+  await recordCanonicalBillingEvent(env, purchase, stored.id);
   if (insert.meta.changes > 0) await queueOutboundWebhooks(env, purchase, stored.id);
   return { transactionId: stored.id, duplicate: insert.meta.changes === 0 };
 }
@@ -386,7 +428,7 @@ export async function customerInfo(db: D1Database, projectId: string | number, c
   const balances = await db.prepare(`
     SELECT currency_identifier, COALESCE(SUM(amount), 0) AS balance
     FROM billing_balance_ledger
-    WHERE customer_id = ?
+    WHERE customer_id = ? AND (expires_at IS NULL OR datetime(expires_at) > datetime('now'))
     GROUP BY currency_identifier
   `).bind(customerId).all<{ currency_identifier: string; balance: number }>();
   const entitlements: Record<string, unknown> = {};
@@ -403,15 +445,23 @@ export async function customerInfo(db: D1Database, projectId: string | number, c
       verification: row.verification,
     };
   }
+  const subscriptionRows: Array<Record<string, unknown>> = (subscriptions.results || []).map((row) => ({
+    ...row,
+    management_url: row.store === 'apple'
+      ? 'https://apps.apple.com/account/subscriptions'
+      : row.store === 'google'
+        ? 'https://play.google.com/store/account/subscriptions'
+        : null,
+  }));
   return {
     original_app_user_id: customer.primary_app_user_id,
     aliases: (aliases.results || []).map((row) => row.app_user_id),
     request_date: new Date().toISOString(),
     entitlements,
-    active_subscriptions: (subscriptions.results || [])
+    active_subscriptions: subscriptionRows
       .filter((row) => entitlementIsActive(String(row.status), row.expires_at as string | null))
       .map((row) => row.store_product_id),
-    subscriptions: subscriptions.results || [],
+    subscriptions: subscriptionRows,
     balances: Object.fromEntries((balances.results || []).map((row) => [row.currency_identifier, Number(row.balance)])),
   };
 }
@@ -436,9 +486,15 @@ export async function offeringsForCustomer(
       FROM billing_packages bp
       JOIN billing_package_products bpp ON bpp.package_id = bp.id
       JOIN billing_products p ON p.id = bpp.product_id
-      WHERE bp.offering_id = ? AND p.active = 1 AND p.store = ? AND p.environment = ?
+      WHERE bp.offering_id = ? AND p.active = 1
+        AND (
+          (? = 'web' AND p.store IN ('stripe','paddle','opengrow_web'))
+          OR (? = 'ios' AND p.store = 'apple')
+          OR (? = 'android' AND p.store = 'google')
+        )
+        AND p.environment = ?
       ORDER BY bp.position ASC
-    `).bind(offering.id, platform === 'ios' ? 'apple' : 'google', environment).all<Record<string, unknown>>();
+    `).bind(offering.id, platform, platform, platform, environment).all<Record<string, unknown>>();
     result[String(offering.identifier)] = {
       identifier: offering.identifier,
       display_name: offering.display_name,

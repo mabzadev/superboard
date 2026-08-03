@@ -1,3 +1,12 @@
+## 2.0.0
+
+* Added remote paywall configuration with per-placement offline caching
+* Added targeting and deterministic experiment assignment models
+* Added paywall funnel events and stable Purchases v2 errors
+* Added typed subscriptions, active subscriptions, management URLs, and virtual currencies
+* Added Customer Center configuration and richer customer information
+* Changed the default Purchases endpoint to `/purchases/v2` while the server keeps v1 compatible
+
 ## 1.1.1
 
 * Relaxed the `shared_preferences` constraint for FlutterFlow 2.5.3 compatibility
