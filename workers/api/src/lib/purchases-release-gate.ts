@@ -71,6 +71,7 @@ export type NativeCatalogCoverage = {
   premium: boolean;
   packages: boolean;
   approved: boolean;
+  available: boolean;
   purchasable: boolean;
 };
 
@@ -312,6 +313,8 @@ export function nativeCatalogCoverage(
       .some((product) => packageTypes(product).has(cadence))),
     approved: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
       .some((product) => providerReadiness(product).approved)),
+    available: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
+      .some((product) => providerReadiness(product).available)),
     purchasable: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
       .some((product) => providerReadiness(product).purchasable)),
   };
@@ -332,6 +335,7 @@ function providerReadiness(product: ReleaseGateCatalogProduct) {
   const metadata = parseObject(product.metadata);
   return {
     approved: metadata.provider_approved === true,
+    available: metadata.provider_available === true,
     purchasable: metadata.provider_purchasable === true,
   };
 }
