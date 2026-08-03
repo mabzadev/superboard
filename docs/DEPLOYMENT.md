@@ -62,7 +62,7 @@ Backups are local recovery artifacts. The target operator must configure encrypt
 
 ## Purchases release control
 
-Keep `BILLING_EXECUTION_MODE=local` until Purchases Diagnostics is fully green. After the gate passes, follow [Billing Worker controlled cutover](./BILLING_WORKER_CUTOVER.md), monitor the observation window, and remove the legacy purchase dependency in a separate release.
+Keep the target environment's `billingExecutionMode` set to `local` while deploying and verifying the private Billing Worker. Follow [Billing Worker controlled cutover](./BILLING_WORKER_CUTOVER.md) to switch the typed manifest to `service` before device certification. Public release remains blocked until Purchases Diagnostics is fully green. Remove the legacy purchase dependency only in a separate release after the observation window passes.
 
 ## Rollback
 

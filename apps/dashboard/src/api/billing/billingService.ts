@@ -228,6 +228,7 @@ export type BillingReleaseGate = {
       ready_for_traffic: boolean;
       credential_copies_ready: boolean;
       credential_decryption_ready: boolean;
+      signing_authority_ready: boolean;
       missing_secrets: string[];
     } | null;
   };
