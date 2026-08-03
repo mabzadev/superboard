@@ -7,7 +7,7 @@ const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const environment = environmentFromArgs(args);
 const service = args.service ?? "api";
 const uploadOnly = Boolean(args["upload-only"]);
-if (!new Set(["api", "dashboard", "messaging"]).has(service)) throw new Error("--service must be api, dashboard or messaging");
+if (!new Set(["api", "dashboard", "billing", "messaging"]).has(service)) throw new Error("--service must be api, dashboard, billing or messaging");
 
 const { target } = await loadTarget(targetName);
 const cloudflareEnv = {

@@ -30,6 +30,9 @@ import { runMaintenance } from './lib/maintenance';
 import { dispatchQueueJob } from './lib/jobs';
 import { isSsoEnabled } from './lib/deployment';
 import { purchasesSigningJwks } from './lib/billing-identity';
+import { dispatchBillingServiceJob, billingServiceEnabled } from './lib/billing-service';
+import { isBillingQueueJob } from './lib/billing-dispatch';
+import { readTextLimited } from './lib/http-limits';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -66,6 +69,18 @@ app.get('/health', (c) => c.json({
   host: c.req.header('host'),
   timestamp: new Date().toISOString(),
 }));
+
+app.get('/health/billing', async (c) => {
+  if (!c.env.BILLING) return c.json({ status: 'unavailable', service: 'opengrow-billing' }, 503);
+  try {
+    const response = await c.env.BILLING.fetch('https://billing.internal/internal/v1/health');
+    const payload = JSON.parse(await readTextLimited(response, 16_384));
+    return c.json({ ...payload, routing_mode: c.env.BILLING_EXECUTION_MODE || 'local' }, response.ok ? 200 : 503);
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'billing_health_failed', error: error instanceof Error ? error.message : String(error) }));
+    return c.json({ status: 'unavailable', service: 'opengrow-billing', routing_mode: c.env.BILLING_EXECUTION_MODE || 'local' }, 503);
+  }
+});
 
 app.get('/up', (c) => c.text('OK', 200));
 app.get('/favicon.ico', (c) => c.body(null, 204));
@@ -165,7 +180,9 @@ export default {
       let body: any = null;
       try {
         body = typeof message.body === 'string' ? JSON.parse(message.body) : message.body;
-        const result = await dispatchQueueJob(env, body);
+        const result = isBillingQueueJob(body) && billingServiceEnabled(env)
+          ? await dispatchBillingServiceJob(env, body)
+          : await dispatchQueueJob(env, body);
         console.log(JSON.stringify({
           event: 'queue_job_completed',
           queue: batch.queue,

@@ -4,7 +4,7 @@ import type {
   ResponseBodyV2DecodedPayload,
 } from '@apple/app-store-server-library';
 import { importPKCS8, SignJWT } from 'jose';
-import { Env } from '../types';
+import type { BillingEnv } from '../types';
 import { BillingEnvironment, BillingStatus, VerifiedPurchase } from './billing';
 import { decryptCredential } from './secrets';
 
@@ -43,7 +43,7 @@ function isoMillis(value: unknown): string | null {
   return Number.isFinite(number) && number > 0 ? new Date(number).toISOString() : null;
 }
 
-function appleRoots(env: Env): Buffer[] {
+function appleRoots(env: BillingEnv): Buffer[] {
   if (!env.APPLE_ROOT_CERTIFICATES_B64) throw new Error('Apple root certificates are not configured');
   let values: string[];
   try {
@@ -90,7 +90,7 @@ async function applicationForProject(db: D1Database, projectId: string | number,
   };
 }
 
-async function appleVerifier(env: Env, app: BillingApplication, environment: BillingEnvironment) {
+async function appleVerifier(env: BillingEnv, app: BillingApplication, environment: BillingEnvironment) {
   const { Environment, SignedDataVerifier } = await loadAppleLibrary();
   const appleEnvironment = environment === 'production' ? Environment.PRODUCTION : Environment.SANDBOX;
   if (environment === 'production' && !app.appAppleId) throw new Error('Apple App ID is required for production verification');
@@ -107,7 +107,7 @@ async function appleVerifier(env: Env, app: BillingApplication, environment: Bil
   );
 }
 
-async function appleServerClient(env: Env, app: BillingApplication, environment: BillingEnvironment) {
+async function appleServerClient(env: BillingEnv, app: BillingApplication, environment: BillingEnvironment) {
   const row = await appleApiCredentials(env, app);
   const token = await appleServerToken(row, app.identifier);
   const baseUrl = environment === 'production'
@@ -133,18 +133,19 @@ async function appleServerClient(env: Env, app: BillingApplication, environment:
   };
 }
 
-async function appleApiCredentials(env: Env, app: BillingApplication) {
+async function appleApiCredentials(env: BillingEnv, app: BillingApplication) {
   const row = await env.DB.prepare(`
-    SELECT encrypted_key, key_id, issuer_id
+    SELECT encrypted_key, billing_encrypted_key, key_id, issuer_id
     FROM ios_server_api_keys
     WHERE instance_id = ? OR ios_configuration_id IN (
       SELECT id FROM ios_configurations WHERE application_id = ?
     )
     ORDER BY updated_at DESC LIMIT 1
-  `).bind(app.instanceId, app.applicationId).first<{ encrypted_key: string; key_id: string; issuer_id: string }>();
-  if (!row?.encrypted_key || !row.key_id || !row.issuer_id) throw new Error('App Store Server API credentials are not configured');
+  `).bind(app.instanceId, app.applicationId).first<{ encrypted_key: string; billing_encrypted_key: string | null; key_id: string; issuer_id: string }>();
+  const encryptedKey = env.CREDENTIAL_KEY_SCOPE === 'billing' ? row?.billing_encrypted_key : row?.encrypted_key;
+  if (!encryptedKey || !row?.key_id || !row.issuer_id) throw new Error('App Store Server API credentials are not configured for this execution domain');
   return {
-    key: await decryptCredential(env, row.encrypted_key),
+    key: await decryptCredential(env, encryptedKey),
     keyId: row.key_id,
     issuerId: row.issuer_id,
   };
@@ -191,7 +192,7 @@ function appleStatus(transaction: JWSTransactionDecodedPayload, eventType = 'PUR
   return 'active';
 }
 
-export async function verifyAppleTransaction(env: Env, params: {
+export async function verifyAppleTransaction(env: BillingEnv, params: {
   projectId: string | number;
   customerId: string;
   signedTransaction: string;
@@ -265,7 +266,7 @@ export async function verifyAppleTransaction(env: Env, params: {
   return { purchase, transaction };
 }
 
-export async function verifyAppleNotification(env: Env, params: {
+export async function verifyAppleNotification(env: BillingEnv, params: {
   projectId: string | number;
   signedPayload: string;
   environment: BillingEnvironment;
@@ -307,19 +308,20 @@ export async function verifyAppleNotification(env: Env, params: {
   };
 }
 
-async function googleCredentials(env: Env, app: BillingApplication): Promise<GoogleCredentials> {
+async function googleCredentials(env: BillingEnv, app: BillingApplication): Promise<GoogleCredentials> {
   const row = await env.DB.prepare(`
-    SELECT encrypted_key
+    SELECT encrypted_key, billing_encrypted_key
     FROM android_server_api_keys
     WHERE instance_id = ? OR android_configuration_id IN (
       SELECT id FROM android_configurations WHERE application_id = ?
     )
     ORDER BY updated_at DESC
     LIMIT 1
-  `).bind(app.instanceId, app.applicationId).first<{ encrypted_key: string }>();
-  const source = row?.encrypted_key || env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;
+  `).bind(app.instanceId, app.applicationId).first<{ encrypted_key: string; billing_encrypted_key: string | null }>();
+  const encryptedKey = env.CREDENTIAL_KEY_SCOPE === 'billing' ? row?.billing_encrypted_key : row?.encrypted_key;
+  const source = encryptedKey || (env.CREDENTIAL_KEY_SCOPE === 'billing' ? null : env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON);
   if (!source) throw new Error('Google Play service account is not configured');
-  const clear = row?.encrypted_key ? await decryptCredential(env, source) : source;
+  const clear = encryptedKey ? await decryptCredential(env, source) : source;
   let parsed: Partial<GoogleCredentials>;
   try {
     parsed = JSON.parse(clear);
@@ -373,7 +375,7 @@ async function fetchStoreJson(url: string, accessToken: string, store: string): 
   return payload;
 }
 
-async function appleConnectToken(env: Env, app: BillingApplication): Promise<string> {
+async function appleConnectToken(env: BillingEnv, app: BillingApplication): Promise<string> {
   const credentials = await appleApiCredentials(env, app);
   const now = Math.floor(Date.now() / 1000);
   const key = await importPKCS8(credentials.key, 'ES256');
@@ -449,7 +451,7 @@ async function appleCollection(url: string, token: string): Promise<Record<strin
   return values;
 }
 
-async function syncAppleCatalog(env: Env, projectId: string | number): Promise<StoreCatalogProduct[]> {
+async function syncAppleCatalog(env: BillingEnv, projectId: string | number): Promise<StoreCatalogProduct[]> {
   const app = await applicationForProject(env.DB, projectId, 'ios');
   const token = await appleConnectToken(env, app);
   const appsPayload = await fetchStoreJson(
@@ -492,7 +494,7 @@ async function syncAppleCatalog(env: Env, projectId: string | number): Promise<S
   ].filter((item): item is StoreCatalogProduct => item !== null);
 }
 
-export async function appStoreConnectAccess(env: Env, projectId: string | number) {
+export async function appStoreConnectAccess(env: BillingEnv, projectId: string | number) {
   const app = await applicationForProject(env.DB, projectId, 'ios');
   const token = await appleConnectToken(env, app);
   const appsPayload = await fetchStoreJson(
@@ -509,7 +511,7 @@ export async function appStoreConnectAccess(env: Env, projectId: string | number
   return { token, appId: String(matching.id), bundleId: app.identifier };
 }
 
-export async function googlePlayAccess(env: Env, projectId: string | number) {
+export async function googlePlayAccess(env: BillingEnv, projectId: string | number) {
   const app = await applicationForProject(env.DB, projectId, 'android');
   const credentials = await googleCredentials(env, app);
   return { token: await googleAccessToken(credentials), packageName: app.identifier };
@@ -545,7 +547,7 @@ async function googleCollection(
   return values;
 }
 
-async function syncGoogleCatalog(env: Env, projectId: string | number): Promise<StoreCatalogProduct[]> {
+async function syncGoogleCatalog(env: BillingEnv, projectId: string | number): Promise<StoreCatalogProduct[]> {
   const app = await applicationForProject(env.DB, projectId, 'android');
   const credentials = await googleCredentials(env, app);
   const token = await googleAccessToken(credentials);
@@ -598,7 +600,7 @@ async function syncGoogleCatalog(env: Env, projectId: string | number): Promise<
   ].filter((item): item is StoreCatalogProduct => item !== null);
 }
 
-export async function fetchStoreCatalog(env: Env, params: {
+export async function fetchStoreCatalog(env: BillingEnv, params: {
   projectId: string | number;
   platform: 'ios' | 'android';
 }): Promise<StoreCatalogProduct[]> {
@@ -620,7 +622,7 @@ function googleSubscriptionStatus(value: string): BillingStatus {
   return status[value] || 'pending';
 }
 
-export async function verifyGooglePurchase(env: Env, params: {
+export async function verifyGooglePurchase(env: BillingEnv, params: {
   projectId: string | number;
   customerId: string | null;
   purchaseToken: string;
@@ -717,7 +719,7 @@ export async function finalizeGooglePurchase(params: {
   if (!response.ok) throw new Error('Google Play purchase acknowledgement failed');
 }
 
-export async function reconcileAppleSubscription(env: Env, params: {
+export async function reconcileAppleSubscription(env: BillingEnv, params: {
   projectId: string | number;
   customerId: string;
   transactionId: string;
@@ -741,7 +743,7 @@ export async function reconcileAppleSubscription(env: Env, params: {
   return verified.purchase;
 }
 
-export async function testStoreCredentials(env: Env, params: {
+export async function testStoreCredentials(env: BillingEnv, params: {
   projectId: string | number;
   platform: 'ios' | 'android';
   environment: BillingEnvironment;

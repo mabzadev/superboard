@@ -25,6 +25,9 @@
     "dashboard": {
       "production": "opengrow"
     },
+    "billing": {
+      "production": "opengrow-billing"
+    },
     "messaging": {
       "production": "opengrow-messaging"
     }

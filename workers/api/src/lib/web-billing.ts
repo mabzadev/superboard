@@ -1,4 +1,4 @@
-import type { Env } from '../types';
+import type { BillingEnv } from '../types';
 import { decryptCredential } from './secrets';
 import { purchasesError } from './purchases-v2';
 import { identifyCustomer } from './billing';
@@ -49,7 +49,7 @@ async function allowedReturnUrl(db: D1Database, projectId: string, value: unknow
   return url.toString();
 }
 
-async function connectionForCheckout(env: Env, projectId: string, provider: string | null, environment: string) {
+async function connectionForCheckout(env: BillingEnv, projectId: string, provider: string | null, environment: string) {
   if (provider && provider !== 'stripe') {
     throw purchasesError('unsupported_web_provider', 'Only Stripe is enabled for Web billing', 422);
   }
@@ -85,7 +85,7 @@ async function productForCheckout(
   return row;
 }
 
-async function providerCredentials(env: Env, connection: WebConnection) {
+async function providerCredentials(env: BillingEnv, connection: WebConnection) {
   let value: unknown;
   try { value = JSON.parse(await decryptCredential(env, connection.configuration_encrypted)); }
   catch { throw purchasesError('connection_credentials_invalid', `${connection.provider} credentials cannot be decrypted`, 500); }
@@ -105,7 +105,7 @@ async function stripeRequest(secretKey: string, path: string, values: Record<str
   return payload;
 }
 
-export async function createWebCheckoutSession(env: Env, params: {
+export async function createWebCheckoutSession(env: BillingEnv, params: {
   projectId: string;
   customerId: string;
   packageIdentifier: string;
@@ -170,7 +170,7 @@ export async function createWebCheckoutSession(env: Env, params: {
   return { url: checkoutUrl, provider: connection.provider, provider_session_id: providerSessionId, redemption_code: redemptionCode, duplicate: false };
 }
 
-export async function createWebPortalSession(env: Env, params: {
+export async function createWebPortalSession(env: BillingEnv, params: {
   projectId: string;
   customerId: string;
   environment: 'sandbox' | 'production';
@@ -192,7 +192,7 @@ export async function createWebPortalSession(env: Env, params: {
   return { url: session.url };
 }
 
-export async function redeemWebPurchase(env: Env, params: { projectId: string; customerId: string; code: string }) {
+export async function redeemWebPurchase(env: BillingEnv, params: { projectId: string; customerId: string; code: string }) {
   const codeHash = await sha256(params.code.trim());
   const redemption = await env.DB.prepare(`
     SELECT r.id, r.status, r.expires_at, s.customer_id AS original_customer_id, s.status AS checkout_status

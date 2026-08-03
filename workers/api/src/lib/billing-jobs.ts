@@ -1,10 +1,10 @@
-import { Env } from '../types';
+import type { BillingEnv } from '../types';
 import { decryptCredential, hmacSha256 } from './secrets';
 import { verifyAppleNotification } from './store-verification';
 import { reconcileAppleSubscription, verifyGooglePurchase } from './store-verification';
 import { applyVerifiedPurchase, queueCustomerEntitlementChanged, type BillingEnvironment } from './billing';
 
-export async function processAppleBillingNotification(env: Env, params: {
+export async function processAppleBillingNotification(env: BillingEnv, params: {
   eventId: string;
   projectId: string;
   signedPayload: string;
@@ -32,7 +32,7 @@ export async function processAppleBillingNotification(env: Env, params: {
   }
 }
 
-export async function processGoogleBillingNotification(env: Env, params: {
+export async function processGoogleBillingNotification(env: BillingEnv, params: {
   eventId: string;
   projectId: string;
   purchaseToken: string;
@@ -83,7 +83,7 @@ function safeWebhookUrl(value: string): URL {
   return url;
 }
 
-export async function deliverBillingWebhook(env: Env, deliveryId: string) {
+export async function deliverBillingWebhook(env: BillingEnv, deliveryId: string) {
   const delivery = await env.DB.prepare(`
     SELECT d.id, d.payload, d.attempts, e.url, e.signing_secret_encrypted, e.active
     FROM billing_webhook_deliveries d
@@ -136,7 +136,7 @@ export async function deliverBillingWebhook(env: Env, deliveryId: string) {
   return { delivered: true, status: response.status };
 }
 
-export async function reconcileBillingState(env: Env) {
+export async function reconcileBillingState(env: BillingEnv) {
   const entitlementExpirations = await env.DB.prepare(`
     SELECT DISTINCT ce.project_id, ce.customer_id, COALESCE(p.environment, 'production') AS environment
     FROM billing_customer_entitlements ce
@@ -201,7 +201,7 @@ export async function reconcileBillingState(env: Env) {
   };
 }
 
-export async function reconcileStoreSubscription(env: Env, subscriptionId: string) {
+export async function reconcileStoreSubscription(env: BillingEnv, subscriptionId: string) {
   const row = await env.DB.prepare(`
     SELECT s.*, p.store_product_id, t.purchase_token
     FROM billing_subscriptions s

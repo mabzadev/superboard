@@ -93,6 +93,29 @@ function projectDb(state: { webhooks: any[]; purchases: any[]; subscriptions: an
   });
 }
 
+function queuedAppleDb(state: { event: { id: string; status: string } | null; queueFailures: number }) {
+  return createFakeD1((call: FakeD1Call) => {
+    const { op, sql, args } = call;
+    if (op === 'first' && sql.includes('FROM projects WHERE instance_id = ? AND is_test = ?')) {
+      return { id: 101, instance_id: Number(args[0]), is_test: Number(args[1]), name: 'Production', identifier: 'prod' };
+    }
+    if (op === 'run' && sql.startsWith('INSERT OR IGNORE INTO billing_webhook_events')) {
+      if (state.event) return { success: true, meta: { changes: 0 } };
+      state.event = { id: String(args[0]), status: 'received' };
+      return true;
+    }
+    if (op === 'first' && sql.includes("store = 'apple'") && sql.includes('external_event_id = ?')) {
+      return state.event;
+    }
+    if (op === 'run' && sql.startsWith('UPDATE billing_webhook_events') && sql.includes("status = 'failed'")) {
+      if (state.event) state.event.status = 'failed';
+      state.queueFailures += 1;
+      return true;
+    }
+    return undefined;
+  });
+}
+
 function stripeDb(state: { messages: Map<string, { processed: number }> }) {
   return createFakeD1((call: FakeD1Call) => {
     const { op, sql, args } = call;
@@ -181,6 +204,48 @@ describe('Stripe webhooks', () => {
 });
 
 describe('IAP webhooks', () => {
+  it('returns a retryable failure when a persisted Apple notification cannot enter the queue', async () => {
+    const state = { event: null as { id: string; status: string } | null, queueFailures: 0 };
+    const send = vi.fn(async () => { throw new Error('queue unavailable'); });
+    const env = baseEnv(queuedAppleDb(state), {
+      ENVIRONMENT: 'production',
+      BILLING_QUEUE: { send } as unknown as Queue,
+    });
+
+    const response = await iapRoutes.request('/apple/production/10', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signedPayload: 'header.payload.signature' }),
+    }, env);
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ retryable: true });
+    expect(state.event?.status).toBe('failed');
+    expect(state.queueFailures).toBe(1);
+  });
+
+  it('requeues an Apple notification replay while its durable event is not processed', async () => {
+    const state = { event: null as { id: string; status: string } | null, queueFailures: 0 };
+    const send = vi.fn(async () => undefined);
+    const env = baseEnv(queuedAppleDb(state), {
+      ENVIRONMENT: 'production',
+      BILLING_QUEUE: { send } as unknown as Queue,
+    });
+    const request = () => iapRoutes.request('/apple/production/10', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signedPayload: 'header.payload.signature' }),
+    }, env);
+
+    expect((await request()).status).toBe(202);
+    const replay = await request();
+
+    expect(replay.status).toBe(202);
+    await expect(replay.json()).resolves.toMatchObject({ duplicate: true });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(new Set(send.mock.calls.map(([job]) => (job as { eventId: string }).eventId)).size).toBe(1);
+  });
+
   it('accepts signed Apple JWS fixtures and persists subscription state', async () => {
     const state = { webhooks: [] as any[], purchases: [] as any[], subscriptions: [] as any[] };
     const transaction = await signedAppleJws({

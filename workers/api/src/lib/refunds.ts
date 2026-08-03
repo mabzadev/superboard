@@ -1,4 +1,4 @@
-import type { Env } from '../types';
+import type { BillingEnv } from '../types';
 import type { VerifiedPurchase } from './billing';
 
 type RefundCaseStatus = 'open' | 'evidence_required' | 'awaiting_approval' | 'submitted' | 'won' | 'lost' | 'closed';
@@ -59,7 +59,7 @@ function deadlineFromPayload(payload: unknown): string | null {
 }
 
 export async function recordRefundCaseForPurchase(
-  env: Env,
+  env: BillingEnv,
   purchase: VerifiedPurchase,
   transactionId: string,
 ): Promise<{ caseId: string; status: RefundCaseStatus } | null> {

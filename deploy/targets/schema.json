@@ -38,10 +38,11 @@
     "workers": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["api", "dashboard", "messaging"],
+      "required": ["api", "dashboard", "billing", "messaging"],
       "properties": {
         "api": { "$ref": "#/$defs/workerNames" },
         "dashboard": { "$ref": "#/$defs/workerNames" },
+        "billing": { "$ref": "#/$defs/workerNames" },
         "messaging": { "$ref": "#/$defs/workerNames" }
       }
     },

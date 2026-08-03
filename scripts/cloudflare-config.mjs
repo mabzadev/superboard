@@ -7,7 +7,7 @@ const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const service = args.service ?? "api";
 const environment = environmentFromArgs(args);
 const preflight = Boolean(args.preflight);
-if (!new Set(["api", "dashboard", "messaging"]).has(service)) throw new Error("--service must be api, dashboard or messaging");
+if (!new Set(["api", "dashboard", "billing", "messaging"]).has(service)) throw new Error("--service must be api, dashboard, billing or messaging");
 
 const { target } = await loadTarget(targetName);
 const resources = target.environments[environment];
@@ -21,7 +21,10 @@ if (!resources.d1.id || !resources.kv.id || (service === "messaging" && !resourc
 const outputDirectory = resolve(root, "deploy", "generated");
 await mkdir(outputDirectory, { recursive: true });
 const outputPath = resolve(outputDirectory, `${targetName}-${service}-${environment}.jsonc`);
-const config = service === "api" ? apiConfig() : service === "dashboard" ? dashboardConfig() : messagingConfig();
+const config = service === "api" ? apiConfig()
+  : service === "dashboard" ? dashboardConfig()
+    : service === "billing" ? billingConfig()
+      : messagingConfig();
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
 console.log(relative(root, outputPath));
 
@@ -56,6 +59,7 @@ function apiConfig() {
       REGISTRATION_MODE: target.registrationMode,
       REGISTRATION_REALM: `${target.target}:${environment}`,
       SSO_ENABLED: String(target.ssoEnabled),
+      BILLING_EXECUTION_MODE: "local",
       MAIL_PROVIDER: target.mail.provider,
       MAIL_FROM: `${target.mail.fromName} <${target.mail.fromAddress}>`,
     },
@@ -79,7 +83,10 @@ function apiConfig() {
         { binding: "BILLING_QUEUE", queue: resources.queues.billing },
       ],
     },
-    services: [{ binding: "MESSAGING", service: target.workers.messaging[environment] }],
+    services: [
+      { binding: "MESSAGING", service: target.workers.messaging[environment] },
+      { binding: "BILLING", service: target.workers.billing[environment] },
+    ],
   };
   if (!preflight) {
     config.triggers = { crons: ["*/10 * * * *"] };
@@ -97,6 +104,25 @@ function apiConfig() {
     ];
   }
   return config;
+}
+
+function billingConfig() {
+  return {
+    ...baseConfig(),
+    workers_dev: false,
+    main: "../../workers/billing/src/index.ts",
+    vars: { ENVIRONMENT: environment, CREDENTIAL_KEY_SCOPE: "billing" },
+    d1_databases: [{
+      binding: "DB",
+      database_name: resources.d1.name,
+      database_id: resources.d1.id,
+    }],
+    kv_namespaces: [{ binding: "KV", id: resources.kv.id }],
+    r2_buckets: [{ binding: "R2", bucket_name: resources.r2.name }],
+    queues: {
+      producers: [{ binding: "BILLING_QUEUE", queue: resources.queues.billing }],
+    },
+  };
 }
 
 function messagingConfig() {

@@ -1,4 +1,4 @@
-import type { Env } from '../types';
+import type { BillingEnv } from '../types';
 
 const DATASETS: Record<string, { sql: string; columns: string[] }> = {
   transactions: {
@@ -57,7 +57,7 @@ function csv(value: unknown) {
   return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-export async function processBillingExport(env: Env, exportId: string) {
+export async function processBillingExport(env: BillingEnv, exportId: string) {
   const job = await env.DB.prepare(`SELECT * FROM billing_export_jobs WHERE id = ? LIMIT 1`).bind(exportId).first<Record<string, any>>();
   if (!job) throw new Error('Billing export not found');
   if (!env.R2) throw new Error('R2 is not configured for billing exports');
