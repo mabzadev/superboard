@@ -4,11 +4,16 @@ import { sdkMiddleware } from '../middleware/auth';
 import { getOrCreateRedirectConfig, getOrCreateProject, parseJsonObject } from '../lib/db';
 import { generateShortCode } from '../lib/crypto';
 import purchasesRoutes from './purchases-sdk';
+import purchasesV2Routes from './purchases-v2-sdk';
 import { AppVariables } from '../types';
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 sdk.use('*', sdkMiddleware);
 sdk.route('/purchases/v1', purchasesRoutes);
+// V2 keeps the proven purchase/restore endpoints while adding remote
+// configuration, unified receipts, events and customer self-service.
+sdk.route('/purchases/v2', purchasesRoutes);
+sdk.route('/purchases/v2', purchasesV2Routes);
 sdk.onError((error, c) => {
   if (error?.message === 'Invalid project for SDK credentials') {
     return c.json({ error: error.message }, 403);

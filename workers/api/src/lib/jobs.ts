@@ -1,6 +1,7 @@
 import { Env } from '../types';
 import { deliverBillingWebhook, processAppleBillingNotification, processGoogleBillingNotification, reconcileBillingState, reconcileStoreSubscription } from './billing-jobs';
 import { processPushNotifications } from '../routes/push';
+import { processBillingExport } from './billing-exports';
 import {
   cleanupExpiredMcp,
   cleanupOrphanedActions,
@@ -23,7 +24,8 @@ export type QueueJob =
   | { type: 'billing.webhook.deliver'; deliveryId: string }
   | { type: 'billing.apple.notification'; eventId: string; projectId: string; signedPayload: string; environment: 'sandbox' | 'production' }
   | { type: 'billing.google.notification'; eventId: string; projectId: string; purchaseToken: string; productId: string; productType: 'subscription' | 'non_consumable' | 'consumable'; eventType: string; eventOccurredAt: string }
-  | { type: 'billing.subscription.reconcile'; subscriptionId: string };
+  | { type: 'billing.subscription.reconcile'; subscriptionId: string }
+  | { type: 'billing.export'; exportId: string };
 
 export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
   switch (job?.type) {
@@ -53,6 +55,8 @@ export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
       return processGoogleBillingNotification(env, job);
     case 'billing.subscription.reconcile':
       return reconcileStoreSubscription(env, String(job.subscriptionId));
+    case 'billing.export':
+      return processBillingExport(env, String(job.exportId));
     default:
       throw new Error(`Unsupported queue job: ${job?.type || 'unknown'}`);
   }

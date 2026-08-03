@@ -15,7 +15,7 @@ abstract final class OpenGrowFlutterFlowState {
 Future<bool> opengrowInitialize({
   required String projectKey,
   required String platformIdentifier,
-  String purchasesBaseUrl = 'https://sdk.vocostar.com/purchases/v1',
+  String purchasesBaseUrl = 'https://sdk.vocostar.com/purchases/v2',
   String identityToken = '',
 }) async {
   await OpenGrowPurchases.instance.configure(
@@ -36,10 +36,12 @@ Future<bool> opengrowInitializeAuto({
   String identityToken = '',
 }) async {
   final platformIdentifier = await OpenGrow().getPlatformIdentifier();
-  final trimmedBaseUrl = sdkBaseUrl.replaceFirst(RegExp(r'/+$'), '');
-  final purchasesBaseUrl = trimmedBaseUrl.endsWith('/purchases/v1')
+  final trimmedBaseUrl = sdkBaseUrl
+      .replaceFirst(RegExp(r'/+$'), '')
+      .replaceFirst(RegExp(r'/purchases/v\d+$'), '');
+  final purchasesBaseUrl = trimmedBaseUrl.endsWith('/purchases/v2')
       ? trimmedBaseUrl
-      : '$trimmedBaseUrl/purchases/v1';
+      : '$trimmedBaseUrl/purchases/v2';
   return opengrowInitialize(
     projectKey: projectKey,
     platformIdentifier: platformIdentifier,
@@ -207,6 +209,51 @@ Future<String> opengrowGetOfferings({String placement = 'default'}) async {
           MapEntry(key, OpenGrowFlutterFlowOffering.fromOpenGrow(value).toMap()),
     ),
   });
+}
+
+Future<String> opengrowGetPurchaseConfigurationJson({
+  String placement = 'default',
+}) async {
+  final configuration = await OpenGrowPurchases.instance
+      .getPurchaseConfiguration(placement: placement);
+  return jsonEncode({
+    'placement': configuration.placement.identifier,
+    'offering': configuration.offering?.identifier,
+    'paywall': configuration.paywall?.toJson(),
+    'experiment': configuration.experimentAssignment == null
+        ? null
+        : {
+            'experiment_id': configuration.experimentAssignment!.experimentId,
+            'variant_id': configuration.experimentAssignment!.variantId,
+            'variant': configuration.experimentAssignment!.variantIdentifier,
+            'is_control': configuration.experimentAssignment!.isControl,
+          },
+    'from_cache': configuration.fromCache,
+    'fetched_at': configuration.fetchedAt.toIso8601String(),
+  });
+}
+
+Future<String> opengrowGetCustomerInfoJson() async {
+  final info = await OpenGrowPurchases.instance.getCustomerInfo();
+  return jsonEncode(info.toJson());
+}
+
+Future<String> opengrowGetVirtualCurrenciesJson() async {
+  final currencies = await OpenGrowPurchases.instance.getVirtualCurrencies();
+  return jsonEncode({
+    'fetched_at': currencies.fetchedAt.toIso8601String(),
+    'all': currencies.all.map((key, value) => MapEntry(key, {
+      'code': value.code,
+      'name': value.name,
+      'description': value.description,
+      'icon': value.icon,
+      'balance': value.balance,
+    })),
+  });
+}
+
+Future<String> opengrowGetCustomerCenterJson() async {
+  return jsonEncode(await OpenGrowPurchases.instance.getCustomerCenter());
 }
 
 Future<List<OpenGrowFlutterFlowEntitlement>> opengrowGetEntitlements() async {

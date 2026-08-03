@@ -21,6 +21,8 @@ import diagnosticsRoutes from './routes/diagnostics';
 import adminRoutes from './routes/admin';
 import wellKnownRoutes from './routes/well-known';
 import purchasesAdminRoutes from './routes/purchases-admin';
+import purchasesV2AdminRoutes from './routes/purchases-v2-admin';
+import purchasesProviderWebhooks from './routes/purchases-provider-webhooks';
 import redirectRoute from './routes/redirect';
 import { runMaintenance } from './lib/maintenance';
 import { dispatchQueueJob } from './lib/jobs';
@@ -41,6 +43,11 @@ app.use('*', cors({
     'PLATFORM',
     'IDENTIFIER',
     'X-OpenGrow-Anonymous-ID',
+    'X-OpenGrow-App-Version',
+    'X-OpenGrow-SDK-Version',
+    'X-OpenGrow-Storefront',
+    'X-OpenGrow-Campaign',
+    'Idempotency-Key',
     'ENVIRONMENT',
     'LINKSQUARED',
     'x-maintenance-key',
@@ -104,6 +111,11 @@ app.route('/api/v1/automation', automationRoutes);
 app.route('/api/v1/diagnostics', diagnosticsRoutes);
 app.route('/api/v1/admin', adminRoutes);
 app.route('/api/v1/billing', purchasesAdminRoutes);
+// The v2 admin surface is additive: existing catalogue/customer operations
+// stay available while new resources use stable error envelopes.
+app.route('/api/v2/purchases/projects', purchasesV2AdminRoutes);
+app.route('/api/v2/purchases/projects', purchasesAdminRoutes);
+app.route('/api/v2/purchases/providers/webhooks', purchasesProviderWebhooks);
 app.route('/oauth', oauthRoutes);
 app.route('/.well-known', wellKnownRoutes);
 app.route('', mcpOauthRoutes);

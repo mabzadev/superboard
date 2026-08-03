@@ -1,9 +1,9 @@
-import { GET, POST, PUT } from "@/lib/api";
+import { DELETE, GET, PATCH, POST, PUT } from "@/lib/api";
 import { config } from "@/lib/config";
 
 export interface BillingProduct {
   id: string;
-  store: "apple" | "google";
+  store: "apple" | "google" | "stripe" | "paddle" | "amazon" | "roku" | "opengrow_web";
   store_product_id: string;
   product_type: string;
   display_name: string;
@@ -81,7 +81,238 @@ export const createBillingPackage = async (projectId: string, offeringId: string
   (await POST(config.apiPath + `/billing/${projectId}/offerings/${offeringId}/packages`, data)).data;
 
 export const searchBillingCustomers = async (projectId: string, query: string) =>
-  (await GET(config.apiPath + `/billing/${projectId}/customers?q=${encodeURIComponent(query)}`)).data;
+  (await GET(purchasesV2Path(projectId, `/customers?q=${encodeURIComponent(query)}&limit=100`))).data;
 
 export const testBillingCredentials = async (projectId: string, platform: "ios" | "android") =>
   (await POST(config.apiPath + `/billing/${projectId}/credentials/test`, { platform })).data;
+
+const purchasesV2Path = (projectId: string, resource = "") => {
+  const apiV2 = config.apiPath.replace(/\/v1\/?$/, "/v2");
+  return `${apiV2}/purchases/projects/${projectId}${resource}`;
+};
+
+export type BillingCapability = {
+  status: "available" | "connected" | "needs_test" | "not_configured" | "unsupported" | "request_only" | string;
+  message?: string;
+};
+
+export type BillingConnection = {
+  id: string;
+  provider: string;
+  environment: "sandbox" | "production";
+  display_name: string;
+  status: string;
+  capabilities: Record<string, BillingCapability>;
+  public_configuration?: Record<string, unknown>;
+  last_tested_at?: string | null;
+  last_synced_at?: string | null;
+  last_event_at?: string | null;
+  last_error_code?: string | null;
+  last_error_message?: string | null;
+};
+
+export type BillingTransaction = {
+  id: string;
+  store: string;
+  environment: string;
+  store_transaction_id: string;
+  event_type: string;
+  status: string;
+  price_micros?: number | null;
+  currency?: string | null;
+  purchased_at?: string | null;
+  created_at: string;
+  store_product_id?: string | null;
+  product_name?: string | null;
+  primary_app_user_id?: string | null;
+};
+
+export type BillingSubscription = {
+  id: string;
+  store: string;
+  environment: string;
+  status: string;
+  period_type: string;
+  starts_at?: string | null;
+  expires_at?: string | null;
+  will_renew: number;
+  updated_at: string;
+  store_product_id?: string | null;
+  product_name?: string | null;
+  primary_app_user_id?: string | null;
+};
+
+export type BillingPaywall = {
+  id: string;
+  identifier: string;
+  display_name: string;
+  offering_id?: string | null;
+  offering_identifier?: string | null;
+  active_version_id?: string | null;
+  active_version?: number | null;
+  active: number;
+  updated_at: string;
+};
+
+export type BillingPlacement = {
+  id: string;
+  identifier: string;
+  display_name: string;
+  description?: string | null;
+  default_offering_id?: string | null;
+  default_offering_identifier?: string | null;
+  active: number;
+};
+
+export type BillingTargetingRule = {
+  id: string;
+  display_name: string;
+  priority: number;
+  state: string;
+  conditions: Array<Record<string, unknown>>;
+  placement_identifier: string;
+  offering_identifier: string;
+};
+
+export type BillingExperiment = {
+  id: string;
+  display_name: string;
+  state: string;
+  placement_identifier: string;
+  variants: Array<Record<string, unknown>>;
+  metrics: Array<Record<string, unknown>>;
+};
+
+export type BillingAnalytics = {
+  range_days: number;
+  summary?: Record<string, number>;
+  series: Array<Record<string, unknown>>;
+  paywall_funnel: Array<{ event_type: string; count: number }>;
+  stores: Array<Record<string, unknown>>;
+};
+
+export type BillingHealth = {
+  status: "healthy" | "degraded";
+  events?: Record<string, unknown>;
+  subscriptions?: Record<string, unknown>;
+  deliveries?: Record<string, unknown>;
+  connections?: Array<Record<string, unknown>>;
+  features?: Record<string, unknown>;
+};
+
+export const getBillingConnections = async (projectId: string): Promise<{ data: BillingConnection[] }> =>
+  (await GET(purchasesV2Path(projectId, "/connections"))).data;
+
+export const testBillingConnection = async (projectId: string, provider: string, environment: string) =>
+  (await POST(purchasesV2Path(projectId, `/connections/${provider}/test`), { environment })).data;
+
+export const createBillingConnection = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/connections"), data)).data;
+
+export const createBillingProviderProduct = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/provider-products"), data)).data;
+
+export const getBillingTransactions = async (projectId: string): Promise<{ data: BillingTransaction[]; next_cursor?: string | null }> =>
+  (await GET(purchasesV2Path(projectId, "/transactions?limit=100"))).data;
+
+export const getBillingSubscriptions = async (projectId: string): Promise<{ data: BillingSubscription[] }> =>
+  (await GET(purchasesV2Path(projectId, "/subscriptions?limit=100"))).data;
+
+export const getBillingPaywalls = async (projectId: string): Promise<{ data: BillingPaywall[] }> =>
+  (await GET(purchasesV2Path(projectId, "/paywalls"))).data;
+
+export const createBillingPaywall = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/paywalls"), data)).data;
+
+export const getBillingPaywallVersions = async (projectId: string, paywallId: string) =>
+  (await GET(purchasesV2Path(projectId, `/paywalls/${paywallId}/versions`))).data;
+
+export const createBillingPaywallVersion = async (projectId: string, paywallId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, `/paywalls/${paywallId}/versions`), data)).data;
+
+export const publishBillingPaywall = async (projectId: string, paywallId: string, versionId: string) =>
+  (await POST(purchasesV2Path(projectId, `/paywalls/${paywallId}/publish`), { version_id: versionId })).data;
+
+export const getBillingPlacements = async (projectId: string): Promise<{ data: BillingPlacement[] }> =>
+  (await GET(purchasesV2Path(projectId, "/placements"))).data;
+
+export const createBillingPlacement = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/placements"), data)).data;
+
+export const updateBillingPlacement = async (projectId: string, placementId: string, data: Record<string, unknown>) =>
+  (await PATCH(purchasesV2Path(projectId, `/placements/${placementId}`), data)).data;
+
+export const getBillingTargeting = async (projectId: string): Promise<{ data: BillingTargetingRule[] }> =>
+  (await GET(purchasesV2Path(projectId, "/targeting"))).data;
+
+export const createBillingTargetingRule = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/targeting"), data)).data;
+
+export const updateBillingTargetingRule = async (projectId: string, id: string, data: Record<string, unknown>) =>
+  (await PATCH(purchasesV2Path(projectId, `/targeting/${id}`), data)).data;
+
+export const getBillingExperiments = async (projectId: string): Promise<{ data: BillingExperiment[] }> =>
+  (await GET(purchasesV2Path(projectId, "/experiments"))).data;
+
+export const createBillingExperiment = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/experiments"), data)).data;
+
+export const updateBillingExperiment = async (projectId: string, id: string, data: Record<string, unknown>) =>
+  (await PATCH(purchasesV2Path(projectId, `/experiments/${id}`), data)).data;
+
+export const getBillingAnalytics = async (projectId: string): Promise<BillingAnalytics> =>
+  (await GET(purchasesV2Path(projectId, "/analytics?days=30"))).data;
+
+export const getBillingHealth = async (projectId: string): Promise<BillingHealth> =>
+  (await GET(purchasesV2Path(projectId, "/health"))).data;
+
+export const getBillingWebhookDeliveries = async (projectId: string) =>
+  (await GET(purchasesV2Path(projectId, "/integrations/deliveries?limit=100"))).data;
+
+export const replayBillingWebhookDelivery = async (projectId: string, deliveryId: string) =>
+  (await POST(purchasesV2Path(projectId, `/integrations/deliveries/${deliveryId}/replay`), {})).data;
+
+export const getBillingVirtualCurrencies = async (projectId: string) =>
+  (await GET(purchasesV2Path(projectId, "/virtual-currencies"))).data;
+
+export const createBillingVirtualCurrency = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/virtual-currencies"), data)).data;
+
+export const getBillingExports = async (projectId: string) =>
+  (await GET(purchasesV2Path(projectId, "/exports"))).data;
+
+export const createBillingExport = async (projectId: string, dataset: string) =>
+  (await POST(purchasesV2Path(projectId, "/exports"), { dataset, format: "csv", incremental: true })).data;
+
+export const getBillingAudiences = async (projectId: string) =>
+  (await GET(purchasesV2Path(projectId, "/audiences"))).data;
+
+export const createBillingAudience = async (projectId: string, data: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, "/audiences"), data)).data;
+
+export const getBillingCustomer = async (projectId: string, customerId: string) =>
+  (await GET(purchasesV2Path(projectId, `/customers/${customerId}`))).data;
+
+export const setBillingCustomerBlocked = async (projectId: string, customerId: string, blocked: boolean) =>
+  (await POST(purchasesV2Path(projectId, `/customers/${customerId}/block`), { blocked })).data;
+
+export const grantBillingEntitlement = async (projectId: string, customerId: string, entitlementId: string, expiresAt?: string | null) =>
+  (await POST(purchasesV2Path(projectId, `/customers/${customerId}/entitlements/${entitlementId}`), { expires_at: expiresAt || null })).data;
+
+export const revokeBillingEntitlement = async (projectId: string, customerId: string, entitlementId: string) =>
+  (await DELETE(purchasesV2Path(projectId, `/customers/${customerId}/entitlements/${entitlementId}`))).data;
+
+export const mergeBillingCustomers = async (projectId: string, customerId: string, targetCustomerId: string) =>
+  (await POST(purchasesV2Path(projectId, `/customers/${customerId}/merge`), { target_customer_id: targetCustomerId })).data;
+
+export const deleteBillingCustomer = async (projectId: string, customerId: string) =>
+  (await DELETE(purchasesV2Path(projectId, `/customers/${customerId}`))).data;
+
+export const archiveBillingProduct = async (projectId: string, productId: string) =>
+  (await DELETE(config.apiPath + `/billing/${projectId}/products/${productId}`)).data;
+
+export const archiveBillingEntitlement = async (projectId: string, entitlementId: string) =>
+  (await DELETE(config.apiPath + `/billing/${projectId}/entitlements/${entitlementId}`)).data;
+
+export const archiveBillingOffering = async (projectId: string, offeringId: string) =>
+  (await DELETE(config.apiPath + `/billing/${projectId}/offerings/${offeringId}`)).data;
