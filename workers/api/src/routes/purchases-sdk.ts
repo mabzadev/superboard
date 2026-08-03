@@ -3,6 +3,7 @@ import { AppVariables, Env } from '../types';
 import { applyVerifiedPurchase, identifyCustomer, offeringsForCustomer, type BillingEnvironment } from '../lib/billing';
 import { resolveSdkCustomer, signedCustomerInfo, verifiedAppUserId } from '../lib/billing-identity';
 import { finalizeGooglePurchase, verifyAppleTransaction, verifyGooglePurchase } from '../lib/store-verification';
+import { isPurchasesEnabled } from '../lib/deployment';
 
 const purchases = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -20,7 +21,9 @@ async function context(c: any) {
     WHERE p.id = ? LIMIT 1
   `).bind(String(projectId)).first() as { id: number; is_test: number; purchases_enabled: number } | null;
   if (!project) throw new Error('Invalid project for SDK credentials');
-  if (Number(project.purchases_enabled) !== 1) throw new Error('OpenGrow Purchases is not enabled for this project');
+  if (!isPurchasesEnabled(c.env, project.purchases_enabled)) {
+    throw new Error('OpenGrow Purchases is not enabled for this project');
+  }
   const anonymousId = c.req.header('X-OpenGrow-Anonymous-ID') || undefined;
   const resolved = await resolveSdkCustomer(c.env, {
     projectId,

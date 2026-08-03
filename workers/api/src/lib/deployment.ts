@@ -10,6 +10,11 @@ export function isFullAccess(env: Env): boolean {
   return env.OPENGROW_ACCESS_MODE === 'full';
 }
 
+/** Full Access deployments cannot have Purchases disabled by a stale project row. */
+export function isPurchasesEnabled(env: Env, configured: unknown): boolean {
+  return isFullAccess(env) || configured === true || Number(configured) === 1;
+}
+
 export function registrationRealm(env: Env): string {
   return String(env.REGISTRATION_REALM || '').trim();
 }
