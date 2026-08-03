@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildReleaseGate,
+  certificationRunCompatibility,
   nativeCatalogCoverage,
   RELEASE_GATE_CHECKS,
   validateReleaseGateEvidence,
@@ -11,18 +12,35 @@ function passedChecks() {
   return RELEASE_GATE_CHECKS.map((check) => ({
     check_key: check.key,
     status: 'passed',
-    evidence_json: JSON.stringify(Object.fromEntries(check.required_evidence.map((field) => [field, `${field}-evidence`]))),
+    evidence_json: JSON.stringify({
+      ...Object.fromEntries(check.required_evidence.map((field) => [field, `${field}-evidence`])),
+      observation_id: `observation-${check.key}`,
+      run_id: `run-${check.key}`,
+      evidence_sha256: `digest-${check.key}`,
+    }),
+  }));
+}
+
+function passedObservations() {
+  return RELEASE_GATE_CHECKS.map((check) => ({
+    id: `observation-${check.key}`,
+    run_id: `run-${check.key}`,
+    check_key: check.key,
+    outcome: 'passed',
+    evidence_sha256: `digest-${check.key}`,
+    run_status: 'completed',
+    digest_valid: true,
   }));
 }
 
 describe('Purchases release gate', () => {
   it('stays closed until every provider scenario and prerequisite has evidence', () => {
-    expect(buildReleaseGate(passedChecks(), [{ key: 'stores', label: 'Stores', passed: false, detail: 'Connect every store.' }]))
+    expect(buildReleaseGate(passedChecks(), [{ key: 'stores', label: 'Stores', passed: false, detail: 'Connect every store.' }], passedObservations()))
       .toMatchObject({ ready: false, publication_allowed: false, legacy_dependency_removal_allowed: false });
   });
 
   it('opens only when all required evidence and prerequisites pass', () => {
-    const gate = buildReleaseGate(passedChecks(), [{ key: 'stores', label: 'Stores', passed: true, detail: 'All stores connected.' }]);
+    const gate = buildReleaseGate(passedChecks(), [{ key: 'stores', label: 'Stores', passed: true, detail: 'All stores connected.' }], passedObservations());
     expect(gate.ready).toBe(true);
     expect(gate.progress).toEqual({ passed: RELEASE_GATE_CHECKS.length, total: RELEASE_GATE_CHECKS.length });
   });
@@ -35,11 +53,37 @@ describe('Purchases release gate', () => {
       status: 'passed',
       evidence_json: '{"reference":"transaction-1"}',
     };
-    const gate = buildReleaseGate(stored, []);
+    const gate = buildReleaseGate(stored, [], passedObservations());
     const check = gate.checks.find((item) => item.key === 'apple.weekly_purchase');
     expect(check).toMatchObject({ status: 'passed', evidence_valid: false, certified: false });
-    expect(check?.missing_evidence).toEqual(['build', 'device']);
+    expect(check?.missing_evidence).toEqual(['build', 'device', 'certification_observation']);
     expect(gate).toMatchObject({ ready: false, progress: { passed: RELEASE_GATE_CHECKS.length - 1 } });
+  });
+
+  it('does not accept a manually passed check without an immutable completed observation', () => {
+    const gate = buildReleaseGate(passedChecks(), [], []);
+    expect(gate.ready).toBe(false);
+    expect(gate.checks.every((check) => !check.certified)).toBe(true);
+    expect(gate.checks[0].missing_evidence).toContain('certification_observation');
+  });
+
+  it('rejects an observation whose stored snapshot no longer matches its digest', () => {
+    const observations = passedObservations();
+    observations[0] = { ...observations[0], digest_valid: false };
+    const gate = buildReleaseGate(passedChecks(), [], observations);
+    expect(gate.ready).toBe(false);
+    expect(gate.progress.passed).toBe(RELEASE_GATE_CHECKS.length - 1);
+    expect(gate.checks[0].missing_evidence).toContain('certification_observation');
+  });
+
+  it('restricts certification runs to the provider platform and test environment', () => {
+    const apple = RELEASE_GATE_CHECKS.find((check) => check.key === 'apple.weekly_purchase')!;
+    expect(certificationRunCompatibility(apple, 'ios', 'sandbox').valid).toBe(true);
+    expect(certificationRunCompatibility(apple, 'android', 'sandbox')).toMatchObject({
+      valid: false, expected_platform: 'ios', expected_environment: 'sandbox',
+    });
+    const inventory = RELEASE_GATE_CHECKS.find((check) => check.key === 'cross_platform.revenuecat_inventory')!;
+    expect(certificationRunCompatibility(inventory, 'cross_platform', 'production').valid).toBe(true);
   });
 
   it('requires structured device evidence for native and FlutterFlow checks', () => {

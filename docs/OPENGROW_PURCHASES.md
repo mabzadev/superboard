@@ -72,3 +72,5 @@ RevenueCat V2 customer and subscription pagination follows the official [Develop
 ## Certification authority
 
 Purchases Diagnostics is the release authority. Automated prerequisites validate credentials, catalogs, Premium mappings, offerings, packages, and isolated Store credential copies. Manual checks require build, device, and provider/test-run evidence. Publication and legacy dependency removal remain blocked until every required check passes.
+
+Certification evidence is run-based. Directly marking a check as passed is rejected unless it points to an immutable observation from a completed run. Provider transaction and Billing event references are resolved server-side; the stored observation contains a bounded snapshot and SHA-256 digest rather than a mutable free-text claim or raw provider payload.

@@ -40,6 +40,8 @@ import {
   archiveBillingProduct,
   approveBillingRefundAction,
   configureBillingLegacySource,
+  completeBillingCertificationRun,
+  createBillingCertificationRun,
   createBillingExperiment,
   createBillingExport,
   createBillingRefundEvidence,
@@ -57,6 +59,7 @@ import {
   disableBillingLegacySource,
   getBillingAnalytics,
   getBillingConnections,
+  getBillingCertificationRuns,
   getBillingCustomer,
   getBillingExperiments,
   getBillingExports,
@@ -77,6 +80,7 @@ import {
   mapBillingProductsToEntitlement,
   publishBillingPaywall,
   replayBillingWebhookDelivery,
+  recordBillingCertificationObservation,
   reviewBillingRefundEvidence,
   searchBillingCustomers,
   setBillingCustomerBlocked,
@@ -89,6 +93,8 @@ import {
   updateBillingReleaseGateCheck,
   updateBillingTargetingRule,
   type BillingAnalytics,
+  type BillingCertificationReferenceType,
+  type BillingCertificationRun,
   type BillingConnection,
   type BillingExperiment,
   type BillingHealth,
@@ -163,6 +169,7 @@ const PurchasesPage = () => {
   const [analytics, setAnalytics] = useState<BillingAnalytics>();
   const [health, setHealth] = useState<BillingHealth>();
   const [releaseGate, setReleaseGate] = useState<BillingReleaseGate>();
+  const [certificationRuns, setCertificationRuns] = useState<BillingCertificationRun[]>([]);
   const [legacyInventory, setLegacyInventory] = useState<BillingLegacyInventory>();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [virtualCurrencies, setVirtualCurrencies] = useState<Array<Record<string, unknown>>>([]);
@@ -201,7 +208,14 @@ const PurchasesPage = () => {
   const [refundActionPayloads, setRefundActionPayloads] = useState<Record<string, string>>({});
   const [gateBuild, setGateBuild] = useState("");
   const [gateDevice, setGateDevice] = useState("");
-  const [gateReference, setGateReference] = useState("");
+  const [gateOsVersion, setGateOsVersion] = useState("");
+  const [gateAppVersion, setGateAppVersion] = useState("");
+  const [gateSdkVersion, setGateSdkVersion] = useState("");
+  const [gatePlatform, setGatePlatform] = useState<"ios" | "android" | "web" | "cross_platform">("ios");
+  const [gateEnvironment, setGateEnvironment] = useState<"sandbox" | "production">("sandbox");
+  const [selectedCertificationRunId, setSelectedCertificationRunId] = useState("");
+  const [gateReferences, setGateReferences] = useState<Record<string, string>>({});
+  const [gateReferenceTypes, setGateReferenceTypes] = useState<Record<string, BillingCertificationReferenceType>>({});
   const [gateNotes, setGateNotes] = useState("");
   const [legacyProjectId, setLegacyProjectId] = useState("");
   const [legacyApiKey, setLegacyApiKey] = useState("");
@@ -226,6 +240,7 @@ const PurchasesPage = () => {
         nextExports,
         nextRefundCases,
         nextReleaseGate,
+        nextCertificationRuns,
         nextLegacyInventory,
       ] = await Promise.allSettled([
         getBillingOverview(projectId),
@@ -243,6 +258,7 @@ const PurchasesPage = () => {
         getBillingExports(projectId),
         getBillingRefundCases(projectId),
         getBillingReleaseGate(projectId),
+        getBillingCertificationRuns(projectId),
         getBillingLegacyInventory(projectId),
       ]);
       const failures: string[] = [];
@@ -262,6 +278,12 @@ const PurchasesPage = () => {
       if (nextExports.status === "fulfilled") setExports(nextExports.value.data || []); else failed("Exports", nextExports.reason);
       if (nextRefundCases.status === "fulfilled") setRefundCases(nextRefundCases.value.data || []); else failed("Refund Center", nextRefundCases.reason);
       if (nextReleaseGate.status === "fulfilled") setReleaseGate(nextReleaseGate.value); else failed("Release gate", nextReleaseGate.reason);
+      if (nextCertificationRuns.status === "fulfilled") {
+        setCertificationRuns(nextCertificationRuns.value.runs || []);
+        setSelectedCertificationRunId((current) => nextCertificationRuns.value.runs.some((item) => item.id === current && item.status === "running")
+          ? current
+          : nextCertificationRuns.value.runs.find((item) => item.status === "running")?.id || "");
+      } else failed("Certification runs", nextCertificationRuns.reason);
       if (nextLegacyInventory.status === "fulfilled") {
         setLegacyInventory(nextLegacyInventory.value);
         if (nextLegacyInventory.value.source?.external_project_id) {
@@ -503,16 +525,57 @@ const PurchasesPage = () => {
     setPackageProductIds([]);
   };
 
-  const updateGateCheck = async (checkKey: string, status: "pending" | "passed" | "failed") => {
+  const resetGateCheck = async (checkKey: string) => {
     if (!projectId) return;
-    const evidence = Object.fromEntries(Object.entries({
-      build: gateBuild.trim(), device: gateDevice.trim(), reference: gateReference.trim(),
-    }).filter(([, value]) => value));
     await run(() => updateBillingReleaseGateCheck(projectId, checkKey, {
-      status,
-      evidence: status === "passed" ? evidence : {},
+      status: "pending",
+      evidence: {},
       notes: gateNotes.trim(),
-    }), status === "passed" ? "Certification evidence saved" : status === "failed" ? "Failure recorded" : "Check reset");
+    }), "Check reset");
+  };
+
+  const startCertificationRun = async () => {
+    if (!projectId || !gateBuild.trim()) return;
+    const created = await run(() => createBillingCertificationRun(projectId, {
+      platform: gatePlatform,
+      environment: gateEnvironment,
+      build_number: gateBuild.trim(),
+      device_model: gateDevice.trim(),
+      os_version: gateOsVersion.trim(),
+      app_version: gateAppVersion.trim(),
+      sdk_version: gateSdkVersion.trim(),
+      notes: gateNotes.trim(),
+    }), "Certification run started");
+    if (created) {
+      const runs = await getBillingCertificationRuns(projectId);
+      setCertificationRuns(runs.runs || []);
+      setSelectedCertificationRunId(runs.runs.find((item) => item.status === "running")?.id || "");
+    }
+  };
+
+  const finishCertificationRun = async (status: "completed" | "failed" | "cancelled") => {
+    if (!projectId || !selectedCertificationRunId) return;
+    await run(
+      () => completeBillingCertificationRun(projectId, selectedCertificationRunId, status),
+      status === "completed" ? "Certification run completed" : `Certification run ${status}`,
+    );
+  };
+
+  const recordCertificationResult = async (check: BillingReleaseGate["checks"][number], outcome: "passed" | "failed") => {
+    if (!projectId || !selectedCertificationRunId) return;
+    const referenceType = gateReferenceTypes[check.key] || check.reference_types[0];
+    const referenceId = (gateReferences[check.key] || "").trim();
+    if (!referenceType || !referenceId) {
+      showErrorNotification("Select a reference type and enter a reference before recording the result");
+      return;
+    }
+    await run(() => recordBillingCertificationObservation(projectId, selectedCertificationRunId, {
+      check_key: check.key,
+      outcome,
+      reference_type: referenceType,
+      reference_id: referenceId,
+      notes: gateNotes.trim(),
+    }), outcome === "passed" ? "Immutable certification result recorded" : "Certification failure recorded");
   };
 
   const connectLegacySource = async () => {
@@ -550,6 +613,7 @@ const PurchasesPage = () => {
     .map((item) => item.product_id));
   const latestLegacyRun = legacyInventory?.runs[0];
   const legacyRunActive = latestLegacyRun?.status === "queued" || latestLegacyRun?.status === "running";
+  const selectedCertificationRun = certificationRuns.find((item) => item.id === selectedCertificationRunId && item.status === "running");
 
   useEffect(() => {
     if (!legacyRunActive) return;
@@ -768,8 +832,33 @@ const PurchasesPage = () => {
                 </Table> : latestLegacyRun?.status === "completed" && <p className="text-sm text-muted-foreground">No unresolved active legacy subscription remains.</p>}
               </CardContent>
             </Card>
-            <Card><CardHeader><CardTitle>Evidence for the next check update</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"><Input placeholder="Build number" value={gateBuild} onChange={(event) => setGateBuild(event.target.value)} /><Input placeholder="Device and OS" value={gateDevice} onChange={(event) => setGateDevice(event.target.value)} /><Input placeholder="Test run or transaction reference" value={gateReference} onChange={(event) => setGateReference(event.target.value)} /><Input placeholder="Notes" value={gateNotes} onChange={(event) => setGateNotes(event.target.value)} /></CardContent></Card>
-            {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div><div className="mt-1 text-xs text-muted-foreground">Required evidence: {check.required_evidence.join(", ")}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{Object.entries(check.evidence).map(([key, value]) => <div key={key} className="max-w-sm truncate text-xs text-muted-foreground" title={String(value)}><span className="font-medium">{key}:</span> {String(value)}</div>)}{check.status === "passed" && !check.evidence_valid && <div className="text-xs text-destructive">Missing evidence: {check.missing_evidence.join(", ")}</div>}{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}</TableCell><TableCell>{statusBadge(check.status === "passed" && !check.evidence_valid ? "invalid" : check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "passed")}>Pass</Button><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void updateGateCheck(check.key, "pending")}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" />Immutable certification runs</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <Alert><ShieldCheck /><AlertTitle>Evidence is linked to a run</AlertTitle><AlertDescription>Passed checks require an immutable observation from a completed run. Transaction and event references are verified against Billing records before they are accepted.</AlertDescription></Alert>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <select aria-label="Certification platform" className="h-9 rounded-md border bg-background px-3 text-sm" value={gatePlatform} onChange={(event) => setGatePlatform(event.target.value as typeof gatePlatform)}>
+                    <option value="ios">iOS</option><option value="android">Android</option><option value="web">Web</option><option value="cross_platform">Cross-platform</option>
+                  </select>
+                  <select aria-label="Certification environment" className="h-9 rounded-md border bg-background px-3 text-sm" value={gateEnvironment} onChange={(event) => setGateEnvironment(event.target.value as typeof gateEnvironment)}>
+                    <option value="sandbox">Sandbox / test</option><option value="production">Production inventory</option>
+                  </select>
+                  <Input placeholder="Build number" value={gateBuild} onChange={(event) => setGateBuild(event.target.value)} />
+                  <Input placeholder="App version" value={gateAppVersion} onChange={(event) => setGateAppVersion(event.target.value)} />
+                  <Input placeholder="Device model" value={gateDevice} onChange={(event) => setGateDevice(event.target.value)} />
+                  <Input placeholder="OS version" value={gateOsVersion} onChange={(event) => setGateOsVersion(event.target.value)} />
+                  <Input placeholder="Purchases SDK version" value={gateSdkVersion} onChange={(event) => setGateSdkVersion(event.target.value)} />
+                  <Input placeholder="Run notes" value={gateNotes} onChange={(event) => setGateNotes(event.target.value)} />
+                </div>
+                <Button disabled={!gateBuild.trim()} onClick={() => void startCertificationRun()}><FlaskConical className="mr-2 h-4 w-4" />Start certification run</Button>
+                <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                  <label className="grid gap-1 text-sm">Active run<select className="h-9 rounded-md border bg-background px-3" value={selectedCertificationRunId} onChange={(event) => setSelectedCertificationRunId(event.target.value)}><option value="">Select a running certification</option>{certificationRuns.filter((item) => item.status === "running").map((item) => <option key={item.id} value={item.id}>{item.platform} · build {item.build_number} · {date(item.started_at)}</option>)}</select></label>
+                  <div className="flex items-end gap-2"><Button variant="outline" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("completed")}>Complete run</Button><Button variant="ghost" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("cancelled")}>Cancel</Button></div>
+                </div>
+                {certificationRuns.slice(0, 5).map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"><div><span className="font-medium">{item.platform} build {item.build_number}</span><div className="text-xs text-muted-foreground">{item.environment} · {item.observation_count || 0} observations · {item.id}</div></div>{statusBadge(item.status)}</div>)}
+              </CardContent>
+            </Card>
+            {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div><div className="mt-1 text-xs text-muted-foreground">Required evidence: {check.required_evidence.join(", ")}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{Object.entries(check.evidence).map(([key, value]) => <div key={key} className="max-w-sm truncate text-xs text-muted-foreground" title={String(value)}><span className="font-medium">{key}:</span> {String(value)}</div>)}{check.status === "passed" && !check.evidence_valid && <div className="text-xs text-destructive">Missing evidence: {check.missing_evidence.join(", ")}</div>}{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}{selectedCertificationRun && <div className="mt-2 grid gap-2"><select aria-label={`${check.label} reference type`} className="h-8 rounded-md border bg-background px-2 text-xs" value={gateReferenceTypes[check.key] || check.reference_types[0]} onChange={(event) => setGateReferenceTypes((current) => ({ ...current, [check.key]: event.target.value as BillingCertificationReferenceType }))}>{check.reference_types.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select><Input className="h-8 text-xs" placeholder="Verified record or external test reference" value={gateReferences[check.key] || ""} onChange={(event) => setGateReferences((current) => ({ ...current, [check.key]: event.target.value }))} /></div>}</TableCell><TableCell>{statusBadge(check.status === "passed" && !check.evidence_valid ? "invalid" : check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "passed")}>Pass</Button><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void resetGateCheck(check.key)}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
           </TabsContent>
         </Tabs>
       </main>

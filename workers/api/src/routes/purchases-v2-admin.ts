@@ -10,10 +10,14 @@ import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billin
 import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
 import {
   buildReleaseGate,
+  certificationRunCompatibility,
   nativeCatalogCoverage,
+  releaseGateProductCadences,
   RELEASE_GATE_CHECKS,
   validateReleaseGateEvidence,
   type ReleaseGateCatalogProduct,
+  type CertificationReferenceType,
+  type ReleaseGateCertificationObservation,
   type ReleaseGatePrerequisite,
   type StoredReleaseGateCheck,
 } from '../lib/purchases-release-gate';
@@ -126,6 +130,22 @@ function parseLimit(value: unknown) {
   return Math.max(1, Math.min(250, Number(value || 50)));
 }
 
+function certificationText(value: unknown, field: string, max = 500) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text || text.length > max) throw purchasesError(`${field}_invalid`, `${field} is required and must contain at most ${max} characters`);
+  return text;
+}
+
+function optionalCertificationText(value: unknown, max = 500) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text ? text.slice(0, max) : null;
+}
+
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 function parseCursor(value: unknown): { createdAt: string; id: string } | null {
   if (!value) return null;
   try {
@@ -224,7 +244,7 @@ admin.get('/:projectId/release-gate', async (c) => {
     const scope = await releaseGateScope(c, project);
     const scopedProjectIds = [scope.testProjectId, scope.productionProjectId].filter(Boolean);
     const projectPlaceholders = scopedProjectIds.map(() => '?').join(',');
-    const [checks, connections, catalog, entitlement, offering, legacyInventory] = await Promise.all([
+    const [checks, connections, catalog, entitlement, offering, legacyInventory, certificationObservations] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
       c.env.DB.prepare(`
         SELECT project_id, provider, environment, status, last_tested_at, billing_configuration_encrypted FROM billing_store_connections
@@ -263,7 +283,20 @@ admin.get('/:projectId/release-gate', async (c) => {
         WHERE project_id = ? AND environment = 'production'
         ORDER BY created_at DESC LIMIT 1
       `).bind(scope.productionProjectId || scope.releaseProjectId).first<Record<string, unknown>>(),
+      c.env.DB.prepare(`
+        SELECT o.id, o.run_id, o.check_key, o.outcome, o.evidence_json, o.evidence_sha256, r.status AS run_status
+        FROM billing_certification_observations o
+        JOIN billing_certification_runs r ON r.id = o.run_id
+        JOIN billing_release_gate_checks gc
+          ON gc.project_id = r.release_project_id
+          AND json_extract(gc.evidence_json, '$.observation_id') = o.id
+        WHERE r.release_project_id = ?
+      `).bind(scope.releaseProjectId).all<ReleaseGateCertificationObservation>(),
     ]);
+    const verifiedCertificationObservations = await Promise.all((certificationObservations.results || []).map(async (row) => ({
+      ...row,
+      digest_valid: await sha256Hex(String(row.evidence_json || '')) === row.evidence_sha256,
+    })));
     const connectionPassed = (projectId: string, provider: string, environment: string) => (connections.results || []).some((row) =>
       String(row.project_id) === projectId && row.provider === provider && row.environment === environment
       && row.status === 'connected' && row.last_tested_at
@@ -327,7 +360,202 @@ admin.get('/:projectId/release-gate', async (c) => {
       prerequisite('production_stripe_packages', 'Stripe production packages', stripeProductsReady(scope.productionProjectId, 'production', 'offering_mapped'), 'Every Stripe production subscription is exposed by the default offering.', 'Add every Stripe production subscription to a package in the default offering.'),
       prerequisite('production_legacy_inventory', 'Production legacy subscription inventory', legacyInventoryReady, legacyInventoryDetail, legacyInventoryDetail),
     ];
-    return c.json({ data: { environments: ['sandbox', 'production'], scope, ...buildReleaseGate(checks.results || [], prerequisites) } });
+    return c.json({ data: { environments: ['sandbox', 'production'], scope, ...buildReleaseGate(checks.results || [], prerequisites, verifiedCertificationObservations) } });
+  } catch (error) { return replyError(c, error); }
+});
+
+export type CertificationRunRow = {
+  id: string;
+  release_project_id: string;
+  target_project_id: string;
+  environment: 'sandbox' | 'production';
+  platform: 'ios' | 'android' | 'web' | 'cross_platform';
+  build_number: string;
+  app_version: string | null;
+  sdk_version: string | null;
+  device_model: string | null;
+  os_version: string | null;
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  started_at: string;
+};
+
+admin.get('/:projectId/certification-runs', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const scope = await releaseGateScope(c, project);
+    const [runs, observations] = await Promise.all([
+      c.env.DB.prepare(`
+        SELECT r.*,
+          (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id) AS observation_count,
+          (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id AND o.outcome = 'passed') AS passed_count,
+          (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id AND o.outcome = 'failed') AS failed_count
+        FROM billing_certification_runs r
+        WHERE r.release_project_id = ? ORDER BY r.started_at DESC LIMIT 50
+      `).bind(scope.releaseProjectId).all<Record<string, unknown>>(),
+      c.env.DB.prepare(`
+        SELECT o.* FROM billing_certification_observations o
+        JOIN billing_certification_runs r ON r.id = o.run_id
+        WHERE r.release_project_id = ? ORDER BY o.observed_at DESC LIMIT 500
+      `).bind(scope.releaseProjectId).all<Record<string, unknown>>(),
+    ]);
+    return c.json({ data: { runs: runs.results, observations: observations.results } });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/certification-runs', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const scope = await releaseGateScope(c, project);
+    const data = await jsonBody(c);
+    const platform = String(data.platform || '');
+    const environment = String(data.environment || '');
+    if (!['ios', 'android', 'web', 'cross_platform'].includes(platform)) {
+      throw purchasesError('certification_platform_invalid', 'Platform must be iOS, Android, Web, or cross-platform');
+    }
+    if (!['sandbox', 'production'].includes(environment)) {
+      throw purchasesError('certification_environment_invalid', 'Environment must be sandbox or production');
+    }
+    const targetProjectId = environment === 'sandbox' ? scope.testProjectId : scope.productionProjectId;
+    if (!targetProjectId) throw purchasesError('certification_target_project_missing', `The ${environment} project is not configured`, 409);
+    const buildNumber = certificationText(data.build_number, 'build_number', 100);
+    const deviceModel = optionalCertificationText(data.device_model, 200);
+    const osVersion = optionalCertificationText(data.os_version, 100);
+    if ((platform === 'ios' || platform === 'android') && (!deviceModel || !osVersion)) {
+      throw purchasesError('certification_device_required', 'Native certification runs require a device model and OS version');
+    }
+    const id = crypto.randomUUID();
+    const row = await c.env.DB.prepare(`
+      INSERT INTO billing_certification_runs (
+        id, release_project_id, target_project_id, environment, platform, build_number,
+        app_version, sdk_version, device_model, os_version, notes, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *
+    `).bind(
+      id, scope.releaseProjectId, targetProjectId, environment, platform, buildNumber,
+      optionalCertificationText(data.app_version, 100), optionalCertificationText(data.sdk_version, 100),
+      deviceModel, osVersion, optionalCertificationText(data.notes, 2000), String(c.get('userId')),
+    ).first<Record<string, unknown>>();
+    await audit(c, scope.releaseProjectId, 'certification_run.created', 'certification_run', id, {
+      target_project_id: targetProjectId, environment, platform, build_number: buildNumber,
+    });
+    return c.json({ data: row }, 201);
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.patch('/:projectId/certification-runs/:runId', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const scope = await releaseGateScope(c, project);
+    const data = await jsonBody(c);
+    const status = String(data.status || '');
+    if (!['completed', 'failed', 'cancelled'].includes(status)) {
+      throw purchasesError('certification_run_status_invalid', 'A running certification can be completed, failed, or cancelled');
+    }
+    if (status === 'completed') {
+      const observation = await c.env.DB.prepare(`
+        SELECT o.id, o.evidence_json, o.evidence_sha256 FROM billing_certification_observations o
+        JOIN billing_certification_runs r ON r.id = o.run_id
+        WHERE r.id = ? AND r.release_project_id = ? LIMIT 1
+      `).bind(c.req.param('runId'), scope.releaseProjectId).first<{ id: string }>();
+      if (!observation) throw purchasesError('certification_observation_required', 'Record at least one result before completing the certification run', 409);
+    }
+    const row = await c.env.DB.prepare(`
+      UPDATE billing_certification_runs
+      SET status = ?, completed_at = datetime('now'), updated_at = datetime('now')
+      WHERE id = ? AND release_project_id = ? AND status = 'running' RETURNING *
+    `).bind(status, c.req.param('runId'), scope.releaseProjectId).first<Record<string, unknown>>();
+    if (!row) throw purchasesError('certification_run_not_running', 'Running certification run not found', 404);
+    await audit(c, scope.releaseProjectId, `certification_run.${status}`, 'certification_run', c.req.param('runId'));
+    return c.json({ data: row });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/certification-runs/:runId/observations', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const scope = await releaseGateScope(c, project);
+    const data = await jsonBody(c);
+    const run = await c.env.DB.prepare(`
+      SELECT * FROM billing_certification_runs
+      WHERE id = ? AND release_project_id = ? LIMIT 1
+    `).bind(c.req.param('runId'), scope.releaseProjectId).first<CertificationRunRow>();
+    if (!run) throw purchasesError('certification_run_not_found', 'Certification run not found', 404);
+    if (run.status !== 'running') throw purchasesError('certification_run_closed', 'Certification results can be added only while the run is active', 409);
+    const checkKey = certificationText(data.check_key, 'check_key', 120);
+    const definition = RELEASE_GATE_CHECKS.find((item) => item.key === checkKey);
+    if (!definition) throw purchasesError('release_gate_check_not_found', 'Release gate check not found', 404);
+    const compatibility = certificationRunCompatibility(definition, run.platform, run.environment);
+    if (!compatibility.valid) {
+      throw purchasesError(
+        'certification_run_incompatible',
+        `This check requires a ${compatibility.expected_platform} ${compatibility.expected_environment} run`,
+        409,
+      );
+    }
+    const outcome = String(data.outcome || '');
+    if (!['passed', 'failed'].includes(outcome)) throw purchasesError('certification_outcome_invalid', 'Outcome must be passed or failed');
+    const referenceType = String(data.reference_type || '') as CertificationReferenceType;
+    if (!definition.reference_types.includes(referenceType)) {
+      throw purchasesError('certification_reference_type_invalid', 'The selected reference type is not valid for this check');
+    }
+    const referenceId = certificationText(data.reference_id, 'reference_id', 500);
+    const reference = await certificationReferenceSnapshot(c.env.DB, run, definition.provider, referenceType, referenceId, checkKey);
+    const observationId = crypto.randomUUID();
+    const observedAt = new Date().toISOString();
+    const evidenceSnapshot = {
+      schema_version: 1,
+      observation_id: observationId,
+      check_key: checkKey,
+      outcome,
+      observed_at: observedAt,
+      run: {
+        id: run.id, target_project_id: run.target_project_id, environment: run.environment,
+        platform: run.platform, build_number: run.build_number, app_version: run.app_version,
+        sdk_version: run.sdk_version, device_model: run.device_model, os_version: run.os_version,
+        started_at: run.started_at,
+      },
+      reference: { type: referenceType, id: referenceId, verified_record: reference },
+    };
+    const encodedSnapshot = JSON.stringify(evidenceSnapshot);
+    const digest = await sha256Hex(encodedSnapshot);
+    const notes = optionalCertificationText(data.notes, 2000);
+    const device = [run.device_model, run.os_version].filter(Boolean).join(' / ') || run.platform;
+    const gateEvidence = {
+      build: run.build_number,
+      device,
+      reference: `${referenceType}:${referenceId}`,
+      observation_id: observationId,
+      run_id: run.id,
+      evidence_sha256: digest,
+    };
+    await c.env.DB.batch([
+      c.env.DB.prepare(`
+        INSERT INTO billing_certification_observations (
+          id, run_id, check_key, outcome, reference_type, reference_id,
+          evidence_json, evidence_sha256, notes, created_by, observed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        observationId, run.id, checkKey, outcome, referenceType, referenceId,
+        encodedSnapshot, digest, notes, String(c.get('userId')), observedAt,
+      ),
+      c.env.DB.prepare(`
+        INSERT INTO billing_release_gate_checks (
+          project_id, check_key, status, evidence_json, notes, verified_by, verified_at
+        ) VALUES (?, ?, ?, ?, ?, ?, CASE WHEN ? = 'passed' THEN datetime('now') END)
+        ON CONFLICT(project_id, check_key) DO UPDATE SET
+          status = excluded.status, evidence_json = excluded.evidence_json, notes = excluded.notes,
+          verified_by = excluded.verified_by,
+          verified_at = CASE WHEN excluded.status = 'passed' THEN datetime('now') ELSE NULL END,
+          updated_at = datetime('now')
+      `).bind(
+        scope.releaseProjectId, checkKey, outcome, JSON.stringify(gateEvidence), notes,
+        String(c.get('userId')), outcome,
+      ),
+    ]);
+    await audit(c, scope.releaseProjectId, 'certification_observation.created', 'certification_observation', observationId, {
+      run_id: run.id, check_key: checkKey, outcome, reference_type: referenceType,
+      evidence_sha256: digest,
+    });
+    return c.json({ data: { id: observationId, run_id: run.id, check_key: checkKey, outcome, evidence_sha256: digest } }, 201);
   } catch (error) { return replyError(c, error); }
 });
 
@@ -348,6 +576,21 @@ admin.patch('/:projectId/release-gate/checks/:checkKey', async (c) => {
     if (status === 'passed' && !evidenceValidation.valid) {
       throw purchasesError('release_gate_evidence_required', `Passing this check requires: ${evidenceValidation.missing.join(', ')}`);
     }
+    if (status === 'passed') {
+      const observationId = String(evidence.observation_id || '');
+      const evidenceSha256 = String(evidence.evidence_sha256 || '');
+      const observation = await c.env.DB.prepare(`
+        SELECT o.id FROM billing_certification_observations o
+        JOIN billing_certification_runs r ON r.id = o.run_id
+        WHERE o.id = ? AND o.check_key = ? AND o.outcome = 'passed'
+          AND o.evidence_sha256 = ? AND r.release_project_id = ? AND r.status = 'completed'
+        LIMIT 1
+      `).bind(observationId, checkKey, evidenceSha256, scope.releaseProjectId)
+        .first<{ id: string; evidence_json: string; evidence_sha256: string }>();
+      if (!observation || await sha256Hex(observation.evidence_json) !== observation.evidence_sha256) {
+        throw purchasesError('release_gate_certification_observation_required', 'A completed immutable certification observation is required', 409);
+      }
+    }
     const notes = data.notes == null ? null : String(data.notes).trim().slice(0, 2000) || null;
     await c.env.DB.prepare(`
       INSERT INTO billing_release_gate_checks (project_id, check_key, status, evidence_json, notes, verified_by, verified_at)
@@ -364,6 +607,141 @@ admin.patch('/:projectId/release-gate/checks/:checkKey', async (c) => {
 
 function providerDisplayName(provider: 'apple' | 'google' | 'stripe') {
   return provider === 'apple' ? 'Apple App Store' : provider === 'google' ? 'Google Play' : 'Stripe';
+}
+
+export async function certificationReferenceSnapshot(
+  db: D1Database,
+  run: CertificationRunRow,
+  provider: 'apple' | 'google' | 'stripe' | 'cross_platform',
+  referenceType: CertificationReferenceType,
+  referenceId: string,
+  checkKey = '',
+) {
+  if (referenceType === 'test_run') {
+    return { external_test_reference: referenceId };
+  }
+  if (referenceType === 'billing_transaction') {
+    const row = await db.prepare(`
+      SELECT t.id, t.store, t.environment, t.status, t.event_type, t.verified_at,
+        t.purchased_at, t.event_occurred_at, t.created_at, p.store_product_id, p.metadata,
+        (SELECT GROUP_CONCAT(DISTINCT bp.package_type)
+          FROM billing_package_products bpp
+          JOIN billing_packages bp ON bp.id = bpp.package_id
+          WHERE bpp.product_id = t.product_id) AS package_types,
+        (SELECT s.period_type FROM billing_subscriptions s
+          WHERE s.project_id = t.project_id AND s.store = t.store AND s.environment = t.environment
+            AND (s.latest_transaction_id = t.id OR s.original_transaction_id = t.original_transaction_id)
+          ORDER BY s.updated_at DESC LIMIT 1) AS period_type
+      FROM billing_transactions t
+      LEFT JOIN billing_products p ON p.id = t.product_id
+      WHERE t.id = ? AND t.project_id = ? LIMIT 1
+    `).bind(referenceId, run.target_project_id).first<Record<string, unknown>>();
+    if (!row || !row.verified_at) throw purchasesError('certification_transaction_not_verified', 'A provider-verified transaction from this certification project is required', 409);
+    if (provider !== 'cross_platform' && row.store !== provider) throw purchasesError('certification_reference_provider_mismatch', 'The transaction provider does not match this check', 409);
+    if (row.environment !== run.environment) throw purchasesError('certification_reference_environment_mismatch', 'The transaction environment does not match this run', 409);
+    requireReferenceDuringRun(row.event_occurred_at || row.purchased_at || row.created_at, run.started_at);
+    validateCertificationScenario(checkKey, referenceType, row);
+    return {
+      id: row.id, provider: row.store, environment: row.environment, status: row.status,
+      event_type: row.event_type, verified_at: row.verified_at,
+      occurred_at: row.event_occurred_at || row.purchased_at, store_product_id: row.store_product_id,
+      period_type: row.period_type,
+    };
+  }
+  if (referenceType === 'billing_event') {
+    const row = await db.prepare(`
+      SELECT id, provider, environment, event_type, status, occurred_at, received_at,
+        transaction_id, subscription_id
+      FROM billing_events WHERE id = ? AND project_id = ? LIMIT 1
+    `).bind(referenceId, run.target_project_id).first<Record<string, unknown>>();
+    if (!row || row.status !== 'processed') throw purchasesError('certification_event_not_processed', 'A processed immutable Billing event from this certification project is required', 409);
+    if (provider !== 'cross_platform' && row.provider !== provider) throw purchasesError('certification_reference_provider_mismatch', 'The Billing event provider does not match this check', 409);
+    if (provider === 'cross_platform' && !['apple', 'google', 'stripe'].includes(String(row.provider))) {
+      throw purchasesError('certification_reference_provider_mismatch', 'Cross-platform convergence requires an Apple, Google Play, or Stripe event', 409);
+    }
+    if (row.environment !== run.environment) throw purchasesError('certification_reference_environment_mismatch', 'The Billing event environment does not match this run', 409);
+    requireReferenceDuringRun(row.occurred_at || row.received_at, run.started_at);
+    validateCertificationScenario(checkKey, referenceType, row);
+    return {
+      id: row.id, provider: row.provider, environment: row.environment, event_type: row.event_type,
+      status: row.status, occurred_at: row.occurred_at, received_at: row.received_at,
+      transaction_id: row.transaction_id, subscription_id: row.subscription_id,
+    };
+  }
+  if (referenceType === 'paywall_event') {
+    const row = await db.prepare(`
+      SELECT id, event_type, platform, app_version, sdk_version, occurred_at,
+        package_identifier, placement_identifier
+      FROM billing_paywall_events WHERE id = ? AND project_id = ? LIMIT 1
+    `).bind(referenceId, run.target_project_id).first<Record<string, unknown>>();
+    if (!row) throw purchasesError('certification_paywall_event_not_found', 'A paywall event from this certification project is required', 409);
+    if (run.platform !== 'cross_platform' && row.platform !== run.platform) {
+      throw purchasesError('certification_reference_platform_mismatch', 'The paywall event platform does not match this run', 409);
+    }
+    requireReferenceDuringRun(row.occurred_at, run.started_at);
+    validateCertificationScenario(checkKey, referenceType, row);
+    return row;
+  }
+  const row = await db.prepare(`
+    SELECT id, status, active_subscriptions, matched_subscriptions,
+      unresolved_subscriptions, unsupported_subscriptions, completed_at
+    FROM billing_legacy_inventory_runs
+    WHERE id = ? AND project_id = ? AND environment = 'production' LIMIT 1
+  `).bind(referenceId, run.target_project_id).first<Record<string, unknown>>();
+  if (!row || row.status !== 'completed' || Number(row.unresolved_subscriptions || 0) !== 0) {
+    throw purchasesError('certification_legacy_inventory_incomplete', 'A completed production inventory with no unresolved subscription is required', 409);
+  }
+  return row;
+}
+
+function validateCertificationScenario(
+  checkKey: string,
+  referenceType: CertificationReferenceType,
+  row: Record<string, unknown>,
+) {
+  if (!checkKey || referenceType === 'test_run' || referenceType === 'legacy_inventory') return;
+  const scenario = checkKey.split('.').at(-1) || '';
+  const eventType = String(row.event_type || '').toLocaleLowerCase('en');
+  const status = String(row.status || '').toLocaleLowerCase('en');
+  const matches = (pattern: RegExp) => pattern.test(`${eventType} ${status}`);
+  let valid = true;
+  if (scenario === 'weekly_purchase' || scenario === 'yearly_purchase') {
+    const cadence = scenario === 'weekly_purchase' ? 'weekly' : 'annual';
+    valid = releaseGateProductCadences({
+      project_id: '', store: '', environment: '', premium_mapped: 0,
+      metadata: row.metadata as string | Record<string, unknown> | null,
+      package_types: String(row.package_types || ''),
+    }).includes(cadence);
+  } else if (scenario === 'trial') valid = String(row.period_type || '').toLocaleLowerCase('en') === 'trial' || matches(/trial/);
+  else if (scenario === 'renewal') valid = matches(/renew|did_renew|invoice\.paid|payment_succeeded/);
+  else if (scenario === 'upgrade_downgrade') valid = matches(/upgrade|downgrade|product.?chang|plan.?chang|change.?renewal.?pref/);
+  else if (scenario === 'expiration') valid = matches(/expir/);
+  else if (scenario === 'refund') valid = matches(/refund|revoke|void/);
+  else if (scenario === 'checkout') valid = matches(/checkout|initial|purchase|invoice\.paid|payment_succeeded|active|trialing/);
+  else if (scenario === 'payment_failed') valid = matches(/payment.?fail|invoice.?fail|billing.?issue|past_due/);
+  else if (scenario === 'dispute') valid = matches(/dispute|inquiry|chargeback/);
+  else if (scenario === 'user_cancelled' && referenceType === 'paywall_event') valid = matches(/purchase_cancelled|closed/);
+  else if (scenario === 'pending' && referenceType === 'paywall_event') valid = matches(/purchase_started/);
+  else if (scenario === 'restore' && referenceType === 'paywall_event') valid = matches(/restore_succeeded/);
+  if (!valid) {
+    throw purchasesError('certification_reference_scenario_mismatch', 'The referenced record does not prove this certification scenario', 409);
+  }
+}
+
+function requireReferenceDuringRun(value: unknown, startedAt: string) {
+  const referenceTime = certificationTimestamp(value);
+  const runStart = certificationTimestamp(startedAt);
+  if (!Number.isFinite(referenceTime) || !Number.isFinite(runStart) || referenceTime < runStart - 600_000) {
+    throw purchasesError('certification_reference_outside_run', 'The referenced record must be observed during this certification run', 409);
+  }
+}
+
+function certificationTimestamp(value: unknown) {
+  const input = String(value || '').trim();
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(input)
+    ? `${input.replace(' ', 'T')}Z`
+    : input;
+  return new Date(normalized).getTime();
 }
 
 admin.get('/:projectId/features', async (c) => {

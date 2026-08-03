@@ -234,16 +234,49 @@ export type BillingReleaseGate = {
     label: string;
     description: string;
     required_evidence: Array<"build" | "device" | "reference">;
+    reference_types: BillingCertificationReferenceType[];
     status: "pending" | "passed" | "failed";
     evidence: Record<string, unknown>;
     evidence_valid: boolean;
-    missing_evidence: Array<"build" | "device" | "reference">;
+    missing_evidence: string[];
     certified: boolean;
     notes?: string | null;
     verified_by?: string | null;
     verified_at?: string | null;
   }>;
   blockers: Array<{ type: "prerequisite" | "check"; key: string; message: string }>;
+};
+
+export type BillingCertificationReferenceType =
+  | "billing_transaction"
+  | "billing_event"
+  | "paywall_event"
+  | "legacy_inventory"
+  | "test_run";
+
+export type BillingCertificationRun = {
+  id: string;
+  release_project_id: string;
+  target_project_id: string;
+  environment: "sandbox" | "production";
+  platform: "ios" | "android" | "web" | "cross_platform";
+  build_number: string;
+  app_version?: string | null;
+  sdk_version?: string | null;
+  device_model?: string | null;
+  os_version?: string | null;
+  status: "running" | "completed" | "failed" | "cancelled";
+  notes?: string | null;
+  started_at: string;
+  completed_at?: string | null;
+  observation_count: number;
+  passed_count: number;
+  failed_count: number;
+};
+
+export type BillingCertificationRuns = {
+  runs: BillingCertificationRun[];
+  observations: Array<Record<string, unknown>>;
 };
 
 export type BillingLegacyInventory = {
@@ -389,6 +422,33 @@ export const updateBillingReleaseGateCheck = async (
   checkKey: string,
   data: { status: "pending" | "passed" | "failed"; evidence?: Record<string, unknown>; notes?: string },
 ) => (await PATCH(purchasesV2Path(projectId, `/release-gate/checks/${encodeURIComponent(checkKey)}`), data)).data.data;
+
+export const getBillingCertificationRuns = async (projectId: string): Promise<BillingCertificationRuns> =>
+  (await GET(purchasesV2Path(projectId, "/certification-runs"))).data.data;
+
+export const createBillingCertificationRun = async (
+  projectId: string,
+  data: Record<string, unknown>,
+): Promise<BillingCertificationRun> =>
+  (await POST(purchasesV2Path(projectId, "/certification-runs"), data)).data.data;
+
+export const completeBillingCertificationRun = async (
+  projectId: string,
+  runId: string,
+  status: "completed" | "failed" | "cancelled",
+) => (await PATCH(purchasesV2Path(projectId, `/certification-runs/${runId}`), { status })).data.data;
+
+export const recordBillingCertificationObservation = async (
+  projectId: string,
+  runId: string,
+  data: {
+    check_key: string;
+    outcome: "passed" | "failed";
+    reference_type: BillingCertificationReferenceType;
+    reference_id: string;
+    notes?: string;
+  },
+) => (await POST(purchasesV2Path(projectId, `/certification-runs/${runId}/observations`), data)).data.data;
 
 export const getBillingLegacyInventory = async (projectId: string): Promise<BillingLegacyInventory> =>
   (await GET(purchasesV2Path(projectId, "/legacy/revenuecat/inventory"))).data.data;
