@@ -1,5 +1,6 @@
 import type { BillingEnvironment } from '../../api/src/lib/billing';
 import type { BillingEnv } from '../../api/src/types';
+export { billingSecretReadiness } from '../../api/src/lib/billing-worker-readiness';
 
 export type ReceiptRequest = {
   project_id: string;
@@ -47,27 +48,4 @@ export function parseReceiptRequest(value: unknown): ReceiptRequest {
 
 export function publicError(code: string, message: string, status = 422) {
   return Object.assign(new Error(message), { code, status });
-}
-
-type BillingSecretEnv = Pick<
-  BillingEnv,
-  | 'STORE_CREDENTIALS_ENCRYPTION_KEYS'
-  | 'STORE_CREDENTIALS_ENCRYPTION_KEY'
-  | 'PURCHASES_SIGNING_KEYSET'
-  | 'APPLE_ROOT_CERTIFICATES_B64'
-  | 'OPENGROW_ENTITLEMENT_WEBHOOK_SECRET'
-  | 'OPENGROW_VOCOSTAR_WEBHOOK_SECRET'
->;
-
-export function billingSecretReadiness(env: BillingSecretEnv) {
-  const missing: string[] = [];
-  if (!env.STORE_CREDENTIALS_ENCRYPTION_KEYS && !env.STORE_CREDENTIALS_ENCRYPTION_KEY) {
-    missing.push('STORE_CREDENTIALS_ENCRYPTION_KEYS');
-  }
-  if (!env.PURCHASES_SIGNING_KEYSET) missing.push('PURCHASES_SIGNING_KEYSET');
-  if (!env.APPLE_ROOT_CERTIFICATES_B64) missing.push('APPLE_ROOT_CERTIFICATES_B64');
-  if (!env.OPENGROW_ENTITLEMENT_WEBHOOK_SECRET && !env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET) {
-    missing.push('OPENGROW_ENTITLEMENT_WEBHOOK_SECRET');
-  }
-  return { ready: missing.length === 0, missing };
 }

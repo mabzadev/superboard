@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { BillingEnv } from '../../api/src/types';
+import { billingWorkerReadiness } from '../../api/src/lib/billing-worker-readiness';
 import { applyVerifiedPurchase } from '../../api/src/lib/billing';
 import { dispatchBillingJob, isBillingQueueJob } from '../../api/src/lib/billing-dispatch';
 import { purchasesSigningJwks, signedCustomerInfo } from '../../api/src/lib/billing-identity';
@@ -10,9 +11,8 @@ import {
   verifyAppleTransaction,
   verifyGooglePurchase,
 } from '../../api/src/lib/store-verification';
-import { billingSecretReadiness, parseReceiptRequest, publicError } from './contracts';
+import { parseReceiptRequest, publicError } from './contracts';
 import { readTextLimited } from '../../api/src/lib/http-limits';
-import { decryptCredential } from '../../api/src/lib/secrets';
 import { encryptCredential } from '../../api/src/lib/secrets';
 import { createWebCheckoutSession, createWebPortalSession, redeemWebPurchase } from '../../api/src/lib/web-billing';
 import purchasesAdminRoutes from '../../api/src/routes/purchases-admin';
@@ -22,38 +22,7 @@ type Bindings = Env & BillingEnv;
 const app = new Hono<{ Bindings: Bindings }>();
 
 app.get('/internal/v1/health', async (c) => {
-  const secrets = billingSecretReadiness(c.env);
-  const [stores, credentialCopies] = await Promise.all([
-    c.env.DB.prepare(`
-    SELECT provider, environment, COUNT(*) AS connections,
-      SUM(CASE WHEN billing_configuration_encrypted IS NOT NULL THEN 1 ELSE 0 END) AS configured
-    FROM billing_store_connections
-    WHERE provider IN ('apple', 'google', 'stripe')
-    GROUP BY provider, environment ORDER BY provider, environment
-    `).all<Record<string, unknown>>(),
-    c.env.DB.prepare(`
-      SELECT
-        (SELECT COUNT(*) FROM ios_server_api_keys WHERE encrypted_key IS NOT NULL) AS apple_source,
-        (SELECT COUNT(*) FROM ios_server_api_keys WHERE billing_encrypted_key IS NOT NULL) AS apple_billing,
-        (SELECT COUNT(*) FROM android_server_api_keys WHERE encrypted_key IS NOT NULL) AS google_source,
-        (SELECT COUNT(*) FROM android_server_api_keys WHERE billing_encrypted_key IS NOT NULL) AS google_billing
-    `).first<Record<string, number>>(),
-  ]);
-  const copiesReady = Boolean(
-    credentialCopies
-    && credentialCopies.apple_source > 0
-    && credentialCopies.google_source > 0
-    && credentialCopies.apple_source === credentialCopies.apple_billing
-    && credentialCopies.google_source === credentialCopies.google_billing
-  );
-  const decryptionReady = copiesReady ? await validateCredentialDecryption(c.env) : false;
-  return c.json({
-    status: 'ok', service: 'opengrow-billing', environment: c.env.ENVIRONMENT,
-    execution: 'private-service-binding', ready_for_traffic: secrets.ready && copiesReady && decryptionReady,
-    missing_secrets: secrets.missing, credential_copies_ready: copiesReady,
-    credential_decryption_ready: decryptionReady,
-    credential_copies: credentialCopies, store_connections: stores.results || [],
-  });
+  return c.json(await billingWorkerReadiness(c.env));
 });
 
 app.get('/internal/v1/jwks', (c) => {
@@ -191,32 +160,6 @@ async function boundedJson(request: Request): Promise<unknown> {
   catch { throw publicError('request_too_large', 'Request body is limited to 1 MB', 413); }
   try { return JSON.parse(text || '{}'); }
   catch { throw publicError('invalid_json', 'Request body must be valid JSON', 400); }
-}
-
-async function validateCredentialDecryption(env: Bindings): Promise<boolean> {
-  try {
-    const [apple, google] = await Promise.all([
-      env.DB.prepare('SELECT billing_encrypted_key FROM ios_server_api_keys WHERE billing_encrypted_key IS NOT NULL LIMIT 1')
-        .first<{ billing_encrypted_key: string }>(),
-      env.DB.prepare('SELECT billing_encrypted_key FROM android_server_api_keys WHERE billing_encrypted_key IS NOT NULL LIMIT 1')
-        .first<{ billing_encrypted_key: string }>(),
-    ]);
-    if (!apple || !google) return false;
-    const [appleKey, googleJson] = await Promise.all([
-      decryptCredential(env, apple.billing_encrypted_key),
-      decryptCredential(env, google.billing_encrypted_key),
-    ]);
-    const googleKey = JSON.parse(googleJson) as Record<string, unknown>;
-    return appleKey.includes('BEGIN PRIVATE KEY')
-      && typeof googleKey.client_email === 'string'
-      && String(googleKey.private_key || '').includes('BEGIN PRIVATE KEY');
-  } catch (error) {
-    console.error(JSON.stringify({
-      event: 'billing_credential_readiness_failed',
-      error: error instanceof Error ? error.message : String(error),
-    }));
-    return false;
-  }
 }
 
 export default {

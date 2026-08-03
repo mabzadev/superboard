@@ -43,6 +43,20 @@ export type ReleaseGatePrerequisite = {
   detail: string;
 };
 
+export type BillingOperationalState = {
+  dedicated_execution: boolean;
+  worker_ready: boolean;
+  canonical_failed: number;
+  canonical_stale_pending: number;
+  provider_failed: number;
+  provider_stale_received: number;
+  entitlement_delivery_failed: number;
+  entitlement_delivery_stale_pending: number;
+  refund_action_failed: number;
+  refund_action_stale: number;
+  missed_refund_deadlines: number;
+};
+
 export type ReleaseGateCatalogProduct = {
   project_id: string;
   store: string;
@@ -140,6 +154,57 @@ export function validateReleaseGateEvidence(definition: ReleaseGateCheckDefiniti
     return typeof value !== 'string' || !value.trim() || value.trim().length > 500;
   });
   return { valid: missing.length === 0, missing };
+}
+
+export function billingOperationalPrerequisites(state: BillingOperationalState): ReleaseGatePrerequisite[] {
+  const prerequisite = (key: string, label: string, passed: boolean, success: string, failure: string): ReleaseGatePrerequisite => ({
+    key, label, passed, detail: passed ? success : failure,
+  });
+  const financialFailures = state.canonical_failed + state.provider_failed;
+  const staleFinancialWork = state.canonical_stale_pending + state.provider_stale_received;
+  const projectionFailures = state.entitlement_delivery_failed;
+  const staleProjections = state.entitlement_delivery_stale_pending;
+  const refundFailures = state.refund_action_failed;
+  const staleRefundActions = state.refund_action_stale;
+  return [
+    prerequisite(
+      'dedicated_billing_execution',
+      'Dedicated Billing execution',
+      state.dedicated_execution && state.worker_ready,
+      'Purchases are routed through the ready private Billing Worker.',
+      !state.dedicated_execution
+        ? 'Route Purchases through the private Billing Worker before publication.'
+        : 'Resolve the Billing Worker secret or credential readiness failure before publication.',
+    ),
+    prerequisite(
+      'financial_event_pipeline',
+      'Financial event pipeline',
+      financialFailures === 0 && staleFinancialWork === 0,
+      'No failed or stale provider event is waiting for processing.',
+      `Resolve ${financialFailures} failed and ${staleFinancialWork} stale financial events.`,
+    ),
+    prerequisite(
+      'entitlement_projection_pipeline',
+      'Entitlement projection pipeline',
+      projectionFailures === 0 && staleProjections === 0,
+      'Every entitlement projection is delivered or within its active retry window.',
+      `Resolve ${projectionFailures} failed and ${staleProjections} stale entitlement projections.`,
+    ),
+    prerequisite(
+      'refund_action_pipeline',
+      'Refund action pipeline',
+      refundFailures === 0 && staleRefundActions === 0,
+      'No failed or stale approved refund action is waiting for delivery.',
+      `Resolve ${refundFailures} failed and ${staleRefundActions} stale refund actions.`,
+    ),
+    prerequisite(
+      'refund_deadlines',
+      'Refund deadlines',
+      state.missed_refund_deadlines === 0,
+      'No refund response deadline is missed.',
+      `Resolve ${state.missed_refund_deadlines} missed refund response deadlines.`,
+    ),
+  ];
 }
 
 export function buildReleaseGate(

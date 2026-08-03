@@ -9,6 +9,7 @@ import { signedCustomerInfo } from '../lib/billing-identity';
 import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
 import {
+  billingOperationalPrerequisites,
   buildReleaseGate,
   certificationRunCompatibility,
   nativeCatalogCoverage,
@@ -22,6 +23,7 @@ import {
   type StoredReleaseGateCheck,
 } from '../lib/purchases-release-gate';
 import { callBillingServiceBinding } from '../lib/billing-service';
+import { billingWorkerReadiness, type BillingWorkerReadiness } from '../lib/billing-worker-readiness';
 import { testLegacySourceConnection } from '../lib/legacy-subscription-inventory';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -31,6 +33,26 @@ admin.use('*', authMiddleware);
 const PROVIDERS = ['apple', 'google', 'stripe'] as const;
 const ENVIRONMENTS = ['sandbox', 'production'] as const;
 const FEATURE_FLAGS = ['purchases_core', 'product_catalog', 'paywalls', 'growth', 'web_billing', 'virtual_currencies', 'scheduled_exports'] as const;
+const DEFAULT_RELEASE_STALE_MINUTES = 15;
+
+function releaseGateStaleMinutes(value: string | undefined) {
+  const parsed = Number(value || DEFAULT_RELEASE_STALE_MINUTES);
+  return Number.isInteger(parsed) && parsed >= 5 && parsed <= 120 ? parsed : DEFAULT_RELEASE_STALE_MINUTES;
+}
+
+async function currentBillingWorkerReadiness(env: Env): Promise<BillingWorkerReadiness | null> {
+  try {
+    if (env.CREDENTIAL_KEY_SCOPE === 'billing') return await billingWorkerReadiness(env);
+    if (!env.BILLING) return null;
+    return await callBillingServiceBinding<BillingWorkerReadiness>(env, '/internal/v1/health');
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'billing_release_readiness_failed',
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return null;
+  }
+}
 
 async function jsonBody(c: any): Promise<Record<string, any>> {
   return c.req.json().catch(() => ({}));
@@ -244,7 +266,22 @@ admin.get('/:projectId/release-gate', async (c) => {
     const scope = await releaseGateScope(c, project);
     const scopedProjectIds = [scope.testProjectId, scope.productionProjectId].filter(Boolean);
     const projectPlaceholders = scopedProjectIds.map(() => '?').join(',');
-    const [checks, connections, catalog, entitlement, offering, legacyInventory, certificationObservations] = await Promise.all([
+    const staleMinutes = releaseGateStaleMinutes(c.env.BILLING_RELEASE_STALE_MINUTES);
+    const [
+      checks,
+      connections,
+      catalog,
+      entitlement,
+      offering,
+      legacyInventory,
+      certificationObservations,
+      canonicalOperations,
+      providerOperations,
+      entitlementDeliveries,
+      refundActions,
+      refundDeadlines,
+      workerReadiness,
+    ] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
       c.env.DB.prepare(`
         SELECT project_id, provider, environment, status, last_tested_at, billing_configuration_encrypted FROM billing_store_connections
@@ -292,6 +329,44 @@ admin.get('/:projectId/release-gate', async (c) => {
           AND json_extract(gc.evidence_json, '$.observation_id') = o.id
         WHERE r.release_project_id = ?
       `).bind(scope.releaseProjectId).all<ReleaseGateCertificationObservation>(),
+      c.env.DB.prepare(`
+        SELECT
+          SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN status = 'pending' AND datetime(received_at) <= datetime('now', '-' || ? || ' minutes') THEN 1 ELSE 0 END) AS stale_pending
+        FROM billing_events
+        WHERE project_id IN (${projectPlaceholders || "''"})
+      `).bind(staleMinutes, ...scopedProjectIds).first<Record<string, number>>(),
+      c.env.DB.prepare(`
+        SELECT
+          SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN status = 'received' AND datetime(received_at) <= datetime('now', '-' || ? || ' minutes') THEN 1 ELSE 0 END) AS stale_received
+        FROM billing_webhook_events
+        WHERE project_id IN (${projectPlaceholders || "''"})
+      `).bind(staleMinutes, ...scopedProjectIds).first<Record<string, number>>(),
+      c.env.DB.prepare(`
+        SELECT
+          SUM(CASE WHEN d.status = 'failed' THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN d.status = 'pending' AND datetime(d.created_at) <= datetime('now', '-' || ? || ' minutes') THEN 1 ELSE 0 END) AS stale_pending
+        FROM billing_webhook_deliveries d
+        JOIN billing_webhook_endpoints e ON e.id = d.endpoint_id
+        WHERE e.project_id IN (${projectPlaceholders || "''"})
+          AND d.event_type = 'customer.entitlement.changed'
+      `).bind(staleMinutes, ...scopedProjectIds).first<Record<string, number>>(),
+      c.env.DB.prepare(`
+        SELECT
+          SUM(CASE WHEN a.status = 'failed' THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN a.status IN ('approved', 'queued') AND datetime(a.updated_at) <= datetime('now', '-' || ? || ' minutes') THEN 1 ELSE 0 END) AS stale
+        FROM billing_refund_provider_actions a
+        JOIN billing_refund_cases rc ON rc.id = a.case_id
+        WHERE rc.project_id IN (${projectPlaceholders || "''"})
+      `).bind(staleMinutes, ...scopedProjectIds).first<Record<string, number>>(),
+      c.env.DB.prepare(`
+        SELECT COUNT(*) AS missed
+        FROM billing_refund_deadlines d
+        JOIN billing_refund_cases rc ON rc.id = d.case_id
+        WHERE rc.project_id IN (${projectPlaceholders || "''"}) AND d.status = 'missed'
+      `).bind(...scopedProjectIds).first<Record<string, number>>(),
+      currentBillingWorkerReadiness(c.env),
     ]);
     const verifiedCertificationObservations = await Promise.all((certificationObservations.results || []).map(async (row) => ({
       ...row,
@@ -334,6 +409,19 @@ admin.get('/:projectId/release-gate', async (c) => {
       key, label, passed, detail: passed ? success : failure,
     });
     const prerequisites: ReleaseGatePrerequisite[] = [
+      ...billingOperationalPrerequisites({
+        dedicated_execution: c.env.CREDENTIAL_KEY_SCOPE === 'billing' || c.env.BILLING_EXECUTION_MODE === 'service',
+        worker_ready: workerReadiness?.ready_for_traffic === true,
+        canonical_failed: Number(canonicalOperations?.failed || 0),
+        canonical_stale_pending: Number(canonicalOperations?.stale_pending || 0),
+        provider_failed: Number(providerOperations?.failed || 0),
+        provider_stale_received: Number(providerOperations?.stale_received || 0),
+        entitlement_delivery_failed: Number(entitlementDeliveries?.failed || 0),
+        entitlement_delivery_stale_pending: Number(entitlementDeliveries?.stale_pending || 0),
+        refund_action_failed: Number(refundActions?.failed || 0),
+        refund_action_stale: Number(refundActions?.stale || 0),
+        missed_refund_deadlines: Number(refundDeadlines?.missed || 0),
+      }),
       prerequisite('test_project', 'Test project', Boolean(scope.testProjectId), 'A dedicated test project is available.', 'Create the paired test project.'),
       prerequisite('production_project', 'Production project', Boolean(scope.productionProjectId), 'A dedicated production project is available.', 'Create the paired production project.'),
       ...(['apple', 'google', 'stripe'] as const).flatMap((provider) => [
@@ -360,7 +448,14 @@ admin.get('/:projectId/release-gate', async (c) => {
       prerequisite('production_stripe_packages', 'Stripe production packages', stripeProductsReady(scope.productionProjectId, 'production', 'offering_mapped'), 'Every Stripe production subscription is exposed by the default offering.', 'Add every Stripe production subscription to a package in the default offering.'),
       prerequisite('production_legacy_inventory', 'Production legacy subscription inventory', legacyInventoryReady, legacyInventoryDetail, legacyInventoryDetail),
     ];
-    return c.json({ data: { environments: ['sandbox', 'production'], scope, ...buildReleaseGate(checks.results || [], prerequisites, verifiedCertificationObservations) } });
+    return c.json({
+      data: {
+        environments: ['sandbox', 'production'],
+        scope,
+        operational_policy: { stale_after_minutes: staleMinutes, billing_worker: workerReadiness },
+        ...buildReleaseGate(checks.results || [], prerequisites, verifiedCertificationObservations),
+      },
+    });
   } catch (error) { return replyError(c, error); }
 });
 
