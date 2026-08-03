@@ -3,6 +3,10 @@ import { importPKCS8, importX509, jwtVerify, SignJWT } from 'jose';
 import { Env } from '../types';
 import { getOrCreateProject } from '../lib/db';
 import { applyVerifiedPurchase, type BillingStatus, type VerifiedPurchase } from '../lib/billing';
+import {
+  billingServiceEnabled,
+  ingestProviderEventWithBillingAuthority,
+} from '../lib/billing-service';
 
 const iap = new Hono<{ Bindings: Env }>();
 
@@ -284,13 +288,36 @@ async function handleApple(c: any, test: boolean) {
   if (typeof body.signedPayload === 'string' && body.signedPayload && c.env.IAP_ALLOW_UNSIGNED_FIXTURES !== 'true') {
     const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.signedPayload)));
     const externalEventId = Array.from(digest).map((value) => value.toString(16).padStart(2, '0')).join('');
+    const environment = test ? 'sandbox' as const : 'production' as const;
+    if (billingServiceEnabled(c.env)) {
+      try {
+        const result = await ingestProviderEventWithBillingAuthority(c.env, {
+          projectId: String(project.id),
+          store: 'apple',
+          environment,
+          externalEventId,
+          payload: JSON.stringify(body),
+          job: {
+            type: 'billing.apple.notification',
+            projectId: String(project.id),
+            signedPayload: body.signedPayload,
+            environment,
+          },
+        });
+        return c.json({
+          message: result.processed ? 'Apple IAP notification already processed' : 'Apple IAP notification accepted',
+          duplicate: result.duplicate,
+        }, 202);
+      } catch (error) {
+        return providerIngressError(c, error, 'Apple notification could not be accepted');
+      }
+    }
     const eventId = crypto.randomUUID();
     const inserted = await c.env.DB.prepare(`
       INSERT OR IGNORE INTO billing_webhook_events (
         id, project_id, store, environment, external_event_id, payload, status
       ) VALUES (?, ?, 'apple', ?, ?, ?, 'received')
     `).bind(eventId, project.id, test ? 'sandbox' : 'production', externalEventId, JSON.stringify(body)).run();
-    const environment = test ? 'sandbox' as const : 'production' as const;
     const persisted = await c.env.DB.prepare(`
       SELECT id, status FROM billing_webhook_events
       WHERE project_id = ? AND store = 'apple' AND environment = ? AND external_event_id = ? LIMIT 1
@@ -367,6 +394,41 @@ async function handleGoogle(c: any) {
   const pubsubMessageId = body.message?.messageId || body.message?.message_id;
   let billingWebhookEventId: string | null = null;
   if (pubsubMessageId) {
+    let productType: 'subscription' | 'non_consumable' | 'consumable' = purchaseType === 'subscription' ? 'subscription' : 'non_consumable';
+    if (purchaseType !== 'subscription' && productId) {
+      const configured = await c.env.DB.prepare(`
+        SELECT product_type FROM billing_products
+        WHERE project_id = ? AND store = 'google' AND store_product_id = ? LIMIT 1
+      `).bind(project.id, productId).first() as { product_type: 'non_consumable' | 'consumable' } | null;
+      if (configured?.product_type) productType = configured.product_type;
+    }
+    if (billingServiceEnabled(c.env)) {
+      try {
+        const result = await ingestProviderEventWithBillingAuthority(c.env, {
+          projectId: String(project.id),
+          store: 'google',
+          environment: 'production',
+          externalEventId: String(pubsubMessageId),
+          eventType: notificationType,
+          payload: JSON.stringify(body),
+          job: {
+            type: 'billing.google.notification',
+            projectId: String(project.id),
+            purchaseToken: String(notification.purchaseToken || data.purchaseToken || ''),
+            productId: String(productId || ''),
+            productType,
+            eventType: notificationType,
+            eventOccurredAt: msDate(data.eventTimeMillis) || new Date().toISOString(),
+          },
+        });
+        return c.json({
+          message: result.processed ? 'Google RTDN already processed' : 'Google RTDN accepted',
+          duplicate: result.duplicate,
+        }, result.processed ? 200 : 202);
+      } catch (error) {
+        return providerIngressError(c, error, 'Google RTDN could not be accepted');
+      }
+    }
     billingWebhookEventId = crypto.randomUUID();
     const inserted = await c.env.DB.prepare(`
       INSERT OR IGNORE INTO billing_webhook_events (
@@ -381,14 +443,6 @@ async function handleGoogle(c: any) {
     if (persisted.status === 'processed') return c.json({ message: 'Google RTDN already processed', duplicate: true });
     billingWebhookEventId = persisted.id;
     if (c.env.BILLING_QUEUE) {
-      let productType: 'subscription' | 'non_consumable' | 'consumable' = purchaseType === 'subscription' ? 'subscription' : 'non_consumable';
-      if (purchaseType !== 'subscription' && productId) {
-        const configured = await c.env.DB.prepare(`
-          SELECT product_type FROM billing_products
-          WHERE project_id = ? AND store = 'google' AND store_product_id = ? LIMIT 1
-        `).bind(project.id, productId).first() as { product_type: 'non_consumable' | 'consumable' } | null;
-        if (configured?.product_type) productType = configured.product_type;
-      }
       try {
         await c.env.BILLING_QUEUE.send({
           type: 'billing.google.notification',
@@ -481,6 +535,16 @@ async function handleGoogle(c: any) {
     `).bind(notificationType, billingWebhookEventId).run();
   }
   return c.json({ message: 'Google IAP webhook processed' });
+}
+
+function providerIngressError(c: any, error: unknown, fallback: string) {
+  const tagged = error as { code?: string; status?: number; retryable?: boolean; message?: string };
+  const status = Number(tagged.status || 503);
+  return c.json({
+    code: tagged.code || 'provider_ingress_failed',
+    error: tagged.message || fallback,
+    retryable: tagged.retryable === true || status >= 500,
+  }, status);
 }
 
 iap.post('/apple/production/:path', (c) => handleApple(c, false));

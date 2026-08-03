@@ -10,6 +10,7 @@ import {
   verifiedAppUserId,
 } from '../../api/src/lib/billing-identity';
 import { restoreVerifiedPurchases } from '../../api/src/lib/billing-restore';
+import { ingestBillingProviderEvent, type BillingProviderIngressRequest } from '../../api/src/lib/billing-provider-ingress';
 import { reconcileBillingState } from '../../api/src/lib/billing-jobs';
 import {
   fetchStoreCatalog,
@@ -40,6 +41,23 @@ app.post('/internal/v1/jobs', async (c) => {
   const job: unknown = await boundedJson(c.req.raw);
   if (!isBillingQueueJob(job)) throw publicError('billing_job_invalid', 'A supported billing job is required');
   return c.json({ data: await dispatchBillingJob(c.env, job) });
+});
+
+app.post('/internal/v1/provider-events/ingest', async (c) => {
+  const body = await boundedRecord(c.req.raw);
+  const job = body.job && typeof body.job === 'object' && !Array.isArray(body.job)
+    ? body.job as Record<string, unknown>
+    : {};
+  const request = {
+    projectId: requiredText(body.project_id, 'project_id'),
+    store: requiredText(body.store, 'store'),
+    environment: requiredText(body.environment, 'environment'),
+    externalEventId: requiredText(body.external_event_id, 'external_event_id'),
+    eventType: optionalText(body.event_type) || undefined,
+    payload: requiredText(body.payload, 'payload', 1_048_576),
+    job,
+  } as BillingProviderIngressRequest;
+  return c.json({ data: await ingestBillingProviderEvent(c.env, request) });
 });
 
 app.post('/internal/v1/receipts/verify', async (c) => {
@@ -214,8 +232,8 @@ app.onError((error, c) => {
 
 async function boundedJson(request: Request): Promise<unknown> {
   let text: string;
-  try { text = await readTextLimited(request, 1_048_576, 'Request body is limited to 1 MB'); }
-  catch { throw publicError('request_too_large', 'Request body is limited to 1 MB', 413); }
+  try { text = await readTextLimited(request, 2_359_296, 'Private request body is limited to 2.25 MB'); }
+  catch { throw publicError('request_too_large', 'Private request body is limited to 2.25 MB', 413); }
   try { return JSON.parse(text || '{}'); }
   catch { throw publicError('invalid_json', 'Request body must be valid JSON', 400); }
 }
@@ -228,14 +246,17 @@ async function boundedRecord(request: Request): Promise<Record<string, unknown>>
   return value as Record<string, unknown>;
 }
 
-function requiredText(value: unknown, field: string) {
-  const result = optionalText(value);
+function requiredText(value: unknown, field: string, maxLength = 4096) {
+  const result = optionalText(value, maxLength);
   if (!result) throw publicError(`${field}_required`, `${field} is required`);
   return result;
 }
 
-function optionalText(value: unknown) {
-  return typeof value === 'string' ? value.trim().slice(0, 4096) : '';
+function optionalText(value: unknown, maxLength = 4096) {
+  if (typeof value !== 'string') return '';
+  const result = value.trim();
+  if (result.length > maxLength) throw publicError('text_value_too_large', `Text value is limited to ${maxLength} characters`, 413);
+  return result;
 }
 
 export default {
