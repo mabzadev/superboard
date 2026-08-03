@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { Env } from '../types';
 import { hashPassword, signToken, verifyToken } from '../lib/crypto';
 import { getOrCreateInstanceForUser } from '../lib/db';
+import { isFullAccess, isRegistrationAllowed, recordSuccessfulRegistration } from '../lib/deployment';
 
 const sso = new Hono<{ Bindings: Env }>();
 const STATE_TTL_SECONDS = 10 * 60;
@@ -170,6 +171,9 @@ async function oauthApplicationId(db: D1Database) {
 
 async function findOrCreateUser(c: any, provider: string, profile: { uid: string; email: string; name: string | null }) {
   if (!profile.email || !profile.uid) throw new Error('SSO provider did not return email or uid');
+  if (!await isRegistrationAllowed(c.env, profile.email)) {
+    throw new Error('This email is not authorized for this OpenGrow deployment.');
+  }
   const existing = await c.env.DB.prepare('SELECT id, provider FROM users WHERE email = ? LIMIT 1').bind(profile.email).first() as any;
   if (existing) {
     if (existing.provider && existing.provider !== provider) {
@@ -187,11 +191,12 @@ async function findOrCreateUser(c: any, provider: string, profile: { uid: string
     RETURNING id
   `).bind(profile.email, placeholder, placeholder, profile.name, provider, profile.uid).first() as { id: number } | null;
   if (!created) throw new Error('Unable to create SSO user');
+  await recordSuccessfulRegistration(c.env, profile.email);
   return created.id;
 }
 
 async function issueDashboardTokens(c: any, userId: number) {
-  const instanceId = await getOrCreateInstanceForUser(c.env.DB, userId, 'sso');
+  const instanceId = await getOrCreateInstanceForUser(c.env.DB, userId, 'sso', isFullAccess(c.env));
   const appId = await oauthApplicationId(c.env.DB);
   const token = await signToken({ sub: userId, instanceId, type: 'access', sso: true }, c.env, '2h');
   const refreshToken = await signToken({ sub: userId, instanceId, type: 'refresh', sso: true }, c.env, '7d');

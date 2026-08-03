@@ -47,6 +47,34 @@ Dashboard Worker:
 Use a Cloudflare API token restricted to the target account. Runtime values belong
 in Worker secrets; build variables are not runtime secrets.
 
+## Private full-access registration
+
+Each deployment declares its access policy in `deploy/targets/<target>.json`.
+Private deployments use `accessMode: "full"`, `registrationMode: "allowlist"`
+and `ssoEnabled: false`. The allowlist realm is derived from the target and
+environment (for example `vocostar:production`), so two deployments remain
+isolated even if they accidentally share a D1 database.
+
+Manage exact email addresses directly against the target D1 with Cloudflare
+authentication. No administrator key or email list is stored in the dashboard:
+
+```bash
+npm run allowlist -- add --target vocostar --environment production \
+  --email user@example.com
+npm run allowlist -- revoke --target vocostar --environment production \
+  --email user@example.com
+npm run allowlist -- list --target vocostar --environment production
+```
+
+API deployment applies additive migrations and runs `bootstrap` automatically.
+That action authorizes existing users in the deployment realm and enables revenue
+collection for every instance in full-access mode. It is idempotent and can also
+be run explicitly:
+
+```bash
+npm run allowlist -- bootstrap --target vocostar --environment production
+```
+
 ## Vocostar production deployment
 
 Vocostar is production-only. Its canonical Workers are `opengrow-api` and

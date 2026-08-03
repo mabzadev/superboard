@@ -38,6 +38,10 @@ if (service === "dashboard") {
     NEXT_PUBLIC_CLIENT_ID: target.oauth.dashboardClientId,
     NEXT_PUBLIC_APP_URL: appUrl,
     NEXT_PUBLIC_ENV: environment,
+    NEXT_PUBLIC_OPENGROW_ACCESS_MODE: target.accessMode,
+    NEXT_PUBLIC_OPENGROW_EE: String(target.accessMode === "full"),
+    NEXT_PUBLIC_REGISTRATION_MODE: target.registrationMode,
+    NEXT_PUBLIC_SSO_ENABLED: String(target.ssoEnabled),
   };
   run(
     "npx",
@@ -61,6 +65,18 @@ if (service === "api" && !args["skip-migrations"]) {
     ["wrangler", "d1", "migrations", "apply", "DB", "--remote", "--config", configPath],
     cloudflareEnv,
   );
+  if (target.registrationMode === "allowlist") {
+    run(
+      "node",
+      [
+        resolve(root, "scripts", "opengrow-allowlist.mjs"),
+        "bootstrap",
+        "--target", targetName,
+        "--environment", environment,
+      ],
+      cloudflareEnv,
+    );
+  }
 }
 
 if (service === "dashboard") {

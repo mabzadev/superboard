@@ -210,7 +210,7 @@ const SettingsPage = () => {
     if (isEnterprisePlan) {
       return subscription?.total_maus ?? 0;
     } else {
-      return mau.total_available;
+      return mau.total_available ?? Number.POSITIVE_INFINITY;
     }
   };
 

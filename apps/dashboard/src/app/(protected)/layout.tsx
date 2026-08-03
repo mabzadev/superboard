@@ -8,7 +8,6 @@ import React, { Suspense } from "react";
 import PageSkeleton from "@/components/common/PageSkeleton";
 import CreateCampaignGlobalDialogProvider from "@/context/useCreateCampaignDialogContext";
 import LinkDialogProvider from "@/context/useLinkDialogContext";
-import { ChatwootProvider } from "@/context/useChatwoot";
 export default function DashboardLayout({
   children,
 }: {
@@ -25,20 +24,18 @@ export default function DashboardLayout({
       <ProjectSelectionProvider>
         <LinkDialogProvider>
           <CreateCampaignGlobalDialogProvider>
-            <ChatwootProvider>
-              <ClientLayout>
-                <SidebarProvider>
-                  <AppSidebar />
-                  <SidebarInset>
-                    <main id="main-content">
-                      <Suspense fallback={<PageSkeleton />}>
-                        {children}
-                      </Suspense>
-                    </main>
-                  </SidebarInset>
-                </SidebarProvider>
-              </ClientLayout>
-            </ChatwootProvider>
+            <ClientLayout>
+              <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                  <main id="main-content">
+                    <Suspense fallback={<PageSkeleton />}>
+                      {children}
+                    </Suspense>
+                  </main>
+                </SidebarInset>
+              </SidebarProvider>
+            </ClientLayout>
           </CreateCampaignGlobalDialogProvider>
         </LinkDialogProvider>
       </ProjectSelectionProvider>

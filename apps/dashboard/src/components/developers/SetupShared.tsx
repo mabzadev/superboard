@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Attaches a native DOM click listener to bypass React's synthetic event dispatch,
- * which can crash with SecurityError when cross-origin iframes (GTM, Chatwoot) are on the page.
+ * which can crash with SecurityError when cross-origin analytics iframes are on the page.
  * Returns a callback ref to attach to the button element.
  */
 function useNativeClick(handler: (() => void) | undefined) {
@@ -316,7 +316,7 @@ export function StepNavigation({
   const isLastStep = currentStep === totalSteps - 1;
 
   // Native click listeners bypass React's synthetic event dispatch, which crashes
-  // with SecurityError when cross-origin iframes (GTM, Chatwoot) are on the page.
+  // with SecurityError when cross-origin analytics iframes are on the page.
   const backRef = useNativeClick(onBack);
   const continueRef = useNativeClick(onContinue);
   const saveAndContinueRef = useNativeClick(onSaveAndContinue);

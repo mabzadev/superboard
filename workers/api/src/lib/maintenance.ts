@@ -1,5 +1,6 @@
 import { Env } from '../types';
 import { sendMail } from './mail';
+import { isFullAccess } from './deployment';
 
 const EVENT_METRICS = {
   views: "SUM(CASE WHEN event = 'view' THEN 1 ELSE 0 END)",
@@ -180,6 +181,21 @@ export async function updateQuotaStates(env: Env): Promise<{
   const instances = await env.DB.prepare('SELECT id, uri_scheme, quota_exceeded, last_quota_warning_sent_at, last_quota_exceeded_sent_at FROM instances')
     .all<any>();
   const result = { checked: 0, exceeded: 0, warnings: 0, emailsSent: 0, emailsSkipped: 0 };
+
+  if (isFullAccess(env)) {
+    await env.DB.prepare(`
+      UPDATE instances
+      SET quota_exceeded = 0,
+          last_quota_warning_sent_at = NULL,
+          last_quota_exceeded_sent_at = NULL,
+          updated_at = datetime('now')
+      WHERE COALESCE(quota_exceeded, 0) != 0
+         OR last_quota_warning_sent_at IS NOT NULL
+         OR last_quota_exceeded_sent_at IS NOT NULL
+    `).run();
+    result.checked = instances.results?.length || 0;
+    return result;
+  }
 
   for (const instance of instances.results || []) {
     result.checked += 1;

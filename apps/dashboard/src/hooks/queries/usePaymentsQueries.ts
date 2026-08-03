@@ -37,7 +37,8 @@ export function useSubscriptionQuery(instanceId: string | undefined) {
 
 interface MAUResult {
   current_quantity: number;
-  total_available: number;
+  total_available: number | null;
+  unlimited?: boolean;
 }
 
 export function useMauQuery(instanceId: string | undefined) {

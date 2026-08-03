@@ -3,6 +3,7 @@ import { Env } from '../types';
 import { signToken, verifyToken, verifyPassword, verifyTotpCode } from '../lib/crypto';
 import { getOrCreateInstanceForUser } from '../lib/db';
 import { getAuthContext } from '../lib/auth';
+import { isFullAccess } from '../lib/deployment';
 
 
 const oauth = new Hono<{ Bindings: Env }>();
@@ -68,7 +69,12 @@ oauth.post('/token', async (c) => {
       }
     }
 
-    const instanceId = await getOrCreateInstanceForUser(c.env.DB, user.id, user.email.split('@')[0]);
+    const instanceId = await getOrCreateInstanceForUser(
+      c.env.DB,
+      user.id,
+      user.email.split('@')[0],
+      isFullAccess(c.env),
+    );
 
     const accessToken = await signToken({ sub: user.id, instanceId, type: 'access' }, c.env, '2h');
     const refreshToken = await signToken({ sub: user.id, instanceId, type: 'refresh' }, c.env, '7d');

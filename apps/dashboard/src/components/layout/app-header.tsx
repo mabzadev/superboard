@@ -50,6 +50,7 @@ export default function AppHeader({
   const subscriptionQuery = useSubscriptionQuery(selectedInstance?.id);
   const subscription = subscriptionQuery.data?.subscription ?? null;
   const isEnterprise = subscriptionQuery.data?.isEnterprise ?? false;
+  const isFullAccess = subscription?.type === "full";
   const planLoaded =
     !subscriptionQuery.isLoading && subscriptionQuery.isFetched;
 
@@ -92,12 +93,15 @@ export default function AppHeader({
     if (isEnterprise) {
       return subscription?.total_maus ?? 0;
     } else {
-      return mau.total_available;
+      return mau.total_available ?? Number.POSITIVE_INFINITY;
     }
   };
 
   const displayLimitReach = () => {
     if (!planLoaded) {
+      return;
+    }
+    if (isFullAccess) {
       return;
     }
     // Paid Stripe subscribers — don't show the banner (Stripe handles billing)

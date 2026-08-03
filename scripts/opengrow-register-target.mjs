@@ -63,6 +63,9 @@ function newManifest() {
     target,
     accountId: args["account-id"],
     workersDevSubdomain: args["workers-dev-subdomain"],
+    accessMode: "full",
+    registrationMode: "allowlist",
+    ssoEnabled: false,
     domains: {
       shortlinks: args["shortlinks-domain"],
       sdk: args["sdk-domain"],
