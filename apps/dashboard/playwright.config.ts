@@ -58,7 +58,7 @@ export default defineConfig({
           timeout: 120_000,
         },
         {
-          command: `NEXT_PUBLIC_API_URL=${workerUrl} NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-dashboard-vocostar CLIENT_SECRET=opengrow-dashboard-secret-vocostar-2025 npm run dev`,
+          command: `NEXT_PUBLIC_API_URL=${workerUrl} NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-dashboard-vocostar CLIENT_SECRET=dashboard-secret npm run dev`,
           url: "http://localhost:3001",
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

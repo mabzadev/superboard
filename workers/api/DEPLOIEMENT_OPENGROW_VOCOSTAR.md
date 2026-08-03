@@ -84,13 +84,13 @@ app-vocostar/
 ```
 URL      : https://opengrow-vocostar.pages.dev/login
 Email    : admin@vocostar.com
-Password : Vocostar2025!
+Password : <gestionnaire-de-secrets>
 ```
 
 ### OAuth2 Client (dans la DB D1 — table oauth_applications)
 ```
 client_id     : opengrow-vocostar
-client_secret : opengrow-dashboard-secret-vocostar-2025
+client_secret : <injecté-par-wrangler>
 grant_type    : password
 expires_in    : 2592000 secondes (30 jours)
 ```
@@ -168,7 +168,7 @@ NEXT_PUBLIC_API_URL=https://go.vocostar.com
 NEXT_PUBLIC_API_PATH=/api/v1
 NEXT_PUBLIC_CLIENT_ID=opengrow-vocostar
 NEXT_PUBLIC_ENV=production
-CLIENT_SECRET=opengrow-dashboard-secret-vocostar-2025
+CLIENT_SECRET=<injecté-par-wrangler>
 ```
 
 ### `workers/opengrow-dashboard/.npmrc`
@@ -252,7 +252,7 @@ INSERT OR IGNORE INTO oauth_applications (name, uid, secret, scopes)
 VALUES (
   'OpenGrow Dashboard',
   'opengrow-vocostar',
-  'opengrow-dashboard-secret-vocostar-2025',
+  '<secret-injecté>',
   'read write'
 );
 
@@ -279,7 +279,7 @@ NEXT_PUBLIC_API_URL=https://go.vocostar.com \
 NEXT_PUBLIC_API_PATH=/api/v1 \
 NEXT_PUBLIC_CLIENT_ID=opengrow-vocostar \
 NEXT_PUBLIC_ENV=production \
-CLIENT_SECRET=opengrow-dashboard-secret-vocostar-2025 \
+CLIENT_SECRET='<injecté-par-wrangler>' \
 npx vercel build --yes
 
 # Étape 2 — Transformer pour Cloudflare edge
@@ -312,9 +312,9 @@ curl -X POST https://go.vocostar.com/oauth/token \
   -d '{
     "grant_type": "password",
     "email": "admin@vocostar.com",
-    "password": "Vocostar2025!",
+    "password": "<mot-de-passe>",
     "client_id": "opengrow-vocostar",
-    "client_secret": "opengrow-dashboard-secret-vocostar-2025"
+    "client_secret": "<secret-injecté>"
   }'
 ```
 

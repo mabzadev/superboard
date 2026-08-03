@@ -7,21 +7,21 @@ const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const service = args.service ?? "api";
 const environment = environmentFromArgs(args);
 const preflight = Boolean(args.preflight);
-if (!new Set(["api", "dashboard"]).has(service)) throw new Error("--service must be api or dashboard");
+if (!new Set(["api", "dashboard", "messaging"]).has(service)) throw new Error("--service must be api, dashboard or messaging");
 
 const { target } = await loadTarget(targetName);
 const resources = target.environments[environment];
-if (!resources || !target.workers.api[environment] || !target.workers.dashboard[environment]) {
+if (!resources || !target.workers[service]?.[environment]) {
   throw new Error(`${targetName} does not define a ${environment} environment`);
 }
-if (!resources.d1.id || !resources.kv.id) {
+if (!resources.d1.id || !resources.kv.id || (service === "messaging" && !resources.messagingD1.id)) {
   throw new Error(`Run cloudflare-bootstrap for ${targetName}/${environment} before generating configuration`);
 }
 
 const outputDirectory = resolve(root, "deploy", "generated");
 await mkdir(outputDirectory, { recursive: true });
 const outputPath = resolve(outputDirectory, `${targetName}-${service}-${environment}.jsonc`);
-const config = service === "api" ? apiConfig() : dashboardConfig();
+const config = service === "api" ? apiConfig() : service === "dashboard" ? dashboardConfig() : messagingConfig();
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
 console.log(relative(root, outputPath));
 
@@ -79,6 +79,7 @@ function apiConfig() {
         { binding: "BILLING_QUEUE", queue: resources.queues.billing },
       ],
     },
+    services: [{ binding: "MESSAGING", service: target.workers.messaging[environment] }],
   };
   if (!preflight) {
     config.triggers = { crons: ["*/10 * * * *"] };
@@ -94,6 +95,36 @@ function apiConfig() {
       { pattern: target.domains.shortlinks, custom_domain: true },
       { pattern: target.domains.sdk, custom_domain: true },
     ];
+  }
+  return config;
+}
+
+function messagingConfig() {
+  const config = {
+    ...baseConfig(),
+    main: "../../workers/messaging/src/index.ts",
+    vars: {
+      ENVIRONMENT: environment,
+      VOCOSTAR_ISSUER: "https://api.vocostar.com",
+      VOCOSTAR_AUDIENCE: "opengrow",
+      VOCOSTAR_JWKS_URL: "https://api.vocostar.com/.well-known/jwks.json",
+      ALLOWED_PROJECT_IDS: environment === "production" ? "11,12" : "",
+      CORS_ORIGIN: environment === "production" ? `https://${target.domains.dashboard}` : "*",
+    },
+    d1_databases: [{
+      binding: "DB",
+      database_name: resources.messagingD1.name,
+      database_id: resources.messagingD1.id,
+      migrations_dir: "../../workers/messaging/migrations",
+    }],
+    r2_buckets: [{ binding: "ATTACHMENTS", bucket_name: resources.messagingR2.name }],
+    durable_objects: {
+      bindings: [{ name: "CONVERSATIONS", class_name: "ConversationRoom" }],
+    },
+    migrations: [{ tag: "v1", new_sqlite_classes: ["ConversationRoom"] }],
+  };
+  if (environment === "production" && !args["no-routes"] && !preflight) {
+    config.routes = [{ pattern: target.domains.messaging, custom_domain: true }];
   }
   return config;
 }

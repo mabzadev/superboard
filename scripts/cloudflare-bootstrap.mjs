@@ -15,8 +15,10 @@ if (apply && !token) throw new Error("CLOUDFLARE_API_TOKEN is required with --ap
 const planned = [];
 const d1 = await ensureNamed("D1 database", resources.d1, "/d1/database", { name: resources.d1.name });
 const kv = await ensureNamed("KV namespace", resources.kv, "/storage/kv/namespaces", { title: resources.kv.name });
+const messagingD1 = await ensureNamed("Messaging D1 database", resources.messagingD1, "/d1/database", { name: resources.messagingD1.name });
 await ensureNamed("R2 bucket", resources.r2, "/r2/buckets", { name: resources.r2.name });
 await ensureNamed("dashboard R2 cache", resources.dashboardCache, "/r2/buckets", { name: resources.dashboardCache.name });
+await ensureNamed("Messaging R2 bucket", resources.messagingR2, "/r2/buckets", { name: resources.messagingR2.name });
 
 for (const queue of Object.values(resources.queues)) {
   await ensureNamed("queue", { name: queue }, "/queues", { queue_name: queue });
@@ -25,6 +27,7 @@ for (const queue of Object.values(resources.queues)) {
 if (apply) {
   if (d1?.uuid) resources.d1.id = d1.uuid;
   if (kv?.id) resources.kv.id = kv.id;
+  if (messagingD1?.uuid) resources.messagingD1.id = messagingD1.uuid;
   await writeFile(path, `${JSON.stringify(target, null, 2)}\n`);
   console.log(`Updated ${path}`);
 } else {
