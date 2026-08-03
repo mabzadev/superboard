@@ -50,12 +50,18 @@ Application state must be updated only from verified CustomerInfo. Generated Flu
 
 ## Legacy provider removal
 
-1. Inventory and import every real active subscription.
-2. Keep the legacy initiator during the mirror phase.
-3. Compare purchase, trial, renewal, plan change, cancellation, grace period, refund, restore, device change, reinstall, network recovery, duplicate, and out-of-order scenarios.
-4. Require full convergence and zero entitlement assignments from unverified events.
-5. Switch the FlutterFlow paywall only after TestFlight and Play Internal evidence passes.
-6. Remove legacy actions, packages, keys, and initialization only after the release gate explicitly permits removal.
+1. Configure the temporary RevenueCat V2 source in Purchases Diagnostics with a read-only secret key that can list customers, aliases, and subscriptions.
+2. Run the paginated production inventory. OpenGrow matches identities through existing customer aliases and records every active subscription without storing the provider response or secret in clear text.
+3. Import access only through provider verification. Existing verified Apple, Google Play, or Stripe subscriptions are matched directly; Apple records may be imported through App Store Server API verification. Google Play records without a purchase token remain unresolved until a native restore supplies verifiable Store data.
+4. Resolve every unmatched identity, product, unsupported provider, and missing verified subscription. A completed run with zero unresolved items is an automated release-gate prerequisite.
+5. Record the completed run ID as the legacy inventory check reference, then destroy the temporary encrypted API key from Diagnostics.
+6. Keep the legacy initiator during the mirror phase.
+7. Compare purchase, trial, renewal, plan change, cancellation, grace period, refund, restore, device change, reinstall, network recovery, duplicate, and out-of-order scenarios.
+8. Require full convergence and zero entitlement assignments from unverified events.
+9. Switch the FlutterFlow paywall only after TestFlight and Play Internal evidence passes.
+10. Remove legacy actions, packages, keys, and initialization only after the release gate explicitly permits removal.
+
+RevenueCat V2 customer and subscription pagination follows the official [Developer API](https://www.revenuecat.com/docs/api-v2). The source is migration-only and is never included in a mobile SDK or treated as a billing authority.
 
 ## Certification authority
 

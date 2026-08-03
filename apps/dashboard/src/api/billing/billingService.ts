@@ -246,6 +246,44 @@ export type BillingReleaseGate = {
   blockers: Array<{ type: "prerequisite" | "check"; key: string; message: string }>;
 };
 
+export type BillingLegacyInventory = {
+  source: {
+    id: string;
+    provider: "revenuecat";
+    external_project_id: string;
+    status: "configured" | "connected" | "error" | "disabled";
+    last_tested_at?: string | null;
+    last_error_code?: string | null;
+    last_error_message?: string | null;
+  } | null;
+  runs: Array<{
+    id: string;
+    environment: "sandbox" | "production";
+    status: "queued" | "running" | "completed" | "failed" | "cancelled";
+    customers_scanned: number;
+    active_subscriptions: number;
+    matched_subscriptions: number;
+    unresolved_subscriptions: number;
+    unsupported_subscriptions: number;
+    last_error_message?: string | null;
+    started_at?: string | null;
+    completed_at?: string | null;
+    created_at: string;
+  }>;
+  unresolved: Array<{
+    external_customer_id: string;
+    external_subscription_id: string;
+    app_user_id?: string | null;
+    provider: "apple" | "google" | "stripe" | "unsupported";
+    environment: "sandbox" | "production";
+    store_product_id?: string | null;
+    source_status?: string | null;
+    source_expires_at?: string | null;
+    resolution_status: string;
+    resolution_detail?: string | null;
+  }>;
+};
+
 export type BillingRefundCase = {
   id: string;
   provider: "apple" | "google" | "stripe";
@@ -351,6 +389,25 @@ export const updateBillingReleaseGateCheck = async (
   checkKey: string,
   data: { status: "pending" | "passed" | "failed"; evidence?: Record<string, unknown>; notes?: string },
 ) => (await PATCH(purchasesV2Path(projectId, `/release-gate/checks/${encodeURIComponent(checkKey)}`), data)).data.data;
+
+export const getBillingLegacyInventory = async (projectId: string): Promise<BillingLegacyInventory> =>
+  (await GET(purchasesV2Path(projectId, "/legacy/revenuecat/inventory"))).data.data;
+
+export const configureBillingLegacySource = async (
+  projectId: string,
+  data: { external_project_id: string; api_key: string },
+) => (await POST(purchasesV2Path(projectId, "/legacy/revenuecat/connections"), data)).data.data;
+
+export const testBillingLegacySource = async (projectId: string) =>
+  (await POST(purchasesV2Path(projectId, "/legacy/revenuecat/connection-test"), {})).data.data;
+
+export const disableBillingLegacySource = async (projectId: string) =>
+  (await DELETE(purchasesV2Path(projectId, "/legacy/revenuecat/connection"))).data.data;
+
+export const startBillingLegacyInventory = async (
+  projectId: string,
+  environment: "sandbox" | "production" = "production",
+) => (await POST(purchasesV2Path(projectId, "/legacy/revenuecat/inventory-runs"), { environment })).data.data;
 
 export const getBillingWebhookDeliveries = async (projectId: string) =>
   (await GET(purchasesV2Path(projectId, "/integrations/deliveries?limit=100"))).data;

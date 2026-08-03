@@ -211,12 +211,30 @@ export async function reconcileBillingState(env: BillingEnv) {
       await env.BILLING_QUEUE.send({ type: 'billing.refund.action.execute', actionId: row.id });
     }
   }
+  const legacyInventoryRuns = await env.DB.prepare(`
+    SELECT id, next_cursor
+    FROM billing_legacy_inventory_runs
+    WHERE status IN ('queued', 'running')
+      AND (claim_token IS NULL OR claim_expires_at IS NULL OR datetime(claim_expires_at) <= datetime('now'))
+      AND datetime(updated_at) <= datetime('now', '-5 minutes')
+    ORDER BY updated_at ASC LIMIT 10
+  `).all<{ id: string; next_cursor: string | null }>();
+  if (env.BILLING_QUEUE) {
+    for (const row of legacyInventoryRuns.results || []) {
+      await env.BILLING_QUEUE.send({
+        type: 'billing.legacy.inventory.page',
+        runId: row.id,
+        ...(row.next_cursor ? { cursor: row.next_cursor } : {}),
+      });
+    }
+  }
   return {
     subscriptions_expired: expiredSubscriptions.meta.changes,
     entitlements_expired: expiredEntitlements.meta.changes,
     webhook_deliveries_enqueued: pendingDeliveries.results?.length || 0,
     subscriptions_enqueued: subscriptions.results?.length || 0,
     refund_actions_enqueued: refundActions.results?.length || 0,
+    legacy_inventory_runs_enqueued: legacyInventoryRuns.results?.length || 0,
   };
 }
 

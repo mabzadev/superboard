@@ -76,7 +76,7 @@ analytics.get('/links', async (c) => {
   return c.json({ links: results, period });
 });
 
-// GET /api/v1/projects — liste les projets de l'instance
+// GET /api/v1/projects — list the instance projects
 analytics.get('/projects', async (c) => {
   const instanceId = c.get('instanceId');
   const { results } = await c.env.DB.prepare(
