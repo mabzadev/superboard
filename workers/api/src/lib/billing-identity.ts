@@ -1,4 +1,12 @@
-import { createLocalJWKSet, decodeJwt, jwtVerify, SignJWT, type JSONWebKeySet } from 'jose';
+import {
+  createLocalJWKSet,
+  decodeJwt,
+  importJWK,
+  jwtVerify,
+  SignJWT,
+  type JSONWebKeySet,
+  type JWK,
+} from 'jose';
 import { Env } from '../types';
 import { customerInfo, findCustomerByAppUserId, getOrCreateCustomer } from './billing';
 
@@ -7,6 +15,50 @@ type OidcConfig = {
   audience: string;
   jwks_uri: string;
 };
+
+type PurchasesSigningKeySet = {
+  active_kid: string;
+  keys: Array<JWK & { kid: string }>;
+};
+
+function purchasesSigningKeySet(env: Env): PurchasesSigningKeySet {
+  let value: unknown;
+  try {
+    value = JSON.parse(env.PURCHASES_SIGNING_KEYSET || '');
+  } catch {
+    throw new Error('Purchases signing key set is invalid');
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Purchases signing key set is invalid');
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.active_kid !== 'string' || !Array.isArray(record.keys)) {
+    throw new Error('Purchases signing key set is invalid');
+  }
+  const keys = record.keys.filter((candidate): candidate is JWK & { kid: string } => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return false;
+    const key = candidate as Record<string, unknown>;
+    return key.kty === 'EC' && key.crv === 'P-256'
+      && typeof key.kid === 'string' && typeof key.x === 'string' && typeof key.y === 'string';
+  });
+  if (keys.length !== record.keys.length
+      || !keys.some((key) => key.kid === record.active_kid && typeof key.d === 'string')) {
+    throw new Error('Purchases signing key set is invalid');
+  }
+  return { active_kid: record.active_kid, keys };
+}
+
+export function purchasesSigningJwks(env: Env): JSONWebKeySet {
+  const keySet = purchasesSigningKeySet(env);
+  return {
+    keys: keySet.keys.map(({ d: _private, key_ops: _privateOperations, ...key }) => ({
+      ...key,
+      alg: 'ES256',
+      use: 'sig',
+      key_ops: ['verify'],
+    })),
+  };
+}
 
 function bearerToken(header: string | undefined): string | null {
   const match = /^Bearer\s+(.+)$/i.exec((header || '').trim());
@@ -102,16 +154,40 @@ export async function resolveSdkCustomer(env: Env, params: {
 
 export async function signedCustomerInfo(env: Env, projectId: string | number, customerId: string) {
   const info = await customerInfo(env.DB, projectId, customerId);
-  const secret = new TextEncoder().encode(env.PURCHASES_SIGNING_SECRET || env.JWT_SECRET);
-  const signature = await new SignJWT({ customer_info: info, project_id: String(projectId) })
-    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+  const signedInfo = { ...info, customer_id: customerId };
+  const signature = await signCustomerInfoPayload(
+    env,
+    projectId,
+    String(info.original_app_user_id),
+    signedInfo,
+  );
+  const keySet = purchasesSigningKeySet(env);
+  return {
+    ...signedInfo,
+    signature,
+    signature_algorithm: 'ES256',
+    signature_key_id: keySet.active_kid,
+  };
+}
+
+export async function signCustomerInfoPayload(
+  env: Env,
+  projectId: string | number,
+  subject: string,
+  info: Record<string, unknown>,
+): Promise<string> {
+  const keySet = purchasesSigningKeySet(env);
+  const signingJwk = keySet.keys.find((key) => key.kid === keySet.active_kid && key.d);
+  if (!signingJwk) throw new Error('Purchases signing key is unavailable');
+  const privateKey = await importJWK(signingJwk, 'ES256');
+  return new SignJWT({ customer_info: info, project_id: String(projectId) })
+    .setProtectedHeader({ alg: 'ES256', typ: 'JWT', kid: signingJwk.kid })
     .setIssuer('opengrow-purchases')
     .setAudience('opengrow-sdk')
-    .setSubject(String(info.original_app_user_id))
+    .setSubject(subject)
     .setIssuedAt()
     .setExpirationTime('15m')
-    .sign(secret);
-  return { ...info, customer_id: customerId, signature };
+    .sign(privateKey);
 }
 
 export async function customerForAppUserId(env: Env, projectId: string | number, appUserId: string) {

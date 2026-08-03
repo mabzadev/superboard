@@ -19,6 +19,7 @@ class OpenGrowBootstrap extends StatefulWidget {
     this.height,
     this.sdkBaseUrl = 'https://sdk.vocostar.com',
     this.identityToken = '',
+    this.initializePurchases = true,
     this.onInitialized,
     this.onDeepLinkJson,
     this.onError,
@@ -29,6 +30,10 @@ class OpenGrowBootstrap extends StatefulWidget {
   final double? height;
   final String sdkBaseUrl;
   final String identityToken;
+
+  /// Set to false when the host app initializes Purchases after its own
+  /// authentication flow with [opengrowInitializeAuthenticated].
+  final bool initializePurchases;
   final Future<void> Function()? onInitialized;
   final Future<void> Function(String value)? onDeepLinkJson;
   final Future<void> Function(String message)? onError;
@@ -60,11 +65,13 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
 
   Future<void> _initialize() async {
     try {
-      await opengrowInitializeAuto(
-        projectKey: widget.projectKey,
-        sdkBaseUrl: widget.sdkBaseUrl,
-        identityToken: widget.identityToken,
-      );
+      if (widget.initializePurchases) {
+        await opengrowInitializeAuto(
+          projectKey: widget.projectKey,
+          sdkBaseUrl: widget.sdkBaseUrl,
+          identityToken: widget.identityToken,
+        );
+      }
       await widget.onInitialized?.call();
     } catch (error) {
       final value = error.toString();

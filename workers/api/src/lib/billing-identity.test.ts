@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify, SignJWT } from 'jose';
 import type { Env } from '../types';
-import { verifiedAppUserId } from './billing-identity';
+import {
+  purchasesSigningJwks,
+  signCustomerInfoPayload,
+  verifiedAppUserId,
+} from './billing-identity';
 
 async function identityFixture() {
   const { privateKey, publicKey } = await generateKeyPair('RS256');
@@ -11,6 +15,9 @@ async function identityFixture() {
   const audience = 'opengrow';
   const jwksUri = 'https://identity.example.test/jwks.json';
   const cache = new Map<string, unknown>();
+  const purchasesPair = await generateKeyPair('ES256', { extractable: true });
+  const purchasesPrivateJwk = await exportJWK(purchasesPair.privateKey);
+  Object.assign(purchasesPrivateJwk, { kid: 'purchases-key-1', alg: 'ES256', use: 'sig' });
   const env = {
     DB: {
       prepare() {
@@ -23,6 +30,7 @@ async function identityFixture() {
     } as unknown as KVNamespace,
     ENVIRONMENT: 'test',
     SHORTLINK_DOMAIN: 'go.test', API_DOMAIN: 'api.test', SDK_DOMAIN: 'sdk.test', CORS_ORIGIN: '*', JWT_SECRET: 'test',
+    PURCHASES_SIGNING_KEYSET: JSON.stringify({ active_kid: 'purchases-key-1', keys: [purchasesPrivateJwk] }),
   } as Env;
   const token = async (overrides: { audience?: string; expiration?: string | number; subject?: string } = {}) => new SignJWT({})
     .setProtectedHeader({ alg: 'RS256', kid: 'key-1' })
@@ -61,5 +69,31 @@ describe('billing OIDC identity', () => {
     const token = await new SignJWT({}).setProtectedHeader({ alg: 'RS256', kid: 'key-2' })
       .setIssuer('https://identity.example.test/tenant').setAudience('opengrow').setSubject('rotated-user').setIssuedAt().setExpirationTime('5m').sign(rotated.privateKey);
     await expect(verifiedAppUserId(fixture.env, 1, `Bearer ${token}`)).resolves.toBe('rotated-user');
+  });
+
+  it('signs CustomerInfo with ES256 and publishes only public verification keys', async () => {
+    const fixture = await identityFixture();
+    const info = {
+      original_app_user_id: 'opaque-user-42',
+      request_date: new Date().toISOString(),
+      entitlements: { premium: { is_active: true } },
+    };
+    const signature = await signCustomerInfoPayload(
+      fixture.env,
+      42,
+      'opaque-user-42',
+      info,
+    );
+    const jwks = purchasesSigningJwks(fixture.env);
+    expect(jwks.keys).toHaveLength(1);
+    expect(jwks.keys[0]).not.toHaveProperty('d');
+    const verified = await jwtVerify(signature, createLocalJWKSet(jwks), {
+      algorithms: ['ES256'],
+      issuer: 'opengrow-purchases',
+      audience: 'opengrow-sdk',
+      subject: 'opaque-user-42',
+    });
+    expect(verified.payload.project_id).toBe('42');
+    expect(verified.payload.customer_info).toEqual(info);
   });
 });

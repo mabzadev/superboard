@@ -8,15 +8,16 @@ Bibliothèque prête à importer pour remplacer les actions RevenueCat dans Flut
    opengrow_flutterflow:
      git:
        url: git@github.com:mbzadev/opengrow.git
-       ref: sdk-flutterflow-v2.0.0
+       ref: sdk-flutterflow-v2.1.0
        path: sdks/flutterflow
    ```
 
    Configurez dans FlutterFlow un jeton GitHub fin, en lecture seule et limité à
    ce dépôt. Ne placez jamais ce jeton dans le code exporté.
-2. Ajoutez `OpenGrowBootstrap` une seule fois sur la page initiale. Le
-   Bundle ID/package name est détecté automatiquement ; aucune valeur dupliquée
-   n'est nécessaire.
+2. Ajoutez `OpenGrowBootstrap` une seule fois sur la page initiale. Pour
+   VocoStar, désactivez son initialisation Purchases, puis appelez
+   `opengrowInitializeAuthenticated` juste après `userAuthenticate`, avec le
+   jeton d’accès existant émis par `api.vocostar.com`.
 3. Utilisez `OpenGrowPaywall` avec un `placement`. Son contenu, son offering et
    son expérience sont récupérés à distance avec fallback hors ligne.
 4. Protégez une page avec `opengrowHasEntitlement('premium')` et redirigez vers le paywall si la valeur est fausse.
@@ -26,6 +27,7 @@ Bibliothèque prête à importer pour remplacer les actions RevenueCat dans Flut
 Actions prêtes pour FlutterFlow :
 
 - `opengrowInitializeAuto`
+- `opengrowInitializeAuthenticated`
 - `opengrowIdentify`
 - `opengrowSetUserAttributesJson`
 - `opengrowSetPushToken`
@@ -39,5 +41,9 @@ Actions prêtes pour FlutterFlow :
 - `opengrowGetCustomerInfoJson`
 - `opengrowGetVirtualCurrenciesJson`
 - `opengrowGetCustomerCenterJson`
+- `opengrowOpenSubscriptionManagement`
 
-Le JWT d’identité doit être émis par l’issuer OIDC configuré dans OpenGrow. Aucun secret Apple ou Google n’est embarqué dans l’application.
+`api-auth-gateway` est l’unique autorité d’authentification VocoStar. La Library
+n’émet aucun jeton : elle échange le jeton VocoStar existant contre un JWT ES256
+court via `POST /auth/opengrow-token`. Un achat ne démarre pas si cet échange
+échoue. Aucun secret Apple ou Google n’est embarqué dans l’application.

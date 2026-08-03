@@ -25,7 +25,8 @@ class OpenGrowSubscriptionInfo {
 
   factory OpenGrowSubscriptionInfo.fromJson(Map<String, dynamic> json) {
     return OpenGrowSubscriptionInfo(
-      identifier: (json['store_product_id'] ?? json['product_id'] ?? '').toString(),
+      identifier: (json['store_product_id'] ?? json['product_id'] ?? '')
+          .toString(),
       store: (json['store'] ?? '').toString(),
       environment: (json['environment'] ?? '').toString(),
       status: (json['status'] ?? 'inactive').toString(),
@@ -67,7 +68,10 @@ class OpenGrowEntitlementInfo {
   final DateTime? expiresAt;
   final bool willRenew;
 
-  factory OpenGrowEntitlementInfo.fromJson(String key, Map<String, dynamic> json) {
+  factory OpenGrowEntitlementInfo.fromJson(
+    String key,
+    Map<String, dynamic> json,
+  ) {
     return OpenGrowEntitlementInfo(
       identifier: (json['identifier'] ?? key).toString(),
       isActive: json['is_active'] == true,
@@ -112,7 +116,10 @@ class OpenGrowCustomerInfo {
         (json['balances'] as Map?)?.cast<String, dynamic>() ?? const {};
     final subscriptions = (json['subscriptions'] as List? ?? const [])
         .whereType<Map>()
-        .map((value) => OpenGrowSubscriptionInfo.fromJson(value.cast<String, dynamic>()))
+        .map(
+          (value) =>
+              OpenGrowSubscriptionInfo.fromJson(value.cast<String, dynamic>()),
+        )
         .toList();
     return OpenGrowCustomerInfo(
       originalAppUserId: (json['original_app_user_id'] ?? '').toString(),
@@ -137,8 +144,12 @@ class OpenGrowCustomerInfo {
       activeSubscriptions: (json['active_subscriptions'] as List? ?? const [])
           .map((value) => value.toString())
           .toList(),
-      managementUrl: json['management_url']?.toString() ??
-          subscriptions.map((value) => value.managementUrl).whereType<String>().firstOrNull,
+      managementUrl:
+          json['management_url']?.toString() ??
+          subscriptions
+              .map((value) => value.managementUrl)
+              .whereType<String>()
+              .firstOrNull,
     );
   }
 
@@ -233,10 +244,35 @@ class OpenGrowOfferings {
 }
 
 class OpenGrowPurchaseResult {
-  const OpenGrowPurchaseResult(this.outcome, {this.customerInfo, this.error});
+  const OpenGrowPurchaseResult(
+    this.outcome, {
+    this.customerInfo,
+    this.error,
+    this.code = '',
+    this.retryable = false,
+    this.productIdentifier,
+    this.transactionIdentifier,
+    this.requestId,
+  });
   final OpenGrowPurchaseOutcome outcome;
   final OpenGrowCustomerInfo? customerInfo;
   final String? error;
+  final String code;
+  final bool retryable;
+  final String? productIdentifier;
+  final String? transactionIdentifier;
+  final String? requestId;
+
+  Map<String, dynamic> toJson() => {
+    'state': outcome.name,
+    'code': code,
+    'retryable': retryable,
+    'message': error,
+    'product_id': productIdentifier,
+    'transaction_id': transactionIdentifier,
+    'request_id': requestId,
+    'customer_info': customerInfo?.toJson(),
+  };
 }
 
 class OpenGrowPlacement {
@@ -250,7 +286,8 @@ class OpenGrowPlacement {
   factory OpenGrowPlacement.fromJson(Map<String, dynamic> json) =>
       OpenGrowPlacement(
         identifier: (json['identifier'] ?? 'default').toString(),
-        displayName: (json['display_name'] ?? json['identifier'] ?? 'Default').toString(),
+        displayName: (json['display_name'] ?? json['identifier'] ?? 'Default')
+            .toString(),
       );
 }
 
@@ -292,15 +329,18 @@ class OpenGrowPaywallConfiguration {
   final Map<String, dynamic> configuration;
   final Map<String, dynamic> localizations;
 
-  factory OpenGrowPaywallConfiguration.fromJson(Map<String, dynamic> json) =>
-      OpenGrowPaywallConfiguration(
-        id: (json['id'] ?? '').toString(),
-        identifier: (json['identifier'] ?? '').toString(),
-        versionId: (json['version_id'] ?? '').toString(),
-        version: (json['version'] as num?)?.toInt() ?? 0,
-        configuration: (json['configuration'] as Map?)?.cast<String, dynamic>() ?? const {},
-        localizations: (json['localizations'] as Map?)?.cast<String, dynamic>() ?? const {},
-      );
+  factory OpenGrowPaywallConfiguration.fromJson(
+    Map<String, dynamic> json,
+  ) => OpenGrowPaywallConfiguration(
+    id: (json['id'] ?? '').toString(),
+    identifier: (json['identifier'] ?? '').toString(),
+    versionId: (json['version_id'] ?? '').toString(),
+    version: (json['version'] as num?)?.toInt() ?? 0,
+    configuration:
+        (json['configuration'] as Map?)?.cast<String, dynamic>() ?? const {},
+    localizations:
+        (json['localizations'] as Map?)?.cast<String, dynamic>() ?? const {},
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,

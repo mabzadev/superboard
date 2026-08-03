@@ -29,14 +29,14 @@
 
 ## OpenGrow Purchases
 
-Version 1.2 adds server-verified App Store and Google Play purchases:
+Version 2.1 adds resumable, server-verified App Store and Google Play purchases:
 
 ```dart
 final purchases = OpenGrowPurchases.instance;
 await purchases.configure(
   projectKey: 'my_project_key',
   platformIdentifier: 'com.example.app',
-  identityToken: myOidcJwt,
+  identityTokenProvider: getShortLivedOpenGrowIdentityToken,
 );
 
 final offerings = await purchases.getOfferings();
@@ -48,11 +48,13 @@ final premium = result.customerInfo?.isEntitled('premium') == true;
 
 Available APIs: `configure`, `logIn`, `logOut`, `getOfferings`,
 `getCustomerInfo`, `isEntitled`, `purchasePackage`, `restorePurchases`,
-`syncPurchases`, and `customerInfoStream`.
+`syncPurchases`, `customerInfoStream`, and `purchaseResultStream`.
 
 The SDK sends StoreKit 2 JWS transactions or Google purchase tokens to OpenGrow.
-It completes a purchase only after server verification. Never put App Store
-Connect or Google service-account credentials in the application.
+It stores unfinished transactions in an encrypted outbox, verifies the ES256
+CustomerInfo JWS, and completes a purchase only after server verification and
+durable local persistence. Never put App Store Connect or Google
+service-account credentials in the application.
 
 The OpenGrow Flutter SDK provides deep linking, app links, universal links, link generation, in-app messaging, revenue tracking, and attribution for your Flutter apps. It wraps the native iOS and Android SDKs.
 
@@ -72,7 +74,7 @@ The OpenGrow Flutter SDK provides deep linking, app links, universal links, link
 - Flutter 3.3.0+
 - Dart 3.9.2+
 - iOS 13.0+
-- Android API 21+ (Android 5.0)
+- Android API 24+ (Android 7.0)
 
 ## Installation
 
@@ -83,7 +85,7 @@ dependencies:
   opengrow_flutter:
     git:
       url: git@github.com:mbzadev/opengrow.git
-      ref: sdk-flutter-v2.0.0
+      ref: sdk-flutter-v2.1.0
       path: sdks/flutter
 ```
 
