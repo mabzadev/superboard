@@ -52,6 +52,8 @@ Noms attendus uniquement :
 
 Les identifiants Apple et Google sont stockés dans D1 avec un chiffrement propre au domaine Billing (`billing-v1`). Les colonnes historiques restent lisibles uniquement par l'API en mode local pendant la transition. La migration de chiffrement est auditée dans `billing_credential_rewrap_audit` et ne journalise jamais le clair.
 
+Les identifiants de projet écrits dans `billing_products` sont canonicalisés en texte avant toute synchronisation. Une contrainte D1 refuse les variantes numériques comme `11.0`, qui pourraient autrement contourner l'unicité du catalogue ; les corrections historiques sont consignées dans `billing_product_canonicalization_audit`.
+
 Les secrets temporaires de re-chiffrement et d'administration doivent être créés seulement pendant une rotation contrôlée, puis supprimés immédiatement après vérification. Ils ne sont pas requis en fonctionnement normal.
 
 ## Gate avant bascule

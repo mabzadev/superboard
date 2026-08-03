@@ -185,11 +185,12 @@ admin.post('/:projectId/products', async (c) => {
 async function persistStoreCatalog(c: any, project: any, platform: 'ios' | 'android', products: StoreCatalogProduct[]) {
   const store = platform === 'ios' ? 'apple' : 'google';
   const environment = project.isTest ? 'sandbox' : 'production';
+  const projectId = String(project.id);
   const statements = [
     c.env.DB.prepare(`
       UPDATE billing_products SET active = 0, updated_at = datetime('now')
       WHERE project_id = ? AND store = ? AND environment = ?
-    `).bind(project.id, store, environment),
+    `).bind(projectId, store, environment),
     ...products.map((product) => c.env.DB.prepare(`
       INSERT INTO billing_products (
         id, project_id, application_id, store, environment, store_product_id,
@@ -208,7 +209,7 @@ async function persistStoreCatalog(c: any, project: any, platform: 'ios' | 'andr
         metadata = excluded.metadata,
         updated_at = datetime('now')
     `).bind(
-      crypto.randomUUID(), project.id, product.applicationId, store, environment,
+      crypto.randomUUID(), projectId, product.applicationId, store, environment,
       product.storeProductId, product.productType, product.displayName, product.description,
       product.active ? 1 : 0, JSON.stringify(product.metadata),
     )),
