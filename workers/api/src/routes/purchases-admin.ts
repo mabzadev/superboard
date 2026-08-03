@@ -7,6 +7,7 @@ import { signedCustomerInfo } from '../lib/billing-identity';
 import { customerInfo, identifyCustomer } from '../lib/billing';
 import { customerForAppUserId } from '../lib/billing-identity';
 import { testStoreCredentials } from '../lib/store-verification';
+import { isFullAccess, isPurchasesEnabled } from '../lib/deployment';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -68,7 +69,11 @@ admin.get('/:projectId', async (c) => {
     ]);
     return c.json({
       project,
-      settings,
+      settings: settings || {
+        project_id: String(project.id),
+        restore_behavior: 'transfer',
+        purchases_enabled: isPurchasesEnabled(c.env, null) ? 1 : 0,
+      },
       products: products.results,
       entitlements: entitlements.results,
       offerings: offerings.results,
@@ -111,7 +116,7 @@ admin.put('/:projectId/settings', async (c) => {
       VALUES (?, ?, ?)
       ON CONFLICT(project_id) DO UPDATE SET restore_behavior = excluded.restore_behavior,
         purchases_enabled = excluded.purchases_enabled, updated_at = datetime('now')
-    `).bind(project.id, restore, data.purchases_enabled ? 1 : 0).run();
+    `).bind(project.id, restore, isFullAccess(c.env) || data.purchases_enabled ? 1 : 0).run();
     return c.json(await c.env.DB.prepare('SELECT * FROM billing_project_settings WHERE project_id = ?').bind(project.id).first());
   } catch (error) { return fail(c, error); }
 });
