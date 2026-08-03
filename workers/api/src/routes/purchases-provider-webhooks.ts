@@ -3,6 +3,7 @@ import type { BillingEnv, Env } from '../types';
 import { applyVerifiedPurchase, type BillingStatus, type VerifiedPurchase } from '../lib/billing';
 import { decryptCredential } from '../lib/secrets';
 import { readTextLimited } from '../lib/http-limits';
+import { billingServiceEnabled, ingestProviderEventWithBillingAuthority } from '../lib/billing-service';
 
 const webhooks = new Hono<{ Bindings: Env }>();
 
@@ -216,6 +217,31 @@ webhooks.post('/:connectionId', async (c) => {
   const externalId = String(event.id || event.event_id || '');
   if (!externalId) return c.json({ error: 'Webhook event ID is required' }, 422);
   const eventType = String(event.type || event.event_type || 'unknown');
+  if (billingServiceEnabled(c.env)) {
+    try {
+      const result = await ingestProviderEventWithBillingAuthority(c.env, {
+        projectId: String(connection.project_id),
+        store: 'stripe',
+        environment: connection.environment === 'production' ? 'production' : 'sandbox',
+        externalEventId: externalId,
+        eventType,
+        payload,
+        job: {
+          type: 'billing.stripe.notification',
+          connectionId: String(connection.id),
+        },
+      });
+      return c.json({ received: true, queued: result.queued, duplicate: result.duplicate }, result.processed ? 200 : 202);
+    } catch (error) {
+      const tagged = error as { code?: string; status?: number; retryable?: boolean; message?: string };
+      const status = Number(tagged.status || 503);
+      return c.json({
+        code: tagged.code || 'provider_ingress_failed',
+        error: tagged.message || 'Webhook could not be accepted',
+        retryable: tagged.retryable === true || status >= 500,
+      }, status as any);
+    }
+  }
   const eventId = crypto.randomUUID();
   const inserted = await c.env.DB.prepare(`
     INSERT OR IGNORE INTO billing_webhook_events (id, project_id, store, environment, external_event_id, event_type, status, payload)
