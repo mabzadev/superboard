@@ -54,10 +54,10 @@ describe('Refund Center projection', () => {
   });
 
   it('prepares Apple consumption information for human approval', async () => {
-    const writes: string[] = [];
+    const writes: Array<{ sql: string; args: unknown[] }> = [];
     const db = createFakeD1((call) => {
       if (call.op === 'run') {
-        writes.push(call.sql);
+        writes.push({ sql: call.sql, args: call.args });
         return true;
       }
       if (call.sql.startsWith('SELECT id FROM billing_refund_cases')) return { id: 'refund-case-2' };
@@ -69,6 +69,33 @@ describe('Refund Center projection', () => {
       'transaction-2',
     );
     expect(result?.status).toBe('evidence_required');
-    expect(writes.some((sql) => sql.startsWith('INSERT OR IGNORE INTO billing_refund_provider_actions'))).toBe(true);
+    expect(writes.some(({ sql }) => sql.startsWith('INSERT OR IGNORE INTO billing_refund_provider_actions'))).toBe(true);
+    const deadline = writes.find(({ sql }) => sql.startsWith('INSERT INTO billing_refund_cases'))?.args[12];
+    expect(Date.parse(String(deadline))).toBeGreaterThan(Date.now() + 11 * 60 * 60_000);
+  });
+
+  it('prepares Stripe dispute evidence but never submits it automatically', async () => {
+    const writes: Array<{ sql: string; args: unknown[] }> = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'run') {
+        writes.push({ sql: call.sql, args: call.args });
+        return true;
+      }
+      if (call.sql.startsWith('SELECT id FROM billing_refund_cases')) return { id: 'refund-case-stripe' };
+      return undefined;
+    });
+    await recordRefundCaseForPurchase(
+      { DB: db } as unknown as Env,
+      purchase({
+        store: 'stripe',
+        eventType: 'dispute.needs_response',
+        status: 'active',
+        rawPayload: { data: { object: { id: 'dp_123', evidence_details: { due_by: Math.floor(Date.now() / 1000) + 3600 } } } },
+      }),
+      'transaction-stripe',
+    );
+    const action = writes.find(({ sql }) => sql.startsWith('INSERT OR IGNORE INTO billing_refund_provider_actions'));
+    expect(action?.sql).toContain("'submit_stripe_dispute_evidence'");
+    expect(action?.sql).toContain("'draft'");
   });
 });

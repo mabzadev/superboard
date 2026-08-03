@@ -113,10 +113,15 @@ async function appleServerClient(env: BillingEnv, app: BillingApplication, envir
   const baseUrl = environment === 'production'
     ? 'https://api.storekit.apple.com'
     : 'https://api.storekit-sandbox.apple.com';
-  const request = async (path: string, method = 'GET'): Promise<any> => {
+  const request = async (path: string, method = 'GET', body?: unknown): Promise<any> => {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
     const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
     if (!response.ok) throw storeApiError('App Store Server API', response.status, payload);
@@ -130,7 +135,29 @@ async function appleServerClient(env: BillingEnv, app: BillingApplication, envir
     },
     getAllSubscriptionStatuses: (transactionId: string) =>
       request(`/inApps/v1/subscriptions/${encodeURIComponent(transactionId)}`),
+    sendConsumptionInformation: (transactionId: string, payload: AppleConsumptionRequest) =>
+      request(`/inApps/v2/transactions/consumption/${encodeURIComponent(transactionId)}`, 'PUT', payload),
   };
+}
+
+export type AppleConsumptionRequest = {
+  customerConsented: true;
+  deliveryStatus: 'DELIVERED' | 'UNDELIVERED_QUALITY_ISSUE' | 'UNDELIVERED_WRONG_ITEM' | 'UNDELIVERED_SERVER_OUTAGE' | 'UNDELIVERED_OTHER';
+  sampleContentProvided: boolean;
+  consumptionPercentage?: number;
+  refundPreference?: 'DECLINE' | 'GRANT_FULL' | 'GRANT_PRORATED';
+};
+
+export async function sendAppleConsumptionInformation(env: BillingEnv, params: {
+  projectId: string;
+  environment: BillingEnvironment;
+  transactionId: string;
+  payload: AppleConsumptionRequest;
+}) {
+  const app = await applicationForProject(env.DB, params.projectId, 'ios');
+  const client = await appleServerClient(env, app, params.environment);
+  await client.sendConsumptionInformation(params.transactionId, params.payload);
+  return { accepted: true, transaction_id: params.transactionId };
 }
 
 async function appleApiCredentials(env: BillingEnv, app: BillingApplication) {
