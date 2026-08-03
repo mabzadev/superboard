@@ -120,7 +120,7 @@ app.get('/.well-known/purchases-jwks.json', (c) => {
 app.all('*', async (c, next) => {
   const host = c.req.header('host') || '';
 
-  // sdk.vocostar.com — Mobile SDK
+  // Mobile SDK custom domain.
   if (host.startsWith('sdk.')) {
     const pathname = new URL(c.req.url).pathname;
     if (pathname === '/api/v1/sdk' || pathname.startsWith('/api/v1/sdk/')) {
@@ -129,13 +129,13 @@ app.all('*', async (c, next) => {
     return sdkRoutes.fetch(c.req.raw, c.env);
   }
 
-  // go.vocostar.com — Short link redirects + well-known
+  // Short-link custom domain and well-known resources.
   // The workers.dev host is also accepted for tests.
   return next();
 });
 
 // =====================================
-// Routes go.vocostar.com / workers.dev
+// Routes for the custom domain and workers.dev.
 // =====================================
 app.route('/api/v1/auth', authRoutes);
 app.route('/api/v1/users', usersRoutes);

@@ -189,7 +189,9 @@ describe('public redirects', () => {
     }, env);
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain("Ouvrir l'App Store");
+    const html = await response.text();
+    expect(html).toContain('<html lang="en">');
+    expect(html).toContain('Open the App Store');
     expect(state.events).toHaveLength(1);
   });
 
