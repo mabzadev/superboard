@@ -27,8 +27,8 @@ function caseType(eventType: string): string {
 }
 
 function caseStatus(purchase: VerifiedPurchase): RefundCaseStatus {
-  if (/REFUND_(DECLINED|REVERSED)|DISPUTE_WON/i.test(purchase.eventType)) return 'won';
-  if (['refunded', 'revoked'].includes(purchase.status) || /VOID|DISPUTE_LOST/i.test(purchase.eventType)) return 'lost';
+  if (/REFUND[_.](DECLINED|REVERSED)|DISPUTE.*WON/i.test(purchase.eventType)) return 'won';
+  if (['refunded', 'revoked'].includes(purchase.status) || /VOID|DISPUTE.*LOST/i.test(purchase.eventType)) return 'lost';
   if (/CONSUMPTION_REQUEST|DISPUTE|INQUIRY/i.test(purchase.eventType)) return 'evidence_required';
   return 'open';
 }

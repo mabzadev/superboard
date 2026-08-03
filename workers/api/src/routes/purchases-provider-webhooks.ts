@@ -69,7 +69,7 @@ async function updateStripeCustomer(env: Env, customerId: string, stripeCustomer
 }
 
 function stripeStatus(type: string, object: Record<string, any>): BillingStatus {
-  if (/refunded/.test(type)) return 'refunded';
+  if (/refunded/.test(type) || (/dispute/.test(type) && object.status === 'lost')) return 'refunded';
   if (/payment_failed/.test(type) || object.status === 'past_due' || object.status === 'unpaid') return 'billing_issue';
   if (/deleted/.test(type) || object.status === 'canceled') return 'expired';
   if (object.status === 'trialing') return 'trialing';
@@ -77,41 +77,87 @@ function stripeStatus(type: string, object: Record<string, any>): BillingStatus 
   return 'active';
 }
 
+async function stripeCustomerForEvent(env: Env, connection: Record<string, any>, object: Record<string, any>) {
+  if (object.customer) {
+    const direct = await env.DB.prepare(`
+      SELECT id FROM billing_customers
+      WHERE project_id = ? AND json_extract(attributes, '$.stripe_customer_id') = ?
+      LIMIT 1
+    `).bind(String(connection.project_id), String(object.customer)).first<{ id: string }>();
+    if (direct) return direct;
+  }
+  const providerObjectId = String(object.payment_intent || object.charge || object.id || '');
+  if (!providerObjectId) return null;
+  return env.DB.prepare(`
+    SELECT customer_id AS id FROM billing_transactions
+    WHERE project_id = ? AND store = 'stripe' AND customer_id IS NOT NULL
+      AND (
+        json_extract(raw_payload, '$.data.object.id') = ?
+        OR json_extract(raw_payload, '$.data.object.payment_intent') = ?
+        OR json_extract(raw_payload, '$.data.object.charge') = ?
+      )
+    ORDER BY COALESCE(event_occurred_at, created_at) DESC LIMIT 1
+  `).bind(String(connection.project_id), providerObjectId, providerObjectId, providerObjectId).first<{ id: string }>();
+}
+
+async function latestStripeProduct(env: Env, connection: Record<string, any>, customerId: string) {
+  return env.DB.prepare(`
+    SELECT p.store_product_id, p.product_type, t.original_transaction_id,
+      t.expires_at, t.currency, t.price_micros
+    FROM billing_transactions t
+    JOIN billing_products p ON p.id = t.product_id
+    WHERE t.project_id = ? AND t.customer_id = ? AND t.store = 'stripe'
+    ORDER BY COALESCE(t.event_occurred_at, t.created_at) DESC
+    LIMIT 1
+  `).bind(String(connection.project_id), customerId).first<Record<string, any>>();
+}
+
 async function processStripe(env: Env, connection: Record<string, any>, event: Record<string, any>) {
   const object = parseObject(event.data?.object);
   const metadata = parseObject(object.metadata || object.subscription_details?.metadata);
   const checkout = await checkoutProduct(env, metadata.opengrow_checkout_id || null, event.type === 'checkout.session.completed' ? object.id : null);
-  const customerId = String(metadata.opengrow_customer_id || checkout?.customer_id || '');
-  if (!checkout || !customerId) return { ignored: true, reason: 'checkout_not_found' };
+  const providerCustomer = await stripeCustomerForEvent(env, connection, object);
+  const customerId = String(metadata.opengrow_customer_id || checkout?.customer_id || providerCustomer?.id || '');
+  if (!customerId) return { ignored: true, reason: 'customer_not_found' };
+  const prior = checkout ? null : await latestStripeProduct(env, connection, customerId);
+  if (!checkout && !prior) return { ignored: true, reason: 'purchase_not_found' };
   const status = stripeStatus(String(event.type), object);
-  const isSubscription = checkout.product_type === 'subscription';
+  const isSubscription = (checkout?.product_type || prior?.product_type) === 'subscription';
   const subscriptionId = String(object.subscription || object.id || event.id);
   const transactionId = String(object.payment_intent || object.charge || object.id || event.id);
   const line = object.lines?.data?.[0] || {};
   const periodEnd = epoch(line.period?.end || object.current_period_end);
+  const eventType = object.status && /dispute/.test(String(event.type))
+    ? `${String(event.type)}.${String(object.status)}`
+    : String(event.type);
   const purchase: VerifiedPurchase = {
     projectId: String(connection.project_id),
     customerId,
     store: 'stripe',
     environment: connection.environment,
-    storeProductId: String(checkout.store_product_id || line.price?.id || 'web-product'),
+    storeProductId: String(checkout?.store_product_id || prior?.store_product_id || line.price?.id || 'web-product'),
     productType: isSubscription ? 'subscription' : 'non_consumable',
     storeTransactionId: `${transactionId}:${event.id}`,
-    originalTransactionId: isSubscription ? subscriptionId : transactionId,
-    eventType: String(event.type),
+    originalTransactionId: isSubscription ? String(checkout?.provider_subscription_id || prior?.original_transaction_id || subscriptionId) : transactionId,
+    eventType,
     status,
-    priceMicros: object.amount_total != null ? Number(object.amount_total) * 10000 : object.amount_paid != null ? Number(object.amount_paid) * 10000 : null,
-    currency: object.currency ? String(object.currency).toUpperCase() : null,
+    priceMicros: object.amount_total != null ? Number(object.amount_total) * 10000
+      : object.amount_paid != null ? Number(object.amount_paid) * 10000
+        : object.amount != null ? Number(object.amount) * 10000
+          : prior?.price_micros ?? null,
+    currency: object.currency ? String(object.currency).toUpperCase() : prior?.currency || null,
     purchasedAt: epoch(object.created),
     eventOccurredAt: epoch(event.created) || new Date().toISOString(),
-    expiresAt: periodEnd,
+    expiresAt: periodEnd || prior?.expires_at || null,
     autoRenews: isSubscription && !object.cancel_at_period_end && status !== 'expired',
     periodType: status === 'trialing' ? 'trial' : 'normal',
     rawPayload: event,
   };
   const applied = await applyVerifiedPurchase(env, purchase);
-  await env.DB.prepare(`UPDATE billing_checkout_sessions SET status = ?, provider_customer_id = COALESCE(?, provider_customer_id), updated_at = datetime('now') WHERE id = ?`)
-    .bind(status, object.customer || null, checkout.id).run();
+  if (checkout) {
+    await env.DB.prepare(`UPDATE billing_checkout_sessions SET status = ?, provider_customer_id = COALESCE(?, provider_customer_id), updated_at = datetime('now') WHERE id = ?`)
+      .bind(status, object.customer || null, checkout.id).run();
+  }
   await updateStripeCustomer(env, customerId, object.customer);
   return applied;
 }
