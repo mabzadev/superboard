@@ -2,15 +2,18 @@
   "name": "@opengrow/growth-worker",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:runtime": "node ../../scripts/cloudflare-config.mjs --service growth --target vocostar --environment production && vitest run --config vitest.runtime.config.ts",
     "deploy": "node ../../scripts/cloudflare-deploy.mjs --service growth --target vocostar --environment production"
   },
   "dependencies": {
     "hono": "^4.7.4"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.20.1",
     "@cloudflare/workers-types": "^5.20260721.1",
     "typescript": "^5.8.3",
     "vitest": "^4.1.6",
