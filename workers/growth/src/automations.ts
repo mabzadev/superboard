@@ -78,12 +78,58 @@ export async function markRun(env: Env, projectId: number, runId: string, input:
   if (!['delivered', 'failed', 'cancelled'].includes(status)) throw failure('status_invalid', 'status must be delivered, failed or cancelled');
   const lastError = input.last_error == null ? null : requiredString(input.last_error, 'last_error', 2000);
   const run = await env.DB.prepare(`
-    UPDATE growth_automation_runs SET status = ?, last_error = ?, updated_at = datetime('now')
+    UPDATE growth_automation_runs SET status = ?, last_error = ?, claimed_at = NULL,
+      delivered_at = CASE WHEN ? = 'delivered' THEN datetime('now') ELSE delivered_at END,
+      updated_at = datetime('now')
     WHERE id = ? AND project_id = ? AND status = 'pending' RETURNING id, status
-  `).bind(status, lastError, runId, projectId).first<Record<string, unknown>>();
+  `).bind(status, lastError, status, runId, projectId).first<Record<string, unknown>>();
   if (!run) throw failure('automation_run_not_found', 'Pending automation run not found', 404);
   await audit(env, projectId, `growth.automation_run.${status}`, 'automation_run', runId, { last_error: lastError });
   return run;
+}
+
+export async function claimRun(env: Env, projectId: number, runId: string) {
+  const current = await automationRun(env, projectId, runId);
+  if (!current) throw failure('automation_run_not_found', 'Automation run not found', 404, false);
+  if (current.status !== 'pending') return { ...current, terminal: true };
+  const claimed = await env.DB.prepare(`
+    UPDATE growth_automation_runs SET claimed_at = datetime('now'), attempt_count = attempt_count + 1,
+      updated_at = datetime('now')
+    WHERE id = ? AND project_id = ? AND status = 'pending'
+      AND (next_attempt_at IS NULL OR next_attempt_at <= datetime('now'))
+      AND (claimed_at IS NULL OR claimed_at <= datetime('now', '-5 minutes'))
+    RETURNING id
+  `).bind(runId, projectId).first<Record<string, unknown>>();
+  if (!claimed) throw failure('automation_run_busy', 'Automation run is already being delivered', 409, true, 30);
+  const run = await automationRun(env, projectId, runId);
+  await audit(env, projectId, 'growth.automation_run.claimed', 'automation_run', runId, {
+    attempt_count: run?.attempt_count,
+  });
+  return { ...run, terminal: false };
+}
+
+export async function releaseRun(env: Env, projectId: number, runId: string, input: Record<string, unknown>) {
+  const lastError = requiredString(input.last_error, 'last_error', 2000);
+  const retryAfter = Math.max(30, Math.min(3600, Number(input.retry_after_seconds || 60)));
+  const run = await env.DB.prepare(`
+    UPDATE growth_automation_runs SET claimed_at = NULL, last_error = ?,
+      next_attempt_at = datetime('now', '+' || ? || ' seconds'), updated_at = datetime('now')
+    WHERE id = ? AND project_id = ? AND status = 'pending' RETURNING id, status, attempt_count, next_attempt_at
+  `).bind(lastError, retryAfter, runId, projectId).first<Record<string, unknown>>();
+  if (!run) throw failure('automation_run_not_found', 'Pending automation run not found', 404, false);
+  await audit(env, projectId, 'growth.automation_run.retry_scheduled', 'automation_run', runId, {
+    last_error: lastError, retry_after_seconds: retryAfter,
+  });
+  return run;
+}
+
+async function automationRun(env: Env, projectId: number, runId: string) {
+  return env.DB.prepare(`
+    SELECT r.id, r.project_id, r.status, r.action_payload_json, r.attempt_count,
+      r.claimed_at, r.next_attempt_at, r.delivered_at, a.action_type, a.name AS automation_name
+    FROM growth_automation_runs r JOIN growth_automations a ON a.id = r.automation_id
+    WHERE r.id = ? AND r.project_id = ?
+  `).bind(runId, projectId).first<Record<string, unknown>>();
 }
 
 export function matchesAutomation(config: Record<string, unknown>, payload: Record<string, unknown>): boolean {

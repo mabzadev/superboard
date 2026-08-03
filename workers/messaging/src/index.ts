@@ -151,6 +151,23 @@ app.get('/internal/projects/:projectId/conversations', async (c) => {
   return c.json({ data: rows.results });
 });
 
+app.post('/internal/projects/:projectId/conversations', async (c) => {
+  const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');
+  const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+  const externalUserId = String(body.external_user_id || '').trim();
+  const clientId = String(body.client_conversation_id || c.req.header('Idempotency-Key') || '').trim();
+  const subjectLine = typeof body.subject === 'string' ? body.subject.trim().slice(0, 255) : '';
+  if (!externalUserId || externalUserId.length > 255) throw failure('external_user_id_invalid', 'A valid external user id is required');
+  if (!clientId || clientId.length > 128) throw failure('client_conversation_id_invalid', 'A client conversation id is required');
+  const result = await upsertProjectConversation(c.env, projectId, externalUserId, clientId, subjectLine || null);
+  if (!result.duplicate) {
+    await audit(c.env, String(result.conversation.id), projectId, 'conversation.created', { kind: 'system', id: 'automation' }, {
+      source: 'automation',
+    });
+  }
+  return c.json({ data: result.conversation, duplicate: result.duplicate }, result.duplicate ? 200 : 201);
+});
+
 app.get('/internal/projects/:projectId/conversations/:conversationId/messages', async (c) => {
   const conversation = await projectConversation(c.env, c.req.param('conversationId'), positiveInt(c.req.param('projectId'), 'project_id_invalid'));
   const rows = await c.env.DB.prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY sequence ASC LIMIT 500')
@@ -221,6 +238,26 @@ async function projectConversation(env: Env, id: string, projectId: number): Pro
     .bind(id, projectId).first<Conversation & Record<string, unknown>>();
   if (!conversation) throw failure('conversation_not_found', 'Conversation not found', 404);
   return conversation;
+}
+
+export async function upsertProjectConversation(
+  env: Pick<Env, 'DB'>,
+  projectId: number,
+  externalUserId: string,
+  clientConversationId: string,
+  subject: string | null,
+) {
+  const id = crypto.randomUUID();
+  const inserted = await env.DB.prepare(`
+    INSERT INTO conversations (id, project_id, external_user_id, client_conversation_id, subject)
+    VALUES (?, ?, ?, ?, ?) ON CONFLICT(project_id, external_user_id, client_conversation_id) DO NOTHING
+    RETURNING *
+  `).bind(id, projectId, externalUserId, clientConversationId, subject).first<Record<string, unknown>>();
+  const conversation = inserted || await env.DB.prepare(`
+    SELECT * FROM conversations WHERE project_id = ? AND external_user_id = ? AND client_conversation_id = ?
+  `).bind(projectId, externalUserId, clientConversationId).first<Record<string, unknown>>();
+  if (!conversation) throw new Error('Unable to create conversation');
+  return { conversation, duplicate: !inserted };
 }
 
 function roomFetch(env: Env, conversationId: string, actor: Actor, path: string, source: Request) {

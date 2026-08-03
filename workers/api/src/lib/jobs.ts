@@ -2,6 +2,7 @@ import { Env } from '../types';
 import { processPushNotifications } from '../routes/push';
 import { publishApprovedReviewDraft, syncStoreReviews } from './store-reviews';
 import { dispatchBillingJob, isBillingQueueJob, type BillingQueueJob } from './billing-dispatch';
+import { deliverGrowthAutomation } from './growth-delivery';
 import {
   cleanupExpiredMcp,
   cleanupOrphanedActions,
@@ -22,7 +23,8 @@ export type QueueJob =
   | { type: 'enterprise_mau.precompute' }
   | BillingQueueJob
   | { type: 'reputation.reviews.sync'; projectId: string }
-  | { type: 'reputation.review-response.publish'; draftId: string };
+  | { type: 'reputation.review-response.publish'; draftId: string }
+  | { type: 'growth.automation.deliver'; projectId: string; runId: string };
 
 export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
   if (isBillingQueueJob(job)) return dispatchBillingJob(env, job);
@@ -47,6 +49,8 @@ export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
       return syncStoreReviews(env, String(job.projectId));
     case 'reputation.review-response.publish':
       return publishApprovedReviewDraft(env, String(job.draftId));
+    case 'growth.automation.deliver':
+      return deliverGrowthAutomation(env, String(job.projectId), String(job.runId));
     default:
       throw new Error(`Unsupported queue job: ${job?.type || 'unknown'}`);
   }
