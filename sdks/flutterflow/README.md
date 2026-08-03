@@ -8,14 +8,14 @@ Bibliothèque prête à importer pour remplacer les actions RevenueCat dans Flut
    opengrow_flutterflow:
      git:
        url: git@github.com:mbzadev/opengrow.git
-       ref: sdk-flutterflow-v2.1.0
+       ref: sdk-flutterflow-v2.1.1
        path: sdks/flutterflow
    ```
 
    Configurez dans FlutterFlow un jeton GitHub fin, en lecture seule et limité à
    ce dépôt. Ne placez jamais ce jeton dans le code exporté.
 2. Ajoutez `OpenGrowBootstrap` une seule fois sur la page initiale. Pour
-   VocoStar, désactivez son initialisation Purchases, puis appelez
+   Il n’initialise jamais Purchases anonymement. Appelez ensuite
    `opengrowInitializeAuthenticated` juste après `userAuthenticate`, avec le
    jeton d’accès existant émis par `api.vocostar.com`.
 3. Utilisez `OpenGrowPaywall` avec un `placement`. Son contenu, son offering et
