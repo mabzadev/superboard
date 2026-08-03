@@ -16,6 +16,20 @@ abstract final class OpenGrowFlutterFlowState {
   static String lastError = '';
 }
 
+/// Emits only CustomerInfo payloads that have already passed SDK JWS
+/// verification. Hosts can use this stream to update no-code application
+/// state when a pending or recovered purchase resolves asynchronously.
+Stream<String> get opengrowVerifiedCustomerInfoJsonStream => OpenGrowPurchases
+    .instance
+    .customerInfoStream
+    .map((customerInfo) => jsonEncode(customerInfo.toJson()));
+
+/// Emits structured terminal and pending purchase results for host bridges.
+Stream<String> get opengrowPurchaseResultJsonStream => OpenGrowPurchases
+    .instance
+    .purchaseResultStream
+    .map((result) => jsonEncode(result.toJson()));
+
 Future<bool> opengrowInitialize({
   required String projectKey,
   required String platformIdentifier,
