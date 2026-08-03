@@ -75,6 +75,22 @@ be run explicitly:
 npm run allowlist -- bootstrap --target vocostar --environment production
 ```
 
+## Transactional email
+
+Password recovery and dashboard invitations use Cloudflare Email Sending through
+the API Worker's `EMAIL` binding. Each target manifest declares the only allowed
+sender address. Before deploying a new target, enable Email Sending for its domain
+and publish the SPF, DKIM, return-path and DMARC records returned by Cloudflare:
+
+```bash
+npx wrangler email sending enable example.com
+npx wrangler email sending dns get example.com
+```
+
+Create new target manifests with an explicit sender, for example
+`--mail-from-address noreply@example.com`. No provider API key is stored in D1,
+the dashboard or the repository.
+
 ## Vocostar production deployment
 
 Vocostar is production-only. Its canonical Workers are `opengrow-api` and

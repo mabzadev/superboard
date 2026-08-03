@@ -7,6 +7,11 @@
   "accessMode": "full",
   "registrationMode": "allowlist",
   "ssoEnabled": false,
+  "mail": {
+    "provider": "cloudflare",
+    "fromName": "OpenGrow",
+    "fromAddress": "noreply@vocostar.com"
+  },
   "domains": {
     "shortlinks": "go.vocostar.com",
     "sdk": "sdk.vocostar.com",

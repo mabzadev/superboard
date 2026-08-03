@@ -56,6 +56,8 @@ function apiConfig() {
       REGISTRATION_MODE: target.registrationMode,
       REGISTRATION_REALM: `${target.target}:${environment}`,
       SSO_ENABLED: String(target.ssoEnabled),
+      MAIL_PROVIDER: target.mail.provider,
+      MAIL_FROM: `${target.mail.fromName} <${target.mail.fromAddress}>`,
     },
     d1_databases: [{
       binding: "DB",
@@ -65,6 +67,10 @@ function apiConfig() {
     }],
     kv_namespaces: [{ binding: "KV", id: resources.kv.id }],
     r2_buckets: [{ binding: "R2", bucket_name: resources.r2.name }],
+    send_email: [{
+      name: "EMAIL",
+      allowed_sender_addresses: [target.mail.fromAddress],
+    }],
     queues: {
       producers: [
         { binding: "EVENT_QUEUE", queue: resources.queues.events },
