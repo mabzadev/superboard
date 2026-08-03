@@ -109,7 +109,7 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "growthD1", "queues"],
+      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "messagingProjectIds", "growthD1", "queues"],
       "properties": {
         "d1": { "$ref": "#/$defs/namedResource" },
         "kv": { "$ref": "#/$defs/namedResource" },
@@ -117,6 +117,11 @@
         "dashboardCache": { "$ref": "#/$defs/namedResource" },
         "messagingD1": { "$ref": "#/$defs/namedResource" },
         "messagingR2": { "$ref": "#/$defs/namedResource" },
+        "messagingProjectIds": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "uniqueItems": true
+        },
         "growthD1": { "$ref": "#/$defs/namedResource" },
         "queues": { "$ref": "#/$defs/queues" }
       }

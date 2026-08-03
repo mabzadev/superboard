@@ -39,11 +39,20 @@ export async function verifyApplicationIdentity(env: Env, authorization?: string
 
 export function requireProject(env: Env, value: string | undefined): number {
   const projectId = Number(value);
-  const allowed = env.ALLOWED_PROJECT_IDS.split(',').map(Number).filter(Number.isInteger);
+  const allowed = parseAllowedProjectIds(env.ALLOWED_PROJECT_IDS);
   if (!Number.isInteger(projectId) || projectId <= 0 || !allowed.includes(projectId)) {
     throw publicError('project_not_allowed', 'Project is not enabled for Messaging', 403);
   }
   return projectId;
+}
+
+export function parseAllowedProjectIds(value: string): number[] {
+  const values = value.split(',').map((item) => item.trim()).filter(Boolean);
+  const parsed = values.map(Number);
+  if (parsed.some((projectId) => !Number.isInteger(projectId) || projectId <= 0)) {
+    throw publicError('messaging_configuration_invalid', 'Messaging project configuration is invalid', 503);
+  }
+  return [...new Set(parsed)];
 }
 
 export function timingSafeEqual(left: string, right: string): boolean {

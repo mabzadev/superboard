@@ -12,7 +12,10 @@ const manifestPath = resolve(root, "deploy", "targets", `${target}.json`);
 try {
   await access(manifestPath);
 } catch {
-  for (const required of ["account-id", "workers-dev-subdomain", "shortlinks-domain", "sdk-domain", "dashboard-domain", "mail-from-address"]) {
+  for (const required of [
+    "account-id", "workers-dev-subdomain", "shortlinks-domain", "sdk-domain",
+    "dashboard-domain", "messaging-domain", "mail-from-address",
+  ]) {
     if (!args[required]) throw new Error(`New targets require --${required}`);
   }
   const manifest = newManifest();
@@ -49,12 +52,18 @@ function newManifest() {
     maintenanceDlq: `${resourcePrefix(environment)}-maintenance-dlq`,
     billing: `${resourcePrefix(environment)}-billing`,
     billingDlq: `${resourcePrefix(environment)}-billing-dlq`,
+    growth: `${resourcePrefix(environment)}-growth`,
+    growthDlq: `${resourcePrefix(environment)}-growth-dlq`,
   });
   const environment = (name) => ({
     d1: { name: `${resourcePrefix(name)}-db`, id: null },
     kv: { name: resourcePrefix(name), id: null },
     r2: { name: resourcePrefix(name) },
     dashboardCache: { name: resourcePrefix(name) },
+    messagingD1: { name: `${resourcePrefix(name)}-messaging-db`, id: null },
+    messagingR2: { name: `${resourcePrefix(name)}-messaging` },
+    messagingProjectIds: [],
+    growthD1: { name: `${resourcePrefix(name)}-growth-db`, id: null },
     queues: queues(name),
   });
   return {
@@ -75,10 +84,14 @@ function newManifest() {
       shortlinks: args["shortlinks-domain"],
       sdk: args["sdk-domain"],
       dashboard: args["dashboard-domain"],
+      messaging: args["messaging-domain"],
     },
     workers: {
       api: { staging: "opengrow-api-staging", production: "opengrow-api" },
       dashboard: { staging: "opengrow-staging", production: "opengrow" },
+      billing: { staging: "opengrow-billing-staging", production: "opengrow-billing" },
+      messaging: { staging: "opengrow-messaging-staging", production: "opengrow-messaging" },
+      growth: { staging: "opengrow-growth-staging", production: "opengrow-growth" },
     },
     oauth: { dashboardClientId: `${prefix}-dashboard` },
     environments: { staging: environment("staging"), production: environment("production") },
