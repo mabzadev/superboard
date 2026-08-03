@@ -65,7 +65,7 @@ app.use('*', cors({
   ],
 }));
 
-// Health check (tous les sous-domaines)
+// Health check for every subdomain
 app.get('/health', (c) => c.json({
   status: 'ok',
   service: 'opengrow',
@@ -115,7 +115,7 @@ app.get('/.well-known/purchases-jwks.json', (c) => {
 });
 
 // =============================================
-// Routing par sous-domaine (comme le vrai OpenGrow)
+// Route requests by subdomain
 // =============================================
 app.all('*', async (c, next) => {
   const host = c.req.header('host') || '';
@@ -130,7 +130,7 @@ app.all('*', async (c, next) => {
   }
 
   // go.vocostar.com — Short link redirects + well-known
-  // (ou workers.dev pour tests)
+  // The workers.dev host is also accepted for tests.
   return next();
 });
 

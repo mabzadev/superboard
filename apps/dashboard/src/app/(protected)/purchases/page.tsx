@@ -39,6 +39,7 @@ import {
   archiveBillingOffering,
   archiveBillingProduct,
   approveBillingRefundAction,
+  configureBillingLegacySource,
   createBillingExperiment,
   createBillingExport,
   createBillingRefundEvidence,
@@ -53,12 +54,14 @@ import {
   createEntitlement,
   createOffering,
   createProduct,
+  disableBillingLegacySource,
   getBillingAnalytics,
   getBillingConnections,
   getBillingCustomer,
   getBillingExperiments,
   getBillingExports,
   getBillingHealth,
+  getBillingLegacyInventory,
   getBillingOverview,
   getBillingPaywalls,
   getBillingPlacements,
@@ -77,8 +80,10 @@ import {
   reviewBillingRefundEvidence,
   searchBillingCustomers,
   setBillingCustomerBlocked,
+  startBillingLegacyInventory,
   syncBillingProducts,
   testBillingConnection,
+  testBillingLegacySource,
   updateBillingExperiment,
   updateBillingRefundAction,
   updateBillingReleaseGateCheck,
@@ -87,6 +92,7 @@ import {
   type BillingConnection,
   type BillingExperiment,
   type BillingHealth,
+  type BillingLegacyInventory,
   type BillingOverview,
   type BillingPaywall,
   type BillingPlacement,
@@ -136,7 +142,10 @@ const date = (value: unknown) =>
 
 const statusBadge = (status: unknown) => {
   const value = String(status || "unknown");
-  const destructive = ["failed", "invalid", "degraded", "refunded", "revoked", "expired", "billing_issue"].includes(value);
+  const destructive = [
+    "failed", "invalid", "error", "degraded", "refunded", "revoked", "expired", "billing_issue",
+    "unmatched_customer", "missing_product", "missing_verified_subscription", "unsupported_provider",
+  ].includes(value);
   return <Badge variant={destructive ? "destructive" : ["active", "connected", "healthy", "passed"].includes(value) ? "default" : "outline"}>{value}</Badge>;
 };
 
@@ -154,6 +163,7 @@ const PurchasesPage = () => {
   const [analytics, setAnalytics] = useState<BillingAnalytics>();
   const [health, setHealth] = useState<BillingHealth>();
   const [releaseGate, setReleaseGate] = useState<BillingReleaseGate>();
+  const [legacyInventory, setLegacyInventory] = useState<BillingLegacyInventory>();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [virtualCurrencies, setVirtualCurrencies] = useState<Array<Record<string, unknown>>>([]);
   const [exports, setExports] = useState<Array<Record<string, unknown>>>([]);
@@ -193,6 +203,8 @@ const PurchasesPage = () => {
   const [gateDevice, setGateDevice] = useState("");
   const [gateReference, setGateReference] = useState("");
   const [gateNotes, setGateNotes] = useState("");
+  const [legacyProjectId, setLegacyProjectId] = useState("");
+  const [legacyApiKey, setLegacyApiKey] = useState("");
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -214,6 +226,7 @@ const PurchasesPage = () => {
         nextExports,
         nextRefundCases,
         nextReleaseGate,
+        nextLegacyInventory,
       ] = await Promise.allSettled([
         getBillingOverview(projectId),
         getBillingConnections(projectId),
@@ -230,6 +243,7 @@ const PurchasesPage = () => {
         getBillingExports(projectId),
         getBillingRefundCases(projectId),
         getBillingReleaseGate(projectId),
+        getBillingLegacyInventory(projectId),
       ]);
       const failures: string[] = [];
       const failed = (name: string, reason: unknown) => failures.push(`${name}: ${reason instanceof Error ? reason.message : "unable to load"}`);
@@ -248,6 +262,12 @@ const PurchasesPage = () => {
       if (nextExports.status === "fulfilled") setExports(nextExports.value.data || []); else failed("Exports", nextExports.reason);
       if (nextRefundCases.status === "fulfilled") setRefundCases(nextRefundCases.value.data || []); else failed("Refund Center", nextRefundCases.reason);
       if (nextReleaseGate.status === "fulfilled") setReleaseGate(nextReleaseGate.value); else failed("Release gate", nextReleaseGate.reason);
+      if (nextLegacyInventory.status === "fulfilled") {
+        setLegacyInventory(nextLegacyInventory.value);
+        if (nextLegacyInventory.value.source?.external_project_id) {
+          setLegacyProjectId(nextLegacyInventory.value.source.external_project_id);
+        }
+      } else failed("Legacy inventory", nextLegacyInventory.reason);
       if (failures.length) showErrorNotification(failures.join(" · "));
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Unable to load Purchases");
@@ -270,8 +290,10 @@ const PurchasesPage = () => {
       await action();
       showSuccessNotification(success);
       if (refresh) await load();
+      return true;
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "The action failed");
+      return false;
     }
   };
 
@@ -493,6 +515,26 @@ const PurchasesPage = () => {
     }), status === "passed" ? "Certification evidence saved" : status === "failed" ? "Failure recorded" : "Check reset");
   };
 
+  const connectLegacySource = async () => {
+    if (!projectId || !legacyProjectId.trim() || !legacyApiKey.trim()) return;
+    const connected = await run(async () => {
+      await configureBillingLegacySource(projectId, {
+        external_project_id: legacyProjectId.trim(),
+        api_key: legacyApiKey.trim(),
+      });
+      await testBillingLegacySource(projectId);
+    }, "Legacy source connected");
+    if (connected) setLegacyApiKey("");
+  };
+
+  const startLegacyInventory = async () => {
+    if (!projectId) return;
+    await run(
+      () => startBillingLegacyInventory(projectId, projectType === "test" ? "sandbox" : "production"),
+      "Verified legacy inventory queued",
+    );
+  };
+
   const metrics = overview?.metrics;
   const metricCards: Array<[string, string | number, LucideIcon]> = [
     ["Verified revenue", money(metrics?.revenue_micros), CreditCard],
@@ -506,6 +548,14 @@ const PurchasesPage = () => {
   const premiumProductIds = new Set((overview?.product_entitlements || [])
     .filter((item) => item.entitlement_id === premiumEntitlement?.id)
     .map((item) => item.product_id));
+  const latestLegacyRun = legacyInventory?.runs[0];
+  const legacyRunActive = latestLegacyRun?.status === "queued" || latestLegacyRun?.status === "running";
+
+  useEffect(() => {
+    if (!legacyRunActive) return;
+    const interval = window.setInterval(() => void load(), 5_000);
+    return () => window.clearInterval(interval);
+  }, [legacyRunActive, load]);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
@@ -674,6 +724,50 @@ const PurchasesPage = () => {
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><PlugZap className="h-5 w-5" />Webhooks</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Pending</span><span>{String(health?.deliveries?.pending_deliveries || 0)}</span></div><div className="flex justify-between"><span>Failures</span><span>{String(health?.deliveries?.failed_deliveries || 0)}</span></div></CardContent></Card>
             </div>
             <Card><CardHeader><CardTitle>Automated prerequisites</CardTitle></CardHeader><CardContent className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{releaseGate?.prerequisites.map((item) => <div key={item.key} className="rounded-md border p-3"><div className="flex items-center justify-between gap-2"><span className="font-medium">{item.label}</span><Badge variant={item.passed ? "default" : "destructive"}>{item.passed ? "passed" : "blocked"}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div>)}</CardContent></Card>
+            <Card>
+              <CardHeader><CardTitle>Verified legacy subscription migration</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Inventory the existing RevenueCat project with a read-only V2 secret key. Access is imported only after a matching Apple, Google Play, or Stripe subscription has been verified by OpenGrow.
+                </p>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <Input placeholder="RevenueCat project ID" value={legacyProjectId} onChange={(event) => setLegacyProjectId(event.target.value)} />
+                  <Input type="password" autoComplete="off" placeholder="RevenueCat V2 secret key" value={legacyApiKey} onChange={(event) => setLegacyApiKey(event.target.value)} />
+                  <Button disabled={legacyRunActive || !legacyProjectId.trim() || !legacyApiKey.trim()} onClick={() => void connectLegacySource()}>Save and test</Button>
+                  <Button variant="outline" disabled={legacyInventory?.source?.status !== "connected" || legacyRunActive} onClick={() => void startLegacyInventory()}>
+                    {legacyRunActive ? "Inventory running" : "Run verified inventory"}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <span>Connection: {statusBadge(legacyInventory?.source?.status || "not_configured")}</span>
+                  {legacyInventory?.source?.status === "connected" && <Button size="sm" variant="ghost" onClick={() => projectId && void run(() => testBillingLegacySource(projectId), "Legacy connection verified")}>Retest</Button>}
+                  {legacyInventory?.source && legacyInventory.source.status !== "disabled" && <Button size="sm" variant="ghost" disabled={legacyRunActive} onClick={() => projectId && void run(() => disableBillingLegacySource(projectId), "Legacy credentials destroyed")}>Disconnect and destroy key</Button>}
+                  <span className="text-xs text-muted-foreground">The secret is encrypted separately for the API and Billing execution domains.</span>
+                </div>
+                {latestLegacyRun && <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+                  {([
+                    ["Status", latestLegacyRun.status],
+                    ["Customers", latestLegacyRun.customers_scanned],
+                    ["Active", latestLegacyRun.active_subscriptions],
+                    ["Matched", latestLegacyRun.matched_subscriptions],
+                    ["Unresolved", latestLegacyRun.unresolved_subscriptions],
+                    ["Unsupported", latestLegacyRun.unsupported_subscriptions],
+                  ] as Array<[string, string | number]>).map(([label, value]) => <div key={label} className="rounded-md border p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-medium">{String(value)}</div></div>)}
+                </div>}
+                {latestLegacyRun && <p className="text-xs text-muted-foreground">Run reference: {latestLegacyRun.id}</p>}
+                {latestLegacyRun?.last_error_message && <p className="text-sm text-destructive">{latestLegacyRun.last_error_message}</p>}
+                {legacyInventory?.unresolved.length ? <Table>
+                  <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Store</TableHead><TableHead>Product</TableHead><TableHead>Expiration</TableHead><TableHead>Resolution</TableHead></TableRow></TableHeader>
+                  <TableBody>{legacyInventory.unresolved.map((item) => <TableRow key={item.external_subscription_id}>
+                    <TableCell><div>{item.app_user_id || "Unmatched"}</div><div className="text-xs text-muted-foreground">{item.external_customer_id}</div></TableCell>
+                    <TableCell>{item.provider} · {item.environment}</TableCell>
+                    <TableCell>{item.store_product_id || "Unknown"}</TableCell>
+                    <TableCell>{date(item.source_expires_at)}</TableCell>
+                    <TableCell><div>{statusBadge(item.resolution_status)}</div><div className="mt-1 max-w-md text-xs text-muted-foreground">{item.resolution_detail}</div></TableCell>
+                  </TableRow>)}</TableBody>
+                </Table> : latestLegacyRun?.status === "completed" && <p className="text-sm text-muted-foreground">No unresolved active legacy subscription remains.</p>}
+              </CardContent>
+            </Card>
             <Card><CardHeader><CardTitle>Evidence for the next check update</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"><Input placeholder="Build number" value={gateBuild} onChange={(event) => setGateBuild(event.target.value)} /><Input placeholder="Device and OS" value={gateDevice} onChange={(event) => setGateDevice(event.target.value)} /><Input placeholder="Test run or transaction reference" value={gateReference} onChange={(event) => setGateReference(event.target.value)} /><Input placeholder="Notes" value={gateNotes} onChange={(event) => setGateNotes(event.target.value)} /></CardContent></Card>
             {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div><div className="mt-1 text-xs text-muted-foreground">Required evidence: {check.required_evidence.join(", ")}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{Object.entries(check.evidence).map(([key, value]) => <div key={key} className="max-w-sm truncate text-xs text-muted-foreground" title={String(value)}><span className="font-medium">{key}:</span> {String(value)}</div>)}{check.status === "passed" && !check.evidence_valid && <div className="text-xs text-destructive">Missing evidence: {check.missing_evidence.join(", ")}</div>}{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}</TableCell><TableCell>{statusBadge(check.status === "passed" && !check.evidence_valid ? "invalid" : check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "passed")}>Pass</Button><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void updateGateCheck(check.key, "pending")}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
           </TabsContent>

@@ -18,6 +18,7 @@ import {
   type StoredReleaseGateCheck,
 } from '../lib/purchases-release-gate';
 import { callBillingServiceBinding } from '../lib/billing-service';
+import { testLegacySourceConnection } from '../lib/legacy-subscription-inventory';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -98,6 +99,14 @@ async function featureFlagsFor(c: any, projectId: string) {
       virtual_currencies, scheduled_exports, updated_at
     FROM billing_feature_flags WHERE project_id = ?
   `).bind(projectId).first();
+}
+
+async function requireLegacyInventoryIdle(c: any, projectId: string) {
+  const active = await c.env.DB.prepare(`
+    SELECT id FROM billing_legacy_inventory_runs
+    WHERE project_id = ? AND status IN ('queued', 'running') LIMIT 1
+  `).bind(projectId).first();
+  if (active) throw purchasesError('legacy_inventory_active', 'Wait for the active legacy inventory to finish', 409);
 }
 
 function replyError(c: any, error: unknown) {
@@ -215,7 +224,7 @@ admin.get('/:projectId/release-gate', async (c) => {
     const scope = await releaseGateScope(c, project);
     const scopedProjectIds = [scope.testProjectId, scope.productionProjectId].filter(Boolean);
     const projectPlaceholders = scopedProjectIds.map(() => '?').join(',');
-    const [checks, connections, catalog, entitlement, offering] = await Promise.all([
+    const [checks, connections, catalog, entitlement, offering, legacyInventory] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
       c.env.DB.prepare(`
         SELECT project_id, provider, environment, status, last_tested_at, billing_configuration_encrypted FROM billing_store_connections
@@ -247,6 +256,13 @@ admin.get('/:projectId/release-gate', async (c) => {
         SELECT project_id FROM billing_offerings
         WHERE project_id IN (${projectPlaceholders || "''"}) AND identifier = 'default' AND active = 1 AND is_current = 1
       `).bind(...scopedProjectIds).all<{ project_id: string }>(),
+      c.env.DB.prepare(`
+        SELECT id, status, active_subscriptions, matched_subscriptions,
+          unresolved_subscriptions, unsupported_subscriptions, completed_at
+        FROM billing_legacy_inventory_runs
+        WHERE project_id = ? AND environment = 'production'
+        ORDER BY created_at DESC LIMIT 1
+      `).bind(scope.productionProjectId || scope.releaseProjectId).first<Record<string, unknown>>(),
     ]);
     const connectionPassed = (projectId: string, provider: string, environment: string) => (connections.results || []).some((row) =>
       String(row.project_id) === projectId && row.provider === provider && row.environment === environment
@@ -270,6 +286,17 @@ admin.get('/:projectId/release-gate', async (c) => {
     const productionGoogle = native(scope.productionProjectId, 'google', 'production');
     const hasEntitlement = (projectId: string) => (entitlement.results || []).some((row) => String(row.project_id) === projectId);
     const hasOffering = (projectId: string) => (offering.results || []).some((row) => String(row.project_id) === projectId);
+    const legacyInventoryReady = legacyInventory?.status === 'completed'
+      && Number(legacyInventory.unresolved_subscriptions || 0) === 0;
+    const legacyInventoryDetail = legacyInventoryReady
+      ? `${Number(legacyInventory.matched_subscriptions || 0)} active legacy subscriptions match provider-verified OpenGrow subscriptions.`
+      : !legacyInventory
+        ? 'Run the verified production legacy subscription inventory.'
+        : legacyInventory.status === 'completed'
+          ? `Resolve ${Number(legacyInventory.unresolved_subscriptions || 0)} legacy subscriptions before dependency removal.`
+          : legacyInventory.status === 'failed'
+            ? 'Correct the legacy inventory failure and run it again.'
+            : 'Wait for the production legacy subscription inventory to complete.';
     const prerequisite = (key: string, label: string, passed: boolean, success: string, failure: string): ReleaseGatePrerequisite => ({
       key, label, passed, detail: passed ? success : failure,
     });
@@ -298,6 +325,7 @@ admin.get('/:projectId/release-gate', async (c) => {
       prerequisite('production_native_packages', 'Production native packages', productionApple.packages && productionGoogle.packages, 'Weekly and yearly native subscriptions are exposed by the default offering.', 'Add the production weekly and yearly Apple and Google subscriptions to matching packages in the default offering.'),
       prerequisite('sandbox_stripe_packages', 'Stripe test packages', stripeProductsReady(scope.testProjectId, 'sandbox', 'offering_mapped'), 'Every Stripe test subscription is exposed by the default offering.', 'Add every Stripe test subscription to a package in the default offering.'),
       prerequisite('production_stripe_packages', 'Stripe production packages', stripeProductsReady(scope.productionProjectId, 'production', 'offering_mapped'), 'Every Stripe production subscription is exposed by the default offering.', 'Add every Stripe production subscription to a package in the default offering.'),
+      prerequisite('production_legacy_inventory', 'Production legacy subscription inventory', legacyInventoryReady, legacyInventoryDetail, legacyInventoryDetail),
     ];
     return c.json({ data: { environments: ['sandbox', 'production'], scope, ...buildReleaseGate(checks.results || [], prerequisites) } });
   } catch (error) { return replyError(c, error); }
@@ -357,6 +385,160 @@ admin.patch('/:projectId/features', async (c) => {
     await c.env.DB.batch(statements);
     await audit(c, project.id, 'features.updated', 'billing_feature_flags', project.id, { flags: FEATURE_FLAGS.filter((flag) => data[flag] !== undefined) });
     return c.json({ data: await featureFlagsFor(c, project.id) });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/legacy/revenuecat/connections', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    await requireLegacyInventoryIdle(c, project.id);
+    const data = await jsonBody(c);
+    const externalProjectId = String(data.external_project_id || '').trim();
+    const apiKey = String(data.api_key || '').trim();
+    if (!/^[A-Za-z0-9_-]{1,255}$/.test(externalProjectId)) {
+      throw purchasesError('legacy_project_id_invalid', 'A valid legacy project ID is required');
+    }
+    if (!apiKey || apiKey.length > 4096) {
+      throw purchasesError('legacy_api_key_invalid', 'A valid legacy V2 secret API key is required');
+    }
+    const clearCredential = JSON.stringify({ api_key: apiKey });
+    const [apiCiphertext, billingResult] = await Promise.all([
+      encryptCredential(c.env, clearCredential),
+      callBillingServiceBinding<{ data: { ciphertext: string } }>(c.env, '/internal/v1/credentials/encrypt', {
+        credential: clearCredential,
+      }),
+    ]);
+    const billingCiphertext = String(billingResult.data?.ciphertext || '');
+    if (!billingCiphertext) throw purchasesError('billing_credential_copy_failed', 'Billing credential encryption failed', 503, true);
+    const sourceId = crypto.randomUUID();
+    const source = await c.env.DB.prepare(`
+      INSERT INTO billing_legacy_sources (
+        id, project_id, provider, external_project_id,
+        configuration_encrypted, billing_configuration_encrypted, status
+      ) VALUES (?, ?, 'revenuecat', ?, ?, ?, 'configured')
+      ON CONFLICT(project_id, provider) DO UPDATE SET
+        external_project_id = excluded.external_project_id,
+        configuration_encrypted = excluded.configuration_encrypted,
+        billing_configuration_encrypted = excluded.billing_configuration_encrypted,
+        status = 'configured', last_error_code = NULL, last_error_message = NULL,
+        updated_at = datetime('now')
+      RETURNING id
+    `).bind(sourceId, project.id, externalProjectId, apiCiphertext, billingCiphertext).first<{ id: string }>();
+    const id = String(source?.id || sourceId);
+    await audit(c, project.id, 'legacy_source.upserted', 'legacy_source', id, {
+      provider: 'revenuecat', external_project_id: externalProjectId, dual_credential_copy: true,
+    });
+    return c.json({ data: { id, provider: 'revenuecat', status: 'configured', billing_copy_ready: true } }, 201);
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/legacy/revenuecat/connection-test', async (c) => {
+  let sourceId: string | null = null;
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const source = await c.env.DB.prepare(`
+      SELECT id, project_id, external_project_id, configuration_encrypted, billing_configuration_encrypted
+      FROM billing_legacy_sources WHERE project_id = ? AND provider = 'revenuecat'
+    `).bind(project.id).first<{
+      id: string; project_id: string; external_project_id: string;
+      configuration_encrypted: string | null; billing_configuration_encrypted: string | null;
+    }>();
+    if (!source) throw purchasesError('legacy_source_not_configured', 'Configure the legacy source first', 409);
+    sourceId = source.id;
+    const result = await testLegacySourceConnection(source, c.env);
+    await c.env.DB.prepare(`
+      UPDATE billing_legacy_sources SET status = 'connected', last_tested_at = datetime('now'),
+        last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now') WHERE id = ?
+    `).bind(source.id).run();
+    await audit(c, project.id, 'legacy_source.tested', 'legacy_source', source.id, { ok: true });
+    return c.json({ data: result });
+  } catch (error) {
+    if (sourceId) {
+      const tagged = error as { code?: string; message?: string };
+      await c.env.DB.prepare(`
+        UPDATE billing_legacy_sources SET status = 'error', last_tested_at = datetime('now'),
+          last_error_code = ?, last_error_message = ?, updated_at = datetime('now') WHERE id = ?
+      `).bind(tagged.code || 'legacy_connection_failed', String(tagged.message || error).slice(0, 1000), sourceId).run().catch(() => undefined);
+    }
+    return replyError(c, error);
+  }
+});
+
+admin.delete('/:projectId/legacy/revenuecat/connection', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    await requireLegacyInventoryIdle(c, project.id);
+    const source = await c.env.DB.prepare(`
+      UPDATE billing_legacy_sources
+      SET configuration_encrypted = NULL, billing_configuration_encrypted = NULL,
+        status = 'disabled', last_error_code = NULL, last_error_message = NULL,
+        updated_at = datetime('now')
+      WHERE project_id = ? AND provider = 'revenuecat'
+      RETURNING id
+    `).bind(project.id).first<{ id: string }>();
+    if (!source) throw purchasesError('legacy_source_not_configured', 'Legacy source is not configured', 404);
+    await audit(c, project.id, 'legacy_source.disabled', 'legacy_source', source.id, { credentials_destroyed: true });
+    return c.json({ data: { id: source.id, status: 'disabled', credentials_destroyed: true } });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/legacy/revenuecat/inventory-runs', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    if (!c.env.BILLING_QUEUE) throw purchasesError('billing_queue_unavailable', 'Billing queue is unavailable', 503, true);
+    const data = await jsonBody(c);
+    const environment = data.environment === 'sandbox' ? 'sandbox' : 'production';
+    const source = await c.env.DB.prepare(`
+      SELECT id, status FROM billing_legacy_sources
+      WHERE project_id = ? AND provider = 'revenuecat'
+    `).bind(project.id).first<{ id: string; status: string }>();
+    if (!source || source.status !== 'connected') {
+      throw purchasesError('legacy_source_not_connected', 'Test the legacy source connection before starting inventory', 409);
+    }
+    const active = await c.env.DB.prepare(`
+      SELECT id, status FROM billing_legacy_inventory_runs
+      WHERE project_id = ? AND environment = ? AND status IN ('queued', 'running') LIMIT 1
+    `).bind(project.id, environment).first<{ id: string; status: string }>();
+    if (active) return c.json({ data: active }, 200);
+    const runId = crypto.randomUUID();
+    await c.env.DB.prepare(`
+      INSERT INTO billing_legacy_inventory_runs
+        (id, project_id, source_id, environment, status, requested_by)
+      VALUES (?, ?, ?, ?, 'queued', ?)
+    `).bind(runId, project.id, source.id, environment, String(c.get('userId'))).run();
+    await c.env.BILLING_QUEUE.send({ type: 'billing.legacy.inventory.page', runId });
+    await audit(c, project.id, 'legacy_inventory.started', 'legacy_inventory_run', runId, { environment });
+    return c.json({ data: { id: runId, status: 'queued', environment } }, 202);
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.get('/:projectId/legacy/revenuecat/inventory', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const [source, runs] = await Promise.all([
+      c.env.DB.prepare(`
+        SELECT id, provider, external_project_id, status, last_tested_at,
+          last_error_code, last_error_message, created_at, updated_at
+        FROM billing_legacy_sources WHERE project_id = ? AND provider = 'revenuecat'
+      `).bind(project.id).first(),
+      c.env.DB.prepare(`
+        SELECT id, environment, status, customers_scanned, active_subscriptions,
+          matched_subscriptions, unresolved_subscriptions, unsupported_subscriptions,
+          last_error_code, last_error_message, started_at, completed_at, created_at, updated_at
+        FROM billing_legacy_inventory_runs WHERE project_id = ?
+        ORDER BY created_at DESC LIMIT 20
+      `).bind(project.id).all<Record<string, unknown>>(),
+    ]);
+    const latestRunId = String(runs.results?.[0]?.id || '');
+    const unresolved = latestRunId ? await c.env.DB.prepare(`
+      SELECT external_customer_id, external_subscription_id, app_user_id, provider,
+        environment, store_product_id, source_status, source_expires_at,
+        resolution_status, resolution_detail
+      FROM billing_legacy_subscription_inventory
+      WHERE run_id = ? AND resolution_status <> 'matched'
+      ORDER BY source_expires_at DESC LIMIT 100
+    `).bind(latestRunId).all<Record<string, unknown>>() : { results: [] };
+    return c.json({ data: { source: source || null, runs: runs.results || [], unresolved: unresolved.results || [] } });
   } catch (error) { return replyError(c, error); }
 });
 

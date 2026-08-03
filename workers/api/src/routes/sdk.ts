@@ -393,7 +393,7 @@ sdk.get('/device_for_vendor_id', async (c) => {
   return c.json({ last_seen: event?.created_at || null });
 });
 
-// POST /api/v1/sdk/register — enregistrer un device
+// POST /api/v1/sdk/register — register a device
 sdk.post('/register', async (c) => {
   const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || '0.0.0.0';
   const countryCode = requestCountry(c);
@@ -532,7 +532,7 @@ sdk.post('/attribution', async (c) => {
   });
 });
 
-// POST /api/v1/sdk/events — tracker des events in-app
+// POST /api/v1/sdk/events — track in-app events
 sdk.post('/events', async (c) => {
   const body = await c.req.json<{
     device_id: number;

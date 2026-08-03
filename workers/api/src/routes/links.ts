@@ -6,7 +6,7 @@ import { generateShortCode } from '../lib/crypto';
 const links = new Hono<{ Bindings: Env; Variables: { userId: number; instanceId: number } }>();
 links.use('*', authMiddleware);
 
-// GET /api/v1/links — liste tous les liens du projet
+// GET /api/v1/links — list every project link
 links.get('/', async (c) => {
   const projectId = c.req.query('project_id');
   const page = parseInt(c.req.query('page') || '1');

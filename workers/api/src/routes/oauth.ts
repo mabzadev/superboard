@@ -19,7 +19,7 @@ async function readBody(c: any): Promise<Record<string, string>> {
 
 // =============================================
 // OAuth2 Doorkeeper-compatible endpoints
-// Compatible avec le dashboard OpenGrow officiel
+// Compatible with the OpenGrow dashboard OAuth contract.
 // =============================================
 
 // POST /oauth/token — password grant + refresh_token grant
