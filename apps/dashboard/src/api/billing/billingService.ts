@@ -200,6 +200,32 @@ export type BillingHealth = {
   features?: Record<string, unknown>;
 };
 
+export type BillingRefundCase = {
+  id: string;
+  provider: "apple" | "google" | "stripe";
+  environment: "sandbox" | "production";
+  provider_case_id: string;
+  case_type: string;
+  status: string;
+  reason?: string | null;
+  amount_micros?: number | null;
+  currency?: string | null;
+  deadline_at?: string | null;
+  primary_app_user_id?: string | null;
+  store_product_id?: string | null;
+  evidence_count?: number;
+  actions_requiring_approval?: number;
+  updated_at: string;
+};
+
+export type BillingRefundCaseDetail = {
+  refund_case: BillingRefundCase;
+  evidence: Array<Record<string, any>>;
+  actions: Array<Record<string, any>>;
+  deadlines: Array<Record<string, any>>;
+  audit_events: Array<Record<string, any>>;
+};
+
 export const getBillingConnections = async (projectId: string): Promise<{ data: BillingConnection[] }> =>
   (await GET(purchasesV2Path(projectId, "/connections"))).data;
 
@@ -271,6 +297,21 @@ export const getBillingWebhookDeliveries = async (projectId: string) =>
 
 export const replayBillingWebhookDelivery = async (projectId: string, deliveryId: string) =>
   (await POST(purchasesV2Path(projectId, `/integrations/deliveries/${deliveryId}/replay`), {})).data;
+
+export const getBillingRefundCases = async (projectId: string): Promise<{ data: BillingRefundCase[] }> =>
+  (await GET(purchasesV2Path(projectId, "/refunds?limit=100"))).data;
+
+export const getBillingRefundCase = async (projectId: string, caseId: string): Promise<BillingRefundCaseDetail> =>
+  (await GET(purchasesV2Path(projectId, `/refunds/${caseId}`))).data;
+
+export const createBillingRefundEvidence = async (projectId: string, caseId: string, data: { evidence_type: string; content?: string; file_key?: string }) =>
+  (await POST(purchasesV2Path(projectId, `/refunds/${caseId}/evidence`), data)).data;
+
+export const reviewBillingRefundEvidence = async (projectId: string, caseId: string, evidenceId: string, approved: boolean) =>
+  (await POST(purchasesV2Path(projectId, `/refunds/${caseId}/evidence/${evidenceId}/review`), { approved })).data;
+
+export const approveBillingRefundAction = async (projectId: string, caseId: string, actionId: string) =>
+  (await POST(purchasesV2Path(projectId, `/refunds/${caseId}/actions/${actionId}/approve`), {})).data;
 
 export const getBillingVirtualCurrencies = async (projectId: string) =>
   (await GET(purchasesV2Path(projectId, "/virtual-currencies"))).data;

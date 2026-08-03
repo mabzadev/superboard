@@ -1,6 +1,7 @@
 import { Env } from '../types';
 import { entitlementIsActive } from './billing-state';
 import { recordCanonicalBillingEvent } from './purchases-v2';
+import { recordRefundCaseForPurchase } from './refunds';
 
 export const BILLING_STATUSES = [
   'pending',
@@ -456,6 +457,7 @@ export async function applyVerifiedPurchase(env: Env, purchase: VerifiedPurchase
   if (subscriptionAccepted) await syncEntitlements(env.DB, purchase, String(product.id));
   await creditProductCurrencies(env.DB, purchase, product, stored.id);
   await recordCanonicalBillingEvent(env, purchase, stored.id);
+  await recordRefundCaseForPurchase(env, purchase, stored.id);
   if (insert.meta.changes > 0) {
     await queuePurchaseWebhook(env, purchase, stored.id);
     if (purchase.customerId) {

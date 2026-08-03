@@ -928,6 +928,111 @@ admin.post('/:projectId/integrations/deliveries/:id/replay', async (c) => {
   } catch (error) { return replyError(c, error); }
 });
 
+admin.get('/:projectId/refunds', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const status = String(c.req.query('status') || '').trim();
+    const limit = parseLimit(c.req.query('limit'));
+    const rows = await c.env.DB.prepare(`
+      SELECT rc.*, bc.primary_app_user_id, t.store_transaction_id, p.store_product_id,
+        (SELECT COUNT(*) FROM billing_refund_evidence re WHERE re.case_id = rc.id) AS evidence_count,
+        (SELECT COUNT(*) FROM billing_refund_provider_actions ra WHERE ra.case_id = rc.id AND ra.status = 'draft') AS actions_requiring_approval
+      FROM billing_refund_cases rc
+      LEFT JOIN billing_customers bc ON bc.id = rc.customer_id
+      LEFT JOIN billing_transactions t ON t.id = rc.transaction_id
+      LEFT JOIN billing_products p ON p.id = t.product_id
+      WHERE rc.project_id = ? AND (? = '' OR rc.status = ?)
+      ORDER BY CASE WHEN rc.deadline_at IS NULL THEN 1 ELSE 0 END, rc.deadline_at, rc.updated_at DESC
+      LIMIT ?
+    `).bind(project.id, status, status, limit).all();
+    return c.json({ data: rows.results });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.get('/:projectId/refunds/:caseId', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const refundCase = await c.env.DB.prepare(`
+      SELECT rc.*, bc.primary_app_user_id, t.store_transaction_id, p.store_product_id
+      FROM billing_refund_cases rc
+      LEFT JOIN billing_customers bc ON bc.id = rc.customer_id
+      LEFT JOIN billing_transactions t ON t.id = rc.transaction_id
+      LEFT JOIN billing_products p ON p.id = t.product_id
+      WHERE rc.id = ? AND rc.project_id = ?
+    `).bind(c.req.param('caseId'), project.id).first();
+    if (!refundCase) throw purchasesError('refund_case_not_found', 'Refund case not found', 404);
+    const [evidence, actions, deadlines, events] = await Promise.all([
+      c.env.DB.prepare('SELECT * FROM billing_refund_evidence WHERE case_id = ? ORDER BY created_at').bind(c.req.param('caseId')).all(),
+      c.env.DB.prepare('SELECT * FROM billing_refund_provider_actions WHERE case_id = ? ORDER BY created_at').bind(c.req.param('caseId')).all(),
+      c.env.DB.prepare('SELECT * FROM billing_refund_deadlines WHERE case_id = ? ORDER BY due_at').bind(c.req.param('caseId')).all(),
+      c.env.DB.prepare('SELECT * FROM billing_refund_audit_events WHERE case_id = ? ORDER BY occurred_at DESC').bind(c.req.param('caseId')).all(),
+    ]);
+    return c.json({ refund_case: refundCase, evidence: evidence.results, actions: actions.results, deadlines: deadlines.results, audit_events: events.results });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/refunds/:caseId/evidence', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
+    const refundCase = await c.env.DB.prepare('SELECT id FROM billing_refund_cases WHERE id = ? AND project_id = ?')
+      .bind(c.req.param('caseId'), project.id).first<{ id: string }>();
+    if (!refundCase) throw purchasesError('refund_case_not_found', 'Refund case not found', 404);
+    const evidenceType = identifier(data.evidence_type, 'evidence_type');
+    const content = typeof data.content === 'string' ? data.content.trim() : '';
+    const fileKey = typeof data.file_key === 'string' ? data.file_key.trim() : '';
+    if (!content && !fileKey) throw purchasesError('evidence_content_required', 'Evidence content or file_key is required');
+    const id = crypto.randomUUID();
+    await c.env.DB.batch([
+      c.env.DB.prepare(`
+        INSERT INTO billing_refund_evidence (id, case_id, evidence_type, content, file_key, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(id, refundCase.id, evidenceType, content || null, fileKey || null, String(c.get('userId'))),
+      c.env.DB.prepare(`
+        INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, actor_id, payload)
+        VALUES (?, ?, 'evidence.created', 'admin', ?, ?)
+      `).bind(crypto.randomUUID(), refundCase.id, String(c.get('userId')), JSON.stringify({ evidence_id: id, evidence_type: evidenceType })),
+      c.env.DB.prepare(`UPDATE billing_refund_cases SET status = 'awaiting_approval', updated_at = datetime('now') WHERE id = ? AND status NOT IN ('won','lost','closed')`).bind(refundCase.id),
+    ]);
+    return c.json({ id, review_status: 'draft' }, 201);
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/refunds/:caseId/evidence/:evidenceId/review', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
+    const reviewStatus = data.approved === true ? 'approved' : 'rejected';
+    const result = await c.env.DB.prepare(`
+      UPDATE billing_refund_evidence
+      SET review_status = ?, reviewed_by = ?, reviewed_at = datetime('now'), updated_at = datetime('now')
+      WHERE id = ? AND case_id IN (SELECT id FROM billing_refund_cases WHERE id = ? AND project_id = ?)
+    `).bind(reviewStatus, String(c.get('userId')), c.req.param('evidenceId'), c.req.param('caseId'), project.id).run();
+    if (!result.meta.changes) throw purchasesError('refund_evidence_not_found', 'Refund evidence not found', 404);
+    await c.env.DB.prepare(`
+      INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, actor_id, payload)
+      VALUES (?, ?, ?, 'admin', ?, ?)
+    `).bind(crypto.randomUUID(), c.req.param('caseId'), `evidence.${reviewStatus}`, String(c.get('userId')), JSON.stringify({ evidence_id: c.req.param('evidenceId') })).run();
+    return c.json({ review_status: reviewStatus });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/refunds/:caseId/actions/:actionId/approve', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const result = await c.env.DB.prepare(`
+      UPDATE billing_refund_provider_actions
+      SET status = 'approved', approved_by = ?, approved_at = datetime('now'), updated_at = datetime('now')
+      WHERE id = ? AND status = 'draft'
+        AND case_id IN (SELECT id FROM billing_refund_cases WHERE id = ? AND project_id = ?)
+    `).bind(String(c.get('userId')), c.req.param('actionId'), c.req.param('caseId'), project.id).run();
+    if (!result.meta.changes) throw purchasesError('refund_action_not_approvable', 'Refund action was not found or is no longer a draft', 409);
+    await c.env.DB.prepare(`
+      INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, actor_id, payload)
+      VALUES (?, ?, 'provider_action.approved', 'admin', ?, ?)
+    `).bind(crypto.randomUUID(), c.req.param('caseId'), String(c.get('userId')), JSON.stringify({ action_id: c.req.param('actionId') })).run();
+    return c.json({ status: 'approved', queued: false });
+  } catch (error) { return replyError(c, error); }
+});
+
 admin.get('/:projectId/exports', async (c) => {
   try {
     const project = await projectFor(c);
