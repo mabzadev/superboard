@@ -12,7 +12,7 @@ const manifestPath = resolve(root, "deploy", "targets", `${target}.json`);
 try {
   await access(manifestPath);
 } catch {
-  for (const required of ["account-id", "workers-dev-subdomain", "shortlinks-domain", "sdk-domain", "dashboard-domain"]) {
+  for (const required of ["account-id", "workers-dev-subdomain", "shortlinks-domain", "sdk-domain", "dashboard-domain", "mail-from-address"]) {
     if (!args[required]) throw new Error(`New targets require --${required}`);
   }
   const manifest = newManifest();
@@ -66,6 +66,11 @@ function newManifest() {
     accessMode: "full",
     registrationMode: "allowlist",
     ssoEnabled: false,
+    mail: {
+      provider: "cloudflare",
+      fromName: "OpenGrow",
+      fromAddress: args["mail-from-address"],
+    },
     domains: {
       shortlinks: args["shortlinks-domain"],
       sdk: args["sdk-domain"],

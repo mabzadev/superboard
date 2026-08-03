@@ -1,10 +1,12 @@
 JWT_SECRET=local-development-secret-change-me
 
 # Mail delivery for reset password and dashboard invitations.
-# Pick one provider and keep real tokens as Cloudflare Worker secrets in prod.
-MAIL_PROVIDER=webhook
-MAIL_FROM="OpenGrow <noreply@opengrow.io>"
-MAIL_WEBHOOK_URL=http://127.0.0.1:9999/mail
+# Cloudflare Email Sending uses the EMAIL binding generated from the target.
+MAIL_PROVIDER=cloudflare
+MAIL_FROM="OpenGrow <noreply@example.com>"
+# Alternative HTTP providers remain available for local compatibility.
+# MAIL_PROVIDER=webhook
+# MAIL_WEBHOOK_URL=http://127.0.0.1:9999/mail
 # RESEND_API_KEY=
 # POSTMARK_SERVER_TOKEN=
 # SENDGRID_API_KEY=

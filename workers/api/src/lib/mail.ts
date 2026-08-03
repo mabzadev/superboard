@@ -24,6 +24,7 @@ function htmlEscape(value: string): string {
 function providerFor(env: Env): string | null {
   const configured = env.MAIL_PROVIDER?.trim().toLowerCase();
   if (configured) return configured;
+  if (env.EMAIL) return 'cloudflare';
   if (env.RESEND_API_KEY) return 'resend';
   if (env.POSTMARK_SERVER_TOKEN) return 'postmark';
   if (env.SENDGRID_API_KEY) return 'sendgrid';
@@ -65,6 +66,18 @@ export async function sendMail(env: Env, message: MailMessage): Promise<MailResu
   }
 
   const from = mailFrom(env);
+
+  if (provider === 'cloudflare') {
+    if (!env.EMAIL) throw new Error('EMAIL binding is not configured');
+    const result = await env.EMAIL.send({
+      from: parseEmailAddress(from),
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+    });
+    return { provider, id: result.messageId };
+  }
 
   if (provider === 'resend') {
     if (!env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not configured');
@@ -126,6 +139,12 @@ export async function sendMail(env: Env, message: MailMessage): Promise<MailResu
   }
 
   throw new Error(`Unsupported mail provider: ${provider}`);
+}
+
+function parseEmailAddress(value: string): string | EmailAddress {
+  const match = value.match(/^\s*(.*?)\s*<([^<>]+)>\s*$/);
+  if (!match) return value.trim();
+  return { name: match[1].trim(), email: match[2].trim() };
 }
 
 export function dashboardBaseUrl(env: Env): string {

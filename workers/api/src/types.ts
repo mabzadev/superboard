@@ -6,6 +6,7 @@ export interface Env {
   PUSH_QUEUE?: Queue;
   MAINTENANCE_QUEUE?: Queue;
   BILLING_QUEUE?: Queue;
+  EMAIL?: SendEmail;
   ENVIRONMENT: string;
   SHORTLINK_DOMAIN: string;
   API_DOMAIN: string;
