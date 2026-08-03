@@ -6,6 +6,7 @@ import {
   publishApprovedReviewDraft,
   publishStoreReviewResponse,
   storeReviewResponseLimit,
+  upsertReview,
 } from './store-reviews';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -31,6 +32,30 @@ describe('store review reliability', () => {
       code: 'store_review_response_invalid',
       retryable: false,
     });
+  });
+
+  it('queues a newly persisted negative revision exactly once', async () => {
+    const jobs: unknown[] = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'run' && call.sql.startsWith('INSERT INTO store_reviews')) return { meta: { changes: 1 } };
+      if (call.op === 'first' && call.sql.includes('SELECT id FROM store_reviews')) return { id: 'review-1' };
+      if (call.op === 'run' && call.sql.includes('INSERT OR IGNORE INTO store_review_revisions')) return { meta: { changes: 1 } };
+      return undefined;
+    });
+    const env = {
+      DB: db,
+      EVENT_QUEUE: { send: async (job: unknown) => { jobs.push(job); } },
+      GROWTH: { fetch: async () => Response.json({}) },
+      GROWTH_INTERNAL_TOKEN: 'growth-token',
+    } as unknown as Env;
+    await upsertReview(env, '11', {
+      provider: 'apple', providerReviewId: 'provider-review-1', rating: 1,
+      title: 'Needs work', body: 'The app closes unexpectedly.', rawPayload: { id: 'provider-review-1' },
+    });
+    expect(jobs).toEqual([expect.objectContaining({
+      type: 'growth.review-negative.evaluate', projectId: '11',
+    })]);
+    expect(String((jobs[0] as Record<string, unknown>).revisionId)).toBeTruthy();
   });
 
   it('never publishes a response without an explicit publish request', async () => {

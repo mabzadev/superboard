@@ -25,4 +25,15 @@ export const AUTOMATION_TRIGGERS = [
   'churn_risk',
 ] as const;
 
-export const AUTOMATION_ACTIONS = ['chat', 'push', 'in_app'] as const;
+export const AUTOMATION_ACTIONS = ['chat', 'push', 'in_app', 'inbox'] as const;
+
+export const AUTOMATION_TRIGGER_ACTIONS: Record<(typeof AUTOMATION_TRIGGERS)[number], readonly (typeof AUTOMATION_ACTIONS)[number][]> = {
+  paywall_abandoned: ['chat', 'push', 'in_app'],
+  payment_failed: ['chat', 'push', 'in_app'],
+  entitlement_expired: ['chat', 'push', 'in_app'],
+  refund_granted: ['chat', 'push', 'in_app'],
+  refund_reversed: ['chat', 'push', 'in_app'],
+  renewal_succeeded: ['chat', 'push', 'in_app'],
+  review_negative: ['inbox'],
+  churn_risk: ['chat', 'push', 'in_app'],
+};

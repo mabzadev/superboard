@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { claimRun, evaluateEvent, markRun, releaseRun } from './automations';
 import { audit, enqueueAllProjects, syncProject } from './sync';
-import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, type Env, type GrowthQueueJob } from './types';
+import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_ACTIONS, type Env, type GrowthQueueJob } from './types';
 import {
   automationAction,
+  assertAutomationCompatibility,
   automationTrigger,
   booleanFlag,
   boundedJson,
@@ -57,6 +58,7 @@ const contracts = (env: Env) => ({
     ],
     automation_triggers: AUTOMATION_TRIGGERS,
     automation_actions: AUTOMATION_ACTIONS,
+    automation_trigger_actions: AUTOMATION_TRIGGER_ACTIONS,
     limits: { app_identifiers_per_request: 5, keywords_per_request: 5, list_page_size: 250 },
   },
 });
@@ -203,12 +205,15 @@ app.post('/internal/projects/:projectId/automations', async (c) => {
   const id = crypto.randomUUID();
   const triggerConfig = validatedAutomationConfig(body.trigger_config, 'trigger_config');
   const actionConfig = validatedAutomationConfig(body.action_config, 'action_config');
+  const triggerType = automationTrigger(body.trigger_type);
+  const actionType = automationAction(body.action_type);
+  assertAutomationCompatibility(triggerType, actionType);
   const row = await c.env.DB.prepare(`
     INSERT INTO growth_automations (
       id, project_id, name, trigger_type, action_type, trigger_config_json, action_config_json, enabled
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *
   `).bind(
-    id, projectId, requiredString(body.name, 'name', 120), automationTrigger(body.trigger_type), automationAction(body.action_type),
+    id, projectId, requiredString(body.name, 'name', 120), triggerType, actionType,
     JSON.stringify(triggerConfig), JSON.stringify(actionConfig), booleanFlag(body.enabled, false) ? 1 : 0,
   ).first<Record<string, unknown>>();
   await audit(c.env, projectId, 'growth.automation.created', 'automation', id, { ...row, action_config_json: '[redacted]' }, c.get('actorId'));
@@ -224,6 +229,7 @@ app.patch('/internal/projects/:projectId/automations/:id', async (c) => {
   const name = body.name == null ? existing.name : requiredString(body.name, 'name', 120);
   const triggerType = body.trigger_type == null ? existing.trigger_type : automationTrigger(body.trigger_type);
   const actionType = body.action_type == null ? existing.action_type : automationAction(body.action_type);
+  assertAutomationCompatibility(String(triggerType), String(actionType));
   const triggerConfig = body.trigger_config == null ? parseJson(existing.trigger_config_json) : validatedAutomationConfig(body.trigger_config, 'trigger_config');
   const actionConfig = body.action_config == null ? parseJson(existing.action_config_json) : validatedAutomationConfig(body.action_config, 'action_config');
   const enabled = body.enabled == null ? Number(existing.enabled) === 1 : booleanFlag(body.enabled);

@@ -1,5 +1,5 @@
 import type { Env } from './types';
-import { AUTOMATION_TRIGGERS } from './types';
+import { AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_ACTIONS } from './types';
 import { failure, jsonObject, requiredString } from './validation';
 import { audit } from './sync';
 
@@ -7,7 +7,7 @@ type AutomationRow = {
   id: string;
   project_id: number;
   trigger_type: string;
-  action_type: 'chat' | 'push' | 'in_app';
+  action_type: 'chat' | 'push' | 'in_app' | 'inbox';
   trigger_config_json: string;
   action_config_json: string;
 };
@@ -36,6 +36,7 @@ export async function evaluateEvent(env: Env, projectId: number, input: Record<s
       SELECT * FROM growth_automations WHERE project_id = ? AND enabled = 1 AND trigger_type = ? ORDER BY id
     `).bind(projectId, eventType).all<AutomationRow>();
     for (const automation of automations.results) {
+      if (!(AUTOMATION_TRIGGER_ACTIONS[eventType as keyof typeof AUTOMATION_TRIGGER_ACTIONS] || []).includes(automation.action_type)) continue;
       const triggerConfig = parseObject(automation.trigger_config_json);
       if (!matchesAutomation(triggerConfig, payload)) continue;
       const actionConfig = parseObject(automation.action_config_json);
@@ -43,7 +44,7 @@ export async function evaluateEvent(env: Env, projectId: number, input: Record<s
         channel: automation.action_type,
         subject_id: subjectId,
         message: actionConfig,
-        event: { id: event.id, type: eventType, occurred_at: occurredAt },
+        event: { id: event.id, type: eventType, occurred_at: occurredAt, payload },
       };
       await env.DB.prepare(`
         INSERT INTO growth_automation_runs (

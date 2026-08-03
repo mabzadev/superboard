@@ -6,7 +6,9 @@ import {
   deliverGrowthAutomation,
   emitBillingGrowthEvent,
   emitGrowthEvent,
+  enqueueNegativeReviewRecovery,
   enqueuePaywallAbandonmentRecovery,
+  evaluateNegativeReview,
   evaluatePaywallAbandonment,
 } from './growth-delivery';
 
@@ -23,10 +25,13 @@ function baseEnv(options: {
   messaging?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   growth?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   queue?: { send: (body: unknown) => Promise<void> };
+  inboxAlertId?: string;
 } = {}) {
   const db = createFakeD1((call: FakeD1Call) => {
     if (call.op === 'first' && call.sql.includes('FROM growth_delivery_receipts')) return options.receipt ?? null;
+    if (call.op === 'first' && call.sql.includes('FROM inbox_automation_alerts')) return options.inboxAlertId ? { id: options.inboxAlertId } : null;
     if (call.op === 'run' && call.sql.includes('growth_delivery_receipts')) return { meta: { changes: 1 } };
+    if (call.op === 'run' && call.sql.includes('inbox_automation_alerts')) return { meta: { changes: 1 } };
     return undefined;
   });
   const env = {
@@ -130,6 +135,47 @@ describe('growth automation delivery', () => {
     }]);
   });
 
+  it('projects a negative review without exposing review text or a customer identity', async () => {
+    const growthEvents: Record<string, unknown>[] = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM store_review_revisions rr')) return {
+        revision_id: 'revision-1', review_id: 'review-1', project_id: '11', provider: 'apple', rating: 1,
+        territory: 'CH', language: 'en', app_version: '1.2.0', sentiment: 'negative', category: 'bug',
+        provider_updated_at: '2026-08-03T10:00:00.000Z', created_at: '2026-08-03T10:00:00.000Z',
+        growth_projected_at: null, growth_projection_attempts: 0,
+      };
+      if (call.op === 'run' && call.sql.includes('UPDATE store_review_revisions')) return { meta: { changes: 1 } };
+      return undefined;
+    });
+    const { env } = baseEnv({
+      growth: async (_input, init) => {
+        growthEvents.push(JSON.parse(String(init?.body || '{}')));
+        return json({ data: { duplicate: false, actions: [] } }, 202);
+      },
+      queue: { send: async () => undefined },
+    });
+    env.DB = db;
+    await expect(evaluateNegativeReview(env, '11', 'revision-1'))
+      .resolves.toMatchObject({ projected: true, duplicate: false });
+    expect(growthEvents).toEqual([expect.objectContaining({
+      event_id: 'review:revision-1:negative', event_type: 'review_negative', subject_id: 'store-review:review-1',
+      payload: expect.objectContaining({ review_id: 'review-1', rating: 1, category: 'bug' }),
+    })]);
+    expect(JSON.stringify(growthEvents[0])).not.toContain('review body');
+  });
+
+  it('re-enqueues due negative review projections for recovery', async () => {
+    const jobs: unknown[] = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'all' && call.sql.includes('rr.rating <= 2')) return [{ id: 'revision-1', project_id: '11' }];
+      return undefined;
+    });
+    const { env } = baseEnv({ queue: { send: async (job) => { jobs.push(job); } } });
+    env.DB = db;
+    await expect(enqueueNegativeReviewRecovery(env)).resolves.toBe(1);
+    expect(jobs).toEqual([{ type: 'growth.review-negative.evaluate', projectId: '11', revisionId: 'revision-1' }]);
+  });
+
   it('delivers a deterministic chat message and marks both receipt and run delivered', async () => {
     const requests: Request[] = [];
     const { env, db } = baseEnv({ messaging: async (input, init) => {
@@ -156,6 +202,30 @@ describe('growth automation delivery', () => {
     });
     await expect(deliverGrowthAutomation(env, 11, 'run-1')).resolves.toEqual({ status: 'delivered', duplicate: true });
     expect(messagingCalls).toBe(0);
+  });
+
+  it('persists an idempotent internal Inbox alert for a negative review', async () => {
+    const { env, db } = baseEnv({
+      inboxAlertId: 'alert-1',
+      growth: async (input, init) => {
+        const request = requestFrom(input, init);
+        if (new URL(request.url).pathname.endsWith('/claim')) return json({ data: {
+          id: 'run-1', status: 'pending', action_type: 'inbox', terminal: false,
+          action_payload_json: JSON.stringify({
+            subject_id: 'store-review:review-1',
+            message: { title: 'Review needs attention', body: 'Prepare a helpful response.' },
+            event: { type: 'review_negative', payload: { review_id: 'review-1', rating: 1 } },
+          }),
+        } });
+        return json({ data: { id: 'run-1', status: 'delivered' } });
+      },
+    });
+    await expect(deliverGrowthAutomation(env, 11, 'run-1')).resolves.toMatchObject({
+      status: 'delivered', channel: 'inbox', inbox_alert_id: 'alert-1',
+    });
+    expect(db.calls.some((call) => call.sql.includes('INSERT INTO inbox_automation_alerts')
+      && call.args.includes('review-1')
+      && call.args.includes('store-review:review-1'))).toBe(true);
   });
 
   it('releases a retryable run without converting it to a terminal failure', async () => {
