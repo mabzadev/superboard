@@ -4,6 +4,32 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
+abstract interface class OpenGrowPurchaseStorage {
+  Future<String?> read({required String key});
+
+  Future<void> write({required String key, required String? value});
+
+  Future<void> delete({required String key});
+}
+
+class FlutterOpenGrowPurchaseStorage implements OpenGrowPurchaseStorage {
+  const FlutterOpenGrowPurchaseStorage([
+    this._storage = const FlutterSecureStorage(),
+  ]);
+
+  final FlutterSecureStorage _storage;
+
+  @override
+  Future<String?> read({required String key}) => _storage.read(key: key);
+
+  @override
+  Future<void> write({required String key, required String? value}) =>
+      _storage.write(key: key, value: value);
+
+  @override
+  Future<void> delete({required String key}) => _storage.delete(key: key);
+}
+
 class OpenGrowPurchaseOutboxEntry {
   const OpenGrowPurchaseOutboxEntry({
     required this.id,
@@ -106,7 +132,7 @@ class OpenGrowPurchaseOutbox {
   OpenGrowPurchaseOutbox(this._storage);
 
   static const _storageKey = 'opengrow.purchases.outbox.v1';
-  final FlutterSecureStorage _storage;
+  final OpenGrowPurchaseStorage _storage;
   Future<void> _tail = Future.value();
 
   Future<List<OpenGrowPurchaseOutboxEntry>> readAll() => _locked(_readUnlocked);

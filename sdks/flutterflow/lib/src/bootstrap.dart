@@ -22,7 +22,11 @@ class OpenGrowBootstrap extends StatefulWidget {
     this.initializePurchases = false,
     this.onInitialized,
     this.onDeepLinkJson,
+    this.onPurchaseResultJson,
+    this.onVerifiedCustomerInfoJson,
     this.onError,
+    @visibleForTesting this.purchaseResultStream,
+    @visibleForTesting this.customerInfoStream,
   });
 
   final String projectKey;
@@ -36,7 +40,11 @@ class OpenGrowBootstrap extends StatefulWidget {
   final bool initializePurchases;
   final Future<void> Function()? onInitialized;
   final Future<void> Function(String value)? onDeepLinkJson;
+  final Future<void> Function(String value)? onPurchaseResultJson;
+  final Future<void> Function(String value)? onVerifiedCustomerInfoJson;
   final Future<void> Function(String message)? onError;
+  final Stream<OpenGrowPurchaseResult>? purchaseResultStream;
+  final Stream<OpenGrowCustomerInfo>? customerInfoStream;
 
   @override
   State<OpenGrowBootstrap> createState() => _OpenGrowBootstrapState();
@@ -44,6 +52,8 @@ class OpenGrowBootstrap extends StatefulWidget {
 
 class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
   StreamSubscription<DeeplinkDetails>? _deepLinkSubscription;
+  StreamSubscription<OpenGrowPurchaseResult>? _purchaseResultSubscription;
+  StreamSubscription<OpenGrowCustomerInfo>? _customerInfoSubscription;
 
   @override
   void initState() {
@@ -60,7 +70,29 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
         await widget.onError?.call(value);
       },
     );
+    _purchaseResultSubscription =
+        (widget.purchaseResultStream ??
+                OpenGrowPurchases.instance.purchaseResultStream)
+            .listen((result) async {
+              final value = jsonEncode(result.toJson());
+              OpenGrowFlutterFlowState.lastPurchaseResultJson = value;
+              await widget.onPurchaseResultJson?.call(value);
+            }, onError: _forwardError);
+    _customerInfoSubscription =
+        (widget.customerInfoStream ??
+                OpenGrowPurchases.instance.customerInfoStream)
+            .listen((info) async {
+              final value = jsonEncode(info.toJson());
+              OpenGrowFlutterFlowState.lastVerifiedCustomerInfoJson = value;
+              await widget.onVerifiedCustomerInfoJson?.call(value);
+            }, onError: _forwardError);
     _initialize();
+  }
+
+  Future<void> _forwardError(Object error) async {
+    final value = error.toString();
+    OpenGrowFlutterFlowState.lastError = value;
+    await widget.onError?.call(value);
   }
 
   Future<void> _initialize() async {
@@ -83,6 +115,8 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
   @override
   void dispose() {
     _deepLinkSubscription?.cancel();
+    _purchaseResultSubscription?.cancel();
+    _customerInfoSubscription?.cancel();
     super.dispose();
   }
 

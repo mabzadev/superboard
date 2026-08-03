@@ -8,7 +8,7 @@ Import-ready library for replacing RevenueCat actions in FlutterFlow.
    opengrow_flutterflow:
      git:
        url: git@github.com:mbzadev/opengrow.git
-       ref: sdk-flutterflow-v2.1.3
+       ref: sdk-flutterflow-v2.1.4
        path: sdks/flutterflow
    ```
 
@@ -36,6 +36,8 @@ FlutterFlow-ready actions:
 - `opengrowGetUnreadMessageCount`
 - `opengrowDisplayMessages`
 - `opengrowGetLastDeepLinkJson`
+- `opengrowGetLastPurchaseResultJson`
+- `opengrowGetLastVerifiedCustomerInfoJson`
 - `opengrowPurchaseLogin`, `opengrowPurchaseLogout`, purchase, restore,
   synchronization, offerings, and entitlements
 - `opengrowGetPurchaseConfigurationJson`
@@ -43,6 +45,10 @@ FlutterFlow-ready actions:
 - `opengrowGetVirtualCurrenciesJson`
 - `opengrowGetCustomerCenterJson`
 - `opengrowOpenSubscriptionManagement`
+
+Use `OpenGrowBootstrap.onPurchaseResultJson` to handle the terminal result of
+a pending purchase or a purchase recovered after restart. Use
+`onVerifiedCustomerInfoJson` as the only callback source for Premium UI state.
 
 `api-auth-gateway` remains the only application authentication authority. The
 library never issues an application token. It exchanges the existing access

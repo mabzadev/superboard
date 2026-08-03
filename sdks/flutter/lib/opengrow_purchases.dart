@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import 'models/opengrow_purchases.dart';
 import 'src/customer_info_verifier.dart';
 import 'src/purchase_outbox.dart';
+import 'src/purchase_store.dart';
 
 typedef OpenGrowIdentityTokenProvider = Future<String?> Function();
 
@@ -30,13 +30,39 @@ class OpenGrowPurchasesException implements Exception {
 }
 
 class OpenGrowPurchases {
-  OpenGrowPurchases._();
+  OpenGrowPurchases._({
+    OpenGrowPurchaseStore? purchaseStore,
+    OpenGrowPurchaseStorage? secureStorage,
+    OpenGrowCustomerInfoVerifier? customerInfoVerifier,
+    http.Client Function()? httpClientFactory,
+  }) : _iap = purchaseStore ?? FlutterOpenGrowPurchaseStore(),
+       _secureStorage = secureStorage ?? const FlutterOpenGrowPurchaseStorage(),
+       _customerInfoVerifier =
+           customerInfoVerifier ?? OpenGrowCustomerInfoVerifier(),
+       _httpClientFactory = httpClientFactory ?? http.Client.new {
+    _outbox = OpenGrowPurchaseOutbox(_secureStorage);
+  }
+
+  @visibleForTesting
+  factory OpenGrowPurchases.forTesting({
+    required OpenGrowPurchaseStore purchaseStore,
+    required OpenGrowPurchaseStorage secureStorage,
+    required OpenGrowCustomerInfoVerifier customerInfoVerifier,
+    required http.Client Function() httpClientFactory,
+  }) => OpenGrowPurchases._(
+    purchaseStore: purchaseStore,
+    secureStorage: secureStorage,
+    customerInfoVerifier: customerInfoVerifier,
+    httpClientFactory: httpClientFactory,
+  );
+
   static final instance = OpenGrowPurchases._();
 
-  final _iap = InAppPurchase.instance;
-  final _secureStorage = const FlutterSecureStorage();
-  final _customerInfoVerifier = OpenGrowCustomerInfoVerifier();
-  final _outbox = OpenGrowPurchaseOutbox(const FlutterSecureStorage());
+  final OpenGrowPurchaseStore _iap;
+  final OpenGrowPurchaseStorage _secureStorage;
+  final OpenGrowCustomerInfoVerifier _customerInfoVerifier;
+  final http.Client Function() _httpClientFactory;
+  late final OpenGrowPurchaseOutbox _outbox;
   final _customerInfoController =
       StreamController<OpenGrowCustomerInfo>.broadcast();
   final _purchaseCompleters = <String, Completer<OpenGrowPurchaseResult>>{};
@@ -55,7 +81,7 @@ class OpenGrowPurchases {
   String? _platformIdentifier;
   String _baseUrl = 'https://sdk.vocostar.com/purchases/v2';
   String _appVersion = '';
-  String _sdkVersion = '2.1.0';
+  String _sdkVersion = '2.1.2';
   String _storefront = '';
   String _campaign = '';
   String? _anonymousId;
@@ -75,7 +101,7 @@ class OpenGrowPurchases {
     String? identityToken,
     OpenGrowIdentityTokenProvider? identityTokenProvider,
     String appVersion = '',
-    String sdkVersion = '2.1.0',
+    String sdkVersion = '2.1.2',
     String storefront = '',
     String campaign = '',
   }) async {
@@ -794,10 +820,15 @@ class OpenGrowPurchases {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       })
       ..body = jsonEncode(body ?? const {});
-    final client = http.Client();
-    final streamed = await client.send(request);
-    final text = await streamed.stream.bytesToString();
-    client.close();
+    final client = _httpClientFactory();
+    late final http.StreamedResponse streamed;
+    late final String text;
+    try {
+      streamed = await client.send(request);
+      text = await streamed.stream.bytesToString();
+    } finally {
+      client.close();
+    }
     final decoded = text.isEmpty
         ? <String, dynamic>{}
         : (jsonDecode(text) as Map).cast<String, dynamic>();
@@ -837,5 +868,14 @@ class OpenGrowPurchases {
       return provided;
     }
     return _identityToken;
+  }
+
+  @visibleForTesting
+  Future<void> disposeForTesting() async {
+    _restoreTimer?.cancel();
+    _outboxRetryTimer?.cancel();
+    await _subscription?.cancel();
+    await _customerInfoController.close();
+    await _purchaseResultController.close();
   }
 }

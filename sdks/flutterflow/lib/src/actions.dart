@@ -11,6 +11,8 @@ import 'models.dart';
 /// Deep-link payloads are deliberately kept in memory and are never persisted.
 abstract final class OpenGrowFlutterFlowState {
   static String lastDeepLinkJson = '';
+  static String lastPurchaseResultJson = '';
+  static String lastVerifiedCustomerInfoJson = '';
   static String lastError = '';
 }
 
@@ -222,6 +224,19 @@ Future<bool> opengrowDisplayMessages() async {
 
 Future<String> opengrowGetLastDeepLinkJson() async {
   return OpenGrowFlutterFlowState.lastDeepLinkJson;
+}
+
+/// Returns the latest purchase result emitted by the native store listener.
+///
+/// This includes terminal results that resolve after an action first returned
+/// `pending` and results recovered after an application restart.
+Future<String> opengrowGetLastPurchaseResultJson() async {
+  return OpenGrowFlutterFlowState.lastPurchaseResultJson;
+}
+
+/// Returns the latest CustomerInfo received from the verified SDK stream.
+Future<String> opengrowGetLastVerifiedCustomerInfoJson() async {
+  return OpenGrowFlutterFlowState.lastVerifiedCustomerInfoJson;
 }
 
 Future<String> opengrowPurchase({
