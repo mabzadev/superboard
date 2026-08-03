@@ -25,6 +25,7 @@ import purchasesV2AdminRoutes from './routes/purchases-v2-admin';
 import purchasesProviderWebhooks from './routes/purchases-provider-webhooks';
 import storeReviewsAdminRoutes from './routes/store-reviews-admin';
 import messagingAdminRoutes from './routes/messaging-admin';
+import growthAdminRoutes from './routes/growth-admin';
 import redirectRoute from './routes/redirect';
 import { runMaintenance } from './lib/maintenance';
 import { dispatchQueueJob } from './lib/jobs';
@@ -79,6 +80,17 @@ app.get('/health/billing', async (c) => {
   } catch (error) {
     console.error(JSON.stringify({ event: 'billing_health_failed', error: error instanceof Error ? error.message : String(error) }));
     return c.json({ status: 'unavailable', service: 'opengrow-billing', routing_mode: c.env.BILLING_EXECUTION_MODE || 'local' }, 503);
+  }
+});
+
+app.get('/health/growth', async (c) => {
+  if (!c.env.GROWTH) return c.json({ status: 'unavailable', service: 'opengrow-growth' }, 503);
+  try {
+    const response = await c.env.GROWTH.fetch('https://growth.internal/health');
+    return new Response(response.body, { status: response.status, headers: response.headers });
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'growth_health_failed', error: error instanceof Error ? error.message : String(error) }));
+    return c.json({ status: 'unavailable', service: 'opengrow-growth' }, 503);
   }
 });
 
@@ -150,6 +162,7 @@ app.route('/api/v2/purchases/projects', purchasesAdminRoutes);
 app.route('/api/v2/purchases/providers/webhooks', purchasesProviderWebhooks);
 app.route('/api/v2/reputation/projects', storeReviewsAdminRoutes);
 app.route('/api/v2/messaging/projects', messagingAdminRoutes);
+app.route('/api/v2/growth/projects', growthAdminRoutes);
 app.route('/oauth', oauthRoutes);
 app.route('/.well-known', wellKnownRoutes);
 app.route('', mcpOauthRoutes);

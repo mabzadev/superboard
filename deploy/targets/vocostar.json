@@ -30,6 +30,9 @@
     },
     "messaging": {
       "production": "opengrow-messaging"
+    },
+    "growth": {
+      "production": "opengrow-growth"
     }
   },
   "oauth": {
@@ -49,6 +52,7 @@
       "dashboardCache": { "name": "opengrow" },
       "messagingD1": { "name": "opengrow-messaging-db", "id": "e7142cd8-d708-48b6-a311-47a49d3a67ac" },
       "messagingR2": { "name": "opengrow-messaging" },
+      "growthD1": { "name": "opengrow-growth-db", "id": "d131bb22-f3b5-4f7b-96df-c06a9f4ecc31" },
       "queues": {
         "events": "opengrow-events",
         "eventsDlq": "opengrow-events-dlq",
@@ -57,7 +61,9 @@
         "maintenance": "opengrow-maintenance",
         "maintenanceDlq": "opengrow-maintenance-dlq",
         "billing": "opengrow-billing",
-        "billingDlq": "opengrow-billing-dlq"
+        "billingDlq": "opengrow-billing-dlq",
+        "growth": "opengrow-growth",
+        "growthDlq": "opengrow-growth-dlq"
       }
     }
   }

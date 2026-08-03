@@ -7,14 +7,14 @@ const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const service = args.service ?? "api";
 const environment = environmentFromArgs(args);
 const preflight = Boolean(args.preflight);
-if (!new Set(["api", "dashboard", "billing", "messaging"]).has(service)) throw new Error("--service must be api, dashboard, billing or messaging");
+if (!new Set(["api", "dashboard", "billing", "messaging", "growth"]).has(service)) throw new Error("--service must be api, dashboard, billing, messaging or growth");
 
 const { target } = await loadTarget(targetName);
 const resources = target.environments[environment];
 if (!resources || !target.workers[service]?.[environment]) {
   throw new Error(`${targetName} does not define a ${environment} environment`);
 }
-if (!resources.d1.id || !resources.kv.id || (service === "messaging" && !resources.messagingD1.id)) {
+if (!resources.d1.id || !resources.kv.id || (service === "messaging" && !resources.messagingD1.id) || (service === "growth" && !resources.growthD1.id)) {
   throw new Error(`Run cloudflare-bootstrap for ${targetName}/${environment} before generating configuration`);
 }
 
@@ -24,7 +24,8 @@ const outputPath = resolve(outputDirectory, `${targetName}-${service}-${environm
 const config = service === "api" ? apiConfig()
   : service === "dashboard" ? dashboardConfig()
     : service === "billing" ? billingConfig()
-      : messagingConfig();
+      : service === "messaging" ? messagingConfig()
+        : growthConfig();
 await writeFile(outputPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
 console.log(relative(root, outputPath));
 
@@ -86,6 +87,7 @@ function apiConfig() {
     services: [
       { binding: "MESSAGING", service: target.workers.messaging[environment] },
       { binding: "BILLING", service: target.workers.billing[environment] },
+      { binding: "GROWTH", service: target.workers.growth[environment] },
     ],
   };
   if (!preflight) {
@@ -151,6 +153,32 @@ function messagingConfig() {
   };
   if (environment === "production" && !args["no-routes"] && !preflight) {
     config.routes = [{ pattern: target.domains.messaging, custom_domain: true }];
+  }
+  return config;
+}
+
+function growthConfig() {
+  const config = {
+    ...baseConfig(),
+    workers_dev: false,
+    main: "../../workers/growth/src/index.ts",
+    vars: {
+      ENVIRONMENT: environment,
+      APPTWEAK_API_BASE_URL: "https://public-api.apptweak.com/api/public/store",
+    },
+    d1_databases: [{
+      binding: "DB",
+      database_name: resources.growthD1.name,
+      database_id: resources.growthD1.id,
+      migrations_dir: "../../workers/growth/migrations",
+    }],
+    queues: {
+      producers: [{ binding: "GROWTH_QUEUE", queue: resources.queues.growth }],
+    },
+  };
+  if (!preflight) {
+    config.triggers = { crons: ["15 */6 * * *"] };
+    config.queues.consumers = [queueConsumer(resources.queues.growth, resources.queues.growthDlq, 10, 5, 8)];
   }
   return config;
 }

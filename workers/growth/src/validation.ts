@@ -1,0 +1,86 @@
+import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, type Device, type Platform } from './types';
+
+export function positiveInt(value: unknown, field = 'project_id'): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) throw failure(`${field}_invalid`, `${field} must be a positive integer`);
+  return parsed;
+}
+
+export function requiredString(value: unknown, field: string, max = 255): string {
+  const parsed = typeof value === 'string' ? value.trim() : '';
+  if (!parsed || parsed.length > max) throw failure(`${field}_invalid`, `${field} is required and must contain at most ${max} characters`);
+  return parsed;
+}
+
+export function optionalString(value: unknown, field: string, max = 255): string | null {
+  if (value == null || value === '') return null;
+  return requiredString(value, field, max);
+}
+
+export function platform(value: unknown): Platform {
+  if (value !== 'apple' && value !== 'google') throw failure('platform_invalid', 'platform must be apple or google');
+  return value;
+}
+
+export function device(value: unknown, selectedPlatform: Platform): Device {
+  const parsed = value || (selectedPlatform === 'apple' ? 'iphone' : 'android');
+  if (!['iphone', 'ipad', 'android'].includes(String(parsed))) throw failure('device_invalid', 'device must be iphone, ipad or android');
+  if (selectedPlatform === 'google' && parsed !== 'android') throw failure('device_invalid', 'Google apps must use the android device');
+  if (selectedPlatform === 'apple' && parsed === 'android') throw failure('device_invalid', 'Apple apps must use an Apple device');
+  return parsed as Device;
+}
+
+export function locale(value: unknown, field: string, fallback: string): string {
+  const parsed = String(value || fallback).trim().toLowerCase();
+  if (!/^[a-z]{2}(?:-[a-z0-9]{2,8})?$/.test(parsed)) throw failure(`${field}_invalid`, `${field} must be a valid store locale`);
+  return parsed;
+}
+
+export function booleanFlag(value: unknown, fallback = false): boolean {
+  if (value == null) return fallback;
+  if (typeof value !== 'boolean') throw failure('boolean_invalid', 'Boolean fields must be true or false');
+  return value;
+}
+
+export function jsonObject(value: unknown, field: string): Record<string, unknown> {
+  if (value == null) return {};
+  if (typeof value !== 'object' || Array.isArray(value)) throw failure(`${field}_invalid`, `${field} must be a JSON object`);
+  const encoded = JSON.stringify(value);
+  if (encoded.length > 32_768) throw failure(`${field}_too_large`, `${field} is limited to 32 KB`, 413);
+  return value as Record<string, unknown>;
+}
+
+export function automationTrigger(value: unknown): string {
+  const parsed = requiredString(value, 'trigger_type', 64);
+  if (!(AUTOMATION_TRIGGERS as readonly string[]).includes(parsed)) {
+    throw failure('trigger_type_invalid', 'Unsupported automation trigger');
+  }
+  return parsed;
+}
+
+export function automationAction(value: unknown): string {
+  const parsed = requiredString(value, 'action_type', 32);
+  if (!(AUTOMATION_ACTIONS as readonly string[]).includes(parsed)) {
+    throw failure('action_type_invalid', 'Unsupported automation action');
+  }
+  return parsed;
+}
+
+export function failure(code: string, message: string, status = 422, retryable = false) {
+  return Object.assign(new Error(message), { code, status, retryable });
+}
+
+export async function boundedJson(request: Request): Promise<Record<string, unknown>> {
+  const announced = Number(request.headers.get('content-length') || 0);
+  if (announced > 65_536) throw failure('request_too_large', 'Request body is limited to 64 KB', 413);
+  const text = await request.text();
+  if (text.length > 65_536) throw failure('request_too_large', 'Request body is limited to 64 KB', 413);
+  if (!text) return {};
+  try {
+    const parsed = JSON.parse(text);
+    return jsonObject(parsed, 'body');
+  } catch (error) {
+    if ((error as { code?: string }).code) throw error;
+    throw failure('json_invalid', 'Request body must contain valid JSON', 400);
+  }
+}

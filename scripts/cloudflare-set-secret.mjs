@@ -8,7 +8,7 @@ const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const environment = environmentFromArgs(args);
 const service = args.service;
 const secretName = args.name;
-if (!new Set(["api", "dashboard", "billing", "messaging"]).has(service)) throw new Error("--service must be api, dashboard, billing or messaging");
+if (!new Set(["api", "dashboard", "billing", "messaging", "growth"]).has(service)) throw new Error("--service must be api, dashboard, billing, messaging or growth");
 if (!/^[A-Z][A-Z0-9_]+$/.test(secretName ?? "")) throw new Error("--name must be an uppercase secret name");
 if (process.stdin.isTTY) throw new Error("Pipe the secret value on stdin; interactive input is intentionally disabled");
 

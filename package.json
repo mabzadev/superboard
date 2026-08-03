@@ -22,6 +22,11 @@
     "messaging:test": "npx vitest run --config workers/messaging/vitest.config.ts",
     "messaging:check": "npm run messaging:typecheck && npm run messaging:test && node scripts/cloudflare-config.mjs --service messaging --target vocostar --environment production && cd workers/messaging && npx wrangler deploy --dry-run --config ../../deploy/generated/vocostar-messaging-production.jsonc",
     "messaging:deploy": "npm run cloudflare:deploy -- --service messaging --target vocostar --environment production",
+    "growth:typecheck": "cd workers/growth && npx tsc --noEmit",
+    "growth:test": "npx vitest run --config workers/growth/vitest.config.ts",
+    "growth:types": "node scripts/cloudflare-config.mjs --service growth --target vocostar --environment production && cd workers/growth && npx wrangler types --config ../../deploy/generated/vocostar-growth-production.jsonc",
+    "growth:check": "npm run growth:types && npm run growth:typecheck && npm run growth:test && cd workers/growth && npx wrangler deploy --dry-run --config ../../deploy/generated/vocostar-growth-production.jsonc",
+    "growth:deploy": "npm run cloudflare:deploy -- --service growth --target vocostar --environment production",
     "purchases-js:typecheck": "npm --prefix sdks/purchases-js run typecheck",
     "worker:migrate:local": "npm --prefix workers/api run migrate:local",
     "worker:migrate:prod": "npm --prefix workers/api run migrate:prod",
@@ -37,8 +42,8 @@
     "target:register": "node scripts/opengrow-register-target.mjs",
     "allowlist": "node scripts/opengrow-allowlist.mjs",
     "secrets:scan": "gitleaks git . --no-banner --redact",
-    "typecheck": "npm run worker:typecheck && npm run billing:typecheck && npm run messaging:typecheck && npm run dashboard:typecheck && npm run purchases-js:typecheck",
-    "test": "npm run dashboard:test && npm run worker:test && npm run billing:test && npm run messaging:test",
+    "typecheck": "npm run worker:typecheck && npm run billing:typecheck && npm run messaging:typecheck && npm run growth:typecheck && npm run dashboard:typecheck && npm run purchases-js:typecheck",
+    "test": "npm run dashboard:test && npm run worker:test && npm run billing:test && npm run messaging:test && npm run growth:test",
     "test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 npm run test:e2e",
     "test:all": "npm run migration:inventory && npm run typecheck && npm run test && npm run dashboard:cf-build && npm run worker:check"
   },
@@ -47,6 +52,7 @@
     "workers/api",
     "workers/billing",
     "workers/messaging",
+    "workers/growth",
     "sdks/purchases-js"
   ],
   "devDependencies": {
