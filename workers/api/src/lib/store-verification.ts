@@ -492,6 +492,29 @@ async function syncAppleCatalog(env: Env, projectId: string | number): Promise<S
   ].filter((item): item is StoreCatalogProduct => item !== null);
 }
 
+export async function appStoreConnectAccess(env: Env, projectId: string | number) {
+  const app = await applicationForProject(env.DB, projectId, 'ios');
+  const token = await appleConnectToken(env, app);
+  const appsPayload = await fetchStoreJson(
+    `https://api.appstoreconnect.apple.com/v1/apps?filter%5BbundleId%5D=${encodeURIComponent(app.identifier)}&limit=2`,
+    token,
+    'App Store Connect',
+  );
+  const apps = Array.isArray(appsPayload.data) ? appsPayload.data as Record<string, unknown>[] : [];
+  const matching = apps.find((item) => {
+    const attributes = item.attributes && typeof item.attributes === 'object' ? item.attributes as Record<string, unknown> : {};
+    return attributes.bundleId === app.identifier;
+  });
+  if (!matching?.id) throw new Error(`App Store Connect: no app found for bundle ID ${app.identifier}`);
+  return { token, appId: String(matching.id), bundleId: app.identifier };
+}
+
+export async function googlePlayAccess(env: Env, projectId: string | number) {
+  const app = await applicationForProject(env.DB, projectId, 'android');
+  const credentials = await googleCredentials(env, app);
+  return { token: await googleAccessToken(credentials), packageName: app.identifier };
+}
+
 function localizedListing(value: unknown): { title?: string; description?: string } {
   if (Array.isArray(value)) {
     const listing = value.find((item) => item && typeof item === 'object') as Record<string, unknown> | undefined;
