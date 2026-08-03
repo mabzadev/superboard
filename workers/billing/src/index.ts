@@ -13,6 +13,10 @@ import {
 import { billingSecretReadiness, parseReceiptRequest, publicError } from './contracts';
 import { readTextLimited } from '../../api/src/lib/http-limits';
 import { decryptCredential } from '../../api/src/lib/secrets';
+import { encryptCredential } from '../../api/src/lib/secrets';
+import { createWebCheckoutSession, createWebPortalSession, redeemWebPurchase } from '../../api/src/lib/web-billing';
+import purchasesAdminRoutes from '../../api/src/routes/purchases-admin';
+import purchasesV2AdminRoutes from '../../api/src/routes/purchases-v2-admin';
 
 type Bindings = Env & BillingEnv;
 const app = new Hono<{ Bindings: Bindings }>();
@@ -22,7 +26,7 @@ app.get('/internal/v1/health', async (c) => {
   const [stores, credentialCopies] = await Promise.all([
     c.env.DB.prepare(`
     SELECT provider, environment, COUNT(*) AS connections,
-      SUM(CASE WHEN configuration_encrypted IS NOT NULL THEN 1 ELSE 0 END) AS configured
+      SUM(CASE WHEN billing_configuration_encrypted IS NOT NULL THEN 1 ELSE 0 END) AS configured
     FROM billing_store_connections
     WHERE provider IN ('apple', 'google', 'stripe')
     GROUP BY provider, environment ORDER BY provider, environment
@@ -105,6 +109,49 @@ app.post('/internal/v1/customer-info', async (c) => {
   return c.json({ data: await signedCustomerInfo(c.env, projectId, customerId) });
 });
 
+app.post('/internal/v1/credentials/encrypt', async (c) => {
+  const body = await boundedJson(c.req.raw) as Record<string, unknown>;
+  const credential = typeof body.credential === 'string' ? body.credential : '';
+  if (!credential || credential.length > 65_536) {
+    throw publicError('credential_invalid', 'A credential of at most 64 KB is required');
+  }
+  return c.json({ data: { ciphertext: await encryptCredential(c.env, credential) } });
+});
+
+app.post('/internal/v1/web/checkout-sessions', async (c) => {
+  const body = await boundedJson(c.req.raw) as Record<string, unknown>;
+  return c.json({ data: await createWebCheckoutSession(c.env, {
+    projectId: String(body.project_id || ''),
+    customerId: String(body.customer_id || ''),
+    packageIdentifier: String(body.package_identifier || ''),
+    offeringIdentifier: body.offering_identifier ? String(body.offering_identifier) : undefined,
+    provider: body.provider ? String(body.provider) : undefined,
+    environment: body.environment === 'production' ? 'production' : 'sandbox',
+    successUrl: String(body.success_url || ''),
+    cancelUrl: String(body.cancel_url || ''),
+    idempotencyKey: String(body.idempotency_key || ''),
+  }) });
+});
+
+app.post('/internal/v1/web/portal-sessions', async (c) => {
+  const body = await boundedJson(c.req.raw) as Record<string, unknown>;
+  return c.json({ data: await createWebPortalSession(c.env, {
+    projectId: String(body.project_id || ''),
+    customerId: String(body.customer_id || ''),
+    environment: body.environment === 'production' ? 'production' : 'sandbox',
+    returnUrl: String(body.return_url || ''),
+  }) });
+});
+
+app.post('/internal/v1/web/redemptions', async (c) => {
+  const body = await boundedJson(c.req.raw) as Record<string, unknown>;
+  return c.json({ data: await redeemWebPurchase(c.env, {
+    projectId: String(body.project_id || ''),
+    customerId: String(body.customer_id || ''),
+    code: String(body.code || ''),
+  }) });
+});
+
 app.post('/internal/v1/catalog/sync', async (c) => {
   const body = await boundedJson(c.req.raw) as Record<string, unknown>;
   const projectId = String(body.project_id || '');
@@ -118,6 +165,10 @@ app.post('/internal/v1/catalog/sync', async (c) => {
 });
 
 app.post('/internal/v1/reconcile', async (c) => c.json({ data: await reconcileBillingState(c.env) }));
+
+app.route('/internal/v1/admin/billing', purchasesAdminRoutes);
+app.route('/internal/v1/admin/purchases/projects', purchasesV2AdminRoutes);
+app.route('/internal/v1/admin/purchases/projects', purchasesAdminRoutes);
 
 app.onError((error, c) => {
   const status = Number((error as { status?: number }).status || 500);

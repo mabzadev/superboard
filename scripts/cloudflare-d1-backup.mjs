@@ -18,6 +18,11 @@ await mkdir(backupDirectory, { recursive: true, mode: 0o700 });
 const result = spawnSync("npx", [
   "wrangler", "d1", "export", database.name,
   "--remote", "--output", output,
-], { cwd: root, stdio: "inherit", shell: false });
+], {
+  cwd: root,
+  stdio: "inherit",
+  shell: false,
+  env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: target.accountId },
+});
 if (result.status !== 0) process.exit(result.status ?? 1);
 console.log(`Encrypted/offsite retention must be configured by the target operator: ${output}`);

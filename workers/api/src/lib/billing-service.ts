@@ -6,8 +6,8 @@ export function billingServiceEnabled(env: Env): boolean {
   return env.BILLING_EXECUTION_MODE === 'service' && Boolean(env.BILLING);
 }
 
-export async function callBillingService<T>(env: Env, path: string, body?: unknown): Promise<T> {
-  if (!billingServiceEnabled(env) || !env.BILLING) {
+export async function callBillingServiceBinding<T>(env: Env, path: string, body?: unknown): Promise<T> {
+  if (!env.BILLING) {
     throw Object.assign(new Error('Billing service is not enabled'), {
       code: 'billing_service_unavailable', status: 503, retryable: true,
     });
@@ -28,6 +28,15 @@ export async function callBillingService<T>(env: Env, path: string, body?: unkno
     });
   }
   return payload as T;
+}
+
+export async function callBillingService<T>(env: Env, path: string, body?: unknown): Promise<T> {
+  if (!billingServiceEnabled(env)) {
+    throw Object.assign(new Error('Billing service is not enabled'), {
+      code: 'billing_service_unavailable', status: 503, retryable: true,
+    });
+  }
+  return callBillingServiceBinding<T>(env, path, body);
 }
 
 export async function dispatchBillingServiceJob(env: Env, job: BillingQueueJob) {

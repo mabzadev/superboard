@@ -54,6 +54,15 @@ export async function decryptCredential(env: BillingEnv, ciphertext: string): Pr
   return decryptSecret(ciphertext, credentialKeyMaterial(env));
 }
 
+export function scopedStoreCredential(row: {
+  configuration_encrypted?: string | null;
+  billing_configuration_encrypted?: string | null;
+}, env: BillingEnv): string | null {
+  return env.CREDENTIAL_KEY_SCOPE === 'billing'
+    ? row.billing_configuration_encrypted || null
+    : row.configuration_encrypted || null;
+}
+
 export async function encryptSecret(secret: string, keyMaterial: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await encryptionKey(keyMaterial);
