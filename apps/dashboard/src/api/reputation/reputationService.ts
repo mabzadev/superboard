@@ -1,4 +1,4 @@
-import { GET, POST } from "@/lib/api";
+import { GET, PATCH, POST } from "@/lib/api";
 import { config } from "@/lib/config";
 
 export type StoreReview = {
@@ -8,6 +8,9 @@ export type StoreReview = {
   rating: number;
   title?: string | null;
   body?: string | null;
+  original_body?: string | null;
+  translated_body?: string | null;
+  translation_language?: string | null;
   author_name?: string | null;
   language?: string | null;
   territory?: string | null;
@@ -15,8 +18,13 @@ export type StoreReview = {
   provider_created_at?: string | null;
   response_body?: string | null;
   response_state?: string | null;
+  latest_draft_id?: string | null;
+  latest_draft_body?: string | null;
   latest_draft_status?: string | null;
   revision_count?: number;
+  sentiment?: string | null;
+  category?: string | null;
+  response_character_limit?: number;
 };
 
 const reputationPath = (projectId: string, resource = "") => {
@@ -32,6 +40,9 @@ export const syncStoreReviews = async (projectId: string) =>
 
 export const createStoreReviewDraft = async (projectId: string, reviewId: string, body: string) =>
   (await POST(reputationPath(projectId, `/reviews/${reviewId}/drafts`), { body })).data;
+
+export const updateStoreReviewDraft = async (projectId: string, reviewId: string, draftId: string, body: string) =>
+  (await PATCH(reputationPath(projectId, `/reviews/${reviewId}/drafts/${draftId}`), { body })).data;
 
 export const approveStoreReviewDraft = async (projectId: string, reviewId: string, draftId: string) =>
   (await POST(reputationPath(projectId, `/reviews/${reviewId}/drafts/${draftId}/approve`), {})).data;
