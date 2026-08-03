@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { automationAction, automationTrigger, device, locale, platform } from './validation';
+import { assertAutomationCompatibility, automationAction, automationTrigger, device, locale, platform } from './validation';
 import { AUTOMATION_ACTIONS } from './types';
 
 describe('growth contracts', () => {
   it('prevents automation actions from representing financial mutations', () => {
-    expect(AUTOMATION_ACTIONS).toEqual(['chat', 'push', 'in_app']);
+    expect(AUTOMATION_ACTIONS).toEqual(['chat', 'push', 'in_app', 'inbox']);
     expect(() => automationAction('entitlement')).toThrow(/unsupported/i);
     expect(() => automationAction('refund')).toThrow(/unsupported/i);
+  });
+
+  it('keeps store reviewers isolated from app-user delivery channels', () => {
+    expect(() => assertAutomationCompatibility('review_negative', 'inbox')).not.toThrow();
+    expect(() => assertAutomationCompatibility('review_negative', 'push')).toThrow(/not supported/i);
+    expect(() => assertAutomationCompatibility('payment_failed', 'inbox')).toThrow(/not supported/i);
   });
 
   it('accepts only supported marketing triggers', () => {

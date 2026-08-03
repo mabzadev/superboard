@@ -107,7 +107,19 @@ async function reviewItems(db: D1Database, projectId: string): Promise<InboxItem
   const rows = await db.prepare(`
     SELECT r.id, r.provider, r.provider_review_id, r.rating, r.title, r.body,
       r.translated_body, r.author_name, r.territory, r.language, r.provider_created_at, r.updated_at,
-      (SELECT status FROM store_review_response_drafts d WHERE d.review_id = r.id ORDER BY d.created_at DESC LIMIT 1) AS draft_status
+      (SELECT status FROM store_review_response_drafts d WHERE d.review_id = r.id ORDER BY d.created_at DESC LIMIT 1) AS draft_status,
+      (SELECT ia.id FROM inbox_automation_alerts ia
+        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
+        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_id,
+      (SELECT ia.title FROM inbox_automation_alerts ia
+        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
+        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_title,
+      (SELECT ia.body FROM inbox_automation_alerts ia
+        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
+        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_body,
+      (SELECT ia.priority FROM inbox_automation_alerts ia
+        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
+        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_priority
     FROM store_reviews r
     WHERE r.project_id = ? AND r.response_body IS NULL
     ORDER BY r.provider_created_at DESC, r.updated_at DESC LIMIT 250
@@ -116,6 +128,8 @@ async function reviewItems(db: D1Database, projectId: string): Promise<InboxItem
 }
 
 export function mapReviewItem(row: Record<string, unknown>): InboxItem {
+  const ratingPriority = Number(row.rating) <= 1 ? 'urgent' : Number(row.rating) <= 2 ? 'high' : 'normal';
+  const automationPriority = row.automation_alert_priority ? itemPriority(row.automation_alert_priority) : 'low';
   return {
     id: `store_review:${row.id}`,
     source_type: 'store_review',
@@ -123,13 +137,18 @@ export function mapReviewItem(row: Record<string, unknown>): InboxItem {
     title: String(row.title || row.author_name || 'Customer review').slice(0, 255),
     preview: String(row.translated_body || row.body || 'No written comment').slice(0, 1000),
     status: row.draft_status === 'approved' || row.draft_status === 'queued' ? 'pending' : 'open',
-    priority: Number(row.rating) <= 1 ? 'urgent' : Number(row.rating) <= 2 ? 'high' : 'normal',
+    priority: higherPriority(ratingPriority, automationPriority),
     customer_reference: row.author_name ? String(row.author_name) : null,
     updated_at: isoDate(row.provider_created_at || row.updated_at),
     destination: `/store-reviews?review=${encodeURIComponent(String(row.id))}`,
-    capabilities: ['draft_response', 'approve_response', 'publish_response'],
+    capabilities: ['draft_response', 'approve_response', 'publish_response', ...(row.automation_alert_id ? ['automation_alert'] : [])],
     source: row,
   };
+}
+
+function higherPriority(left: InboxItem['priority'], right: InboxItem['priority']): InboxItem['priority'] {
+  const ranks: Record<InboxItem['priority'], number> = { low: 0, normal: 1, high: 2, urgent: 3 };
+  return ranks[right] > ranks[left] ? right : left;
 }
 
 async function refundItems(db: D1Database, projectId: string): Promise<InboxItem[]> {

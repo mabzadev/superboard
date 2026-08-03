@@ -1,7 +1,7 @@
 import type { Env } from '../types';
 import { appStoreConnectAccess, googlePlayAccess } from './store-verification';
 
-type ReviewProjection = {
+export type ReviewProjection = {
   provider: 'apple' | 'google';
   providerReviewId: string;
   rating: number;
@@ -60,7 +60,7 @@ function isoGoogleTimestamp(value: any): string | null {
   return seconds > 0 ? new Date(seconds * 1000 + Number(value?.nanos || 0) / 1_000_000).toISOString() : null;
 }
 
-async function upsertReview(env: Env, projectId: string, review: ReviewProjection) {
+export async function upsertReview(env: Env, projectId: string, review: ReviewProjection) {
   const proposedId = crypto.randomUUID();
   const analysis = analyzeStoreReview(review.rating, `${review.title || ''}\n${review.body || ''}`);
   await env.DB.prepare(`
@@ -96,10 +96,24 @@ async function upsertReview(env: Env, projectId: string, review: ReviewProjectio
     .bind(projectId, review.provider, review.providerReviewId).first<{ id: string }>();
   if (!row) throw new Error('Unable to persist store review');
   const hash = await sha256Hex(JSON.stringify({ rating: review.rating, title: review.title || '', body: review.body || '' }));
-  await env.DB.prepare(`
+  const revisionId = crypto.randomUUID();
+  const revision = await env.DB.prepare(`
     INSERT OR IGNORE INTO store_review_revisions (id, review_id, content_sha256, rating, title, body, provider_updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(crypto.randomUUID(), row.id, hash, review.rating, review.title || null, review.body || null, review.providerUpdatedAt || null).run();
+  `).bind(revisionId, row.id, hash, review.rating, review.title || null, review.body || null, review.providerUpdatedAt || null).run();
+  if (review.rating <= 2 && Number(revision.meta.changes || 0) > 0
+    && env.EVENT_QUEUE && env.GROWTH && env.GROWTH_INTERNAL_TOKEN) {
+    await env.EVENT_QUEUE.send({
+      type: 'growth.review-negative.evaluate', projectId: String(projectId), revisionId,
+    });
+  }
+  if (review.responseBody) {
+    await env.DB.prepare(`
+      UPDATE inbox_automation_alerts
+      SET status = 'closed', closed_at = COALESCE(closed_at, datetime('now')), updated_at = datetime('now')
+      WHERE project_id = ? AND source_type = 'store_review' AND source_id = ? AND status = 'open'
+    `).bind(String(projectId), row.id).run();
+  }
 }
 
 async function fetchJson(url: string, token: string, init: RequestInit = {}) {
@@ -259,6 +273,11 @@ export async function publishApprovedReviewDraft(env: Env, draftId: string) {
       `).bind(JSON.stringify(providerResponse), draftId, claimToken),
       env.DB.prepare(`UPDATE store_reviews SET response_body = ?, response_state = 'published', response_updated_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`)
         .bind(String(draft.body), draft.review_id),
+      env.DB.prepare(`
+        UPDATE inbox_automation_alerts
+        SET status = 'closed', closed_at = COALESCE(closed_at, datetime('now')), updated_at = datetime('now')
+        WHERE project_id = ? AND source_type = 'store_review' AND source_id = ? AND status = 'open'
+      `).bind(String(draft.project_id), draft.review_id),
       env.DB.prepare(`INSERT INTO store_review_audit_events (id, review_id, event_type, actor_type, payload) VALUES (?, ?, 'response.published', 'system', ?)`)
         .bind(crypto.randomUUID(), draft.review_id, JSON.stringify({ draft_id: draftId, provider: draft.provider })),
     ]);

@@ -13,7 +13,7 @@ export type GrowthEventInput = {
 type GrowthAction = {
   id: string;
   status: string;
-  action_type: 'chat' | 'push' | 'in_app';
+  action_type: 'chat' | 'push' | 'in_app' | 'inbox';
   payload: Record<string, unknown>;
 };
 
@@ -214,6 +214,110 @@ export async function enqueuePaywallAbandonmentRecovery(env: Env) {
   return rows.results?.length || 0;
 }
 
+type NegativeReviewRevisionRow = {
+  revision_id: string;
+  review_id: string;
+  project_id: string;
+  provider: string;
+  rating: number;
+  territory: string | null;
+  language: string | null;
+  app_version: string | null;
+  sentiment: string | null;
+  category: string | null;
+  provider_updated_at: string | null;
+  created_at: string;
+  growth_projected_at: string | null;
+  growth_projection_attempts: number;
+};
+
+export async function evaluateNegativeReview(
+  env: Env,
+  projectId: string | number,
+  revisionId: string,
+) {
+  const revision = await env.DB.prepare(`
+    SELECT rr.id AS revision_id, rr.review_id, rr.rating, rr.provider_updated_at, rr.created_at,
+      rr.growth_projected_at, rr.growth_projection_attempts,
+      r.project_id, r.provider, r.territory, r.language, r.app_version, r.sentiment, r.category
+    FROM store_review_revisions rr
+    JOIN store_reviews r ON r.id = rr.review_id
+    WHERE rr.id = ? AND r.project_id = ? LIMIT 1
+  `).bind(revisionId, String(projectId)).first<NegativeReviewRevisionRow>();
+  if (!revision) return { skipped: true, reason: 'review_revision_not_found' };
+  if (revision.growth_projected_at) return { skipped: true, reason: 'already_projected' };
+  if (Number(revision.rating) > 2) {
+    await markReviewProjectionComplete(env.DB, revision.revision_id);
+    return { skipped: true, reason: 'review_not_negative' };
+  }
+
+  try {
+    const result = await emitGrowthEvent(env, revision.project_id, {
+      event_id: `review:${revision.revision_id}:negative`,
+      event_type: 'review_negative',
+      subject_id: `store-review:${revision.review_id}`,
+      occurred_at: revision.provider_updated_at || revision.created_at,
+      payload: {
+        review_id: revision.review_id,
+        revision_id: revision.revision_id,
+        provider: revision.provider,
+        rating: Number(revision.rating),
+        territory: revision.territory,
+        language: revision.language,
+        app_version: revision.app_version,
+        sentiment: revision.sentiment,
+        category: revision.category,
+      },
+    });
+    await markReviewProjectionComplete(env.DB, revision.revision_id);
+    return { projected: true, ...result };
+  } catch (error) {
+    const attempts = Number(revision.growth_projection_attempts || 0) + 1;
+    const retrySeconds = Math.min(3600, 30 * (2 ** Math.min(7, attempts)));
+    await env.DB.prepare(`
+      UPDATE store_review_revisions
+      SET growth_projection_attempts = ?, growth_projection_error = ?,
+        growth_projection_next_attempt_at = datetime('now', '+' || ? || ' seconds')
+      WHERE id = ? AND growth_projected_at IS NULL
+    `).bind(
+      attempts,
+      (error instanceof Error ? error.message : String(error)).slice(0, 1000),
+      retrySeconds,
+      revision.revision_id,
+    ).run();
+    throw error;
+  }
+}
+
+export async function enqueueNegativeReviewRecovery(env: Env) {
+  if (!env.EVENT_QUEUE || !env.GROWTH || !env.GROWTH_INTERNAL_TOKEN) return 0;
+  const rows = await env.DB.prepare(`
+    SELECT rr.id, r.project_id
+    FROM store_review_revisions rr
+    JOIN store_reviews r ON r.id = rr.review_id
+    WHERE rr.rating <= 2 AND rr.growth_projected_at IS NULL
+      AND rr.growth_projection_attempts < 10
+      AND (rr.growth_projection_next_attempt_at IS NULL OR datetime(rr.growth_projection_next_attempt_at) <= datetime('now'))
+      AND datetime(COALESCE(rr.provider_updated_at, rr.created_at)) >= datetime('now', '-90 days')
+    ORDER BY rr.created_at LIMIT 100
+  `).all<{ id: string; project_id: string }>();
+  for (const row of rows.results || []) {
+    await env.EVENT_QUEUE.send({
+      type: 'growth.review-negative.evaluate', projectId: String(row.project_id), revisionId: row.id,
+    });
+  }
+  return rows.results?.length || 0;
+}
+
+async function markReviewProjectionComplete(db: D1Database, revisionId: string) {
+  await db.prepare(`
+    UPDATE store_review_revisions
+    SET growth_projected_at = datetime('now'), growth_projection_next_attempt_at = NULL,
+      growth_projection_error = NULL
+    WHERE id = ? AND growth_projected_at IS NULL
+  `).bind(revisionId).run();
+}
+
 async function markPaywallProjectionComplete(db: D1Database, eventId: string) {
   await db.prepare(`
     UPDATE billing_paywall_events
@@ -244,6 +348,7 @@ export async function deliverGrowthAutomation(env: Env, projectId: string | numb
     let result: Record<string, unknown>;
     if (channel === 'chat') result = await deliverChat(env, projectId, runId, subjectId, message);
     else if (channel === 'push' || channel === 'in_app') result = await deliverNotification(env, projectId, runId, subjectId, channel, message);
+    else if (channel === 'inbox') result = await deliverInboxAlert(env.DB, projectId, runId, subjectId, message, parseObject(payload.event));
     else throw deliveryError('growth_action_unsupported', 'Unsupported automation action', false);
     await completeReceipt(env.DB, runId, result.notification_id == null ? null : String(result.notification_id));
     await markGrowthRun(env, projectId, runId, 'delivered');
@@ -258,6 +363,40 @@ export async function deliverGrowthAutomation(env: Env, projectId: string | numb
     await markGrowthRun(env, projectId, runId, 'failed', normalized.message);
     return { status: 'failed', channel, code: normalized.code, error: normalized.message };
   }
+}
+
+async function deliverInboxAlert(
+  db: D1Database,
+  projectId: string | number,
+  runId: string,
+  subjectId: string,
+  message: Record<string, unknown>,
+  event: Record<string, unknown>,
+) {
+  if (event.type !== 'review_negative') {
+    throw deliveryError('inbox_event_unsupported', 'Internal Inbox delivery is not supported for this event', false);
+  }
+  const eventPayload = parseObject(event.payload);
+  const reviewId = requiredText(eventPayload.review_id, 'Store review reference is required', 255);
+  if (subjectId !== `store-review:${reviewId}`) {
+    throw deliveryError('inbox_subject_invalid', 'Store review automation subject does not match its source', false);
+  }
+  const title = optionalText(message.title, 255) || 'Negative store review';
+  const body = requiredText(message.body, 'Inbox alert body is required', 4_000);
+  const rating = Number(eventPayload.rating);
+  const priority = rating <= 1 ? 'urgent' : 'high';
+  const id = crypto.randomUUID();
+  await db.prepare(`
+    INSERT INTO inbox_automation_alerts (
+      id, run_id, project_id, source_type, source_id, subject_id, title, body, priority
+    ) VALUES (?, ?, ?, 'store_review', ?, ?, ?, ?, ?)
+    ON CONFLICT(run_id) DO NOTHING
+  `).bind(id, runId, String(projectId), reviewId, subjectId, title, body, priority).run();
+  const alert = await db.prepare(`
+    SELECT id FROM inbox_automation_alerts WHERE run_id = ? AND project_id = ? LIMIT 1
+  `).bind(runId, String(projectId)).first<{ id: string }>();
+  if (!alert) throw deliveryError('inbox_alert_persistence_failed', 'Unable to persist the Inbox alert', true);
+  return { inbox_alert_id: alert.id };
 }
 
 async function deliverChat(env: Env, projectId: string | number, runId: string, subjectId: string, message: Record<string, unknown>) {

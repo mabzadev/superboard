@@ -1,4 +1,4 @@
-import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, type Device, type Platform } from './types';
+import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_ACTIONS, type Device, type Platform } from './types';
 
 export function positiveInt(value: unknown, field = 'project_id'): number {
   const parsed = Number(value);
@@ -64,6 +64,13 @@ export function automationAction(value: unknown): string {
     throw failure('action_type_invalid', 'Unsupported automation action');
   }
   return parsed;
+}
+
+export function assertAutomationCompatibility(trigger: string, action: string) {
+  const supported = AUTOMATION_TRIGGER_ACTIONS[trigger as keyof typeof AUTOMATION_TRIGGER_ACTIONS] || [];
+  if (!supported.includes(action as never)) {
+    throw failure('automation_action_incompatible', 'The selected action is not supported for this trigger');
+  }
 }
 
 export function failure(code: string, message: string, status = 422, retryable = false, retryDelaySeconds?: number) {

@@ -6,6 +6,7 @@ export type GrowthContracts = {
   sources: Array<{ id: string; configured: boolean; capabilities: string[] }>;
   automation_triggers: string[];
   automation_actions: string[];
+  automation_trigger_actions: Record<string, string[]>;
   limits: Record<string, number>;
 };
 
@@ -57,7 +58,7 @@ export type GrowthAutomation = {
   id: string;
   name: string;
   trigger_type: string;
-  action_type: "chat" | "push" | "in_app";
+  action_type: "chat" | "push" | "in_app" | "inbox";
   trigger_config: Record<string, unknown>;
   action_config: Record<string, unknown>;
   enabled: boolean;
