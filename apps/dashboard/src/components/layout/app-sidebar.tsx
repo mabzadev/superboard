@@ -11,6 +11,7 @@ import {
   PencilRuler,
   SquareTerminal,
   ShoppingBag,
+  Star,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
@@ -89,6 +90,13 @@ const data = {
       url: "/messaging",
       icon: MessageSquareText,
       itemType: "simple",
+    },
+    {
+      title: "Store Reviews",
+      url: "/store-reviews",
+      icon: Star,
+      itemType: "simple",
+      badge: "New",
     },
   ],
 
