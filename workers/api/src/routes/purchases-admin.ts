@@ -4,7 +4,7 @@ import { AppVariables, Env } from '../types';
 import { getOrCreateProject, parseProjectExternalId } from '../lib/db';
 import { encryptCredential } from '../lib/secrets';
 import { signedCustomerInfo } from '../lib/billing-identity';
-import { customerInfo, identifyCustomer } from '../lib/billing';
+import { customerInfo, identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 import { customerForAppUserId } from '../lib/billing-identity';
 import { fetchStoreCatalog, testStoreCredentials, type StoreCatalogProduct } from '../lib/store-verification';
 import { isFullAccess, isPurchasesEnabled } from '../lib/deployment';
@@ -374,6 +374,12 @@ admin.post('/:projectId/customers/:customerId/entitlements/:entitlementId', asyn
       VALUES (?, ?, ?, 'promotional', 'active', datetime('now'), ?, 'admin')
       ON CONFLICT(customer_id, entitlement_id, source) DO UPDATE SET status = 'active', expires_at = excluded.expires_at, updated_at = datetime('now')
     `).bind(project.id, customer.id, entitlement.id, data.expires_at || null).run();
+    await queueCustomerEntitlementChanged(c.env, {
+      projectId: project.id,
+      customerId: String(customer.id),
+      environment: project.isTest ? 'sandbox' : 'production',
+      reason: 'promotional_granted',
+    });
     return c.json({ granted: true });
   } catch (error) { return fail(c, error); }
 });
@@ -381,10 +387,18 @@ admin.post('/:projectId/customers/:customerId/entitlements/:entitlementId', asyn
 admin.delete('/:projectId/customers/:customerId/entitlements/:entitlementId', async (c) => {
   try {
     const project = await projectFor(c);
-    await c.env.DB.prepare(`
+    const result = await c.env.DB.prepare(`
       UPDATE billing_customer_entitlements SET status = 'revoked', updated_at = datetime('now')
       WHERE project_id = ? AND customer_id = ? AND entitlement_id = ? AND source = 'promotional'
     `).bind(project.id, c.req.param('customerId'), c.req.param('entitlementId')).run();
+    if (result.meta.changes) {
+      await queueCustomerEntitlementChanged(c.env, {
+        projectId: project.id,
+        customerId: c.req.param('customerId'),
+        environment: project.isTest ? 'sandbox' : 'production',
+        reason: 'promotional_revoked',
+      });
+    }
     return c.json({ revoked: true });
   } catch (error) { return fail(c, error); }
 });

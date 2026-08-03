@@ -6,7 +6,7 @@ import { decryptCredential, encryptCredential } from '../lib/secrets';
 import { testStoreCredentials } from '../lib/store-verification';
 import { errorEnvelope, PAYWALL_EVENT_TYPES, purchasesError } from '../lib/purchases-v2';
 import { signedCustomerInfo } from '../lib/billing-identity';
-import { identifyCustomer } from '../lib/billing';
+import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -459,6 +459,12 @@ admin.post('/:projectId/customers/:customerId/entitlements/:entitlementId', asyn
       ON CONFLICT(customer_id, entitlement_id, source) DO UPDATE SET status = 'active', expires_at = excluded.expires_at, updated_at = datetime('now')
     `).bind(project.id, customer.id, entitlement.id, data.expires_at || null).run();
     await recordAdminBillingEvent(c, project, customer.id, 'promotional_granted', { entitlement_id: entitlement.id, expires_at: data.expires_at || null });
+    await queueCustomerEntitlementChanged(c.env, {
+      projectId: project.id,
+      customerId: String(customer.id),
+      environment: project.isTest ? 'sandbox' : 'production',
+      reason: 'promotional_granted',
+    });
     await audit(c, project.id, 'entitlement.granted', 'customer', customer.id, { entitlement_id: entitlement.id });
     return c.json({ granted: true });
   } catch (error) { return replyError(c, error); }
@@ -473,6 +479,12 @@ admin.delete('/:projectId/customers/:customerId/entitlements/:entitlementId', as
     `).bind(project.id, c.req.param('customerId'), c.req.param('entitlementId')).run();
     if (!result.meta.changes) throw purchasesError('promotional_entitlement_not_found', 'Promotional entitlement not found', 404);
     await recordAdminBillingEvent(c, project, c.req.param('customerId'), 'promotional_revoked', { entitlement_id: c.req.param('entitlementId') });
+    await queueCustomerEntitlementChanged(c.env, {
+      projectId: project.id,
+      customerId: c.req.param('customerId'),
+      environment: project.isTest ? 'sandbox' : 'production',
+      reason: 'promotional_revoked',
+    });
     await audit(c, project.id, 'entitlement.revoked', 'customer', c.req.param('customerId'), { entitlement_id: c.req.param('entitlementId') });
     return c.json({ revoked: true });
   } catch (error) { return replyError(c, error); }
