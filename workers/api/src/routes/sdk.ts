@@ -23,6 +23,12 @@ async function readBody(c: any): Promise<Record<string, any>> {
   return await c.req.parseBody().catch(() => ({}));
 }
 
+function requestCountry(c: any): string | null {
+  const requestWithCf = c.req.raw as Request & { cf?: { country?: string } };
+  const value = String(requestWithCf.cf?.country || c.req.header('CF-IPCountry') || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(value) ? value : null;
+}
+
 function parseJsonArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value !== 'string' || !value.trim()) return [];
@@ -307,6 +313,7 @@ sdk.post('/authenticate', async (c) => {
   const body = await readBody(c);
   const project = await currentSdkProject(c, body);
   const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || '0.0.0.0';
+  const countryCode = requestCountry(c);
   const userAgent = String(body.user_agent || c.req.header('User-Agent') || '');
   if (!userAgent || !body.app_version) return c.json({ error: 'user_agent and app_version required' }, 422);
 
@@ -319,17 +326,17 @@ sdk.post('/authenticate', async (c) => {
       UPDATE devices
       SET ip = ?, remote_ip = ?, user_agent = ?, model = COALESCE(?, model), build = COALESCE(?, build),
           app_version = ?, platform = COALESCE(?, platform), language = COALESCE(?, language),
-          timezone = COALESCE(?, timezone), updated_at = datetime('now')
+          timezone = COALESCE(?, timezone), country_code = COALESCE(?, country_code), updated_at = datetime('now')
       WHERE id = ?
     `).bind(
       ip, ip, userAgent, body.model || null, body.build || null, body.app_version,
       c.req.header('PLATFORM') || c.req.header('platform') || body.platform || null,
-      body.language || null, body.timezone || null, deviceId,
+      body.language || null, body.timezone || null, countryCode, deviceId,
     ).run();
   } else {
     const created = await c.env.DB.prepare(`
-      INSERT INTO devices (ip, remote_ip, user_agent, platform, model, vendor, language, timezone, screen_width, screen_height, app_version, build, webgl_vendor, webgl_renderer)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO devices (ip, remote_ip, user_agent, platform, model, vendor, language, timezone, screen_width, screen_height, app_version, build, webgl_vendor, webgl_renderer, country_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING id
     `).bind(
       ip, ip, userAgent,
@@ -337,7 +344,7 @@ sdk.post('/authenticate', async (c) => {
       body.model || null, body.vendor_id || body.vendor || null,
       body.language || null, body.timezone || null,
       body.screen_width || null, body.screen_height || null,
-      body.app_version, body.build || null, body.webgl_vendor || null, body.webgl_renderer || null,
+      body.app_version, body.build || null, body.webgl_vendor || null, body.webgl_renderer || null, countryCode,
     ).first<{ id: number }>();
     deviceId = created?.id;
   }
@@ -378,6 +385,7 @@ sdk.get('/device_for_vendor_id', async (c) => {
 // POST /api/v1/sdk/register — enregistrer un device
 sdk.post('/register', async (c) => {
   const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || '0.0.0.0';
+  const countryCode = requestCountry(c);
   const userAgent = c.req.header('User-Agent') || '';
   const body = await c.req.json<{
     platform?: string;
@@ -406,20 +414,20 @@ sdk.post('/register', async (c) => {
 
   if (existing) {
     await c.env.DB.prepare(
-      "UPDATE devices SET updated_at = datetime('now'), push_token = ?, app_version = ?, build = ? WHERE id = ?"
-    ).bind(body.push_token || null, body.app_version || null, body.build || null, existing.id).run();
+      "UPDATE devices SET updated_at = datetime('now'), push_token = ?, app_version = ?, build = ?, country_code = COALESCE(?, country_code) WHERE id = ?"
+    ).bind(body.push_token || null, body.app_version || null, body.build || null, countryCode, existing.id).run();
     deviceId = existing.id;
   } else {
     const result = await c.env.DB.prepare(`
-      INSERT INTO devices (ip, remote_ip, user_agent, platform, model, vendor, language, timezone, screen_width, screen_height, app_version, build, push_token, webgl_vendor, webgl_renderer)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+      INSERT INTO devices (ip, remote_ip, user_agent, platform, model, vendor, language, timezone, screen_width, screen_height, app_version, build, push_token, webgl_vendor, webgl_renderer, country_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
     `).bind(
       ip, ip, userAgent,
       body.platform || null, body.model || null, body.vendor || null,
       body.language || null, body.timezone || null,
       body.screen_width || null, body.screen_height || null,
       body.app_version || null, body.build || null,
-      body.push_token || null, body.webgl_vendor || null, body.webgl_renderer || null
+      body.push_token || null, body.webgl_vendor || null, body.webgl_renderer || null, countryCode
     ).first<{ id: number }>();
     deviceId = result!.id;
   }
@@ -443,6 +451,11 @@ sdk.post('/attribution', async (c) => {
   }
 
   const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || '0.0.0.0';
+  const countryCode = requestCountry(c);
+  if (countryCode) {
+    await c.env.DB.prepare("UPDATE devices SET country_code = ?, updated_at = datetime('now') WHERE id = ?")
+      .bind(countryCode, body.device_id).run();
+  }
 
   // Look for a pending action (click → install match) via IP fingerprinting
   // Find clicks from same IP within attribution window (7 days)
