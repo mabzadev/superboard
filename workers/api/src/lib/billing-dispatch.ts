@@ -9,6 +9,7 @@ import {
 } from './billing-jobs';
 import { processStripeBillingNotification } from '../routes/purchases-provider-webhooks';
 import { executeRefundProviderAction } from './refund-actions';
+import { processLegacyInventoryPage } from './legacy-subscription-inventory';
 
 export type BillingQueueJob =
   | { type: 'billing.reconcile' }
@@ -18,6 +19,7 @@ export type BillingQueueJob =
   | { type: 'billing.stripe.notification'; eventId: string; connectionId: string }
   | { type: 'billing.subscription.reconcile'; subscriptionId: string }
   | { type: 'billing.refund.action.execute'; actionId: string }
+  | { type: 'billing.legacy.inventory.page'; runId: string; cursor?: string }
   | { type: 'billing.export'; exportId: string };
 
 const BILLING_JOB_TYPES = new Set<BillingQueueJob['type']>([
@@ -28,6 +30,7 @@ const BILLING_JOB_TYPES = new Set<BillingQueueJob['type']>([
   'billing.stripe.notification',
   'billing.subscription.reconcile',
   'billing.refund.action.execute',
+  'billing.legacy.inventory.page',
   'billing.export',
 ]);
 
@@ -52,6 +55,8 @@ export async function dispatchBillingJob(env: BillingEnv, job: BillingQueueJob) 
       return reconcileStoreSubscription(env, String(job.subscriptionId));
     case 'billing.refund.action.execute':
       return executeRefundProviderAction(env, String(job.actionId));
+    case 'billing.legacy.inventory.page':
+      return processLegacyInventoryPage(env, String(job.runId), job.cursor ? String(job.cursor) : undefined);
     case 'billing.export':
       return processBillingExport(env, String(job.exportId));
     default:
