@@ -12,6 +12,7 @@ import {
   type TargetingContext,
 } from '../lib/purchases-v2';
 import { createWebCheckoutSession, createWebPortalSession, redeemWebPurchase } from '../lib/web-billing';
+import { billingServiceEnabled, callBillingService } from '../lib/billing-service';
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -122,6 +123,19 @@ sdk.get('/customer-info', async (c) => {
 sdk.post('/receipts', async (c) => {
   try {
     const ctx = await context(c); const data = await body(c);
+    if (billingServiceEnabled(c.env)) {
+      const result = await callBillingService<Record<string, unknown>>(c.env, '/internal/v1/receipts/verify', {
+        project_id: ctx.projectId,
+        customer_id: String(ctx.customer.id),
+        environment: ctx.environment,
+        store: data.store,
+        signed_transaction: data.signed_transaction,
+        purchase_token: data.purchase_token,
+        product_id: data.product_id,
+        product_type: data.product_type,
+      });
+      return c.json(result);
+    }
     let purchase;
     let finalize: (() => Promise<void>) | null = null;
     if (data.store === 'apple') {

@@ -7,7 +7,7 @@ import {
   type JSONWebKeySet,
   type JWK,
 } from 'jose';
-import { Env } from '../types';
+import type { BillingEnv } from '../types';
 import { customerInfo, findCustomerByAppUserId, getOrCreateCustomer } from './billing';
 
 type OidcConfig = {
@@ -21,7 +21,7 @@ type PurchasesSigningKeySet = {
   keys: Array<JWK & { kid: string }>;
 };
 
-function purchasesSigningKeySet(env: Env): PurchasesSigningKeySet {
+function purchasesSigningKeySet(env: BillingEnv): PurchasesSigningKeySet {
   let value: unknown;
   try {
     value = JSON.parse(env.PURCHASES_SIGNING_KEYSET || '');
@@ -48,7 +48,7 @@ function purchasesSigningKeySet(env: Env): PurchasesSigningKeySet {
   return { active_kid: record.active_kid, keys };
 }
 
-export function purchasesSigningJwks(env: Env): JSONWebKeySet {
+export function purchasesSigningJwks(env: BillingEnv): JSONWebKeySet {
   const keySet = purchasesSigningKeySet(env);
   return {
     keys: keySet.keys.map(({ d: _private, key_ops: _privateOperations, ...key }) => ({
@@ -65,7 +65,7 @@ function bearerToken(header: string | undefined): string | null {
   return match?.[1]?.trim() || null;
 }
 
-async function oidcConfig(env: Env, projectId: string | number, issuer: string): Promise<OidcConfig | null> {
+async function oidcConfig(env: BillingEnv, projectId: string | number, issuer: string): Promise<OidcConfig | null> {
   const configured = await env.DB.prepare(`
     SELECT issuer, audience, jwks_uri
     FROM billing_oidc_configs
@@ -89,7 +89,7 @@ function isJwks(value: unknown): value is JSONWebKeySet {
   return Array.isArray(keys) && keys.every((key) => key && typeof key === 'object');
 }
 
-async function loadJwks(env: Env, uri: string, forceRefresh = false): Promise<JSONWebKeySet> {
+async function loadJwks(env: BillingEnv, uri: string, forceRefresh = false): Promise<JSONWebKeySet> {
   const cacheKey = `billing:jwks:${await sha256(uri)}`;
   const cached = forceRefresh ? null : await env.KV.get(cacheKey, 'json').catch(() => null);
   if (isJwks(cached)) return cached;
@@ -108,7 +108,7 @@ async function sha256(value: string): Promise<string> {
   return Array.from(digest).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export async function verifiedAppUserId(env: Env, projectId: string | number, authorization?: string): Promise<string | null> {
+export async function verifiedAppUserId(env: BillingEnv, projectId: string | number, authorization?: string): Promise<string | null> {
   const token = bearerToken(authorization);
   if (!token) return null;
   let decoded: ReturnType<typeof decodeJwt>;
@@ -137,7 +137,7 @@ export async function verifiedAppUserId(env: Env, projectId: string | number, au
   return payload.sub;
 }
 
-export async function resolveSdkCustomer(env: Env, params: {
+export async function resolveSdkCustomer(env: BillingEnv, params: {
   projectId: string | number;
   authorization?: string;
   anonymousId?: string;
@@ -152,7 +152,7 @@ export async function resolveSdkCustomer(env: Env, params: {
   return { customer, appUserId, identified: Boolean(verified) };
 }
 
-export async function signedCustomerInfo(env: Env, projectId: string | number, customerId: string) {
+export async function signedCustomerInfo(env: BillingEnv, projectId: string | number, customerId: string) {
   const info = await customerInfo(env.DB, projectId, customerId);
   const signedInfo = { ...info, customer_id: customerId };
   const signature = await signCustomerInfoPayload(
@@ -171,7 +171,7 @@ export async function signedCustomerInfo(env: Env, projectId: string | number, c
 }
 
 export async function signCustomerInfoPayload(
-  env: Env,
+  env: BillingEnv,
   projectId: string | number,
   subject: string,
   info: Record<string, unknown>,
@@ -190,6 +190,6 @@ export async function signCustomerInfoPayload(
     .sign(privateKey);
 }
 
-export async function customerForAppUserId(env: Env, projectId: string | number, appUserId: string) {
+export async function customerForAppUserId(env: BillingEnv, projectId: string | number, appUserId: string) {
   return findCustomerByAppUserId(env.DB, projectId, appUserId);
 }

@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
-import type { Env } from '../types';
+import type { BillingEnv, Env } from '../types';
 import { applyVerifiedPurchase, type BillingStatus, type VerifiedPurchase } from '../lib/billing';
 import { decryptCredential } from '../lib/secrets';
+import { readTextLimited } from '../lib/http-limits';
 
 const webhooks = new Hono<{ Bindings: Env }>();
 
@@ -49,7 +50,7 @@ function epoch(value: unknown) {
   return number > 0 ? new Date(number * 1000).toISOString() : null;
 }
 
-async function checkoutProduct(env: Env, checkoutId: string | null, providerSessionId: string | null) {
+async function checkoutProduct(env: BillingEnv, checkoutId: string | null, providerSessionId: string | null) {
   return env.DB.prepare(`
     SELECT s.*, p.store_product_id, p.product_type
     FROM billing_checkout_sessions s LEFT JOIN billing_products p ON p.id = s.product_id
@@ -58,7 +59,7 @@ async function checkoutProduct(env: Env, checkoutId: string | null, providerSess
   `).bind(checkoutId, checkoutId, providerSessionId, providerSessionId).first<Record<string, any>>();
 }
 
-async function updateStripeCustomer(env: Env, customerId: string, stripeCustomerId: unknown) {
+async function updateStripeCustomer(env: BillingEnv, customerId: string, stripeCustomerId: unknown) {
   if (!stripeCustomerId) return;
   const row = await env.DB.prepare('SELECT attributes FROM billing_customers WHERE id = ?').bind(customerId).first<{ attributes: string }>();
   if (!row) return;
@@ -77,7 +78,7 @@ function stripeStatus(type: string, object: Record<string, any>): BillingStatus 
   return 'active';
 }
 
-async function stripeCustomerForEvent(env: Env, connection: Record<string, any>, object: Record<string, any>) {
+async function stripeCustomerForEvent(env: BillingEnv, connection: Record<string, any>, object: Record<string, any>) {
   if (object.customer) {
     const direct = await env.DB.prepare(`
       SELECT id FROM billing_customers
@@ -100,7 +101,7 @@ async function stripeCustomerForEvent(env: Env, connection: Record<string, any>,
   `).bind(String(connection.project_id), providerObjectId, providerObjectId, providerObjectId).first<{ id: string }>();
 }
 
-async function latestStripeProduct(env: Env, connection: Record<string, any>, customerId: string) {
+async function latestStripeProduct(env: BillingEnv, connection: Record<string, any>, customerId: string) {
   return env.DB.prepare(`
     SELECT p.store_product_id, p.product_type, t.original_transaction_id,
       t.expires_at, t.currency, t.price_micros
@@ -112,7 +113,7 @@ async function latestStripeProduct(env: Env, connection: Record<string, any>, cu
   `).bind(String(connection.project_id), customerId).first<Record<string, any>>();
 }
 
-async function processStripe(env: Env, connection: Record<string, any>, event: Record<string, any>) {
+async function processStripe(env: BillingEnv, connection: Record<string, any>, event: Record<string, any>) {
   const object = parseObject(event.data?.object);
   const metadata = parseObject(object.metadata || object.subscription_details?.metadata);
   const checkout = await checkoutProduct(env, metadata.opengrow_checkout_id || null, event.type === 'checkout.session.completed' ? object.id : null);
@@ -162,8 +163,44 @@ async function processStripe(env: Env, connection: Record<string, any>, event: R
   return applied;
 }
 
+export async function processStripeBillingNotification(env: BillingEnv, params: {
+  eventId: string;
+  connectionId: string;
+}) {
+  const eventRow = await env.DB.prepare(`
+    SELECT id, project_id, environment, payload, status
+    FROM billing_webhook_events
+    WHERE id = ? AND store = 'stripe' LIMIT 1
+  `).bind(params.eventId).first<Record<string, any>>();
+  if (!eventRow) throw new Error('Stripe webhook event not found');
+  if (eventRow.status === 'processed') return { processed: true, duplicate: true };
+  const connection = await env.DB.prepare(`
+    SELECT * FROM billing_store_connections
+    WHERE id = ? AND project_id = ? AND provider = 'stripe' AND environment = ? LIMIT 1
+  `).bind(params.connectionId, eventRow.project_id, eventRow.environment).first<Record<string, any>>();
+  if (!connection) throw new Error('Stripe connection not found');
+  try {
+    const event = JSON.parse(String(eventRow.payload || '{}')) as Record<string, any>;
+    const result = await processStripe(env, connection, event);
+    await env.DB.prepare(`
+      UPDATE billing_webhook_events
+      SET status = 'processed', attempts = attempts + 1, processed_at = datetime('now'), error_message = NULL
+      WHERE id = ?
+    `).bind(params.eventId).run();
+    return { processed: true, result };
+  } catch (error) {
+    await env.DB.prepare(`
+      UPDATE billing_webhook_events
+      SET status = 'failed', attempts = attempts + 1, error_message = ? WHERE id = ?
+    `).bind((error instanceof Error ? error.message : String(error)).slice(0, 1000), params.eventId).run();
+    throw error;
+  }
+}
+
 webhooks.post('/:connectionId', async (c) => {
-  const payload = await c.req.text();
+  let payload: string;
+  try { payload = await readTextLimited(c.req.raw, 1_048_576, 'Webhook payload too large'); }
+  catch { return c.json({ error: 'Webhook payload too large' }, 413); }
   const connection = await c.env.DB.prepare(`SELECT * FROM billing_store_connections WHERE id = ? AND provider = 'stripe' LIMIT 1`)
     .bind(c.req.param('connectionId')).first<Record<string, any>>();
   if (!connection?.configuration_encrypted) return c.json({ error: 'Connection not found' }, 404);
@@ -173,26 +210,42 @@ webhooks.post('/:connectionId', async (c) => {
   const webhookSecret = String(credentials.webhook_secret || '');
   const valid = await verifyStripe(payload, c.req.header('Stripe-Signature') || '', webhookSecret);
   if (!valid) return c.json({ error: 'Invalid webhook signature' }, 401);
-  const event = JSON.parse(payload) as Record<string, any>;
+  let event: Record<string, any>;
+  try { event = JSON.parse(payload) as Record<string, any>; }
+  catch { return c.json({ error: 'Webhook payload is invalid JSON' }, 400); }
   const externalId = String(event.id || event.event_id || '');
   if (!externalId) return c.json({ error: 'Webhook event ID is required' }, 422);
   const eventType = String(event.type || event.event_type || 'unknown');
+  const eventId = crypto.randomUUID();
   const inserted = await c.env.DB.prepare(`
     INSERT OR IGNORE INTO billing_webhook_events (id, project_id, store, environment, external_event_id, event_type, status, payload)
     VALUES (?, ?, ?, ?, ?, ?, 'received', ?)
-  `).bind(crypto.randomUUID(), connection.project_id, connection.provider, connection.environment, externalId, eventType, payload).run();
-  if (!inserted.meta.changes) return c.json({ received: true, duplicate: true });
+  `).bind(eventId, connection.project_id, connection.provider, connection.environment, externalId, eventType, payload).run();
+  const persisted = await c.env.DB.prepare(`
+    SELECT id, status FROM billing_webhook_events
+    WHERE project_id = ? AND store = ? AND environment = ? AND external_event_id = ? LIMIT 1
+  `).bind(connection.project_id, connection.provider, connection.environment, externalId)
+    .first<{ id: string; status: string }>();
+  if (!persisted) return c.json({ error: 'Webhook event persistence failed' }, 503);
+  if (persisted.status === 'processed') return c.json({ received: true, duplicate: true });
+  const job = { type: 'billing.stripe.notification' as const, eventId: persisted.id, connectionId: String(connection.id) };
   try {
-    const result = await processStripe(c.env, connection, event);
-    await c.env.DB.prepare(`UPDATE billing_webhook_events SET status = 'processed', processed_at = datetime('now') WHERE project_id = ? AND store = ? AND external_event_id = ?`)
-      .bind(connection.project_id, connection.provider, externalId).run();
-    return c.json({ received: true, result });
+    if (c.env.BILLING_QUEUE) {
+      await c.env.BILLING_QUEUE.send(job);
+    } else {
+      c.executionCtx.waitUntil(processStripeBillingNotification(c.env, job));
+    }
   } catch (error) {
-    await c.env.DB.prepare(`UPDATE billing_webhook_events SET status = 'failed', error_message = ? WHERE project_id = ? AND store = ? AND external_event_id = ?`)
-      .bind((error as Error)?.message || String(error), connection.project_id, connection.provider, externalId).run();
-    console.error('purchases_provider_webhook_failed', error);
-    return c.json({ error: 'Webhook processing failed' }, 500);
+    await c.env.DB.prepare(`
+      UPDATE billing_webhook_events SET status = 'failed', error_message = ? WHERE id = ?
+    `).bind('Queue delivery failed', persisted.id).run();
+    console.error(JSON.stringify({
+      event: 'stripe_webhook_queue_failed', webhook_event_id: persisted.id,
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return c.json({ error: 'Webhook queue is temporarily unavailable', retryable: true }, 503);
   }
+  return c.json({ received: true, queued: true, duplicate: !inserted.meta.changes }, 202);
 });
 
 export default webhooks;

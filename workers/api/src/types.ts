@@ -1,14 +1,34 @@
-export interface Env {
+export interface BillingEnv {
   DB: D1Database;
   KV: KVNamespace;
   R2?: R2Bucket;
+  BILLING_QUEUE?: Queue;
+  ENVIRONMENT: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_STANDARD_PRICE_ID?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PORTAL_RETURN_URL?: string;
+  STRIPE_SUCCESS_URL?: string;
+  STRIPE_CANCEL_URL?: string;
+  IAP_ALLOW_UNSIGNED_FIXTURES?: string;
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON?: string;
+  STORE_CREDENTIALS_ENCRYPTION_KEY?: string;
+  STORE_CREDENTIALS_ENCRYPTION_KEYS?: string;
+  STORE_CREDENTIALS_ACTIVE_KEY_VERSION?: string;
+  PURCHASES_SIGNING_SECRET?: string;
+  PURCHASES_SIGNING_KEYSET?: string;
+  OPENGROW_VOCOSTAR_WEBHOOK_SECRET?: string;
+  APPLE_ROOT_CERTIFICATES_B64?: string;
+  CREDENTIAL_KEY_SCOPE?: 'api' | 'billing';
+}
+
+export interface Env extends BillingEnv {
   EVENT_QUEUE?: Queue;
   PUSH_QUEUE?: Queue;
   MAINTENANCE_QUEUE?: Queue;
-  BILLING_QUEUE?: Queue;
   MESSAGING?: Fetcher;
+  BILLING?: Fetcher;
   EMAIL?: SendEmail;
-  ENVIRONMENT: string;
   SHORTLINK_DOMAIN: string;
   API_DOMAIN: string;
   SDK_DOMAIN: string;
@@ -19,6 +39,13 @@ export interface Env {
   REGISTRATION_REALM?: string;
   SSO_ENABLED?: string;
   JWT_SECRET: string;
+  BILLING_EXECUTION_MODE?: 'local' | 'service';
+  SENT_QUOTAS_WEBHOOK_KEY?: string;
+  PUSH_PROCESS_KEY?: string;
+  IAP_PROCESS_KEY?: string;
+  GOOGLE_PUBSUB_VERIFICATION_TOKEN?: string;
+  MESSAGING_INTERNAL_TOKEN?: string;
+  BILLING_CREDENTIALS_REWRAP_KEY?: string;
   APP_URL?: string;
   MCP_CONSENT_URL?: string;
   SERVER_HOST?: string;
@@ -32,26 +59,6 @@ export interface Env {
   REACT_HOST?: string;
   REACT_HOST_DASHBOARD_PATH?: string;
   REACT_HOST_PROTOCOL?: string;
-  STRIPE_SECRET_KEY?: string;
-  STRIPE_STANDARD_PRICE_ID?: string;
-  STRIPE_WEBHOOK_SECRET?: string;
-  SENT_QUOTAS_WEBHOOK_KEY?: string;
-  STRIPE_PORTAL_RETURN_URL?: string;
-  STRIPE_SUCCESS_URL?: string;
-  STRIPE_CANCEL_URL?: string;
-  PUSH_PROCESS_KEY?: string;
-  IAP_PROCESS_KEY?: string;
-  IAP_ALLOW_UNSIGNED_FIXTURES?: string;
-  GOOGLE_PUBSUB_VERIFICATION_TOKEN?: string;
-  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON?: string;
-  STORE_CREDENTIALS_ENCRYPTION_KEY?: string;
-  STORE_CREDENTIALS_ENCRYPTION_KEYS?: string;
-  STORE_CREDENTIALS_ACTIVE_KEY_VERSION?: string;
-  PURCHASES_SIGNING_SECRET?: string;
-  PURCHASES_SIGNING_KEYSET?: string;
-  OPENGROW_VOCOSTAR_WEBHOOK_SECRET?: string;
-  MESSAGING_INTERNAL_TOKEN?: string;
-  APPLE_ROOT_CERTIFICATES_B64?: string;
   ADMIN_API_KEY?: string;
   MAINTENANCE_PROCESS_KEY?: string;
   DIAGNOSTICS_API_KEY?: string;

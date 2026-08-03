@@ -1,0 +1,55 @@
+import type { BillingEnv } from '../types';
+import { processBillingExport } from './billing-exports';
+import {
+  deliverBillingWebhook,
+  processAppleBillingNotification,
+  processGoogleBillingNotification,
+  reconcileBillingState,
+  reconcileStoreSubscription,
+} from './billing-jobs';
+import { processStripeBillingNotification } from '../routes/purchases-provider-webhooks';
+
+export type BillingQueueJob =
+  | { type: 'billing.reconcile' }
+  | { type: 'billing.webhook.deliver'; deliveryId: string }
+  | { type: 'billing.apple.notification'; eventId: string; projectId: string; signedPayload: string; environment: 'sandbox' | 'production' }
+  | { type: 'billing.google.notification'; eventId: string; projectId: string; purchaseToken: string; productId: string; productType: 'subscription' | 'non_consumable' | 'consumable'; eventType: string; eventOccurredAt: string }
+  | { type: 'billing.stripe.notification'; eventId: string; connectionId: string }
+  | { type: 'billing.subscription.reconcile'; subscriptionId: string }
+  | { type: 'billing.export'; exportId: string };
+
+const BILLING_JOB_TYPES = new Set<BillingQueueJob['type']>([
+  'billing.reconcile',
+  'billing.webhook.deliver',
+  'billing.apple.notification',
+  'billing.google.notification',
+  'billing.stripe.notification',
+  'billing.subscription.reconcile',
+  'billing.export',
+]);
+
+export function isBillingQueueJob(value: unknown): value is BillingQueueJob {
+  if (!value || typeof value !== 'object') return false;
+  return BILLING_JOB_TYPES.has((value as { type?: BillingQueueJob['type'] }).type as BillingQueueJob['type']);
+}
+
+export async function dispatchBillingJob(env: BillingEnv, job: BillingQueueJob) {
+  switch (job.type) {
+    case 'billing.reconcile':
+      return reconcileBillingState(env);
+    case 'billing.webhook.deliver':
+      return deliverBillingWebhook(env, String(job.deliveryId));
+    case 'billing.apple.notification':
+      return processAppleBillingNotification(env, job);
+    case 'billing.google.notification':
+      return processGoogleBillingNotification(env, job);
+    case 'billing.stripe.notification':
+      return processStripeBillingNotification(env, job);
+    case 'billing.subscription.reconcile':
+      return reconcileStoreSubscription(env, String(job.subscriptionId));
+    case 'billing.export':
+      return processBillingExport(env, String(job.exportId));
+    default:
+      throw new Error(`Unsupported billing queue job: ${(job as { type?: string }).type || 'unknown'}`);
+  }
+}

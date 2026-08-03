@@ -174,6 +174,14 @@ async function recordWebhook(db: D1Database, params: {
   ).run();
 }
 
+async function markWebhookQueueFailure(db: D1Database, eventId: string) {
+  await db.prepare(`
+    UPDATE billing_webhook_events
+    SET status = 'failed', error_message = 'Queue delivery failed'
+    WHERE id = ?
+  `).bind(eventId).run();
+}
+
 async function upsertPurchaseEvent(db: D1Database, event: {
   projectId: number | string;
   source: 'apple' | 'google';
@@ -282,16 +290,32 @@ async function handleApple(c: any, test: boolean) {
         id, project_id, store, environment, external_event_id, payload, status
       ) VALUES (?, ?, 'apple', ?, ?, ?, 'received')
     `).bind(eventId, project.id, test ? 'sandbox' : 'production', externalEventId, JSON.stringify(body)).run();
-    if (inserted.meta.changes > 0) {
-      const job = {
-        type: 'billing.apple.notification' as const,
-        eventId,
-        projectId: String(project.id),
-        signedPayload: body.signedPayload,
-        environment: test ? 'sandbox' as const : 'production' as const,
-      };
+    const environment = test ? 'sandbox' as const : 'production' as const;
+    const persisted = await c.env.DB.prepare(`
+      SELECT id, status FROM billing_webhook_events
+      WHERE project_id = ? AND store = 'apple' AND environment = ? AND external_event_id = ? LIMIT 1
+    `).bind(project.id, environment, externalEventId).first() as { id: string; status: string } | null;
+    if (!persisted) return c.json({ error: 'Apple notification persistence failed' }, 503);
+    if (persisted.status === 'processed') {
+      return c.json({ message: 'Apple IAP notification already processed', duplicate: true }, 202);
+    }
+    const job = {
+      type: 'billing.apple.notification' as const,
+      eventId: persisted.id,
+      projectId: String(project.id),
+      signedPayload: body.signedPayload,
+      environment,
+    };
+    try {
       if (c.env.BILLING_QUEUE) await c.env.BILLING_QUEUE.send(job);
       else c.executionCtx.waitUntil(import('../lib/billing-jobs').then(({ processAppleBillingNotification }) => processAppleBillingNotification(c.env, job)));
+    } catch (error) {
+      await markWebhookQueueFailure(c.env.DB, persisted.id);
+      console.error(JSON.stringify({
+        event: 'apple_notification_queue_failed', webhook_event_id: persisted.id,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+      return c.json({ error: 'Apple notification queue is temporarily unavailable', retryable: true }, 503);
     }
     return c.json({ message: 'Apple IAP notification accepted', duplicate: inserted.meta.changes === 0 }, 202);
   }
@@ -349,7 +373,13 @@ async function handleGoogle(c: any) {
         id, project_id, store, environment, external_event_id, payload, status
       ) VALUES (?, ?, 'google', 'production', ?, ?, 'received')
     `).bind(billingWebhookEventId, project.id, String(pubsubMessageId), JSON.stringify(body)).run();
-    if (inserted.meta.changes === 0) return c.json({ message: 'Google RTDN already processed', duplicate: true });
+    const persisted = await c.env.DB.prepare(`
+      SELECT id, status FROM billing_webhook_events
+      WHERE project_id = ? AND store = 'google' AND environment = 'production' AND external_event_id = ? LIMIT 1
+    `).bind(project.id, String(pubsubMessageId)).first() as { id: string; status: string } | null;
+    if (!persisted) return c.json({ error: 'Google RTDN persistence failed' }, 503);
+    if (persisted.status === 'processed') return c.json({ message: 'Google RTDN already processed', duplicate: true });
+    billingWebhookEventId = persisted.id;
     if (c.env.BILLING_QUEUE) {
       let productType: 'subscription' | 'non_consumable' | 'consumable' = purchaseType === 'subscription' ? 'subscription' : 'non_consumable';
       if (purchaseType !== 'subscription' && productId) {
@@ -359,17 +389,26 @@ async function handleGoogle(c: any) {
         `).bind(project.id, productId).first() as { product_type: 'non_consumable' | 'consumable' } | null;
         if (configured?.product_type) productType = configured.product_type;
       }
-      await c.env.BILLING_QUEUE.send({
-        type: 'billing.google.notification',
-        eventId: billingWebhookEventId,
-        projectId: String(project.id),
-        purchaseToken: String(notification.purchaseToken || data.purchaseToken || ''),
-        productId: String(productId || ''),
-        productType,
-        eventType: notificationType,
-        eventOccurredAt: msDate(data.eventTimeMillis) || new Date().toISOString(),
-      });
-      return c.json({ message: 'Google RTDN accepted', duplicate: false }, 202);
+      try {
+        await c.env.BILLING_QUEUE.send({
+          type: 'billing.google.notification',
+          eventId: persisted.id,
+          projectId: String(project.id),
+          purchaseToken: String(notification.purchaseToken || data.purchaseToken || ''),
+          productId: String(productId || ''),
+          productType,
+          eventType: notificationType,
+          eventOccurredAt: msDate(data.eventTimeMillis) || new Date().toISOString(),
+        });
+      } catch (error) {
+        await markWebhookQueueFailure(c.env.DB, persisted.id);
+        console.error(JSON.stringify({
+          event: 'google_notification_queue_failed', webhook_event_id: billingWebhookEventId,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+        return c.json({ error: 'Google RTDN queue is temporarily unavailable', retryable: true }, 503);
+      }
+      return c.json({ message: 'Google RTDN accepted', duplicate: inserted.meta.changes === 0 }, 202);
     }
   }
   let verified: any = null;
