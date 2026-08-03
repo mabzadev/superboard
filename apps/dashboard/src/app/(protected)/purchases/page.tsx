@@ -157,6 +157,7 @@ const PurchasesPage = () => {
   const [customerDetail, setCustomerDetail] = useState<CustomerDetail>();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [activeSection, setActiveSection] = useState("overview");
 
   const [entitlementId, setEntitlementId] = useState("premium");
   const [productId, setProductId] = useState("");
@@ -306,6 +307,17 @@ const PurchasesPage = () => {
     }
     catch (error) { showErrorNotification(error instanceof Error ? error.message : "Refund case not found"); }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get("section");
+    const supported = new Set(["overview", "stores", "products", "entitlements", "offerings", "paywalls", "customers", "transactions", "subscriptions", "refunds", "growth", "integrations", "diagnostics"]);
+    if (section && supported.has(section)) setActiveSection(section);
+    const refundCaseId = params.get("case");
+    if (refundCaseId) void openRefundCase(refundCaseId);
+  // The source link is evaluated again when the selected project changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const createRefundAction = async () => {
     if (!projectId || !refundCaseDetail) return;
@@ -463,7 +475,7 @@ const PurchasesPage = () => {
           ))}
         </div>
 
-        <Tabs defaultValue="overview">
+        <Tabs value={activeSection} onValueChange={setActiveSection}>
           <TabsList className="h-auto flex-wrap justify-start">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="stores">Stores</TabsTrigger>
