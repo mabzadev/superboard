@@ -19,7 +19,7 @@ class OpenGrowBootstrap extends StatefulWidget {
     this.height,
     this.sdkBaseUrl = 'https://sdk.vocostar.com',
     this.identityToken = '',
-    this.initializePurchases = true,
+    this.initializePurchases = false,
     this.onInitialized,
     this.onDeepLinkJson,
     this.onError,
