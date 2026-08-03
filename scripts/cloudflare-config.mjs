@@ -61,6 +61,7 @@ function apiConfig() {
       REGISTRATION_REALM: `${target.target}:${environment}`,
       SSO_ENABLED: String(target.ssoEnabled),
       BILLING_EXECUTION_MODE: "local",
+      BILLING_RELEASE_STALE_MINUTES: "15",
       MAIL_PROVIDER: target.mail.provider,
       MAIL_FROM: `${target.mail.fromName} <${target.mail.fromAddress}>`,
     },
@@ -113,7 +114,12 @@ function billingConfig() {
     ...baseConfig(),
     workers_dev: false,
     main: "../../workers/billing/src/index.ts",
-    vars: { ENVIRONMENT: environment, CREDENTIAL_KEY_SCOPE: "billing", OPENGROW_ACCESS_MODE: target.accessMode },
+    vars: {
+      ENVIRONMENT: environment,
+      CREDENTIAL_KEY_SCOPE: "billing",
+      OPENGROW_ACCESS_MODE: target.accessMode,
+      BILLING_RELEASE_STALE_MINUTES: "15",
+    },
     d1_databases: [{
       binding: "DB",
       database_name: resources.d1.name,

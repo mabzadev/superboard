@@ -222,6 +222,15 @@ export type BillingHealth = {
 export type BillingReleaseGate = {
   environments: Array<"sandbox" | "production">;
   scope: { releaseProjectId: string; testProjectId: string; productionProjectId: string };
+  operational_policy?: {
+    stale_after_minutes: number;
+    billing_worker: {
+      ready_for_traffic: boolean;
+      credential_copies_ready: boolean;
+      credential_decryption_ready: boolean;
+      missing_secrets: string[];
+    } | null;
+  };
   ready: boolean;
   publication_allowed: boolean;
   legacy_dependency_removal_allowed: boolean;

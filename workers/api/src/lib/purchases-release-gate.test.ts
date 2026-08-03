@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  billingOperationalPrerequisites,
   buildReleaseGate,
   certificationRunCompatibility,
   nativeCatalogCoverage,
@@ -114,6 +115,40 @@ describe('Purchases release gate', () => {
       premium: false,
       packages: true,
     });
+  });
+
+  it('blocks publication unless financial execution and delivery pipelines are clean', () => {
+    const prerequisites = billingOperationalPrerequisites({
+      dedicated_execution: false,
+      worker_ready: true,
+      canonical_failed: 1,
+      canonical_stale_pending: 0,
+      provider_failed: 0,
+      provider_stale_received: 2,
+      entitlement_delivery_failed: 1,
+      entitlement_delivery_stale_pending: 0,
+      refund_action_failed: 0,
+      refund_action_stale: 1,
+      missed_refund_deadlines: 1,
+    });
+    expect(prerequisites.every((item) => item.passed === false)).toBe(true);
+    expect(buildReleaseGate(passedChecks(), prerequisites, passedObservations()).ready).toBe(false);
+  });
+
+  it('accepts a ready private Billing Worker with no failed or stale financial work', () => {
+    expect(billingOperationalPrerequisites({
+      dedicated_execution: true,
+      worker_ready: true,
+      canonical_failed: 0,
+      canonical_stale_pending: 0,
+      provider_failed: 0,
+      provider_stale_received: 0,
+      entitlement_delivery_failed: 0,
+      entitlement_delivery_stale_pending: 0,
+      refund_action_failed: 0,
+      refund_action_stale: 0,
+      missed_refund_deadlines: 0,
+    }).every((item) => item.passed)).toBe(true);
   });
 });
 

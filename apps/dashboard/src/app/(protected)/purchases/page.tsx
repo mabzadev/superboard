@@ -11,6 +11,7 @@ import {
   PanelTop,
   PlugZap,
   RefreshCw,
+  Server,
   ShieldAlert,
   ShieldCheck,
   Store,
@@ -782,7 +783,8 @@ const PurchasesPage = () => {
                 ? "Publication and legacy dependency removal are allowed by the verified backend policy."
                 : `${releaseGate?.progress.passed || 0}/${releaseGate?.progress.total || 0} device and provider checks passed. Publication and legacy dependency removal remain blocked.`}</AlertDescription>
             </Alert>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Card><CardHeader><CardTitle className="flex items-center gap-2"><Server className="h-5 w-5" />Billing Worker</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Dedicated routing</span><span>{releaseGate?.prerequisites.find((item) => item.key === "dedicated_billing_execution")?.passed ? "Ready" : "Blocked"}</span></div><div className="flex justify-between"><span>Worker readiness</span><span>{releaseGate?.operational_policy?.billing_worker?.ready_for_traffic ? "Ready" : "Blocked"}</span></div><div className="flex justify-between"><span>Credential copies</span><span>{releaseGate?.operational_policy?.billing_worker?.credential_copies_ready ? "Ready" : "Blocked"}</span></div><div className="flex justify-between"><span>Credential decryption</span><span>{releaseGate?.operational_policy?.billing_worker?.credential_decryption_ready ? "Ready" : "Blocked"}</span></div><div className="flex justify-between"><span>Stale-work window</span><span>{releaseGate?.operational_policy?.stale_after_minutes ? `${releaseGate.operational_policy.stale_after_minutes} min` : "—"}</span></div></CardContent></Card>
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />Events</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Last event</span><span>{date(health?.events?.last_event_at)}</span></div><div className="flex justify-between"><span>Pending</span><span>{String(health?.events?.pending_events || 0)}</span></div><div className="flex justify-between"><span>Failures</span><span>{String(health?.events?.failed_events || 0)}</span></div></CardContent></Card>
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" />Subscriptions</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Last projection</span><span>{date(health?.subscriptions?.last_reconciled_at)}</span></div><div className="flex justify-between"><span>Billing issues</span><span>{String(health?.subscriptions?.billing_issues || 0)}</span></div></CardContent></Card>
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><PlugZap className="h-5 w-5" />Webhooks</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Pending</span><span>{String(health?.deliveries?.pending_deliveries || 0)}</span></div><div className="flex justify-between"><span>Failures</span><span>{String(health?.deliveries?.failed_deliveries || 0)}</span></div></CardContent></Card>
