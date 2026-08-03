@@ -55,6 +55,7 @@ type BillingSecretEnv = Pick<
   | 'STORE_CREDENTIALS_ENCRYPTION_KEY'
   | 'PURCHASES_SIGNING_KEYSET'
   | 'APPLE_ROOT_CERTIFICATES_B64'
+  | 'OPENGROW_ENTITLEMENT_WEBHOOK_SECRET'
   | 'OPENGROW_VOCOSTAR_WEBHOOK_SECRET'
 >;
 
@@ -65,6 +66,8 @@ export function billingSecretReadiness(env: BillingSecretEnv) {
   }
   if (!env.PURCHASES_SIGNING_KEYSET) missing.push('PURCHASES_SIGNING_KEYSET');
   if (!env.APPLE_ROOT_CERTIFICATES_B64) missing.push('APPLE_ROOT_CERTIFICATES_B64');
-  if (!env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET) missing.push('OPENGROW_VOCOSTAR_WEBHOOK_SECRET');
+  if (!env.OPENGROW_ENTITLEMENT_WEBHOOK_SECRET && !env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET) {
+    missing.push('OPENGROW_ENTITLEMENT_WEBHOOK_SECRET');
+  }
   return { ready: missing.length === 0, missing };
 }

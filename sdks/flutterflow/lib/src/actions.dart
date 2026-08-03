@@ -56,11 +56,11 @@ Future<bool> opengrowInitializeAuto({
 /// exchanged its existing access token for a short-lived ES256 identity token.
 Future<bool> opengrowInitializeAuthenticated({
   required String projectKey,
-  required String vocostarAccessToken,
+  required String applicationAccessToken,
   String sdkBaseUrl = 'https://sdk.vocostar.com',
-  String vocostarApiBaseUrl = 'https://api.vocostar.com',
+  String authGatewayBaseUrl = 'https://api.vocostar.com',
 }) async {
-  if (vocostarAccessToken.trim().isEmpty) {
+  if (applicationAccessToken.trim().isEmpty) {
     throw const OpenGrowPurchasesException(
       'Application authentication is required before Purchases initialization',
       code: 'identity_required',
@@ -72,10 +72,10 @@ Future<bool> opengrowInitializeAuthenticated({
       final response = await client
           .post(
             Uri.parse(
-              '${vocostarApiBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
+              '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
             ),
             headers: {
-              'Authorization': 'Bearer ${vocostarAccessToken.trim()}',
+              'Authorization': 'Bearer ${applicationAccessToken.trim()}',
               'Accept': 'application/json',
             },
           )

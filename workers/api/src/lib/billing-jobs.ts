@@ -96,8 +96,11 @@ export async function deliverBillingWebhook(env: BillingEnv, deliveryId: string)
   safeWebhookUrl(String(delivery.url));
   const payload = String(delivery.payload);
   const secretReference = String(delivery.signing_secret_encrypted);
-  const secret = secretReference === 'env:OPENGROW_VOCOSTAR_WEBHOOK_SECRET'
-    ? env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET
+  const secret = [
+    'env:OPENGROW_ENTITLEMENT_WEBHOOK_SECRET',
+    'env:OPENGROW_VOCOSTAR_WEBHOOK_SECRET',
+  ].includes(secretReference)
+    ? env.OPENGROW_ENTITLEMENT_WEBHOOK_SECRET || env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET
     : await decryptCredential(env, secretReference);
   if (!secret) throw new Error('Billing webhook signing secret is unavailable');
   const timestamp = String(Math.floor(Date.now() / 1000));

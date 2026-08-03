@@ -133,9 +133,9 @@ function messagingConfig() {
     main: "../../workers/messaging/src/index.ts",
     vars: {
       ENVIRONMENT: environment,
-      VOCOSTAR_ISSUER: "https://api.vocostar.com",
-      VOCOSTAR_AUDIENCE: "opengrow",
-      VOCOSTAR_JWKS_URL: "https://api.vocostar.com/.well-known/jwks.json",
+      AUTH_GATEWAY_ISSUER: "https://api.vocostar.com",
+      AUTH_GATEWAY_AUDIENCE: "opengrow",
+      AUTH_GATEWAY_JWKS_URL: "https://api.vocostar.com/.well-known/jwks.json",
       ALLOWED_PROJECT_IDS: environment === "production" ? "11,12" : "",
       CORS_ORIGIN: environment === "production" ? `https://${target.domains.dashboard}` : "*",
     },

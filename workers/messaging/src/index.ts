@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { requireInternal, requireProject, verifyVocoStarIdentity } from './auth';
+import { requireInternal, requireProject, verifyApplicationIdentity } from './auth';
 import { ConversationRoom } from './conversation-room';
 import type { Actor, Conversation, Env } from './types';
 import { MAX_ATTACHMENT_BYTES, safeFilename } from './validation';
@@ -18,7 +18,7 @@ app.use('*', cors({
 app.get('/health', (c) => c.json({ status: 'ok', service: 'opengrow-messaging', environment: c.env.ENVIRONMENT }));
 
 app.use('/v1/*', async (c, next) => {
-  const subject = await verifyVocoStarIdentity(c.env, c.req.header('Authorization'));
+  const subject = await verifyApplicationIdentity(c.env, c.req.header('Authorization'));
   c.set('subject', subject);
   await next();
 });
