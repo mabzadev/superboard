@@ -43,6 +43,7 @@ export interface Env extends BillingEnv {
   SSO_ENABLED?: string;
   JWT_SECRET: string;
   BILLING_EXECUTION_MODE?: 'local' | 'service';
+  BILLING_RELEASE_STALE_MINUTES?: string;
   SENT_QUOTAS_WEBHOOK_KEY?: string;
   PUSH_PROCESS_KEY?: string;
   IAP_PROCESS_KEY?: string;
