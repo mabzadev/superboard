@@ -48,6 +48,12 @@ Webhook signatures are verified before persistence and queueing. When Billing se
 
 Application state must be updated only from verified CustomerInfo. Generated FlutterFlow files are not a source of truth; the libraries and Custom Actions are.
 
+## Lifecycle automation bridge
+
+The remote FlutterFlow paywall attaches a unique session identifier to every impression, selection, purchase, restore, and close event. A close, cancellation, or failed purchase is evaluated asynchronously after the Store flow settles. A verified purchase success in the same session suppresses abandonment, preventing false win-back messages.
+
+Subscription cancellation while access remains available emits `churn_risk`; actual entitlement expiration emits `entitlement_expired`. Provider lifecycle and paywall projections use deterministic event identifiers, queue retries, and scheduled recovery. Growth can deliver chat, push, or in-app messages, but it cannot write any entitlement or billing projection.
+
 ## Legacy provider removal
 
 1. Configure the temporary RevenueCat V2 source in Purchases Diagnostics with a read-only secret key that can list customers, aliases, and subscriptions.

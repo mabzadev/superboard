@@ -39,6 +39,12 @@ describe('queue job dispatch', () => {
       .rejects.toMatchObject({ code: 'growth_unavailable', retryable: true });
   });
 
+  it('recognizes paywall abandonment evaluation as isolated queue work', async () => {
+    await expect(dispatchQueueJob(envWithDb(jobsDb()), {
+      type: 'growth.paywall-abandonment.evaluate', projectId: '11', paywallEventId: 'event-1',
+    })).rejects.toThrow('Unhandled fake D1 first');
+  });
+
   it('dispatches push processing jobs', async () => {
     await expect(dispatchQueueJob(envWithDb(jobsDb()), { type: 'push.process', limit: 10 }))
       .resolves.toEqual({ processed: 0, results: [] });

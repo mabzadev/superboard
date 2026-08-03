@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:opengrow_flutter/opengrow.dart';
@@ -38,11 +39,18 @@ class OpenGrowPaywall extends StatefulWidget {
 }
 
 class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
+  final String _sessionId =
+      '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${Random.secure().nextInt(0x7fffffff).toRadixString(36)}';
   OpenGrowPurchaseConfiguration? _configuration;
   OpenGrowOffering? _offering;
   OpenGrowPackage? _selected;
   String? _error;
   bool _busy = false;
+  bool _closedTracked = false;
+
+  Map<String, dynamic> _eventMetadata([
+    Map<String, dynamic> extra = const {},
+  ]) => {'session_id': _sessionId, ...extra};
 
   @override
   void initState() {
@@ -68,6 +76,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
         OpenGrowPurchases.instance.trackPaywallEvent(
           'impression',
           configuration: configuration,
+          metadata: _eventMetadata(),
         ),
       );
     } catch (error) {
@@ -84,6 +93,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
           'package_selected',
           configuration: configuration,
           packageIdentifier: package.identifier,
+          metadata: _eventMetadata(),
         ),
       );
     }
@@ -99,6 +109,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
         'purchase_started',
         configuration: configuration,
         packageIdentifier: package.identifier,
+        metadata: _eventMetadata(),
       );
     }
     final result = await OpenGrowPurchases.instance.purchasePackage(package);
@@ -121,7 +132,9 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
           type,
           configuration: configuration,
           packageIdentifier: package.identifier,
-          metadata: {if (result.error != null) 'error': result.error},
+          metadata: _eventMetadata({
+            if (result.error != null) 'error': result.error,
+          }),
         ),
       );
     }
@@ -138,6 +151,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
       await OpenGrowPurchases.instance.trackPaywallEvent(
         'restore_started',
         configuration: configuration,
+        metadata: _eventMetadata(),
       );
     }
     try {
@@ -147,6 +161,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
           OpenGrowPurchases.instance.trackPaywallEvent(
             'restore_succeeded',
             configuration: configuration,
+            metadata: _eventMetadata(),
           ),
         );
       }
@@ -158,7 +173,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
           OpenGrowPurchases.instance.trackPaywallEvent(
             'restore_failed',
             configuration: configuration,
-            metadata: {'error': error.toString()},
+            metadata: _eventMetadata({'error': error.toString()}),
           ),
         );
       }
@@ -168,16 +183,36 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
   }
 
   void _close() {
+    _closedTracked = true;
     final configuration = _configuration;
     if (configuration != null) {
       unawaited(
         OpenGrowPurchases.instance.trackPaywallEvent(
           'closed',
           configuration: configuration,
+          packageIdentifier: _selected?.identifier,
+          metadata: _eventMetadata(),
         ),
       );
     }
     widget.onClosed?.call();
+  }
+
+  @override
+  void dispose() {
+    final configuration = _configuration;
+    if (!_closedTracked && configuration != null) {
+      _closedTracked = true;
+      unawaited(
+        OpenGrowPurchases.instance.trackPaywallEvent(
+          'closed',
+          configuration: configuration,
+          packageIdentifier: _selected?.identifier,
+          metadata: _eventMetadata({'source': 'widget_disposed'}),
+        ),
+      );
+    }
+    super.dispose();
   }
 
   List<Map<String, dynamic>> get _components {
@@ -398,7 +433,10 @@ class OpenGrowCustomerCenter extends StatelessWidget {
                 ),
               if (info.balances.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('Balances', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Balances',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 for (final entry in info.balances.entries)
                   ListTile(
                     title: Text(entry.key),

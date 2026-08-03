@@ -178,9 +178,11 @@ sdk.post('/events', async (c) => {
     const ctx = await context(c); const data = await body(c);
     const events = Array.isArray(data.events) ? data.events : [data];
     if (events.length < 1 || events.length > 100) throw purchasesError('invalid_event_batch', 'Events batch must contain 1-100 events');
-    const statements = events.map((event: Record<string, any>) => {
+    const eventIds: string[] = [];
+    const statements = events.map((event: Record<string, any>, index: number) => {
       if (!PAYWALL_EVENT_TYPES.includes(event.type)) throw purchasesError('invalid_event_type', `Unsupported paywall event: ${event.type}`);
       const id = String(event.id || crypto.randomUUID());
+      eventIds[index] = id;
       const occurredAt = event.occurred_at && !Number.isNaN(Date.parse(event.occurred_at)) ? event.occurred_at : new Date().toISOString();
       return c.env.DB.prepare(`
         INSERT OR IGNORE INTO billing_paywall_events (
@@ -197,6 +199,27 @@ sdk.post('/events', async (c) => {
       );
     });
     const results = await c.env.DB.batch(statements);
+    if (c.env.EVENT_QUEUE) {
+      for (const [index, event] of events.entries()) {
+        const metadata = event.metadata && typeof event.metadata === 'object' && !Array.isArray(event.metadata)
+          ? event.metadata as Record<string, unknown>
+          : {};
+        const sessionId = typeof metadata.session_id === 'string' ? metadata.session_id.trim() : '';
+        if (!['closed', 'purchase_cancelled', 'purchase_failed'].includes(String(event.type))
+          || !sessionId || sessionId.length > 128) continue;
+        c.executionCtx.waitUntil(c.env.EVENT_QUEUE.send({
+          type: 'growth.paywall-abandonment.evaluate',
+          projectId: ctx.projectId,
+          paywallEventId: eventIds[index],
+        }, { delaySeconds: 30 }).catch((error) => {
+          console.error(JSON.stringify({
+            event: 'paywall_growth_projection_queue_failed',
+            paywall_event_id: eventIds[index],
+            error: error instanceof Error ? error.message : String(error),
+          }));
+        }));
+      }
+    }
     return c.json({ accepted: results.reduce((sum: number, item: any) => sum + Number(item.meta.changes || 0), 0), received: events.length }, 202);
   } catch (error) { return fail(c, error); }
 });
