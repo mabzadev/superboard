@@ -2,6 +2,7 @@ import { Env } from '../types';
 import { deliverBillingWebhook, processAppleBillingNotification, processGoogleBillingNotification, reconcileBillingState, reconcileStoreSubscription } from './billing-jobs';
 import { processPushNotifications } from '../routes/push';
 import { processBillingExport } from './billing-exports';
+import { publishApprovedReviewDraft, syncStoreReviews } from './store-reviews';
 import {
   cleanupExpiredMcp,
   cleanupOrphanedActions,
@@ -25,7 +26,9 @@ export type QueueJob =
   | { type: 'billing.apple.notification'; eventId: string; projectId: string; signedPayload: string; environment: 'sandbox' | 'production' }
   | { type: 'billing.google.notification'; eventId: string; projectId: string; purchaseToken: string; productId: string; productType: 'subscription' | 'non_consumable' | 'consumable'; eventType: string; eventOccurredAt: string }
   | { type: 'billing.subscription.reconcile'; subscriptionId: string }
-  | { type: 'billing.export'; exportId: string };
+  | { type: 'billing.export'; exportId: string }
+  | { type: 'reputation.reviews.sync'; projectId: string }
+  | { type: 'reputation.review-response.publish'; draftId: string };
 
 export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
   switch (job?.type) {
@@ -57,6 +60,10 @@ export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
       return reconcileStoreSubscription(env, String(job.subscriptionId));
     case 'billing.export':
       return processBillingExport(env, String(job.exportId));
+    case 'reputation.reviews.sync':
+      return syncStoreReviews(env, String(job.projectId));
+    case 'reputation.review-response.publish':
+      return publishApprovedReviewDraft(env, String(job.draftId));
     default:
       throw new Error(`Unsupported queue job: ${job?.type || 'unknown'}`);
   }
