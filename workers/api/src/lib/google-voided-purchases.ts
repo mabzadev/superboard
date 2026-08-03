@@ -26,6 +26,10 @@ type MatchedTransaction = {
 };
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+// Google validates the window against its own request-time clock. Staying below
+// the documented 30-day maximum avoids crossing the boundary in transit.
+const PROVIDER_WINDOW_SAFETY_MS = 5 * 60 * 1000;
+const INITIAL_LOOKBACK_MS = THIRTY_DAYS_MS - PROVIDER_WINDOW_SAFETY_MS;
 const OVERLAP_MS = 60 * 60 * 1000;
 
 function reconciliationError(code: string, message: string, retryable = true, retryDelaySeconds = 300) {
@@ -76,7 +80,7 @@ export async function reconcileGoogleVoidedPurchases(
 
   const endTime = Math.min(now, Date.now());
   const previousWatermark = Number(state?.watermark_ms || 0);
-  const startTime = Math.max(endTime - THIRTY_DAYS_MS, previousWatermark > 0 ? previousWatermark - OVERLAP_MS : 0);
+  const startTime = Math.max(endTime - INITIAL_LOOKBACK_MS, previousWatermark > 0 ? previousWatermark - OVERLAP_MS : 0);
   let scanned = 0;
   let processed = 0;
   let unmatched = 0;

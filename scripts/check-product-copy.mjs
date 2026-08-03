@@ -9,14 +9,20 @@ const sourceRoots = [
   'docs',
   'sdks/flutterflow/lib',
   'sdks/flutterflow_messaging/lib',
+  'sdks/flutter/lib',
+  'sdks/flutter/android/src/main',
+  'sdks/flutter/ios/Classes',
+  'sdks/javascript/src',
+  'sdks/android/OpenGrow/OpenGrow/src/main',
   'workers/api/src',
+  'workers/billing/src',
   'workers/growth/src',
   'workers/messaging/src',
 ];
-const extensions = new Set(['.dart', '.js', '.jsx', '.md', '.ts', '.tsx']);
-const ignoredSegments = new Set(['.dart_tool', '.next', '.open-next', 'build', 'node_modules']);
+const extensions = new Set(['.dart', '.html', '.js', '.jsx', '.kt', '.md', '.swift', '.ts', '.tsx', '.xml']);
+const ignoredSegments = new Set(['.dart_tool', '.next', '.open-next', 'build', 'node_modules', 'test', 'tests']);
 const frenchDiacritics = /[àâäçéèêëîïôöùûüÿœæ]/iu;
-const frenchProductTerms = /\b(ajouter|annuler|chargement|continuer|enregistrer|erreur|fermer|mots-clés|ouvrir|remboursement|supprimer)\b/iu;
+const frenchProductTerms = /\b(accueil|achat|achats|ajout|ajouter|annulation|annuler|aucun|bienvenue|chargement|configurer|connexion|continuer|courant|créer|déconnexion|désolé|détails|échoué|enregistrer|erreur|essayer|fermer|gestion|impossible|mots-clés|ouvrir|paiement|profil|remboursement|réponse|réessayer|réussi|sélectionner|supprimer|utilisateur|vérifier|votre|vous)\b/iu;
 const deploymentBrand = /\bvoco\s*star\b/iu;
 const violations = [];
 
