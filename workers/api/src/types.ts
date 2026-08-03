@@ -17,6 +17,8 @@ export interface BillingEnv {
   STORE_CREDENTIALS_ACTIVE_KEY_VERSION?: string;
   PURCHASES_SIGNING_SECRET?: string;
   PURCHASES_SIGNING_KEYSET?: string;
+  OPENGROW_ENTITLEMENT_WEBHOOK_SECRET?: string;
+  /** @deprecated Compatibility alias used until the existing secret is rotated. */
   OPENGROW_VOCOSTAR_WEBHOOK_SECRET?: string;
   APPLE_ROOT_CERTIFICATES_B64?: string;
   CREDENTIAL_KEY_SCOPE?: 'api' | 'billing';

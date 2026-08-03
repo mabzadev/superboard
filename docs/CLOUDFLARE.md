@@ -2,109 +2,77 @@
 
 ## Isolation contract
 
-Each target has one manifest in `deploy/targets`. Production is required; staging
-is optional and may be omitted for production-only accounts such as Vocostar.
-Secret values are never accepted by the schema. `OPENGROW_TARGET` selects the
-manifest in Workers Builds.
+Each deployment target has one manifest under `deploy/targets`. Production is required; staging is optional. Secret values are rejected by the manifest schema. `OPENGROW_TARGET` selects the manifest used by Workers Builds.
 
-Vocostar uses the canonical production names `opengrow-db` for D1, `opengrow` for
-KV and the single R2 bucket, and `opengrow-*` for queues. The API and dashboard
-share the same R2 bucket through separate bindings.
+Storage, queues, Workers, domains, registration realms, and OAuth applications are target-scoped. An accidental shared resource must not allow one target to authenticate, read, or mutate another target.
 
 ## Workers Builds
 
-Connect `mbzadev/opengrow` independently from every Cloudflare account by
-installing the Cloudflare GitHub App in that account. Configure both Workers with
-repository root `/` and a target-scoped build variable `OPENGROW_TARGET`.
-
-After that one-time GitHub App authorization, the repository connection, build
-tokens, production triggers and watch paths are configured idempotently. Preview
-triggers are added only when the target manifest explicitly defines staging:
+Connect the repository independently from each Cloudflare account through the Cloudflare GitHub App. Configure repository root `/` and a target-scoped `OPENGROW_TARGET` build variable.
 
 ```bash
 CLOUDFLARE_BUILDS_API_TOKEN=... npm run cloudflare:connect-builds -- \
-  --target vocostar --service api
+  --target <target> --service api
 CLOUDFLARE_BUILDS_API_TOKEN=... npm run cloudflare:connect-builds -- \
-  --target vocostar --service dashboard
+  --target <target> --service dashboard
 ```
 
 API Worker:
 
-- production branch: `main`
-- build: `npm ci && npm run worker:typecheck && npm run worker:test`
-- deploy: `npm run cloudflare:deploy -- --target $OPENGROW_TARGET --service api --environment production`
-- optional preview deploy: `npm run cloudflare:deploy -- --target $OPENGROW_TARGET --service api --environment staging --upload-only`
-- watch: `workers/api/**`, `packages/shared/**`, `deploy/**`, `scripts/**`, root lockfiles
+- production branch: `main`;
+- build: `npm ci && npm run worker:typecheck && npm run worker:test`;
+- deploy: `npm run cloudflare:deploy -- --target $OPENGROW_TARGET --service api --environment production`;
+- optional preview: the same command with `--environment staging --upload-only`;
+- watch paths: API, shared packages, deployment configuration, scripts, and root lockfiles.
 
 Dashboard Worker:
 
-- production branch: `main`
-- build: `npm ci && npm run dashboard:typecheck && npm run dashboard:test`
-- deploy: `npm run cloudflare:deploy -- --target $OPENGROW_TARGET --service dashboard --environment production`
-- optional preview deploy: `npm run cloudflare:deploy -- --target $OPENGROW_TARGET --service dashboard --environment staging --upload-only`
-- watch: `apps/dashboard/**`, `packages/shared/**`, `deploy/**`, `scripts/**`, root lockfiles
+- production branch: `main`;
+- build: `npm ci && npm run dashboard:typecheck && npm run dashboard:test`;
+- deploy: `npm run cloudflare:deploy -- --target $OPENGROW_TARGET --service dashboard --environment production`;
+- optional preview: the same command with `--environment staging --upload-only`;
+- watch paths: dashboard, shared packages, deployment configuration, scripts, and root lockfiles.
 
-Use a Cloudflare API token restricted to the target account. Runtime values belong
-in Worker secrets; build variables are not runtime secrets.
+Use a Cloudflare API token restricted to one target account. Build variables are not runtime secrets.
 
 ## Private full-access registration
 
-Each deployment declares its access policy in `deploy/targets/<target>.json`.
-Private deployments use `accessMode: "full"`, `registrationMode: "allowlist"`
-and `ssoEnabled: false`. The allowlist realm is derived from the target and
-environment (for example `vocostar:production`), so two deployments remain
-isolated even if they accidentally share a D1 database.
+Private deployments use:
 
-Manage exact email addresses directly against the target D1 with Cloudflare
-authentication. No administrator key or email list is stored in the dashboard:
+- `accessMode: "full"`;
+- `registrationMode: "allowlist"`;
+- `ssoEnabled: false`.
 
-```bash
-npm run allowlist -- add --target vocostar --environment production \
-  --email user@example.com
-npm run allowlist -- revoke --target vocostar --environment production \
-  --email user@example.com
-npm run allowlist -- list --target vocostar --environment production
-```
-
-API deployment applies additive migrations and runs `bootstrap` automatically.
-That action authorizes existing users in the deployment realm and enables revenue
-collection for every instance in full-access mode. It is idempotent and can also
-be run explicitly:
+The allowlist realm is derived from the target and environment. Manage exact addresses directly against the target D1 database:
 
 ```bash
-npm run allowlist -- bootstrap --target vocostar --environment production
+npm run allowlist -- add --target <target> --environment production --email user@example.com
+npm run allowlist -- revoke --target <target> --environment production --email user@example.com
+npm run allowlist -- list --target <target> --environment production
+npm run allowlist -- bootstrap --target <target> --environment production
 ```
+
+No administrator key or email list is stored in the dashboard.
 
 ## Transactional email
 
-Password recovery and dashboard invitations use Cloudflare Email Sending through
-the API Worker's `EMAIL` binding. Each target manifest declares the only allowed
-sender address. Before deploying a new target, enable Email Sending for its domain
-and publish the SPF, DKIM, return-path and DMARC records returned by Cloudflare:
+Password recovery and dashboard invitations use the API Worker's `EMAIL` binding. Each target manifest declares the only allowed sender address. Enable Email Sending and publish the Cloudflare-provided SPF, DKIM, return-path, and DMARC records before deployment.
 
 ```bash
 npx wrangler email sending enable example.com
 npx wrangler email sending dns get example.com
 ```
 
-Create new target manifests with an explicit sender, for example
-`--mail-from-address noreply@example.com`. No provider API key is stored in D1,
-the dashboard or the repository.
+No email-provider API key is stored in D1, the dashboard, or the repository.
 
-## Vocostar production deployment
+## Production rollout
 
-Vocostar is production-only. Its canonical Workers are `opengrow-api` and
-`opengrow`; no Vocostar staging resource belongs in Cloudflare.
+1. Deploy new Workers with `--preflight`. This omits custom domains, API queue consumers, and cron triggers while allowing direct health validation where configured.
+2. Upload runtime secrets and validate private service readiness.
+3. Export production D1 and rotate dashboard OAuth when required.
+4. Deploy private Workers first, followed by the production API routes and consumers.
+5. Deploy the dashboard.
+6. Verify domains, queue backlog, D1 row counts, health endpoints, and purchase reconciliation.
+7. Remove superseded Workers or Pages only after production checks pass.
 
-1. Deploy both new Workers with `--preflight`. This omits custom domains, API queue
-   consumers and API cron triggers while keeping direct `workers.dev` health checks
-   available. Upload their runtime secrets and validate them directly.
-2. Export production D1, rotate dashboard OAuth, then deploy the production API
-   config with routes and queue consumers.
-3. Deploy the dashboard production config with `grow.vocostar.com`.
-4. Verify `go.vocostar.com`, `sdk.vocostar.com`, `grow.vocostar.com`, queue backlog,
-   D1 row counts and purchase reconciliation.
-5. Remove superseded Workers and Pages only after the production checks pass.
-
-Never run a production bootstrap that creates replacement storage for an existing
-target. The manifest's explicit production IDs are the guardrail.
+Never bootstrap replacement storage for an existing production target. Explicit resource IDs in the target manifest are the guardrail.

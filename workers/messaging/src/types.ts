@@ -3,9 +3,9 @@ export interface Env {
   ATTACHMENTS: R2Bucket;
   CONVERSATIONS: DurableObjectNamespace;
   ENVIRONMENT: string;
-  VOCOSTAR_ISSUER: string;
-  VOCOSTAR_AUDIENCE: string;
-  VOCOSTAR_JWKS_URL: string;
+  AUTH_GATEWAY_ISSUER: string;
+  AUTH_GATEWAY_AUDIENCE: string;
+  AUTH_GATEWAY_JWKS_URL: string;
   ALLOWED_PROJECT_IDS: string;
   CORS_ORIGIN: string;
   INTERNAL_API_TOKEN: string;

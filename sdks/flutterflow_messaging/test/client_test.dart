@@ -6,7 +6,7 @@ import 'package:http/testing.dart';
 import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart';
 
 void main() {
-  test('sends VocoStar identity and project headers', () async {
+  test('sends application identity and project headers', () async {
     final client = OpenGrowMessagingClient(
       baseUri: Uri.parse('https://messages.example'),
       projectId: 11,
