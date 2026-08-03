@@ -11,7 +11,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { config } from "@/lib/config";
 import type { UseFormReturn } from "react-hook-form";
 import type { LoginFormValues } from "@/schemas/auth";
 
@@ -105,17 +104,6 @@ export function LoginForm({
           </form>
         </CardContent>
       </Card>
-      <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
-        By clicking continue, you agree to our{" "}
-        <a href={config.termsUrl} target="_blank" rel="noopener noreferrer">
-          Terms of Service
-        </a>{" "}
-        and{" "}
-        <a href={config.privacyUrl} target="_blank" rel="noopener noreferrer">
-          Privacy Policy
-        </a>
-        .
-      </div>
     </div>
   );
 }
