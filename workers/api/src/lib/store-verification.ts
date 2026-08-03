@@ -459,9 +459,9 @@ function appleSubscription(
   if (!storeProductId) return null;
   const state = String(attributes.state || '').toUpperCase();
   const providerApproved = state === 'APPROVED';
+  const providerAvailable = availability.planCount > 0 && availability.availableTerritoryCount > 0;
   const providerPurchasable = providerApproved
-    && availability.planCount > 0
-    && availability.availableTerritoryCount > 0;
+    && providerAvailable;
   return {
     applicationId,
     storeProductId,
@@ -474,6 +474,7 @@ function appleSubscription(
       store_resource_id: resource.id || null,
       state: attributes.state || null,
       provider_approved: providerApproved,
+      provider_available: providerAvailable,
       provider_purchasable: providerPurchasable,
       plan_count: availability.planCount,
       available_territory_count: availability.availableTerritoryCount,
@@ -631,7 +632,9 @@ async function syncGoogleCatalog(env: BillingEnv, projectId: string | number): P
       const basePlanReadiness = basePlans.map(googleBasePlanReadiness);
       const providerApproved = item.archived !== true
         && basePlanReadiness.some((plan) => String(plan.state || '').toUpperCase() === 'ACTIVE');
-      const providerPurchasable = item.archived !== true && basePlanReadiness.some((plan) =>
+      const providerAvailable = item.archived !== true
+        && basePlanReadiness.some((plan) => plan.newSubscriberAvailable);
+      const providerPurchasable = providerApproved && basePlanReadiness.some((plan) =>
         String(plan.state || '').toUpperCase() === 'ACTIVE' && plan.newSubscriberAvailable);
       return {
         applicationId: app.applicationId,
@@ -644,6 +647,7 @@ async function syncGoogleCatalog(env: BillingEnv, projectId: string | number): P
           source: 'google_play',
           archived: item.archived === true,
           provider_approved: providerApproved,
+          provider_available: providerAvailable,
           provider_purchasable: providerPurchasable,
           base_plans: basePlanReadiness.map((plan) => ({
             base_plan_id: plan.basePlanId,
