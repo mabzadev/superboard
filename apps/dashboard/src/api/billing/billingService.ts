@@ -25,11 +25,27 @@ export interface BillingOffering {
   is_current: number;
 }
 
+export interface BillingPackage {
+  id: string;
+  offering_id: string;
+  identifier: string;
+  package_type: string;
+  position: number;
+  product_ids: string[];
+}
+
+export interface BillingProductEntitlement {
+  product_id: string;
+  entitlement_id: string;
+}
+
 export interface BillingOverview {
   settings?: { purchases_enabled: number; restore_behavior: string };
   products: BillingProduct[];
   entitlements: BillingEntitlement[];
   offerings: BillingOffering[];
+  packages: BillingPackage[];
+  product_entitlements: BillingProductEntitlement[];
   metrics?: { revenue_micros: number; paying_customers: number; trials: number; refunds: number };
   credentials?: {
     ios: {
@@ -57,6 +73,9 @@ export const updateBillingSettings = async (projectId: string, data: { purchases
 
 export const createEntitlement = async (projectId: string, data: { identifier: string; display_name: string }) =>
   (await POST(config.apiPath + `/billing/${projectId}/entitlements`, data)).data;
+
+export const mapBillingProductsToEntitlement = async (projectId: string, entitlementId: string, productIds: string[]) =>
+  (await POST(config.apiPath + `/billing/${projectId}/entitlements/${entitlementId}/products`, { product_ids: productIds })).data;
 
 export const createProduct = async (projectId: string, data: Record<string, unknown>) =>
   (await POST(config.apiPath + `/billing/${projectId}/products`, data)).data;
@@ -201,7 +220,8 @@ export type BillingHealth = {
 };
 
 export type BillingReleaseGate = {
-  environment: "sandbox" | "production";
+  environments: Array<"sandbox" | "production">;
+  scope: { releaseProjectId: string; testProjectId: string; productionProjectId: string };
   ready: boolean;
   publication_allowed: boolean;
   legacy_dependency_removal_allowed: boolean;
@@ -213,6 +233,7 @@ export type BillingReleaseGate = {
     group: string;
     label: string;
     description: string;
+    required_evidence: Array<"build" | "device" | "reference">;
     status: "pending" | "passed" | "failed";
     evidence: Record<string, unknown>;
     notes?: string | null;

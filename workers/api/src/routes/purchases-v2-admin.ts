@@ -8,7 +8,7 @@ import { errorEnvelope, PAYWALL_EVENT_TYPES, purchasesError } from '../lib/purch
 import { signedCustomerInfo } from '../lib/billing-identity';
 import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
-import { buildReleaseGate, RELEASE_GATE_CHECKS, type ReleaseGatePrerequisite, type StoredReleaseGateCheck } from '../lib/purchases-release-gate';
+import { buildReleaseGate, RELEASE_GATE_CHECKS, validateReleaseGateEvidence, type ReleaseGatePrerequisite, type StoredReleaseGateCheck } from '../lib/purchases-release-gate';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -30,6 +30,19 @@ async function projectFor(c: any) {
   if (!access) throw purchasesError('project_not_found', 'Project not found', 404);
   const project = await getOrCreateProject(c.env.DB, parsed.instanceId, parsed.kind);
   return { ...project, id: String(project.id), role: access.role };
+}
+
+async function releaseGateScope(c: any, project: { id: string; instanceId: number }) {
+  const rows = await c.env.DB.prepare(`
+    SELECT id, is_test FROM projects WHERE instance_id = ? ORDER BY is_test ASC, id ASC
+  `).bind(project.instanceId).all() as { results: Array<{ id: number; is_test: number }> };
+  const productionProjectId = String(rows.results.find((row) => Number(row.is_test) === 0)?.id || '');
+  const testProjectId = String(rows.results.find((row) => Number(row.is_test) === 1)?.id || '');
+  return {
+    productionProjectId,
+    testProjectId,
+    releaseProjectId: productionProjectId || project.id,
+  };
 }
 
 function requireAdmin(project: { role: string }) {
@@ -190,49 +203,120 @@ admin.get('/:projectId/health', async (c) => {
 admin.get('/:projectId/release-gate', async (c) => {
   try {
     const project = await projectFor(c);
-    const environment = project.isTest ? 'sandbox' : 'production';
+    const scope = await releaseGateScope(c, project);
+    const scopedProjectIds = [scope.testProjectId, scope.productionProjectId].filter(Boolean);
+    const projectPlaceholders = scopedProjectIds.map(() => '?').join(',');
     const [checks, connections, catalog, entitlement, offering] = await Promise.all([
-      c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(project.id).all<StoredReleaseGateCheck>(),
+      c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
       c.env.DB.prepare(`
-        SELECT provider, status, last_tested_at FROM billing_store_connections
-        WHERE project_id = ? AND environment = ? AND provider IN ('apple', 'google', 'stripe')
-      `).bind(project.id, environment).all<Record<string, any>>(),
+        SELECT project_id, provider, environment, status, last_tested_at FROM billing_store_connections
+        WHERE project_id IN (${projectPlaceholders || "''"}) AND provider IN ('apple', 'google', 'stripe')
+      `).bind(...scopedProjectIds).all<Record<string, any>>(),
       c.env.DB.prepare(`
-        SELECT store, store_product_id FROM billing_products
-        WHERE project_id = ? AND active = 1 AND product_type = 'subscription'
-      `).bind(project.id).all<{ store: string; store_product_id: string }>(),
-      c.env.DB.prepare(`SELECT id FROM billing_entitlements WHERE project_id = ? AND identifier = 'premium' AND active = 1 LIMIT 1`).bind(project.id).first(),
-      c.env.DB.prepare(`SELECT id FROM billing_offerings WHERE project_id = ? AND identifier = 'default' AND active = 1 LIMIT 1`).bind(project.id).first(),
+        SELECT p.project_id, p.store, p.environment, p.store_product_id,
+          EXISTS (
+            SELECT 1 FROM billing_product_entitlements bpe
+            JOIN billing_entitlements e ON e.id = bpe.entitlement_id
+            WHERE bpe.product_id = p.id AND e.project_id = p.project_id
+              AND e.identifier = 'premium' AND e.active = 1
+          ) AS premium_mapped,
+          EXISTS (
+            SELECT 1 FROM billing_package_products bpp
+            JOIN billing_packages bp ON bp.id = bpp.package_id
+            JOIN billing_offerings o ON o.id = bp.offering_id
+            WHERE bpp.product_id = p.id AND o.project_id = p.project_id
+              AND o.identifier = 'default' AND o.active = 1 AND o.is_current = 1
+              AND (
+                p.store = 'stripe'
+                OR (p.store_product_id = 'vocostar_weekly_999' AND bp.identifier = 'weekly' AND bp.package_type = 'weekly')
+                OR (p.store_product_id = 'vocostar_yearly_4999' AND bp.identifier = 'yearly' AND bp.package_type = 'annual')
+              )
+          ) AS offering_mapped
+        FROM billing_products p
+        WHERE p.project_id IN (${projectPlaceholders || "''"}) AND p.active = 1 AND p.product_type = 'subscription'
+      `).bind(...scopedProjectIds).all<{
+        project_id: string; store: string; environment: string; store_product_id: string;
+        premium_mapped: number; offering_mapped: number;
+      }>(),
+      c.env.DB.prepare(`
+        SELECT project_id FROM billing_entitlements
+        WHERE project_id IN (${projectPlaceholders || "''"}) AND identifier = 'premium' AND active = 1
+      `).bind(...scopedProjectIds).all<{ project_id: string }>(),
+      c.env.DB.prepare(`
+        SELECT project_id FROM billing_offerings
+        WHERE project_id IN (${projectPlaceholders || "''"}) AND identifier = 'default' AND active = 1 AND is_current = 1
+      `).bind(...scopedProjectIds).all<{ project_id: string }>(),
     ]);
-    const connected = new Set((connections.results || []).filter((row) => row.status === 'connected' && row.last_tested_at).map((row) => row.provider));
+    const connectionPassed = (projectId: string, provider: string, environment: string) => (connections.results || []).some((row) =>
+      String(row.project_id) === projectId && row.provider === provider && row.environment === environment
+      && row.status === 'connected' && row.last_tested_at);
     const products = catalog.results || [];
-    const hasNativePlans = (store: string) => ['vocostar_weekly_999', 'vocostar_yearly_4999']
-      .every((identifier) => products.some((product) => product.store === store && product.store_product_id === identifier));
+    const hasNativePlans = (projectId: string, store: string, environment: string) => ['vocostar_weekly_999', 'vocostar_yearly_4999']
+      .every((identifier) => products.some((product) => String(product.project_id) === projectId && product.store === store
+        && product.environment === environment && product.store_product_id === identifier));
+    const hasStripePlan = (projectId: string, environment: string) => products.some((product) =>
+      String(product.project_id) === projectId && product.store === 'stripe' && product.environment === environment);
+    const nativeProductsReady = (projectId: string, store: string, environment: string, field: 'premium_mapped' | 'offering_mapped') =>
+      ['vocostar_weekly_999', 'vocostar_yearly_4999'].every((identifier) => products.some((product) =>
+        String(product.project_id) === projectId && product.store === store && product.environment === environment
+        && product.store_product_id === identifier && Number(product[field]) === 1));
+    const stripeProductsReady = (projectId: string, environment: string, field: 'premium_mapped' | 'offering_mapped') => {
+      const stripeProducts = products.filter((product) => String(product.project_id) === projectId
+        && product.store === 'stripe' && product.environment === environment);
+      return stripeProducts.length > 0 && stripeProducts.every((product) => Number(product[field]) === 1);
+    };
+    const hasEntitlement = (projectId: string) => (entitlement.results || []).some((row) => String(row.project_id) === projectId);
+    const hasOffering = (projectId: string) => (offering.results || []).some((row) => String(row.project_id) === projectId);
+    const prerequisite = (key: string, label: string, passed: boolean, success: string, failure: string): ReleaseGatePrerequisite => ({
+      key, label, passed, detail: passed ? success : failure,
+    });
     const prerequisites: ReleaseGatePrerequisite[] = [
-      { key: 'apple_connection', label: 'Apple App Store connection', passed: connected.has('apple'), detail: connected.has('apple') ? 'Credentials were tested successfully.' : 'Test the Apple App Store connection successfully.' },
-      { key: 'google_connection', label: 'Google Play connection', passed: connected.has('google'), detail: connected.has('google') ? 'Credentials were tested successfully.' : 'Test the Google Play connection successfully.' },
-      { key: 'stripe_connection', label: 'Stripe connection', passed: connected.has('stripe'), detail: connected.has('stripe') ? 'Credentials were tested successfully.' : 'Test the Stripe connection successfully.' },
-      { key: 'apple_catalog', label: 'Apple subscription catalog', passed: hasNativePlans('apple'), detail: hasNativePlans('apple') ? 'Weekly and yearly subscriptions are imported.' : 'Import the weekly and yearly Apple subscriptions.' },
-      { key: 'google_catalog', label: 'Google subscription catalog', passed: hasNativePlans('google'), detail: hasNativePlans('google') ? 'Weekly and yearly subscriptions are imported.' : 'Import the weekly and yearly Google subscriptions.' },
-      { key: 'premium_entitlement', label: 'Premium entitlement', passed: Boolean(entitlement), detail: entitlement ? 'The Premium entitlement is active.' : 'Create and activate the Premium entitlement.' },
-      { key: 'default_offering', label: 'Default offering', passed: Boolean(offering), detail: offering ? 'The default offering is active.' : 'Create and activate the default offering.' },
+      prerequisite('test_project', 'Test project', Boolean(scope.testProjectId), 'A dedicated test project is available.', 'Create the paired test project.'),
+      prerequisite('production_project', 'Production project', Boolean(scope.productionProjectId), 'A dedicated production project is available.', 'Create the paired production project.'),
+      ...(['apple', 'google', 'stripe'] as const).flatMap((provider) => [
+        prerequisite(`sandbox_${provider}_connection`, `Sandbox ${providerDisplayName(provider)} connection`, connectionPassed(scope.testProjectId, provider, 'sandbox'), 'Credentials were tested successfully.', `Test the sandbox ${providerDisplayName(provider)} connection successfully.`),
+        prerequisite(`production_${provider}_connection`, `Production ${providerDisplayName(provider)} connection`, connectionPassed(scope.productionProjectId, provider, 'production'), 'Credentials were tested successfully.', `Test the production ${providerDisplayName(provider)} connection successfully.`),
+      ]),
+      prerequisite('sandbox_apple_catalog', 'Sandbox Apple subscription catalog', hasNativePlans(scope.testProjectId, 'apple', 'sandbox'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the test project.'),
+      prerequisite('production_apple_catalog', 'Production Apple subscription catalog', hasNativePlans(scope.productionProjectId, 'apple', 'production'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the production project.'),
+      prerequisite('sandbox_google_catalog', 'Sandbox Google subscription catalog', hasNativePlans(scope.testProjectId, 'google', 'sandbox'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the test project.'),
+      prerequisite('production_google_catalog', 'Production Google subscription catalog', hasNativePlans(scope.productionProjectId, 'google', 'production'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the production project.'),
+      prerequisite('sandbox_stripe_catalog', 'Stripe test subscription catalog', hasStripePlan(scope.testProjectId, 'sandbox'), 'A Stripe test subscription is active.', 'Add an active Stripe test subscription to the test project.'),
+      prerequisite('production_stripe_catalog', 'Stripe production subscription catalog', hasStripePlan(scope.productionProjectId, 'production'), 'A Stripe production subscription is active.', 'Add an active Stripe production subscription to the production project.'),
+      prerequisite('sandbox_premium_entitlement', 'Test Premium entitlement', hasEntitlement(scope.testProjectId), 'The Premium entitlement is active.', 'Create and activate the Premium entitlement in the test project.'),
+      prerequisite('production_premium_entitlement', 'Production Premium entitlement', hasEntitlement(scope.productionProjectId), 'The Premium entitlement is active.', 'Create and activate the Premium entitlement in the production project.'),
+      prerequisite('sandbox_native_entitlement_mappings', 'Test native Premium mappings', nativeProductsReady(scope.testProjectId, 'apple', 'sandbox', 'premium_mapped') && nativeProductsReady(scope.testProjectId, 'google', 'sandbox', 'premium_mapped'), 'Every native subscription grants Premium.', 'Map every test Apple and Google subscription to Premium.'),
+      prerequisite('production_native_entitlement_mappings', 'Production native Premium mappings', nativeProductsReady(scope.productionProjectId, 'apple', 'production', 'premium_mapped') && nativeProductsReady(scope.productionProjectId, 'google', 'production', 'premium_mapped'), 'Every native subscription grants Premium.', 'Map every production Apple and Google subscription to Premium.'),
+      prerequisite('sandbox_stripe_entitlement_mappings', 'Stripe test Premium mappings', stripeProductsReady(scope.testProjectId, 'sandbox', 'premium_mapped'), 'Every Stripe test subscription grants Premium.', 'Map every Stripe test subscription to Premium.'),
+      prerequisite('production_stripe_entitlement_mappings', 'Stripe production Premium mappings', stripeProductsReady(scope.productionProjectId, 'production', 'premium_mapped'), 'Every Stripe production subscription grants Premium.', 'Map every Stripe production subscription to Premium.'),
+      prerequisite('sandbox_default_offering', 'Test default offering', hasOffering(scope.testProjectId), 'The current default offering is active.', 'Create and activate the current default offering in the test project.'),
+      prerequisite('production_default_offering', 'Production default offering', hasOffering(scope.productionProjectId), 'The current default offering is active.', 'Create and activate the current default offering in the production project.'),
+      prerequisite('sandbox_native_packages', 'Test native packages', nativeProductsReady(scope.testProjectId, 'apple', 'sandbox', 'offering_mapped') && nativeProductsReady(scope.testProjectId, 'google', 'sandbox', 'offering_mapped'), 'Every native subscription is exposed by the default offering.', 'Add every test Apple and Google subscription to packages in the default offering.'),
+      prerequisite('production_native_packages', 'Production native packages', nativeProductsReady(scope.productionProjectId, 'apple', 'production', 'offering_mapped') && nativeProductsReady(scope.productionProjectId, 'google', 'production', 'offering_mapped'), 'Every native subscription is exposed by the default offering.', 'Add every production Apple and Google subscription to packages in the default offering.'),
+      prerequisite('sandbox_stripe_packages', 'Stripe test packages', stripeProductsReady(scope.testProjectId, 'sandbox', 'offering_mapped'), 'Every Stripe test subscription is exposed by the default offering.', 'Add every Stripe test subscription to a package in the default offering.'),
+      prerequisite('production_stripe_packages', 'Stripe production packages', stripeProductsReady(scope.productionProjectId, 'production', 'offering_mapped'), 'Every Stripe production subscription is exposed by the default offering.', 'Add every Stripe production subscription to a package in the default offering.'),
     ];
-    return c.json({ data: { environment, ...buildReleaseGate(checks.results || [], prerequisites) } });
+    return c.json({ data: { environments: ['sandbox', 'production'], scope, ...buildReleaseGate(checks.results || [], prerequisites) } });
   } catch (error) { return replyError(c, error); }
 });
 
 admin.patch('/:projectId/release-gate/checks/:checkKey', async (c) => {
   try {
     const project = await projectFor(c); requireAdmin(project);
+    const scope = await releaseGateScope(c, project);
     const checkKey = c.req.param('checkKey');
-    if (!RELEASE_GATE_CHECKS.some((item) => item.key === checkKey)) throw purchasesError('release_gate_check_not_found', 'Release gate check not found', 404);
+    const definition = RELEASE_GATE_CHECKS.find((item) => item.key === checkKey);
+    if (!definition) throw purchasesError('release_gate_check_not_found', 'Release gate check not found', 404);
     const data = await jsonBody(c);
     const status = String(data.status || '');
     if (!['pending', 'passed', 'failed'].includes(status)) throw purchasesError('release_gate_status_invalid', 'Status must be pending, passed, or failed');
     const evidence = data.evidence && typeof data.evidence === 'object' && !Array.isArray(data.evidence) ? data.evidence as Record<string, unknown> : {};
     const encodedEvidence = JSON.stringify(evidence);
     if (encodedEvidence.length > 16_384) throw purchasesError('release_gate_evidence_too_large', 'Evidence is limited to 16 KB', 413);
-    if (status === 'passed' && Object.keys(evidence).length === 0) throw purchasesError('release_gate_evidence_required', 'Passing a check requires test evidence');
+    const evidenceValidation = validateReleaseGateEvidence(definition, evidence);
+    if (status === 'passed' && !evidenceValidation.valid) {
+      throw purchasesError('release_gate_evidence_required', `Passing this check requires: ${evidenceValidation.missing.join(', ')}`);
+    }
     const notes = data.notes == null ? null : String(data.notes).trim().slice(0, 2000) || null;
     await c.env.DB.prepare(`
       INSERT INTO billing_release_gate_checks (project_id, check_key, status, evidence_json, notes, verified_by, verified_at)
@@ -241,11 +325,15 @@ admin.patch('/:projectId/release-gate/checks/:checkKey', async (c) => {
         evidence_json = excluded.evidence_json, notes = excluded.notes, verified_by = excluded.verified_by,
         verified_at = CASE WHEN excluded.status = 'passed' THEN datetime('now') ELSE NULL END,
         updated_at = datetime('now')
-    `).bind(project.id, checkKey, status, encodedEvidence, notes, String(c.get('userId')), status).run();
-    await audit(c, project.id, 'release_gate_check.updated', 'release_gate_check', checkKey, { status, evidence_fields: Object.keys(evidence) });
+    `).bind(scope.releaseProjectId, checkKey, status, encodedEvidence, notes, String(c.get('userId')), status).run();
+    await audit(c, scope.releaseProjectId, 'release_gate_check.updated', 'release_gate_check', checkKey, { status, evidence_fields: Object.keys(evidence) });
     return c.json({ data: { check_key: checkKey, status } });
   } catch (error) { return replyError(c, error); }
 });
+
+function providerDisplayName(provider: 'apple' | 'google' | 'stripe') {
+  return provider === 'apple' ? 'Apple App Store' : provider === 'google' ? 'Google Play' : 'Stripe';
+}
 
 admin.get('/:projectId/features', async (c) => {
   try {

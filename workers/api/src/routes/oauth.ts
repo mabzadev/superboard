@@ -31,7 +31,7 @@ oauth.post('/token', async (c) => {
   const clientSecret = body['client_secret'];
 
 
-  // Vérifie le client OAuth
+  // Verify the OAuth client.
   const oauthApp = await c.env.DB.prepare(
     'SELECT * FROM oauth_applications WHERE uid = ? AND secret = ?'
   ).bind(clientId, clientSecret).first<{ id: number; uid: string }>();
@@ -118,7 +118,7 @@ oauth.post('/token', async (c) => {
     const newAccess = await signToken({ sub: payload.sub, instanceId: payload.instanceId, type: 'access' }, c.env, '2h');
     const newRefresh = await signToken({ sub: payload.sub, instanceId: payload.instanceId, type: 'refresh' }, c.env, '7d');
 
-    // Révoque l'ancien, crée le nouveau
+    // Revoke the previous token and create its replacement.
     await c.env.DB.prepare("UPDATE oauth_access_tokens SET revoked_at = datetime('now') WHERE id = ?").bind(stored.id).run();
     await c.env.DB.prepare(
       "INSERT INTO oauth_access_tokens (resource_owner_id, application_id, token, refresh_token, previous_refresh_token, expires_in, scopes) VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -171,7 +171,7 @@ oauth.get('/token/info', async (c) => {
   });
 });
 
-// GET /api/v1/me — profil utilisateur (utilisé par le dashboard après login)
+// GET /api/v1/me — Return the dashboard user's profile after login.
 oauth.get('/api/v1/me', async (c) => {
   const auth = c.req.header('Authorization') || '';
   const context = await getAuthContext(c.env, auth);

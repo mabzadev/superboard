@@ -31,7 +31,7 @@ links.get('/', async (c) => {
   return c.json({ links: results, meta: { total: count, page, per_page: perPage } });
 });
 
-// POST /api/v1/links — créer un lien
+// POST /api/v1/links — Create a link.
 links.post('/', async (c) => {
   const body = await c.req.json<{
     project_id: number;
