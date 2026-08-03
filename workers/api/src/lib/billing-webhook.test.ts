@@ -4,7 +4,7 @@ import { createFakeD1 } from '../test/fake-d1';
 import { queueCustomerEntitlementChanged } from './billing';
 
 describe('customer entitlement projection webhook', () => {
-  it('queues a normalized VocoStar mirror event only for subscribed endpoints', async () => {
+  it('queues a normalized entitlement mirror event only for subscribed endpoints', async () => {
     let deliveryPayload = '';
     const db = createFakeD1((call) => {
       if (call.sql.startsWith('SELECT * FROM billing_customers')) {

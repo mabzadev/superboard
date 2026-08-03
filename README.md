@@ -42,9 +42,9 @@ Android, JavaScript, React Native and MCP validation commands are mirrored in
 ## Cloudflare targets
 
 `deploy/targets/<target>.json` contains names, domains and resource identifiers,
-but never credentials. Production and staging bindings are distinct. Vocostar
-reuses its existing production D1, KV, R2 and queues; only Worker names and the
-deployment mechanism change.
+but never credentials. Production and staging bindings are distinct. Each
+configured target can reuse its existing D1, KV, R2 and queues; only Worker
+names and the deployment mechanism change.
 
 ```bash
 # Validate/preview an existing target
