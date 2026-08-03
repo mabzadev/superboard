@@ -6,7 +6,7 @@ import { encryptCredential } from '../lib/secrets';
 import { signedCustomerInfo } from '../lib/billing-identity';
 import { customerInfo, identifyCustomer } from '../lib/billing';
 import { customerForAppUserId } from '../lib/billing-identity';
-import { testStoreCredentials } from '../lib/store-verification';
+import { fetchStoreCatalog, testStoreCredentials, type StoreCatalogProduct } from '../lib/store-verification';
 import { isFullAccess, isPurchasesEnabled } from '../lib/deployment';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -24,7 +24,9 @@ async function projectFor(c: any) {
   `).bind(c.get('userId'), parsed.instanceId).first() as { role: string } | null;
   if (!access) throw new Error('Project not found');
   const project = await getOrCreateProject(c.env.DB, parsed.instanceId, parsed.kind);
-  return { ...project, role: access.role };
+  // Billing foreign keys use TEXT. Binding a D1 numeric value can serialize 11 as
+  // "11.0", so normalize once here for every admin query and write.
+  return { ...project, id: String(project.id), role: access.role };
 }
 
 function fail(c: any, error: unknown) {
@@ -177,6 +179,66 @@ admin.post('/:projectId/products', async (c) => {
         .bind(id, entitlementId, project.id).run();
     }
     return c.json({ id }, 201);
+  } catch (error) { return fail(c, error); }
+});
+
+async function persistStoreCatalog(c: any, project: any, platform: 'ios' | 'android', products: StoreCatalogProduct[]) {
+  const store = platform === 'ios' ? 'apple' : 'google';
+  const environment = project.isTest ? 'sandbox' : 'production';
+  const statements = [
+    c.env.DB.prepare(`
+      UPDATE billing_products SET active = 0, updated_at = datetime('now')
+      WHERE project_id = ? AND store = ? AND environment = ?
+    `).bind(project.id, store, environment),
+    ...products.map((product) => c.env.DB.prepare(`
+      INSERT INTO billing_products (
+        id, project_id, application_id, store, environment, store_product_id,
+        product_type, display_name, description, active, metadata
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(project_id, store, environment, store_product_id) DO UPDATE SET
+        application_id = excluded.application_id,
+        product_type = CASE
+          WHEN billing_products.product_type = 'consumable' AND excluded.product_type = 'non_consumable'
+          THEN billing_products.product_type
+          ELSE excluded.product_type
+        END,
+        display_name = excluded.display_name,
+        description = excluded.description,
+        active = excluded.active,
+        metadata = excluded.metadata,
+        updated_at = datetime('now')
+    `).bind(
+      crypto.randomUUID(), project.id, product.applicationId, store, environment,
+      product.storeProductId, product.productType, product.displayName, product.description,
+      product.active ? 1 : 0, JSON.stringify(product.metadata),
+    )),
+  ];
+  await c.env.DB.batch(statements);
+  return { platform, store, imported: products.length };
+}
+
+admin.post('/:projectId/products/sync', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const data = await body(c);
+    const requested = data.platform === 'ios' || data.platform === 'android' ? [data.platform] : ['ios', 'android'];
+    const results = await Promise.all(requested.map(async (platform) => {
+      try {
+        const products = await fetchStoreCatalog(c.env, { projectId: project.id, platform });
+        return { ok: true as const, ...await persistStoreCatalog(c, project, platform, products) };
+      } catch (error) {
+        return {
+          ok: false as const,
+          platform,
+          store: platform === 'ios' ? 'apple' : 'google',
+          error: error instanceof Error ? error.message : 'Store synchronization failed',
+        };
+      }
+    }));
+    if (!results.some((result) => result.ok)) {
+      return c.json({ error: 'Store synchronization failed', stores: results }, 422);
+    }
+    return c.json({ stores: results });
   } catch (error) { return fail(c, error); }
 });
 

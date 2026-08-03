@@ -11,6 +11,7 @@ import { numberFormatter } from "../../utils/numberFormatter";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { formatPlatformName } from "@/lib/utils";
 import { formatCurrencyFromCents } from "@/utils/formatCurrency";
+import { formatCountry } from "@/lib/country";
 
 const renderToolTipContent = (key: string) => {
   let text = "";
@@ -109,6 +110,11 @@ export const getVisitorsTableColumns = (
         </div>
       );
     },
+  },
+  {
+    accessorKey: "country",
+    header: () => <Button variant="ghost">Pays</Button>,
+    cell: ({ row }) => <div>{formatCountry(row.original.country_code)}</div>,
   },
   {
     accessorKey: "views",
@@ -274,6 +280,7 @@ export interface VisitorMetrics {
   invited_by?: string;
   total_user_referred: number;
   platform: string;
+  country_code?: string | null;
   total_reactivations: number;
   total_time_spent: number;
   total_revenue: number;

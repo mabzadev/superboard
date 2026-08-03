@@ -940,6 +940,7 @@ function visitorRow(row: any) {
     sdk_identifier: row.sdk_identifier || '',
     sdk_attributes: parseJsonObject(row.sdk_attributes) || {},
     platform: row.platform || '',
+    country_code: row.country_code || null,
     inviter: row.inviter || null,
     invited: [],
     created_at: row.created_at,
@@ -955,6 +956,7 @@ function referralVisitorRow(row: any) {
     sdk_identifier: row.sdk_identifier || '',
     inviter: row.inviter || null,
     platform: row.platform || '',
+    country_code: row.country_code || null,
     updated_at: row.updated_at,
     view_count: Number(row.views || 0),
     open_count: Number(row.opens || 0),
@@ -1049,7 +1051,7 @@ projects.post('/:id/visitors/search', async (c) => {
     WHERE v.project_id = ?${filter.clause}${termClause}
   `).bind(String(project.id), ...filter.values, ...termValues).first<{ total: number }>();
   const rows = await c.env.DB.prepare(`
-    SELECT v.*, d.platform,
+    SELECT v.*, d.platform, d.country_code,
       COALESCE(SUM(CASE WHEN e.event = 'view' THEN 1 ELSE 0 END), 0) AS views,
       COALESCE(SUM(CASE WHEN e.event = 'open' THEN 1 ELSE 0 END), 0) AS opens,
       COALESCE(SUM(CASE WHEN e.event = 'app_open' THEN 1 ELSE 0 END), 0) AS app_opens,
@@ -1064,7 +1066,7 @@ projects.post('/:id/visitors/search', async (c) => {
     LEFT JOIN events e ON e.device_id = v.device_id AND e.project_id = v.project_id AND date(e.created_at) BETWEEN ? AND ?
     LEFT JOIN purchase_events pe ON pe.device_id = v.device_id AND pe.project_id = v.project_id AND date(COALESCE(pe.date, pe.created_at)) BETWEEN ? AND ?
     WHERE v.project_id = ?${filter.clause}${termClause}
-    GROUP BY v.id, d.platform
+    GROUP BY v.id, d.platform, d.country_code
     ORDER BY v.updated_at DESC
     LIMIT ? OFFSET ?
   `).bind(range.startDate, range.endDate, range.startDate, range.endDate, String(project.id), ...filter.values, ...termValues, perPage, (page - 1) * perPage).all<any>();
@@ -1092,7 +1094,7 @@ projects.post('/:id/visitors/aggregated', async (c) => {
     WHERE v.project_id = ?${filter.clause}${termClause}
   `).bind(String(project.id), ...filter.values, ...termValues).first<{ total: number }>();
   const rows = await c.env.DB.prepare(`
-    SELECT v.*, d.platform,
+    SELECT v.*, d.platform, d.country_code,
       COALESCE(SUM(CASE WHEN e.event = 'view' THEN 1 ELSE 0 END), 0) AS views,
       COALESCE(SUM(CASE WHEN e.event = 'open' THEN 1 ELSE 0 END), 0) AS opens,
       COALESCE(SUM(CASE WHEN e.event = 'app_open' THEN 1 ELSE 0 END), 0) AS app_opens,
@@ -1108,7 +1110,7 @@ projects.post('/:id/visitors/aggregated', async (c) => {
     LEFT JOIN events e ON e.link_id = l.id AND e.project_id = v.project_id AND date(e.created_at) BETWEEN ? AND ?
     LEFT JOIN purchase_events pe ON pe.link_id = l.id AND pe.project_id = v.project_id AND date(COALESCE(pe.date, pe.created_at)) BETWEEN ? AND ?
     WHERE v.project_id = ?${filter.clause}${termClause}
-    GROUP BY v.id, d.platform
+    GROUP BY v.id, d.platform, d.country_code
     ORDER BY v.updated_at DESC
     LIMIT ? OFFSET ?
   `).bind(range.startDate, range.endDate, range.startDate, range.endDate, String(project.id), ...filter.values, ...termValues, perPage, (page - 1) * perPage).all<any>();
@@ -1123,7 +1125,7 @@ projects.get('/:id/visitors/:visitorId', async (c) => {
   const project = await resolveProject(c.env.DB, c.req.param('id'));
   const visitorId = c.req.param('visitorId');
   const row = await c.env.DB.prepare(`
-    SELECT v.*, d.platform,
+    SELECT v.*, d.platform, d.country_code,
       COALESCE(SUM(CASE WHEN e.event = 'view' THEN 1 ELSE 0 END), 0) AS views,
       COALESCE(SUM(CASE WHEN e.event = 'open' THEN 1 ELSE 0 END), 0) AS opens,
       COALESCE(SUM(CASE WHEN e.event = 'app_open' THEN 1 ELSE 0 END), 0) AS app_opens,
@@ -1138,7 +1140,7 @@ projects.get('/:id/visitors/:visitorId', async (c) => {
     LEFT JOIN events e ON e.device_id = v.device_id AND e.project_id = v.project_id
     LEFT JOIN purchase_events pe ON pe.device_id = v.device_id AND pe.project_id = v.project_id
     WHERE v.project_id = ? AND v.id = ?
-    GROUP BY v.id, d.platform
+    GROUP BY v.id, d.platform, d.country_code
   `).bind(String(project.id), visitorId).first<any>();
   if (!row) return c.json({ error: 'Not found' }, 404);
   const visitor = visitorRow(row);

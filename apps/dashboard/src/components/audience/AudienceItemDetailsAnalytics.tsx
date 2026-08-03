@@ -15,6 +15,7 @@ import type {
   AggregatedVisitorMetrics,
   InvitedUser,
 } from "@/types";
+import { formatCountry } from "@/lib/country";
 
 const AudienceItemDetailsAnalytics = ({
   metrics,
@@ -38,6 +39,7 @@ const AudienceItemDetailsAnalytics = ({
         <div className="rounded-lg border border-sidebar-border overflow-hidden">
           <div className="grid grid-cols-3">
             <MetricCell label="Platform" value={metrics.platform} />
+            <MetricCell label="Pays" value={formatCountry(metrics.country_code)} />
             <MetricCell label="Views" value={metrics.total_views} />
             <MetricCell label="Opens" value={metrics.total_app_opens} />
             <MetricCell label="Installs" value={metrics.total_installs} />

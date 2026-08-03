@@ -104,10 +104,19 @@ const makeRequest = async (
       // Convert to ApiError for better caller ergonomics
       if (axios.isAxiosError(error)) {
         const status = error.response?.status ?? 0;
+        const responseData = error.response?.data as
+          | { error?: unknown; message?: unknown }
+          | undefined;
+        const apiMessage =
+          typeof responseData?.error === "string"
+            ? responseData.error
+            : typeof responseData?.message === "string"
+              ? responseData.message
+              : null;
         const message =
           status === 0
             ? "Unable to connect. Check your internet connection."
-            : getErrorMessage(status);
+            : apiMessage ?? getErrorMessage(status);
 
         throw new ApiError(message, status, error.code, error.response?.data);
       }
