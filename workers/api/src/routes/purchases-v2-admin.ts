@@ -692,14 +692,16 @@ admin.patch('/:projectId/release-gate/checks/:checkKey', async (c) => {
     }
     if (status === 'passed') {
       const observationId = String(evidence.observation_id || '');
+      const runId = String(evidence.run_id || '');
       const evidenceSha256 = String(evidence.evidence_sha256 || '');
       const observation = await c.env.DB.prepare(`
-        SELECT o.id FROM billing_certification_observations o
+        SELECT o.id, o.evidence_json, o.evidence_sha256 FROM billing_certification_observations o
         JOIN billing_certification_runs r ON r.id = o.run_id
         WHERE o.id = ? AND o.check_key = ? AND o.outcome = 'passed'
-          AND o.evidence_sha256 = ? AND r.release_project_id = ? AND r.status = 'completed'
+          AND o.evidence_sha256 = ? AND r.id = ?
+          AND r.release_project_id = ? AND r.status = 'completed'
         LIMIT 1
-      `).bind(observationId, checkKey, evidenceSha256, scope.releaseProjectId)
+      `).bind(observationId, checkKey, evidenceSha256, runId, scope.releaseProjectId)
         .first<{ id: string; evidence_json: string; evidence_sha256: string }>();
       if (!observation || await sha256Hex(observation.evidence_json) !== observation.evidence_sha256) {
         throw purchasesError('release_gate_certification_observation_required', 'A completed immutable certification observation is required', 409);
