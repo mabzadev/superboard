@@ -257,38 +257,94 @@ async function creditProductCurrencies(
   ).run();
 }
 
-async function queueOutboundWebhooks(env: Env, purchase: VerifiedPurchase, transactionId: string) {
+type OutboundWebhookEvent = {
+  projectId: string | number;
+  environment: BillingEnvironment;
+  eventType: string;
+  transactionId?: string | null;
+  payload: Record<string, unknown>;
+};
+
+async function queueOutboundWebhookEvent(env: Env, event: OutboundWebhookEvent) {
   const endpoints = await env.DB.prepare(`
     SELECT id, environments, event_types
     FROM billing_webhook_endpoints
     WHERE project_id = ? AND active = 1
-  `).bind(String(purchase.projectId)).all<Record<string, unknown>>();
+  `).bind(String(event.projectId)).all<Record<string, unknown>>();
   for (const endpoint of endpoints.results || []) {
     const environments = Array.isArray(endpoint.environments) ? endpoint.environments : JSON.parse(String(endpoint.environments || '[]'));
     const eventTypes = Array.isArray(endpoint.event_types) ? endpoint.event_types : JSON.parse(String(endpoint.event_types || '[]'));
-    if (environments.length > 0 && !environments.includes(purchase.environment)) continue;
-    if (eventTypes.length > 0 && !eventTypes.includes(purchase.eventType)) continue;
+    if (environments.length > 0 && !environments.includes(event.environment)) continue;
+    if (eventTypes.length > 0 && !eventTypes.includes(event.eventType)) continue;
     const deliveryId = crypto.randomUUID();
     const payload = JSON.stringify({
       id: deliveryId,
-      type: purchase.eventType,
-      project_id: String(purchase.projectId),
-      customer_id: purchase.customerId,
-      transaction_id: transactionId,
-      store: purchase.store,
-      environment: purchase.environment,
-      product_id: purchase.storeProductId,
-      status: purchase.status,
+      type: event.eventType,
+      api_version: '2026-08-03',
+      project_id: String(event.projectId),
+      transaction_id: event.transactionId || null,
+      environment: event.environment,
       occurred_at: new Date().toISOString(),
+      ...event.payload,
     });
     await env.DB.prepare(`
       INSERT INTO billing_webhook_deliveries (id, endpoint_id, transaction_id, event_type, payload)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(deliveryId, endpoint.id, transactionId, purchase.eventType, payload).run();
+    `).bind(deliveryId, endpoint.id, event.transactionId || null, event.eventType, payload).run();
     if (env.BILLING_QUEUE) {
       await env.BILLING_QUEUE.send({ type: 'billing.webhook.deliver', deliveryId });
     }
   }
+}
+
+async function queuePurchaseWebhook(env: Env, purchase: VerifiedPurchase, transactionId: string) {
+  await queueOutboundWebhookEvent(env, {
+    projectId: purchase.projectId,
+    environment: purchase.environment,
+    eventType: purchase.eventType,
+    transactionId,
+    payload: {
+      customer_id: purchase.customerId,
+      store: purchase.store,
+      product_id: purchase.storeProductId,
+      status: purchase.status,
+    },
+  });
+}
+
+/**
+ * Emits the single authoritative entitlement projection consumed by VocoStar.
+ * The delivery layer signs the exact body and timestamp with the endpoint HMAC
+ * secret, so consumers never need access to a Billing signing private key.
+ */
+export async function queueCustomerEntitlementChanged(env: Env, params: {
+  projectId: string | number;
+  customerId: string;
+  environment: BillingEnvironment;
+  transactionId?: string | null;
+  reason: string;
+}) {
+  const info = await customerInfo(env.DB, params.projectId, params.customerId);
+  const entitlements = info.entitlements as Record<string, { is_active?: boolean }>;
+  const subscriptions = info.active_subscriptions as string[];
+  await queueOutboundWebhookEvent(env, {
+    projectId: params.projectId,
+    environment: params.environment,
+    eventType: 'customer.entitlement.changed',
+    transactionId: params.transactionId,
+    payload: {
+      customer_id: params.customerId,
+      app_user_id: info.original_app_user_id,
+      reason: params.reason,
+      data: {
+        premium: entitlements.premium?.is_active === true,
+        subscription: subscriptions.length > 0,
+        entitlements: info.entitlements,
+        active_subscriptions: subscriptions,
+        request_date: info.request_date,
+      },
+    },
+  });
 }
 
 export async function applyVerifiedPurchase(env: Env, purchase: VerifiedPurchase) {
@@ -400,7 +456,18 @@ export async function applyVerifiedPurchase(env: Env, purchase: VerifiedPurchase
   if (subscriptionAccepted) await syncEntitlements(env.DB, purchase, String(product.id));
   await creditProductCurrencies(env.DB, purchase, product, stored.id);
   await recordCanonicalBillingEvent(env, purchase, stored.id);
-  if (insert.meta.changes > 0) await queueOutboundWebhooks(env, purchase, stored.id);
+  if (insert.meta.changes > 0) {
+    await queuePurchaseWebhook(env, purchase, stored.id);
+    if (purchase.customerId) {
+      await queueCustomerEntitlementChanged(env, {
+        projectId: purchase.projectId,
+        customerId: purchase.customerId,
+        environment: purchase.environment,
+        transactionId: stored.id,
+        reason: purchase.eventType,
+      });
+    }
+  }
   return { transactionId: stored.id, duplicate: insert.meta.changes === 0 };
 }
 
