@@ -82,6 +82,14 @@ describe("LoginForm", () => {
     expect(screen.queryByText("Login with Microsoft")).not.toBeInTheDocument();
   });
 
+  it("does not render legal consent links", () => {
+    render(<TestLoginForm />);
+
+    expect(screen.queryByText(/By clicking continue/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Terms of Service")).not.toBeInTheDocument();
+    expect(screen.queryByText("Privacy Policy")).not.toBeInTheDocument();
+  });
+
   it("submit button is disabled when form is invalid", () => {
     render(<TestLoginForm />);
 
