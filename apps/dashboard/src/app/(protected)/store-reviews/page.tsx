@@ -44,6 +44,14 @@ export default function StoreReviewsPage() {
       const result = await getStoreReviews(projectId, unanswered);
       setReviews(result.data || []);
       setSyncState(result.sync || []);
+      const requestedId = new URLSearchParams(window.location.search).get("review");
+      const requested = requestedId ? (result.data || []).find((review) => review.id === requestedId) : undefined;
+      if (requested) {
+        setSelected(requested);
+        setDraftBody(requested.latest_draft_body || requested.response_body || "");
+        setDraftId(requested.latest_draft_id || "");
+        setDraftStatus(requested.latest_draft_status || "");
+      }
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Unable to load reviews");
     } finally { setLoading(false); }
