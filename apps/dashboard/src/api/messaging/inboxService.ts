@@ -28,9 +28,39 @@ export type InboxMessage = {
   created_at: string;
 };
 
+export type UnifiedInboxItem = {
+  id: string;
+  source_type: "conversation" | "store_review" | "refund_case";
+  source_id: string;
+  title: string;
+  preview: string;
+  status: "open" | "pending" | "closed";
+  priority: "low" | "normal" | "high" | "urgent";
+  customer_reference?: string | null;
+  updated_at: string;
+  destination: string;
+  capabilities: string[];
+  source: Record<string, unknown>;
+};
+
 const path = (projectId: string, resource: string) => {
   const apiV2 = config.apiPath.replace(/\/v1\/?$/, "/v2");
   return `${apiV2}/messaging/projects/${projectId}${resource}`;
+};
+
+const unifiedPath = (projectId: string, resource: string) => {
+  const apiV2 = config.apiPath.replace(/\/v1\/?$/, "/v2");
+  return `${apiV2}/inbox/projects/${projectId}${resource}`;
+};
+
+export const getUnifiedInboxItems = async (
+  projectId: string,
+  filters: { type?: string; status?: string } = {},
+): Promise<{ data: UnifiedInboxItem[]; degraded_sources: Array<{ source_type: string; code: string; message: string }> }> => {
+  const query = new URLSearchParams();
+  if (filters.type) query.set("type", filters.type);
+  if (filters.status) query.set("status", filters.status);
+  return (await GET(unifiedPath(projectId, `/items${query.size ? `?${query}` : ""}`))).data;
 };
 
 export const getInboxConversations = async (projectId: string, status = ""):
