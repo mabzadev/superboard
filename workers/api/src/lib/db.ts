@@ -31,15 +31,20 @@ export async function getPrimaryInstanceId(db: D1Database, userId: number): Prom
   return role?.instance_id ?? null;
 }
 
-export async function getOrCreateInstanceForUser(db: D1Database, userId: number, name = 'Vocostar'): Promise<number> {
+export async function getOrCreateInstanceForUser(
+  db: D1Database,
+  userId: number,
+  name = 'Vocostar',
+  revenueCollectionEnabled = false,
+): Promise<number> {
   const current = await getPrimaryInstanceId(db, userId);
   if (current) return current;
 
   const apiKey = generateApiKey();
   const uriScheme = `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}${Date.now().toString(36)}`;
   const created = await db.prepare(
-    'INSERT INTO instances (api_key, uri_scheme) VALUES (?, ?) RETURNING id'
-  ).bind(apiKey, uriScheme).first<{ id: number }>();
+    'INSERT INTO instances (api_key, uri_scheme, revenue_collection_enabled) VALUES (?, ?, ?) RETURNING id'
+  ).bind(apiKey, uriScheme, revenueCollectionEnabled ? 1 : 0).first<{ id: number }>();
 
   if (!created) throw new Error('Unable to create instance');
 

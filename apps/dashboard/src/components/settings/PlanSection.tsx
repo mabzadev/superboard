@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "../ui/button";
-import { Building, Crown, ExternalLink, Star, Zap } from "lucide-react";
+import { Building, Crown, ExternalLink, Infinity as InfinityIcon, Star, Zap } from "lucide-react";
 import { Progress } from "../ui/progress";
 import ScaleUpDialog from "./ScaleUpDialog";
 import { useProjectSelection } from "@/context/useProjectSelection";
@@ -118,7 +118,7 @@ const PlanSection = () => {
         return subscription.maus;
       }
     } else {
-      return mau.total_available;
+      return mau.total_available ?? 0;
     }
   };
 
@@ -183,6 +183,45 @@ const PlanSection = () => {
             <div className="flex justify-between mt-2">
               <Skeleton className="h-3 w-[120px]" />
               <Skeleton className="h-3 w-[80px]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (subscription?.type === "full") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-semibold">Access & Usage</span>
+          <span className="text-xs text-muted-foreground">
+            Every OpenGrow feature is enabled for this private deployment.
+          </span>
+        </div>
+        <div className="rounded-xl border border-primary/30 overflow-hidden">
+          <div className="px-5 py-5 flex items-center gap-4 bg-gradient-to-r from-primary/8 to-primary/3">
+            <div className="flex items-center justify-center h-11 w-11 rounded-xl shrink-0 bg-primary/15 ring-1 ring-primary/20">
+              <InfinityIcon className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+              <span className="text-lg font-semibold tracking-tight">
+                Full Access
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Unlimited access without billing or MAU restrictions.
+              </span>
+            </div>
+          </div>
+          <div className="border-t border-sidebar-border px-5 py-4 flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              Monthly Active Users
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-semibold tabular-nums">
+                {numberFormatter.format(subscription.current_maus ?? 0)}
+              </span>
+              <span className="text-xs text-muted-foreground">/ Unlimited</span>
             </div>
           </div>
         </div>

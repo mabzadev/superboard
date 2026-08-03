@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { isFullAccess } from '../lib/deployment';
 import { Env } from '../types';
 import { generateShortCode } from '../lib/crypto';
 
@@ -297,7 +298,7 @@ redirect.get('/:code', async (c) => {
     return c.redirect(dashboardUrl(c), 302);
   }
 
-  if (link.quota_exceeded === 1) {
+  if (!isFullAccess(c.env) && link.quota_exceeded === 1) {
     return c.html(generateQuotaExceededPage(link.project_name || 'OpenGrow'), 402);
   }
 

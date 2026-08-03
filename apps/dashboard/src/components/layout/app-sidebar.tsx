@@ -24,7 +24,6 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { NavSupport } from "@/components/layout/nav-support";
 import { IS_ENTERPRISE } from "@/lib/edition";
 
 const data = {
@@ -160,7 +159,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProjects items={data.projects} />
-        <NavSupport />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
         <NavUser />

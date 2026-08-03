@@ -83,7 +83,7 @@ See [`.env.example`](.env.example) for all available configuration options.
 
 **Required:** `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CLIENT_ID`, `CLIENT_SECRET`
 
-**Optional:** Firebase, Chatwoot, PostHog, GTM (features gracefully disable when not configured)
+**Optional:** Firebase, PostHog, GTM (features gracefully disable when not configured)
 
 ## Scripts
 

@@ -6,6 +6,7 @@ import { getOrCreateProject } from '../lib/db';
 import { storeCsvDownload } from '../lib/files';
 import { downloadFileMessage, invitationMessage, invitationUrl, sendMail } from '../lib/mail';
 import { encryptCredential } from '../lib/secrets';
+import { isFullAccess, isRegistrationAllowed, registrationDeniedBody } from '../lib/deployment';
 
 const instances = new Hono<{ Bindings: Env }>();
 
@@ -529,8 +530,8 @@ instances.post('/', async (c) => {
   const apiKey = crypto.randomUUID().replace(/-/g, '');
   const uriScheme = name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36);
   const result = await c.env.DB.prepare(
-    'INSERT INTO instances (api_key, uri_scheme) VALUES (?, ?) RETURNING id'
-  ).bind(apiKey, uriScheme).first<{ id: number }>();
+    'INSERT INTO instances (api_key, uri_scheme, revenue_collection_enabled) VALUES (?, ?, ?) RETURNING id'
+  ).bind(apiKey, uriScheme, isFullAccess(c.env) ? 1 : 0).first<{ id: number }>();
   await c.env.DB.prepare(
     'INSERT INTO instance_roles (user_id, instance_id, role) VALUES (?, ?, ?)'
   ).bind(userId, result!.id, 'owner').run();
@@ -599,6 +600,9 @@ instances.post('/:id/members', async (c) => {
   const role = body.role || 'member';
 
   if (!email) return c.json({ error: 'email required' }, 422);
+  if (!await isRegistrationAllowed(c.env, email)) {
+    return c.json(registrationDeniedBody(), 403);
+  }
 
   const invitationToken = crypto.randomUUID().replace(/-/g, '');
   let invited = await c.env.DB.prepare(
@@ -1359,6 +1363,15 @@ instances.get('/:id/billing/subscription', async (c) => {
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
 
+  if (isFullAccess(c.env)) {
+    return c.json({
+      type: 'full',
+      unlimited: true,
+      current_maus: await currentMau(c.env.DB, instanceId),
+      total_available: null,
+    });
+  }
+
   const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
   if (stripeRow) {
     const subId = subscriptionId(stripeRow);
@@ -1425,8 +1438,16 @@ instances.get('/:id/billing/mau', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
+  const currentQuantity = await currentMau(c.env.DB, instanceId);
+  if (isFullAccess(c.env)) {
+    return c.json({
+      current_quantity: currentQuantity,
+      total_available: null,
+      unlimited: true,
+    });
+  }
   return c.json({
-    current_quantity: await currentMau(c.env.DB, instanceId),
+    current_quantity: currentQuantity,
     total_available: String(freeMauCount(c.env)),
   });
 });
@@ -1435,6 +1456,15 @@ instances.get('/:id/billing/usage', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
+
+  if (isFullAccess(c.env)) {
+    return c.json({
+      type: 'full',
+      unlimited: true,
+      current_maus: await currentMau(c.env.DB, instanceId),
+      total_available: null,
+    });
+  }
 
   const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
   if (stripeRow) {
@@ -1479,6 +1509,7 @@ instances.get('/:id/billing/stripe_portal', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
+  if (isFullAccess(c.env)) return c.json({ error: 'Billing is disabled for full-access deployments' }, 409);
 
   const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
   const customer = subscriptionCustomerId(stripeRow);
@@ -1497,6 +1528,7 @@ instances.post('/:id/billing/subscriptions', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
+  if (isFullAccess(c.env)) return c.json({ error: 'Billing is disabled for full-access deployments' }, 409);
 
   const existing = await activeStripeSubscription(c.env.DB, instanceId);
   if (existing) return c.json({ error: 'This project is already subscribed' }, 422);
@@ -1531,6 +1563,7 @@ instances.delete('/:id/billing/subscription', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
+  if (isFullAccess(c.env)) return c.json({ error: 'Billing is disabled for full-access deployments' }, 409);
 
   const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
   const subId = subscriptionId(stripeRow);

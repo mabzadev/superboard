@@ -22,6 +22,16 @@ function env(overrides: Partial<Env> = {}): Env {
 }
 
 describe('Worker scheduled and queue handlers', () => {
+  it('returns 404 for SSO routes when the target disables SSO', async () => {
+    const response = await worker.fetch?.(
+      new Request('https://go.test/api/v1/identity/sso/auth/google_oauth2', { method: 'POST' }),
+      env({ SSO_ENABLED: 'false' }),
+      {} as ExecutionContext,
+    );
+
+    expect(response?.status).toBe(404);
+  });
+
   it('enqueues maintenance work from the scheduled handler when a queue binding exists', async () => {
     const sent: unknown[] = [];
     const waitUntil = vi.fn((promise: Promise<unknown>) => promise);

@@ -10,9 +10,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import googleIcon from "@/assets/icons/generic/Google.svg";
-import microsoftIcon from "@/assets/icons/generic/Microsoft.svg";
-import Image from "next/image";
 import Link from "next/link";
 import { config } from "@/lib/config";
 import type { UseFormReturn } from "react-hook-form";
@@ -23,7 +20,6 @@ export function LoginForm({
   form,
   otpEnabled,
   handleLogin,
-  loginWithSSO,
   ...props
 }: LoginFormProps) {
   const {
@@ -36,7 +32,7 @@ export function LoginForm({
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
           <CardDescription>
-            Login with your Google or Microsoft account
+            Login with your email and password
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -50,41 +46,6 @@ export function LoginForm({
             }}
           >
             <div className="grid gap-6">
-              <div className="flex flex-col gap-4">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  type="button"
-                  onClick={() => loginWithSSO("google_oauth2")}
-                >
-                  <Image
-                    src={googleIcon}
-                    alt="Google Icon"
-                    width={24}
-                    height={24}
-                  />
-                  Login with Google
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  type="button"
-                  onClick={() => loginWithSSO("microsoft_graph")}
-                >
-                  <Image
-                    src={microsoftIcon}
-                    alt="Microsoft Icon"
-                    width={24}
-                    height={24}
-                  />
-                  Login with Microsoft
-                </Button>
-              </div>
-              <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-                <span className="bg-card text-muted-foreground relative z-10 px-2">
-                  Or continue with
-                </span>
-              </div>
               <div className="grid gap-6">
                 <div className="grid gap-3">
                   <Label htmlFor="email">Email</Label>
@@ -163,5 +124,4 @@ type LoginFormProps = React.ComponentProps<"div"> & {
   form: UseFormReturn<LoginFormValues>;
   otpEnabled: boolean;
   handleLogin: (e?: React.BaseSyntheticEvent) => void;
-  loginWithSSO: (provider: string) => void;
 };

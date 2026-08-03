@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginForm } from "../loginForm/login-form";
@@ -17,13 +17,6 @@ vi.mock("@/lib/config", () => ({
     pricingUrl: "https://example.com/pricing",
     salesUrl: "https://example.com/sales",
     appUrl: "https://app.example.com",
-  },
-}));
-
-vi.mock("next/image", () => ({
-  default: (props: Record<string, unknown>) => {
-    const { src, ...rest } = props;
-    return <img src={typeof src === "string" ? src : ""} {...rest} />;
   },
 }));
 
@@ -56,7 +49,6 @@ function TestLoginForm(
     form,
     otpEnabled: false,
     handleLogin: vi.fn(),
-    loginWithSSO: vi.fn(),
     ...overrides,
   };
 
@@ -83,22 +75,11 @@ describe("LoginForm", () => {
     expect(screen.getByLabelText("OTP")).toBeInTheDocument();
   });
 
-  it("renders SSO buttons", () => {
+  it("does not render SSO buttons", () => {
     render(<TestLoginForm />);
 
-    expect(screen.getByText("Login with Google")).toBeInTheDocument();
-    expect(screen.getByText("Login with Microsoft")).toBeInTheDocument();
-  });
-
-  it("calls loginWithSSO with correct provider on SSO button click", () => {
-    const loginWithSSO = vi.fn();
-    render(<TestLoginForm loginWithSSO={loginWithSSO} />);
-
-    fireEvent.click(screen.getByText("Login with Google"));
-    expect(loginWithSSO).toHaveBeenCalledWith("google_oauth2");
-
-    fireEvent.click(screen.getByText("Login with Microsoft"));
-    expect(loginWithSSO).toHaveBeenCalledWith("microsoft_graph");
+    expect(screen.queryByText("Login with Google")).not.toBeInTheDocument();
+    expect(screen.queryByText("Login with Microsoft")).not.toBeInTheDocument();
   });
 
   it("submit button is disabled when form is invalid", () => {

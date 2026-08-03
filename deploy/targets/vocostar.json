@@ -4,6 +4,9 @@
   "target": "vocostar",
   "accountId": "4fec11873e7130ab0e44e795e3e3afd3",
   "workersDevSubdomain": "vocostar",
+  "accessMode": "full",
+  "registrationMode": "allowlist",
+  "ssoEnabled": false,
   "domains": {
     "shortlinks": "go.vocostar.com",
     "sdk": "sdk.vocostar.com",

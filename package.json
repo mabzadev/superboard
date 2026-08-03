@@ -25,6 +25,7 @@
     "cloudflare:rotate-oauth": "node scripts/cloudflare-rotate-oauth.mjs",
     "cloudflare:connect-builds": "node scripts/cloudflare-connect-builds.mjs",
     "target:register": "node scripts/opengrow-register-target.mjs",
+    "allowlist": "node scripts/opengrow-allowlist.mjs",
     "secrets:scan": "gitleaks git . --no-banner --redact",
     "typecheck": "npm run worker:typecheck && npm run dashboard:typecheck",
     "test": "npm run dashboard:test && npm run worker:test",

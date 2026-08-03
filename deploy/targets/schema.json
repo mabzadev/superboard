@@ -4,13 +4,16 @@
   "title": "OpenGrow deployment target",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "target", "accountId", "workersDevSubdomain", "domains", "workers", "oauth", "environments"],
+  "required": ["schemaVersion", "target", "accountId", "workersDevSubdomain", "accessMode", "registrationMode", "ssoEnabled", "domains", "workers", "oauth", "environments"],
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
     "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "accountId": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
     "workersDevSubdomain": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "accessMode": { "enum": ["full", "metered"] },
+    "registrationMode": { "enum": ["allowlist", "public"] },
+    "ssoEnabled": { "type": "boolean" },
     "domains": {
       "type": "object",
       "additionalProperties": false,
