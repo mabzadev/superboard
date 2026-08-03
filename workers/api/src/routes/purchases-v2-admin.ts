@@ -11,6 +11,7 @@ import { refundActionDefinitions, supportedRefundActions, validateRefundActionPa
 import {
   billingOperationalPrerequisites,
   buildReleaseGate,
+  catalogSyncFresh,
   certificationRunCompatibility,
   nativeCatalogCoverage,
   releaseGateProductCadences,
@@ -34,10 +35,16 @@ const PROVIDERS = ['apple', 'google', 'stripe'] as const;
 const ENVIRONMENTS = ['sandbox', 'production'] as const;
 const FEATURE_FLAGS = ['purchases_core', 'product_catalog', 'paywalls', 'growth', 'web_billing', 'virtual_currencies', 'scheduled_exports'] as const;
 const DEFAULT_RELEASE_STALE_MINUTES = 15;
+const DEFAULT_CATALOG_STALE_HOURS = 24;
 
 function releaseGateStaleMinutes(value: string | undefined) {
   const parsed = Number(value || DEFAULT_RELEASE_STALE_MINUTES);
   return Number.isInteger(parsed) && parsed >= 5 && parsed <= 120 ? parsed : DEFAULT_RELEASE_STALE_MINUTES;
+}
+
+function releaseGateCatalogStaleHours(value: string | undefined) {
+  const parsed = Number(value || DEFAULT_CATALOG_STALE_HOURS);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 168 ? parsed : DEFAULT_CATALOG_STALE_HOURS;
 }
 
 async function currentBillingWorkerReadiness(env: Env): Promise<BillingWorkerReadiness | null> {
@@ -267,6 +274,7 @@ admin.get('/:projectId/release-gate', async (c) => {
     const scopedProjectIds = [scope.testProjectId, scope.productionProjectId].filter(Boolean);
     const projectPlaceholders = scopedProjectIds.map(() => '?').join(',');
     const staleMinutes = releaseGateStaleMinutes(c.env.BILLING_RELEASE_STALE_MINUTES);
+    const catalogStaleHours = releaseGateCatalogStaleHours(c.env.BILLING_CATALOG_STALE_HOURS);
     const [
       checks,
       connections,
@@ -376,6 +384,11 @@ admin.get('/:projectId/release-gate', async (c) => {
       String(row.project_id) === projectId && row.provider === provider && row.environment === environment
       && row.status === 'connected' && row.last_tested_at
       && (provider !== 'stripe' || Boolean(row.billing_configuration_encrypted)));
+    const catalogRecentlySynced = (projectId: string, provider: 'apple' | 'google', environment: 'production') =>
+      (connections.results || []).some((row) => String(row.project_id) === projectId
+        && row.provider === provider
+        && row.environment === environment
+        && catalogSyncFresh(row.last_synced_at, catalogStaleHours));
     const products = catalog.results || [];
     const hasStripePlan = (projectId: string, environment: string) => products.some((product) =>
       String(product.project_id) === projectId && product.store === 'stripe' && product.environment === environment);
@@ -430,8 +443,14 @@ admin.get('/:projectId/release-gate', async (c) => {
       ]),
       prerequisite('sandbox_apple_catalog', 'Sandbox Apple subscription catalog', sandboxApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the test project.'),
       prerequisite('production_apple_catalog', 'Production Apple subscription catalog', productionApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the production project.'),
+      prerequisite('production_apple_catalog_fresh', 'Production Apple catalog freshness', catalogRecentlySynced(scope.productionProjectId, 'apple', 'production'), `The Apple catalog was synchronized within the past ${catalogStaleHours} hours.`, `Synchronize the production Apple catalog. Its approval and availability evidence must be less than ${catalogStaleHours} hours old.`),
+      prerequisite('production_apple_products_approved', 'Production Apple product approval', productionApple.approved, 'Weekly and yearly subscriptions are approved by Apple.', 'Submit the weekly and yearly subscriptions to Apple and wait until both are approved.'),
+      prerequisite('production_apple_products_purchasable', 'Production Apple product availability', productionApple.purchasable, 'Weekly and yearly subscriptions are available for purchase in at least one territory.', 'Make the approved weekly and yearly subscriptions available in at least one App Store territory, then synchronize the catalog again.'),
       prerequisite('sandbox_google_catalog', 'Sandbox Google subscription catalog', sandboxGoogle.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the test project.'),
       prerequisite('production_google_catalog', 'Production Google subscription catalog', productionGoogle.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the production project.'),
+      prerequisite('production_google_catalog_fresh', 'Production Google catalog freshness', catalogRecentlySynced(scope.productionProjectId, 'google', 'production'), `The Google catalog was synchronized within the past ${catalogStaleHours} hours.`, `Synchronize the production Google catalog. Its activation and availability evidence must be less than ${catalogStaleHours} hours old.`),
+      prerequisite('production_google_products_active', 'Production Google base plan activation', productionGoogle.approved, 'Weekly and yearly subscriptions have active base plans.', 'Activate a base plan for the weekly and yearly Google subscriptions, then synchronize the catalog again.'),
+      prerequisite('production_google_products_purchasable', 'Production Google product availability', productionGoogle.purchasable, 'Weekly and yearly subscriptions are available to new subscribers in at least one region.', 'Enable new subscriber availability for the weekly and yearly Google subscriptions in at least one region, then synchronize the catalog again.'),
       prerequisite('sandbox_stripe_catalog', 'Stripe test subscription catalog', hasStripePlan(scope.testProjectId, 'sandbox'), 'A Stripe test subscription is active.', 'Add an active Stripe test subscription to the test project.'),
       prerequisite('production_stripe_catalog', 'Stripe production subscription catalog', hasStripePlan(scope.productionProjectId, 'production'), 'A Stripe production subscription is active.', 'Add an active Stripe production subscription to the production project.'),
       prerequisite('sandbox_premium_entitlement', 'Test Premium entitlement', hasEntitlement(scope.testProjectId), 'The Premium entitlement is active.', 'Create and activate the Premium entitlement in the test project.'),
@@ -452,7 +471,7 @@ admin.get('/:projectId/release-gate', async (c) => {
       data: {
         environments: ['sandbox', 'production'],
         scope,
-        operational_policy: { stale_after_minutes: staleMinutes, billing_worker: workerReadiness },
+        operational_policy: { stale_after_minutes: staleMinutes, catalog_stale_after_hours: catalogStaleHours, billing_worker: workerReadiness },
         ...buildReleaseGate(checks.results || [], prerequisites, verifiedCertificationObservations),
       },
     });

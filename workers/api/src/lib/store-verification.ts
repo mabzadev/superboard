@@ -7,6 +7,11 @@ import { importPKCS8, SignJWT } from 'jose';
 import type { BillingEnv } from '../types';
 import { BillingEnvironment, BillingStatus, VerifiedPurchase } from './billing';
 import { decryptCredential } from './secrets';
+import {
+  googleBasePlanReadiness,
+  parseAppleSubscriptionAvailability,
+  type AppleSubscriptionAvailability,
+} from './store-catalog-readiness';
 
 type BillingApplication = {
   applicationId: string;
@@ -442,13 +447,21 @@ function appleProduct(resource: Record<string, unknown>, applicationId: string):
   };
 }
 
-function appleSubscription(resource: Record<string, unknown>, applicationId: string): StoreCatalogProduct | null {
+function appleSubscription(
+  resource: Record<string, unknown>,
+  applicationId: string,
+  availability: AppleSubscriptionAvailability,
+): StoreCatalogProduct | null {
   const attributes = resource.attributes && typeof resource.attributes === 'object'
     ? resource.attributes as Record<string, unknown>
     : {};
   const storeProductId = String(attributes.productId || '').trim();
   if (!storeProductId) return null;
   const state = String(attributes.state || '').toUpperCase();
+  const providerApproved = state === 'APPROVED';
+  const providerPurchasable = providerApproved
+    && availability.planCount > 0
+    && availability.availableTerritoryCount > 0;
   return {
     applicationId,
     storeProductId,
@@ -460,10 +473,29 @@ function appleSubscription(resource: Record<string, unknown>, applicationId: str
       source: 'app_store_connect',
       store_resource_id: resource.id || null,
       state: attributes.state || null,
+      provider_approved: providerApproved,
+      provider_purchasable: providerPurchasable,
+      plan_count: availability.planCount,
+      available_territory_count: availability.availableTerritoryCount,
+      available_in_new_territories: availability.availableInNewTerritories,
       subscription_period: attributes.subscriptionPeriod || null,
       family_sharable: attributes.familySharable || false,
     },
   };
+}
+
+async function appleSubscriptionAvailability(
+  resource: Record<string, unknown>,
+  token: string,
+): Promise<AppleSubscriptionAvailability> {
+  const resourceId = String(resource.id || '').trim();
+  if (!resourceId) return { planCount: 0, availableTerritoryCount: 0, availableInNewTerritories: false };
+  const payload = await fetchStoreJson(
+    `https://api.appstoreconnect.apple.com/v1/subscriptions/${encodeURIComponent(resourceId)}/planAvailabilities?include=availableTerritories&limit=200&limit%5BavailableTerritories%5D=1`,
+    token,
+    'App Store Connect',
+  );
+  return parseAppleSubscriptionAvailability(payload);
 }
 
 async function appleCollection(url: string, token: string): Promise<Record<string, unknown>[]> {
@@ -515,9 +547,15 @@ async function syncAppleCatalog(env: BillingEnv, projectId: string | number): Pr
     ? groupPayload.included as Record<string, unknown>[]
     : [];
   const subscriptions = included.filter((item) => item.type === 'subscriptions');
+  const subscriptionProducts: StoreCatalogProduct[] = [];
+  for (const subscription of subscriptions) {
+    const availability = await appleSubscriptionAvailability(subscription, token);
+    const product = appleSubscription(subscription, app.applicationId, availability);
+    if (product) subscriptionProducts.push(product);
+  }
   return [
     ...oneTime.map((item) => appleProduct(item, app.applicationId)),
-    ...subscriptions.map((item) => appleSubscription(item, app.applicationId)),
+    ...subscriptionProducts,
   ].filter((item): item is StoreCatalogProduct => item !== null);
 }
 
@@ -590,29 +628,31 @@ async function syncGoogleCatalog(env: BillingEnv, projectId: string | number): P
       if (!storeProductId) return null;
       const listing = localizedListing(item.listings);
       const basePlans = Array.isArray(item.basePlans) ? item.basePlans as Array<Record<string, unknown>> : [];
+      const basePlanReadiness = basePlans.map(googleBasePlanReadiness);
+      const providerApproved = item.archived !== true
+        && basePlanReadiness.some((plan) => String(plan.state || '').toUpperCase() === 'ACTIVE');
+      const providerPurchasable = item.archived !== true && basePlanReadiness.some((plan) =>
+        String(plan.state || '').toUpperCase() === 'ACTIVE' && plan.newSubscriberAvailable);
       return {
         applicationId: app.applicationId,
         storeProductId,
         productType: 'subscription',
         displayName: listing.title || storeProductId,
         description: listing.description || null,
-        active: item.archived !== true && basePlans.some((plan) => String(plan.state || '').toUpperCase() === 'ACTIVE'),
+        active: item.archived !== true && providerApproved,
         metadata: {
           source: 'google_play',
           archived: item.archived === true,
-          base_plans: basePlans.map((plan) => {
-            const autoRenewing = plan.autoRenewingBasePlanType && typeof plan.autoRenewingBasePlanType === 'object'
-              ? plan.autoRenewingBasePlanType as Record<string, unknown>
-              : {};
-            const prepaid = plan.prepaidBasePlanType && typeof plan.prepaidBasePlanType === 'object'
-              ? plan.prepaidBasePlanType as Record<string, unknown>
-              : {};
-            return {
-              base_plan_id: plan.basePlanId || null,
-              state: plan.state || null,
-              billing_period: autoRenewing.billingPeriodDuration || prepaid.billingPeriodDuration || null,
-            };
-          }),
+          provider_approved: providerApproved,
+          provider_purchasable: providerPurchasable,
+          base_plans: basePlanReadiness.map((plan) => ({
+            base_plan_id: plan.basePlanId,
+            state: plan.state,
+            billing_period: plan.billingPeriod,
+            available_region_count: plan.availableRegionCount,
+            available_in_other_regions: plan.availableInOtherRegions,
+            new_subscriber_available: plan.newSubscriberAvailable,
+          })),
         },
       };
     }),
