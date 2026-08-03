@@ -1,241 +1,503 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CloudDownload, CreditCard, Package, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  CloudDownload,
+  Coins,
+  CreditCard,
+  FlaskConical,
+  PanelTop,
+  PlugZap,
+  RefreshCw,
+  Store,
+  Users,
+  Webhook,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AppHeader from "@/components/layout/app-header";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProjectSelection } from "@/context/useProjectSelection";
 import {
-  createEntitlement,
+  archiveBillingEntitlement,
+  archiveBillingOffering,
+  archiveBillingProduct,
+  createBillingExperiment,
+  createBillingExport,
+  createBillingConnection,
   createBillingPackage,
+  createBillingPaywall,
+  createBillingPlacement,
+  createBillingProviderProduct,
+  createBillingTargetingRule,
+  createBillingVirtualCurrency,
+  createEntitlement,
   createOffering,
   createProduct,
+  getBillingAnalytics,
+  getBillingConnections,
+  getBillingCustomer,
+  getBillingExperiments,
+  getBillingExports,
+  getBillingHealth,
   getBillingOverview,
+  getBillingPaywalls,
+  getBillingPlacements,
+  getBillingSubscriptions,
+  getBillingTargeting,
+  getBillingTransactions,
+  getBillingVirtualCurrencies,
+  getBillingWebhookDeliveries,
+  grantBillingEntitlement,
+  publishBillingPaywall,
+  replayBillingWebhookDelivery,
   searchBillingCustomers,
+  setBillingCustomerBlocked,
   syncBillingProducts,
-  testBillingCredentials,
-  updateBillingSettings,
+  testBillingConnection,
+  updateBillingExperiment,
+  updateBillingTargetingRule,
+  type BillingAnalytics,
+  type BillingConnection,
+  type BillingExperiment,
+  type BillingHealth,
   type BillingOverview,
+  type BillingPaywall,
+  type BillingPlacement,
+  type BillingSubscription,
+  type BillingTargetingRule,
+  type BillingTransaction,
 } from "@/api/billing/billingService";
 import { showErrorNotification, showSuccessNotification } from "@/lib/Notifications";
 
+type CustomerRow = {
+  id: string;
+  primary_app_user_id: string;
+  aliases?: string | null;
+  blocked?: number;
+  first_seen_at?: string;
+  last_seen_at?: string;
+};
+
+type CustomerDetail = {
+  customer: CustomerRow;
+  customer_info: {
+    entitlements?: Record<string, { is_active?: boolean; status?: string; expires_at?: string | null }>;
+    subscriptions?: Array<Record<string, unknown>>;
+    balances?: Record<string, number>;
+  };
+  transactions?: BillingTransaction[];
+};
+
+type Delivery = {
+  id: string;
+  endpoint_name?: string;
+  event_type?: string;
+  status?: string;
+  attempts?: number;
+  last_error?: string | null;
+  created_at?: string;
+};
+
+const money = (micros: unknown, currency = "") =>
+  `${(Number(micros || 0) / 1_000_000).toFixed(2)}${currency ? ` ${currency}` : ""}`;
+
+const date = (value: unknown) =>
+  value ? new Intl.DateTimeFormat("fr-CH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(String(value))) : "—";
+
+const statusBadge = (status: unknown) => {
+  const value = String(status || "unknown");
+  const destructive = ["failed", "degraded", "refunded", "revoked", "expired", "billing_issue"].includes(value);
+  return <Badge variant={destructive ? "destructive" : value === "active" || value === "connected" || value === "healthy" ? "default" : "outline"}>{value}</Badge>;
+};
+
 const PurchasesPage = () => {
-  const { selectedProject } = useProjectSelection();
+  const { selectedProject, projectType } = useProjectSelection();
+  const projectId = selectedProject?.id;
   const [overview, setOverview] = useState<BillingOverview>();
+  const [connections, setConnections] = useState<BillingConnection[]>([]);
+  const [transactions, setTransactions] = useState<BillingTransaction[]>([]);
+  const [subscriptions, setSubscriptions] = useState<BillingSubscription[]>([]);
+  const [paywalls, setPaywalls] = useState<BillingPaywall[]>([]);
+  const [placements, setPlacements] = useState<BillingPlacement[]>([]);
+  const [targeting, setTargeting] = useState<BillingTargetingRule[]>([]);
+  const [experiments, setExperiments] = useState<BillingExperiment[]>([]);
+  const [analytics, setAnalytics] = useState<BillingAnalytics>();
+  const [health, setHealth] = useState<BillingHealth>();
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [virtualCurrencies, setVirtualCurrencies] = useState<Array<Record<string, unknown>>>([]);
+  const [exports, setExports] = useState<Array<Record<string, unknown>>>([]);
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [customerDetail, setCustomerDetail] = useState<CustomerDetail>();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+
   const [entitlementId, setEntitlementId] = useState("premium");
   const [productId, setProductId] = useState("");
-  const [store, setStore] = useState<"apple" | "google">("apple");
+  const [store, setStore] = useState("apple");
   const [productType, setProductType] = useState("subscription");
-  const [customerQuery, setCustomerQuery] = useState("");
   const [offeringId, setOfferingId] = useState("default");
   const [packageId, setPackageId] = useState("monthly");
-  const [customers, setCustomers] = useState<Array<Record<string, unknown>>>([]);
-  const [credentialTests, setCredentialTests] = useState<
-    Partial<Record<"ios" | "android", "passed" | "failed">>
-  >({});
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [paywallId, setPaywallId] = useState("premium");
+  const [paywallTitle, setPaywallTitle] = useState("Passez Premium");
+  const [paywallSubtitle, setPaywallSubtitle] = useState("Débloquez toutes les fonctionnalités.");
+  const [paywallAccent, setPaywallAccent] = useState("#5B5FF0");
+  const [placementId, setPlacementId] = useState("onboarding_end");
+  const [ruleCountry, setRuleCountry] = useState("CH");
+  const [experimentName, setExperimentName] = useState("Paywall test");
+  const [currencyCode, setCurrencyCode] = useState("CREDITS");
+  const [webProvider, setWebProvider] = useState<"stripe" | "paddle" | "opengrow_web">("opengrow_web");
+  const [providerSecret, setProviderSecret] = useState("");
+  const [providerWebhookSecret, setProviderWebhookSecret] = useState("");
+  const [providerCheckoutUrl, setProviderCheckoutUrl] = useState("");
 
   const load = useCallback(async () => {
-    if (!selectedProject?.id) return;
+    if (!projectId) return;
     setLoading(true);
     try {
-      setOverview(await getBillingOverview(selectedProject.id));
+      const [
+        nextOverview,
+        nextConnections,
+        nextTransactions,
+        nextSubscriptions,
+        nextPaywalls,
+        nextPlacements,
+        nextTargeting,
+        nextExperiments,
+        nextAnalytics,
+        nextHealth,
+        nextDeliveries,
+        nextCurrencies,
+        nextExports,
+      ] = await Promise.allSettled([
+        getBillingOverview(projectId),
+        getBillingConnections(projectId),
+        getBillingTransactions(projectId),
+        getBillingSubscriptions(projectId),
+        getBillingPaywalls(projectId),
+        getBillingPlacements(projectId),
+        getBillingTargeting(projectId),
+        getBillingExperiments(projectId),
+        getBillingAnalytics(projectId),
+        getBillingHealth(projectId),
+        getBillingWebhookDeliveries(projectId),
+        getBillingVirtualCurrencies(projectId),
+        getBillingExports(projectId),
+      ]);
+      const failures: string[] = [];
+      const failed = (name: string, reason: unknown) => failures.push(`${name}: ${reason instanceof Error ? reason.message : "chargement impossible"}`);
+      if (nextOverview.status === "fulfilled") setOverview(nextOverview.value); else failed("Overview", nextOverview.reason);
+      if (nextConnections.status === "fulfilled") setConnections(nextConnections.value.data || []); else failed("Stores", nextConnections.reason);
+      if (nextTransactions.status === "fulfilled") setTransactions(nextTransactions.value.data || []); else failed("Transactions", nextTransactions.reason);
+      if (nextSubscriptions.status === "fulfilled") setSubscriptions(nextSubscriptions.value.data || []); else failed("Subscriptions", nextSubscriptions.reason);
+      if (nextPaywalls.status === "fulfilled") setPaywalls(nextPaywalls.value.data || []); else failed("Paywalls", nextPaywalls.reason);
+      if (nextPlacements.status === "fulfilled") setPlacements(nextPlacements.value.data || []); else failed("Placements", nextPlacements.reason);
+      if (nextTargeting.status === "fulfilled") setTargeting(nextTargeting.value.data || []); else failed("Targeting", nextTargeting.reason);
+      if (nextExperiments.status === "fulfilled") setExperiments(nextExperiments.value.data || []); else failed("Experiments", nextExperiments.reason);
+      if (nextAnalytics.status === "fulfilled") setAnalytics(nextAnalytics.value); else failed("Analytics", nextAnalytics.reason);
+      if (nextHealth.status === "fulfilled") setHealth(nextHealth.value); else failed("Diagnostics", nextHealth.reason);
+      if (nextDeliveries.status === "fulfilled") setDeliveries(nextDeliveries.value.data || []); else failed("Webhooks", nextDeliveries.reason);
+      if (nextCurrencies.status === "fulfilled") setVirtualCurrencies(nextCurrencies.value.data || []); else failed("Currencies", nextCurrencies.reason);
+      if (nextExports.status === "fulfilled") setExports(nextExports.value.data || []); else failed("Exports", nextExports.reason);
+      if (failures.length) showErrorNotification(failures.join(" · "));
     } catch (error) {
-      showErrorNotification(error instanceof Error ? error.message : "Unable to load Purchases");
+      showErrorNotification(error instanceof Error ? error.message : "Impossible de charger Purchases");
     } finally {
       setLoading(false);
     }
-  }, [selectedProject?.id]);
+  }, [projectId]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const enable = async () => {
-    if (!selectedProject?.id) return;
-    await updateBillingSettings(selectedProject.id, { purchases_enabled: true, restore_behavior: "transfer" });
-    showSuccessNotification("OpenGrow Purchases enabled");
-    await load();
-  };
-
-  const addEntitlement = async () => {
-    if (!selectedProject?.id || !entitlementId.trim()) return;
-    await createEntitlement(selectedProject.id, { identifier: entitlementId.trim(), display_name: entitlementId.trim() });
-    setEntitlementId("");
-    await load();
-  };
-
-  const addProduct = async () => {
-    if (!selectedProject?.id || !productId.trim()) return;
-    await createProduct(selectedProject.id, {
-      store,
-      store_product_id: productId.trim(),
-      product_type: productType,
-      display_name: productId.trim(),
-      entitlement_ids: overview?.entitlements.map((value) => value.id) ?? [],
-    });
-    setProductId("");
-    await load();
+  const run = async (action: () => Promise<unknown>, success: string, refresh = true) => {
+    try {
+      await action();
+      showSuccessNotification(success);
+      if (refresh) await load();
+    } catch (error) {
+      showErrorNotification(error instanceof Error ? error.message : "L’action a échoué");
+    }
   };
 
   const syncProducts = async () => {
-    if (!selectedProject?.id) return;
+    if (!projectId) return;
     setSyncing(true);
     try {
-      const result = await syncBillingProducts(selectedProject.id);
-      const imported = result.stores.reduce((total, value) => total + (value.imported ?? 0), 0);
-      const failures = result.stores.filter((value) => !value.ok);
-      if (failures.length > 0) {
-        showErrorNotification(failures.map((value) => value.error).filter(Boolean).join(" · "));
-      }
-      if (result.stores.some((value) => value.ok)) {
-        showSuccessNotification(`${imported} produit${imported === 1 ? "" : "s"} synchronisé${imported === 1 ? "" : "s"} depuis les Stores`);
-      }
+      const result = await syncBillingProducts(projectId);
+      const imported = result.stores.reduce((total, item) => total + (item.imported || 0), 0);
+      const failures = result.stores.filter((item) => !item.ok);
+      if (failures.length) showErrorNotification(failures.map((item) => item.error).filter(Boolean).join(" · "));
+      if (result.stores.some((item) => item.ok)) showSuccessNotification(`${imported} produit(s) synchronisé(s)`);
       await load();
     } catch (error) {
-      showErrorNotification(error instanceof Error ? error.message : "Store synchronization failed");
+      showErrorNotification(error instanceof Error ? error.message : "Synchronisation impossible");
     } finally {
       setSyncing(false);
     }
   };
 
   const searchCustomers = async () => {
-    if (!selectedProject?.id) return;
-    const result = await searchBillingCustomers(selectedProject.id, customerQuery);
-    setCustomers(result.data ?? []);
-  };
-
-  const testCredentials = async (platform: "ios" | "android") => {
-    if (!selectedProject?.id) return;
+    if (!projectId) return;
     try {
-      await testBillingCredentials(selectedProject.id, platform);
-      setCredentialTests((current) => ({ ...current, [platform]: "passed" }));
-      showSuccessNotification(`${platform === "ios" ? "App Store" : "Google Play"} credentials verified`);
+      const result = await searchBillingCustomers(projectId, customerQuery);
+      setCustomers((result.data || []) as CustomerRow[]);
     } catch (error) {
-      setCredentialTests((current) => ({ ...current, [platform]: "failed" }));
-      showErrorNotification(error instanceof Error ? error.message : "Credential test failed");
+      showErrorNotification(error instanceof Error ? error.message : "Recherche impossible");
     }
   };
 
-  const addOffering = async () => {
-    if (!selectedProject?.id || !offeringId.trim()) return;
-    await createOffering(selectedProject.id, {
-      identifier: offeringId.trim(),
-      display_name: offeringId.trim(),
-      placement: "default",
-      is_current: overview?.offerings.length === 0,
-    });
-    await load();
+  const openCustomer = async (id: string) => {
+    if (!projectId) return;
+    try { setCustomerDetail(await getBillingCustomer(projectId, id)); }
+    catch (error) { showErrorNotification(error instanceof Error ? error.message : "Client introuvable"); }
   };
 
-  const addPackage = async () => {
-    if (!selectedProject?.id || !overview?.offerings[0] || !packageId.trim()) return;
-    await createBillingPackage(selectedProject.id, overview.offerings[0].id, {
-      identifier: packageId.trim(),
-      package_type: packageId.trim(),
-      product_ids: overview.products.map((value) => value.id),
-    });
-    setPackageId("");
-    showSuccessNotification("Package created and mapped to the store products");
+  const createPaywall = async () => {
+    const offering = overview?.offerings[0];
+    if (!projectId || !paywallId.trim() || !offering) return;
+    await run(async () => {
+      const created = await createBillingPaywall(projectId, {
+        identifier: paywallId,
+        display_name: paywallId,
+        offering_id: offering.id,
+        configuration: {
+          schema_version: 1,
+          theme: { accent_color: paywallAccent, background_color: "#FFFFFF", text_color: "#111827" },
+          components: [
+            { type: "title", text: paywallTitle },
+            { type: "subtitle", text: paywallSubtitle },
+            { type: "packages" },
+            { type: "purchase_button", text: "Continuer" },
+            { type: "restore_button", text: "Restaurer mes achats" },
+          ],
+        },
+      });
+      await publishBillingPaywall(projectId, created.id, created.draft_version_id);
+    }, "Paywall créé et publié");
+  };
+
+  const createRule = async () => {
+    const placement = placements[0];
+    const offering = overview?.offerings[0];
+    if (!projectId || !placement || !offering) return;
+    await run(() => createBillingTargetingRule(projectId, {
+      placement_id: placement.id,
+      display_name: `Pays ${ruleCountry.toUpperCase()}`,
+      priority: targeting.length,
+      state: "live",
+      conditions: [{ field: "country", operator: "equals", value: ruleCountry.toUpperCase() }],
+      offering_id: offering.id,
+    }), "Règle de ciblage activée");
+  };
+
+  const createExperiment = async () => {
+    const placement = placements[0];
+    const control = overview?.offerings[0];
+    const variant = overview?.offerings[1];
+    if (!projectId || !placement || !control || !variant) return;
+    await run(() => createBillingExperiment(projectId, {
+      placement_id: placement.id,
+      display_name: experimentName,
+      variants: [
+        { identifier: "control", offering_id: control.id, weight: 5000, is_control: true },
+        { identifier: "variant_b", offering_id: variant.id, weight: 5000 },
+      ],
+    }), "Expérience créée en brouillon");
+  };
+
+  const saveWebConnection = async () => {
+    if (!projectId || !providerSecret.trim()) return;
+    await run(() => createBillingConnection(projectId, {
+      provider: webProvider,
+      environment: projectType === "test" ? "sandbox" : "production",
+      display_name: webProvider === "opengrow_web" ? "OpenGrow Web Billing" : webProvider === "stripe" ? "Stripe Billing" : "Paddle Billing",
+      secret_configuration: webProvider === "paddle"
+        ? { api_key: providerSecret, webhook_secret: providerWebhookSecret }
+        : { secret_key: providerSecret, webhook_secret: providerWebhookSecret },
+      public_configuration: providerCheckoutUrl ? { checkout_url: providerCheckoutUrl } : {},
+    }), "Connexion Web enregistrée");
+    setProviderSecret("");
+    setProviderWebhookSecret("");
+  };
+
+  const addProduct = async () => {
+    if (!projectId || !productId.trim()) return;
+    const action = store === "apple" || store === "google"
+      ? () => createProduct(projectId, { store, store_product_id: productId.trim(), product_type: productType, display_name: productId.trim(), entitlement_ids: overview?.entitlements.map((item) => item.id) || [] })
+      : () => createBillingProviderProduct(projectId, { provider: store, store_product_id: productId.trim(), provider_price_id: productId.trim(), product_type: productType, display_name: productId.trim(), environment: projectType === "test" ? "sandbox" : "production" });
+    await run(action, "Produit ajouté");
+    setProductId("");
   };
 
   const metrics = overview?.metrics;
   const metricCards: Array<[string, string | number, LucideIcon]> = [
-    ["Revenu vérifié", `${(Number(metrics?.revenue_micros ?? 0) / 1_000_000).toFixed(2)}`, CreditCard],
+    ["Revenu vérifié", money(metrics?.revenue_micros), CreditCard],
     ["Clients payants", metrics?.paying_customers ?? 0, Users],
-    ["Essais", metrics?.trials ?? 0, Package],
+    ["Essais", metrics?.trials ?? 0, FlaskConical],
     ["Remboursements", metrics?.refunds ?? 0, RefreshCw],
   ];
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       <AppHeader titleOverride="Purchases" />
-      <main className="flex-1 overflow-auto p-6 space-y-6">
-        <div className="flex items-start justify-between gap-4">
+      <main className="flex-1 space-y-6 overflow-auto p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">OpenGrow Purchases</h1>
-            <p className="text-sm text-muted-foreground">Produits, droits, offres et clients vérifiés par Apple et Google.</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold">OpenGrow Purchases 2.0</h1>
+              <Badge variant="secondary">Full Access</Badge>
+              {health && statusBadge(health.status)}
+            </div>
+            <p className="text-sm text-muted-foreground">Monétisation, abonnements, paywalls, clients et expériences sur toutes les plateformes.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={() => void syncProducts()} disabled={syncing || loading}>
-              <CloudDownload className="mr-2 h-4 w-4" />
-              {syncing ? "Synchronisation…" : "Synchroniser les Stores"}
+              <CloudDownload className="mr-2 h-4 w-4" />{syncing ? "Synchronisation…" : "Synchroniser les Stores"}
             </Button>
-            <Button variant="outline" onClick={() => void testCredentials("ios")}>Tester Apple</Button>
-            <Button variant="outline" onClick={() => void testCredentials("android")}>Tester Google</Button>
             <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4" />Actualiser</Button>
-            {!overview?.settings?.purchases_enabled && <Button onClick={() => void enable()}><ShieldCheck className="mr-2 h-4 w-4" />Activer</Button>}
           </div>
         </div>
+
+        {health?.status === "degraded" && (
+          <Alert variant="destructive">
+            <Activity />
+            <AlertTitle>Purchases nécessite votre attention</AlertTitle>
+            <AlertDescription>Consultez Diagnostics pour identifier les événements ou webhooks en échec.</AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-4 md:grid-cols-4">
           {metricCards.map(([label, value, Icon]) => (
-            <Card key={String(label)}><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{String(label)}</CardTitle></CardHeader><CardContent className="flex items-center justify-between"><span className="text-2xl font-semibold">{String(value)}</span><Icon className="h-5 w-5 text-muted-foreground" /></CardContent></Card>
+            <Card key={label}><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{label}</CardTitle></CardHeader><CardContent className="flex items-center justify-between"><span className="text-2xl font-semibold">{value}</span><Icon className="h-5 w-5 text-muted-foreground" /></CardContent></Card>
           ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {(["ios", "android"] as const).map((platform) => {
-            const value = overview?.credentials?.[platform];
-            const label = platform === "ios" ? "App Store Connect" : "Google Play";
-            const detail =
-              platform === "ios"
-                ? value && "key_id" in value
-                  ? value.key_id
-                  : null
-                : value && "client_email" in value
-                  ? value.client_email
-                  : null;
-            return (
-              <Card key={platform}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">{label}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className={value?.configured ? "text-sm text-emerald-600" : "text-sm text-amber-600"}>
-                      {value?.configured ? "Identifiants configurés" : "Configuration requise"}
-                    </div>
-                    {detail && <div className="text-xs text-muted-foreground">{detail}</div>}
-                    {credentialTests[platform] && (
-                      <div className={credentialTests[platform] === "passed" ? "text-xs text-emerald-600" : "text-xs text-destructive"}>
-                        Dernier test : {credentialTests[platform] === "passed" ? "réussi" : "échoué"}
-                      </div>
-                    )}
-                  </div>
-                  <Button variant="outline" onClick={() => void testCredentials(platform)}>
-                    Tester
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <Tabs defaultValue="overview">
+          <TabsList className="h-auto flex-wrap justify-start">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="stores">Stores</TabsTrigger>
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
+            <TabsTrigger value="offerings">Offerings</TabsTrigger>
+            <TabsTrigger value="paywalls">Paywalls</TabsTrigger>
+            <TabsTrigger value="customers">Customers</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+            <TabsTrigger value="growth">Growth</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
+            <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+          </TabsList>
 
-        <Tabs defaultValue="catalog">
-          <TabsList><TabsTrigger value="catalog">Catalogue</TabsTrigger><TabsTrigger value="entitlements">Entitlements</TabsTrigger><TabsTrigger value="offerings">Offres</TabsTrigger><TabsTrigger value="customers">Clients</TabsTrigger></TabsList>
-          <TabsContent value="catalog" className="space-y-4">
-            <Card>
-              <CardHeader><CardTitle>Catalogue Apple et Google</CardTitle></CardHeader>
-              <CardContent className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">OpenGrow récupère les abonnements et achats intégrés directement depuis App Store Connect et Google Play.</p>
-                <Button onClick={() => void syncProducts()} disabled={syncing || loading}>
-                  <CloudDownload className="mr-2 h-4 w-4" />
-                  {syncing ? "Synchronisation…" : "Synchroniser maintenant"}
-                </Button>
-              </CardContent>
-            </Card>
-            <Card><CardHeader><CardTitle>Ajouter un produit store</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Input className="max-w-sm" value={productId} onChange={(event) => setProductId(event.target.value)} placeholder="com.app.premium.monthly" /><select className="rounded-md border bg-background px-3" value={store} onChange={(event) => setStore(event.target.value as "apple" | "google")}><option value="apple">App Store</option><option value="google">Google Play</option></select><select className="rounded-md border bg-background px-3" value={productType} onChange={(event) => setProductType(event.target.value)}><option value="subscription">Abonnement</option><option value="non_consumable">Lifetime</option><option value="consumable">Consommable</option></select><Button onClick={() => void addProduct()}>Ajouter</Button></CardContent></Card>
-            <Card><CardContent className="pt-6 space-y-2">{overview?.products.map((product) => <div key={product.id} className="flex justify-between rounded-md border p-3"><div><div className="font-medium">{product.display_name}</div><div className="text-xs text-muted-foreground">{product.store_product_id}</div></div><div className="text-sm">{product.store} · {product.product_type} · {product.environment}</div></div>)}</CardContent></Card>
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-5">
+              {[
+                ["MRR", money(analytics?.summary?.mrr_micros)],
+                ["ARR", money(analytics?.summary?.arr_micros)],
+                ["Abonnements actifs", String(analytics?.summary?.active_subscriptions || 0)],
+                ["Churn", `${(Number(analytics?.summary?.churn_rate || 0) * 100).toFixed(1)}%`],
+                ["LTV réalisé", money(analytics?.summary?.realized_ltv_micros)],
+              ].map(([label, value]) => <Card key={label}><CardContent className="pt-5"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 text-xl font-semibold">{value}</div></CardContent></Card>)}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card><CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" />Activité sur 30 jours</CardTitle></CardHeader><CardContent>
+                {analytics?.series.length ? <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Revenu</TableHead><TableHead>Achats</TableHead><TableHead>Renouvellements</TableHead><TableHead>Remboursements</TableHead></TableRow></TableHeader><TableBody>{analytics.series.slice(-14).map((row) => <TableRow key={String(row.date)}><TableCell>{String(row.date)}</TableCell><TableCell>{money(row.revenue_micros)}</TableCell><TableCell>{String(row.purchases || 0)}</TableCell><TableCell>{String(row.renewals || 0)}</TableCell><TableCell>{String(row.refunds || 0)}</TableCell></TableRow>)}</TableBody></Table> : <p className="text-sm text-muted-foreground">Les graphiques apparaîtront après les premiers événements vérifiés.</p>}
+              </CardContent></Card>
+              <Card><CardHeader><CardTitle>Funnel paywall</CardTitle></CardHeader><CardContent className="space-y-3">
+                {analytics?.paywall_funnel.length ? analytics.paywall_funnel.map((item) => <div key={item.event_type} className="flex items-center justify-between rounded-md border p-3"><span>{item.event_type}</span><span className="text-xl font-semibold">{item.count}</span></div>) : <p className="text-sm text-muted-foreground">Impressions, achats et conversions seront collectés automatiquement par le SDK v2.</p>}
+              </CardContent></Card>
+            </div>
           </TabsContent>
+
+          <TabsContent value="stores" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              {connections.map((connection) => (
+                <Card key={`${connection.provider}-${connection.environment}`}>
+                  <CardHeader><div className="flex items-center justify-between"><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" />{connection.display_name}</CardTitle>{statusBadge(connection.status)}</div></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {Object.entries(connection.capabilities || {}).map(([name, capability]) => <div key={name} className="flex items-center justify-between rounded-md border p-2"><span>{name}</span>{statusBadge(capability.status)}</div>)}
+                    </div>
+                    {connection.last_error_message && <p className="text-sm text-destructive">{connection.last_error_code}: {connection.last_error_message}</p>}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Dernier test : {date(connection.last_tested_at)}</span><Button variant="outline" size="sm" onClick={() => projectId && void run(() => testBillingConnection(projectId, connection.provider, connection.environment), `${connection.display_name} vérifié`)}>Tester la connexion</Button></div>
+                  </CardContent>
+                </Card>
+              ))}
+              {!connections.length && <Card><CardContent className="pt-6 text-sm text-muted-foreground">Aucune connexion store configurée.</CardContent></Card>}
+            </div>
+            <Card><CardHeader><CardTitle>Ajouter une connexion Web</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-5"><select className="rounded-md border bg-background px-3" value={webProvider} onChange={(event) => setWebProvider(event.target.value as typeof webProvider)}><option value="opengrow_web">OpenGrow Web Billing</option><option value="stripe">Stripe Billing</option><option value="paddle">Paddle Billing</option></select><Input type="password" value={providerSecret} onChange={(event) => setProviderSecret(event.target.value)} placeholder={webProvider === "paddle" ? "Paddle API key" : "Stripe secret key"} autoComplete="new-password" /><Input type="password" value={providerWebhookSecret} onChange={(event) => setProviderWebhookSecret(event.target.value)} placeholder="Webhook signing secret" autoComplete="new-password" />{webProvider === "paddle" && <Input value={providerCheckoutUrl} onChange={(event) => setProviderCheckoutUrl(event.target.value)} placeholder="URL checkout Paddle approuvée" />}<Button onClick={() => void saveWebConnection()}>Chiffrer et enregistrer</Button></CardContent></Card>
+          </TabsContent>
+
+          <TabsContent value="products" className="space-y-4">
+            <Card><CardHeader><CardTitle>Catalogue multiplateforme</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Button variant="outline" disabled={syncing} onClick={() => void syncProducts()}><CloudDownload className={`mr-2 h-4 w-4 ${syncing ? "animate-pulse" : ""}`} />{syncing ? "Import en cours…" : "Importer Apple & Google"}</Button><Input className="max-w-sm" value={productId} onChange={(event) => setProductId(event.target.value)} placeholder="ID produit ou prix fournisseur" /><select className="rounded-md border bg-background px-3" value={store} onChange={(event) => setStore(event.target.value)}><option value="apple">App Store</option><option value="google">Google Play</option><option value="opengrow_web">OpenGrow Web</option><option value="stripe">Stripe</option><option value="paddle">Paddle</option><option value="amazon">Amazon</option><option value="roku">Roku</option></select><select className="rounded-md border bg-background px-3" value={productType} onChange={(event) => setProductType(event.target.value)}><option value="subscription">Abonnement</option><option value="non_consumable">Lifetime</option><option value="consumable">Consommable</option></select><Button onClick={() => void addProduct()}>Ajouter</Button></CardContent></Card>
+            <Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>Store</TableHead><TableHead>Type</TableHead><TableHead>Environnement</TableHead><TableHead>État</TableHead><TableHead /></TableRow></TableHeader><TableBody>{overview?.products.map((product) => <TableRow key={product.id}><TableCell><div className="font-medium">{product.display_name}</div><div className="text-xs text-muted-foreground">{product.store_product_id}</div></TableCell><TableCell>{product.store}</TableCell><TableCell>{product.product_type}</TableCell><TableCell>{product.environment}</TableCell><TableCell>{product.active ? statusBadge("active") : statusBadge("archived")}</TableCell><TableCell><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingProduct(projectId, product.id), "Produit archivé")}>Archiver</Button></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
+          </TabsContent>
+
           <TabsContent value="entitlements" className="space-y-4">
-            <Card><CardHeader><CardTitle>Créer un droit</CardTitle></CardHeader><CardContent className="flex gap-2"><Input className="max-w-sm" value={entitlementId} onChange={(event) => setEntitlementId(event.target.value)} placeholder="premium" /><Button onClick={() => void addEntitlement()}>Créer</Button></CardContent></Card>
-            <Card><CardContent className="pt-6 space-y-2">{overview?.entitlements.map((item) => <div key={item.id} className="rounded-md border p-3"><div className="font-medium">{item.display_name}</div><div className="text-xs text-muted-foreground">{item.identifier}</div></div>)}</CardContent></Card>
+            <Card><CardHeader><CardTitle>Droits d’accès</CardTitle></CardHeader><CardContent className="flex gap-2"><Input className="max-w-sm" value={entitlementId} onChange={(event) => setEntitlementId(event.target.value)} placeholder="premium" /><Button onClick={() => projectId && entitlementId.trim() && void run(() => createEntitlement(projectId, { identifier: entitlementId.trim(), display_name: entitlementId.trim() }), "Entitlement créé")}>Créer</Button></CardContent></Card>
+            <div className="grid gap-3 md:grid-cols-2">{overview?.entitlements.map((item) => <Card key={item.id}><CardContent className="flex items-center justify-between pt-6"><div><div className="font-medium">{item.display_name}</div><div className="text-xs text-muted-foreground">{item.identifier}</div></div><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingEntitlement(projectId, item.id), "Entitlement archivé")}>Archiver</Button></CardContent></Card>)}</div>
           </TabsContent>
-          <TabsContent value="offerings" className="space-y-4"><Card><CardHeader><CardTitle>Créer une offre</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Input className="max-w-sm" value={offeringId} onChange={(event) => setOfferingId(event.target.value)} placeholder="default" /><Button onClick={() => void addOffering()}>Créer l’offre</Button><Input className="max-w-sm" value={packageId} onChange={(event) => setPackageId(event.target.value)} placeholder="monthly" /><Button variant="outline" onClick={() => void addPackage()} disabled={!overview?.offerings.length || !overview?.products.length}>Ajouter le package</Button></CardContent></Card><Card><CardContent className="pt-6 space-y-2">{overview?.offerings.length ? overview.offerings.map((item) => <div key={item.id} className="rounded-md border p-3">{item.display_name} {item.is_current ? "· actuelle" : ""}</div>) : <p className="text-sm text-muted-foreground">Créez une offre, puis mappez ses packages aux produits Apple et Google.</p>}</CardContent></Card></TabsContent>
-          <TabsContent value="customers" className="space-y-4"><Card><CardHeader><CardTitle>Rechercher un client</CardTitle></CardHeader><CardContent className="flex gap-2"><Input value={customerQuery} onChange={(event) => setCustomerQuery(event.target.value)} placeholder="App User ID" /><Button onClick={() => void searchCustomers()}>Rechercher</Button></CardContent></Card><Card><CardContent className="pt-6 space-y-2">{customers.map((customer) => <div key={String(customer.id)} className="rounded-md border p-3"><div className="font-medium">{String(customer.primary_app_user_id)}</div><div className="text-xs text-muted-foreground">{String(customer.aliases ?? "")}</div></div>)}</CardContent></Card></TabsContent>
+
+          <TabsContent value="offerings" className="space-y-4">
+            <Card><CardHeader><CardTitle>Offerings et packages</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Input className="max-w-xs" value={offeringId} onChange={(event) => setOfferingId(event.target.value)} placeholder="default" /><Button onClick={() => projectId && void run(() => createOffering(projectId, { identifier: offeringId, display_name: offeringId, placement: "default", is_current: !overview?.offerings.length }), "Offering créé")}>Créer l’offering</Button><Input className="max-w-xs" value={packageId} onChange={(event) => setPackageId(event.target.value)} placeholder="monthly" /><Button variant="outline" disabled={!overview?.offerings.length || !overview?.products.length} onClick={() => projectId && overview?.offerings[0] && void run(() => createBillingPackage(projectId, overview?.offerings[0]?.id || "", { identifier: packageId, package_type: packageId, product_ids: overview?.products.map((item) => item.id) || [] }), "Package créé")}>Ajouter le package</Button></CardContent></Card>
+            <div className="grid gap-3 md:grid-cols-2">{overview?.offerings.map((item) => <Card key={item.id}><CardContent className="flex items-center justify-between pt-6"><div><div className="font-medium">{item.display_name}</div><div className="text-xs text-muted-foreground">{item.identifier} {item.is_current ? "· current" : ""}</div></div><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingOffering(projectId, item.id), "Offering archivé")}>Archiver</Button></CardContent></Card>)}</div>
+          </TabsContent>
+
+          <TabsContent value="paywalls" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+              <Card><CardHeader><CardTitle>Paywalls distants</CardTitle></CardHeader><CardContent className="space-y-3">{paywalls.length ? paywalls.map((item) => <div key={item.id} className="flex items-center justify-between rounded-md border p-3"><div><div className="font-medium">{item.display_name}</div><div className="text-xs text-muted-foreground">{item.identifier} · Offering {item.offering_identifier || "non associé"}</div></div><div className="flex items-center gap-2">{item.active_version ? <Badge>v{item.active_version}</Badge> : <Badge variant="outline">Brouillon</Badge>}</div></div>) : <p className="text-sm text-muted-foreground">Créez un paywall piloté à distance. Sa publication ne nécessite aucune nouvelle version de l’application.</p>}</CardContent></Card>
+              <Card><CardHeader><CardTitle>Aperçu et publication</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={paywallId} onChange={(event) => setPaywallId(event.target.value)} placeholder="premium" /><Input value={paywallTitle} onChange={(event) => setPaywallTitle(event.target.value)} /><Input value={paywallSubtitle} onChange={(event) => setPaywallSubtitle(event.target.value)} /><div className="flex gap-2"><Input type="color" className="w-16" value={paywallAccent} onChange={(event) => setPaywallAccent(event.target.value)} /><Input value={paywallAccent} onChange={(event) => setPaywallAccent(event.target.value)} /></div><div className="rounded-xl border p-5 text-center" style={{ borderColor: paywallAccent }}><PanelTop className="mx-auto mb-3 h-8 w-8" style={{ color: paywallAccent }} /><h3 className="text-xl font-semibold">{paywallTitle}</h3><p className="mt-1 text-sm text-muted-foreground">{paywallSubtitle}</p><div className="my-4 rounded-md border p-3">Package sélectionné</div><div className="rounded-md p-2 text-white" style={{ backgroundColor: paywallAccent }}>Continuer</div></div><Button className="w-full" disabled={!overview?.offerings.length} onClick={() => void createPaywall()}>Créer et publier</Button></CardContent></Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="customers" className="space-y-4">
+            <Card><CardHeader><CardTitle>Recherche client</CardTitle></CardHeader><CardContent className="flex gap-2"><Input value={customerQuery} onChange={(event) => setCustomerQuery(event.target.value)} placeholder="App User ID ou alias" onKeyDown={(event) => event.key === "Enter" && void searchCustomers()} /><Button onClick={() => void searchCustomers()}>Rechercher</Button></CardContent></Card>
+            <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+              <Card><CardContent className="space-y-2 pt-6">{customers.map((customer) => <button key={customer.id} className="w-full rounded-md border p-3 text-left hover:bg-muted" onClick={() => void openCustomer(customer.id)}><div className="flex items-center justify-between"><span className="font-medium">{customer.primary_app_user_id}</span>{customer.blocked ? statusBadge("blocked") : null}</div><div className="text-xs text-muted-foreground">{customer.aliases || "Aucun alias"}</div></button>)}{!customers.length && <p className="text-sm text-muted-foreground">Lancez une recherche pour afficher les clients.</p>}</CardContent></Card>
+              <Card><CardHeader><CardTitle>Détail client</CardTitle></CardHeader><CardContent className="space-y-4">{customerDetail ? <><div className="flex flex-wrap items-center justify-between gap-2"><div><div className="font-semibold">{customerDetail.customer.primary_app_user_id}</div><div className="text-xs text-muted-foreground">Dernière activité : {date(customerDetail.customer.last_seen_at)}</div></div><Button variant="outline" onClick={() => projectId && void run(async () => { await setBillingCustomerBlocked(projectId, customerDetail.customer.id, !customerDetail.customer.blocked); await openCustomer(customerDetail.customer.id); }, customerDetail.customer.blocked ? "Client débloqué" : "Client bloqué", false)}>{customerDetail.customer.blocked ? "Débloquer" : "Bloquer"}</Button></div><div><h4 className="mb-2 text-sm font-medium">Entitlements</h4><div className="space-y-2">{Object.entries(customerDetail.customer_info.entitlements || {}).map(([key, value]) => <div key={key} className="flex items-center justify-between rounded-md border p-2"><span>{key}</span><div className="flex items-center gap-2">{statusBadge(value.status)}<span className="text-xs text-muted-foreground">{date(value.expires_at)}</span></div></div>)}</div></div><div className="flex flex-wrap gap-2">{overview?.entitlements.map((item) => <Button key={item.id} size="sm" variant="outline" onClick={() => projectId && void run(async () => { await grantBillingEntitlement(projectId, customerDetail.customer.id, item.id); await openCustomer(customerDetail.customer.id); }, `${item.identifier} accordé`, false)}>Accorder {item.identifier}</Button>)}</div><div><h4 className="mb-2 text-sm font-medium">Soldes</h4><div className="flex flex-wrap gap-2">{Object.entries(customerDetail.customer_info.balances || {}).map(([key, value]) => <Badge key={key} variant="outline">{key}: {value}</Badge>)}</div></div></> : <p className="text-sm text-muted-foreground">Sélectionnez un client pour consulter son historique et administrer ses droits.</p>}</CardContent></Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="transactions"><Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Produit</TableHead><TableHead>Store</TableHead><TableHead>Événement</TableHead><TableHead>Montant</TableHead><TableHead>État</TableHead></TableRow></TableHeader><TableBody>{transactions.map((item) => <TableRow key={item.id}><TableCell>{date(item.purchased_at || item.created_at)}</TableCell><TableCell>{item.primary_app_user_id || "Anonyme"}</TableCell><TableCell>{item.store_product_id || item.product_name || "—"}</TableCell><TableCell>{item.store} · {item.environment}</TableCell><TableCell>{item.event_type}</TableCell><TableCell>{money(item.price_micros, item.currency || "")}</TableCell><TableCell>{statusBadge(item.status)}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
+
+          <TabsContent value="subscriptions"><Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Client</TableHead><TableHead>Produit</TableHead><TableHead>Store</TableHead><TableHead>Période</TableHead><TableHead>Expiration</TableHead><TableHead>Renouvelle</TableHead><TableHead>État</TableHead></TableRow></TableHeader><TableBody>{subscriptions.map((item) => <TableRow key={item.id}><TableCell>{item.primary_app_user_id || "Anonyme"}</TableCell><TableCell>{item.store_product_id || item.product_name || "—"}</TableCell><TableCell>{item.store}</TableCell><TableCell>{item.period_type}</TableCell><TableCell>{date(item.expires_at)}</TableCell><TableCell>{item.will_renew ? "Oui" : "Non"}</TableCell><TableCell>{statusBadge(item.status)}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
+
+          <TabsContent value="growth" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Card><CardHeader><CardTitle>Placements</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={placementId} onChange={(event) => setPlacementId(event.target.value)} /><Button className="w-full" disabled={!overview?.offerings.length} onClick={() => projectId && overview?.offerings[0] && void run(() => createBillingPlacement(projectId, { identifier: placementId, display_name: placementId, default_offering_id: overview?.offerings[0]?.id || "" }), "Placement créé")}>Créer</Button>{placements.map((item) => <div key={item.id} className="rounded-md border p-2 text-sm"><div className="font-medium">{item.identifier}</div><div className="text-xs text-muted-foreground">{item.default_offering_identifier || "Sans offering"}</div></div>)}</CardContent></Card>
+              <Card><CardHeader><CardTitle>Ciblage</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={ruleCountry} maxLength={2} onChange={(event) => setRuleCountry(event.target.value)} placeholder="Pays (CH)" /><Button className="w-full" disabled={!placements.length || !overview?.offerings.length} onClick={() => void createRule()}>Créer la règle pays</Button>{targeting.map((item) => <div key={item.id} className="rounded-md border p-2 text-sm"><div className="flex items-center justify-between"><span className="font-medium">{item.display_name}</span>{statusBadge(item.state)}</div><div className="text-xs text-muted-foreground">{item.placement_identifier} → {item.offering_identifier}</div><Button className="mt-2" size="sm" variant="outline" onClick={() => projectId && void run(() => updateBillingTargetingRule(projectId, item.id, { state: item.state === "live" ? "inactive" : "live" }), item.state === "live" ? "Règle désactivée" : "Règle activée")}>{item.state === "live" ? "Désactiver" : "Activer"}</Button></div>)}</CardContent></Card>
+              <Card><CardHeader><CardTitle>Expériences A/B</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={experimentName} onChange={(event) => setExperimentName(event.target.value)} /><Button className="w-full" disabled={!placements.length || (overview?.offerings.length || 0) < 2} onClick={() => void createExperiment()}>Créer un test 50/50</Button>{experiments.map((item) => <div key={item.id} className="rounded-md border p-2 text-sm"><div className="flex items-center justify-between"><span className="font-medium">{item.display_name}</span>{statusBadge(item.state)}</div><div className="text-xs text-muted-foreground">{item.variants.length} variantes · {item.placement_identifier}</div><Button className="mt-2" size="sm" variant="outline" disabled={item.state === "stopped"} onClick={() => projectId && void run(() => updateBillingExperiment(projectId, item.id, { state: item.state === "running" ? "paused" : "running" }), item.state === "running" ? "Expérience en pause" : "Expérience lancée")}>{item.state === "running" ? "Mettre en pause" : "Lancer"}</Button></div>)}</CardContent></Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+              <Card><CardHeader><CardTitle className="flex items-center gap-2"><Webhook className="h-5 w-5" />Livraisons webhook</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Endpoint</TableHead><TableHead>Événement</TableHead><TableHead>Tentatives</TableHead><TableHead>État</TableHead><TableHead /></TableRow></TableHeader><TableBody>{deliveries.map((item) => <TableRow key={item.id}><TableCell>{date(item.created_at)}</TableCell><TableCell>{item.endpoint_name || "—"}</TableCell><TableCell>{item.event_type || "—"}</TableCell><TableCell>{item.attempts || 0}</TableCell><TableCell>{statusBadge(item.status)}</TableCell><TableCell>{item.status === "failed" && <Button size="sm" variant="outline" onClick={() => projectId && void run(() => replayBillingWebhookDelivery(projectId, item.id), "Replay mis en file")}>Replay</Button>}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
+              <div className="space-y-4"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Coins className="h-5 w-5" />Monnaies virtuelles</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={currencyCode} onChange={(event) => setCurrencyCode(event.target.value.toUpperCase())} /><Button className="w-full" onClick={() => projectId && void run(() => createBillingVirtualCurrency(projectId, { code: currencyCode, display_name: currencyCode }), "Monnaie créée")}>Créer</Button>{virtualCurrencies.map((item) => <div key={String(item.id)} className="rounded-md border p-2"><div className="font-medium">{String(item.display_name)}</div><div className="text-xs text-muted-foreground">{String(item.code)}</div></div>)}</CardContent></Card><Card><CardHeader><CardTitle>Exports R2</CardTitle></CardHeader><CardContent className="space-y-2"><Button className="w-full" variant="outline" onClick={() => projectId && void run(() => createBillingExport(projectId, "transactions"), "Export mis en file")}>Exporter les transactions CSV</Button>{exports.slice(0, 5).map((item) => <div key={String(item.id)} className="flex items-center justify-between text-xs"><span>{String(item.dataset)}</span>{statusBadge(item.status)}</div>)}</CardContent></Card></div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="diagnostics" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card><CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />Événements</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Dernier événement</span><span>{date(health?.events?.last_event_at)}</span></div><div className="flex justify-between"><span>En attente</span><span>{String(health?.events?.pending_events || 0)}</span></div><div className="flex justify-between"><span>Échecs</span><span>{String(health?.events?.failed_events || 0)}</span></div></CardContent></Card>
+              <Card><CardHeader><CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" />Abonnements</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Dernière projection</span><span>{date(health?.subscriptions?.last_reconciled_at)}</span></div><div className="flex justify-between"><span>Billing issues</span><span>{String(health?.subscriptions?.billing_issues || 0)}</span></div></CardContent></Card>
+              <Card><CardHeader><CardTitle className="flex items-center gap-2"><PlugZap className="h-5 w-5" />Webhooks</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>En attente</span><span>{String(health?.deliveries?.pending_deliveries || 0)}</span></div><div className="flex justify-between"><span>Échecs</span><span>{String(health?.deliveries?.failed_deliveries || 0)}</span></div></CardContent></Card>
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
     </div>
