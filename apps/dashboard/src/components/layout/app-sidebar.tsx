@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Star,
   Inbox,
+  Target,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
@@ -103,6 +104,13 @@ const data = {
       title: "Store Reviews",
       url: "/store-reviews",
       icon: Star,
+      itemType: "simple",
+      badge: "New",
+    },
+    {
+      title: "Growth",
+      url: "/growth",
+      icon: Target,
       itemType: "simple",
       badge: "New",
     },

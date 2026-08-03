@@ -6,9 +6,12 @@ import { loadTarget, parseArgs, root } from "./cloudflare-target.mjs";
 const args = parseArgs();
 const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const { target } = await loadTarget(targetName);
-const database = target.environments.production.d1;
+const databaseKey = args.database ?? "d1";
+if (!new Set(["d1", "growthD1", "messagingD1"]).has(databaseKey)) throw new Error("--database must be d1, growthD1 or messagingD1");
+const database = target.environments.production[databaseKey];
+if (!database?.name) throw new Error(`${targetName} does not define ${databaseKey}`);
 const date = new Date().toISOString().replaceAll(":", "-");
-const backupDirectory = resolve(root, ".backups", targetName);
+const backupDirectory = resolve(root, ".backups", targetName, databaseKey);
 const output = resolve(backupDirectory, `${date}.sql`);
 await mkdir(backupDirectory, { recursive: true, mode: 0o700 });
 

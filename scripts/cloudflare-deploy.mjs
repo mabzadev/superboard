@@ -7,7 +7,7 @@ const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const environment = environmentFromArgs(args);
 const service = args.service ?? "api";
 const uploadOnly = Boolean(args["upload-only"]);
-if (!new Set(["api", "dashboard", "billing", "messaging"]).has(service)) throw new Error("--service must be api, dashboard, billing or messaging");
+if (!new Set(["api", "dashboard", "billing", "messaging", "growth"]).has(service)) throw new Error("--service must be api, dashboard, billing, messaging or growth");
 
 const { target } = await loadTarget(targetName);
 const cloudflareEnv = {
@@ -51,15 +51,19 @@ if (service === "dashboard") {
   );
 }
 
-if (service === "api" && environment === "production" && !args["skip-backup"]) {
+if ((service === "api" || service === "growth") && environment === "production" && !args["skip-backup"]) {
   run(
     "node",
-    [resolve(root, "scripts", "cloudflare-d1-backup.mjs"), "--target", targetName],
+    [
+      resolve(root, "scripts", "cloudflare-d1-backup.mjs"),
+      "--target", targetName,
+      ...(service === "growth" ? ["--database", "growthD1"] : []),
+    ],
     cloudflareEnv,
   );
 }
 
-if ((service === "api" || service === "messaging") && !args["skip-migrations"]) {
+if ((service === "api" || service === "messaging" || service === "growth") && !args["skip-migrations"]) {
   run(
     "npx",
     ["wrangler", "d1", "migrations", "apply", "DB", "--remote", "--config", configPath],
