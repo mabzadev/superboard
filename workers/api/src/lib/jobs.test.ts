@@ -34,6 +34,11 @@ describe('queue job dispatch', () => {
     await expect(dispatchQueueJob(envWithDb(jobsDb()), { type: 'unknown.job' })).rejects.toThrow('Unsupported queue job');
   });
 
+  it('recognizes growth delivery jobs as isolated queue work', async () => {
+    await expect(dispatchQueueJob(envWithDb(jobsDb()), { type: 'growth.automation.deliver', projectId: '11', runId: 'run-1' }))
+      .rejects.toMatchObject({ code: 'growth_unavailable', retryable: true });
+  });
+
   it('dispatches push processing jobs', async () => {
     await expect(dispatchQueueJob(envWithDb(jobsDb()), { type: 'push.process', limit: 10 }))
       .resolves.toEqual({ processed: 0, results: [] });

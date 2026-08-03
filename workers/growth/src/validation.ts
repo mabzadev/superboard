@@ -66,8 +66,8 @@ export function automationAction(value: unknown): string {
   return parsed;
 }
 
-export function failure(code: string, message: string, status = 422, retryable = false) {
-  return Object.assign(new Error(message), { code, status, retryable });
+export function failure(code: string, message: string, status = 422, retryable = false, retryDelaySeconds?: number) {
+  return Object.assign(new Error(message), { code, status, retryable, retryDelaySeconds });
 }
 
 export async function boundedJson(request: Request): Promise<Record<string, unknown>> {

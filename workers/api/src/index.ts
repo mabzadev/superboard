@@ -35,6 +35,7 @@ import { purchasesSigningJwks } from './lib/billing-identity';
 import { dispatchBillingServiceJob, billingServiceEnabled } from './lib/billing-service';
 import { isBillingQueueJob } from './lib/billing-dispatch';
 import { readTextLimited } from './lib/http-limits';
+import { emitBillingGrowthEvent } from './lib/growth-delivery';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -190,7 +191,7 @@ export default {
       }),
     );
   },
-  async queue(batch, env) {
+  async queue(batch, env, ctx) {
     for (const message of batch.messages) {
       let body: any = null;
       try {
@@ -206,6 +207,16 @@ export default {
           result,
         }));
         message.ack();
+        if (isBillingQueueJob(body) && env.GROWTH && env.GROWTH_INTERNAL_TOKEN && env.EVENT_QUEUE) {
+          ctx.waitUntil(emitBillingGrowthEvent(env, body, result).catch((error) => {
+            console.error(JSON.stringify({
+              event: 'billing_growth_projection_failed',
+              message_id: message.id,
+              job_type: body.type,
+              error: error instanceof Error ? error.message : String(error),
+            }));
+          }));
+        }
       } catch (error: any) {
         console.error(JSON.stringify({
           event: 'queue_job_failed',
