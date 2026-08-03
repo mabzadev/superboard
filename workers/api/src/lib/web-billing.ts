@@ -5,10 +5,9 @@ import { identifyCustomer } from './billing';
 
 type WebConnection = {
   id: string;
-  provider: 'stripe' | 'paddle' | 'opengrow_web';
+  provider: 'stripe';
   environment: 'sandbox' | 'production';
   configuration_encrypted: string;
-  public_configuration: string;
 };
 
 type CheckoutProduct = {
@@ -51,16 +50,16 @@ async function allowedReturnUrl(db: D1Database, projectId: string, value: unknow
 }
 
 async function connectionForCheckout(env: Env, projectId: string, provider: string | null, environment: string) {
-  const requested = provider === 'opengrow_web' ? ['opengrow_web', 'stripe'] : provider ? [provider] : ['opengrow_web', 'stripe', 'paddle'];
-  for (const candidate of requested) {
-    const row = await env.DB.prepare(`
-      SELECT * FROM billing_store_connections
-      WHERE project_id = ? AND provider = ? AND environment = ? AND status IN ('configured','connected')
-        AND configuration_encrypted IS NOT NULL LIMIT 1
-    `).bind(projectId, candidate, environment).first<WebConnection>();
-    if (row) return row;
+  if (provider && provider !== 'stripe') {
+    throw purchasesError('unsupported_web_provider', 'Only Stripe is enabled for Web billing', 422);
   }
-  throw purchasesError('web_billing_not_configured', 'No Stripe, Paddle or OpenGrow Web connection is configured', 409);
+  const row = await env.DB.prepare(`
+    SELECT * FROM billing_store_connections
+    WHERE project_id = ? AND provider = 'stripe' AND environment = ? AND status IN ('configured','connected')
+      AND configuration_encrypted IS NOT NULL LIMIT 1
+  `).bind(projectId, environment).first<WebConnection>();
+  if (row) return row;
+  throw purchasesError('web_billing_not_configured', 'Stripe is not configured', 409);
 }
 
 async function productForCheckout(
@@ -79,8 +78,7 @@ async function productForCheckout(
     LEFT JOIN billing_product_prices pp ON pp.product_id = p.id AND pp.active = 1
     WHERE o.project_id = ? AND bp.identifier = ?
       AND (? IS NULL OR o.identifier = ?)
-      AND p.store IN ('stripe','paddle','opengrow_web')
-    ORDER BY CASE p.store WHEN 'opengrow_web' THEN 0 WHEN 'stripe' THEN 1 ELSE 2 END
+      AND p.store = 'stripe'
     LIMIT 1
   `).bind(projectId, packageIdentifier, offeringIdentifier || null, offeringIdentifier || null).first<CheckoutProduct>();
   if (!row) throw purchasesError('web_package_not_found', 'No Web product is mapped to this package', 404);
@@ -91,8 +89,7 @@ async function providerCredentials(env: Env, connection: WebConnection) {
   let value: unknown;
   try { value = JSON.parse(await decryptCredential(env, connection.configuration_encrypted)); }
   catch { throw purchasesError('connection_credentials_invalid', `${connection.provider} credentials cannot be decrypted`, 500); }
-  const secret = parseObject(value);
-  return { secret, publicConfiguration: parseObject(connection.public_configuration) };
+  return parseObject(value);
 }
 
 async function stripeRequest(secretKey: string, path: string, values: Record<string, string>, idempotencyKey?: string) {
@@ -132,60 +129,29 @@ export async function createWebCheckoutSession(env: Env, params: {
   const priceId = product.provider_price_id || product.store_product_id;
   const localId = crypto.randomUUID();
   const redemptionCode = crypto.randomUUID().replaceAll('-', '');
-  let providerSessionId: string;
-  let checkoutUrl: string;
-
-  if (connection.provider === 'stripe' || connection.provider === 'opengrow_web') {
-    const secretKey = String(credentials.secret.secret_key || credentials.secret.api_key || '');
-    if (!secretKey.startsWith('sk_')) throw purchasesError('stripe_secret_invalid', 'Stripe secret key is invalid');
-    const mode = product.product_type === 'subscription' ? 'subscription' : 'payment';
-    const values: Record<string, string> = {
-      mode,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      client_reference_id: params.customerId,
-      'line_items[0][price]': priceId,
-      'line_items[0][quantity]': '1',
-      'metadata[opengrow_project_id]': params.projectId,
-      'metadata[opengrow_customer_id]': params.customerId,
-      'metadata[opengrow_checkout_id]': localId,
-      'metadata[opengrow_redemption_code]': redemptionCode,
-    };
-    if (mode === 'subscription') {
-      values['subscription_data[metadata][opengrow_project_id]'] = params.projectId;
-      values['subscription_data[metadata][opengrow_customer_id]'] = params.customerId;
-      values['subscription_data[metadata][opengrow_checkout_id]'] = localId;
-    }
-    const session = await stripeRequest(secretKey, '/checkout/sessions', values, `opengrow-${params.projectId}-${params.idempotencyKey}`.slice(0, 255));
-    providerSessionId = String(session.id || '');
-    checkoutUrl = String(session.url || '');
-  } else if (connection.provider === 'paddle') {
-    const apiKey = String(credentials.secret.api_key || '');
-    if (!apiKey) throw purchasesError('paddle_secret_invalid', 'Paddle API key is invalid');
-    const response = await fetch(`${params.environment === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'}/transactions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        items: [{ price_id: priceId, quantity: 1 }],
-        collection_mode: 'automatic',
-        custom_data: {
-          opengrow_project_id: params.projectId,
-          opengrow_customer_id: params.customerId,
-          opengrow_checkout_id: localId,
-          opengrow_redemption_code: redemptionCode,
-          success_url: successUrl,
-          cancel_url: cancelUrl,
-        },
-        checkout: { url: credentials.publicConfiguration.checkout_url || null },
-      }),
-    });
-    const payload = await response.json().catch(() => ({})) as Record<string, any>;
-    if (!response.ok) throw purchasesError('paddle_request_failed', payload?.error?.detail || 'Paddle request failed', response.status >= 500 ? 503 : 422, response.status >= 500);
-    providerSessionId = String(payload.data?.id || '');
-    checkoutUrl = String(payload.data?.checkout?.url || '');
-  } else {
-    throw purchasesError('unsupported_web_provider', `Unsupported Web provider: ${connection.provider}`);
+  const secretKey = String(credentials.secret_key || credentials.api_key || '');
+  if (!secretKey.startsWith('sk_')) throw purchasesError('stripe_secret_invalid', 'Stripe secret key is invalid');
+  const mode = product.product_type === 'subscription' ? 'subscription' : 'payment';
+  const values: Record<string, string> = {
+    mode,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    client_reference_id: params.customerId,
+    'line_items[0][price]': priceId,
+    'line_items[0][quantity]': '1',
+    'metadata[opengrow_project_id]': params.projectId,
+    'metadata[opengrow_customer_id]': params.customerId,
+    'metadata[opengrow_checkout_id]': localId,
+    'metadata[opengrow_redemption_code]': redemptionCode,
+  };
+  if (mode === 'subscription') {
+    values['subscription_data[metadata][opengrow_project_id]'] = params.projectId;
+    values['subscription_data[metadata][opengrow_customer_id]'] = params.customerId;
+    values['subscription_data[metadata][opengrow_checkout_id]'] = localId;
   }
+  const session = await stripeRequest(secretKey, '/checkout/sessions', values, `opengrow-${params.projectId}-${params.idempotencyKey}`.slice(0, 255));
+  const providerSessionId = String(session.id || '');
+  const checkoutUrl = String(session.url || '');
   if (!providerSessionId || !checkoutUrl) throw purchasesError('checkout_session_incomplete', 'Provider did not return a checkout URL', 502, true);
 
   await env.DB.batch([
@@ -216,10 +182,10 @@ export async function createWebPortalSession(env: Env, params: {
   const attributes = parseObject(customer.attributes);
   const stripeCustomerId = String(attributes.stripe_customer_id || '');
   if (!stripeCustomerId) throw purchasesError('portal_customer_missing', 'This customer has no Stripe billing profile', 409);
-  const connection = await connectionForCheckout(env, params.projectId, 'opengrow_web', params.environment);
+  const connection = await connectionForCheckout(env, params.projectId, 'stripe', params.environment);
   const credentials = await providerCredentials(env, connection);
   const returnUrl = await allowedReturnUrl(env.DB, params.projectId, params.returnUrl, params.environment);
-  const session = await stripeRequest(String(credentials.secret.secret_key || credentials.secret.api_key || ''), '/billing_portal/sessions', {
+  const session = await stripeRequest(String(credentials.secret_key || credentials.api_key || ''), '/billing_portal/sessions', {
     customer: stripeCustomerId,
     return_url: returnUrl,
   });

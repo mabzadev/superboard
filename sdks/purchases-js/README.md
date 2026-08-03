@@ -11,4 +11,4 @@ await purchases.track("impression", configuration);
 ```
 
 Le SDK ne reçoit jamais de données bancaires. `createCheckoutSession` retourne
-une URL Stripe ou Paddle hébergée lorsque le fournisseur Web est configuré.
+une URL Stripe Checkout hébergée lorsque Stripe est configuré.

@@ -3,7 +3,7 @@ import { config } from "@/lib/config";
 
 export interface BillingProduct {
   id: string;
-  store: "apple" | "google" | "stripe" | "paddle" | "amazon" | "roku" | "opengrow_web";
+  store: "apple" | "google" | "stripe";
   store_product_id: string;
   product_type: string;
   display_name: string;
