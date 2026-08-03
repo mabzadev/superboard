@@ -903,7 +903,7 @@ function eventRow(row: any) {
 async function ensureVisitorForDevice(db: D1Database, projectId: number, deviceId: number, sdkIdentifier?: string | null) {
   const existing = await db.prepare(
     'SELECT id FROM visitors WHERE project_id = ? AND device_id = ? LIMIT 1'
-  ).bind(projectId, deviceId).first<{ id: number }>();
+  ).bind(String(projectId), deviceId).first<{ id: number }>();
   if (existing) {
     if (sdkIdentifier) {
       await db.prepare('UPDATE visitors SET sdk_identifier = COALESCE(?, sdk_identifier), updated_at = datetime("now") WHERE id = ?')
@@ -915,7 +915,7 @@ async function ensureVisitorForDevice(db: D1Database, projectId: number, deviceI
     INSERT INTO visitors (project_id, device_id, sdk_identifier, uuid, sdk_attributes)
     VALUES (?, ?, ?, ?, ?)
     RETURNING id
-  `).bind(projectId, deviceId, sdkIdentifier || null, crypto.randomUUID(), '{}').first<{ id: number }>();
+  `).bind(String(projectId), deviceId, sdkIdentifier || null, crypto.randomUUID(), '{}').first<{ id: number }>();
   return created?.id ?? null;
 }
 
@@ -1047,7 +1047,7 @@ projects.post('/:id/visitors/search', async (c) => {
     FROM visitors v
     LEFT JOIN devices d ON d.id = v.device_id
     WHERE v.project_id = ?${filter.clause}${termClause}
-  `).bind(project.id, ...filter.values, ...termValues).first<{ total: number }>();
+  `).bind(String(project.id), ...filter.values, ...termValues).first<{ total: number }>();
   const rows = await c.env.DB.prepare(`
     SELECT v.*, d.platform,
       COALESCE(SUM(CASE WHEN e.event = 'view' THEN 1 ELSE 0 END), 0) AS views,
@@ -1067,7 +1067,7 @@ projects.post('/:id/visitors/search', async (c) => {
     GROUP BY v.id, d.platform
     ORDER BY v.updated_at DESC
     LIMIT ? OFFSET ?
-  `).bind(range.startDate, range.endDate, range.startDate, range.endDate, project.id, ...filter.values, ...termValues, perPage, (page - 1) * perPage).all<any>();
+  `).bind(range.startDate, range.endDate, range.startDate, range.endDate, String(project.id), ...filter.values, ...termValues, perPage, (page - 1) * perPage).all<any>();
   const total = Number(count?.total || 0);
   return c.json({
     visitors: (rows.results || []).map(visitorRow),
@@ -1090,7 +1090,7 @@ projects.post('/:id/visitors/aggregated', async (c) => {
     FROM visitors v
     LEFT JOIN devices d ON d.id = v.device_id
     WHERE v.project_id = ?${filter.clause}${termClause}
-  `).bind(project.id, ...filter.values, ...termValues).first<{ total: number }>();
+  `).bind(String(project.id), ...filter.values, ...termValues).first<{ total: number }>();
   const rows = await c.env.DB.prepare(`
     SELECT v.*, d.platform,
       COALESCE(SUM(CASE WHEN e.event = 'view' THEN 1 ELSE 0 END), 0) AS views,
@@ -1111,7 +1111,7 @@ projects.post('/:id/visitors/aggregated', async (c) => {
     GROUP BY v.id, d.platform
     ORDER BY v.updated_at DESC
     LIMIT ? OFFSET ?
-  `).bind(range.startDate, range.endDate, range.startDate, range.endDate, project.id, ...filter.values, ...termValues, perPage, (page - 1) * perPage).all<any>();
+  `).bind(range.startDate, range.endDate, range.startDate, range.endDate, String(project.id), ...filter.values, ...termValues, perPage, (page - 1) * perPage).all<any>();
   const total = Number(count?.total || 0);
   return c.json({
     visitors: (rows.results || []).map(referralVisitorRow),
@@ -1139,7 +1139,7 @@ projects.get('/:id/visitors/:visitorId', async (c) => {
     LEFT JOIN purchase_events pe ON pe.device_id = v.device_id AND pe.project_id = v.project_id
     WHERE v.project_id = ? AND v.id = ?
     GROUP BY v.id, d.platform
-  `).bind(project.id, visitorId).first<any>();
+  `).bind(String(project.id), visitorId).first<any>();
   if (!row) return c.json({ error: 'Not found' }, 404);
   const visitor = visitorRow(row);
   const numberOfLinks = await c.env.DB.prepare('SELECT COUNT(*) AS total FROM links WHERE visitor_id = ?')
