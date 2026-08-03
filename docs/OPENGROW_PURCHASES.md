@@ -1,43 +1,22 @@
 # OpenGrow Purchases
 
-OpenGrow Purchases est la source de vérité multi-tenant des achats iOS et Android. Les événements envoyés directement par une application restent provisoires. Seule une transaction validée par l’App Store Server API ou l’Android Publisher API peut activer un entitlement.
+OpenGrow Purchases is the multi-tenant authority for Apple App Store, Google Play, and Stripe Web purchases. Client-submitted transactions remain provisional. Only provider-verified transactions can update an entitlement.
 
-## Déploiement du Worker
+## Deployment
 
-Appliquer les migrations D1 `0007_opengrow_purchases.sql` et `0008_billing_event_ordering.sql`, créer la queue `opengrow-billing` et sa DLQ, puis définir ces secrets Cloudflare :
+Apply every D1 migration, create the Billing queue and DLQ, and configure the versioned Store credential keyrings, ES256 CustomerInfo signing keyset, and Apple root certificates as Cloudflare secrets.
 
-- `JWT_SECRET` : secret existant du Worker ;
-- `STORE_CREDENTIALS_ENCRYPTION_KEYS` : keyring JSON versionné, par exemple `{"2026-01":"…","2026-07":"…"}` ;
-- `STORE_CREDENTIALS_ACTIVE_KEY_VERSION` : version utilisée pour les nouvelles écritures ; conserver les anciennes versions pendant la rotation ;
-- `PURCHASES_SIGNING_KEYSET` : keyset EC P-256 versionné contenant
-  `active_kid` et les clés de rotation ES256 ;
-- `APPLE_ROOT_CERTIFICATES_B64` : tableau JSON contenant les certificats racine DER encodés en base64, téléchargés depuis la section Apple Root Certificates du site Apple PKI.
+Never add Apple `.p8` files, Store service-account JSON, Stripe secrets, or signing private keys to Wrangler variables or source control. The dashboard sends credentials to controlled API routes, which create separate AES-GCM ciphertexts for the API and Billing execution domains.
 
-Ne jamais ajouter les clés `.p8` ou le JSON de service account à `wrangler.toml`. Les téléverser depuis l’assistant de configuration du dashboard. OpenGrow les chiffre en AES-GCM avant D1 et n’écrit plus la clé Apple en clair.
+## Identity
 
-La validation Apple de production exige aussi `app_apple_id`, le bundle ID, le Key ID et l’Issuer ID. La validation Google exige un service account autorisé dans Play Console et l’Android Publisher API activée.
+The existing `api-auth-gateway` remains the only application authentication authority. After application authentication, FlutterFlow exchanges the existing access token through `POST /auth/opengrow-token`. OpenGrow accepts only the resulting short-lived ES256 token with the configured issuer, `opengrow` audience, and opaque user subject.
 
-## Identité
+No second application login, account, or session is created.
 
-Chaque projet peut enregistrer un issuer, une audience et une URL JWKS dans `POST /api/v1/billing/:projectId/oidc`. Pour Vocostar :
+## Mobile API
 
-```text
-iss = https://api.vocostar.com
-aud = opengrow
-sub = identifiant utilisateur opaque
-jwks = https://api.vocostar.com/.well-known/jwks.json
-```
-
-Le Worker `api-auth-gateway` derrière `api.vocostar.com` reste l’unique autorité
-d’authentification VocoStar. Après `userAuthenticate`, la Library appelle
-`POST https://api.vocostar.com/auth/opengrow-token` avec le jeton VocoStar
-existant. Elle reçoit un JWT ES256 court (`iss=https://api.vocostar.com`,
-`aud=opengrow`) et le transmet à OpenGrow. Aucun second système d’authentification
-n’est créé.
-
-## API mobile
-
-Toutes les routes utilisent `PROJECT-KEY`, `PLATFORM`, `IDENTIFIER` et `X-OpenGrow-Anonymous-ID` :
+Mobile routes require the project, platform, application identifier, and anonymous identity headers:
 
 - `GET /purchases/v2/offerings`
 - `GET /purchases/v2/customer-info`
@@ -46,14 +25,15 @@ Toutes les routes utilisent `PROJECT-KEY`, `PLATFORM`, `IDENTIFIER` et `X-OpenGr
 - `POST /purchases/v2/restore`
 - `POST /purchases/v2/sync`
 
-Le SDK persiste d’abord la transaction dans un outbox chiffré. Il n’appelle
-`completePurchase` qu’après validation serveur, vérification locale du JWS ES256
-CustomerInfo et persistance du résultat. Il reprend automatiquement après perte
-réseau ou redémarrage. Une réponse `pending` ne donne aucun droit.
+The SDK persists a transaction in encrypted secure storage before server validation. It calls `completePurchase` only after the server has verified and persisted the transaction and the SDK has verified the ES256 CustomerInfo signature. Pending purchases grant no entitlement. Network loss and application restarts resume the outbox automatically.
 
-## FlutterFlow
+## Stripe Web
 
-Le package `packages/opengrow_flutterflow` fournit :
+Stripe is Web-only for digital purchases. Checkout, Billing Portal, redemption, refunds, and disputes share the same entitlement projection as the native Stores. Mobile applications must not replace Apple or Google Play purchase buttons with Stripe Checkout.
+
+Webhook signatures are verified before persistence and queueing. When Billing service mode is enabled, Checkout, Portal, redemption, and provider actions execute only in the private Billing Worker.
+
+## FlutterFlow actions
 
 - `opengrowInitializeAuthenticated`
 - `opengrowPurchase`
@@ -66,16 +46,17 @@ Le package `packages/opengrow_flutterflow` fournit :
 - `OpenGrowPaywall`
 - `OpenGrowRestorePurchasesButton`
 
-Action Flow conseillé pour une page Premium : appeler `opengrowHasEntitlement("premium")`; si faux, ouvrir la page contenant `OpenGrowPaywall`; après un résultat `purchased`, rappeler `opengrowHasEntitlement` puis naviguer.
+Application state must be updated only from verified CustomerInfo. Generated FlutterFlow files are not a source of truth; the libraries and Custom Actions are.
 
-## Bascule depuis RevenueCat
+## Legacy provider removal
 
-1. Configurer les mêmes produits et entitlement `premium` dans OpenGrow.
-2. Conserver RevenueCat comme initiateur pendant la phase miroir et transmettre les transactions StoreKit 2 / tokens Google à OpenGrow.
-3. Comparer tous les comptes sandbox et scénarios (achat, essai, renouvellement, changement de formule, annulation, grâce, remboursement et restauration).
-4. Exiger 100 % de concordance et aucune activation depuis `/add_payment_event`.
-5. Basculer le paywall FlutterFlow sur OpenGrow, tester TestFlight et Play Closed Testing, puis retirer les actions, dépendances et clés RevenueCat.
+1. Inventory and import every real active subscription.
+2. Keep the legacy initiator during the mirror phase.
+3. Compare purchase, trial, renewal, plan change, cancellation, grace period, refund, restore, device change, reinstall, network recovery, duplicate, and out-of-order scenarios.
+4. Require full convergence and zero entitlement assignments from unverified events.
+5. Switch the FlutterFlow paywall only after TestFlight and Play Internal evidence passes.
+6. Remove legacy actions, packages, keys, and initialization only after the release gate explicitly permits removal.
 
-## Limite de la première livraison
+## Certification authority
 
-Les paywalls distants avancés, le ciblage, les expériences A/B, le Customer Center, le win-back et les automatisations Messaging sont le jalon suivant. La source de vérité des achats et les primitives nécessaires à la suppression de RevenueCat sont isolées afin que ces fonctions puissent être ajoutées sans modifier le journal transactionnel.
+Purchases Diagnostics is the release authority. Automated prerequisites validate credentials, catalogs, Premium mappings, offerings, packages, and isolated Store credential copies. Manual checks require build, device, and provider/test-run evidence. Publication and legacy dependency removal remain blocked until every required check passes.

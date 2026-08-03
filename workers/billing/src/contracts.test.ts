@@ -28,7 +28,7 @@ describe('Billing service contracts', () => {
         'STORE_CREDENTIALS_ENCRYPTION_KEYS',
         'PURCHASES_SIGNING_KEYSET',
         'APPLE_ROOT_CERTIFICATES_B64',
-        'OPENGROW_VOCOSTAR_WEBHOOK_SECRET',
+        'OPENGROW_ENTITLEMENT_WEBHOOK_SECRET',
       ],
     });
   });

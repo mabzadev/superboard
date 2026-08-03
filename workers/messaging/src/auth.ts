@@ -19,13 +19,13 @@ function remoteKeys(url: string) {
   return created;
 }
 
-export async function verifyVocoStarIdentity(env: Env, authorization?: string): Promise<string> {
+export async function verifyApplicationIdentity(env: Env, authorization?: string): Promise<string> {
   const token = bearerToken(authorization);
   if (!token) throw publicError('identity_required', 'Identity token required', 401);
   try {
-    const verified = await jwtVerify(token, remoteKeys(env.VOCOSTAR_JWKS_URL), {
-      issuer: env.VOCOSTAR_ISSUER,
-      audience: env.VOCOSTAR_AUDIENCE,
+    const verified = await jwtVerify(token, remoteKeys(env.AUTH_GATEWAY_JWKS_URL), {
+      issuer: env.AUTH_GATEWAY_ISSUER,
+      audience: env.AUTH_GATEWAY_AUDIENCE,
       algorithms: ['ES256'],
       clockTolerance: 5,
     });
