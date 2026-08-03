@@ -1,8 +1,7 @@
-# 🚀 OpenGrow Self-Hosted — Documentation de Déploiement Cloudflare
+# OpenGrow Self-Hosted — Déploiement Cloudflare
 
-> **Généré le** : 12 mai 2026  
-> **Auteur** : Antigravity (session `3b9e6c39-58d8-490c-830e-87a8cb4d23b0`)  
-> **Projet** : Vocostar — Migration OpenGrow vers Cloudflare Stack
+> Document historique. Les fichiers `deploy/targets/*.json` et les configurations générées par
+> `scripts/cloudflare-config.mjs` sont les sources de vérité actuelles.
 
 ---
 
@@ -21,32 +20,22 @@ Migration complète de l'infrastructure **OpenGrow Deep Linking** depuis Ruby/Ra
 
 | Service | URL | Status |
 |---|---|---|
-| **Dashboard** | https://opengrow-vocostar.pages.dev | ✅ Live |
+| **Dashboard** | https://grow.vocostar.com | ✅ Live |
 | **API principale** | https://go.vocostar.com | ✅ Live |
 | **Worker direct** | https://opengrow.vocostar.workers.dev | ✅ Live |
 | **SDK subdomain** | https://sdk.vocostar.com | ✅ Live |
 | **API mobile Vocostar** | https://api.vocostar.com | ⚠️ réservé à `api-auth-gateway`, pas OpenGrow |
+| **Messaging natif** | https://messages.vocostar.com | ✅ Worker, D1 et R2 isolés |
 | **Short links** | https://go.vocostar.com/{slug} | ✅ Live |
 
 ---
 
-## 🔑 Identifiants & Secrets
+## Identifiants et secrets
 
-### Compte Admin Dashboard
-```
-Email    : admin@vocostar.com
-Password : Vocostar2025!
-URL      : https://opengrow-vocostar.pages.dev/login
-```
-
-### OAuth2 Client (Dashboard ↔ Worker)
-```
-client_id     : opengrow-dashboard-vocostar
-client_secret : opengrow-dashboard-secret-vocostar-2025
-grant_type    : password
-token_type    : Bearer
-expires_in    : 2592000 (30 jours)
-```
+Aucun mot de passe, secret OAuth, clé Store ou capacité inter-Worker ne doit être conservé dans Git.
+Les secrets sont injectés avec Wrangler. Les deux capacités Messaging portent des noms distincts,
+mais reçoivent la même valeur rotative : `INTERNAL_API_TOKEN` côté Messaging et
+`MESSAGING_INTERNAL_TOKEN` côté API OpenGrow.
 
 ### Cloudflare Account
 ```
@@ -180,8 +169,8 @@ GET  go.vocostar.com/oauth/token/info # Introspection
   "grant_type": "password",
   "email": "user@example.com",
   "password": "motdepasse",
-  "client_id": "opengrow-dashboard-vocostar",
-  "client_secret": "opengrow-dashboard-secret-vocostar-2025"
+    "client_id": "<dashboard-client-id>",
+    "client_secret": "<secret-injecté-par-wrangler>"
 }
 ```
 
@@ -257,8 +246,8 @@ legacy-peer-deps=true
 ```ts
 // Fallback valeurs hardcodées (process.env undefined en edge)
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://go.vocostar.com';
-const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID ?? 'opengrow-dashboard-vocostar';
-const CLIENT_SECRET = process.env.CLIENT_SECRET ?? 'opengrow-dashboard-secret-vocostar-2025';
+const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 // Après le token, récupère le user pour le dashboard
 const meResponse = await fetch(`${API_URL}/api/v1/users/me`, {
@@ -302,7 +291,7 @@ cd cloudflare/opengrow-dashboard
 NEXT_PUBLIC_API_URL=https://go.vocostar.com \
 NEXT_PUBLIC_CLIENT_ID=opengrow-dashboard-vocostar \
 NEXT_PUBLIC_ENV=production \
-CLIENT_SECRET=opengrow-dashboard-secret-vocostar-2025 \
+CLIENT_SECRET='<injecté-par-wrangler>' \
 npx vercel build --yes
 
 # Étape 2 : Transformer pour Cloudflare edge (SKIP le build, déjà fait)
@@ -383,7 +372,7 @@ JWT_SECRET  ← wrangler secret put JWT_SECRET
 NEXT_PUBLIC_API_URL=https://go.vocostar.com
 NEXT_PUBLIC_CLIENT_ID=opengrow-dashboard-vocostar
 NEXT_PUBLIC_ENV=production
-CLIENT_SECRET=opengrow-dashboard-secret-vocostar-2025
+CLIENT_SECRET=<injecté-par-wrangler>
 ```
 
 ---

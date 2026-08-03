@@ -15,7 +15,8 @@
   "domains": {
     "shortlinks": "go.vocostar.com",
     "sdk": "sdk.vocostar.com",
-    "dashboard": "grow.vocostar.com"
+    "dashboard": "grow.vocostar.com",
+    "messaging": "messages.vocostar.com"
   },
   "workers": {
     "api": {
@@ -23,6 +24,9 @@
     },
     "dashboard": {
       "production": "opengrow"
+    },
+    "messaging": {
+      "production": "opengrow-messaging"
     }
   },
   "oauth": {
@@ -40,6 +44,8 @@
       },
       "r2": { "name": "opengrow" },
       "dashboardCache": { "name": "opengrow" },
+      "messagingD1": { "name": "opengrow-messaging-db", "id": "e7142cd8-d708-48b6-a311-47a49d3a67ac" },
+      "messagingR2": { "name": "opengrow-messaging" },
       "queues": {
         "events": "opengrow-events",
         "eventsDlq": "opengrow-events-dlq",

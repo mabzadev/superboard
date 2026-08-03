@@ -7,7 +7,7 @@ const targetName = args.target ?? process.env.OPENGROW_TARGET ?? "vocostar";
 const environment = environmentFromArgs(args);
 const service = args.service ?? "api";
 const uploadOnly = Boolean(args["upload-only"]);
-if (!new Set(["api", "dashboard"]).has(service)) throw new Error("--service must be api or dashboard");
+if (!new Set(["api", "dashboard", "messaging"]).has(service)) throw new Error("--service must be api, dashboard or messaging");
 
 const { target } = await loadTarget(targetName);
 const cloudflareEnv = {
@@ -59,13 +59,13 @@ if (service === "api" && environment === "production" && !args["skip-backup"]) {
   );
 }
 
-if (service === "api" && !args["skip-migrations"]) {
+if ((service === "api" || service === "messaging") && !args["skip-migrations"]) {
   run(
     "npx",
     ["wrangler", "d1", "migrations", "apply", "DB", "--remote", "--config", configPath],
     cloudflareEnv,
   );
-  if (target.registrationMode === "allowlist") {
+  if (service === "api" && target.registrationMode === "allowlist") {
     run(
       "node",
       [
