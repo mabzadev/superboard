@@ -1,6 +1,6 @@
 name: opengrow_flutter
 description: Flutter plugin for OpenGrow SDK - verified iOS/Android purchases, deep links, messaging, and campaign tracking.
-version: 2.1.0
+version: 2.1.1
 homepage: https://github.com/mbzadev/opengrow
 repository: https://github.com/mbzadev/opengrow
 issue_tracker: https://github.com/mbzadev/opengrow/issues
@@ -17,7 +17,7 @@ dependencies:
   jose: ^0.3.5+2
   in_app_purchase: ^3.3.0
   in_app_purchase_android: ^0.5.0
-  flutter_secure_storage: ^10.3.1
+  flutter_secure_storage: ">=9.2.2 <11.0.0"
   shared_preferences: '>=2.5.3 <3.0.0'
   uuid: ^4.6.0
 
