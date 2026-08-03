@@ -123,6 +123,7 @@ export const ACCOUNT_LOGIN = "account_login" as const;
 export const SSO_LOGIN = "sso_login" as const;
 
 export const ADMIN_ROLE = "admin" as const;
+export const OWNER_ROLE = "owner" as const;
 export const MEMBER_ROLE = "member" as const;
 
 export const REDIRECT_WEB = "redirect_web" as const;

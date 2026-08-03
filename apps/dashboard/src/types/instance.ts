@@ -1,5 +1,6 @@
 export interface Instance {
   id: string;
+  role?: "owner" | "admin" | "member";
   name: string;
   updated_at: string;
   created_at: string;
