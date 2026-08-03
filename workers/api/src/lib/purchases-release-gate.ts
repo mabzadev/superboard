@@ -312,11 +312,11 @@ export function nativeCatalogCoverage(
     packages: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
       .some((product) => packageTypes(product).has(cadence))),
     approved: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
-      .some((product) => providerReadiness(product).approved)),
+      .some((product) => releaseGateProviderReadiness(product).approved)),
     available: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
-      .some((product) => providerReadiness(product).available)),
+      .some((product) => releaseGateProviderReadiness(product).available)),
     purchasable: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
-      .some((product) => providerReadiness(product).purchasable)),
+      .some((product) => releaseGateProviderReadiness(product).purchasable)),
   };
 }
 
@@ -331,12 +331,21 @@ export function catalogSyncFresh(
   return ageMillis >= -5 * 60_000 && ageMillis <= maximumAgeHours * 60 * 60_000;
 }
 
-function providerReadiness(product: ReleaseGateCatalogProduct) {
+export function releaseGateProviderReadiness(product: ReleaseGateCatalogProduct) {
   const metadata = parseObject(product.metadata);
+  const providerVerified = product.store === 'apple'
+    ? metadata.source === 'app_store_connect'
+    : product.store === 'google'
+      ? metadata.source === 'google_play'
+      : product.store === 'stripe'
+        ? metadata.provider_verified === true
+          && String(metadata.stripe_product_id || '').startsWith('prod_')
+          && String(metadata.stripe_price_id || '').startsWith('price_')
+        : false;
   return {
-    approved: metadata.provider_approved === true,
-    available: metadata.provider_available === true,
-    purchasable: metadata.provider_purchasable === true,
+    approved: providerVerified && metadata.provider_approved === true,
+    available: providerVerified && metadata.provider_available === true,
+    purchasable: providerVerified && metadata.provider_purchasable === true,
   };
 }
 

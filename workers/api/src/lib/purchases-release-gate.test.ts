@@ -5,6 +5,7 @@ import {
   catalogSyncFresh,
   certificationRunCompatibility,
   nativeCatalogCoverage,
+  releaseGateProviderReadiness,
   RELEASE_GATE_CHECKS,
   validateReleaseGateEvidence,
   type ReleaseGateCatalogProduct,
@@ -96,8 +97,8 @@ describe('Purchases release gate', () => {
 
   it('detects weekly and annual products from provider metadata without product ID assumptions', () => {
     const products: ReleaseGateCatalogProduct[] = [
-      product('arbitrary-product-a', '{"subscription_period":"ONE_WEEK","provider_approved":true,"provider_available":true,"provider_purchasable":true}', 1, 'weekly'),
-      product('arbitrary-product-b', '{"subscription_period":"ONE_YEAR","provider_approved":true,"provider_available":true,"provider_purchasable":true}', 1, 'annual'),
+      product('arbitrary-product-a', '{"source":"app_store_connect","subscription_period":"ONE_WEEK","provider_approved":true,"provider_available":true,"provider_purchasable":true}', 1, 'weekly'),
+      product('arbitrary-product-b', '{"source":"app_store_connect","subscription_period":"ONE_YEAR","provider_approved":true,"provider_available":true,"provider_purchasable":true}', 1, 'annual'),
     ];
     expect(nativeCatalogCoverage(products, 'project-1', 'apple', 'production')).toEqual({
       catalog: true,
@@ -111,8 +112,8 @@ describe('Purchases release gate', () => {
 
   it('fails closed when Apple products are not approved or territory availability is unknown', () => {
     const products: ReleaseGateCatalogProduct[] = [
-      product('weekly-plan', '{"subscription_period":"ONE_WEEK","state":"READY_TO_SUBMIT","provider_approved":false,"provider_available":true,"provider_purchasable":false}', 1, 'weekly'),
-      product('annual-plan', '{"subscription_period":"ONE_YEAR","state":"APPROVED","provider_approved":true,"provider_available":true,"provider_purchasable":false}', 1, 'annual'),
+      product('weekly-plan', '{"source":"app_store_connect","subscription_period":"ONE_WEEK","state":"READY_TO_SUBMIT","provider_approved":false,"provider_available":true,"provider_purchasable":false}', 1, 'weekly'),
+      product('annual-plan', '{"source":"app_store_connect","subscription_period":"ONE_YEAR","state":"APPROVED","provider_approved":true,"provider_available":true,"provider_purchasable":false}', 1, 'annual'),
     ];
     expect(nativeCatalogCoverage(products, 'project-1', 'apple', 'production')).toMatchObject({
       catalog: true,
@@ -124,8 +125,8 @@ describe('Purchases release gate', () => {
 
   it('requires active and regionally available Google base plans for both cadences', () => {
     const products: ReleaseGateCatalogProduct[] = [
-      product('weekly-plan', '{"base_plans":[{"billing_period":"P1W","state":"ACTIVE","new_subscriber_available":true}],"provider_approved":true,"provider_available":true,"provider_purchasable":true}', 1, 'weekly', 'google'),
-      product('annual-plan', '{"base_plans":[{"billing_period":"P1Y","state":"ACTIVE","new_subscriber_available":false}],"provider_approved":true,"provider_available":false,"provider_purchasable":false}', 1, 'annual', 'google'),
+      product('weekly-plan', '{"source":"google_play","base_plans":[{"billing_period":"P1W","state":"ACTIVE","new_subscriber_available":true}],"provider_approved":true,"provider_available":true,"provider_purchasable":true}', 1, 'weekly', 'google'),
+      product('annual-plan', '{"source":"google_play","base_plans":[{"billing_period":"P1Y","state":"ACTIVE","new_subscriber_available":false}],"provider_approved":true,"provider_available":false,"provider_purchasable":false}', 1, 'annual', 'google'),
     ];
     expect(nativeCatalogCoverage(products, 'project-1', 'google', 'production')).toMatchObject({
       catalog: true,
@@ -140,6 +141,23 @@ describe('Purchases release gate', () => {
     expect(catalogSyncFresh('2026-08-03T12:01:00.000Z', 24, now)).toBe(true);
     expect(catalogSyncFresh('2026-08-03T11:59:59.000Z', 24, now)).toBe(false);
     expect(catalogSyncFresh(null, 24, now)).toBe(false);
+  });
+
+  it('trusts Stripe catalog readiness only when all provider flags are verified', () => {
+    expect(releaseGateProviderReadiness(product(
+      'price_weekly',
+      '{"provider_verified":true,"provider_approved":true,"provider_available":true,"provider_purchasable":true,"stripe_product_id":"prod_premium","stripe_price_id":"price_weekly"}',
+      1,
+      'weekly',
+      'stripe',
+    ))).toEqual({ approved: true, available: true, purchasable: true });
+    expect(releaseGateProviderReadiness(product(
+      'manual-price',
+      '{"provider_approved":true}',
+      1,
+      'weekly',
+      'stripe',
+    ))).toEqual({ approved: false, available: false, purchasable: false });
   });
 
   it('uses current package cadence only for legacy catalog rows without provider periods', () => {
