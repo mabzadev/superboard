@@ -198,7 +198,7 @@ admin.post('/:projectId/products', async (c) => {
     await c.env.DB.prepare(`
       INSERT INTO billing_products (id, project_id, application_id, store, environment, store_product_id, product_type, display_name, description, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(id, project.id, data.application_id || null, data.store, project.isTest ? 'sandbox' : 'production', String(data.store_product_id), data.product_type, data.display_name || data.store_product_id, data.description || null, JSON.stringify(data.metadata || {})).run();
+    `).bind(id, project.id, data.application_id || null, data.store, project.isTest ? 'sandbox' : 'production', String(data.store_product_id), data.product_type, data.display_name || data.store_product_id, data.description || null, JSON.stringify({ source: 'manual' })).run();
     for (const entitlementId of Array.isArray(data.entitlement_ids) ? data.entitlement_ids : []) {
       await c.env.DB.prepare('INSERT OR IGNORE INTO billing_product_entitlements (product_id, entitlement_id) SELECT ?, id FROM billing_entitlements WHERE id = ? AND project_id = ?')
         .bind(id, entitlementId, project.id).run();
@@ -211,6 +211,7 @@ async function persistStoreCatalog(c: any, project: any, platform: 'ios' | 'andr
   const store = platform === 'ios' ? 'apple' : 'google';
   const environment = project.isTest ? 'sandbox' : 'production';
   const projectId = String(project.id);
+  const providerSyncedAt = new Date().toISOString();
   const statements = [
     c.env.DB.prepare(`
       UPDATE billing_products SET active = 0, updated_at = datetime('now')
@@ -236,8 +237,13 @@ async function persistStoreCatalog(c: any, project: any, platform: 'ios' | 'andr
     `).bind(
       crypto.randomUUID(), projectId, product.applicationId, store, environment,
       product.storeProductId, product.productType, product.displayName, product.description,
-      product.active ? 1 : 0, JSON.stringify(product.metadata),
+      product.active ? 1 : 0, JSON.stringify({ ...product.metadata, provider_synced_at: providerSyncedAt }),
     )),
+    c.env.DB.prepare(`
+      UPDATE billing_store_connections
+      SET last_synced_at = ?, last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now')
+      WHERE project_id = ? AND provider = ? AND environment = ?
+    `).bind(providerSyncedAt, projectId, store, environment),
   ];
   await c.env.DB.batch(statements);
   return { platform, store, imported: products.length };
@@ -272,11 +278,12 @@ admin.patch('/:projectId/products/:id', async (c) => {
   try {
     const project = await projectFor(c);
     const data = await body(c);
+    if (data.metadata !== undefined) throw new Error('Provider metadata can only be updated by store synchronization');
     const row = await c.env.DB.prepare(`
       UPDATE billing_products SET display_name = COALESCE(?, display_name), description = COALESCE(?, description),
-        active = COALESCE(?, active), metadata = COALESCE(?, metadata), updated_at = datetime('now')
+        active = COALESCE(?, active), updated_at = datetime('now')
       WHERE id = ? AND project_id = ? RETURNING *
-    `).bind(data.display_name ?? null, data.description ?? null, data.active === undefined ? null : data.active ? 1 : 0, data.metadata === undefined ? null : JSON.stringify(data.metadata), c.req.param('id'), project.id).first();
+    `).bind(data.display_name ?? null, data.description ?? null, data.active === undefined ? null : data.active ? 1 : 0, c.req.param('id'), project.id).first();
     if (!row) throw new Error('Product not found');
     return c.json(row);
   } catch (error) { return fail(c, error); }

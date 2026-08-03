@@ -62,6 +62,7 @@ function apiConfig() {
       SSO_ENABLED: String(target.ssoEnabled),
       BILLING_EXECUTION_MODE: resources.billingExecutionMode,
       BILLING_RELEASE_STALE_MINUTES: "15",
+      BILLING_CATALOG_STALE_HOURS: "24",
       AUTH_GATEWAY_ISSUER: target.authGateway.issuer,
       AUTH_GATEWAY_AUDIENCE: target.authGateway.audience,
       AUTH_GATEWAY_JWKS_URL: target.authGateway.jwksUrl,

@@ -152,8 +152,23 @@ const statusBadge = (status: unknown) => {
   const destructive = [
     "failed", "invalid", "error", "degraded", "refunded", "revoked", "expired", "billing_issue",
     "unmatched_customer", "missing_product", "missing_verified_subscription", "unsupported_provider",
+    "approval_required", "availability_required", "sync_required",
   ].includes(value);
-  return <Badge variant={destructive ? "destructive" : ["active", "connected", "healthy", "passed"].includes(value) ? "default" : "outline"}>{value}</Badge>;
+  return <Badge variant={destructive ? "destructive" : ["active", "connected", "healthy", "passed", "approved", "purchasable"].includes(value) ? "default" : "outline"}>{value.replaceAll("_", " ")}</Badge>;
+};
+
+const productProviderReadiness = (product: BillingOverview["products"][number]) => {
+  if (product.store === "stripe" || product.product_type !== "subscription") return null;
+  let metadata: Record<string, unknown> = {};
+  if (typeof product.metadata === "string") {
+    try { metadata = JSON.parse(product.metadata) as Record<string, unknown>; } catch { metadata = {}; }
+  } else if (product.metadata && typeof product.metadata === "object") {
+    metadata = product.metadata;
+  }
+  if (metadata.provider_approved === true && metadata.provider_purchasable === true) return "purchasable";
+  if (metadata.provider_approved === true) return "availability_required";
+  if (metadata.source === "app_store_connect" || metadata.source === "google_play") return "approval_required";
+  return "sync_required";
 };
 
 const PurchasesPage = () => {
@@ -715,7 +730,7 @@ const PurchasesPage = () => {
 
           <TabsContent value="products" className="space-y-4">
             <Card><CardHeader><CardTitle>App Store, Google Play, and Stripe catalog</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Button variant="outline" disabled={syncing} onClick={() => void syncProducts()}><CloudDownload className={`mr-2 h-4 w-4 ${syncing ? "animate-pulse" : ""}`} />{syncing ? "Importing…" : "Import Apple & Google"}</Button><Input className="max-w-sm" value={productId} onChange={(event) => setProductId(event.target.value)} placeholder="Product ID or Stripe Price ID" /><select className="rounded-md border bg-background px-3" value={store} onChange={(event) => setStore(event.target.value)}><option value="apple">App Store</option><option value="google">Google Play</option><option value="stripe">Stripe</option></select><select className="rounded-md border bg-background px-3" value={productType} onChange={(event) => setProductType(event.target.value)}><option value="subscription">Subscription</option><option value="non_consumable">Lifetime</option><option value="consumable">Consumable</option></select><Button onClick={() => void addProduct()}>Add</Button></CardContent></Card>
-            <Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Product</TableHead><TableHead>Store</TableHead><TableHead>Type</TableHead><TableHead>Environment</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader><TableBody>{overview?.products.map((product) => <TableRow key={product.id}><TableCell><div className="font-medium">{product.display_name}</div><div className="text-xs text-muted-foreground">{product.store_product_id}</div></TableCell><TableCell>{product.store}</TableCell><TableCell>{product.product_type}</TableCell><TableCell>{product.environment}</TableCell><TableCell>{product.active ? statusBadge("active") : statusBadge("archived")}</TableCell><TableCell><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingProduct(projectId, product.id), "Product archived")}>Archive</Button></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
+            <Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Product</TableHead><TableHead>Store</TableHead><TableHead>Type</TableHead><TableHead>Environment</TableHead><TableHead>Catalog status</TableHead><TableHead>Provider readiness</TableHead><TableHead /></TableRow></TableHeader><TableBody>{overview?.products.map((product) => { const readiness = productProviderReadiness(product); return <TableRow key={product.id}><TableCell><div className="font-medium">{product.display_name}</div><div className="text-xs text-muted-foreground">{product.store_product_id}</div></TableCell><TableCell>{product.store}</TableCell><TableCell>{product.product_type}</TableCell><TableCell>{product.environment}</TableCell><TableCell>{product.active ? statusBadge("active") : statusBadge("archived")}</TableCell><TableCell>{readiness ? statusBadge(readiness) : "—"}</TableCell><TableCell><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingProduct(projectId, product.id), "Product archived")}>Archive</Button></TableCell></TableRow>; })}</TableBody></Table></CardContent></Card>
           </TabsContent>
 
           <TabsContent value="entitlements" className="space-y-4">
