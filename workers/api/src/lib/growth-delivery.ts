@@ -80,10 +80,147 @@ export function billingGrowthEventType(status: string, providerEventType: string
   if (/refund.*revers|revoke.*revers/.test(normalizedEvent)) return 'refund_reversed';
   if (normalizedStatus === 'refunded' || normalizedStatus === 'revoked' || /refund|voided|dispute.*lost/.test(normalizedEvent)) return 'refund_granted';
   if (normalizedStatus === 'billing_issue' || /payment.*fail|billing.*retry|grace.*period/.test(normalizedEvent)) return 'payment_failed';
-  if (normalizedStatus === 'expired' || /expir|subscription.*deleted|cancelled/.test(normalizedEvent)) return 'entitlement_expired';
+  if (normalizedStatus === 'expired' || /expir|subscription.*deleted/.test(normalizedEvent)) return 'entitlement_expired';
+  if (normalizedStatus === 'cancelled' || /cancel/.test(normalizedEvent)) return 'churn_risk';
   if (['active', 'trialing'].includes(normalizedStatus)
     && /did_renew|renewal|subscription_renewed|invoice\.paid|invoice\.payment_succeeded/.test(normalizedEvent)) return 'renewal_succeeded';
   return null;
+}
+
+type PaywallAbandonmentRow = {
+  id: string;
+  project_id: string;
+  customer_id: string | null;
+  primary_app_user_id: string | null;
+  anonymous: number | null;
+  event_type: string;
+  paywall_id: string | null;
+  paywall_version_id: string | null;
+  placement_identifier: string | null;
+  package_identifier: string | null;
+  platform: string | null;
+  country: string | null;
+  app_version: string | null;
+  sdk_version: string | null;
+  metadata: string;
+  occurred_at: string;
+  growth_projected_at: string | null;
+  growth_projection_attempts: number;
+};
+
+const PAYWALL_ABANDONMENT_EVENTS = new Set(['closed', 'purchase_cancelled', 'purchase_failed']);
+
+export async function evaluatePaywallAbandonment(
+  env: Env,
+  projectId: string | number,
+  paywallEventId: string,
+) {
+  const event = await env.DB.prepare(`
+    SELECT pe.*, c.primary_app_user_id, c.anonymous
+    FROM billing_paywall_events pe
+    LEFT JOIN billing_customers c ON c.id = pe.customer_id AND c.project_id = pe.project_id
+    WHERE pe.id = ? AND pe.project_id = ? LIMIT 1
+  `).bind(paywallEventId, String(projectId)).first<PaywallAbandonmentRow>();
+  if (!event) return { skipped: true, reason: 'paywall_event_not_found' };
+  if (event.growth_projected_at) return { skipped: true, reason: 'already_projected' };
+  if (!PAYWALL_ABANDONMENT_EVENTS.has(event.event_type)) {
+    await markPaywallProjectionComplete(env.DB, event.id);
+    return { skipped: true, reason: 'event_not_actionable' };
+  }
+
+  const metadata = parseObject(event.metadata);
+  const sessionId = typeof metadata.session_id === 'string' ? metadata.session_id.trim() : '';
+  if (!sessionId || sessionId.length > 128) {
+    await markPaywallProjectionComplete(env.DB, event.id);
+    return { skipped: true, reason: 'paywall_session_unavailable' };
+  }
+
+  const succeeded = await env.DB.prepare(`
+    SELECT id FROM billing_paywall_events
+    WHERE project_id = ? AND customer_id = ? AND event_type = 'purchase_succeeded'
+      AND json_extract(metadata, '$.session_id') = ?
+    LIMIT 1
+  `).bind(event.project_id, event.customer_id, sessionId).first<{ id: string }>();
+  if (succeeded) {
+    await markPaywallProjectionComplete(env.DB, event.id);
+    return { skipped: true, reason: 'purchase_succeeded' };
+  }
+
+  const subjectId = String(event.primary_app_user_id || '').trim();
+  if (!subjectId || Number(event.anonymous) === 1 || subjectId.startsWith('$opengrow_anon_')) {
+    await markPaywallProjectionComplete(env.DB, event.id);
+    return { skipped: true, reason: 'identified_customer_unavailable' };
+  }
+
+  try {
+    const result = await emitGrowthEvent(env, event.project_id, {
+      event_id: `paywall:${event.id}:abandoned`,
+      event_type: 'paywall_abandoned',
+      subject_id: subjectId,
+      occurred_at: event.occurred_at,
+      payload: {
+        paywall_event_type: event.event_type,
+        paywall_id: event.paywall_id,
+        paywall_version_id: event.paywall_version_id,
+        placement: event.placement_identifier,
+        package_identifier: event.package_identifier,
+        platform: event.platform,
+        country: event.country,
+        app_version: event.app_version,
+        sdk_version: event.sdk_version,
+        session_id: sessionId,
+      },
+    });
+    await markPaywallProjectionComplete(env.DB, event.id);
+    return { projected: true, ...result };
+  } catch (error) {
+    const attempts = Number(event.growth_projection_attempts || 0) + 1;
+    const retrySeconds = Math.min(3600, 30 * (2 ** Math.min(7, attempts)));
+    await env.DB.prepare(`
+      UPDATE billing_paywall_events
+      SET growth_projection_attempts = ?, growth_projection_error = ?,
+        growth_projection_next_attempt_at = datetime('now', '+' || ? || ' seconds')
+      WHERE id = ? AND growth_projected_at IS NULL
+    `).bind(
+      attempts,
+      (error instanceof Error ? error.message : String(error)).slice(0, 1000),
+      retrySeconds,
+      event.id,
+    ).run();
+    throw error;
+  }
+}
+
+export async function enqueuePaywallAbandonmentRecovery(env: Env) {
+  if (!env.EVENT_QUEUE || !env.GROWTH || !env.GROWTH_INTERNAL_TOKEN) return 0;
+  const rows = await env.DB.prepare(`
+    SELECT id, project_id
+    FROM billing_paywall_events
+    WHERE event_type IN ('closed', 'purchase_cancelled', 'purchase_failed')
+      AND growth_projected_at IS NULL
+      AND growth_projection_attempts < 10
+      AND json_extract(metadata, '$.session_id') IS NOT NULL
+      AND (growth_projection_next_attempt_at IS NULL OR datetime(growth_projection_next_attempt_at) <= datetime('now'))
+      AND datetime(occurred_at) >= datetime('now', '-30 days')
+    ORDER BY occurred_at LIMIT 100
+  `).all<{ id: string; project_id: string }>();
+  for (const row of rows.results || []) {
+    await env.EVENT_QUEUE.send({
+      type: 'growth.paywall-abandonment.evaluate',
+      projectId: String(row.project_id),
+      paywallEventId: row.id,
+    });
+  }
+  return rows.results?.length || 0;
+}
+
+async function markPaywallProjectionComplete(db: D1Database, eventId: string) {
+  await db.prepare(`
+    UPDATE billing_paywall_events
+    SET growth_projected_at = datetime('now'), growth_projection_next_attempt_at = NULL,
+      growth_projection_error = NULL
+    WHERE id = ? AND growth_projected_at IS NULL
+  `).bind(eventId).run();
 }
 
 export async function deliverGrowthAutomation(env: Env, projectId: string | number, runId: string) {
