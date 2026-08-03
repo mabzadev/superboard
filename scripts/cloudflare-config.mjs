@@ -123,6 +123,7 @@ function billingConfig() {
       CREDENTIAL_KEY_SCOPE: "billing",
       OPENGROW_ACCESS_MODE: target.accessMode,
       BILLING_RELEASE_STALE_MINUTES: "15",
+      BILLING_CATALOG_STALE_HOURS: "24",
       AUTH_GATEWAY_ISSUER: target.authGateway.issuer,
       AUTH_GATEWAY_AUDIENCE: target.authGateway.audience,
       AUTH_GATEWAY_JWKS_URL: target.authGateway.jwksUrl,
