@@ -12,6 +12,7 @@ import {
   PlugZap,
   RefreshCw,
   ShieldAlert,
+  ShieldCheck,
   Store,
   Users,
   Webhook,
@@ -63,6 +64,7 @@ import {
   getBillingPlacements,
   getBillingRefundCase,
   getBillingRefundCases,
+  getBillingReleaseGate,
   getBillingSubscriptions,
   getBillingTargeting,
   getBillingTransactions,
@@ -78,6 +80,7 @@ import {
   testBillingConnection,
   updateBillingExperiment,
   updateBillingRefundAction,
+  updateBillingReleaseGateCheck,
   updateBillingTargetingRule,
   type BillingAnalytics,
   type BillingConnection,
@@ -88,6 +91,7 @@ import {
   type BillingPlacement,
   type BillingRefundCase,
   type BillingRefundCaseDetail,
+  type BillingReleaseGate,
   type BillingSubscription,
   type BillingTargetingRule,
   type BillingTransaction,
@@ -132,7 +136,7 @@ const date = (value: unknown) =>
 const statusBadge = (status: unknown) => {
   const value = String(status || "unknown");
   const destructive = ["failed", "degraded", "refunded", "revoked", "expired", "billing_issue"].includes(value);
-  return <Badge variant={destructive ? "destructive" : value === "active" || value === "connected" || value === "healthy" ? "default" : "outline"}>{value}</Badge>;
+  return <Badge variant={destructive ? "destructive" : ["active", "connected", "healthy", "passed"].includes(value) ? "default" : "outline"}>{value}</Badge>;
 };
 
 const PurchasesPage = () => {
@@ -148,6 +152,7 @@ const PurchasesPage = () => {
   const [experiments, setExperiments] = useState<BillingExperiment[]>([]);
   const [analytics, setAnalytics] = useState<BillingAnalytics>();
   const [health, setHealth] = useState<BillingHealth>();
+  const [releaseGate, setReleaseGate] = useState<BillingReleaseGate>();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [virtualCurrencies, setVirtualCurrencies] = useState<Array<Record<string, unknown>>>([]);
   const [exports, setExports] = useState<Array<Record<string, unknown>>>([]);
@@ -180,6 +185,10 @@ const PurchasesPage = () => {
   const [refundEvidenceContent, setRefundEvidenceContent] = useState("");
   const [refundActionType, setRefundActionType] = useState("");
   const [refundActionPayloads, setRefundActionPayloads] = useState<Record<string, string>>({});
+  const [gateBuild, setGateBuild] = useState("");
+  const [gateDevice, setGateDevice] = useState("");
+  const [gateReference, setGateReference] = useState("");
+  const [gateNotes, setGateNotes] = useState("");
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -200,6 +209,7 @@ const PurchasesPage = () => {
         nextCurrencies,
         nextExports,
         nextRefundCases,
+        nextReleaseGate,
       ] = await Promise.allSettled([
         getBillingOverview(projectId),
         getBillingConnections(projectId),
@@ -215,6 +225,7 @@ const PurchasesPage = () => {
         getBillingVirtualCurrencies(projectId),
         getBillingExports(projectId),
         getBillingRefundCases(projectId),
+        getBillingReleaseGate(projectId),
       ]);
       const failures: string[] = [];
       const failed = (name: string, reason: unknown) => failures.push(`${name}: ${reason instanceof Error ? reason.message : "unable to load"}`);
@@ -232,6 +243,7 @@ const PurchasesPage = () => {
       if (nextCurrencies.status === "fulfilled") setVirtualCurrencies(nextCurrencies.value.data || []); else failed("Currencies", nextCurrencies.reason);
       if (nextExports.status === "fulfilled") setExports(nextExports.value.data || []); else failed("Exports", nextExports.reason);
       if (nextRefundCases.status === "fulfilled") setRefundCases(nextRefundCases.value.data || []); else failed("Refund Center", nextRefundCases.reason);
+      if (nextReleaseGate.status === "fulfilled") setReleaseGate(nextReleaseGate.value); else failed("Release gate", nextReleaseGate.reason);
       if (failures.length) showErrorNotification(failures.join(" · "));
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Unable to load Purchases");
@@ -432,6 +444,18 @@ const PurchasesPage = () => {
     setProductId("");
   };
 
+  const updateGateCheck = async (checkKey: string, status: "pending" | "passed" | "failed") => {
+    if (!projectId) return;
+    const evidence = Object.fromEntries(Object.entries({
+      build: gateBuild.trim(), device: gateDevice.trim(), reference: gateReference.trim(),
+    }).filter(([, value]) => value));
+    await run(() => updateBillingReleaseGateCheck(projectId, checkKey, {
+      status,
+      evidence: status === "passed" ? evidence : {},
+      notes: gateNotes.trim(),
+    }), status === "passed" ? "Certification evidence saved" : status === "failed" ? "Failure recorded" : "Check reset");
+  };
+
   const metrics = overview?.metrics;
   const metricCards: Array<[string, string | number, LucideIcon]> = [
     ["Verified revenue", money(metrics?.revenue_micros), CreditCard],
@@ -592,11 +616,21 @@ const PurchasesPage = () => {
           </TabsContent>
 
           <TabsContent value="diagnostics" className="space-y-4">
+            <Alert variant={releaseGate?.ready ? "default" : "destructive"}>
+              {releaseGate?.ready ? <ShieldCheck /> : <ShieldAlert />}
+              <AlertTitle>{releaseGate?.ready ? "Purchases release gate passed" : "Purchases release gate is closed"}</AlertTitle>
+              <AlertDescription>{releaseGate?.ready
+                ? "Publication and legacy dependency removal are allowed by the verified backend policy."
+                : `${releaseGate?.progress.passed || 0}/${releaseGate?.progress.total || 0} device and provider checks passed. Publication and legacy dependency removal remain blocked.`}</AlertDescription>
+            </Alert>
             <div className="grid gap-4 md:grid-cols-3">
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />Events</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Last event</span><span>{date(health?.events?.last_event_at)}</span></div><div className="flex justify-between"><span>Pending</span><span>{String(health?.events?.pending_events || 0)}</span></div><div className="flex justify-between"><span>Failures</span><span>{String(health?.events?.failed_events || 0)}</span></div></CardContent></Card>
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" />Subscriptions</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Last projection</span><span>{date(health?.subscriptions?.last_reconciled_at)}</span></div><div className="flex justify-between"><span>Billing issues</span><span>{String(health?.subscriptions?.billing_issues || 0)}</span></div></CardContent></Card>
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><PlugZap className="h-5 w-5" />Webhooks</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Pending</span><span>{String(health?.deliveries?.pending_deliveries || 0)}</span></div><div className="flex justify-between"><span>Failures</span><span>{String(health?.deliveries?.failed_deliveries || 0)}</span></div></CardContent></Card>
             </div>
+            <Card><CardHeader><CardTitle>Automated prerequisites</CardTitle></CardHeader><CardContent className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{releaseGate?.prerequisites.map((item) => <div key={item.key} className="rounded-md border p-3"><div className="flex items-center justify-between gap-2"><span className="font-medium">{item.label}</span><Badge variant={item.passed ? "default" : "destructive"}>{item.passed ? "passed" : "blocked"}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div>)}</CardContent></Card>
+            <Card><CardHeader><CardTitle>Evidence for the next check update</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"><Input placeholder="Build number" value={gateBuild} onChange={(event) => setGateBuild(event.target.value)} /><Input placeholder="Device and OS" value={gateDevice} onChange={(event) => setGateDevice(event.target.value)} /><Input placeholder="Test run or transaction reference" value={gateReference} onChange={(event) => setGateReference(event.target.value)} /><Input placeholder="Notes" value={gateNotes} onChange={(event) => setGateNotes(event.target.value)} /></CardContent></Card>
+            {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}</TableCell><TableCell>{statusBadge(check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "passed")}>Pass</Button><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void updateGateCheck(check.key, "pending")}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
           </TabsContent>
         </Tabs>
       </main>

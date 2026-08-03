@@ -200,6 +200,27 @@ export type BillingHealth = {
   features?: Record<string, unknown>;
 };
 
+export type BillingReleaseGate = {
+  environment: "sandbox" | "production";
+  ready: boolean;
+  publication_allowed: boolean;
+  legacy_dependency_removal_allowed: boolean;
+  progress: { passed: number; total: number };
+  prerequisites: Array<{ key: string; label: string; passed: boolean; detail: string }>;
+  checks: Array<{
+    key: string;
+    provider: "apple" | "google" | "stripe" | "cross_platform";
+    group: string;
+    label: string;
+    description: string;
+    status: "pending" | "passed" | "failed";
+    evidence: Record<string, unknown>;
+    notes?: string | null;
+    verified_at?: string | null;
+  }>;
+  blockers: Array<{ type: "prerequisite" | "check"; key: string; message: string }>;
+};
+
 export type BillingRefundCase = {
   id: string;
   provider: "apple" | "google" | "stripe";
@@ -296,6 +317,15 @@ export const getBillingAnalytics = async (projectId: string): Promise<BillingAna
 
 export const getBillingHealth = async (projectId: string): Promise<BillingHealth> =>
   (await GET(purchasesV2Path(projectId, "/health"))).data;
+
+export const getBillingReleaseGate = async (projectId: string): Promise<BillingReleaseGate> =>
+  (await GET(purchasesV2Path(projectId, "/release-gate"))).data.data;
+
+export const updateBillingReleaseGateCheck = async (
+  projectId: string,
+  checkKey: string,
+  data: { status: "pending" | "passed" | "failed"; evidence?: Record<string, unknown>; notes?: string },
+) => (await PATCH(purchasesV2Path(projectId, `/release-gate/checks/${encodeURIComponent(checkKey)}`), data)).data.data;
 
 export const getBillingWebhookDeliveries = async (projectId: string) =>
   (await GET(purchasesV2Path(projectId, "/integrations/deliveries?limit=100"))).data;
