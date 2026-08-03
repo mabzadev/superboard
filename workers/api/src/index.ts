@@ -24,6 +24,7 @@ import purchasesAdminRoutes from './routes/purchases-admin';
 import redirectRoute from './routes/redirect';
 import { runMaintenance } from './lib/maintenance';
 import { dispatchQueueJob } from './lib/jobs';
+import { isSsoEnabled } from './lib/deployment';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -89,6 +90,10 @@ app.route('/api/v1/sdk', sdkRoutes);
 app.route('/api/v1/webhooks', webhooksRoutes);
 app.route('/api/v1/push', pushRoutes);
 app.route('/api/v1/iap', iapRoutes);
+app.use('/api/v1/identity/sso/*', async (c, next) => {
+  if (!isSsoEnabled(c.env)) return c.notFound();
+  return next();
+});
 app.route('/api/v1/identity/sso', identitySsoRoutes);
 app.route('/api/v1/notifications', notificationsRoutes);
 app.route('/api/v1/automation', automationRoutes);

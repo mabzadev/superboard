@@ -4,8 +4,10 @@ export interface StripeSubscription {
 }
 
 export interface Subscription {
-  type: string;
+  type: "full" | "enterprise" | "stripe" | string;
+  unlimited?: boolean;
   current_maus: number;
+  total_available?: number | null;
   total_maus: number;
   maus: number;
   stripe_subscription: StripeSubscription;
@@ -17,5 +19,6 @@ export interface Subscription {
 
 export interface MAU {
   current_quantity: number;
-  total_available: number;
+  total_available: number | null;
+  unlimited?: boolean;
 }

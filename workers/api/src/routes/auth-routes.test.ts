@@ -138,6 +138,21 @@ function authD1Handler(call: FakeD1Call, state: Awaited<ReturnType<typeof authFi
     return user ? { id: user.id } : null;
   }
 
+  if (op === 'first' && sql.includes('FROM projects WHERE instance_id = ? AND is_test = ?')) {
+    const isTest = Number(args[1]);
+    return {
+      id: isTest ? 102 : 101,
+      name: isTest ? 'Test' : 'Production',
+      identifier: isTest ? 'test' : 'production',
+      instance_id: Number(args[0]),
+      is_test: isTest,
+    };
+  }
+
+  if (op === 'first' && sql.includes('COUNT(DISTINCT')) {
+    return { total: 0 };
+  }
+
   if (op === 'first' && sql.includes('FROM users WHERE id = ?')) {
     return userById(args[0]) || null;
   }
@@ -306,6 +321,62 @@ afterEach(() => {
 });
 
 describe('OAuth/dashboard auth routes', () => {
+  it('rejects non-allowlisted registration before creating any records', async () => {
+    const db = createFakeD1(({ op, sql }) => {
+      if (op === 'first' && sql.includes('FROM oauth_applications WHERE uid = ?')) {
+        return { id: 20, uid: 'dashboard-client' };
+      }
+      if (op === 'first' && sql.includes('FROM registration_allowlist')) return null;
+      return undefined;
+    });
+    const env = {
+      DB: db,
+      KV: {} as KVNamespace,
+      ENVIRONMENT: 'test',
+      SHORTLINK_DOMAIN: 'go.test',
+      API_DOMAIN: 'api.test',
+      SDK_DOMAIN: 'sdk.test',
+      CORS_ORIGIN: '*',
+      JWT_SECRET: 'auth-routes-secret',
+      REGISTRATION_MODE: 'allowlist',
+      REGISTRATION_REALM: 'vocostar:production',
+    } satisfies Env;
+
+    const response = await usersRoutes.request('/', json({
+      client_id: 'dashboard-client',
+      email: 'blocked@example.com',
+      password: 'safe-password',
+      name: 'Blocked',
+    }), env);
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ error: 'registration_not_allowed' });
+    expect(db.calls.some((call) => call.sql.startsWith('INSERT INTO users'))).toBe(false);
+    expect(db.calls.some((call) => call.sql.startsWith('INSERT INTO instances'))).toBe(false);
+  });
+
+  it('returns unlimited full-access usage and disables Stripe mutations', async () => {
+    const { env } = await authFixture();
+    env.OPENGROW_ACCESS_MODE = 'full';
+    const tokenBody: any = await (await passwordGrant(env)).json();
+    const headers = { Authorization: `Bearer ${tokenBody.access_token}` };
+
+    const subscription = await instancesRoutes.request('/10/billing/subscription', { headers }, env);
+    expect(subscription.status).toBe(200);
+    await expect(subscription.json()).resolves.toMatchObject({
+      type: 'full',
+      unlimited: true,
+      current_maus: 0,
+      total_available: null,
+    });
+
+    const checkout = await instancesRoutes.request('/10/billing/subscriptions', {
+      method: 'POST',
+      headers,
+    }, env);
+    expect(checkout.status).toBe(409);
+  });
+
   it('rejects a revoked access token even when its JWT remains valid', async () => {
     const { env } = await authFixture();
     const tokenResponse = await passwordGrant(env);

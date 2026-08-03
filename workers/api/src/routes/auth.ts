@@ -2,6 +2,12 @@ import { Hono } from 'hono';
 import { Env } from '../types';
 import { verifyPassword, hashPassword, generateApiKey } from '../lib/crypto';
 import { ensureDefaultOAuthApplication, getAuthContext, issueDbBackedTokens } from '../lib/auth';
+import {
+  isFullAccess,
+  isRegistrationAllowed,
+  recordSuccessfulRegistration,
+  registrationDeniedBody,
+} from '../lib/deployment';
 
 const auth = new Hono<{ Bindings: Env }>();
 
@@ -12,6 +18,10 @@ auth.post('/sign_up', async (c) => {
 
   if (!normalizedEmail || !password) {
     return c.json({ error: 'Email and password required' }, 422);
+  }
+
+  if (!await isRegistrationAllowed(c.env, normalizedEmail)) {
+    return c.json(registrationDeniedBody(), 403);
   }
 
   const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(normalizedEmail).first();
@@ -30,13 +40,14 @@ auth.post('/sign_up', async (c) => {
   // Create instance for this user
   const uriScheme = normalizedEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString(36);
   const instanceResult = await c.env.DB.prepare(
-    'INSERT INTO instances (api_key, uri_scheme) VALUES (?, ?) RETURNING id'
-  ).bind(apiKey, uriScheme).first<{ id: number }>();
+    'INSERT INTO instances (api_key, uri_scheme, revenue_collection_enabled) VALUES (?, ?, ?) RETURNING id'
+  ).bind(apiKey, uriScheme, isFullAccess(c.env) ? 1 : 0).first<{ id: number }>();
 
   // Link user to instance as owner
   await c.env.DB.prepare(
     'INSERT INTO instance_roles (user_id, instance_id, role) VALUES (?, ?, ?)'
   ).bind(userResult!.id, instanceResult!.id, 'owner').run();
+  await recordSuccessfulRegistration(c.env, normalizedEmail);
 
   const applicationId = await ensureDefaultOAuthApplication(c.env.DB, c.env.DASHBOARD_CLIENT_ID);
   const tokens = await issueDbBackedTokens(c.env, userResult!.id, instanceResult!.id, applicationId);

@@ -12,6 +12,12 @@ import {
 import { getOrCreateProject } from '../lib/db';
 import { getAuthUserId, issueDbBackedTokens } from '../lib/auth';
 import { passwordResetMessage, sendMail } from '../lib/mail';
+import {
+  isFullAccess,
+  isRegistrationAllowed,
+  recordSuccessfulRegistration,
+  registrationDeniedBody,
+} from '../lib/deployment';
 
 const users = new Hono<{ Bindings: Env }>();
 
@@ -66,6 +72,10 @@ users.post('/', async (c) => {
     return c.json({ error: 'Email and password required' }, 422);
   }
 
+  if (!await isRegistrationAllowed(c.env, email)) {
+    return c.json(registrationDeniedBody(), 403);
+  }
+
   const existing = await c.env.DB.prepare(
     'SELECT id, email, name, invitation_token, invitation_accepted_at FROM users WHERE email = ?'
   ).bind(email).first<UserRow>();
@@ -87,6 +97,7 @@ users.post('/', async (c) => {
       const role = await c.env.DB.prepare(
         'SELECT instance_id, role FROM instance_roles WHERE user_id = ? LIMIT 1'
       ).bind(existing.id).first<{ instance_id: number; role: string }>();
+      await recordSuccessfulRegistration(c.env, email);
       const tokens = await issueOAuthTokens(c, existing.id, role?.instance_id, oauthApp.id);
       return c.json({
         ...tokens,
@@ -105,8 +116,8 @@ users.post('/', async (c) => {
 
   const uriScheme = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString(36);
   const instanceResult = await c.env.DB.prepare(
-    'INSERT INTO instances (api_key, uri_scheme) VALUES (?, ?) RETURNING id'
-  ).bind(apiKey, uriScheme).first<{ id: number }>();
+    'INSERT INTO instances (api_key, uri_scheme, revenue_collection_enabled) VALUES (?, ?, ?) RETURNING id'
+  ).bind(apiKey, uriScheme, isFullAccess(c.env) ? 1 : 0).first<{ id: number }>();
 
   await c.env.DB.prepare(
     'INSERT INTO instance_roles (user_id, instance_id, role) VALUES (?, ?, ?)'
@@ -114,6 +125,7 @@ users.post('/', async (c) => {
 
   await getOrCreateProject(c.env.DB, instanceResult!.id, 'production');
   await getOrCreateProject(c.env.DB, instanceResult!.id, 'test');
+  await recordSuccessfulRegistration(c.env, email);
 
   const tokens = await issueOAuthTokens(c, userResult!.id, instanceResult!.id, oauthApp.id);
 
@@ -329,6 +341,10 @@ users.post('/accept_invite', async (c) => {
     return c.json({ error: 'Invitation token is invalid or already accepted' }, 422);
   }
 
+  if (!await isRegistrationAllowed(c.env, invited.email)) {
+    return c.json(registrationDeniedBody(), 403);
+  }
+
   const passwordHash = await hashPassword(body.password);
   await c.env.DB.prepare(`
     UPDATE users
@@ -344,6 +360,7 @@ users.post('/accept_invite', async (c) => {
   const role = await c.env.DB.prepare(
     'SELECT instance_id, role FROM instance_roles WHERE user_id = ? LIMIT 1'
   ).bind(invited.id).first<{ instance_id: number; role: string }>();
+  await recordSuccessfulRegistration(c.env, invited.email);
 
   const tokens = await issueOAuthTokens(c, invited.id, role?.instance_id, oauthApp.id);
 

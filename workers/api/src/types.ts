@@ -12,6 +12,10 @@ export interface Env {
   SDK_DOMAIN: string;
   CORS_ORIGIN: string;
   DASHBOARD_CLIENT_ID?: string;
+  OPENGROW_ACCESS_MODE?: 'full' | 'metered';
+  REGISTRATION_MODE?: 'allowlist' | 'public';
+  REGISTRATION_REALM?: string;
+  SSO_ENABLED?: string;
   JWT_SECRET: string;
   APP_URL?: string;
   MCP_CONSENT_URL?: string;

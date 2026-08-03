@@ -9,6 +9,7 @@ function envForQuota(options: {
   lastWarning?: string | null;
   lastExceeded?: string | null;
   ownerEmails?: string[];
+  fullAccess?: boolean;
 }) {
   const updates: any[] = [];
   const instances = [{
@@ -34,6 +35,10 @@ function envForQuota(options: {
       updates.push({ kind: 'quota_exceeded', value: args[0], instanceId: args[1] });
       return true;
     }
+    if (op === 'run' && sql.includes('UPDATE instances SET quota_exceeded = 0')) {
+      updates.push({ kind: 'full_access_reset' });
+      return true;
+    }
     if (op === 'run' && sql.includes('last_quota_exceeded_sent_at')) {
       updates.push({ kind: 'last_quota_exceeded_sent_at', instanceId: args[0] });
       return true;
@@ -57,6 +62,7 @@ function envForQuota(options: {
     FREE_MAU_COUNT: String(options.freeMau),
     MAIL_PROVIDER: 'webhook',
     MAIL_WEBHOOK_URL: 'https://mail.test/send',
+    OPENGROW_ACCESS_MODE: options.fullAccess ? 'full' : 'metered',
   } satisfies Env;
 
   return { env, updates };
@@ -67,6 +73,15 @@ afterEach(() => {
 });
 
 describe('quota maintenance', () => {
+  it('disables quotas and warning emails for full-access deployments', async () => {
+    const { env, updates } = envForQuota({ currentMau: 999999, freeMau: 10, fullAccess: true });
+
+    const result = await updateQuotaStates(env);
+
+    expect(result).toEqual({ checked: 1, exceeded: 0, warnings: 0, emailsSent: 0, emailsSkipped: 0 });
+    expect(updates).toEqual([{ kind: 'full_access_reset' }]);
+  });
+
   it('flags instances as quota exceeded when current MAU is above the free limit', async () => {
     const { env, updates } = envForQuota({ currentMau: 12, freeMau: 10 });
 

@@ -30,7 +30,7 @@ function baseConfig() {
     $schema: "../../node_modules/wrangler/config-schema.json",
     name: target.workers[service][environment],
     account_id: target.accountId,
-    compatibility_date: "2026-07-21",
+    compatibility_date: "2026-08-03",
     compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
     workers_dev: true,
     observability: { enabled: true, head_sampling_rate: 1 },
@@ -52,6 +52,10 @@ function apiConfig() {
       CORS_ORIGIN: environment === "production" ? `https://${target.domains.dashboard}` : "*",
       APP_URL: appUrl,
       DASHBOARD_CLIENT_ID: target.oauth.dashboardClientId,
+      OPENGROW_ACCESS_MODE: target.accessMode,
+      REGISTRATION_MODE: target.registrationMode,
+      REGISTRATION_REALM: `${target.target}:${environment}`,
+      SSO_ENABLED: String(target.ssoEnabled),
     },
     d1_databases: [{
       binding: "DB",
@@ -118,6 +122,10 @@ function dashboardConfig() {
       NEXT_PUBLIC_CLIENT_ID: target.oauth.dashboardClientId,
       NEXT_PUBLIC_APP_URL: appUrl,
       NEXT_PUBLIC_ENV: environment,
+      NEXT_PUBLIC_OPENGROW_ACCESS_MODE: target.accessMode,
+      NEXT_PUBLIC_OPENGROW_EE: String(target.accessMode === "full"),
+      NEXT_PUBLIC_REGISTRATION_MODE: target.registrationMode,
+      NEXT_PUBLIC_SSO_ENABLED: String(target.ssoEnabled),
     },
   };
   if (environment === "production" && !args["no-routes"] && !preflight) {
