@@ -8,6 +8,7 @@ import {
   reconcileStoreSubscription,
 } from './billing-jobs';
 import { processStripeBillingNotification } from '../routes/purchases-provider-webhooks';
+import { executeRefundProviderAction } from './refund-actions';
 
 export type BillingQueueJob =
   | { type: 'billing.reconcile' }
@@ -16,6 +17,7 @@ export type BillingQueueJob =
   | { type: 'billing.google.notification'; eventId: string; projectId: string; purchaseToken: string; productId: string; productType: 'subscription' | 'non_consumable' | 'consumable'; eventType: string; eventOccurredAt: string }
   | { type: 'billing.stripe.notification'; eventId: string; connectionId: string }
   | { type: 'billing.subscription.reconcile'; subscriptionId: string }
+  | { type: 'billing.refund.action.execute'; actionId: string }
   | { type: 'billing.export'; exportId: string };
 
 const BILLING_JOB_TYPES = new Set<BillingQueueJob['type']>([
@@ -25,6 +27,7 @@ const BILLING_JOB_TYPES = new Set<BillingQueueJob['type']>([
   'billing.google.notification',
   'billing.stripe.notification',
   'billing.subscription.reconcile',
+  'billing.refund.action.execute',
   'billing.export',
 ]);
 
@@ -47,6 +50,8 @@ export async function dispatchBillingJob(env: BillingEnv, job: BillingQueueJob) 
       return processStripeBillingNotification(env, job);
     case 'billing.subscription.reconcile':
       return reconcileStoreSubscription(env, String(job.subscriptionId));
+    case 'billing.refund.action.execute':
+      return executeRefundProviderAction(env, String(job.actionId));
     case 'billing.export':
       return processBillingExport(env, String(job.exportId));
     default:

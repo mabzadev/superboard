@@ -193,11 +193,27 @@ export async function reconcileBillingState(env: BillingEnv) {
       await env.BILLING_QUEUE.send({ type: 'billing.subscription.reconcile', subscriptionId: row.id });
     }
   }
+  const refundActions = await env.DB.prepare(`
+    SELECT id FROM billing_refund_provider_actions
+    WHERE (status = 'approved'
+        OR (status = 'queued'
+          AND (claim_token IS NULL OR claim_expires_at IS NULL OR datetime(claim_expires_at) <= datetime('now')))
+        OR (status = 'failed' AND next_attempt_at IS NOT NULL AND datetime(next_attempt_at) <= datetime('now')
+          AND (claim_token IS NULL OR claim_expires_at IS NULL OR datetime(claim_expires_at) <= datetime('now'))))
+      AND attempts < 8
+    ORDER BY updated_at ASC LIMIT 100
+  `).all<{ id: string }>();
+  if (env.BILLING_QUEUE) {
+    for (const row of refundActions.results || []) {
+      await env.BILLING_QUEUE.send({ type: 'billing.refund.action.execute', actionId: row.id });
+    }
+  }
   return {
     subscriptions_expired: expiredSubscriptions.meta.changes,
     entitlements_expired: expiredEntitlements.meta.changes,
     webhook_deliveries_enqueued: pendingDeliveries.results?.length || 0,
     subscriptions_enqueued: subscriptions.results?.length || 0,
+    refund_actions_enqueued: refundActions.results?.length || 0,
   };
 }
 

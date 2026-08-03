@@ -199,7 +199,8 @@ export default {
           job_type: body?.type,
           error: error?.message || String(error),
         }));
-        message.retry({ delaySeconds: 60 });
+        if (error?.retryable === false) message.ack();
+        else message.retry({ delaySeconds: Math.max(30, Math.min(3600, Number(error?.retryDelaySeconds || 60))) });
       }
     }
   },

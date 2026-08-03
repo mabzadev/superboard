@@ -66,7 +66,9 @@ export async function recordRefundCaseForPurchase(
   if (!relevantRefundEvent(purchase)) return null;
   const externalId = providerCaseId(purchase);
   const status = caseStatus(purchase);
-  const deadline = deadlineFromPayload(purchase.rawPayload);
+  const deadline = deadlineFromPayload(purchase.rawPayload) || (/CONSUMPTION_REQUEST/i.test(purchase.eventType)
+    ? new Date(Date.now() + (purchase.environment === 'sandbox' ? 5 * 60_000 : 12 * 60 * 60_000)).toISOString()
+    : null);
   const proposedId = crypto.randomUUID();
   await env.DB.prepare(`
     INSERT INTO billing_refund_cases (
@@ -129,6 +131,20 @@ export async function recordRefundCaseForPurchase(
         id, case_id, action_type, payload, status, idempotency_key
       ) VALUES (?, ?, 'submit_consumption_info', '{}', 'draft', ?)
     `).bind(crypto.randomUUID(), refundCase.id, `refund:${refundCase.id}:submit_consumption_info`).run();
+  }
+  if (purchase.store === 'stripe' && /DISPUTE|CHARGEBACK|INQUIRY/i.test(purchase.eventType)) {
+    await env.DB.prepare(`
+      INSERT OR IGNORE INTO billing_refund_provider_actions (
+        id, case_id, action_type, payload, status, idempotency_key
+      ) VALUES (?, ?, 'submit_stripe_dispute_evidence', '{"evidence":{}}', 'draft', ?)
+    `).bind(crypto.randomUUID(), refundCase.id, `refund:${refundCase.id}:submit_stripe_dispute_evidence`).run();
+  }
+  if (purchase.store === 'stripe' && /FRAUD_WARNING/i.test(purchase.eventType)) {
+    await env.DB.prepare(`
+      INSERT OR IGNORE INTO billing_refund_provider_actions (
+        id, case_id, action_type, payload, status, idempotency_key
+      ) VALUES (?, ?, 'create_stripe_refund', '{"reason":"fraudulent"}', 'draft', ?)
+    `).bind(crypto.randomUUID(), refundCase.id, `refund:${refundCase.id}:create_stripe_refund`).run();
   }
   return { caseId: refundCase.id, status };
 }
