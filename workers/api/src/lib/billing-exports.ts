@@ -63,7 +63,7 @@ export async function processBillingExport(env: Env, exportId: string) {
   if (!env.R2) throw new Error('R2 is not configured for billing exports');
   const dataset = DATASETS[String(job.dataset)];
   if (!dataset) throw new Error('Unsupported billing export dataset');
-  if (job.format !== 'csv') throw new Error('Parquet exports require the analytics export worker');
+  if (job.format !== 'csv') throw new Error('Unsupported billing export format');
   await env.DB.prepare(`UPDATE billing_export_jobs SET status = 'running', started_at = datetime('now'), error_message = NULL WHERE id = ?`).bind(exportId).run();
   try {
     const result = await env.DB.prepare(dataset.sql).bind(String(job.project_id)).all<Record<string, unknown>>();

@@ -39,7 +39,7 @@ admin.get('/:projectId', async (c) => {
     const project = await projectFor(c);
     const [settings, products, entitlements, offerings, metrics, appleCredentials, googleCredentials] = await Promise.all([
       c.env.DB.prepare('SELECT * FROM billing_project_settings WHERE project_id = ?').bind(project.id).first(),
-      c.env.DB.prepare('SELECT * FROM billing_products WHERE project_id = ? ORDER BY created_at DESC').bind(project.id).all(),
+      c.env.DB.prepare("SELECT * FROM billing_products WHERE project_id = ? AND store IN ('apple','google','stripe') ORDER BY created_at DESC").bind(project.id).all(),
       c.env.DB.prepare('SELECT * FROM billing_entitlements WHERE project_id = ? ORDER BY identifier').bind(project.id).all(),
       c.env.DB.prepare('SELECT * FROM billing_offerings WHERE project_id = ? ORDER BY is_current DESC, created_at').bind(project.id).all(),
       c.env.DB.prepare(`
@@ -156,7 +156,7 @@ admin.get('/:projectId/products', async (c) => {
     const rows = await c.env.DB.prepare(`
       SELECT p.*, GROUP_CONCAT(pe.entitlement_id) AS entitlement_ids
       FROM billing_products p LEFT JOIN billing_product_entitlements pe ON pe.product_id = p.id
-      WHERE p.project_id = ? GROUP BY p.id ORDER BY p.created_at DESC
+      WHERE p.project_id = ? AND p.store IN ('apple','google','stripe') GROUP BY p.id ORDER BY p.created_at DESC
     `).bind(project.id).all();
     return c.json({ data: rows.results });
   } catch (error) { return fail(c, error); }

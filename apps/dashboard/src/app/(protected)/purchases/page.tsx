@@ -161,10 +161,8 @@ const PurchasesPage = () => {
   const [ruleCountry, setRuleCountry] = useState("CH");
   const [experimentName, setExperimentName] = useState("Paywall test");
   const [currencyCode, setCurrencyCode] = useState("CREDITS");
-  const [webProvider, setWebProvider] = useState<"stripe" | "paddle" | "opengrow_web">("opengrow_web");
   const [providerSecret, setProviderSecret] = useState("");
   const [providerWebhookSecret, setProviderWebhookSecret] = useState("");
-  const [providerCheckoutUrl, setProviderCheckoutUrl] = useState("");
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -323,13 +321,11 @@ const PurchasesPage = () => {
   const saveWebConnection = async () => {
     if (!projectId || !providerSecret.trim()) return;
     await run(() => createBillingConnection(projectId, {
-      provider: webProvider,
+      provider: "stripe",
       environment: projectType === "test" ? "sandbox" : "production",
-      display_name: webProvider === "opengrow_web" ? "OpenGrow Web Billing" : webProvider === "stripe" ? "Stripe Billing" : "Paddle Billing",
-      secret_configuration: webProvider === "paddle"
-        ? { api_key: providerSecret, webhook_secret: providerWebhookSecret }
-        : { secret_key: providerSecret, webhook_secret: providerWebhookSecret },
-      public_configuration: providerCheckoutUrl ? { checkout_url: providerCheckoutUrl } : {},
+      display_name: "Stripe Billing",
+      secret_configuration: { secret_key: providerSecret, webhook_secret: providerWebhookSecret },
+      public_configuration: {},
     }), "Connexion Web enregistrée");
     setProviderSecret("");
     setProviderWebhookSecret("");
@@ -439,11 +435,11 @@ const PurchasesPage = () => {
               ))}
               {!connections.length && <Card><CardContent className="pt-6 text-sm text-muted-foreground">Aucune connexion store configurée.</CardContent></Card>}
             </div>
-            <Card><CardHeader><CardTitle>Ajouter une connexion Web</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-5"><select className="rounded-md border bg-background px-3" value={webProvider} onChange={(event) => setWebProvider(event.target.value as typeof webProvider)}><option value="opengrow_web">OpenGrow Web Billing</option><option value="stripe">Stripe Billing</option><option value="paddle">Paddle Billing</option></select><Input type="password" value={providerSecret} onChange={(event) => setProviderSecret(event.target.value)} placeholder={webProvider === "paddle" ? "Paddle API key" : "Stripe secret key"} autoComplete="new-password" /><Input type="password" value={providerWebhookSecret} onChange={(event) => setProviderWebhookSecret(event.target.value)} placeholder="Webhook signing secret" autoComplete="new-password" />{webProvider === "paddle" && <Input value={providerCheckoutUrl} onChange={(event) => setProviderCheckoutUrl(event.target.value)} placeholder="URL checkout Paddle approuvée" />}<Button onClick={() => void saveWebConnection()}>Chiffrer et enregistrer</Button></CardContent></Card>
+            <Card><CardHeader><CardTitle>Ajouter Stripe</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-3"><Input type="password" value={providerSecret} onChange={(event) => setProviderSecret(event.target.value)} placeholder="Stripe secret key (sk_…)" autoComplete="new-password" /><Input type="password" value={providerWebhookSecret} onChange={(event) => setProviderWebhookSecret(event.target.value)} placeholder="Stripe webhook secret (whsec_…)" autoComplete="new-password" /><Button onClick={() => void saveWebConnection()}>Chiffrer et enregistrer Stripe</Button></CardContent></Card>
           </TabsContent>
 
           <TabsContent value="products" className="space-y-4">
-            <Card><CardHeader><CardTitle>Catalogue multiplateforme</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Button variant="outline" disabled={syncing} onClick={() => void syncProducts()}><CloudDownload className={`mr-2 h-4 w-4 ${syncing ? "animate-pulse" : ""}`} />{syncing ? "Import en cours…" : "Importer Apple & Google"}</Button><Input className="max-w-sm" value={productId} onChange={(event) => setProductId(event.target.value)} placeholder="ID produit ou prix fournisseur" /><select className="rounded-md border bg-background px-3" value={store} onChange={(event) => setStore(event.target.value)}><option value="apple">App Store</option><option value="google">Google Play</option><option value="opengrow_web">OpenGrow Web</option><option value="stripe">Stripe</option><option value="paddle">Paddle</option><option value="amazon">Amazon</option><option value="roku">Roku</option></select><select className="rounded-md border bg-background px-3" value={productType} onChange={(event) => setProductType(event.target.value)}><option value="subscription">Abonnement</option><option value="non_consumable">Lifetime</option><option value="consumable">Consommable</option></select><Button onClick={() => void addProduct()}>Ajouter</Button></CardContent></Card>
+            <Card><CardHeader><CardTitle>Catalogue App Store, Google Play et Stripe</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Button variant="outline" disabled={syncing} onClick={() => void syncProducts()}><CloudDownload className={`mr-2 h-4 w-4 ${syncing ? "animate-pulse" : ""}`} />{syncing ? "Import en cours…" : "Importer Apple & Google"}</Button><Input className="max-w-sm" value={productId} onChange={(event) => setProductId(event.target.value)} placeholder="ID produit ou Price ID Stripe" /><select className="rounded-md border bg-background px-3" value={store} onChange={(event) => setStore(event.target.value)}><option value="apple">App Store</option><option value="google">Google Play</option><option value="stripe">Stripe</option></select><select className="rounded-md border bg-background px-3" value={productType} onChange={(event) => setProductType(event.target.value)}><option value="subscription">Abonnement</option><option value="non_consumable">Lifetime</option><option value="consumable">Consommable</option></select><Button onClick={() => void addProduct()}>Ajouter</Button></CardContent></Card>
             <Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>Store</TableHead><TableHead>Type</TableHead><TableHead>Environnement</TableHead><TableHead>État</TableHead><TableHead /></TableRow></TableHeader><TableBody>{overview?.products.map((product) => <TableRow key={product.id}><TableCell><div className="font-medium">{product.display_name}</div><div className="text-xs text-muted-foreground">{product.store_product_id}</div></TableCell><TableCell>{product.store}</TableCell><TableCell>{product.product_type}</TableCell><TableCell>{product.environment}</TableCell><TableCell>{product.active ? statusBadge("active") : statusBadge("archived")}</TableCell><TableCell><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingProduct(projectId, product.id), "Produit archivé")}>Archiver</Button></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
           </TabsContent>
 
