@@ -142,7 +142,7 @@ function messagingConfig() {
       AUTH_GATEWAY_ISSUER: "https://api.vocostar.com",
       AUTH_GATEWAY_AUDIENCE: "opengrow",
       AUTH_GATEWAY_JWKS_URL: "https://api.vocostar.com/.well-known/jwks.json",
-      ALLOWED_PROJECT_IDS: environment === "production" ? "11,12" : "",
+      ALLOWED_PROJECT_IDS: resources.messagingProjectIds.join(","),
       CORS_ORIGIN: environment === "production" ? `https://${target.domains.dashboard}` : "*",
     },
     d1_databases: [{
