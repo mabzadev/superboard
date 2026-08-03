@@ -8,6 +8,7 @@ import {
   verifiedAppUserId,
 } from './billing-identity';
 import { readTextLimited } from './http-limits';
+import type { BillingProviderIngressRequest } from './billing-provider-ingress';
 
 type SignedCustomerInfo = Awaited<ReturnType<typeof signedCustomerInfo>>;
 type PurchasesJwks = ReturnType<typeof purchasesSigningJwks>;
@@ -52,6 +53,22 @@ export async function callBillingService<T>(env: Env, path: string, body?: unkno
 
 export async function dispatchBillingServiceJob(env: Env, job: BillingQueueJob) {
   return callBillingService<{ data: unknown }>(env, '/internal/v1/jobs', job).then((value) => value.data);
+}
+
+export async function ingestProviderEventWithBillingAuthority(env: Env, request: BillingProviderIngressRequest) {
+  const response = await callBillingService<{ data?: unknown }>(env, '/internal/v1/provider-events/ingest', {
+    project_id: request.projectId,
+    store: request.store,
+    environment: request.environment,
+    external_event_id: request.externalEventId,
+    event_type: request.eventType || null,
+    payload: request.payload,
+    job: request.job,
+  });
+  if (!isProviderIngressResult(response.data)) {
+    throw invalidBillingAuthorityResponse('Billing returned an invalid provider ingress result');
+  }
+  return response.data;
 }
 
 export async function customerInfoFromBillingAuthority(
@@ -150,6 +167,15 @@ function isResolvedSdkCustomer(value: unknown) {
   return (typeof customer.id === 'string' || typeof customer.id === 'number')
     && typeof record.appUserId === 'string'
     && typeof record.identified === 'boolean';
+}
+
+function isProviderIngressResult(value: unknown): value is {
+  event_id: string; duplicate: boolean; queued: boolean; processed: boolean;
+} {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.event_id === 'string' && typeof record.duplicate === 'boolean'
+    && typeof record.queued === 'boolean' && typeof record.processed === 'boolean';
 }
 
 function invalidBillingAuthorityResponse(message: string) {

@@ -4,6 +4,7 @@ import {
   callBillingServiceBinding,
   customerInfoFromBillingAuthority,
   identifyCustomerFromBillingAuthority,
+  ingestProviderEventWithBillingAuthority,
   purchasesJwksFromBillingAuthority,
   resolveCustomerFromBillingAuthority,
 } from './billing-service';
@@ -101,5 +102,24 @@ describe('Billing service binding', () => {
       project_id: '11', authorization: 'Bearer identity-token', anonymous_id: '$opengrow_anon_device',
     });
     expect((fetch.mock.calls[1][0] as Request).url.endsWith('/internal/v1/customers/identify')).toBe(true);
+  });
+
+  it('delegates provider event persistence and enqueue to Billing in service mode', async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ data: {
+      event_id: 'event-1', duplicate: false, queued: true, processed: false,
+    } }));
+    const env = { BILLING_EXECUTION_MODE: 'service', BILLING: { fetch } } as any;
+
+    await expect(ingestProviderEventWithBillingAuthority(env, {
+      projectId: '11', store: 'stripe', environment: 'sandbox', externalEventId: 'stripe-event-1',
+      eventType: 'checkout.session.completed', payload: '{"id":"stripe-event-1"}',
+      job: { type: 'billing.stripe.notification', connectionId: 'connection-1' },
+    })).resolves.toMatchObject({ event_id: 'event-1', queued: true });
+    const request = fetch.mock.calls[0][0] as Request;
+    expect(request.url).toBe('https://billing.internal/internal/v1/provider-events/ingest');
+    await expect(request.json()).resolves.toMatchObject({
+      project_id: '11', store: 'stripe', external_event_id: 'stripe-event-1',
+      job: { type: 'billing.stripe.notification', connectionId: 'connection-1' },
+    });
   });
 });
