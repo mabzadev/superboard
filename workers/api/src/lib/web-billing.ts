@@ -1,5 +1,5 @@
 import type { BillingEnv } from '../types';
-import { decryptCredential } from './secrets';
+import { decryptCredential, scopedStoreCredential } from './secrets';
 import { purchasesError } from './purchases-v2';
 import { identifyCustomer } from './billing';
 
@@ -7,7 +7,8 @@ type WebConnection = {
   id: string;
   provider: 'stripe';
   environment: 'sandbox' | 'production';
-  configuration_encrypted: string;
+  configuration_encrypted: string | null;
+  billing_configuration_encrypted: string | null;
 };
 
 type CheckoutProduct = {
@@ -56,9 +57,9 @@ async function connectionForCheckout(env: BillingEnv, projectId: string, provide
   const row = await env.DB.prepare(`
     SELECT * FROM billing_store_connections
     WHERE project_id = ? AND provider = 'stripe' AND environment = ? AND status IN ('configured','connected')
-      AND configuration_encrypted IS NOT NULL LIMIT 1
+    LIMIT 1
   `).bind(projectId, environment).first<WebConnection>();
-  if (row) return row;
+  if (row && scopedStoreCredential(row, env)) return row;
   throw purchasesError('web_billing_not_configured', 'Stripe is not configured', 409);
 }
 
@@ -87,7 +88,9 @@ async function productForCheckout(
 
 async function providerCredentials(env: BillingEnv, connection: WebConnection) {
   let value: unknown;
-  try { value = JSON.parse(await decryptCredential(env, connection.configuration_encrypted)); }
+  const encrypted = scopedStoreCredential(connection, env);
+  if (!encrypted) throw purchasesError('connection_credentials_invalid', `${connection.provider} credentials are unavailable for this execution domain`, 500);
+  try { value = JSON.parse(await decryptCredential(env, encrypted)); }
   catch { throw purchasesError('connection_credentials_invalid', `${connection.provider} credentials cannot be decrypted`, 500); }
   return parseObject(value);
 }

@@ -255,6 +255,20 @@ sdk.post('/checkout-sessions', async (c) => {
     }
     const idempotencyKey = c.req.header('Idempotency-Key') || data.idempotency_key;
     if (!idempotencyKey) throw purchasesError('idempotency_key_required', 'Idempotency-Key header is required');
+    if (billingServiceEnabled(c.env)) {
+      const result = await callBillingService<{ data: Record<string, unknown> }>(c.env, '/internal/v1/web/checkout-sessions', {
+        project_id: ctx.projectId,
+        customer_id: String(ctx.customer.id),
+        package_identifier: String(data.package_identifier),
+        offering_identifier: data.offering_identifier ? String(data.offering_identifier) : undefined,
+        provider: data.provider ? String(data.provider) : undefined,
+        environment: ctx.environment,
+        success_url: String(data.success_url),
+        cancel_url: String(data.cancel_url),
+        idempotency_key: String(idempotencyKey),
+      });
+      return c.json(result.data);
+    }
     return c.json(await createWebCheckoutSession(c.env, {
       projectId: ctx.projectId,
       customerId: String(ctx.customer.id),
@@ -274,6 +288,15 @@ sdk.post('/portal-sessions', async (c) => {
     const ctx = await context(c); const data = await body(c);
     if (!ctx.features.webBilling) throw purchasesError('web_billing_not_enabled', 'Web Billing is not enabled for this project', 403);
     if (!data.return_url) throw purchasesError('return_url_required', 'return_url is required');
+    if (billingServiceEnabled(c.env)) {
+      const result = await callBillingService<{ data: Record<string, unknown> }>(c.env, '/internal/v1/web/portal-sessions', {
+        project_id: ctx.projectId,
+        customer_id: String(ctx.customer.id),
+        environment: ctx.environment,
+        return_url: String(data.return_url),
+      });
+      return c.json(result.data);
+    }
     return c.json(await createWebPortalSession(c.env, {
       projectId: ctx.projectId,
       customerId: String(ctx.customer.id),
@@ -288,6 +311,14 @@ sdk.post('/redemptions', async (c) => {
     const ctx = await context(c); const data = await body(c);
     if (!ctx.features.webBilling) throw purchasesError('web_billing_not_enabled', 'Web Billing is not enabled for this project', 403);
     if (!data.code) throw purchasesError('redemption_code_required', 'Redemption code is required');
+    if (billingServiceEnabled(c.env)) {
+      const result = await callBillingService<{ data: Record<string, unknown> }>(c.env, '/internal/v1/web/redemptions', {
+        project_id: ctx.projectId,
+        customer_id: String(ctx.customer.id),
+        code: String(data.code),
+      });
+      return c.json(result.data);
+    }
     return c.json(await redeemWebPurchase(c.env, {
       projectId: ctx.projectId,
       customerId: String(ctx.customer.id),

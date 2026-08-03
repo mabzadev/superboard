@@ -3,6 +3,14 @@ import { AppVariables, Env } from '../types';
 import { getAuthContext } from '../lib/auth';
 
 export async function authMiddleware(c: Context<{ Bindings: Env; Variables: AppVariables }>, next: Next) {
+  if (c.env.CREDENTIAL_KEY_SCOPE === 'billing') {
+    const actor = (c.req.header('X-OpenGrow-Internal-Actor') || '').trim();
+    if (/^[1-9][0-9]{0,18}$/.test(actor)) {
+      c.set('userId', Number(actor));
+      await next();
+      return;
+    }
+  }
   const auth = await getAuthContext(c.env, c.req.header('Authorization'));
   if (!auth) {
     return c.json({ error: 'Invalid or expired token' }, 401);
