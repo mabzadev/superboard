@@ -136,7 +136,7 @@ users.post('/', async (c) => {
 });
 
 
-// GET /api/v1/users/me — Profil utilisateur courant
+// GET /api/v1/users/me — Current user profile
 users.get('/me', async (c) => {
   const userId = await getAuthUser(c);
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);

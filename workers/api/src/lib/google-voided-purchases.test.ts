@@ -55,7 +55,9 @@ describe('Google Voided Purchases reconciliation', () => {
     const result = await reconcileGoogleVoidedPurchases({ DB: db } as BillingEnv, '11', now);
 
     expect(result).toMatchObject({ claimed: true, scanned: 2, processed: 2, unmatched: 0, end_time: now });
+    expect(result.end_time - result.start_time).toBe((30 * 24 * 60 * 60 * 1000) - (5 * 60 * 1000));
     expect(requested).toHaveLength(2);
+    expect(Number(new URL(requested[0]).searchParams.get('startTime'))).toBe(result.start_time);
     expect(new URL(requested[1]).searchParams.get('pageSelection.token')).toBe('page-2');
     expect(providerMocks.apply).toHaveBeenCalledTimes(2);
     expect(providerMocks.apply).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
