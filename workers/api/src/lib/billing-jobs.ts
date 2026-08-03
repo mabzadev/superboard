@@ -2,7 +2,7 @@ import { Env } from '../types';
 import { decryptCredential, hmacSha256 } from './secrets';
 import { verifyAppleNotification } from './store-verification';
 import { reconcileAppleSubscription, verifyGooglePurchase } from './store-verification';
-import { applyVerifiedPurchase, type BillingEnvironment } from './billing';
+import { applyVerifiedPurchase, queueCustomerEntitlementChanged, type BillingEnvironment } from './billing';
 
 export async function processAppleBillingNotification(env: Env, params: {
   eventId: string;
@@ -95,7 +95,11 @@ export async function deliverBillingWebhook(env: Env, deliveryId: string) {
   if (Number(delivery.active) !== 1) return { skipped: true };
   safeWebhookUrl(String(delivery.url));
   const payload = String(delivery.payload);
-  const secret = await decryptCredential(env, String(delivery.signing_secret_encrypted));
+  const secretReference = String(delivery.signing_secret_encrypted);
+  const secret = secretReference === 'env:OPENGROW_VOCOSTAR_WEBHOOK_SECRET'
+    ? env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET
+    : await decryptCredential(env, secretReference);
+  if (!secret) throw new Error('Billing webhook signing secret is unavailable');
   const timestamp = String(Math.floor(Date.now() / 1000));
   const signature = await hmacSha256(secret, `${timestamp}.${payload}`);
   const attempt = Number(delivery.attempts || 0) + 1;
@@ -133,6 +137,15 @@ export async function deliverBillingWebhook(env: Env, deliveryId: string) {
 }
 
 export async function reconcileBillingState(env: Env) {
+  const entitlementExpirations = await env.DB.prepare(`
+    SELECT DISTINCT ce.project_id, ce.customer_id, COALESCE(p.environment, 'production') AS environment
+    FROM billing_customer_entitlements ce
+    LEFT JOIN billing_products p ON p.id = ce.product_id
+    WHERE ce.source = 'purchase'
+      AND ce.status NOT IN ('inactive', 'revoked', 'refunded')
+      AND ce.expires_at IS NOT NULL
+      AND datetime(ce.expires_at) <= datetime('now')
+  `).all<{ project_id: string; customer_id: string; environment: BillingEnvironment }>();
   const expiredSubscriptions = await env.DB.prepare(`
     UPDATE billing_subscriptions
     SET status = 'expired', will_renew = 0, updated_at = datetime('now')
@@ -148,6 +161,14 @@ export async function reconcileBillingState(env: Env) {
       AND expires_at IS NOT NULL
       AND datetime(expires_at) <= datetime('now')
   `).run();
+  for (const expiration of entitlementExpirations.results || []) {
+    await queueCustomerEntitlementChanged(env, {
+      projectId: expiration.project_id,
+      customerId: expiration.customer_id,
+      environment: expiration.environment,
+      reason: 'entitlement_expired',
+    });
+  }
   const pendingDeliveries = await env.DB.prepare(`
     SELECT id FROM billing_webhook_deliveries
     WHERE status IN ('pending', 'failed')
