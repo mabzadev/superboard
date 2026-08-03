@@ -66,6 +66,7 @@ export default function GrowthPage() {
   const [automationForm, setAutomationForm] = useState(emptyAutomationForm);
   const [loading, setLoading] = useState(false);
   const advancedSource = contracts?.sources.find((source) => source.capabilities.includes("keyword_rank"));
+  const automationActions = contracts?.automation_trigger_actions[automationForm.trigger_type] || [];
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -79,11 +80,15 @@ export default function GrowthPage() {
       setCompetitors(nextCompetitors); setRecommendations(nextRecommendations); setAutomations(nextAutomations);
       setAppForm((current) => current.platform ? current : { ...current, platform: nextContracts.platforms[0]?.id || "" });
       setCompetitorForm((current) => current.platform ? current : { ...current, platform: nextContracts.platforms[0]?.id || "" });
-      setAutomationForm((current) => ({
-        ...current,
-        trigger_type: current.trigger_type || nextContracts.automation_triggers[0] || "",
-        action_type: current.action_type || nextContracts.automation_actions[0] || "",
-      }));
+      setAutomationForm((current) => {
+        const trigger = current.trigger_type || nextContracts.automation_triggers[0] || "";
+        const allowed = nextContracts.automation_trigger_actions[trigger] || [];
+        return {
+          ...current,
+          trigger_type: trigger,
+          action_type: allowed.includes(current.action_type) ? current.action_type : allowed[0] || "",
+        };
+      });
       setKeywordForm((current) => current.app_id ? current : { ...current, app_id: nextApps[0]?.id || "" });
     } catch (error) {
       showErrorNotification(message(error, "Unable to load growth intelligence"));
@@ -175,7 +180,7 @@ export default function GrowthPage() {
         <div className="flex gap-2"><Button onClick={() => void synchronize()}><RefreshCw className="mr-2 h-4 w-4" />Synchronize</Button><Button variant="outline" disabled={loading} onClick={() => void load()}>Refresh</Button></div>
       </div>
 
-      <Alert><ShieldCheck /><AlertTitle>Billing isolation is enforced</AlertTitle><AlertDescription>Growth automations can send chat, push, or in-app messages. They cannot grant, revoke, or edit entitlements.</AlertDescription></Alert>
+      <Alert><ShieldCheck /><AlertTitle>Billing isolation is enforced</AlertTitle><AlertDescription>Growth automations can send chat, push, or in-app messages and create internal Inbox alerts. They cannot grant, revoke, or edit entitlements.</AlertDescription></Alert>
       {advancedSource && !advancedSource.configured && <Alert><Target /><AlertTitle>Advanced store intelligence is not configured</AlertTitle><AlertDescription>Apple public metadata remains available. Configure the optional provider to collect Google Play metadata, keyword ranks, volume, and difficulty.</AlertDescription></Alert>}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{countCards.map(([label, value]) => <Card key={label}><CardContent className="p-4"><div className="text-2xl font-semibold">{value}</div><div className="text-sm text-muted-foreground">{label}</div></CardContent></Card>)}</div>
@@ -200,7 +205,7 @@ export default function GrowthPage() {
         </TabsContent>
 
         <TabsContent value="automations" className="space-y-4">
-          <Card><CardHeader><CardTitle>Create an automation</CardTitle><CardDescription>New automations are saved disabled so the message can be reviewed before activation.</CardDescription></CardHeader><CardContent className="grid gap-3 xl:grid-cols-2"><div className="space-y-3"><Input placeholder="Automation name" value={automationForm.name} onChange={(event) => setAutomationForm({ ...automationForm, name: event.target.value })} /><label className="grid gap-1 text-sm">Trigger<select className="h-9 rounded-md border bg-background px-3" value={automationForm.trigger_type} onChange={(event) => setAutomationForm({ ...automationForm, trigger_type: event.target.value })}>{contracts?.automation_triggers.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label><label className="grid gap-1 text-sm">Channel<select className="h-9 rounded-md border bg-background px-3" value={automationForm.action_type} onChange={(event) => setAutomationForm({ ...automationForm, action_type: event.target.value })}>{contracts?.automation_actions.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label></div><div className="space-y-3"><Input placeholder="Message title (optional)" value={automationForm.title} onChange={(event) => setAutomationForm({ ...automationForm, title: event.target.value })} /><textarea className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="Message body" value={automationForm.body} onChange={(event) => setAutomationForm({ ...automationForm, body: event.target.value })} /><Button onClick={() => void submitAutomation()}><Bot className="mr-2 h-4 w-4" />Save automation</Button></div></CardContent></Card>
+          <Card><CardHeader><CardTitle>Create an automation</CardTitle><CardDescription>New automations are saved disabled so the message can be reviewed before activation.</CardDescription></CardHeader><CardContent className="grid gap-3 xl:grid-cols-2"><div className="space-y-3"><Input placeholder="Automation name" value={automationForm.name} onChange={(event) => setAutomationForm({ ...automationForm, name: event.target.value })} /><label className="grid gap-1 text-sm">Trigger<select className="h-9 rounded-md border bg-background px-3" value={automationForm.trigger_type} onChange={(event) => { const trigger = event.target.value; const allowed = contracts?.automation_trigger_actions[trigger] || []; setAutomationForm({ ...automationForm, trigger_type: trigger, action_type: allowed.includes(automationForm.action_type) ? automationForm.action_type : allowed[0] || "" }); }}>{contracts?.automation_triggers.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label><label className="grid gap-1 text-sm">Channel<select className="h-9 rounded-md border bg-background px-3" value={automationForm.action_type} onChange={(event) => setAutomationForm({ ...automationForm, action_type: event.target.value })}>{automationActions.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label>{automationForm.trigger_type === "review_negative" && <p className="text-xs text-muted-foreground">Store reviewers cannot be matched to app users. This trigger creates an internal Inbox alert for the team.</p>}</div><div className="space-y-3"><Input placeholder={automationForm.action_type === "inbox" ? "Alert title (optional)" : "Message title (optional)"} value={automationForm.title} onChange={(event) => setAutomationForm({ ...automationForm, title: event.target.value })} /><textarea className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder={automationForm.action_type === "inbox" ? "Internal alert instructions" : "Message body"} value={automationForm.body} onChange={(event) => setAutomationForm({ ...automationForm, body: event.target.value })} /><Button onClick={() => void submitAutomation()}><Bot className="mr-2 h-4 w-4" />Save automation</Button></div></CardContent></Card>
           <Card><CardHeader><CardTitle>Lifecycle automations</CardTitle></CardHeader><CardContent className="space-y-3">{automations.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-4"><div><div className="flex items-center gap-2"><span className="font-medium">{item.name}</span><Badge variant="outline">{humanize(item.trigger_type)}</Badge><Badge variant="secondary">{humanize(item.action_type)}</Badge></div><div className="mt-1 text-xs text-muted-foreground">{item.run_count || 0} runs · {item.failed_count || 0} failed</div></div><div className="flex items-center gap-3"><Switch checked={item.enabled} onCheckedChange={(checked) => void toggle("automation", item.id, checked)} /><Button size="sm" variant="outline" onClick={() => void remove("automation", item.id)}><Trash2 className="h-4 w-4" /></Button></div></div>)}{!automations.length && <Empty text="No lifecycle automation has been created." />}</CardContent></Card>
         </TabsContent>
       </Tabs>

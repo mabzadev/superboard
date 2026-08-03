@@ -21,6 +21,12 @@ describe('unified Inbox projection', () => {
     expect(mapReviewItem({
       id: 'review-2', rating: 4, body: 'Good', draft_status: 'approved', provider_created_at: '2026-08-03T10:00:00.000Z',
     }).status).toBe('pending');
+    const automated = mapReviewItem({
+      id: 'review-3', rating: 2, body: 'Needs work', automation_alert_id: 'alert-1',
+      automation_alert_priority: 'urgent', provider_created_at: '2026-08-03T10:00:00.000Z',
+    });
+    expect(automated.priority).toBe('urgent');
+    expect(automated.capabilities).toContain('automation_alert');
   });
 
   it('prioritizes imminent refund deadlines without mutating the case', () => {

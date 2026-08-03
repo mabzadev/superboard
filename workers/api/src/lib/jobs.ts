@@ -2,7 +2,7 @@ import { Env } from '../types';
 import { processPushNotifications } from '../routes/push';
 import { publishApprovedReviewDraft, syncStoreReviews } from './store-reviews';
 import { dispatchBillingJob, isBillingQueueJob, type BillingQueueJob } from './billing-dispatch';
-import { deliverGrowthAutomation, evaluatePaywallAbandonment } from './growth-delivery';
+import { deliverGrowthAutomation, evaluateNegativeReview, evaluatePaywallAbandonment } from './growth-delivery';
 import {
   cleanupExpiredMcp,
   cleanupOrphanedActions,
@@ -25,7 +25,8 @@ export type QueueJob =
   | { type: 'reputation.reviews.sync'; projectId: string }
   | { type: 'reputation.review-response.publish'; draftId: string }
   | { type: 'growth.automation.deliver'; projectId: string; runId: string }
-  | { type: 'growth.paywall-abandonment.evaluate'; projectId: string; paywallEventId: string };
+  | { type: 'growth.paywall-abandonment.evaluate'; projectId: string; paywallEventId: string }
+  | { type: 'growth.review-negative.evaluate'; projectId: string; revisionId: string };
 
 export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
   if (isBillingQueueJob(job)) return dispatchBillingJob(env, job);
@@ -54,6 +55,8 @@ export async function dispatchQueueJob(env: Env, job: QueueJob | any) {
       return deliverGrowthAutomation(env, String(job.projectId), String(job.runId));
     case 'growth.paywall-abandonment.evaluate':
       return evaluatePaywallAbandonment(env, String(job.projectId), String(job.paywallEventId));
+    case 'growth.review-negative.evaluate':
+      return evaluateNegativeReview(env, String(job.projectId), String(job.revisionId));
     default:
       throw new Error(`Unsupported queue job: ${job?.type || 'unknown'}`);
   }
