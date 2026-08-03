@@ -73,11 +73,11 @@ async function oidcConfig(env: BillingEnv, projectId: string | number, issuer: s
     LIMIT 1
   `).bind(String(projectId), issuer).first<OidcConfig>();
   if (configured) return configured;
-  if (issuer === 'https://api.vocostar.com') {
+  if (issuer === env.AUTH_GATEWAY_ISSUER) {
     return {
-      issuer,
-      audience: 'opengrow',
-      jwks_uri: 'https://api.vocostar.com/.well-known/jwks.json',
+      issuer: env.AUTH_GATEWAY_ISSUER,
+      audience: env.AUTH_GATEWAY_AUDIENCE,
+      jwks_uri: env.AUTH_GATEWAY_JWKS_URL,
     };
   }
   return null;

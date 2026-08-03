@@ -1,9 +1,16 @@
 import { Hono } from 'hono';
 import { AppVariables, Env } from '../types';
-import { applyVerifiedPurchase, identifyCustomer, offeringsForCustomer, type BillingEnvironment } from '../lib/billing';
-import { resolveSdkCustomer, signedCustomerInfo, verifiedAppUserId } from '../lib/billing-identity';
+import { applyVerifiedPurchase, offeringsForCustomer, type BillingEnvironment } from '../lib/billing';
 import { finalizeGooglePurchase, verifyAppleTransaction, verifyGooglePurchase } from '../lib/store-verification';
 import { isPurchasesEnabled } from '../lib/deployment';
+import {
+  billingServiceEnabled,
+  callBillingService,
+  customerInfoFromBillingAuthority,
+  identifyCustomerFromBillingAuthority,
+  resolveCustomerFromBillingAuthority,
+} from '../lib/billing-service';
+import { restoreVerifiedPurchases } from '../lib/billing-restore';
 
 const purchases = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -25,7 +32,7 @@ async function context(c: any) {
     throw new Error('OpenGrow Purchases is not enabled for this project');
   }
   const anonymousId = c.req.header('X-OpenGrow-Anonymous-ID') || undefined;
-  const resolved = await resolveSdkCustomer(c.env, {
+  const resolved = await resolveCustomerFromBillingAuthority(c.env, {
     projectId,
     authorization: c.req.header('Authorization'),
     anonymousId,
@@ -60,7 +67,7 @@ purchases.get('/offerings', async (c) => {
 purchases.get('/customer-info', async (c) => {
   try {
     const ctx = await context(c);
-    return c.json({ ...(await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id))), customer_id: String(ctx.customer.id) });
+    return c.json({ ...(await customerInfoFromBillingAuthority(c.env, ctx.projectId, String(ctx.customer.id))), customer_id: String(ctx.customer.id) });
   } catch (error) {
     return purchaseError(c, error);
   }
@@ -70,12 +77,15 @@ purchases.post('/identify', async (c) => {
   try {
     const projectId = c.get('projectId');
     if (!projectId) throw new Error('Invalid project for SDK credentials');
-    const targetAppUserId = await verifiedAppUserId(c.env, projectId, c.req.header('Authorization'));
-    if (!targetAppUserId) return c.json({ error: 'A verified identity token is required' }, 401);
     const body = await jsonBody(c);
-    const currentAppUserId = String(body.current_app_user_id || c.req.header('X-OpenGrow-Anonymous-ID') || targetAppUserId);
-    const customer = await identifyCustomer(c.env.DB, projectId, currentAppUserId, targetAppUserId);
-    return c.json({ ...(await signedCustomerInfo(c.env, projectId, String(customer?.id))), customer_id: String(customer?.id), created: false });
+    const currentAppUserId = String(body.current_app_user_id || c.req.header('X-OpenGrow-Anonymous-ID') || '').trim();
+    if (!currentAppUserId) return c.json({ error: 'current_app_user_id is required' }, 422);
+    const info = await identifyCustomerFromBillingAuthority(c.env, {
+      projectId,
+      authorization: c.req.header('Authorization'),
+      currentAppUserId,
+    });
+    return c.json({ ...info, customer_id: String(info.customer_id), created: false });
   } catch (error) {
     return purchaseError(c, error);
   }
@@ -87,6 +97,22 @@ purchases.post('/apple/transactions', async (c) => {
     const body = await jsonBody(c);
     if (typeof body.signed_transaction !== 'string' || !body.signed_transaction) {
       return c.json({ error: 'signed_transaction is required' }, 422);
+    }
+    if (billingServiceEnabled(c.env)) {
+      const result = await callBillingService<Record<string, any>>(c.env, '/internal/v1/receipts/verify', {
+        project_id: String(ctx.projectId),
+        customer_id: String(ctx.customer.id),
+        environment: ctx.environment,
+        store: 'apple',
+        signed_transaction: body.signed_transaction,
+      });
+      return c.json({
+        result: result.status === 'pending' ? 'pending' : 'purchased',
+        finish_transaction: result.finish_transaction,
+        transaction_id: result.transaction_id,
+        duplicate: result.duplicate,
+        customer_info: result.customer_info,
+      });
     }
     const verified = await verifyAppleTransaction(c.env, {
       projectId: ctx.projectId,
@@ -100,7 +126,7 @@ purchases.post('/apple/transactions', async (c) => {
       finish_transaction: verified.purchase.status !== 'pending',
       transaction_id: result.transactionId,
       duplicate: result.duplicate,
-      customer_info: await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)),
+      customer_info: await customerInfoFromBillingAuthority(c.env, ctx.projectId, String(ctx.customer.id)),
     });
   } catch (error) {
     return purchaseError(c, error);
@@ -117,6 +143,24 @@ purchases.post('/google/purchases', async (c) => {
     if (!['subscription', 'non_consumable', 'consumable'].includes(body.product_type)) {
       return c.json({ error: 'product_type is invalid' }, 422);
     }
+    if (billingServiceEnabled(c.env)) {
+      const result = await callBillingService<Record<string, any>>(c.env, '/internal/v1/receipts/verify', {
+        project_id: String(ctx.projectId),
+        customer_id: String(ctx.customer.id),
+        environment: ctx.environment,
+        store: 'google',
+        purchase_token: String(body.purchase_token),
+        product_id: String(body.product_id),
+        product_type: body.product_type,
+      });
+      return c.json({
+        result: result.status === 'pending' ? 'pending' : 'purchased',
+        finish_transaction: result.finish_transaction,
+        transaction_id: result.transaction_id,
+        duplicate: result.duplicate,
+        customer_info: result.customer_info,
+      });
+    }
     const verified = await verifyGooglePurchase(c.env, {
       projectId: ctx.projectId,
       customerId: String(ctx.customer.id),
@@ -131,7 +175,7 @@ purchases.post('/google/purchases', async (c) => {
       result: verified.purchase.status === 'pending' ? 'pending' : 'purchased',
       transaction_id: result.transactionId,
       duplicate: result.duplicate,
-      customer_info: await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)),
+      customer_info: await customerInfoFromBillingAuthority(c.env, ctx.projectId, String(ctx.customer.id)),
     });
   } catch (error) {
     return purchaseError(c, error);
@@ -142,42 +186,27 @@ async function restore(c: any) {
   try {
     const ctx = await context(c);
     const body = await jsonBody(c);
-    const apple = Array.isArray(body.apple_transactions) ? body.apple_transactions : [];
-    const google = Array.isArray(body.google_purchases) ? body.google_purchases : [];
-    const settings = await c.env.DB.prepare('SELECT restore_behavior FROM billing_project_settings WHERE project_id = ?')
-      .bind(String(ctx.projectId)).first() as { restore_behavior?: string } | null;
-    const allowTransfer = settings?.restore_behavior !== 'block';
-    const results: Array<Record<string, unknown>> = [];
-    for (const signedTransaction of apple) {
-      const verified = await verifyAppleTransaction(c.env, {
-        projectId: ctx.projectId,
-        customerId: String(ctx.customer.id),
-        signedTransaction: String(signedTransaction),
+    if (billingServiceEnabled(c.env)) {
+      const result = await callBillingService<{ data: Record<string, unknown> }>(c.env, '/internal/v1/receipts/restore', {
+        project_id: String(ctx.projectId),
+        customer_id: String(ctx.customer.id),
         environment: ctx.environment,
-        allowTransfer,
+        apple_transactions: body.apple_transactions,
+        google_purchases: body.google_purchases,
       });
-      const applied = await applyVerifiedPurchase(c.env, verified.purchase);
-      results.push({ store: 'apple', transaction_id: applied.transactionId, duplicate: applied.duplicate });
+      return c.json(result.data);
     }
-    for (const item of google) {
-      if (!item?.purchase_token || !item?.product_id || !item?.product_type) continue;
-      const verified = await verifyGooglePurchase(c.env, {
-        projectId: ctx.projectId,
-        customerId: String(ctx.customer.id),
-        purchaseToken: String(item.purchase_token),
-        storeProductId: String(item.product_id),
-        productType: item.product_type,
-        environment: ctx.environment,
-        allowTransfer,
-      });
-      const applied = await applyVerifiedPurchase(c.env, verified.purchase);
-      await finalizeGooglePurchase(verified);
-      results.push({ store: 'google', transaction_id: applied.transactionId, duplicate: applied.duplicate });
-    }
+    const results = await restoreVerifiedPurchases(c.env, {
+      projectId: ctx.projectId,
+      customerId: String(ctx.customer.id),
+      environment: ctx.environment,
+      appleTransactions: body.apple_transactions,
+      googlePurchases: body.google_purchases,
+    });
     return c.json({
       result: 'purchased',
       restored: results,
-      customer_info: await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)),
+      customer_info: await customerInfoFromBillingAuthority(c.env, ctx.projectId, String(ctx.customer.id)),
     });
   } catch (error) {
     return purchaseError(c, error);

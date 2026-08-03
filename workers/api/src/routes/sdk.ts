@@ -6,11 +6,11 @@ import { generateShortCode } from '../lib/crypto';
 import purchasesRoutes from './purchases-sdk';
 import purchasesV2Routes from './purchases-v2-sdk';
 import { AppVariables } from '../types';
-import { purchasesSigningJwks } from '../lib/billing-identity';
+import { purchasesJwksFromBillingAuthority } from '../lib/billing-service';
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
-sdk.get('/.well-known/purchases-jwks.json', (c) => c.json(
-  purchasesSigningJwks(c.env),
+sdk.get('/.well-known/purchases-jwks.json', async (c) => c.json(
+  await purchasesJwksFromBillingAuthority(c.env),
   200,
   { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' },
 ));

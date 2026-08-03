@@ -1,4 +1,6 @@
 import type { BillingEnv } from '../types';
+import { createLocalJWKSet, jwtVerify } from 'jose';
+import { purchasesSigningJwks, signCustomerInfoPayload } from './billing-identity';
 import { decryptCredential } from './secrets';
 
 type BillingSecretEnv = Pick<
@@ -20,6 +22,7 @@ export type BillingWorkerReadiness = {
   missing_secrets: string[];
   credential_copies_ready: boolean;
   credential_decryption_ready: boolean;
+  signing_authority_ready: boolean;
   credential_copies: Record<string, number> | null;
   store_connections: Record<string, unknown>[];
 };
@@ -39,7 +42,7 @@ export function billingSecretReadiness(env: BillingSecretEnv) {
 
 export async function billingWorkerReadiness(env: BillingEnv): Promise<BillingWorkerReadiness> {
   const secrets = billingSecretReadiness(env);
-  const [stores, credentialCopies] = await Promise.all([
+  const [stores, credentialCopies, signingAuthorityReady] = await Promise.all([
     env.DB.prepare(`
       SELECT provider, environment, COUNT(*) AS connections,
         SUM(CASE WHEN billing_configuration_encrypted IS NOT NULL THEN 1 ELSE 0 END) AS configured
@@ -54,6 +57,7 @@ export async function billingWorkerReadiness(env: BillingEnv): Promise<BillingWo
         (SELECT COUNT(*) FROM android_server_api_keys WHERE encrypted_key IS NOT NULL) AS google_source,
         (SELECT COUNT(*) FROM android_server_api_keys WHERE billing_encrypted_key IS NOT NULL) AS google_billing
     `).first<Record<string, number>>(),
+    billingSigningAuthorityReady(env),
   ]);
   const copiesReady = Boolean(
     credentialCopies
@@ -68,13 +72,37 @@ export async function billingWorkerReadiness(env: BillingEnv): Promise<BillingWo
     service: 'opengrow-billing',
     environment: env.ENVIRONMENT,
     execution: 'private-service-binding',
-    ready_for_traffic: secrets.ready && copiesReady && decryptionReady,
+    ready_for_traffic: secrets.ready && copiesReady && decryptionReady && signingAuthorityReady,
     missing_secrets: secrets.missing,
     credential_copies_ready: copiesReady,
     credential_decryption_ready: decryptionReady,
+    signing_authority_ready: signingAuthorityReady,
     credential_copies: credentialCopies,
     store_connections: stores.results || [],
   };
+}
+
+export async function billingSigningAuthorityReady(env: BillingEnv): Promise<boolean> {
+  try {
+    const subject = 'billing-readiness-probe';
+    const token = await signCustomerInfoPayload(env, 'readiness', subject, {
+      customer_id: subject,
+      entitlements: {},
+      subscriptions: [],
+    });
+    await jwtVerify(token, createLocalJWKSet(purchasesSigningJwks(env)), {
+      issuer: 'opengrow-purchases',
+      audience: 'opengrow-sdk',
+      subject,
+    });
+    return true;
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'billing_signing_readiness_failed',
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return false;
+  }
 }
 
 async function validateCredentialDecryption(env: BillingEnv): Promise<boolean> {

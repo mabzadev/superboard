@@ -22,6 +22,9 @@ export interface BillingEnv {
   OPENGROW_VOCOSTAR_WEBHOOK_SECRET?: string;
   APPLE_ROOT_CERTIFICATES_B64?: string;
   CREDENTIAL_KEY_SCOPE?: 'api' | 'billing';
+  AUTH_GATEWAY_ISSUER: string;
+  AUTH_GATEWAY_AUDIENCE: string;
+  AUTH_GATEWAY_JWKS_URL: string;
 }
 
 export interface Env extends BillingEnv {
