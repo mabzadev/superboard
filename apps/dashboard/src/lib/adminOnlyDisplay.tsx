@@ -1,21 +1,14 @@
 "use client";
-import { ADMIN_ROLE } from "@/constants/OptionsConstants";
+import { ADMIN_ROLE, OWNER_ROLE } from "@/constants/OptionsConstants";
 import { useProjectSelection } from "@/context/useProjectSelection";
-import { useUserContext } from "@/context/useUserContext";
 
 import React from "react";
 
 const AdminOnlyDisplay = ({ children }: { children: React.ReactNode }) => {
-  const { userRef } = useUserContext();
   const { selectedInstance } = useProjectSelection();
+  const role = selectedInstance?.role;
 
-  const roles = userRef.current?.roles || [];
-  const currentInstanceId = selectedInstance?.id;
-  const roleEntry = roles.find((r) => r.instance_id === currentInstanceId);
-
-  if (roleEntry?.role !== ADMIN_ROLE) {
-    return;
-  }
+  if (role !== OWNER_ROLE && role !== ADMIN_ROLE) return null;
 
   return <>{children}</>;
 };
