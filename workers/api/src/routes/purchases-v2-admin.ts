@@ -8,7 +8,15 @@ import { errorEnvelope, PAYWALL_EVENT_TYPES, purchasesError } from '../lib/purch
 import { signedCustomerInfo } from '../lib/billing-identity';
 import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
-import { buildReleaseGate, RELEASE_GATE_CHECKS, validateReleaseGateEvidence, type ReleaseGatePrerequisite, type StoredReleaseGateCheck } from '../lib/purchases-release-gate';
+import {
+  buildReleaseGate,
+  nativeCatalogCoverage,
+  RELEASE_GATE_CHECKS,
+  validateReleaseGateEvidence,
+  type ReleaseGateCatalogProduct,
+  type ReleaseGatePrerequisite,
+  type StoredReleaseGateCheck,
+} from '../lib/purchases-release-gate';
 import { callBillingServiceBinding } from '../lib/billing-service';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -214,31 +222,23 @@ admin.get('/:projectId/release-gate', async (c) => {
         WHERE project_id IN (${projectPlaceholders || "''"}) AND provider IN ('apple', 'google', 'stripe')
       `).bind(...scopedProjectIds).all<Record<string, any>>(),
       c.env.DB.prepare(`
-        SELECT p.project_id, p.store, p.environment, p.store_product_id,
+        SELECT p.project_id, p.store, p.environment, p.store_product_id, p.metadata,
           EXISTS (
             SELECT 1 FROM billing_product_entitlements bpe
             JOIN billing_entitlements e ON e.id = bpe.entitlement_id
             WHERE bpe.product_id = p.id AND e.project_id = p.project_id
               AND e.identifier = 'premium' AND e.active = 1
           ) AS premium_mapped,
-          EXISTS (
-            SELECT 1 FROM billing_package_products bpp
+          (
+            SELECT GROUP_CONCAT(DISTINCT bp.package_type) FROM billing_package_products bpp
             JOIN billing_packages bp ON bp.id = bpp.package_id
             JOIN billing_offerings o ON o.id = bp.offering_id
             WHERE bpp.product_id = p.id AND o.project_id = p.project_id
               AND o.identifier = 'default' AND o.active = 1 AND o.is_current = 1
-              AND (
-                p.store = 'stripe'
-                OR (p.store_product_id = 'vocostar_weekly_999' AND bp.identifier = 'weekly' AND bp.package_type = 'weekly')
-                OR (p.store_product_id = 'vocostar_yearly_4999' AND bp.identifier = 'yearly' AND bp.package_type = 'annual')
-              )
-          ) AS offering_mapped
+          ) AS package_types
         FROM billing_products p
         WHERE p.project_id IN (${projectPlaceholders || "''"}) AND p.active = 1 AND p.product_type = 'subscription'
-      `).bind(...scopedProjectIds).all<{
-        project_id: string; store: string; environment: string; store_product_id: string;
-        premium_mapped: number; offering_mapped: number;
-      }>(),
+      `).bind(...scopedProjectIds).all<ReleaseGateCatalogProduct>(),
       c.env.DB.prepare(`
         SELECT project_id FROM billing_entitlements
         WHERE project_id IN (${projectPlaceholders || "''"}) AND identifier = 'premium' AND active = 1
@@ -253,20 +253,21 @@ admin.get('/:projectId/release-gate', async (c) => {
       && row.status === 'connected' && row.last_tested_at
       && (provider !== 'stripe' || Boolean(row.billing_configuration_encrypted)));
     const products = catalog.results || [];
-    const hasNativePlans = (projectId: string, store: string, environment: string) => ['vocostar_weekly_999', 'vocostar_yearly_4999']
-      .every((identifier) => products.some((product) => String(product.project_id) === projectId && product.store === store
-        && product.environment === environment && product.store_product_id === identifier));
     const hasStripePlan = (projectId: string, environment: string) => products.some((product) =>
       String(product.project_id) === projectId && product.store === 'stripe' && product.environment === environment);
-    const nativeProductsReady = (projectId: string, store: string, environment: string, field: 'premium_mapped' | 'offering_mapped') =>
-      ['vocostar_weekly_999', 'vocostar_yearly_4999'].every((identifier) => products.some((product) =>
-        String(product.project_id) === projectId && product.store === store && product.environment === environment
-        && product.store_product_id === identifier && Number(product[field]) === 1));
     const stripeProductsReady = (projectId: string, environment: string, field: 'premium_mapped' | 'offering_mapped') => {
       const stripeProducts = products.filter((product) => String(product.project_id) === projectId
         && product.store === 'stripe' && product.environment === environment);
-      return stripeProducts.length > 0 && stripeProducts.every((product) => Number(product[field]) === 1);
+      return stripeProducts.length > 0 && stripeProducts.every((product) => field === 'premium_mapped'
+        ? Number(product.premium_mapped) === 1
+        : Boolean(product.package_types));
     };
+    const native = (projectId: string, store: 'apple' | 'google', environment: 'sandbox' | 'production') =>
+      nativeCatalogCoverage(products, projectId, store, environment);
+    const sandboxApple = native(scope.testProjectId, 'apple', 'sandbox');
+    const productionApple = native(scope.productionProjectId, 'apple', 'production');
+    const sandboxGoogle = native(scope.testProjectId, 'google', 'sandbox');
+    const productionGoogle = native(scope.productionProjectId, 'google', 'production');
     const hasEntitlement = (projectId: string) => (entitlement.results || []).some((row) => String(row.project_id) === projectId);
     const hasOffering = (projectId: string) => (offering.results || []).some((row) => String(row.project_id) === projectId);
     const prerequisite = (key: string, label: string, passed: boolean, success: string, failure: string): ReleaseGatePrerequisite => ({
@@ -279,22 +280,22 @@ admin.get('/:projectId/release-gate', async (c) => {
         prerequisite(`sandbox_${provider}_connection`, `Sandbox ${providerDisplayName(provider)} connection`, connectionPassed(scope.testProjectId, provider, 'sandbox'), 'Credentials were tested successfully.', `Test the sandbox ${providerDisplayName(provider)} connection successfully.`),
         prerequisite(`production_${provider}_connection`, `Production ${providerDisplayName(provider)} connection`, connectionPassed(scope.productionProjectId, provider, 'production'), 'Credentials were tested successfully.', `Test the production ${providerDisplayName(provider)} connection successfully.`),
       ]),
-      prerequisite('sandbox_apple_catalog', 'Sandbox Apple subscription catalog', hasNativePlans(scope.testProjectId, 'apple', 'sandbox'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the test project.'),
-      prerequisite('production_apple_catalog', 'Production Apple subscription catalog', hasNativePlans(scope.productionProjectId, 'apple', 'production'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the production project.'),
-      prerequisite('sandbox_google_catalog', 'Sandbox Google subscription catalog', hasNativePlans(scope.testProjectId, 'google', 'sandbox'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the test project.'),
-      prerequisite('production_google_catalog', 'Production Google subscription catalog', hasNativePlans(scope.productionProjectId, 'google', 'production'), 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the production project.'),
+      prerequisite('sandbox_apple_catalog', 'Sandbox Apple subscription catalog', sandboxApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the test project.'),
+      prerequisite('production_apple_catalog', 'Production Apple subscription catalog', productionApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the production project.'),
+      prerequisite('sandbox_google_catalog', 'Sandbox Google subscription catalog', sandboxGoogle.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the test project.'),
+      prerequisite('production_google_catalog', 'Production Google subscription catalog', productionGoogle.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Google subscriptions into the production project.'),
       prerequisite('sandbox_stripe_catalog', 'Stripe test subscription catalog', hasStripePlan(scope.testProjectId, 'sandbox'), 'A Stripe test subscription is active.', 'Add an active Stripe test subscription to the test project.'),
       prerequisite('production_stripe_catalog', 'Stripe production subscription catalog', hasStripePlan(scope.productionProjectId, 'production'), 'A Stripe production subscription is active.', 'Add an active Stripe production subscription to the production project.'),
       prerequisite('sandbox_premium_entitlement', 'Test Premium entitlement', hasEntitlement(scope.testProjectId), 'The Premium entitlement is active.', 'Create and activate the Premium entitlement in the test project.'),
       prerequisite('production_premium_entitlement', 'Production Premium entitlement', hasEntitlement(scope.productionProjectId), 'The Premium entitlement is active.', 'Create and activate the Premium entitlement in the production project.'),
-      prerequisite('sandbox_native_entitlement_mappings', 'Test native Premium mappings', nativeProductsReady(scope.testProjectId, 'apple', 'sandbox', 'premium_mapped') && nativeProductsReady(scope.testProjectId, 'google', 'sandbox', 'premium_mapped'), 'Every native subscription grants Premium.', 'Map every test Apple and Google subscription to Premium.'),
-      prerequisite('production_native_entitlement_mappings', 'Production native Premium mappings', nativeProductsReady(scope.productionProjectId, 'apple', 'production', 'premium_mapped') && nativeProductsReady(scope.productionProjectId, 'google', 'production', 'premium_mapped'), 'Every native subscription grants Premium.', 'Map every production Apple and Google subscription to Premium.'),
+      prerequisite('sandbox_native_entitlement_mappings', 'Test native Premium mappings', sandboxApple.premium && sandboxGoogle.premium, 'Every required native subscription grants Premium.', 'Map the test weekly and yearly Apple and Google subscriptions to Premium.'),
+      prerequisite('production_native_entitlement_mappings', 'Production native Premium mappings', productionApple.premium && productionGoogle.premium, 'Every required native subscription grants Premium.', 'Map the production weekly and yearly Apple and Google subscriptions to Premium.'),
       prerequisite('sandbox_stripe_entitlement_mappings', 'Stripe test Premium mappings', stripeProductsReady(scope.testProjectId, 'sandbox', 'premium_mapped'), 'Every Stripe test subscription grants Premium.', 'Map every Stripe test subscription to Premium.'),
       prerequisite('production_stripe_entitlement_mappings', 'Stripe production Premium mappings', stripeProductsReady(scope.productionProjectId, 'production', 'premium_mapped'), 'Every Stripe production subscription grants Premium.', 'Map every Stripe production subscription to Premium.'),
       prerequisite('sandbox_default_offering', 'Test default offering', hasOffering(scope.testProjectId), 'The current default offering is active.', 'Create and activate the current default offering in the test project.'),
       prerequisite('production_default_offering', 'Production default offering', hasOffering(scope.productionProjectId), 'The current default offering is active.', 'Create and activate the current default offering in the production project.'),
-      prerequisite('sandbox_native_packages', 'Test native packages', nativeProductsReady(scope.testProjectId, 'apple', 'sandbox', 'offering_mapped') && nativeProductsReady(scope.testProjectId, 'google', 'sandbox', 'offering_mapped'), 'Every native subscription is exposed by the default offering.', 'Add every test Apple and Google subscription to packages in the default offering.'),
-      prerequisite('production_native_packages', 'Production native packages', nativeProductsReady(scope.productionProjectId, 'apple', 'production', 'offering_mapped') && nativeProductsReady(scope.productionProjectId, 'google', 'production', 'offering_mapped'), 'Every native subscription is exposed by the default offering.', 'Add every production Apple and Google subscription to packages in the default offering.'),
+      prerequisite('sandbox_native_packages', 'Test native packages', sandboxApple.packages && sandboxGoogle.packages, 'Weekly and yearly native subscriptions are exposed by the default offering.', 'Add the test weekly and yearly Apple and Google subscriptions to matching packages in the default offering.'),
+      prerequisite('production_native_packages', 'Production native packages', productionApple.packages && productionGoogle.packages, 'Weekly and yearly native subscriptions are exposed by the default offering.', 'Add the production weekly and yearly Apple and Google subscriptions to matching packages in the default offering.'),
       prerequisite('sandbox_stripe_packages', 'Stripe test packages', stripeProductsReady(scope.testProjectId, 'sandbox', 'offering_mapped'), 'Every Stripe test subscription is exposed by the default offering.', 'Add every Stripe test subscription to a package in the default offering.'),
       prerequisite('production_stripe_packages', 'Stripe production packages', stripeProductsReady(scope.productionProjectId, 'production', 'offering_mapped'), 'Every Stripe production subscription is exposed by the default offering.', 'Add every Stripe production subscription to a package in the default offering.'),
     ];

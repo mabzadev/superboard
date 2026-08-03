@@ -24,6 +24,23 @@ export type ReleaseGatePrerequisite = {
   detail: string;
 };
 
+export type ReleaseGateCatalogProduct = {
+  project_id: string;
+  store: string;
+  environment: string;
+  metadata?: string | Record<string, unknown> | null;
+  premium_mapped: number;
+  package_types?: string | null;
+};
+
+export type NativeCatalogCoverage = {
+  catalog: boolean;
+  premium: boolean;
+  packages: boolean;
+};
+
+const REQUIRED_NATIVE_CADENCES = ['weekly', 'annual'] as const;
+
 const nativeScenarios = [
   ['weekly_purchase', 'Weekly subscription purchase', 'Complete a verified purchase for the weekly subscription.'],
   ['yearly_purchase', 'Yearly subscription purchase', 'Complete a verified purchase for the yearly subscription.'],
@@ -92,17 +109,24 @@ export function buildReleaseGate(stored: StoredReleaseGateCheck[], prerequisites
   const byKey = new Map(stored.map((row) => [row.check_key, row]));
   const checks = RELEASE_GATE_CHECKS.map((definition) => {
     const row = byKey.get(definition.key);
+    const evidence = parseObject(row?.evidence_json);
+    const evidenceValidation = validateReleaseGateEvidence(definition, evidence);
+    const status = row?.status === 'passed' || row?.status === 'failed' ? row.status : 'pending';
+    const certified = status === 'passed' && evidenceValidation.valid;
     return {
       ...definition,
-      status: row?.status || 'pending',
-      evidence: parseObject(row?.evidence_json),
+      status,
+      evidence,
+      evidence_valid: evidenceValidation.valid,
+      missing_evidence: evidenceValidation.missing,
+      certified,
       notes: row?.notes || null,
       verified_by: row?.verified_by || null,
       verified_at: row?.verified_at || null,
       updated_at: row?.updated_at || null,
     };
   });
-  const failedChecks = checks.filter((check) => check.status !== 'passed');
+  const failedChecks = checks.filter((check) => !check.certified);
   const failedPrerequisites = prerequisites.filter((item) => !item.passed);
   const ready = failedChecks.length === 0 && failedPrerequisites.length === 0;
   return {
@@ -114,9 +138,61 @@ export function buildReleaseGate(stored: StoredReleaseGateCheck[], prerequisites
     checks,
     blockers: [
       ...failedPrerequisites.map((item) => ({ type: 'prerequisite', key: item.key, message: item.detail })),
-      ...failedChecks.map((item) => ({ type: 'check', key: item.key, message: `${item.group}: ${item.label}` })),
+      ...failedChecks.map((item) => ({
+        type: 'check',
+        key: item.key,
+        message: item.status === 'passed' && !item.evidence_valid
+          ? `${item.group}: ${item.label} is missing ${item.missing_evidence.join(', ')} evidence`
+          : `${item.group}: ${item.label}`,
+      })),
     ],
   };
+}
+
+export function nativeCatalogCoverage(
+  products: ReleaseGateCatalogProduct[],
+  projectId: string,
+  store: 'apple' | 'google',
+  environment: 'sandbox' | 'production',
+): NativeCatalogCoverage {
+  const scoped = products.filter((product) => String(product.project_id) === projectId
+    && product.store === store && product.environment === environment);
+  const cadenceProducts = (cadence: typeof REQUIRED_NATIVE_CADENCES[number]) => scoped.filter((product) =>
+    productCadences(product).has(cadence));
+  return {
+    catalog: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence).length > 0),
+    premium: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
+      .some((product) => Number(product.premium_mapped) === 1)),
+    packages: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
+      .some((product) => packageTypes(product).has(cadence))),
+  };
+}
+
+function productCadences(product: ReleaseGateCatalogProduct) {
+  const metadata = parseObject(product.metadata);
+  const providerCadences = new Set<'weekly' | 'annual'>();
+  addCadence(providerCadences, metadata.subscription_period);
+  if (Array.isArray(metadata.base_plans)) {
+    for (const value of metadata.base_plans) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+      addCadence(providerCadences, (value as Record<string, unknown>).billing_period);
+    }
+  }
+  // Older imported Google catalog rows did not persist the base-plan period.
+  // The current default offering is the canonical fallback until the next sync.
+  return providerCadences.size > 0 ? providerCadences : packageTypes(product);
+}
+
+function packageTypes(product: ReleaseGateCatalogProduct) {
+  return new Set(String(product.package_types || '').split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter((value): value is 'weekly' | 'annual' => value === 'weekly' || value === 'annual'));
+}
+
+function addCadence(target: Set<'weekly' | 'annual'>, value: unknown) {
+  const normalized = String(value || '').trim().toUpperCase().replaceAll('-', '_');
+  if (['ONE_WEEK', 'P1W', 'P7D', 'WEEKLY'].includes(normalized)) target.add('weekly');
+  if (['ONE_YEAR', 'P1Y', 'YEARLY', 'ANNUAL'].includes(normalized)) target.add('annual');
 }
 
 function parseObject(value: unknown) {
