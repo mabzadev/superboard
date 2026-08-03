@@ -66,6 +66,10 @@ Do not set `BILLING_EXECUTION_MODE=service` until all automated prerequisites an
 8. FlutterFlow iOS and Android recovery tests.
 9. Empty DLQ, active alerts, and a verified recent D1 backup.
 
+Manual free-text approval is not certification evidence. Each passed check must reference an immutable observation from a completed certification run. A run records the platform, environment, build, application and SDK versions, device model, OS version, operator, and server timestamps. Each observation stores a bounded evidence snapshot and its SHA-256 digest.
+
+Billing transaction and event references are accepted only when the backend can resolve them in the run's project, provider, environment, and time window. Legacy inventory references must identify a completed production inventory with no unresolved active subscription. Device-only scenarios may use an external test-run reference, but it is still sealed inside the immutable observation. Completing, failing, or cancelling a run prevents additional observations.
+
 ## Cutover procedure
 
 1. Back up D1 and record the deployed API and Billing version IDs.
