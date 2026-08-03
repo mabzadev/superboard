@@ -28,6 +28,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run copy:check
       - run: npm run cloudflare:config:api
       - run: npm run worker:typecheck
       - run: npm run worker:test
