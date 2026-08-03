@@ -1,6 +1,7 @@
 import { Env } from '../types';
 import { sendMail } from './mail';
 import { isFullAccess } from './deployment';
+import { enqueueStoreReviewResponseRetries } from './store-reviews';
 
 const EVENT_METRICS = {
   views: "SUM(CASE WHEN event = 'view' THEN 1 ELSE 0 END)",
@@ -506,6 +507,7 @@ export async function runMaintenance(env: Env, days = 3) {
     duplicateVisitorsMerged: await mergeDuplicateVisitors(env.DB),
     quotaStates: await updateQuotaStates(env),
     enterpriseMauRows: await precomputeEnterpriseMau(env),
+    reviewResponsesEnqueued: await enqueueStoreReviewResponseRetries(env),
     visitorDailyRows: 0,
     linkDailyRows: 0,
     projectActiveUserRows: 0,
