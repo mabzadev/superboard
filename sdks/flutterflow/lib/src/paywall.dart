@@ -10,10 +10,10 @@ class OpenGrowPaywall extends StatefulWidget {
     this.height,
     this.placement = 'default',
     this.offeringIdentifier,
-    this.title = 'Passez Premium',
-    this.subtitle = 'Débloquez toutes les fonctionnalités.',
-    this.purchaseLabel = 'Continuer',
-    this.restoreLabel = 'Restaurer mes achats',
+    this.title = 'Go Premium',
+    this.subtitle = 'Unlock every feature.',
+    this.purchaseLabel = 'Continue',
+    this.restoreLabel = 'Restore purchases',
     this.accentColor = const Color(0xFF5B5FF0),
     this.onPurchased,
     this.onRestored,
@@ -62,7 +62,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
         _configuration = configuration;
         _offering = value;
         _selected = value?.packages.firstOrNull;
-        _error = value == null ? 'Aucune offre disponible.' : null;
+        _error = value == null ? 'No offering is available.' : null;
       });
       unawaited(
         OpenGrowPurchases.instance.trackPaywallEvent(
@@ -330,7 +330,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
 class OpenGrowRestorePurchasesButton extends StatelessWidget {
   const OpenGrowRestorePurchasesButton({
     super.key,
-    this.label = 'Restaurer mes achats',
+    this.label = 'Restore purchases',
     this.onRestored,
   });
   final String label;
@@ -353,7 +353,7 @@ class OpenGrowCustomerCenter extends StatelessWidget {
     super.key,
     this.width,
     this.height,
-    this.title = 'Mes achats',
+    this.title = 'My purchases',
     this.onRestored,
   });
 
@@ -398,7 +398,7 @@ class OpenGrowCustomerCenter extends StatelessWidget {
                 ),
               if (info.balances.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('Soldes', style: Theme.of(context).textTheme.titleMedium),
+                Text('Balances', style: Theme.of(context).textTheme.titleMedium),
                 for (final entry in info.balances.entries)
                   ListTile(
                     title: Text(entry.key),

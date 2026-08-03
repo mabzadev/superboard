@@ -52,8 +52,8 @@ Future<bool> opengrowInitializeAuto({
   );
 }
 
-/// Initializes Purchases only after VocoStar has exchanged its existing access
-/// token for a short-lived ES256 OpenGrow identity token.
+/// Initializes Purchases only after the application authentication gateway has
+/// exchanged its existing access token for a short-lived ES256 identity token.
 Future<bool> opengrowInitializeAuthenticated({
   required String projectKey,
   required String vocostarAccessToken,
@@ -62,7 +62,7 @@ Future<bool> opengrowInitializeAuthenticated({
 }) async {
   if (vocostarAccessToken.trim().isEmpty) {
     throw const OpenGrowPurchasesException(
-      'VocoStar authentication is required before Purchases initialization',
+      'Application authentication is required before Purchases initialization',
       code: 'identity_required',
     );
   }
@@ -84,7 +84,7 @@ Future<bool> opengrowInitializeAuthenticated({
       final token = body is Map ? body['access_token']?.toString() : null;
       if (response.statusCode != 200 || token == null || token.isEmpty) {
         throw OpenGrowPurchasesException(
-          'VocoStar identity synchronization failed',
+          'Identity synchronization failed',
           code: 'identity_sync_failed',
           retryable: response.statusCode >= 500,
         );
