@@ -55,7 +55,7 @@ async function getAuthUser(c: any) {
   return getAuthUserId(c.env, c.req.header('Authorization'));
 }
 
-// POST /api/v1/users — Créer un compte (utilisé par le dashboard OpenGrow)
+// POST /api/v1/users — Create an account used by the OpenGrow dashboard.
 users.post('/', async (c) => {
   const body: any = await readJsonBody(c);
 
@@ -172,7 +172,7 @@ users.get('/me', async (c) => {
   });
 });
 
-// PATCH /api/v1/users/me — Modifier le profil
+// PATCH /api/v1/users/me — Update the current user's profile.
 users.patch('/me', async (c) => {
   const userId = await getAuthUser(c);
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
@@ -308,11 +308,11 @@ users.get('/me/otp_qr', async (c) => {
   return c.body(svg, 200, { 'Content-Type': 'image/svg+xml; charset=utf-8' });
 });
 
-// DELETE /api/v1/users/me — Supprimer son compte
+// DELETE /api/v1/users/me — Delete the current user's account.
 users.delete('/me', async (c) => {
   const userId = await getAuthUser(c);
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
-  // Révoquer tous les tokens
+  // Revoke every active token.
   await c.env.DB.prepare('DELETE FROM oauth_access_tokens WHERE resource_owner_id = ?').bind(userId).run();
   await c.env.DB.prepare('DELETE FROM instance_roles WHERE user_id = ?').bind(userId).run();
   await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();

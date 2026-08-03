@@ -37,11 +37,26 @@ function fail(c: any, error: unknown) {
 admin.get('/:projectId', async (c) => {
   try {
     const project = await projectFor(c);
-    const [settings, products, entitlements, offerings, metrics, appleCredentials, googleCredentials] = await Promise.all([
+    const [settings, products, entitlements, offerings, packages, productEntitlements, metrics, appleCredentials, googleCredentials] = await Promise.all([
       c.env.DB.prepare('SELECT * FROM billing_project_settings WHERE project_id = ?').bind(project.id).first(),
       c.env.DB.prepare("SELECT * FROM billing_products WHERE project_id = ? AND store IN ('apple','google','stripe') ORDER BY created_at DESC").bind(project.id).all(),
       c.env.DB.prepare('SELECT * FROM billing_entitlements WHERE project_id = ? ORDER BY identifier').bind(project.id).all(),
       c.env.DB.prepare('SELECT * FROM billing_offerings WHERE project_id = ? ORDER BY is_current DESC, created_at').bind(project.id).all(),
+      c.env.DB.prepare(`
+        SELECT bp.*, bpp.product_id
+        FROM billing_packages bp
+        JOIN billing_offerings o ON o.id = bp.offering_id
+        LEFT JOIN billing_package_products bpp ON bpp.package_id = bp.id
+        WHERE o.project_id = ?
+        ORDER BY bp.position, bp.created_at, bpp.created_at
+      `).bind(project.id).all<Record<string, unknown>>(),
+      c.env.DB.prepare(`
+        SELECT bpe.product_id, bpe.entitlement_id
+        FROM billing_product_entitlements bpe
+        JOIN billing_products p ON p.id = bpe.product_id
+        JOIN billing_entitlements e ON e.id = bpe.entitlement_id
+        WHERE p.project_id = ? AND e.project_id = ?
+      `).bind(project.id, project.id).all(),
       c.env.DB.prepare(`
         SELECT
           COALESCE(SUM(CASE WHEN status IN ('active','trialing','grace_period','cancelled') THEN price_micros ELSE 0 END), 0) AS revenue_micros,
@@ -69,6 +84,14 @@ admin.get('/:projectId', async (c) => {
         LIMIT 1
       `).bind(project.instanceId).first<Record<string, unknown>>(),
     ]);
+    const packageRows = new Map<string, Record<string, unknown> & { product_ids: string[] }>();
+    for (const row of packages.results || []) {
+      const id = String(row.id);
+      const existing = packageRows.get(id) || { ...row, product_ids: [] };
+      if (row.product_id) existing.product_ids.push(String(row.product_id));
+      delete existing.product_id;
+      packageRows.set(id, existing);
+    }
     return c.json({
       project,
       settings: settings || {
@@ -79,6 +102,8 @@ admin.get('/:projectId', async (c) => {
       products: products.results,
       entitlements: entitlements.results,
       offerings: offerings.results,
+      packages: [...packageRows.values()],
+      product_entitlements: productEntitlements.results,
       metrics,
       credentials: {
         ios: {
@@ -306,21 +331,53 @@ admin.post('/:projectId/offerings', async (c) => {
   } catch (error) { return fail(c, error); }
 });
 
+admin.post('/:projectId/entitlements/:entitlementId/products', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const data = await body(c);
+    const productIds = [...new Set((Array.isArray(data.product_ids) ? data.product_ids : []).map(String).filter(Boolean))];
+    if (productIds.length === 0 || productIds.length > 100) throw new Error('Select between 1 and 100 products');
+    const entitlement = await c.env.DB.prepare(
+      'SELECT id FROM billing_entitlements WHERE id = ? AND project_id = ? AND active = 1',
+    ).bind(c.req.param('entitlementId'), project.id).first();
+    if (!entitlement) throw new Error('Entitlement not found');
+    const placeholders = productIds.map(() => '?').join(',');
+    const valid = await c.env.DB.prepare(`
+      SELECT COUNT(*) AS count FROM billing_products
+      WHERE project_id = ? AND active = 1 AND id IN (${placeholders})
+    `).bind(project.id, ...productIds).first<{ count: number }>();
+    if (Number(valid?.count || 0) !== productIds.length) throw new Error('One or more products are unavailable');
+    await c.env.DB.batch(productIds.map((productId) => c.env.DB.prepare(`
+      INSERT OR IGNORE INTO billing_product_entitlements (product_id, entitlement_id) VALUES (?, ?)
+    `).bind(productId, entitlement.id)));
+    return c.json({ mapped: productIds.length });
+  } catch (error) { return fail(c, error); }
+});
+
 admin.post('/:projectId/offerings/:offeringId/packages', async (c) => {
   try {
     const project = await projectFor(c);
     const data = await body(c);
     const offering = await c.env.DB.prepare('SELECT id FROM billing_offerings WHERE id = ? AND project_id = ?').bind(c.req.param('offeringId'), project.id).first();
     if (!offering) throw new Error('Offering not found');
+    const identifier = String(data.identifier || '').trim();
+    if (!/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(identifier)) throw new Error('Package identifier is invalid');
+    const productIds = [...new Set((Array.isArray(data.product_ids) ? data.product_ids : []).map(String).filter(Boolean))];
+    if (productIds.length === 0 || productIds.length > 100) throw new Error('Select between 1 and 100 products');
+    const placeholders = productIds.map(() => '?').join(',');
+    const valid = await c.env.DB.prepare(`
+      SELECT COUNT(*) AS count FROM billing_products
+      WHERE project_id = ? AND active = 1 AND id IN (${placeholders})
+    `).bind(project.id, ...productIds).first<{ count: number }>();
+    if (Number(valid?.count || 0) !== productIds.length) throw new Error('One or more products are unavailable');
     const id = crypto.randomUUID();
-    await c.env.DB.prepare('INSERT INTO billing_packages (id, offering_id, identifier, package_type, position, metadata) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(id, offering.id, String(data.identifier), data.package_type || 'custom', Number(data.position || 0), JSON.stringify(data.metadata || {})).run();
-    for (const productId of Array.isArray(data.product_ids) ? data.product_ids : []) {
-      await c.env.DB.prepare(`
-        INSERT OR IGNORE INTO billing_package_products (package_id, product_id)
-        SELECT ?, id FROM billing_products WHERE id = ? AND project_id = ?
-      `).bind(id, productId, project.id).run();
-    }
+    await c.env.DB.batch([
+      c.env.DB.prepare('INSERT INTO billing_packages (id, offering_id, identifier, package_type, position, metadata) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(id, offering.id, identifier, data.package_type || 'custom', Number(data.position || 0), JSON.stringify(data.metadata || {})),
+      ...productIds.map((productId) => c.env.DB.prepare(`
+        INSERT INTO billing_package_products (package_id, product_id) VALUES (?, ?)
+      `).bind(id, productId)),
+    ]);
     return c.json({ id }, 201);
   } catch (error) { return fail(c, error); }
 });

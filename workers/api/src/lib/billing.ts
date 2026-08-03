@@ -314,7 +314,7 @@ async function queuePurchaseWebhook(env: BillingEnv, purchase: VerifiedPurchase,
 }
 
 /**
- * Emits the single authoritative entitlement projection consumed by VocoStar.
+ * Emits the single authoritative entitlement projection consumed by the application backend.
  * The delivery layer signs the exact body and timestamp with the endpoint HMAC
  * secret, so consumers never need access to a Billing signing private key.
  */

@@ -21,7 +21,7 @@ function remoteKeys(url: string) {
 
 export async function verifyVocoStarIdentity(env: Env, authorization?: string): Promise<string> {
   const token = bearerToken(authorization);
-  if (!token) throw publicError('identity_required', 'VocoStar identity token required', 401);
+  if (!token) throw publicError('identity_required', 'Identity token required', 401);
   try {
     const verified = await jwtVerify(token, remoteKeys(env.VOCOSTAR_JWKS_URL), {
       issuer: env.VOCOSTAR_ISSUER,
@@ -33,7 +33,7 @@ export async function verifyVocoStarIdentity(env: Env, authorization?: string): 
     if (!subject || subject.length > 255) throw new Error('invalid subject');
     return subject;
   } catch {
-    throw publicError('identity_invalid', 'VocoStar identity token is invalid or expired', 401);
+    throw publicError('identity_invalid', 'Identity token is invalid or expired', 401);
   }
 }
 
