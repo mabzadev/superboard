@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Env } from '../types';
 import { createFakeD1, type FakeD1Call } from '../test/fake-d1';
-import { billingGrowthEventType, deliverGrowthAutomation, emitBillingGrowthEvent, emitGrowthEvent } from './growth-delivery';
+import {
+  billingGrowthEventType,
+  deliverGrowthAutomation,
+  emitBillingGrowthEvent,
+  emitGrowthEvent,
+  enqueuePaywallAbandonmentRecovery,
+  evaluatePaywallAbandonment,
+} from './growth-delivery';
 
 function json(payload: unknown, status = 200) {
   return Response.json(payload, { status });
@@ -53,7 +60,74 @@ describe('growth automation delivery', () => {
     expect(billingGrowthEventType('active', 'DID_RENEW')).toBe('renewal_succeeded');
     expect(billingGrowthEventType('refunded', 'REFUND')).toBe('refund_granted');
     expect(billingGrowthEventType('active', 'REFUND_REVERSED')).toBe('refund_reversed');
+    expect(billingGrowthEventType('cancelled', 'DID_CHANGE_RENEWAL_STATUS')).toBe('churn_risk');
+    expect(billingGrowthEventType('expired', 'EXPIRED')).toBe('entitlement_expired');
     expect(billingGrowthEventType('active', 'INITIAL_BUY')).toBeNull();
+  });
+
+  it('projects an identified abandoned paywall session into an idempotent growth event', async () => {
+    const growthEvents: Record<string, unknown>[] = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM billing_paywall_events pe')) return {
+        id: 'paywall-event-1', project_id: '11', customer_id: 'customer-1',
+        primary_app_user_id: 'user-1', anonymous: 0, event_type: 'closed',
+        paywall_id: 'paywall-1', paywall_version_id: 'version-1', placement_identifier: 'default',
+        package_identifier: 'annual', platform: 'ios', country: 'CH', app_version: '1.0.0', sdk_version: '2.1.0',
+        metadata: JSON.stringify({ session_id: 'session-1' }), occurred_at: '2026-08-03T10:00:00.000Z',
+        growth_projected_at: null, growth_projection_attempts: 0,
+      };
+      if (call.op === 'first' && call.sql.includes("event_type = 'purchase_succeeded'")) return null;
+      if (call.op === 'run' && call.sql.includes('growth_projected_at')) return { meta: { changes: 1 } };
+      return undefined;
+    });
+    const { env } = baseEnv({
+      growth: async (_input, init) => {
+        growthEvents.push(JSON.parse(String(init?.body || '{}')));
+        return json({ data: { duplicate: false, actions: [] } }, 202);
+      },
+      queue: { send: async () => undefined },
+    });
+    env.DB = db;
+    await expect(evaluatePaywallAbandonment(env, '11', 'paywall-event-1'))
+      .resolves.toMatchObject({ projected: true, duplicate: false });
+    expect(growthEvents).toEqual([expect.objectContaining({
+      event_id: 'paywall:paywall-event-1:abandoned', event_type: 'paywall_abandoned', subject_id: 'user-1',
+    })]);
+  });
+
+  it('suppresses abandonment when the same paywall session completed a purchase', async () => {
+    let growthCalls = 0;
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM billing_paywall_events pe')) return {
+        id: 'paywall-event-1', project_id: '11', customer_id: 'customer-1',
+        primary_app_user_id: 'user-1', anonymous: 0, event_type: 'closed', metadata: '{"session_id":"session-1"}',
+        occurred_at: '2026-08-03T10:00:00.000Z', growth_projected_at: null, growth_projection_attempts: 0,
+      };
+      if (call.op === 'first' && call.sql.includes("event_type = 'purchase_succeeded'")) return { id: 'success-1' };
+      if (call.op === 'run' && call.sql.includes('growth_projected_at')) return { meta: { changes: 1 } };
+      return undefined;
+    });
+    const { env } = baseEnv({ growth: async () => { growthCalls += 1; return json({}); } });
+    env.DB = db;
+    await expect(evaluatePaywallAbandonment(env, '11', 'paywall-event-1'))
+      .resolves.toEqual({ skipped: true, reason: 'purchase_succeeded' });
+    expect(growthCalls).toBe(0);
+  });
+
+  it('re-enqueues due paywall projections for recovery', async () => {
+    const jobs: unknown[] = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'all' && call.sql.includes('growth_projection_attempts < 10')) {
+        return [{ id: 'paywall-event-1', project_id: '11' }];
+      }
+      return undefined;
+    });
+    const { env } = baseEnv({ queue: { send: async (job) => { jobs.push(job); } } });
+    env.DB = db;
+    await expect(enqueuePaywallAbandonmentRecovery(env)).resolves.toBe(1);
+    expect(jobs).toEqual([{
+      type: 'growth.paywall-abandonment.evaluate', projectId: '11', paywallEventId: 'paywall-event-1',
+    }]);
   });
 
   it('delivers a deterministic chat message and marks both receipt and run delivered', async () => {
