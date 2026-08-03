@@ -1,8 +1,8 @@
 # OpenGrow FlutterFlow
 
-Bibliothèque prête à importer pour remplacer les actions RevenueCat dans FlutterFlow.
+Import-ready library for replacing RevenueCat actions in FlutterFlow.
 
-1. Ajoutez la dépendance Git privée avec un ref immuable :
+1. Add the private Git dependency with an immutable ref:
 
    ```yaml
    opengrow_flutterflow:
@@ -12,19 +12,20 @@ Bibliothèque prête à importer pour remplacer les actions RevenueCat dans Flut
        path: sdks/flutterflow
    ```
 
-   Configurez dans FlutterFlow un jeton GitHub fin, en lecture seule et limité à
-   ce dépôt. Ne placez jamais ce jeton dans le code exporté.
-2. Ajoutez `OpenGrowBootstrap` une seule fois sur la page initiale. Pour
-   Il n’initialise jamais Purchases anonymement. Appelez ensuite
-   `opengrowInitializeAuthenticated` juste après `userAuthenticate`, avec le
-   jeton d’accès existant émis par `api.vocostar.com`.
-3. Utilisez `OpenGrowPaywall` avec un `placement`. Son contenu, son offering et
-   son expérience sont récupérés à distance avec fallback hors ligne.
-4. Protégez une page avec `opengrowHasEntitlement('premium')` et redirigez vers le paywall si la valeur est fausse.
-5. Ajoutez `OpenGrowCustomerCenter` dans les réglages. Il inclut historique,
-   abonnements, soldes et restauration.
+   Configure a fine-grained, read-only GitHub token in FlutterFlow and limit it
+   to this repository. Never include that token in exported application code.
+2. Add `OpenGrowBootstrap` once to the initial page. It never initializes
+   Purchases anonymously. Call `opengrowInitializeAuthenticated` immediately
+   after `userAuthenticate` with the existing access token issued by the
+   application authentication gateway.
+3. Use `OpenGrowPaywall` with a `placement`. Its content, offering, and
+   experiment assignment are loaded remotely with an offline fallback.
+4. Protect a page with `opengrowHasEntitlement('premium')` and redirect to the
+   paywall when it returns false.
+5. Add `OpenGrowCustomerCenter` to Settings. It includes purchase history,
+   subscriptions, balances, and restoration.
 
-Actions prêtes pour FlutterFlow :
+FlutterFlow-ready actions:
 
 - `opengrowInitializeAuto`
 - `opengrowInitializeAuthenticated`
@@ -35,15 +36,16 @@ Actions prêtes pour FlutterFlow :
 - `opengrowGetUnreadMessageCount`
 - `opengrowDisplayMessages`
 - `opengrowGetLastDeepLinkJson`
-- `opengrowPurchaseLogin`, `opengrowPurchaseLogout`, achat, restauration,
-  synchronisation, offres et entitlements
+- `opengrowPurchaseLogin`, `opengrowPurchaseLogout`, purchase, restore,
+  synchronization, offerings, and entitlements
 - `opengrowGetPurchaseConfigurationJson`
 - `opengrowGetCustomerInfoJson`
 - `opengrowGetVirtualCurrenciesJson`
 - `opengrowGetCustomerCenterJson`
 - `opengrowOpenSubscriptionManagement`
 
-`api-auth-gateway` est l’unique autorité d’authentification VocoStar. La Library
-n’émet aucun jeton : elle échange le jeton VocoStar existant contre un JWT ES256
-court via `POST /auth/opengrow-token`. Un achat ne démarre pas si cet échange
-échoue. Aucun secret Apple ou Google n’est embarqué dans l’application.
+`api-auth-gateway` remains the only application authentication authority. The
+library never issues an application token. It exchanges the existing access
+token for a short-lived ES256 OpenGrow identity JWT through
+`POST /auth/opengrow-token`. A purchase cannot start when this exchange fails.
+No Apple or Google secret is embedded in the application.
