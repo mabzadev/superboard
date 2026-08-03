@@ -6,6 +6,13 @@ import { createFakeD1, FakeD1Call } from './test/fake-d1';
 function env(overrides: Partial<Env> = {}): Env {
   const db = createFakeD1((call: FakeD1Call) => {
     if (call.op === 'all' && call.sql.includes('FROM rpush_notifications rn JOIN rpush_apps ra')) return [];
+    if (call.op === 'first' && call.sql.includes('FROM instances WHERE api_key = ?')) return { id: 10 };
+    if (call.op === 'first' && call.sql.includes('FROM projects WHERE instance_id = ? AND is_test = ?')) return { id: 101 };
+    if (call.op === 'first' && call.sql.includes('JOIN android_configurations')) return { id: 1 };
+    if (call.op === 'first' && call.sql.includes('FROM projects WHERE id = ? AND instance_id = ?')) {
+      return { id: 101, instance_id: 10, identifier: 'mobile-prod-key', is_test: 0 };
+    }
+    if (call.op === 'first' && call.sql.includes('FROM devices WHERE vendor = ?')) return null;
     return undefined;
   });
   return {
@@ -22,6 +29,27 @@ function env(overrides: Partial<Env> = {}): Env {
 }
 
 describe('Worker scheduled and queue handlers', () => {
+  it.each([
+    '/device_for_vendor_id?vendor_id=config-check',
+    '/api/v1/sdk/device_for_vendor_id?vendor_id=config-check',
+  ])('serves mobile SDK routes on the SDK domain at %s', async (pathname) => {
+    const response = await worker.fetch?.(
+      new Request(`https://sdk.test${pathname}`, {
+        headers: {
+          Host: 'sdk.test',
+          'PROJECT-KEY': 'server-api-key',
+          PLATFORM: 'android',
+          IDENTIFIER: 'com.opengrow.android',
+        },
+      }),
+      env(),
+      {} as ExecutionContext,
+    );
+
+    expect(response?.status).toBe(200);
+    await expect(response?.json()).resolves.toEqual({ last_seen: null });
+  });
+
   it('returns 404 for SSO routes when the target disables SSO', async () => {
     const response = await worker.fetch?.(
       new Request('https://go.test/api/v1/identity/sso/auth/google_oauth2', { method: 'POST' }),
