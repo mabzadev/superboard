@@ -70,6 +70,8 @@ export type NativeCatalogCoverage = {
   catalog: boolean;
   premium: boolean;
   packages: boolean;
+  approved: boolean;
+  purchasable: boolean;
 };
 
 const REQUIRED_NATIVE_CADENCES = ['weekly', 'annual'] as const;
@@ -308,6 +310,29 @@ export function nativeCatalogCoverage(
       .some((product) => Number(product.premium_mapped) === 1)),
     packages: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
       .some((product) => packageTypes(product).has(cadence))),
+    approved: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
+      .some((product) => providerReadiness(product).approved)),
+    purchasable: REQUIRED_NATIVE_CADENCES.every((cadence) => cadenceProducts(cadence)
+      .some((product) => providerReadiness(product).purchasable)),
+  };
+}
+
+export function catalogSyncFresh(
+  lastSyncedAt: unknown,
+  maximumAgeHours: number,
+  nowMillis = Date.now(),
+) {
+  const syncedAtMillis = Date.parse(String(lastSyncedAt || ''));
+  if (!Number.isFinite(syncedAtMillis) || !Number.isFinite(maximumAgeHours) || maximumAgeHours <= 0) return false;
+  const ageMillis = nowMillis - syncedAtMillis;
+  return ageMillis >= -5 * 60_000 && ageMillis <= maximumAgeHours * 60 * 60_000;
+}
+
+function providerReadiness(product: ReleaseGateCatalogProduct) {
+  const metadata = parseObject(product.metadata);
+  return {
+    approved: metadata.provider_approved === true,
+    purchasable: metadata.provider_purchasable === true,
   };
 }
 

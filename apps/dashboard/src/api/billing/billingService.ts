@@ -9,6 +9,7 @@ export interface BillingProduct {
   display_name: string;
   environment: string;
   active: number;
+  metadata?: string | Record<string, unknown> | null;
 }
 
 export interface BillingEntitlement {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   billingOperationalPrerequisites,
   buildReleaseGate,
+  catalogSyncFresh,
   certificationRunCompatibility,
   nativeCatalogCoverage,
   RELEASE_GATE_CHECKS,
@@ -95,14 +96,47 @@ describe('Purchases release gate', () => {
 
   it('detects weekly and annual products from provider metadata without product ID assumptions', () => {
     const products: ReleaseGateCatalogProduct[] = [
-      product('arbitrary-product-a', '{"subscription_period":"ONE_WEEK"}', 1, 'weekly'),
-      product('arbitrary-product-b', '{"subscription_period":"ONE_YEAR"}', 1, 'annual'),
+      product('arbitrary-product-a', '{"subscription_period":"ONE_WEEK","provider_approved":true,"provider_purchasable":true}', 1, 'weekly'),
+      product('arbitrary-product-b', '{"subscription_period":"ONE_YEAR","provider_approved":true,"provider_purchasable":true}', 1, 'annual'),
     ];
     expect(nativeCatalogCoverage(products, 'project-1', 'apple', 'production')).toEqual({
       catalog: true,
       premium: true,
       packages: true,
+      approved: true,
+      purchasable: true,
     });
+  });
+
+  it('fails closed when Apple products are not approved or territory availability is unknown', () => {
+    const products: ReleaseGateCatalogProduct[] = [
+      product('weekly-plan', '{"subscription_period":"ONE_WEEK","state":"READY_TO_SUBMIT","provider_approved":false,"provider_purchasable":false}', 1, 'weekly'),
+      product('annual-plan', '{"subscription_period":"ONE_YEAR","state":"APPROVED","provider_approved":true,"provider_purchasable":false}', 1, 'annual'),
+    ];
+    expect(nativeCatalogCoverage(products, 'project-1', 'apple', 'production')).toMatchObject({
+      catalog: true,
+      approved: false,
+      purchasable: false,
+    });
+  });
+
+  it('requires active and regionally available Google base plans for both cadences', () => {
+    const products: ReleaseGateCatalogProduct[] = [
+      product('weekly-plan', '{"base_plans":[{"billing_period":"P1W","state":"ACTIVE","new_subscriber_available":true}],"provider_approved":true,"provider_purchasable":true}', 1, 'weekly', 'google'),
+      product('annual-plan', '{"base_plans":[{"billing_period":"P1Y","state":"ACTIVE","new_subscriber_available":false}],"provider_approved":true,"provider_purchasable":false}', 1, 'annual', 'google'),
+    ];
+    expect(nativeCatalogCoverage(products, 'project-1', 'google', 'production')).toMatchObject({
+      catalog: true,
+      approved: true,
+      purchasable: false,
+    });
+  });
+
+  it('requires a recent successful provider catalog synchronization', () => {
+    const now = Date.parse('2026-08-04T12:00:00.000Z');
+    expect(catalogSyncFresh('2026-08-03T12:01:00.000Z', 24, now)).toBe(true);
+    expect(catalogSyncFresh('2026-08-03T11:59:59.000Z', 24, now)).toBe(false);
+    expect(catalogSyncFresh(null, 24, now)).toBe(false);
   });
 
   it('uses current package cadence only for legacy catalog rows without provider periods', () => {
@@ -114,6 +148,8 @@ describe('Purchases release gate', () => {
       catalog: true,
       premium: false,
       packages: true,
+      approved: false,
+      purchasable: false,
     });
   });
 
