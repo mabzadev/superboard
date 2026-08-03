@@ -27,6 +27,7 @@ import redirectRoute from './routes/redirect';
 import { runMaintenance } from './lib/maintenance';
 import { dispatchQueueJob } from './lib/jobs';
 import { isSsoEnabled } from './lib/deployment';
+import { purchasesSigningJwks } from './lib/billing-identity';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -66,6 +67,20 @@ app.get('/health', (c) => c.json({
 
 app.get('/up', (c) => c.text('OK', 200));
 app.get('/favicon.ico', (c) => c.body(null, 204));
+
+app.get('/.well-known/purchases-jwks.json', (c) => {
+  try {
+    return c.json(purchasesSigningJwks(c.env), 200, {
+      'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+    });
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'purchases_jwks_unavailable',
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    return c.json({ error: 'Purchases verification keys unavailable' }, 503);
+  }
+});
 
 // =============================================
 // Routing par sous-domaine (comme le vrai OpenGrow)

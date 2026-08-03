@@ -64,10 +64,12 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
         _selected = value?.packages.firstOrNull;
         _error = value == null ? 'Aucune offre disponible.' : null;
       });
-      unawaited(OpenGrowPurchases.instance.trackPaywallEvent(
-        'impression',
-        configuration: configuration,
-      ));
+      unawaited(
+        OpenGrowPurchases.instance.trackPaywallEvent(
+          'impression',
+          configuration: configuration,
+        ),
+      );
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     }
@@ -77,11 +79,13 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
     setState(() => _selected = package);
     final configuration = _configuration;
     if (configuration != null) {
-      unawaited(OpenGrowPurchases.instance.trackPaywallEvent(
-        'package_selected',
-        configuration: configuration,
-        packageIdentifier: package.identifier,
-      ));
+      unawaited(
+        OpenGrowPurchases.instance.trackPaywallEvent(
+          'package_selected',
+          configuration: configuration,
+          packageIdentifier: package.identifier,
+        ),
+      );
     }
   }
 
@@ -112,12 +116,14 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
         OpenGrowPurchaseOutcome.failed => 'purchase_failed',
         OpenGrowPurchaseOutcome.pending => 'purchase_started',
       };
-      unawaited(OpenGrowPurchases.instance.trackPaywallEvent(
-        type,
-        configuration: configuration,
-        packageIdentifier: package.identifier,
-        metadata: {if (result.error != null) 'error': result.error},
-      ));
+      unawaited(
+        OpenGrowPurchases.instance.trackPaywallEvent(
+          type,
+          configuration: configuration,
+          packageIdentifier: package.identifier,
+          metadata: {if (result.error != null) 'error': result.error},
+        ),
+      );
     }
     if (result.outcome == OpenGrowPurchaseOutcome.purchased) {
       widget.onPurchased?.call();
@@ -137,20 +143,24 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
     try {
       await OpenGrowPurchases.instance.restorePurchases();
       if (configuration != null) {
-        unawaited(OpenGrowPurchases.instance.trackPaywallEvent(
-          'restore_succeeded',
-          configuration: configuration,
-        ));
+        unawaited(
+          OpenGrowPurchases.instance.trackPaywallEvent(
+            'restore_succeeded',
+            configuration: configuration,
+          ),
+        );
       }
       widget.onRestored?.call();
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
       if (configuration != null) {
-        unawaited(OpenGrowPurchases.instance.trackPaywallEvent(
-          'restore_failed',
-          configuration: configuration,
-          metadata: {'error': error.toString()},
-        ));
+        unawaited(
+          OpenGrowPurchases.instance.trackPaywallEvent(
+            'restore_failed',
+            configuration: configuration,
+            metadata: {'error': error.toString()},
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -160,10 +170,12 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
   void _close() {
     final configuration = _configuration;
     if (configuration != null) {
-      unawaited(OpenGrowPurchases.instance.trackPaywallEvent(
-        'closed',
-        configuration: configuration,
-      ));
+      unawaited(
+        OpenGrowPurchases.instance.trackPaywallEvent(
+          'closed',
+          configuration: configuration,
+        ),
+      );
     }
     widget.onClosed?.call();
   }
@@ -248,11 +260,15 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
             ? component['items'] as List
             : const [];
         return Column(
-          children: items.map((item) => ListTile(
-            dense: true,
-            leading: Icon(Icons.check_circle, color: _accentColor),
-            title: Text(item.toString()),
-          )).toList(),
+          children: items
+              .map(
+                (item) => ListTile(
+                  dense: true,
+                  leading: Icon(Icons.check_circle, color: _accentColor),
+                  title: Text(item.toString()),
+                ),
+              )
+              .toList(),
         );
       case 'packages':
         return _packageList();
@@ -384,7 +400,10 @@ class OpenGrowCustomerCenter extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text('Soldes', style: Theme.of(context).textTheme.titleMedium),
                 for (final entry in info.balances.entries)
-                  ListTile(title: Text(entry.key), trailing: Text('${entry.value}')),
+                  ListTile(
+                    title: Text(entry.key),
+                    trailing: Text('${entry.value}'),
+                  ),
               ],
               OpenGrowRestorePurchasesButton(onRestored: onRestored),
             ],

@@ -81,7 +81,9 @@ class OpenGrowFlutterFlowEntitlement {
   final String productId;
   final String expirationIso;
 
-  factory OpenGrowFlutterFlowEntitlement.fromOpenGrow(OpenGrowEntitlementInfo value) {
+  factory OpenGrowFlutterFlowEntitlement.fromOpenGrow(
+    OpenGrowEntitlementInfo value,
+  ) {
     return OpenGrowFlutterFlowEntitlement(
       identifier: value.identifier,
       active: value.isActive,

@@ -1,6 +1,6 @@
 name: opengrow_flutterflow
 description: FlutterFlow-ready actions and paywall widgets for OpenGrow Purchases.
-version: 2.0.0
+version: 2.1.0
 publish_to: none
 
 environment:
@@ -10,8 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^1.6.0
   opengrow_flutter:
     path: ../flutter
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

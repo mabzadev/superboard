@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:opengrow_flutter/opengrow.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'models.dart';
 
@@ -48,6 +50,62 @@ Future<bool> opengrowInitializeAuto({
     purchasesBaseUrl: purchasesBaseUrl,
     identityToken: identityToken,
   );
+}
+
+/// Initializes Purchases only after VocoStar has exchanged its existing access
+/// token for a short-lived ES256 OpenGrow identity token.
+Future<bool> opengrowInitializeAuthenticated({
+  required String projectKey,
+  required String vocostarAccessToken,
+  String sdkBaseUrl = 'https://sdk.vocostar.com',
+  String vocostarApiBaseUrl = 'https://api.vocostar.com',
+}) async {
+  if (vocostarAccessToken.trim().isEmpty) {
+    throw const OpenGrowPurchasesException(
+      'VocoStar authentication is required before Purchases initialization',
+      code: 'identity_required',
+    );
+  }
+  Future<String?> tokenProvider() async {
+    final client = http.Client();
+    try {
+      final response = await client
+          .post(
+            Uri.parse(
+              '${vocostarApiBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
+            ),
+            headers: {
+              'Authorization': 'Bearer ${vocostarAccessToken.trim()}',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      final body = response.body.isEmpty ? const {} : jsonDecode(response.body);
+      final token = body is Map ? body['access_token']?.toString() : null;
+      if (response.statusCode != 200 || token == null || token.isEmpty) {
+        throw OpenGrowPurchasesException(
+          'VocoStar identity synchronization failed',
+          code: 'identity_sync_failed',
+          retryable: response.statusCode >= 500,
+        );
+      }
+      return token;
+    } finally {
+      client.close();
+    }
+  }
+
+  final initialToken = await tokenProvider();
+  final platformIdentifier = await OpenGrow().getPlatformIdentifier();
+  final base = sdkBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+  await OpenGrowPurchases.instance.configure(
+    projectKey: projectKey,
+    platformIdentifier: platformIdentifier,
+    baseUrl: '$base/purchases/v2',
+    identityToken: initialToken,
+    identityTokenProvider: tokenProvider,
+  );
+  return true;
 }
 
 /// Associates both OpenGrow attribution and verified purchases with a user.
@@ -127,7 +185,9 @@ Future<String> opengrowGenerateLinkJson(String paramsJson) async {
       subtitle: params['subtitle']?.toString(),
       imageURL: params['imageURL']?.toString(),
       data: data,
-      tags: (params['tags'] as List?)?.map((value) => value.toString()).toList(),
+      tags: (params['tags'] as List?)
+          ?.map((value) => value.toString())
+          .toList(),
       customRedirects: redirects == null
           ? null
           : CustomRedirects(
@@ -140,12 +200,12 @@ Future<String> opengrowGenerateLinkJson(String paramsJson) async {
       tracking: tracking == null
           ? null
           : TrackingParams(
-              utmCampaign:
-                  (tracking['utm_campaign'] ?? tracking['campaign'])?.toString(),
-              utmSource:
-                  (tracking['utm_source'] ?? tracking['source'])?.toString(),
-              utmMedium:
-                  (tracking['utm_medium'] ?? tracking['medium'])?.toString(),
+              utmCampaign: (tracking['utm_campaign'] ?? tracking['campaign'])
+                  ?.toString(),
+              utmSource: (tracking['utm_source'] ?? tracking['source'])
+                  ?.toString(),
+              utmMedium: (tracking['utm_medium'] ?? tracking['medium'])
+                  ?.toString(),
             ),
     ),
   );
@@ -172,7 +232,15 @@ Future<String> opengrowPurchase({
   final offering = offeringIdentifier.isEmpty
       ? offerings.current
       : offerings.all[offeringIdentifier];
-  if (offering == null) return OpenGrowPurchaseOutcome.failed.name;
+  if (offering == null) {
+    return jsonEncode(
+      const OpenGrowPurchaseResult(
+        OpenGrowPurchaseOutcome.failed,
+        code: 'offering_not_found',
+        error: 'Offering not found',
+      ).toJson(),
+    );
+  }
   OpenGrowPackage? selected;
   for (final package in offering.packages) {
     if (package.identifier == packageIdentifier) {
@@ -180,8 +248,19 @@ Future<String> opengrowPurchase({
       break;
     }
   }
-  if (selected == null) return OpenGrowPurchaseOutcome.failed.name;
-  return (await OpenGrowPurchases.instance.purchasePackage(selected)).outcome.name;
+  if (selected == null) {
+    return jsonEncode(
+      OpenGrowPurchaseResult(
+        OpenGrowPurchaseOutcome.failed,
+        code: 'package_not_found',
+        error: 'Package not found',
+        productIdentifier: packageIdentifier,
+      ).toJson(),
+    );
+  }
+  return jsonEncode(
+    (await OpenGrowPurchases.instance.purchasePackage(selected)).toJson(),
+  );
 }
 
 Future<bool> opengrowRestore() async {
@@ -205,8 +284,10 @@ Future<String> opengrowGetOfferings({String placement = 'default'}) async {
   return jsonEncode({
     'current': offerings.current?.identifier,
     'all': offerings.all.map(
-      (key, value) =>
-          MapEntry(key, OpenGrowFlutterFlowOffering.fromOpenGrow(value).toMap()),
+      (key, value) => MapEntry(
+        key,
+        OpenGrowFlutterFlowOffering.fromOpenGrow(value).toMap(),
+      ),
     ),
   });
 }
@@ -242,18 +323,29 @@ Future<String> opengrowGetVirtualCurrenciesJson() async {
   final currencies = await OpenGrowPurchases.instance.getVirtualCurrencies();
   return jsonEncode({
     'fetched_at': currencies.fetchedAt.toIso8601String(),
-    'all': currencies.all.map((key, value) => MapEntry(key, {
-      'code': value.code,
-      'name': value.name,
-      'description': value.description,
-      'icon': value.icon,
-      'balance': value.balance,
-    })),
+    'all': currencies.all.map(
+      (key, value) => MapEntry(key, {
+        'code': value.code,
+        'name': value.name,
+        'description': value.description,
+        'icon': value.icon,
+        'balance': value.balance,
+      }),
+    ),
   });
 }
 
 Future<String> opengrowGetCustomerCenterJson() async {
   return jsonEncode(await OpenGrowPurchases.instance.getCustomerCenter());
+}
+
+Future<bool> opengrowOpenSubscriptionManagement() async {
+  final info = await OpenGrowPurchases.instance.getCustomerInfo();
+  final value = info.managementUrl;
+  if (value == null || value.isEmpty) return false;
+  final uri = Uri.tryParse(value);
+  if (uri == null || !{'https', 'itms-apps'}.contains(uri.scheme)) return false;
+  return launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
 Future<List<OpenGrowFlutterFlowEntitlement>> opengrowGetEntitlements() async {
