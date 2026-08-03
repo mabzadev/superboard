@@ -31,8 +31,11 @@ import redirectRoute from './routes/redirect';
 import { runMaintenance } from './lib/maintenance';
 import { dispatchQueueJob } from './lib/jobs';
 import { isSsoEnabled } from './lib/deployment';
-import { purchasesSigningJwks } from './lib/billing-identity';
-import { dispatchBillingServiceJob, billingServiceEnabled } from './lib/billing-service';
+import {
+  billingServiceEnabled,
+  dispatchBillingServiceJob,
+  purchasesJwksFromBillingAuthority,
+} from './lib/billing-service';
 import { isBillingQueueJob } from './lib/billing-dispatch';
 import { readTextLimited } from './lib/http-limits';
 import { emitBillingGrowthEvent } from './lib/growth-delivery';
@@ -100,9 +103,9 @@ app.get('/health/growth', async (c) => {
 app.get('/up', (c) => c.text('OK', 200));
 app.get('/favicon.ico', (c) => c.body(null, 204));
 
-app.get('/.well-known/purchases-jwks.json', (c) => {
+app.get('/.well-known/purchases-jwks.json', async (c) => {
   try {
-    return c.json(purchasesSigningJwks(c.env), 200, {
+    return c.json(await purchasesJwksFromBillingAuthority(c.env), 200, {
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
     });
   } catch (error) {

@@ -30,6 +30,9 @@ async function identityFixture() {
     } as unknown as KVNamespace,
     ENVIRONMENT: 'test',
     SHORTLINK_DOMAIN: 'go.test', API_DOMAIN: 'api.test', SDK_DOMAIN: 'sdk.test', CORS_ORIGIN: '*', JWT_SECRET: 'test',
+    AUTH_GATEWAY_ISSUER: issuer,
+    AUTH_GATEWAY_AUDIENCE: audience,
+    AUTH_GATEWAY_JWKS_URL: jwksUri,
     PURCHASES_SIGNING_KEYSET: JSON.stringify({ active_kid: 'purchases-key-1', keys: [purchasesPrivateJwk] }),
   } as Env;
   const token = async (overrides: { audience?: string; expiration?: string | number; subject?: string } = {}) => new SignJWT({})
@@ -48,6 +51,17 @@ describe('billing OIDC identity', () => {
 
   it('accepts a correctly signed subject with strict issuer and audience', async () => {
     const fixture = await identityFixture();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ keys: [fixture.publicJwk] }), { status: 200 })));
+    await expect(verifiedAppUserId(fixture.env, 1, `Bearer ${await fixture.token()}`)).resolves.toBe('opaque-user-42');
+  });
+
+  it('uses the typed target gateway when no project-specific identity provider exists', async () => {
+    const fixture = await identityFixture();
+    fixture.env.DB = {
+      prepare() {
+        return { bind() { return { first: async () => null }; } };
+      },
+    } as unknown as D1Database;
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ keys: [fixture.publicJwk] }), { status: 200 })));
     await expect(verifiedAppUserId(fixture.env, 1, `Bearer ${await fixture.token()}`)).resolves.toBe('opaque-user-42');
   });

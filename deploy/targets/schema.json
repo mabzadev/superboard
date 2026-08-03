@@ -4,7 +4,7 @@
   "title": "OpenGrow deployment target",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "target", "accountId", "workersDevSubdomain", "accessMode", "registrationMode", "ssoEnabled", "mail", "domains", "workers", "oauth", "environments"],
+  "required": ["schemaVersion", "target", "accountId", "workersDevSubdomain", "accessMode", "registrationMode", "ssoEnabled", "mail", "domains", "workers", "oauth", "authGateway", "environments"],
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
@@ -53,6 +53,16 @@
       "required": ["dashboardClientId"],
       "properties": {
         "dashboardClientId": { "type": "string", "minLength": 3 }
+      }
+    },
+    "authGateway": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issuer", "audience", "jwksUrl"],
+      "properties": {
+        "issuer": { "type": "string", "pattern": "^https://[^\\s]+$" },
+        "audience": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "jwksUrl": { "type": "string", "pattern": "^https://[^\\s]+$" }
       }
     },
     "environments": {
@@ -109,7 +119,7 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "messagingProjectIds", "growthD1", "queues"],
+      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "messagingProjectIds", "growthD1", "billingExecutionMode", "queues"],
       "properties": {
         "d1": { "$ref": "#/$defs/namedResource" },
         "kv": { "$ref": "#/$defs/namedResource" },
@@ -123,6 +133,7 @@
           "uniqueItems": true
         },
         "growthD1": { "$ref": "#/$defs/namedResource" },
+        "billingExecutionMode": { "enum": ["local", "service"] },
         "queues": { "$ref": "#/$defs/queues" }
       }
     }

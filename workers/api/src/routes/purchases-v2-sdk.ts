@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import type { AppVariables, Env } from '../types';
 import { applyVerifiedPurchase, offeringsForCustomer, type BillingEnvironment } from '../lib/billing';
-import { resolveSdkCustomer, signedCustomerInfo } from '../lib/billing-identity';
 import { finalizeGooglePurchase, verifyAppleTransaction, verifyGooglePurchase } from '../lib/store-verification';
 import { isPurchasesEnabled } from '../lib/deployment';
 import {
@@ -12,7 +11,12 @@ import {
   type TargetingContext,
 } from '../lib/purchases-v2';
 import { createWebCheckoutSession, createWebPortalSession, redeemWebPurchase } from '../lib/web-billing';
-import { billingServiceEnabled, callBillingService } from '../lib/billing-service';
+import {
+  billingServiceEnabled,
+  callBillingService,
+  customerInfoFromBillingAuthority,
+  resolveCustomerFromBillingAuthority,
+} from '../lib/billing-service';
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -39,7 +43,7 @@ async function context(c: any) {
   if (!project) throw purchasesError('invalid_sdk_project', 'Invalid project for SDK credentials', 403);
   if (!isPurchasesEnabled(c.env, project.purchases_enabled)) throw purchasesError('purchases_disabled', 'OpenGrow Purchases is not enabled for this project', 403);
   if (Number(project.purchases_core) !== 1) throw purchasesError('purchases_v2_not_enabled', 'Purchases v2 core is not enabled for this project', 403);
-  const resolved = await resolveSdkCustomer(c.env, {
+  const resolved = await resolveCustomerFromBillingAuthority(c.env, {
     projectId,
     authorization: c.req.header('Authorization'),
     anonymousId: c.req.header('X-OpenGrow-Anonymous-ID') || undefined,
@@ -116,7 +120,7 @@ sdk.get('/configuration', async (c) => {
 sdk.get('/customer-info', async (c) => {
   try {
     const ctx = await context(c);
-    return c.json(await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)), 200, { 'Cache-Control': 'private, no-store' });
+    return c.json(await customerInfoFromBillingAuthority(c.env, ctx.projectId, String(ctx.customer.id)), 200, { 'Cache-Control': 'private, no-store' });
   } catch (error) { return fail(c, error); }
 });
 
@@ -168,7 +172,7 @@ sdk.post('/receipts', async (c) => {
       duplicate: result.duplicate,
       status: purchase.status,
       finish_transaction: purchase.status !== 'pending',
-      customer_info: await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id)),
+      customer_info: await customerInfoFromBillingAuthority(c.env, ctx.projectId, String(ctx.customer.id)),
     });
   } catch (error) { return fail(c, error); }
 });
@@ -254,7 +258,7 @@ sdk.get('/virtual-currencies', async (c) => {
 sdk.get('/customer-center', async (c) => {
   try {
     const ctx = await context(c);
-    const info = await signedCustomerInfo(c.env, ctx.projectId, String(ctx.customer.id));
+    const info = await customerInfoFromBillingAuthority(c.env, ctx.projectId, String(ctx.customer.id));
     const subscriptions = (info.subscriptions || []) as Array<Record<string, any>>;
     return c.json({
       schema_version: 1,

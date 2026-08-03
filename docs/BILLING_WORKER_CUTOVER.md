@@ -4,13 +4,14 @@
 
 The financial domain is deployed in the private `opengrow-billing` Worker. It has no public route and no `workers.dev` hostname. The API reaches it only through a Cloudflare service binding.
 
-Purchase traffic intentionally remains in `local` mode until the Apple, Google Play, Stripe, FlutterFlow, and legacy-subscription certification gates are complete. The private Worker is ready, but it is not yet the production execution path.
+Purchase traffic starts in `local` mode while the private Worker and its dependencies are deployed and verified. The controlled technical cutover to `service` mode happens before the final device certification so that certification exercises the real production architecture. Public release remains blocked until the complete Apple, Google Play, Stripe, FlutterFlow, and legacy-subscription gate passes.
 
 Readiness is exposed through `GET /health/billing`. The response must report:
 
 - `ready_for_traffic: true`;
 - `credential_copies_ready: true`;
 - `credential_decryption_ready: true`;
+- `signing_authority_ready: true`;
 - no missing Billing secrets.
 
 The endpoint must never return private keys, certificates, Store credentials, or decrypted values.
@@ -19,7 +20,7 @@ The endpoint must never return private keys, certificates, Store credentials, or
 
 - `api-auth-gateway` remains the only application authentication authority.
 - OpenGrow verifies the short-lived ES256 JWT issued by that gateway and does not create a second application identity.
-- In `service` mode, `opengrow-billing` executes financial writes, receipt verification, Stripe Checkout, Billing Portal, redemption, reconciliation, and provider actions.
+- In `service` mode, `opengrow-billing` resolves the authenticated customer context, signs CustomerInfo, and executes financial writes, receipt verification, restoration, Stripe Checkout, Billing Portal, redemption, reconciliation, and provider actions.
 - Stripe credentials have separate API and Billing ciphertexts. Each execution domain can decrypt only its own copy.
 - The dashboard, Messaging, Reputation, and Growth cannot assign an entitlement directly.
 - The legacy purchase provider remains enabled until the complete device matrix and subscription inventory pass.
@@ -30,7 +31,7 @@ The endpoint must never return private keys, certificates, Store credentials, or
 FlutterFlow / SDK
   -> OpenGrow API (gateway-issued JWT)
   -> private service binding
-  -> Billing Worker
+  -> Billing Worker (customer resolution + signed CustomerInfo)
   -> Apple / Google Play
   -> immutable billing event + projections
 
@@ -52,9 +53,18 @@ Webhooks acknowledge only after signature verification and durable persistence. 
 
 Secret values must be configured through Cloudflare secrets. They must never be committed, placed in Wrangler variables, returned by an API, or written to logs.
 
-## Cutover gate
+## Technical cutover gate
 
-Do not set `BILLING_EXECUTION_MODE=service` until all automated prerequisites and all device/provider checks in Purchases Diagnostics are green. This includes:
+Set the target environment's typed `billingExecutionMode` property to `service` only after these automated prerequisites are green:
+
+1. A recent verified D1 backup exists.
+2. `npm run billing:check` and `npm run worker:check` pass.
+3. `/health/billing` reports every readiness field as ready, including `signing_authority_ready`.
+4. Required service bindings, queues, DLQs, and secrets exist.
+5. The private Billing endpoints and public JWKS delegation pass smoke tests.
+6. Monitoring and a tested `local` routing rollback are available.
+
+After this technical cutover, run the complete certification matrix through `service` mode. Do not publish until the Purchases Diagnostics release gate includes:
 
 1. Approved and purchasable weekly and yearly products.
 2. Apple Sandbox/TestFlight device evidence.
@@ -64,7 +74,7 @@ Do not set `BILLING_EXECUTION_MODE=service` until all automated prerequisites an
 6. Store, OpenGrow, Stripe, and application projection convergence.
 7. Complete legacy subscription inventory and import.
 8. FlutterFlow iOS and Android recovery tests.
-9. Empty DLQ, active alerts, and a verified recent D1 backup.
+9. Empty DLQ and active alerts throughout the observation window.
 
 Manual free-text approval is not certification evidence. Each passed check must reference an immutable observation from a completed certification run. A run records the platform, environment, build, application and SDK versions, device model, OS version, operator, and server timestamps. Each observation stores a bounded evidence snapshot and its SHA-256 digest.
 
@@ -73,13 +83,14 @@ Billing transaction and event references are accepted only when the backend can 
 ## Cutover procedure
 
 1. Back up D1 and record the deployed API and Billing version IDs.
-2. Run `npm run billing:check`, `npm run worker:check`, and the complete device matrix.
+2. Run `npm run billing:check` and `npm run worker:check`.
 3. Verify `/health/billing` and the required secret names.
-4. Deploy Billing first, then deploy the API with `BILLING_EXECUTION_MODE=service`.
-5. Run one Sandbox purchase per native Store, one restoration, and one Stripe Test event.
-6. Monitor validation success, latency, pending events, retries, DLQ, and entitlement divergence.
-7. Remove the legacy purchase dependency only in a separate release after the observation window passes.
+4. Deploy Billing first, set `billingExecutionMode` to `service` in the typed target manifest, then deploy the API.
+5. Verify the public JWKS and signed CustomerInfo delegation before opening device certification.
+6. Run the complete device matrix, including one Sandbox purchase per native Store, restoration, recovery, and Stripe Test events.
+7. Monitor validation success, latency, pending events, retries, DLQ, and entitlement divergence.
+8. Remove the legacy purchase dependency only in a separate release after the public release gate and observation window pass.
 
 ## Rollback
 
-Redeploy the API with `BILLING_EXECUTION_MODE=local`. Do not edit immutable events and do not delete queued messages; they are required for replay. Restore the Billing Worker and D1 backup independently only when necessary. A routing rollback never changes the application authentication authority.
+Set the target environment's `billingExecutionMode` back to `local` and redeploy the API. Do not edit immutable events and do not delete queued messages; they are required for replay. Restore the Billing Worker and D1 backup independently only when necessary. A routing rollback never changes the application authentication authority.

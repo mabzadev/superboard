@@ -38,6 +38,11 @@
   "oauth": {
     "dashboardClientId": "opengrow-vocostar"
   },
+  "authGateway": {
+    "issuer": "https://api.vocostar.com",
+    "audience": "opengrow",
+    "jwksUrl": "https://api.vocostar.com/.well-known/jwks.json"
+  },
   "environments": {
     "production": {
       "d1": {
@@ -54,6 +59,7 @@
       "messagingR2": { "name": "opengrow-messaging" },
       "messagingProjectIds": [11, 12],
       "growthD1": { "name": "opengrow-growth-db", "id": "d131bb22-f3b5-4f7b-96df-c06a9f4ecc31" },
+      "billingExecutionMode": "local",
       "queues": {
         "events": "opengrow-events",
         "eventsDlq": "opengrow-events-dlq",

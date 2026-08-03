@@ -1,9 +1,15 @@
 import { Hono } from 'hono';
 import type { BillingEnv } from '../../api/src/types';
 import { billingWorkerReadiness } from '../../api/src/lib/billing-worker-readiness';
-import { applyVerifiedPurchase } from '../../api/src/lib/billing';
+import { applyVerifiedPurchase, identifyCustomer } from '../../api/src/lib/billing';
 import { dispatchBillingJob, isBillingQueueJob } from '../../api/src/lib/billing-dispatch';
-import { purchasesSigningJwks, signedCustomerInfo } from '../../api/src/lib/billing-identity';
+import {
+  purchasesSigningJwks,
+  resolveSdkCustomer,
+  signedCustomerInfo,
+  verifiedAppUserId,
+} from '../../api/src/lib/billing-identity';
+import { restoreVerifiedPurchases } from '../../api/src/lib/billing-restore';
 import { reconcileBillingState } from '../../api/src/lib/billing-jobs';
 import {
   fetchStoreCatalog,
@@ -76,6 +82,58 @@ app.post('/internal/v1/customer-info', async (c) => {
   const customerId = String(body.customer_id || '');
   if (!projectId || !customerId) throw publicError('customer_context_invalid', 'project_id and customer_id are required');
   return c.json({ data: await signedCustomerInfo(c.env, projectId, customerId) });
+});
+
+app.post('/internal/v1/customers/resolve', async (c) => {
+  const body = await boundedRecord(c.req.raw);
+  const projectId = requiredText(body.project_id, 'project_id');
+  const authorization = optionalText(body.authorization);
+  const anonymousId = optionalText(body.anonymous_id);
+  try {
+    return c.json({ data: await resolveSdkCustomer(c.env, {
+      projectId,
+      authorization: authorization || undefined,
+      anonymousId: anonymousId || undefined,
+    }) });
+  } catch (error) {
+    throw publicError('customer_identity_invalid', error instanceof Error ? error.message : 'Customer identity is invalid', 401);
+  }
+});
+
+app.post('/internal/v1/customers/identify', async (c) => {
+  const body = await boundedRecord(c.req.raw);
+  const projectId = requiredText(body.project_id, 'project_id');
+  const currentAppUserId = requiredText(body.current_app_user_id, 'current_app_user_id');
+  const authorization = optionalText(body.authorization);
+  let targetAppUserId: string | null;
+  try {
+    targetAppUserId = await verifiedAppUserId(c.env, projectId, authorization || undefined);
+  } catch (error) {
+    throw publicError('customer_identity_invalid', error instanceof Error ? error.message : 'Customer identity is invalid', 401);
+  }
+  if (!targetAppUserId) throw publicError('identity_required', 'A verified identity token is required', 401);
+  const customer = await identifyCustomer(c.env.DB, projectId, currentAppUserId, targetAppUserId);
+  return c.json({ data: await signedCustomerInfo(c.env, projectId, String(customer?.id)) });
+});
+
+app.post('/internal/v1/receipts/restore', async (c) => {
+  const body = await boundedRecord(c.req.raw);
+  const projectId = requiredText(body.project_id, 'project_id');
+  const customerId = requiredText(body.customer_id, 'customer_id');
+  const environment = body.environment === 'production' ? 'production' : body.environment === 'sandbox' ? 'sandbox' : null;
+  if (!environment) throw publicError('restore_environment_invalid', 'environment must be sandbox or production');
+  const restored = await restoreVerifiedPurchases(c.env, {
+    projectId,
+    customerId,
+    environment,
+    appleTransactions: body.apple_transactions,
+    googlePurchases: body.google_purchases,
+  });
+  return c.json({ data: {
+    result: 'purchased',
+    restored,
+    customer_info: await signedCustomerInfo(c.env, projectId, customerId),
+  } });
 });
 
 app.post('/internal/v1/credentials/encrypt', async (c) => {
@@ -160,6 +218,24 @@ async function boundedJson(request: Request): Promise<unknown> {
   catch { throw publicError('request_too_large', 'Request body is limited to 1 MB', 413); }
   try { return JSON.parse(text || '{}'); }
   catch { throw publicError('invalid_json', 'Request body must be valid JSON', 400); }
+}
+
+async function boundedRecord(request: Request): Promise<Record<string, unknown>> {
+  const value = await boundedJson(request);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw publicError('request_object_required', 'Request body must be a JSON object', 400);
+  }
+  return value as Record<string, unknown>;
+}
+
+function requiredText(value: unknown, field: string) {
+  const result = optionalText(value);
+  if (!result) throw publicError(`${field}_required`, `${field} is required`);
+  return result;
+}
+
+function optionalText(value: unknown) {
+  return typeof value === 'string' ? value.trim().slice(0, 4096) : '';
 }
 
 export default {

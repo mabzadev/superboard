@@ -14,7 +14,8 @@ try {
 } catch {
   for (const required of [
     "account-id", "workers-dev-subdomain", "shortlinks-domain", "sdk-domain",
-    "dashboard-domain", "messaging-domain", "mail-from-address",
+    "dashboard-domain", "messaging-domain", "mail-from-address", "auth-gateway-issuer",
+    "auth-gateway-audience", "auth-gateway-jwks-url",
   ]) {
     if (!args[required]) throw new Error(`New targets require --${required}`);
   }
@@ -64,6 +65,7 @@ function newManifest() {
     messagingR2: { name: `${resourcePrefix(name)}-messaging` },
     messagingProjectIds: [],
     growthD1: { name: `${resourcePrefix(name)}-growth-db`, id: null },
+    billingExecutionMode: "local",
     queues: queues(name),
   });
   return {
@@ -94,6 +96,11 @@ function newManifest() {
       growth: { staging: "opengrow-growth-staging", production: "opengrow-growth" },
     },
     oauth: { dashboardClientId: `${prefix}-dashboard` },
+    authGateway: {
+      issuer: args["auth-gateway-issuer"],
+      audience: args["auth-gateway-audience"],
+      jwksUrl: args["auth-gateway-jwks-url"],
+    },
     environments: { staging: environment("staging"), production: environment("production") },
   };
 }
