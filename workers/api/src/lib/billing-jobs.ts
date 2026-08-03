@@ -211,6 +211,22 @@ export async function reconcileBillingState(env: BillingEnv) {
       await env.BILLING_QUEUE.send({ type: 'billing.refund.action.execute', actionId: row.id });
     }
   }
+  const googleVoidedProjects = await env.DB.prepare(`
+    SELECT connection.project_id
+    FROM billing_store_connections connection
+    LEFT JOIN billing_google_voided_sync_state state
+      ON state.project_id = connection.project_id AND state.environment = 'production'
+    WHERE connection.provider = 'google' AND connection.environment = 'production'
+      AND connection.status IN ('configured', 'connected')
+      AND (state.last_completed_at IS NULL OR datetime(state.last_completed_at) <= datetime('now', '-15 minutes'))
+      AND (state.claim_token IS NULL OR state.claim_expires_at IS NULL OR datetime(state.claim_expires_at) <= datetime('now'))
+    ORDER BY COALESCE(state.last_completed_at, '1970-01-01') LIMIT 25
+  `).all<{ project_id: string }>();
+  if (env.BILLING_QUEUE) {
+    for (const row of googleVoidedProjects.results || []) {
+      await env.BILLING_QUEUE.send({ type: 'billing.google.voided.reconcile', projectId: row.project_id });
+    }
+  }
   const legacyInventoryRuns = await env.DB.prepare(`
     SELECT id, next_cursor
     FROM billing_legacy_inventory_runs
@@ -234,6 +250,7 @@ export async function reconcileBillingState(env: BillingEnv) {
     webhook_deliveries_enqueued: pendingDeliveries.results?.length || 0,
     subscriptions_enqueued: subscriptions.results?.length || 0,
     refund_actions_enqueued: refundActions.results?.length || 0,
+    google_voided_reconciliations_enqueued: googleVoidedProjects.results?.length || 0,
     legacy_inventory_runs_enqueued: legacyInventoryRuns.results?.length || 0,
   };
 }
