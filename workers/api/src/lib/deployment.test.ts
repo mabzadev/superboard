@@ -3,6 +3,7 @@ import { createFakeD1 } from '../test/fake-d1';
 import { Env } from '../types';
 import {
   isFullAccess,
+  isPurchasesEnabled,
   isRegistrationAllowed,
   normalizeRegistrationEmail,
   recordSuccessfulRegistration,
@@ -84,5 +85,12 @@ describe('deployment access policy', () => {
   it('detects full access explicitly', () => {
     expect(isFullAccess(environment({ accessMode: 'full' }))).toBe(true);
     expect(isFullAccess(environment({ accessMode: 'metered' }))).toBe(false);
+  });
+
+  it('keeps Purchases enabled throughout Full Access deployments', () => {
+    expect(isPurchasesEnabled(environment({ accessMode: 'full' }), 0)).toBe(true);
+    expect(isPurchasesEnabled(environment({ accessMode: 'full' }), null)).toBe(true);
+    expect(isPurchasesEnabled(environment({ accessMode: 'metered' }), 1)).toBe(true);
+    expect(isPurchasesEnabled(environment({ accessMode: 'metered' }), 0)).toBe(false);
   });
 });
