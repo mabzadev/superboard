@@ -10,12 +10,14 @@ import {
 import { processStripeBillingNotification } from '../routes/purchases-provider-webhooks';
 import { executeRefundProviderAction } from './refund-actions';
 import { processLegacyInventoryPage } from './legacy-subscription-inventory';
+import { reconcileGoogleVoidedPurchases } from './google-voided-purchases';
 
 export type BillingQueueJob =
   | { type: 'billing.reconcile' }
   | { type: 'billing.webhook.deliver'; deliveryId: string }
   | { type: 'billing.apple.notification'; eventId: string; projectId: string; signedPayload: string; environment: 'sandbox' | 'production' }
   | { type: 'billing.google.notification'; eventId: string; projectId: string; purchaseToken: string; productId: string; productType: 'subscription' | 'non_consumable' | 'consumable'; eventType: string; eventOccurredAt: string }
+  | { type: 'billing.google.voided.reconcile'; projectId: string }
   | { type: 'billing.stripe.notification'; eventId: string; connectionId: string }
   | { type: 'billing.subscription.reconcile'; subscriptionId: string }
   | { type: 'billing.refund.action.execute'; actionId: string }
@@ -27,6 +29,7 @@ const BILLING_JOB_TYPES = new Set<BillingQueueJob['type']>([
   'billing.webhook.deliver',
   'billing.apple.notification',
   'billing.google.notification',
+  'billing.google.voided.reconcile',
   'billing.stripe.notification',
   'billing.subscription.reconcile',
   'billing.refund.action.execute',
@@ -49,6 +52,8 @@ export async function dispatchBillingJob(env: BillingEnv, job: BillingQueueJob) 
       return processAppleBillingNotification(env, job);
     case 'billing.google.notification':
       return processGoogleBillingNotification(env, job);
+    case 'billing.google.voided.reconcile':
+      return reconcileGoogleVoidedPurchases(env, String(job.projectId));
     case 'billing.stripe.notification':
       return processStripeBillingNotification(env, job);
     case 'billing.subscription.reconcile':
