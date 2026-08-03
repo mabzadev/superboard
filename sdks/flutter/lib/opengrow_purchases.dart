@@ -2,18 +2,29 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'models/opengrow_purchases.dart';
+import 'src/customer_info_verifier.dart';
+import 'src/purchase_outbox.dart';
 
 typedef OpenGrowIdentityTokenProvider = Future<String?> Function();
 
 class OpenGrowPurchasesException implements Exception {
-  const OpenGrowPurchasesException(this.message);
+  const OpenGrowPurchasesException(
+    this.message, {
+    this.code = 'purchases_failed',
+    this.retryable = false,
+    this.requestId,
+  });
   final String message;
+  final String code;
+  final bool retryable;
+  final String? requestId;
   @override
   String toString() => 'OpenGrowPurchasesException: $message';
 }
@@ -23,12 +34,19 @@ class OpenGrowPurchases {
   static final instance = OpenGrowPurchases._();
 
   final _iap = InAppPurchase.instance;
+  final _secureStorage = const FlutterSecureStorage();
+  final _customerInfoVerifier = OpenGrowCustomerInfoVerifier();
+  final _outbox = OpenGrowPurchaseOutbox(const FlutterSecureStorage());
   final _customerInfoController =
       StreamController<OpenGrowCustomerInfo>.broadcast();
   final _purchaseCompleters = <String, Completer<OpenGrowPurchaseResult>>{};
+  final _purchaseResultController =
+      StreamController<OpenGrowPurchaseResult>.broadcast();
   final _products = <String, ProductDetails>{};
   Completer<OpenGrowCustomerInfo>? _restoreCompleter;
   Timer? _restoreTimer;
+  Timer? _outboxRetryTimer;
+  bool _retryingOutbox = false;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   SharedPreferences? _preferences;
   OpenGrowIdentityTokenProvider? _tokenProvider;
@@ -37,7 +55,7 @@ class OpenGrowPurchases {
   String? _platformIdentifier;
   String _baseUrl = 'https://sdk.vocostar.com/purchases/v2';
   String _appVersion = '';
-  String _sdkVersion = '2.0.0';
+  String _sdkVersion = '2.1.0';
   String _storefront = '';
   String _campaign = '';
   String? _anonymousId;
@@ -46,6 +64,8 @@ class OpenGrowPurchases {
 
   Stream<OpenGrowCustomerInfo> get customerInfoStream =>
       _customerInfoController.stream;
+  Stream<OpenGrowPurchaseResult> get purchaseResultStream =>
+      _purchaseResultController.stream;
   OpenGrowCustomerInfo? get cachedCustomerInfo => _lastCustomerInfo;
 
   Future<OpenGrowCustomerInfo> configure({
@@ -55,7 +75,7 @@ class OpenGrowPurchases {
     String? identityToken,
     OpenGrowIdentityTokenProvider? identityTokenProvider,
     String appVersion = '',
-    String sdkVersion = '2.0.0',
+    String sdkVersion = '2.1.0',
     String storefront = '',
     String campaign = '',
   }) async {
@@ -66,6 +86,10 @@ class OpenGrowPurchases {
         'OpenGrow Purchases supports iOS and Android only',
       );
     }
+    _subscription ??= _iap.purchaseStream.listen(
+      _handlePurchases,
+      onError: _handlePurchaseStreamError,
+    );
     _projectKey = projectKey;
     _platformIdentifier = platformIdentifier;
     _baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), '');
@@ -84,23 +108,33 @@ class OpenGrowPurchases {
         _anonymousId!,
       );
     }
-    final cached = _preferences!.getString('opengrow.purchases.customer_info');
+    final cached = await _secureStorage.read(
+      key: 'opengrow.purchases.customer_info.verified',
+    );
     if (cached != null) {
       try {
-        final info = OpenGrowCustomerInfo.fromJson(
-          (jsonDecode(cached) as Map).cast<String, dynamic>(),
+        final envelope = (jsonDecode(cached) as Map).cast<String, dynamic>();
+        final verified = await _customerInfoVerifier.verify(
+          envelope: envelope,
+          purchasesBaseUrl: _baseUrl,
+          preferences: _preferences!,
+          allowExpiredSignatureForOfflineEntitlements: true,
         );
+        final info = OpenGrowCustomerInfo.fromJson(verified);
         _lastCustomerInfo = info;
         _customerId = info.customerId;
-      } catch (_) {}
+      } catch (_) {
+        await _secureStorage.delete(
+          key: 'opengrow.purchases.customer_info.verified',
+        );
+      }
     }
-    _subscription ??= _iap.purchaseStream.listen(
-      _handlePurchases,
-      onError: _handlePurchaseStreamError,
-    );
     if (!await _iap.isAvailable()) {
-      throw const OpenGrowPurchasesException('The platform store is unavailable');
+      throw const OpenGrowPurchasesException(
+        'The platform store is unavailable',
+      );
     }
+    unawaited(_resumeOutbox());
     return getCustomerInfo();
   }
 
@@ -241,7 +275,8 @@ class OpenGrowPurchases {
     Map<String, dynamic> json, {
     bool fromCache = false,
   }) async {
-    final rawAll = (json['offerings'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final rawAll =
+        (json['offerings'] as Map?)?.cast<String, dynamic>() ?? const {};
     final selected = (json['offering'] as Map?)?.cast<String, dynamic>();
     final selectedIdentifier = selected?['identifier']?.toString();
     final offerings = await _offeringsFromResponse({
@@ -254,8 +289,8 @@ class OpenGrowPurchases {
           {'identifier': 'default', 'display_name': 'Default'},
     );
     final paywallJson = (json['paywall'] as Map?)?.cast<String, dynamic>();
-    final assignmentJson =
-        (json['experiment_assignment'] as Map?)?.cast<String, dynamic>();
+    final assignmentJson = (json['experiment_assignment'] as Map?)
+        ?.cast<String, dynamic>();
     return OpenGrowPurchaseConfiguration(
       placement: placement,
       offerings: offerings,
@@ -281,28 +316,36 @@ class OpenGrowPurchases {
     String? packageIdentifier,
     Map<String, dynamic> metadata = const {},
   }) async {
-    await _request('POST', '/events', body: {
-      'id': const Uuid().v4(),
-      'type': type,
-      'paywall_id': configuration.paywall?.id,
-      'paywall_version_id': configuration.paywall?.versionId,
-      'placement': configuration.placement.identifier,
-      'experiment_id': configuration.experimentAssignment?.experimentId,
-      'variant_id': configuration.experimentAssignment?.variantId,
-      'package_identifier': packageIdentifier,
-      'metadata': metadata,
-      'occurred_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    await _request(
+      'POST',
+      '/events',
+      body: {
+        'id': const Uuid().v4(),
+        'type': type,
+        'paywall_id': configuration.paywall?.id,
+        'paywall_version_id': configuration.paywall?.versionId,
+        'placement': configuration.placement.identifier,
+        'experiment_id': configuration.experimentAssignment?.experimentId,
+        'variant_id': configuration.experimentAssignment?.variantId,
+        'package_identifier': packageIdentifier,
+        'metadata': metadata,
+        'occurred_at': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
   }
 
   Future<OpenGrowVirtualCurrencies> getVirtualCurrencies() async {
     final response = await _request('GET', '/virtual-currencies');
     final raw = (response['all'] as Map?)?.cast<String, dynamic>() ?? const {};
     return OpenGrowVirtualCurrencies(
-      all: raw.map((key, value) => MapEntry(
-        key,
-        OpenGrowVirtualCurrency.fromJson((value as Map).cast<String, dynamic>()),
-      )),
+      all: raw.map(
+        (key, value) => MapEntry(
+          key,
+          OpenGrowVirtualCurrency.fromJson(
+            (value as Map).cast<String, dynamic>(),
+          ),
+        ),
+      ),
       fetchedAt:
           DateTime.tryParse(response['fetched_at']?.toString() ?? '') ??
           DateTime.now().toUtc(),
@@ -332,8 +375,18 @@ class OpenGrowPurchases {
   Future<bool> isEntitled(String identifier) async =>
       (await getCustomerInfo()).isEntitled(identifier);
 
-  Future<OpenGrowPurchaseResult> purchasePackage(OpenGrowPackage package) async {
+  Future<OpenGrowPurchaseResult> purchasePackage(
+    OpenGrowPackage package,
+  ) async {
     _ensureConfigured();
+    final identityToken = await _identityTokenForRequest();
+    if (identityToken == null || identityToken.isEmpty) {
+      throw const OpenGrowPurchasesException(
+        'Verified identity synchronization is required before purchasing',
+        code: 'identity_required',
+        retryable: true,
+      );
+    }
     var product = _products[package.product.identifier];
     if (product == null) {
       final response = await _iap.queryProductDetails({
@@ -342,7 +395,9 @@ class OpenGrowPurchases {
       if (response.productDetails.isEmpty) {
         return OpenGrowPurchaseResult(
           OpenGrowPurchaseOutcome.failed,
+          code: 'store_product_not_found',
           error: 'Store product not found',
+          productIdentifier: package.product.identifier,
         );
       }
       product = response.productDetails.first;
@@ -361,16 +416,23 @@ class OpenGrowPurchases {
       _purchaseCompleters.remove(product.id);
       return OpenGrowPurchaseResult(
         OpenGrowPurchaseOutcome.failed,
+        code: 'store_purchase_not_started',
         error: 'Store purchase could not start',
+        retryable: true,
+        productIdentifier: product.id,
       );
     }
+    final purchasedProductId = product.id;
     return completer.future.timeout(
       const Duration(minutes: 5),
       onTimeout: () {
-        _purchaseCompleters.remove(product!.id);
+        _purchaseCompleters.remove(purchasedProductId);
         return OpenGrowPurchaseResult(
           OpenGrowPurchaseOutcome.failed,
+          code: 'store_purchase_timeout',
           error: 'Store purchase timed out',
+          retryable: true,
+          productIdentifier: purchasedProductId,
         );
       },
     );
@@ -394,32 +456,43 @@ class OpenGrowPurchases {
     for (final purchase in purchases) {
       final completer = _purchaseCompleters[purchase.productID];
       if (purchase.status == PurchaseStatus.pending) {
-        if (completer != null && !completer.isCompleted) {
-          completer.complete(
-            const OpenGrowPurchaseResult(OpenGrowPurchaseOutcome.pending),
-          );
-        }
+        _completeAndPublish(
+          completer,
+          OpenGrowPurchaseResult(
+            OpenGrowPurchaseOutcome.pending,
+            code: 'purchase_pending',
+            productIdentifier: purchase.productID,
+            transactionIdentifier: purchase.purchaseID,
+          ),
+        );
         _purchaseCompleters.remove(purchase.productID);
         continue;
       }
       if (purchase.status == PurchaseStatus.canceled) {
-        if (completer != null && !completer.isCompleted) {
-          completer.complete(
-            const OpenGrowPurchaseResult(OpenGrowPurchaseOutcome.cancelled),
-          );
-        }
+        _completeAndPublish(
+          completer,
+          OpenGrowPurchaseResult(
+            OpenGrowPurchaseOutcome.cancelled,
+            code: 'purchase_cancelled',
+            productIdentifier: purchase.productID,
+            transactionIdentifier: purchase.purchaseID,
+          ),
+        );
         _purchaseCompleters.remove(purchase.productID);
         continue;
       }
       if (purchase.status == PurchaseStatus.error) {
-        if (completer != null && !completer.isCompleted) {
-          completer.complete(
-            OpenGrowPurchaseResult(
-              OpenGrowPurchaseOutcome.failed,
-              error: purchase.error?.message,
-            ),
-          );
-        }
+        _completeAndPublish(
+          completer,
+          OpenGrowPurchaseResult(
+            OpenGrowPurchaseOutcome.failed,
+            code: purchase.error?.code ?? 'store_purchase_failed',
+            error: purchase.error?.message,
+            retryable: true,
+            productIdentifier: purchase.productID,
+            transactionIdentifier: purchase.purchaseID,
+          ),
+        );
         _purchaseCompleters.remove(purchase.productID);
         continue;
       }
@@ -428,61 +501,88 @@ class OpenGrowPurchases {
         final productType = _productTypeFor(purchase.productID);
         final verification = purchase.verificationData.serverVerificationData;
         final restoring = purchase.status == PurchaseStatus.restored;
-        final response = await _request(
-          'POST',
-          restoring
-              ? '/restore'
-              : apple
-              ? '/apple/transactions'
-              : '/google/purchases',
-          body: restoring
-              ? apple
-                    ? {
-                        'apple_transactions': [verification],
-                      }
-                    : {
-                        'google_purchases': [
-                          {
-                            'purchase_token': verification,
-                            'product_id': purchase.productID,
-                            'product_type': productType,
-                          },
-                        ],
-                      }
-              : apple
-              ? {'signed_transaction': verification}
-              : {
-                  'purchase_token': verification,
-                  'product_id': purchase.productID,
-                  'product_type': productType,
-                },
+        var entry = await _outbox.upsert(
+          OpenGrowPurchaseOutboxEntry.create(
+            store: apple ? 'apple' : 'google',
+            productId: purchase.productID,
+            productType: productType,
+            verificationData: verification,
+            restoring: restoring,
+            transactionId: purchase.purchaseID,
+          ),
         );
-        if (response['result'] != 'pending' &&
-            purchase.pendingCompletePurchase) {
+        Map<String, dynamic>? response;
+        OpenGrowCustomerInfo? validatedInfo;
+        if (!entry.serverValidated) {
+          response = await _validateOutboxEntry(entry);
+          final pending =
+              response['result'] == 'pending' ||
+              response['status'] == 'pending';
+          final responseInfo = (response['customer_info'] as Map?)
+              ?.cast<String, dynamic>();
+          if (!pending) {
+            if (responseInfo == null) {
+              throw const OpenGrowPurchasesException(
+                'Verified CustomerInfo is missing from purchase response',
+                code: 'customer_info_missing',
+                retryable: true,
+              );
+            }
+            validatedInfo = await _storeCustomerInfo(responseInfo);
+          }
+          entry = await _outbox.upsert(
+            entry.copyWith(
+              serverValidated: !pending,
+              transactionId: response['transaction_id']?.toString(),
+            ),
+          );
+          if (pending) {
+            final result = OpenGrowPurchaseResult(
+              OpenGrowPurchaseOutcome.pending,
+              code: 'purchase_pending',
+              productIdentifier: purchase.productID,
+              transactionIdentifier: purchase.purchaseID,
+            );
+            _completeAndPublish(completer, result);
+            _scheduleOutboxRetry();
+            continue;
+          }
+        }
+        if (purchase.pendingCompletePurchase) {
           await _iap.completePurchase(purchase);
         }
-        final infoJson = (response['customer_info'] as Map?)
-            ?.cast<String, dynamic>();
-        final info = infoJson == null
-            ? await getCustomerInfo()
-            : _storeCustomerInfo(infoJson);
-        if (completer != null && !completer.isCompleted) {
-          completer.complete(
-            OpenGrowPurchaseResult(
-              OpenGrowPurchaseOutcome.purchased,
-              customerInfo: info,
-            ),
-          );
-        }
+        await _outbox.remove(entry.id);
+        final info = validatedInfo ?? await getCustomerInfo();
+        _completeAndPublish(
+          completer,
+          OpenGrowPurchaseResult(
+            OpenGrowPurchaseOutcome.purchased,
+            customerInfo: info,
+            code: 'purchase_verified',
+            productIdentifier: purchase.productID,
+            transactionIdentifier:
+                response?['transaction_id']?.toString() ??
+                entry.transactionId ??
+                purchase.purchaseID,
+          ),
+        );
       } catch (error) {
-        if (completer != null && !completer.isCompleted) {
-          completer.complete(
-            OpenGrowPurchaseResult(
-              OpenGrowPurchaseOutcome.failed,
-              error: error.toString(),
-            ),
-          );
-        }
+        final purchaseError = error is OpenGrowPurchasesException
+            ? error
+            : OpenGrowPurchasesException(error.toString(), retryable: true);
+        _completeAndPublish(
+          completer,
+          OpenGrowPurchaseResult(
+            OpenGrowPurchaseOutcome.failed,
+            error: purchaseError.message,
+            code: purchaseError.code,
+            retryable: purchaseError.retryable,
+            requestId: purchaseError.requestId,
+            productIdentifier: purchase.productID,
+            transactionIdentifier: purchase.purchaseID,
+          ),
+        );
+        _scheduleOutboxRetry();
       } finally {
         _purchaseCompleters.remove(purchase.productID);
       }
@@ -490,6 +590,122 @@ class OpenGrowPurchases {
     if (_restoreCompleter != null) {
       _scheduleRestoreCompletion();
     }
+  }
+
+  Future<Map<String, dynamic>> _validateOutboxEntry(
+    OpenGrowPurchaseOutboxEntry entry,
+  ) {
+    if (entry.restoring) {
+      return _request(
+        'POST',
+        '/restore',
+        body: entry.store == 'apple'
+            ? {
+                'apple_transactions': [entry.verificationData],
+              }
+            : {
+                'google_purchases': [
+                  {
+                    'purchase_token': entry.verificationData,
+                    'product_id': entry.productId,
+                    'product_type': entry.productType,
+                  },
+                ],
+              },
+      );
+    }
+    return _request(
+      'POST',
+      '/receipts',
+      body: entry.store == 'apple'
+          ? {'store': 'apple', 'signed_transaction': entry.verificationData}
+          : {
+              'store': 'google',
+              'purchase_token': entry.verificationData,
+              'product_id': entry.productId,
+              'product_type': entry.productType,
+            },
+    );
+  }
+
+  Future<void> _resumeOutbox() async {
+    if (_retryingOutbox) return;
+    _retryingOutbox = true;
+    try {
+      final now = DateTime.now().toUtc();
+      for (var entry in await _outbox.readAll()) {
+        if (entry.serverValidated ||
+            (entry.nextAttemptAt?.isAfter(now) ?? false)) {
+          continue;
+        }
+        try {
+          final response = await _validateOutboxEntry(entry);
+          final pending =
+              response['result'] == 'pending' ||
+              response['status'] == 'pending';
+          final infoJson = (response['customer_info'] as Map?)
+              ?.cast<String, dynamic>();
+          final info = infoJson == null
+              ? null
+              : await _storeCustomerInfo(infoJson);
+          if (!pending && info == null) {
+            throw const OpenGrowPurchasesException(
+              'Verified CustomerInfo is missing from purchase response',
+              code: 'customer_info_missing',
+              retryable: true,
+            );
+          }
+          entry = await _outbox.upsert(
+            entry.copyWith(
+              serverValidated: !pending,
+              transactionId: response['transaction_id']?.toString(),
+            ),
+          );
+          if (!pending) {
+            _purchaseResultController.add(
+              OpenGrowPurchaseResult(
+                OpenGrowPurchaseOutcome.purchased,
+                customerInfo: info,
+                code: 'purchase_verified_waiting_store_completion',
+                productIdentifier: entry.productId,
+                transactionIdentifier: entry.transactionId,
+              ),
+            );
+          }
+        } catch (_) {
+          final attempts = entry.attempts + 1;
+          final exponent = attempts > 6 ? 6 : attempts;
+          final delaySeconds = (5 * (1 << exponent)).clamp(10, 300).toInt();
+          await _outbox.upsert(
+            entry.copyWith(
+              attempts: attempts,
+              nextAttemptAt: now.add(Duration(seconds: delaySeconds)),
+            ),
+          );
+        }
+      }
+    } finally {
+      _retryingOutbox = false;
+      if ((await _outbox.readAll()).any((entry) => !entry.serverValidated)) {
+        _scheduleOutboxRetry();
+      }
+    }
+  }
+
+  void _scheduleOutboxRetry() {
+    _outboxRetryTimer?.cancel();
+    _outboxRetryTimer = Timer(
+      const Duration(seconds: 15),
+      () => unawaited(_resumeOutbox()),
+    );
+  }
+
+  void _completeAndPublish(
+    Completer<OpenGrowPurchaseResult>? completer,
+    OpenGrowPurchaseResult result,
+  ) {
+    if (completer != null && !completer.isCompleted) completer.complete(result);
+    _purchaseResultController.add(result);
   }
 
   void _scheduleRestoreCompletion() {
@@ -508,17 +724,20 @@ class OpenGrowPurchases {
   }
 
   void _handlePurchaseStreamError(Object error) {
+    final result = OpenGrowPurchaseResult(
+      OpenGrowPurchaseOutcome.failed,
+      code: 'purchase_stream_failed',
+      error: error.toString(),
+      retryable: true,
+    );
     for (final completer in _purchaseCompleters.values) {
       if (!completer.isCompleted) {
-        completer.complete(
-          OpenGrowPurchaseResult(
-            OpenGrowPurchaseOutcome.failed,
-            error: error.toString(),
-          ),
-        );
+        completer.complete(result);
       }
     }
     _purchaseCompleters.clear();
+    _purchaseResultController.add(result);
+    _scheduleOutboxRetry();
   }
 
   String _productTypeFor(String productId) {
@@ -527,13 +746,26 @@ class OpenGrowPurchases {
 
   final _lastOfferProductTypes = <String, String>{};
 
-  OpenGrowCustomerInfo _storeCustomerInfo(Map<String, dynamic> value) {
-    final info = OpenGrowCustomerInfo.fromJson(value);
+  Future<OpenGrowCustomerInfo> _storeCustomerInfo(
+    Map<String, dynamic> value,
+  ) async {
+    final preferences = _preferences;
+    if (preferences == null) {
+      throw const OpenGrowPurchasesException(
+        'Purchases storage is unavailable',
+      );
+    }
+    final verified = await _customerInfoVerifier.verify(
+      envelope: value,
+      purchasesBaseUrl: _baseUrl,
+      preferences: preferences,
+    );
+    final info = OpenGrowCustomerInfo.fromJson(verified);
     _lastCustomerInfo = info;
     _customerId = info.customerId ?? _customerId;
-    _preferences?.setString(
-      'opengrow.purchases.customer_info',
-      jsonEncode(info.toJson()),
+    await _secureStorage.write(
+      key: 'opengrow.purchases.customer_info.verified',
+      value: jsonEncode({...info.toJson(), 'signature': value['signature']}),
     );
     _customerInfoController.add(info);
     return info;
@@ -545,7 +777,7 @@ class OpenGrowPurchases {
     Map<String, dynamic>? body,
   }) async {
     _ensureConfigured();
-    final token = _identityToken ?? await _tokenProvider?.call();
+    final token = await _identityTokenForRequest();
     final request = http.Request(method, Uri.parse('$_baseUrl$path'))
       ..headers.addAll({
         'Content-Type': 'application/json',
@@ -576,6 +808,13 @@ class OpenGrowPurchases {
           : error?.toString();
       throw OpenGrowPurchasesException(
         message ?? 'HTTP ${streamed.statusCode}',
+        code: error is Map
+            ? error['code']?.toString() ?? 'http_${streamed.statusCode}'
+            : 'http_${streamed.statusCode}',
+        retryable: error is Map
+            ? error['retryable'] == true
+            : streamed.statusCode >= 500,
+        requestId: error is Map ? error['request_id']?.toString() : null,
       );
     }
     return decoded;
@@ -589,5 +828,14 @@ class OpenGrowPurchases {
         'Call OpenGrowPurchases.instance.configure first',
       );
     }
+  }
+
+  Future<String?> _identityTokenForRequest() async {
+    final provided = await _tokenProvider?.call();
+    if (provided != null && provided.isNotEmpty) {
+      _identityToken = provided;
+      return provided;
+    }
+    return _identityToken;
   }
 }

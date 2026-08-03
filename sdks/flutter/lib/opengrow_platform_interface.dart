@@ -30,7 +30,9 @@ abstract class OpenGrowPlatform extends PlatformInterface {
 
   /// Returns the app Bundle ID on iOS or package name on Android.
   Future<String> getPlatformIdentifier() {
-    throw UnimplementedError('getPlatformIdentifier() has not been implemented.');
+    throw UnimplementedError(
+      'getPlatformIdentifier() has not been implemented.',
+    );
   }
 
   /// Generate a OpenGrow link with the specified parameters

@@ -6,8 +6,14 @@ import { generateShortCode } from '../lib/crypto';
 import purchasesRoutes from './purchases-sdk';
 import purchasesV2Routes from './purchases-v2-sdk';
 import { AppVariables } from '../types';
+import { purchasesSigningJwks } from '../lib/billing-identity';
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+sdk.get('/.well-known/purchases-jwks.json', (c) => c.json(
+  purchasesSigningJwks(c.env),
+  200,
+  { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' },
+));
 sdk.use('*', sdkMiddleware);
 sdk.route('/purchases/v1', purchasesRoutes);
 // V2 keeps the proven purchase/restore endpoints while adding remote

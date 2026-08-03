@@ -9,7 +9,8 @@ Appliquer les migrations D1 `0007_opengrow_purchases.sql` et `0008_billing_event
 - `JWT_SECRET` : secret existant du Worker ;
 - `STORE_CREDENTIALS_ENCRYPTION_KEYS` : keyring JSON versionné, par exemple `{"2026-01":"…","2026-07":"…"}` ;
 - `STORE_CREDENTIALS_ACTIVE_KEY_VERSION` : version utilisée pour les nouvelles écritures ; conserver les anciennes versions pendant la rotation ;
-- `PURCHASES_SIGNING_SECRET` : signature de la réponse `CustomerInfo` ;
+- `PURCHASES_SIGNING_KEYSET` : keyset EC P-256 versionné contenant
+  `active_kid` et les clés de rotation ES256 ;
 - `APPLE_ROOT_CERTIFICATES_B64` : tableau JSON contenant les certificats racine DER encodés en base64, téléchargés depuis la section Apple Root Certificates du site Apple PKI.
 
 Ne jamais ajouter les clés `.p8` ou le JSON de service account à `wrangler.toml`. Les téléverser depuis l’assistant de configuration du dashboard. OpenGrow les chiffre en AES-GCM avant D1 et n’écrit plus la clé Apple en clair.
@@ -27,32 +28,41 @@ sub = identifiant utilisateur opaque
 jwks = https://api.vocostar.com/.well-known/jwks.json
 ```
 
-Le SDK envoie le JWT dans `Authorization: Bearer …`. Sans JWT il crée un alias `$opengrow_anon_<uuid>`. `logIn` fusionne l’utilisateur anonyme avec le sujet JWT vérifié. La restauration transfère les achats par défaut ; le réglage projet `restore_behavior=block` l’interdit.
+Le Worker `api-auth-gateway` derrière `api.vocostar.com` reste l’unique autorité
+d’authentification VocoStar. Après `userAuthenticate`, la Library appelle
+`POST https://api.vocostar.com/auth/opengrow-token` avec le jeton VocoStar
+existant. Elle reçoit un JWT ES256 court (`iss=https://api.vocostar.com`,
+`aud=opengrow`) et le transmet à OpenGrow. Aucun second système d’authentification
+n’est créé.
 
 ## API mobile
 
 Toutes les routes utilisent `PROJECT-KEY`, `PLATFORM`, `IDENTIFIER` et `X-OpenGrow-Anonymous-ID` :
 
-- `GET /purchases/v1/offerings`
-- `GET /purchases/v1/customer-info`
-- `POST /purchases/v1/identify`
-- `POST /purchases/v1/apple/transactions`
-- `POST /purchases/v1/google/purchases`
-- `POST /purchases/v1/restore`
-- `POST /purchases/v1/sync`
+- `GET /purchases/v2/offerings`
+- `GET /purchases/v2/customer-info`
+- `POST /purchases/v2/identify`
+- `POST /purchases/v2/receipts`
+- `POST /purchases/v2/restore`
+- `POST /purchases/v2/sync`
 
-Le SDK n’appelle `completePurchase` qu’après validation et persistance serveur. Google est acknowledged ou consumed par le Worker. Une réponse `pending` ne donne aucun droit.
+Le SDK persiste d’abord la transaction dans un outbox chiffré. Il n’appelle
+`completePurchase` qu’après validation serveur, vérification locale du JWS ES256
+CustomerInfo et persistance du résultat. Il reprend automatiquement après perte
+réseau ou redémarrage. Une réponse `pending` ne donne aucun droit.
 
 ## FlutterFlow
 
 Le package `packages/opengrow_flutterflow` fournit :
 
-- `opengrowInitialize`
+- `opengrowInitializeAuthenticated`
 - `opengrowPurchase`
 - `opengrowRestore`
 - `opengrowSync`
 - `opengrowHasEntitlement`
 - `opengrowGetOfferings`
+- `opengrowGetCustomerInfoJson`
+- `opengrowOpenSubscriptionManagement`
 - `OpenGrowPaywall`
 - `OpenGrowRestorePurchasesButton`
 
