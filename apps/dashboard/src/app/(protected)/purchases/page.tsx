@@ -11,6 +11,7 @@ import {
   PanelTop,
   PlugZap,
   RefreshCw,
+  ShieldAlert,
   Store,
   Users,
   Webhook,
@@ -36,8 +37,10 @@ import {
   archiveBillingEntitlement,
   archiveBillingOffering,
   archiveBillingProduct,
+  approveBillingRefundAction,
   createBillingExperiment,
   createBillingExport,
+  createBillingRefundEvidence,
   createBillingConnection,
   createBillingPackage,
   createBillingPaywall,
@@ -57,6 +60,8 @@ import {
   getBillingOverview,
   getBillingPaywalls,
   getBillingPlacements,
+  getBillingRefundCase,
+  getBillingRefundCases,
   getBillingSubscriptions,
   getBillingTargeting,
   getBillingTransactions,
@@ -65,6 +70,7 @@ import {
   grantBillingEntitlement,
   publishBillingPaywall,
   replayBillingWebhookDelivery,
+  reviewBillingRefundEvidence,
   searchBillingCustomers,
   setBillingCustomerBlocked,
   syncBillingProducts,
@@ -78,6 +84,8 @@ import {
   type BillingOverview,
   type BillingPaywall,
   type BillingPlacement,
+  type BillingRefundCase,
+  type BillingRefundCaseDetail,
   type BillingSubscription,
   type BillingTargetingRule,
   type BillingTransaction,
@@ -141,6 +149,8 @@ const PurchasesPage = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [virtualCurrencies, setVirtualCurrencies] = useState<Array<Record<string, unknown>>>([]);
   const [exports, setExports] = useState<Array<Record<string, unknown>>>([]);
+  const [refundCases, setRefundCases] = useState<BillingRefundCase[]>([]);
+  const [refundCaseDetail, setRefundCaseDetail] = useState<BillingRefundCaseDetail>();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [customerDetail, setCustomerDetail] = useState<CustomerDetail>();
   const [loading, setLoading] = useState(false);
@@ -163,6 +173,8 @@ const PurchasesPage = () => {
   const [currencyCode, setCurrencyCode] = useState("CREDITS");
   const [providerSecret, setProviderSecret] = useState("");
   const [providerWebhookSecret, setProviderWebhookSecret] = useState("");
+  const [refundEvidenceType, setRefundEvidenceType] = useState("customer_context");
+  const [refundEvidenceContent, setRefundEvidenceContent] = useState("");
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -182,6 +194,7 @@ const PurchasesPage = () => {
         nextDeliveries,
         nextCurrencies,
         nextExports,
+        nextRefundCases,
       ] = await Promise.allSettled([
         getBillingOverview(projectId),
         getBillingConnections(projectId),
@@ -196,6 +209,7 @@ const PurchasesPage = () => {
         getBillingWebhookDeliveries(projectId),
         getBillingVirtualCurrencies(projectId),
         getBillingExports(projectId),
+        getBillingRefundCases(projectId),
       ]);
       const failures: string[] = [];
       const failed = (name: string, reason: unknown) => failures.push(`${name}: ${reason instanceof Error ? reason.message : "chargement impossible"}`);
@@ -212,6 +226,7 @@ const PurchasesPage = () => {
       if (nextDeliveries.status === "fulfilled") setDeliveries(nextDeliveries.value.data || []); else failed("Webhooks", nextDeliveries.reason);
       if (nextCurrencies.status === "fulfilled") setVirtualCurrencies(nextCurrencies.value.data || []); else failed("Currencies", nextCurrencies.reason);
       if (nextExports.status === "fulfilled") setExports(nextExports.value.data || []); else failed("Exports", nextExports.reason);
+      if (nextRefundCases.status === "fulfilled") setRefundCases(nextRefundCases.value.data || []); else failed("Refund Center", nextRefundCases.reason);
       if (failures.length) showErrorNotification(failures.join(" · "));
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Impossible de charger Purchases");
@@ -263,6 +278,24 @@ const PurchasesPage = () => {
     if (!projectId) return;
     try { setCustomerDetail(await getBillingCustomer(projectId, id)); }
     catch (error) { showErrorNotification(error instanceof Error ? error.message : "Client introuvable"); }
+  };
+
+  const openRefundCase = async (id: string) => {
+    if (!projectId) return;
+    try { setRefundCaseDetail(await getBillingRefundCase(projectId, id)); }
+    catch (error) { showErrorNotification(error instanceof Error ? error.message : "Dossier introuvable"); }
+  };
+
+  const addRefundEvidence = async () => {
+    if (!projectId || !refundCaseDetail || !refundEvidenceContent.trim()) return;
+    await run(async () => {
+      await createBillingRefundEvidence(projectId, refundCaseDetail.refund_case.id, {
+        evidence_type: refundEvidenceType,
+        content: refundEvidenceContent.trim(),
+      });
+      setRefundEvidenceContent("");
+      setRefundCaseDetail(await getBillingRefundCase(projectId, refundCaseDetail.refund_case.id));
+    }, "Preuve ajoutée en brouillon", false);
   };
 
   const createPaywall = async () => {
@@ -394,6 +427,7 @@ const PurchasesPage = () => {
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+            <TabsTrigger value="refunds">Refund Center</TabsTrigger>
             <TabsTrigger value="growth">Growth</TabsTrigger>
             <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
@@ -471,6 +505,17 @@ const PurchasesPage = () => {
           <TabsContent value="transactions"><Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Produit</TableHead><TableHead>Store</TableHead><TableHead>Événement</TableHead><TableHead>Montant</TableHead><TableHead>État</TableHead></TableRow></TableHeader><TableBody>{transactions.map((item) => <TableRow key={item.id}><TableCell>{date(item.purchased_at || item.created_at)}</TableCell><TableCell>{item.primary_app_user_id || "Anonyme"}</TableCell><TableCell>{item.store_product_id || item.product_name || "—"}</TableCell><TableCell>{item.store} · {item.environment}</TableCell><TableCell>{item.event_type}</TableCell><TableCell>{money(item.price_micros, item.currency || "")}</TableCell><TableCell>{statusBadge(item.status)}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
 
           <TabsContent value="subscriptions"><Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Client</TableHead><TableHead>Produit</TableHead><TableHead>Store</TableHead><TableHead>Période</TableHead><TableHead>Expiration</TableHead><TableHead>Renouvelle</TableHead><TableHead>État</TableHead></TableRow></TableHeader><TableBody>{subscriptions.map((item) => <TableRow key={item.id}><TableCell>{item.primary_app_user_id || "Anonyme"}</TableCell><TableCell>{item.store_product_id || item.product_name || "—"}</TableCell><TableCell>{item.store}</TableCell><TableCell>{item.period_type}</TableCell><TableCell>{date(item.expires_at)}</TableCell><TableCell>{item.will_renew ? "Oui" : "Non"}</TableCell><TableCell>{statusBadge(item.status)}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
+
+          <TabsContent value="refunds" className="space-y-4">
+            <Alert><ShieldAlert /><AlertTitle>Validation humaine obligatoire</AlertTitle><AlertDescription>OpenGrow prépare les preuves et actions. Aucun message Apple, Google ou Stripe n’est envoyé avant l’approbation d’un administrateur.</AlertDescription></Alert>
+            <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
+              <Card><CardHeader><CardTitle>Dossiers de remboursement et contestation</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Échéance</TableHead><TableHead>Client</TableHead><TableHead>Store</TableHead><TableHead>Type</TableHead><TableHead>État</TableHead><TableHead /></TableRow></TableHeader><TableBody>{refundCases.map((item) => <TableRow key={item.id}><TableCell>{date(item.deadline_at)}</TableCell><TableCell><div>{item.primary_app_user_id || "—"}</div><div className="text-xs text-muted-foreground">{item.store_product_id || item.provider_case_id}</div></TableCell><TableCell>{item.provider} · {item.environment}</TableCell><TableCell>{item.case_type}</TableCell><TableCell>{statusBadge(item.status)}</TableCell><TableCell><Button size="sm" variant="outline" onClick={() => void openRefundCase(item.id)}>Ouvrir</Button></TableCell></TableRow>)}{!refundCases.length && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Aucun remboursement reçu.</TableCell></TableRow>}</TableBody></Table></CardContent></Card>
+              <div className="space-y-4">
+                <Card><CardHeader><CardTitle>Détail et preuves</CardTitle></CardHeader><CardContent className="space-y-3">{refundCaseDetail ? <><div className="flex items-center justify-between"><span className="font-medium">{refundCaseDetail.refund_case.provider_case_id}</span>{statusBadge(refundCaseDetail.refund_case.status)}</div><div className="text-sm text-muted-foreground">{refundCaseDetail.refund_case.reason || refundCaseDetail.refund_case.case_type}</div><Input value={refundEvidenceType} onChange={(event) => setRefundEvidenceType(event.target.value)} placeholder="customer_context" /><textarea className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm" value={refundEvidenceContent} onChange={(event) => setRefundEvidenceContent(event.target.value)} placeholder="Contexte factuel, historique d’utilisation, éléments de consommation…" /><Button className="w-full" onClick={() => void addRefundEvidence()}>Ajouter comme brouillon</Button>{refundCaseDetail.evidence.map((evidence) => <div key={String(evidence.id)} className="rounded-md border p-3 text-sm"><div className="flex items-center justify-between"><span className="font-medium">{String(evidence.evidence_type)}</span>{statusBadge(evidence.review_status)}</div><p className="mt-2 whitespace-pre-wrap text-muted-foreground">{String(evidence.content || evidence.file_key || "")}</p>{evidence.review_status === "draft" && <div className="mt-2 flex gap-2"><Button size="sm" onClick={() => projectId && void run(async () => { await reviewBillingRefundEvidence(projectId, refundCaseDetail.refund_case.id, String(evidence.id), true); await openRefundCase(refundCaseDetail.refund_case.id); }, "Preuve approuvée", false)}>Approuver</Button><Button size="sm" variant="outline" onClick={() => projectId && void run(async () => { await reviewBillingRefundEvidence(projectId, refundCaseDetail.refund_case.id, String(evidence.id), false); await openRefundCase(refundCaseDetail.refund_case.id); }, "Preuve rejetée", false)}>Rejeter</Button></div>}</div>)}</> : <p className="text-sm text-muted-foreground">Ouvrez un dossier pour préparer sa réponse.</p>}</CardContent></Card>
+                {refundCaseDetail && <Card><CardHeader><CardTitle>Actions fournisseur</CardTitle></CardHeader><CardContent className="space-y-2">{refundCaseDetail.actions.map((action) => <div key={String(action.id)} className="rounded-md border p-3 text-sm"><div className="flex items-center justify-between"><span>{String(action.action_type)}</span>{statusBadge(action.status)}</div>{action.status === "draft" && <Button className="mt-2 w-full" size="sm" onClick={() => projectId && void run(async () => { await approveBillingRefundAction(projectId, refundCaseDetail.refund_case.id, String(action.id)); await openRefundCase(refundCaseDetail.refund_case.id); }, "Action approuvée, non envoyée", false)}>Valider l’action</Button>}</div>)}{!refundCaseDetail.actions.length && <p className="text-sm text-muted-foreground">Aucune action préparée.</p>}</CardContent></Card>}
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="growth" className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-3">
