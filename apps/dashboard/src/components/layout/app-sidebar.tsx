@@ -12,6 +12,7 @@ import {
   SquareTerminal,
   ShoppingBag,
   Star,
+  Inbox,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
@@ -82,6 +83,13 @@ const data = {
       title: "Purchases",
       url: "/purchases",
       icon: ShoppingBag,
+      itemType: "simple",
+      badge: "New",
+    },
+    {
+      title: "Inbox",
+      url: "/inbox",
+      icon: Inbox,
       itemType: "simple",
       badge: "New",
     },

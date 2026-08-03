@@ -27,20 +27,22 @@
     "domains": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["shortlinks", "sdk", "dashboard"],
+      "required": ["shortlinks", "sdk", "dashboard", "messaging"],
       "properties": {
         "shortlinks": { "$ref": "#/$defs/hostname" },
         "sdk": { "$ref": "#/$defs/hostname" },
-        "dashboard": { "$ref": "#/$defs/hostname" }
+        "dashboard": { "$ref": "#/$defs/hostname" },
+        "messaging": { "$ref": "#/$defs/hostname" }
       }
     },
     "workers": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["api", "dashboard"],
+      "required": ["api", "dashboard", "messaging"],
       "properties": {
         "api": { "$ref": "#/$defs/workerNames" },
-        "dashboard": { "$ref": "#/$defs/workerNames" }
+        "dashboard": { "$ref": "#/$defs/workerNames" },
+        "messaging": { "$ref": "#/$defs/workerNames" }
       }
     },
     "oauth": {
@@ -103,12 +105,14 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["d1", "kv", "r2", "dashboardCache", "queues"],
+      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "queues"],
       "properties": {
         "d1": { "$ref": "#/$defs/namedResource" },
         "kv": { "$ref": "#/$defs/namedResource" },
         "r2": { "$ref": "#/$defs/namedResource" },
         "dashboardCache": { "$ref": "#/$defs/namedResource" },
+        "messagingD1": { "$ref": "#/$defs/namedResource" },
+        "messagingR2": { "$ref": "#/$defs/namedResource" },
         "queues": { "$ref": "#/$defs/queues" }
       }
     }

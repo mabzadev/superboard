@@ -6,6 +6,7 @@ export interface Env {
   PUSH_QUEUE?: Queue;
   MAINTENANCE_QUEUE?: Queue;
   BILLING_QUEUE?: Queue;
+  MESSAGING?: Fetcher;
   EMAIL?: SendEmail;
   ENVIRONMENT: string;
   SHORTLINK_DOMAIN: string;
@@ -49,6 +50,7 @@ export interface Env {
   PURCHASES_SIGNING_SECRET?: string;
   PURCHASES_SIGNING_KEYSET?: string;
   OPENGROW_VOCOSTAR_WEBHOOK_SECRET?: string;
+  MESSAGING_INTERNAL_TOKEN?: string;
   APPLE_ROOT_CERTIFICATES_B64?: string;
   ADMIN_API_KEY?: string;
   MAINTENANCE_PROCESS_KEY?: string;
