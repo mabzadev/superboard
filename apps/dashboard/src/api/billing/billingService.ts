@@ -224,6 +224,11 @@ export type BillingRefundCaseDetail = {
   actions: Array<Record<string, any>>;
   deadlines: Array<Record<string, any>>;
   audit_events: Array<Record<string, any>>;
+  action_definitions: Array<{
+    action_type: string;
+    default_payload: Record<string, unknown>;
+    recommended_evidence_type: string;
+  }>;
 };
 
 export const getBillingConnections = async (projectId: string): Promise<{ data: BillingConnection[] }> =>
@@ -309,6 +314,12 @@ export const createBillingRefundEvidence = async (projectId: string, caseId: str
 
 export const reviewBillingRefundEvidence = async (projectId: string, caseId: string, evidenceId: string, approved: boolean) =>
   (await POST(purchasesV2Path(projectId, `/refunds/${caseId}/evidence/${evidenceId}/review`), { approved })).data;
+
+export const createBillingRefundAction = async (projectId: string, caseId: string, actionType: string, payload: Record<string, unknown>) =>
+  (await POST(purchasesV2Path(projectId, `/refunds/${caseId}/actions`), { action_type: actionType, payload })).data;
+
+export const updateBillingRefundAction = async (projectId: string, caseId: string, actionId: string, payload: Record<string, unknown>) =>
+  (await PATCH(purchasesV2Path(projectId, `/refunds/${caseId}/actions/${actionId}`), { payload })).data;
 
 export const approveBillingRefundAction = async (projectId: string, caseId: string, actionId: string) =>
   (await POST(purchasesV2Path(projectId, `/refunds/${caseId}/actions/${actionId}/approve`), {})).data;

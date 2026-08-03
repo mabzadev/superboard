@@ -7,12 +7,12 @@ import { testStoreCredentials } from '../lib/store-verification';
 import { errorEnvelope, PAYWALL_EVENT_TYPES, purchasesError } from '../lib/purchases-v2';
 import { signedCustomerInfo } from '../lib/billing-identity';
 import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
+import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
 
-// VocoStar intentionally supports only the two native stores and Stripe.
-// Keep historical rows readable, but never expose or create disabled providers.
+// Keep historical rows readable, but expose and create only supported providers.
 const PROVIDERS = ['apple', 'google', 'stripe'] as const;
 const ENVIRONMENTS = ['sandbox', 'production'] as const;
 const FEATURE_FLAGS = ['purchases_core', 'product_catalog', 'paywalls', 'growth', 'web_billing', 'virtual_currencies', 'scheduled_exports'] as const;
@@ -675,11 +675,11 @@ admin.post('/:projectId/paywalls', async (c) => {
       schema_version: 1,
       theme: { accent_color: '#5B5FF0', background_color: '#FFFFFF', text_color: '#111827' },
       components: [
-        { type: 'title', text: 'Passez Premium' },
-        { type: 'subtitle', text: 'Débloquez toutes les fonctionnalités.' },
+        { type: 'title', text: 'Go Premium' },
+        { type: 'subtitle', text: 'Unlock every feature.' },
         { type: 'packages' },
-        { type: 'purchase_button', text: 'Continuer' },
-        { type: 'restore_button', text: 'Restaurer mes achats' },
+        { type: 'purchase_button', text: 'Continue' },
+        { type: 'restore_button', text: 'Restore purchases' },
       ],
     };
     await c.env.DB.batch([
@@ -967,7 +967,15 @@ admin.get('/:projectId/refunds/:caseId', async (c) => {
       c.env.DB.prepare('SELECT * FROM billing_refund_deadlines WHERE case_id = ? ORDER BY due_at').bind(c.req.param('caseId')).all(),
       c.env.DB.prepare('SELECT * FROM billing_refund_audit_events WHERE case_id = ? ORDER BY occurred_at DESC').bind(c.req.param('caseId')).all(),
     ]);
-    return c.json({ refund_case: refundCase, evidence: evidence.results, actions: actions.results, deadlines: deadlines.results, audit_events: events.results });
+    const provider = String((refundCase as { provider?: string }).provider || '');
+    return c.json({
+      refund_case: refundCase,
+      evidence: evidence.results,
+      actions: actions.results,
+      deadlines: deadlines.results,
+      audit_events: events.results,
+      action_definitions: refundActionDefinitions(provider),
+    });
   } catch (error) { return replyError(c, error); }
 });
 
@@ -1015,21 +1023,120 @@ admin.post('/:projectId/refunds/:caseId/evidence/:evidenceId/review', async (c) 
   } catch (error) { return replyError(c, error); }
 });
 
+admin.post('/:projectId/refunds/:caseId/actions', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
+    const refundCase = await c.env.DB.prepare(`
+      SELECT id, provider FROM billing_refund_cases WHERE id = ? AND project_id = ? LIMIT 1
+    `).bind(c.req.param('caseId'), project.id).first<{ id: string; provider: string }>();
+    if (!refundCase) throw purchasesError('refund_case_not_found', 'Refund case not found', 404);
+    const actionType = String(data.action_type || '').trim();
+    if (!supportedRefundActions(refundCase.provider).includes(actionType as RefundActionType)) {
+      throw purchasesError('refund_action_unsupported', `${actionType || 'Refund action'} is not supported for ${refundCase.provider}`);
+    }
+    const payload = data.payload && typeof data.payload === 'object' && !Array.isArray(data.payload)
+      ? data.payload as Record<string, unknown>
+      : {};
+    if (JSON.stringify(payload).length > 100_000) throw purchasesError('refund_action_payload_too_large', 'Refund action payload is too large', 413);
+    const id = crypto.randomUUID();
+    const idempotencyKey = `refund:${refundCase.id}:${actionType}`;
+    await c.env.DB.prepare(`
+      INSERT INTO billing_refund_provider_actions (id, case_id, action_type, payload, status, idempotency_key)
+      VALUES (?, ?, ?, ?, 'draft', ?)
+      ON CONFLICT(idempotency_key) DO UPDATE SET
+        payload = CASE WHEN billing_refund_provider_actions.status = 'draft' THEN excluded.payload ELSE billing_refund_provider_actions.payload END,
+        updated_at = datetime('now')
+    `).bind(id, refundCase.id, actionType, JSON.stringify(payload), idempotencyKey).run();
+    const action = await c.env.DB.prepare(`
+      SELECT id, action_type, status, payload FROM billing_refund_provider_actions WHERE idempotency_key = ?
+    `).bind(idempotencyKey).first();
+    await audit(c, project.id, 'refund_action.drafted', 'refund_provider_action', String((action as any)?.id || id), { case_id: refundCase.id, action_type: actionType });
+    return c.json({ data: action, supported_actions: supportedRefundActions(refundCase.provider) }, 201);
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.patch('/:projectId/refunds/:caseId/actions/:actionId', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
+    const action = await c.env.DB.prepare(`
+      SELECT action.id, action.action_type, refund.provider
+      FROM billing_refund_provider_actions action
+      JOIN billing_refund_cases refund ON refund.id = action.case_id
+      WHERE action.id = ? AND action.case_id = ? AND refund.project_id = ? AND action.status IN ('draft','failed')
+    `).bind(c.req.param('actionId'), c.req.param('caseId'), project.id)
+      .first<{ id: string; action_type: string; provider: string }>();
+    if (!action) throw purchasesError('refund_action_not_editable', 'Refund action was not found or cannot be edited in its current state', 409);
+    const payload = validateRefundActionPayload(action.provider, action.action_type, data.payload);
+    await c.env.DB.prepare(`
+      UPDATE billing_refund_provider_actions
+      SET payload = ?, status = 'draft', attempts = 0, next_attempt_at = NULL,
+        claim_token = NULL, claim_expires_at = NULL, last_error = NULL,
+        provider_response = NULL, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(JSON.stringify(payload), action.id).run();
+    await audit(c, project.id, 'refund_action.updated', 'refund_provider_action', action.id, { case_id: c.req.param('caseId') });
+    return c.json({ id: action.id, status: 'draft', payload });
+  } catch (error) { return replyError(c, error); }
+});
+
 admin.post('/:projectId/refunds/:caseId/actions/:actionId/approve', async (c) => {
   try {
     const project = await projectFor(c); requireAdmin(project);
+    const action = await c.env.DB.prepare(`
+      SELECT action.id, action.action_type, action.payload, refund.provider
+      FROM billing_refund_provider_actions action
+      JOIN billing_refund_cases refund ON refund.id = action.case_id
+      WHERE action.id = ? AND action.status = 'draft' AND refund.id = ? AND refund.project_id = ?
+      LIMIT 1
+    `).bind(c.req.param('actionId'), c.req.param('caseId'), project.id)
+      .first<{ id: string; action_type: RefundActionType; payload: string; provider: string }>();
+    if (!action) throw purchasesError('refund_action_not_approvable', 'Refund action was not found or is no longer a draft', 409);
+    validateRefundActionPayload(action.provider, action.action_type, action.payload);
+    if (action.action_type === 'submit_consumption_info') {
+      const consent = await c.env.DB.prepare(`
+        SELECT id FROM billing_refund_evidence
+        WHERE case_id = ? AND evidence_type = 'apple_consumption_consent'
+          AND review_status = 'approved' AND content IS NOT NULL LIMIT 1
+      `).bind(c.req.param('caseId')).first();
+      if (!consent) throw purchasesError('apple_consumption_consent_evidence_required', 'Approve apple_consumption_consent evidence before sending data to Apple', 409);
+    }
+    if (action.action_type === 'submit_stripe_dispute_evidence') {
+      const payload = JSON.parse(action.payload || '{}') as Record<string, any>;
+      const inlineEvidence = payload.evidence && typeof payload.evidence === 'object' && Object.keys(payload.evidence).length > 0;
+      const approved = await c.env.DB.prepare(`
+        SELECT id FROM billing_refund_evidence
+        WHERE case_id = ? AND review_status = 'approved' AND content IS NOT NULL LIMIT 1
+      `).bind(c.req.param('caseId')).first();
+      if (!inlineEvidence && !approved) throw purchasesError('stripe_evidence_required', 'Approve at least one evidence item before submitting the Stripe dispute', 409);
+    }
     const result = await c.env.DB.prepare(`
       UPDATE billing_refund_provider_actions
       SET status = 'approved', approved_by = ?, approved_at = datetime('now'), updated_at = datetime('now')
       WHERE id = ? AND status = 'draft'
         AND case_id IN (SELECT id FROM billing_refund_cases WHERE id = ? AND project_id = ?)
     `).bind(String(c.get('userId')), c.req.param('actionId'), c.req.param('caseId'), project.id).run();
-    if (!result.meta.changes) throw purchasesError('refund_action_not_approvable', 'Refund action was not found or is no longer a draft', 409);
+    if (!result.meta.changes) throw purchasesError('refund_action_not_approvable', 'Refund action was modified concurrently', 409);
     await c.env.DB.prepare(`
       INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, actor_id, payload)
       VALUES (?, ?, 'provider_action.approved', 'admin', ?, ?)
     `).bind(crypto.randomUUID(), c.req.param('caseId'), String(c.get('userId')), JSON.stringify({ action_id: c.req.param('actionId') })).run();
-    return c.json({ status: 'approved', queued: false });
+    let queued = false;
+    if (c.env.BILLING_QUEUE) {
+      try {
+        await c.env.BILLING_QUEUE.send({ type: 'billing.refund.action.execute', actionId: c.req.param('actionId') });
+        queued = true;
+        await c.env.DB.prepare(`
+          UPDATE billing_refund_provider_actions SET status = 'queued', updated_at = datetime('now')
+          WHERE id = ? AND status = 'approved'
+        `).bind(c.req.param('actionId')).run();
+      } catch (error) {
+        console.error(JSON.stringify({
+          event: 'refund_action_queue_failed', action_id: c.req.param('actionId'),
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      }
+    }
+    return c.json({ status: queued ? 'queued' : 'approved', queued, retry_scheduled: !queued }, 202);
   } catch (error) { return replyError(c, error); }
 });
 

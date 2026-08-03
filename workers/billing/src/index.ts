@@ -186,7 +186,9 @@ export default {
           event: 'billing_job_failed', message_id: message.id,
           error: error instanceof Error ? error.message : String(error),
         }));
-        message.retry({ delaySeconds: 60 });
+        const tagged = error as { retryable?: boolean; retryDelaySeconds?: number };
+        if (tagged?.retryable === false) message.ack();
+        else message.retry({ delaySeconds: Math.max(30, Math.min(3600, Number(tagged?.retryDelaySeconds || 60))) });
       }
     }
   },
