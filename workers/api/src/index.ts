@@ -36,6 +36,7 @@ import { dispatchBillingServiceJob, billingServiceEnabled } from './lib/billing-
 import { isBillingQueueJob } from './lib/billing-dispatch';
 import { readTextLimited } from './lib/http-limits';
 import { emitBillingGrowthEvent } from './lib/growth-delivery';
+import { getAuthContext } from './lib/auth';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -156,9 +157,11 @@ app.route('/api/v1/notifications', notificationsRoutes);
 app.route('/api/v1/automation', automationRoutes);
 app.route('/api/v1/diagnostics', diagnosticsRoutes);
 app.route('/api/v1/admin', adminRoutes);
+app.use('/api/v1/billing/*', async (c, next) => proxyBillingAdmin(c, next, '/api/v1/billing', '/internal/v1/admin/billing'));
 app.route('/api/v1/billing', purchasesAdminRoutes);
 // The v2 admin surface is additive: existing catalogue/customer operations
 // stay available while new resources use stable error envelopes.
+app.use('/api/v2/purchases/projects/*', async (c, next) => proxyBillingAdmin(c, next, '/api/v2/purchases/projects', '/internal/v1/admin/purchases/projects'));
 app.route('/api/v2/purchases/projects', purchasesV2AdminRoutes);
 app.route('/api/v2/purchases/projects', purchasesAdminRoutes);
 app.route('/api/v2/purchases/providers/webhooks', purchasesProviderWebhooks);
@@ -172,6 +175,27 @@ app.route('', mcpOauthRoutes);
 
 // Short link redirect — this must remain last.
 app.route('', redirectRoute);
+
+async function proxyBillingAdmin(c: any, next: () => Promise<void>, publicPrefix: string, internalPrefix: string) {
+  if (!billingServiceEnabled(c.env)) return next();
+  const pathname = new URL(c.req.url).pathname;
+  if (c.req.method === 'POST' && /\/connections$/.test(pathname)) return next();
+  const auth = await getAuthContext(c.env, c.req.header('Authorization'));
+  if (!auth) return c.json({ error: 'Invalid or expired token' }, 401);
+  if (!c.env.BILLING) return c.json({ code: 'billing_service_unavailable', message: 'Billing service is unavailable', retryable: true }, 503);
+  const source = new URL(c.req.url);
+  const internalUrl = new URL(`https://billing.internal${internalPrefix}${pathname.slice(publicPrefix.length)}`);
+  internalUrl.search = source.search;
+  const headers = new Headers(c.req.raw.headers);
+  headers.set('X-OpenGrow-Internal-Actor', String(auth.userId));
+  headers.delete('Authorization');
+  const response = await c.env.BILLING.fetch(new Request(internalUrl, {
+    method: c.req.method,
+    headers,
+    body: ['GET', 'HEAD'].includes(c.req.method) ? undefined : c.req.raw.body,
+  }));
+  return new Response(response.body, { status: response.status, headers: response.headers });
+}
 
 export default {
   fetch: app.fetch,

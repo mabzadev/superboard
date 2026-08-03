@@ -113,7 +113,7 @@ function billingConfig() {
     ...baseConfig(),
     workers_dev: false,
     main: "../../workers/billing/src/index.ts",
-    vars: { ENVIRONMENT: environment, CREDENTIAL_KEY_SCOPE: "billing" },
+    vars: { ENVIRONMENT: environment, CREDENTIAL_KEY_SCOPE: "billing", OPENGROW_ACCESS_MODE: target.accessMode },
     d1_databases: [{
       binding: "DB",
       database_name: resources.d1.name,

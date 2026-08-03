@@ -1,5 +1,5 @@
 import type { BillingEnv } from '../types';
-import { decryptCredential } from './secrets';
+import { decryptCredential, scopedStoreCredential } from './secrets';
 import {
   googlePlayAccess,
   sendAppleConsumptionInformation,
@@ -199,13 +199,17 @@ export function validateRefundActionPayload(provider: string, actionType: string
 
 async function stripeConnection(env: BillingEnv, row: ActionRow) {
   const connection = await env.DB.prepare(`
-    SELECT configuration_encrypted FROM billing_store_connections
+    SELECT configuration_encrypted, billing_configuration_encrypted FROM billing_store_connections
     WHERE project_id = ? AND provider = 'stripe' AND environment = ?
-      AND status IN ('configured','connected') AND configuration_encrypted IS NOT NULL
+      AND status IN ('configured','connected')
     LIMIT 1
-  `).bind(row.project_id, row.environment).first<{ configuration_encrypted: string }>();
-  if (!connection) throw actionError('stripe_connection_missing', 'Stripe is not configured for this project and environment');
-  const credentials = objectValue(await decryptCredential(env, connection.configuration_encrypted));
+  `).bind(row.project_id, row.environment).first<{
+    configuration_encrypted: string | null;
+    billing_configuration_encrypted: string | null;
+  }>();
+  const encrypted = connection && scopedStoreCredential(connection, env);
+  if (!encrypted) throw actionError('stripe_connection_missing', 'Stripe is not configured for this project and environment');
+  const credentials = objectValue(await decryptCredential(env, encrypted));
   const secretKey = String(credentials.secret_key || credentials.api_key || '');
   if (!secretKey.startsWith('sk_')) throw actionError('stripe_secret_invalid', 'Stripe secret key is invalid');
   return secretKey;

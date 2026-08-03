@@ -2,13 +2,14 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../middleware/auth';
 import type { AppVariables, Env } from '../types';
 import { getOrCreateProject, parseProjectExternalId } from '../lib/db';
-import { decryptCredential, encryptCredential } from '../lib/secrets';
+import { decryptCredential, encryptCredential, scopedStoreCredential } from '../lib/secrets';
 import { testStoreCredentials } from '../lib/store-verification';
 import { errorEnvelope, PAYWALL_EVENT_TYPES, purchasesError } from '../lib/purchases-v2';
 import { signedCustomerInfo } from '../lib/billing-identity';
 import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
 import { buildReleaseGate, RELEASE_GATE_CHECKS, validateReleaseGateEvidence, type ReleaseGatePrerequisite, type StoredReleaseGateCheck } from '../lib/purchases-release-gate';
+import { callBillingServiceBinding } from '../lib/billing-service';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -209,7 +210,7 @@ admin.get('/:projectId/release-gate', async (c) => {
     const [checks, connections, catalog, entitlement, offering] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
       c.env.DB.prepare(`
-        SELECT project_id, provider, environment, status, last_tested_at FROM billing_store_connections
+        SELECT project_id, provider, environment, status, last_tested_at, billing_configuration_encrypted FROM billing_store_connections
         WHERE project_id IN (${projectPlaceholders || "''"}) AND provider IN ('apple', 'google', 'stripe')
       `).bind(...scopedProjectIds).all<Record<string, any>>(),
       c.env.DB.prepare(`
@@ -249,7 +250,8 @@ admin.get('/:projectId/release-gate', async (c) => {
     ]);
     const connectionPassed = (projectId: string, provider: string, environment: string) => (connections.results || []).some((row) =>
       String(row.project_id) === projectId && row.provider === provider && row.environment === environment
-      && row.status === 'connected' && row.last_tested_at);
+      && row.status === 'connected' && row.last_tested_at
+      && (provider !== 'stripe' || Boolean(row.billing_configuration_encrypted)));
     const products = catalog.results || [];
     const hasNativePlans = (projectId: string, store: string, environment: string) => ['vocostar_weekly_999', 'vocostar_yearly_4999']
       .every((identifier) => products.some((product) => String(product.project_id) === projectId && product.store === store
@@ -390,22 +392,47 @@ admin.post('/:projectId/connections', async (c) => {
     const environment = String(data.environment || '');
     if (!PROVIDERS.includes(provider as any)) throw purchasesError('unsupported_provider', 'Unsupported billing provider');
     if (!ENVIRONMENTS.includes(environment as any)) throw purchasesError('invalid_environment', 'Environment must be sandbox or production');
-    const secret = data.secret_configuration && Object.keys(data.secret_configuration).length
-      ? await encryptCredential(c.env, JSON.stringify(data.secret_configuration)) : null;
+    let secret: string | null = null;
+    let billingSecret: string | null = null;
+    if (data.secret_configuration && Object.keys(data.secret_configuration).length) {
+      const clearCredential = JSON.stringify(data.secret_configuration);
+      const [apiCiphertext, billingResult] = await Promise.all([
+        encryptCredential(c.env, clearCredential),
+        callBillingServiceBinding<{ data: { ciphertext: string } }>(c.env, '/internal/v1/credentials/encrypt', {
+          credential: clearCredential,
+        }),
+      ]);
+      secret = apiCiphertext;
+      billingSecret = String(billingResult.data?.ciphertext || '');
+      if (!billingSecret) throw purchasesError('billing_credential_copy_failed', 'Billing credential encryption failed', 503, true);
+    }
     const id = crypto.randomUUID();
-    await c.env.DB.prepare(`
+    const stored = await c.env.DB.prepare(`
       INSERT INTO billing_store_connections (
         id, project_id, provider, environment, display_name, status, capabilities,
-        configuration_encrypted, public_configuration
-      ) VALUES (?, ?, ?, ?, ?, 'configured', ?, ?, ?)
+        configuration_encrypted, billing_configuration_encrypted, public_configuration
+      ) VALUES (?, ?, ?, ?, ?, 'configured', ?, ?, ?, ?)
       ON CONFLICT(project_id, provider, environment) DO UPDATE SET
         display_name = excluded.display_name, status = 'configured', capabilities = excluded.capabilities,
         configuration_encrypted = COALESCE(excluded.configuration_encrypted, billing_store_connections.configuration_encrypted),
+        billing_configuration_encrypted = COALESCE(excluded.billing_configuration_encrypted, billing_store_connections.billing_configuration_encrypted),
         public_configuration = excluded.public_configuration, last_error_code = NULL,
         last_error_message = NULL, updated_at = datetime('now')
-    `).bind(id, project.id, provider, environment, data.display_name || provider, JSON.stringify(connectionCapabilities(provider, true)), secret, JSON.stringify(data.public_configuration || {})).run();
-    await audit(c, project.id, 'connection.upserted', 'store_connection', id, { provider, environment });
-    return c.json({ id, provider, environment, configured: true }, 201);
+      RETURNING id
+    `).bind(id, project.id, provider, environment, data.display_name || provider, JSON.stringify(connectionCapabilities(provider, true)), secret, billingSecret, JSON.stringify(data.public_configuration || {})).first<{ id: string }>();
+    const connectionId = String(stored?.id || id);
+    await c.env.DB.batch([
+      c.env.DB.prepare(`
+        INSERT INTO billing_store_credential_audit
+          (id, connection_id, project_id, provider, environment, operation, actor_user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(crypto.randomUUID(), connectionId, project.id, provider, environment, secret ? 'dual_copy_upserted' : 'configuration_upserted', String(c.get('userId'))),
+      c.env.DB.prepare(`
+        INSERT INTO billing_admin_audit_logs (id, project_id, actor_user_id, action, resource_type, resource_id, metadata)
+        VALUES (?, ?, ?, 'connection.upserted', 'store_connection', ?, ?)
+      `).bind(crypto.randomUUID(), project.id, String(c.get('userId')), connectionId, JSON.stringify({ provider, environment })),
+    ]);
+    return c.json({ id: connectionId, provider, environment, configured: true, billing_copy_ready: !secret || Boolean(billingSecret) }, 201);
   } catch (error) { return replyError(c, error); }
 });
 
@@ -423,10 +450,15 @@ admin.post('/:projectId/connections/:provider/test', async (c) => {
     if (provider === 'apple' || provider === 'google') {
       result = await testStoreCredentials(c.env, { projectId: project.id, platform: provider === 'apple' ? 'ios' : 'android', environment: environment as 'sandbox' | 'production' });
     } else {
-      const connection = await c.env.DB.prepare(`SELECT id, configuration_encrypted FROM billing_store_connections WHERE project_id = ? AND provider = ? AND environment = ? AND configuration_encrypted IS NOT NULL`)
-        .bind(project.id, provider, environment).first<{ id: string; configuration_encrypted: string }>();
-      if (!connection) throw purchasesError('connection_not_configured', `${provider} credentials are not configured`, 422);
-      const credentials = JSON.parse(await decryptCredential(c.env, connection.configuration_encrypted));
+      const connection = await c.env.DB.prepare(`
+        SELECT id, configuration_encrypted, billing_configuration_encrypted
+        FROM billing_store_connections WHERE project_id = ? AND provider = ? AND environment = ?
+      `).bind(project.id, provider, environment).first<{
+        id: string; configuration_encrypted: string | null; billing_configuration_encrypted: string | null;
+      }>();
+      const encrypted = connection && scopedStoreCredential(connection, c.env);
+      if (!encrypted) throw purchasesError('connection_not_configured', `${provider} credentials are not configured`, 422);
+      const credentials = JSON.parse(await decryptCredential(c.env, encrypted));
       if (provider === 'stripe') {
         const response = await fetch('https://api.stripe.com/v1/account', {
           headers: { Authorization: `Bearer ${credentials.secret_key || credentials.api_key || ''}` },
