@@ -8,6 +8,7 @@ import { errorEnvelope, PAYWALL_EVENT_TYPES, purchasesError } from '../lib/purch
 import { signedCustomerInfo } from '../lib/billing-identity';
 import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
+import { buildReleaseGate, RELEASE_GATE_CHECKS, type ReleaseGatePrerequisite, type StoredReleaseGateCheck } from '../lib/purchases-release-gate';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -183,6 +184,66 @@ admin.get('/:projectId/health', async (c) => {
       featureFlagsFor(c, project.id),
     ]);
     return c.json({ status: Number((events as any)?.failed_events || 0) + Number((deliveries as any)?.failed_deliveries || 0) > 0 ? 'degraded' : 'healthy', events, subscriptions, deliveries, connections: connections.results, features });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.get('/:projectId/release-gate', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const environment = project.isTest ? 'sandbox' : 'production';
+    const [checks, connections, catalog, entitlement, offering] = await Promise.all([
+      c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(project.id).all<StoredReleaseGateCheck>(),
+      c.env.DB.prepare(`
+        SELECT provider, status, last_tested_at FROM billing_store_connections
+        WHERE project_id = ? AND environment = ? AND provider IN ('apple', 'google', 'stripe')
+      `).bind(project.id, environment).all<Record<string, any>>(),
+      c.env.DB.prepare(`
+        SELECT store, store_product_id FROM billing_products
+        WHERE project_id = ? AND active = 1 AND product_type = 'subscription'
+      `).bind(project.id).all<{ store: string; store_product_id: string }>(),
+      c.env.DB.prepare(`SELECT id FROM billing_entitlements WHERE project_id = ? AND identifier = 'premium' AND active = 1 LIMIT 1`).bind(project.id).first(),
+      c.env.DB.prepare(`SELECT id FROM billing_offerings WHERE project_id = ? AND identifier = 'default' AND active = 1 LIMIT 1`).bind(project.id).first(),
+    ]);
+    const connected = new Set((connections.results || []).filter((row) => row.status === 'connected' && row.last_tested_at).map((row) => row.provider));
+    const products = catalog.results || [];
+    const hasNativePlans = (store: string) => ['vocostar_weekly_999', 'vocostar_yearly_4999']
+      .every((identifier) => products.some((product) => product.store === store && product.store_product_id === identifier));
+    const prerequisites: ReleaseGatePrerequisite[] = [
+      { key: 'apple_connection', label: 'Apple App Store connection', passed: connected.has('apple'), detail: connected.has('apple') ? 'Credentials were tested successfully.' : 'Test the Apple App Store connection successfully.' },
+      { key: 'google_connection', label: 'Google Play connection', passed: connected.has('google'), detail: connected.has('google') ? 'Credentials were tested successfully.' : 'Test the Google Play connection successfully.' },
+      { key: 'stripe_connection', label: 'Stripe connection', passed: connected.has('stripe'), detail: connected.has('stripe') ? 'Credentials were tested successfully.' : 'Test the Stripe connection successfully.' },
+      { key: 'apple_catalog', label: 'Apple subscription catalog', passed: hasNativePlans('apple'), detail: hasNativePlans('apple') ? 'Weekly and yearly subscriptions are imported.' : 'Import the weekly and yearly Apple subscriptions.' },
+      { key: 'google_catalog', label: 'Google subscription catalog', passed: hasNativePlans('google'), detail: hasNativePlans('google') ? 'Weekly and yearly subscriptions are imported.' : 'Import the weekly and yearly Google subscriptions.' },
+      { key: 'premium_entitlement', label: 'Premium entitlement', passed: Boolean(entitlement), detail: entitlement ? 'The Premium entitlement is active.' : 'Create and activate the Premium entitlement.' },
+      { key: 'default_offering', label: 'Default offering', passed: Boolean(offering), detail: offering ? 'The default offering is active.' : 'Create and activate the default offering.' },
+    ];
+    return c.json({ data: { environment, ...buildReleaseGate(checks.results || [], prerequisites) } });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.patch('/:projectId/release-gate/checks/:checkKey', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const checkKey = c.req.param('checkKey');
+    if (!RELEASE_GATE_CHECKS.some((item) => item.key === checkKey)) throw purchasesError('release_gate_check_not_found', 'Release gate check not found', 404);
+    const data = await jsonBody(c);
+    const status = String(data.status || '');
+    if (!['pending', 'passed', 'failed'].includes(status)) throw purchasesError('release_gate_status_invalid', 'Status must be pending, passed, or failed');
+    const evidence = data.evidence && typeof data.evidence === 'object' && !Array.isArray(data.evidence) ? data.evidence as Record<string, unknown> : {};
+    const encodedEvidence = JSON.stringify(evidence);
+    if (encodedEvidence.length > 16_384) throw purchasesError('release_gate_evidence_too_large', 'Evidence is limited to 16 KB', 413);
+    if (status === 'passed' && Object.keys(evidence).length === 0) throw purchasesError('release_gate_evidence_required', 'Passing a check requires test evidence');
+    const notes = data.notes == null ? null : String(data.notes).trim().slice(0, 2000) || null;
+    await c.env.DB.prepare(`
+      INSERT INTO billing_release_gate_checks (project_id, check_key, status, evidence_json, notes, verified_by, verified_at)
+      VALUES (?, ?, ?, ?, ?, ?, CASE WHEN ? = 'passed' THEN datetime('now') END)
+      ON CONFLICT(project_id, check_key) DO UPDATE SET status = excluded.status,
+        evidence_json = excluded.evidence_json, notes = excluded.notes, verified_by = excluded.verified_by,
+        verified_at = CASE WHEN excluded.status = 'passed' THEN datetime('now') ELSE NULL END,
+        updated_at = datetime('now')
+    `).bind(project.id, checkKey, status, encodedEvidence, notes, String(c.get('userId')), status).run();
+    await audit(c, project.id, 'release_gate_check.updated', 'release_gate_check', checkKey, { status, evidence_fields: Object.keys(evidence) });
+    return c.json({ data: { check_key: checkKey, status } });
   } catch (error) { return replyError(c, error); }
 });
 
