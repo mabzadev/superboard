@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { timingSafeEqual } from './auth';
+import { parseAllowedProjectIds, requireProject, timingSafeEqual } from './auth';
+import type { Env } from './types';
 import { parseMessageInput, safeFilename } from './validation';
 
 describe('Messaging validation', () => {
@@ -22,5 +23,19 @@ describe('Messaging validation', () => {
   it('compares internal capabilities without early string equality', () => {
     expect(timingSafeEqual('same', 'same')).toBe(true);
     expect(timingSafeEqual('same', 'different')).toBe(false);
+  });
+
+  it('loads the Messaging project allowlist from validated deployment configuration', () => {
+    expect(parseAllowedProjectIds('11, 12,11')).toEqual([11, 12]);
+    expect(requireProject({ ALLOWED_PROJECT_IDS: '11,12' } as Env, '12')).toBe(12);
+    expect(() => requireProject({ ALLOWED_PROJECT_IDS: '11,12' } as Env, '13'))
+      .toThrow(/not enabled/);
+  });
+
+  it('fails closed when Messaging project configuration is malformed', () => {
+    expect(() => parseAllowedProjectIds('11,project-two')).toThrowError(expect.objectContaining({
+      code: 'messaging_configuration_invalid',
+      status: 503,
+    }));
   });
 });
