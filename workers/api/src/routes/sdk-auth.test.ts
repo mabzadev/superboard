@@ -224,6 +224,48 @@ function probeApp() {
 }
 
 describe('SDK auth contract', () => {
+  it('accepts the dashboard access key for the production mobile project', async () => {
+    const { env } = sdkFixture();
+    const response = await probeApp().request('/authenticate', {
+      method: 'POST',
+      headers: {
+        'PROJECT-KEY': 'server-api-key',
+        PLATFORM: 'android',
+        IDENTIFIER: 'com.opengrow.android',
+      },
+    }, env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      mode: 'mobile',
+      instanceId: 10,
+      projectId: 101,
+      platform: 'android',
+      identifier: 'com.opengrow.android',
+    });
+  });
+
+  it('accepts the test-prefixed dashboard access key for the test mobile project', async () => {
+    const { env } = sdkFixture();
+    const response = await probeApp().request('/authenticate', {
+      method: 'POST',
+      headers: {
+        'PROJECT-KEY': 'test_server-api-key',
+        PLATFORM: 'android',
+        IDENTIFIER: 'com.opengrow.android',
+      },
+    }, env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      mode: 'mobile',
+      instanceId: 10,
+      projectId: 102,
+      platform: 'android',
+      identifier: 'com.opengrow.android',
+    });
+  });
+
   it('accepts mobile SDK auth only when project key, platform and configured identifier match', async () => {
     const { env } = sdkFixture();
     const response = await probeApp().request('/authenticate', {

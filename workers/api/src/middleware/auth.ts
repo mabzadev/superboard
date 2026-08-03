@@ -41,6 +41,29 @@ async function getOrCreateProjectForEnvironment(db: D1Database, instanceId: numb
   return created.id;
 }
 
+async function resolveMobileProject(db: D1Database, projectKey: string) {
+  const isTest = projectKey.startsWith('test_');
+  const instanceKey = isTest ? projectKey.slice('test_'.length) : projectKey;
+  const instance = instanceKey
+    ? await db.prepare('SELECT id FROM instances WHERE api_key = ? LIMIT 1')
+      .bind(instanceKey).first<{ id: number }>()
+    : null;
+
+  if (instance) {
+    const instanceId = Number(instance.id);
+    const projectId = await getOrCreateProjectForEnvironment(
+      db,
+      instanceId,
+      isTest ? 'test' : 'production',
+    );
+    return { id: Number(projectId), instance_id: instanceId };
+  }
+
+  return db.prepare(
+    'SELECT id, instance_id FROM projects WHERE identifier = ? LIMIT 1'
+  ).bind(projectKey).first<{ id: number; instance_id: number }>();
+}
+
 async function mobileProject(c: Context<{ Bindings: Env; Variables: AppVariables }>, projectKey: string) {
   const platform = sdkHeader(c, 'PLATFORM').toLowerCase();
   const identifier = sdkHeader(c, 'IDENTIFIER');
@@ -48,9 +71,7 @@ async function mobileProject(c: Context<{ Bindings: Env; Variables: AppVariables
     return { error: c.json({ error: 'PROJECT-KEY, PLATFORM and IDENTIFIER required' }, 401) };
   }
 
-  const project = await c.env.DB.prepare(
-    'SELECT id, instance_id FROM projects WHERE identifier = ? LIMIT 1'
-  ).bind(projectKey).first<{ id: number; instance_id: number }>();
+  const project = await resolveMobileProject(c.env.DB, projectKey);
   if (!project) return { error: c.json({ error: 'Invalid credentials' }, 403) };
 
   let configured: { id: number | string } | null = null;
