@@ -11,9 +11,11 @@ import { identifyCustomer } from '../lib/billing';
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
 
-const PROVIDERS = ['apple', 'google', 'stripe', 'paddle', 'amazon', 'roku', 'opengrow_web'] as const;
+// VocoStar intentionally supports only the two native stores and Stripe.
+// Keep historical rows readable, but never expose or create disabled providers.
+const PROVIDERS = ['apple', 'google', 'stripe'] as const;
 const ENVIRONMENTS = ['sandbox', 'production'] as const;
-const FEATURE_FLAGS = ['purchases_core', 'product_catalog', 'paywalls', 'growth', 'web_billing', 'extended_stores', 'virtual_currencies', 'scheduled_exports'] as const;
+const FEATURE_FLAGS = ['purchases_core', 'product_catalog', 'paywalls', 'growth', 'web_billing', 'virtual_currencies', 'scheduled_exports'] as const;
 
 async function jsonBody(c: any): Promise<Record<string, any>> {
   return c.req.json().catch(() => ({}));
@@ -70,7 +72,7 @@ async function featureFlagsFor(c: any, projectId: string) {
   await c.env.DB.prepare('INSERT OR IGNORE INTO billing_feature_flags (project_id) VALUES (?)').bind(projectId).run();
   return c.env.DB.prepare(`
     SELECT purchases_core, product_catalog, paywalls, growth, web_billing,
-      extended_stores, virtual_currencies, scheduled_exports, updated_at
+      virtual_currencies, scheduled_exports, updated_at
     FROM billing_feature_flags WHERE project_id = ?
   `).bind(projectId).first();
 }
@@ -115,7 +117,7 @@ function connectionCapabilities(provider: string, configured: boolean) {
     catalog: { status: configured ? 'available' : 'not_configured' },
     transactions: { status: configured ? 'available' : 'not_configured' },
     notifications: { status: configured ? 'needs_test' : 'not_configured' },
-    refunds: { status: ['google', 'stripe', 'paddle', 'opengrow_web'].includes(provider) && configured ? 'available' : 'unsupported' },
+    refunds: { status: ['google', 'stripe'].includes(provider) && configured ? 'available' : 'unsupported' },
     subscription_management: { status: configured ? 'available' : 'not_configured' },
   };
   if (provider === 'apple') base.refunds = { status: configured ? 'request_only' : 'not_configured' };
@@ -176,7 +178,7 @@ admin.get('/:projectId/health', async (c) => {
         FROM billing_webhook_deliveries d
         JOIN billing_webhook_endpoints e ON e.id = d.endpoint_id WHERE e.project_id = ?
       `).bind(project.id).first(),
-      c.env.DB.prepare(`SELECT provider, environment, status, last_tested_at, last_synced_at, last_event_at, last_error_code, last_error_message FROM billing_store_connections WHERE project_id = ?`)
+      c.env.DB.prepare(`SELECT provider, environment, status, last_tested_at, last_synced_at, last_event_at, last_error_code, last_error_message FROM billing_store_connections WHERE project_id = ? AND provider IN ('apple','google','stripe')`)
         .bind(project.id).all(),
       featureFlagsFor(c, project.id),
     ]);
@@ -213,7 +215,9 @@ admin.get('/:projectId/connections', async (c) => {
       c.env.DB.prepare(`
         SELECT id, provider, environment, display_name, status, capabilities, public_configuration,
           last_tested_at, last_synced_at, last_event_at, last_error_code, last_error_message, created_at, updated_at
-        FROM billing_store_connections WHERE project_id = ? ORDER BY provider, environment
+        FROM billing_store_connections
+        WHERE project_id = ? AND provider IN ('apple','google','stripe')
+        ORDER BY provider, environment
       `).bind(project.id).all<Record<string, any>>(),
       nativeConnections(c, project),
     ]);
@@ -262,6 +266,7 @@ admin.post('/:projectId/connections/:provider/test', async (c) => {
   let environment: string | null = null;
   try {
     const project = await projectFor(c); requireAdmin(project);
+    if (!PROVIDERS.includes(provider as any)) throw purchasesError('unsupported_provider', 'Only Apple App Store, Google Play and Stripe are enabled', 422);
     projectId = project.id;
     const data = await jsonBody(c);
     environment = ENVIRONMENTS.includes(data.environment) ? data.environment : project.isTest ? 'sandbox' : 'production';
@@ -273,22 +278,15 @@ admin.post('/:projectId/connections/:provider/test', async (c) => {
         .bind(project.id, provider, environment).first<{ id: string; configuration_encrypted: string }>();
       if (!connection) throw purchasesError('connection_not_configured', `${provider} credentials are not configured`, 422);
       const credentials = JSON.parse(await decryptCredential(c.env, connection.configuration_encrypted));
-      if (provider === 'stripe' || provider === 'opengrow_web') {
+      if (provider === 'stripe') {
         const response = await fetch('https://api.stripe.com/v1/account', {
           headers: { Authorization: `Bearer ${credentials.secret_key || credentials.api_key || ''}` },
         });
         const payload = await response.json().catch(() => ({})) as Record<string, any>;
         if (!response.ok) throw purchasesError('stripe_connection_failed', payload?.error?.message || 'Stripe connection failed', 422);
         result = { ok: true, provider, environment, account_id: payload.id, country: payload.country };
-      } else if (provider === 'paddle') {
-        const response = await fetch(`${environment === 'sandbox' ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com'}/event-types?per_page=1`, {
-          headers: { Authorization: `Bearer ${credentials.api_key || ''}` },
-        });
-        const payload = await response.json().catch(() => ({})) as Record<string, any>;
-        if (!response.ok) throw purchasesError('paddle_connection_failed', payload?.error?.detail || 'Paddle connection failed', 422);
-        result = { ok: true, provider, environment };
       } else {
-        result = { ok: true, provider, environment, note: 'Credentials are encrypted and available.' };
+        throw purchasesError('unsupported_provider', 'Only Apple App Store, Google Play and Stripe are enabled', 422);
       }
     }
     await c.env.DB.prepare(`
@@ -326,7 +324,7 @@ admin.post('/:projectId/provider-products', async (c) => {
   try {
     const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
     const provider = String(data.provider || '');
-    if (!['stripe', 'paddle', 'amazon', 'roku', 'opengrow_web'].includes(provider)) throw purchasesError('unsupported_provider', 'Unsupported product provider');
+    if (provider !== 'stripe') throw purchasesError('unsupported_provider', 'Only Stripe products can be added outside Apple App Store and Google Play');
     if (!['subscription', 'non_consumable', 'consumable'].includes(data.product_type)) throw purchasesError('invalid_product_type', 'Invalid product type');
     const storeProductId = String(data.store_product_id || '').trim();
     if (!storeProductId) throw purchasesError('product_id_required', 'Provider product or price ID is required');
@@ -955,7 +953,7 @@ admin.post('/:projectId/exports', async (c) => {
   try {
     const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
     if (!['transactions', 'subscriptions', 'customers', 'virtual_currencies'].includes(data.dataset)) throw purchasesError('invalid_export_dataset', 'Invalid export dataset');
-    if ((data.format || 'csv') !== 'csv') throw purchasesError('parquet_export_unavailable', 'Parquet export is not enabled on this deployment yet', 409);
+    if ((data.format || 'csv') !== 'csv') throw purchasesError('unsupported_export_format', 'Only CSV exports are supported', 422);
     const id = crypto.randomUUID();
     await c.env.DB.prepare(`
       INSERT INTO billing_export_jobs (id, project_id, dataset, format, cadence, incremental, columns, requested_by)

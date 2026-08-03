@@ -16,7 +16,7 @@ export const BILLING_STATUSES = [
 ] as const;
 
 export type BillingStatus = typeof BILLING_STATUSES[number];
-export type BillingStore = 'apple' | 'google' | 'stripe' | 'paddle' | 'amazon' | 'roku' | 'opengrow_web' | 'promotional';
+export type BillingStore = 'apple' | 'google' | 'stripe' | 'promotional';
 export type BillingEnvironment = 'sandbox' | 'production';
 
 export type VerifiedPurchase = {
@@ -488,7 +488,7 @@ export async function offeringsForCustomer(
       JOIN billing_products p ON p.id = bpp.product_id
       WHERE bp.offering_id = ? AND p.active = 1
         AND (
-          (? = 'web' AND p.store IN ('stripe','paddle','opengrow_web'))
+          (? = 'web' AND p.store = 'stripe')
           OR (? = 'ios' AND p.store = 'apple')
           OR (? = 'android' AND p.store = 'google')
         )
