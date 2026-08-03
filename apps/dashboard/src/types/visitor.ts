@@ -3,6 +3,7 @@ export interface Visitor {
   uuid: string;
   sdk_identifier: string;
   platform: string;
+  country_code?: string | null;
   total_views: number;
   total_opens: number;
   total_app_opens: number;
@@ -31,6 +32,7 @@ export interface AggregatedVisitor {
   updated_at: string;
   inviter: string;
   platform: string;
+  country_code?: string | null;
   invited_views: number;
   invited_app_opens: number;
   invited_installs: number;
@@ -51,6 +53,7 @@ export interface VisitorDetailMetrics {
   uuid: string;
   sdk_identifier: string;
   platform: string;
+  country_code?: string | null;
   sdk_attributes?: Record<string, string>;
   invited?: InvitedUser[];
   created_at: string;

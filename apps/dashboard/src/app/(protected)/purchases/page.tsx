@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CreditCard, Package, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { CloudDownload, CreditCard, Package, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AppHeader from "@/components/layout/app-header";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   createProduct,
   getBillingOverview,
   searchBillingCustomers,
+  syncBillingProducts,
   testBillingCredentials,
   updateBillingSettings,
   type BillingOverview,
@@ -26,6 +27,7 @@ const PurchasesPage = () => {
   const { selectedProject } = useProjectSelection();
   const [overview, setOverview] = useState<BillingOverview>();
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [entitlementId, setEntitlementId] = useState("premium");
   const [productId, setProductId] = useState("");
   const [store, setStore] = useState<"apple" | "google">("apple");
@@ -77,6 +79,27 @@ const PurchasesPage = () => {
     });
     setProductId("");
     await load();
+  };
+
+  const syncProducts = async () => {
+    if (!selectedProject?.id) return;
+    setSyncing(true);
+    try {
+      const result = await syncBillingProducts(selectedProject.id);
+      const imported = result.stores.reduce((total, value) => total + (value.imported ?? 0), 0);
+      const failures = result.stores.filter((value) => !value.ok);
+      if (failures.length > 0) {
+        showErrorNotification(failures.map((value) => value.error).filter(Boolean).join(" · "));
+      }
+      if (result.stores.some((value) => value.ok)) {
+        showSuccessNotification(`${imported} produit${imported === 1 ? "" : "s"} synchronisé${imported === 1 ? "" : "s"} depuis les Stores`);
+      }
+      await load();
+    } catch (error) {
+      showErrorNotification(error instanceof Error ? error.message : "Store synchronization failed");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const searchCustomers = async () => {
@@ -136,6 +159,10 @@ const PurchasesPage = () => {
             <p className="text-sm text-muted-foreground">Produits, droits, offres et clients vérifiés par Apple et Google.</p>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => void syncProducts()} disabled={syncing || loading}>
+              <CloudDownload className="mr-2 h-4 w-4" />
+              {syncing ? "Synchronisation…" : "Synchroniser les Stores"}
+            </Button>
             <Button variant="outline" onClick={() => void testCredentials("ios")}>Tester Apple</Button>
             <Button variant="outline" onClick={() => void testCredentials("android")}>Tester Google</Button>
             <Button variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className="mr-2 h-4 w-4" />Actualiser</Button>
@@ -190,6 +217,16 @@ const PurchasesPage = () => {
         <Tabs defaultValue="catalog">
           <TabsList><TabsTrigger value="catalog">Catalogue</TabsTrigger><TabsTrigger value="entitlements">Entitlements</TabsTrigger><TabsTrigger value="offerings">Offres</TabsTrigger><TabsTrigger value="customers">Clients</TabsTrigger></TabsList>
           <TabsContent value="catalog" className="space-y-4">
+            <Card>
+              <CardHeader><CardTitle>Catalogue Apple et Google</CardTitle></CardHeader>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">OpenGrow récupère les abonnements et achats intégrés directement depuis App Store Connect et Google Play.</p>
+                <Button onClick={() => void syncProducts()} disabled={syncing || loading}>
+                  <CloudDownload className="mr-2 h-4 w-4" />
+                  {syncing ? "Synchronisation…" : "Synchroniser maintenant"}
+                </Button>
+              </CardContent>
+            </Card>
             <Card><CardHeader><CardTitle>Ajouter un produit store</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Input className="max-w-sm" value={productId} onChange={(event) => setProductId(event.target.value)} placeholder="com.app.premium.monthly" /><select className="rounded-md border bg-background px-3" value={store} onChange={(event) => setStore(event.target.value as "apple" | "google")}><option value="apple">App Store</option><option value="google">Google Play</option></select><select className="rounded-md border bg-background px-3" value={productType} onChange={(event) => setProductType(event.target.value)}><option value="subscription">Abonnement</option><option value="non_consumable">Lifetime</option><option value="consumable">Consommable</option></select><Button onClick={() => void addProduct()}>Ajouter</Button></CardContent></Card>
             <Card><CardContent className="pt-6 space-y-2">{overview?.products.map((product) => <div key={product.id} className="flex justify-between rounded-md border p-3"><div><div className="font-medium">{product.display_name}</div><div className="text-xs text-muted-foreground">{product.store_product_id}</div></div><div className="text-sm">{product.store} · {product.product_type} · {product.environment}</div></div>)}</CardContent></Card>
           </TabsContent>

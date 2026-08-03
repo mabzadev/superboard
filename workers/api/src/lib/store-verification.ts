@@ -21,6 +21,16 @@ type GoogleCredentials = {
   token_uri?: string;
 };
 
+export type StoreCatalogProduct = {
+  applicationId: string;
+  storeProductId: string;
+  productType: 'subscription' | 'non_consumable' | 'consumable';
+  displayName: string;
+  description: string | null;
+  active: boolean;
+  metadata: Record<string, unknown>;
+};
+
 // The Apple library currently loads jsrsasign, which seeds its PRNG during
 // module initialization. Cloudflare Workers forbids random generation in the
 // global scope, so load the library lazily from inside request/queue handlers.
@@ -86,7 +96,11 @@ async function appleVerifier(env: Env, app: BillingApplication, environment: Bil
   if (environment === 'production' && !app.appAppleId) throw new Error('Apple App ID is required for production verification');
   return new SignedDataVerifier(
     appleRoots(env),
-    true,
+    // The official Node package performs online certificate checks through
+    // node-fetch, which is not callable in Cloudflare Workers. Signature and
+    // certificate-chain checks remain enabled; transaction state is then
+    // confirmed against Apple's Server API below using the native fetch API.
+    false,
     appleEnvironment,
     app.identifier,
     environment === 'production' ? app.appAppleId || undefined : undefined,
@@ -94,6 +108,32 @@ async function appleVerifier(env: Env, app: BillingApplication, environment: Bil
 }
 
 async function appleServerClient(env: Env, app: BillingApplication, environment: BillingEnvironment) {
+  const row = await appleApiCredentials(env, app);
+  const token = await appleServerToken(row, app.identifier);
+  const baseUrl = environment === 'production'
+    ? 'https://api.storekit.apple.com'
+    : 'https://api.storekit-sandbox.apple.com';
+  const request = async (path: string, method = 'GET'): Promise<any> => {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+    if (!response.ok) throw storeApiError('App Store Server API', response.status, payload);
+    return payload;
+  };
+  return {
+    requestTestNotification: () => request('/inApps/v1/notifications/test', 'POST'),
+    getTransactionHistory: (transactionId: string, _revision: unknown, options: { sort?: unknown }, version: unknown) => {
+      const query = options?.sort ? `?sort=${encodeURIComponent(String(options.sort))}` : '';
+      return request(`/inApps/${encodeURIComponent(String(version))}/history/${encodeURIComponent(transactionId)}${query}`);
+    },
+    getAllSubscriptionStatuses: (transactionId: string) =>
+      request(`/inApps/v1/subscriptions/${encodeURIComponent(transactionId)}`),
+  };
+}
+
+async function appleApiCredentials(env: Env, app: BillingApplication) {
   const row = await env.DB.prepare(`
     SELECT encrypted_key, key_id, issuer_id
     FROM ios_server_api_keys
@@ -103,15 +143,26 @@ async function appleServerClient(env: Env, app: BillingApplication, environment:
     ORDER BY updated_at DESC LIMIT 1
   `).bind(app.instanceId, app.applicationId).first<{ encrypted_key: string; key_id: string; issuer_id: string }>();
   if (!row?.encrypted_key || !row.key_id || !row.issuer_id) throw new Error('App Store Server API credentials are not configured');
-  const key = await decryptCredential(env, row.encrypted_key);
-  const { AppStoreServerAPIClient, Environment } = await loadAppleLibrary();
-  return new AppStoreServerAPIClient(
-    key,
-    row.key_id,
-    row.issuer_id,
-    app.identifier,
-    environment === 'production' ? Environment.PRODUCTION : Environment.SANDBOX,
-  );
+  return {
+    key: await decryptCredential(env, row.encrypted_key),
+    keyId: row.key_id,
+    issuerId: row.issuer_id,
+  };
+}
+
+async function appleServerToken(
+  credentials: { key: string; keyId: string; issuerId: string },
+  bundleId: string,
+): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const key = await importPKCS8(credentials.key, 'ES256');
+  return new SignJWT({
+    iss: credentials.issuerId,
+    aud: 'appstoreconnect-v1',
+    bid: bundleId,
+    iat: now,
+    exp: now + 5 * 60,
+  }).setProtectedHeader({ alg: 'ES256', kid: credentials.keyId, typ: 'JWT' }).sign(key);
 }
 
 function statusFromAppleServer(status: number | undefined, transaction: JWSTransactionDecodedPayload, autoRenews: boolean): BillingStatus {
@@ -166,7 +217,7 @@ export async function verifyAppleTransaction(env: Env, params: {
   if (history.bundleId !== app.identifier || (params.environment === 'production' && Number(history.appAppleId) !== app.appAppleId)) {
     throw new Error('App Store Server API returned a different application');
   }
-  const historyTransactions = await Promise.all((history.signedTransactions || []).map((value) => verifier.verifyAndDecodeTransaction(value)));
+  const historyTransactions = await Promise.all((history.signedTransactions || []).map((value: string) => verifier.verifyAndDecodeTransaction(value)));
   const matching = historyTransactions.filter((value) => value.originalTransactionId === transaction.originalTransactionId);
   if (!matching.some((value) => value.transactionId === transaction.transactionId)) throw new Error('Apple transaction is absent from server history');
   matching.sort((left, right) => Number(right.signedDate || right.purchaseDate || 0) - Number(left.signedDate || left.purchaseDate || 0));
@@ -176,8 +227,8 @@ export async function verifyAppleTransaction(env: Env, params: {
   let renewal: Record<string, unknown> | null = null;
   if (autoRenews) {
     const statuses = await client.getAllSubscriptionStatuses(transaction.transactionId!);
-    const latest = (statuses.data || []).flatMap((group) => group.lastTransactions || [])
-      .find((item) => item.originalTransactionId === transaction.originalTransactionId);
+    const latest = (statuses.data || []).flatMap((group: { lastTransactions?: Array<Record<string, any>> }) => group.lastTransactions || [])
+      .find((item: Record<string, any>) => item.originalTransactionId === transaction.originalTransactionId);
     serverStatus = Number(latest?.status || 0) || undefined;
     if (latest?.signedTransactionInfo) transaction = await verifier.verifyAndDecodeTransaction(latest.signedTransactionInfo);
     if (latest?.signedRenewalInfo) {
@@ -300,6 +351,239 @@ async function googleAccessToken(credentials: GoogleCredentials): Promise<string
   return payload.access_token;
 }
 
+function storeApiError(store: string, status: number, payload: Record<string, unknown>): Error {
+  const errors = Array.isArray(payload.errors) ? payload.errors as Array<Record<string, unknown>> : [];
+  const first = errors[0] || {};
+  const nested = payload.error && typeof payload.error === 'object'
+    ? payload.error as Record<string, unknown>
+    : {};
+  if (store === 'App Store Server API' && status === 401) {
+    return new Error('Apple rejected the server key. Upload an In-App Purchase key from Users and Access > Integrations > In-App Purchase.');
+  }
+  const message = String(
+    first.detail || first.title || nested.message || payload.errorMessage || payload.message || `${store} API returned HTTP ${status}`,
+  );
+  return new Error(`${store}: ${message}`);
+}
+
+async function fetchStoreJson(url: string, accessToken: string, store: string): Promise<Record<string, unknown>> {
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } });
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) throw storeApiError(store, response.status, payload);
+  return payload;
+}
+
+async function appleConnectToken(env: Env, app: BillingApplication): Promise<string> {
+  const credentials = await appleApiCredentials(env, app);
+  const now = Math.floor(Date.now() / 1000);
+  const key = await importPKCS8(credentials.key, 'ES256');
+  return new SignJWT({
+    iss: credentials.issuerId,
+    aud: 'appstoreconnect-v1',
+    iat: now,
+    exp: now + 19 * 60,
+  }).setProtectedHeader({ alg: 'ES256', kid: credentials.keyId, typ: 'JWT' }).sign(key);
+}
+
+function appleProduct(resource: Record<string, unknown>, applicationId: string): StoreCatalogProduct | null {
+  const attributes = resource.attributes && typeof resource.attributes === 'object'
+    ? resource.attributes as Record<string, unknown>
+    : {};
+  const storeProductId = String(attributes.productId || '').trim();
+  if (!storeProductId) return null;
+  const rawType = String(attributes.inAppPurchaseType || '').toUpperCase();
+  const state = String(attributes.state || '').toUpperCase();
+  return {
+    applicationId,
+    storeProductId,
+    productType: rawType.includes('CONSUMABLE') && !rawType.includes('NON_CONSUMABLE')
+      ? 'consumable'
+      : rawType.includes('SUBSCRIPTION')
+        ? 'subscription'
+        : 'non_consumable',
+    displayName: String(attributes.referenceName || attributes.name || storeProductId),
+    description: null,
+    active: !state.includes('REMOVED') && !state.includes('REJECTED'),
+    metadata: {
+      source: 'app_store_connect',
+      store_resource_id: resource.id || null,
+      state: attributes.state || null,
+      in_app_purchase_type: attributes.inAppPurchaseType || null,
+    },
+  };
+}
+
+function appleSubscription(resource: Record<string, unknown>, applicationId: string): StoreCatalogProduct | null {
+  const attributes = resource.attributes && typeof resource.attributes === 'object'
+    ? resource.attributes as Record<string, unknown>
+    : {};
+  const storeProductId = String(attributes.productId || '').trim();
+  if (!storeProductId) return null;
+  const state = String(attributes.state || '').toUpperCase();
+  return {
+    applicationId,
+    storeProductId,
+    productType: 'subscription',
+    displayName: String(attributes.name || storeProductId),
+    description: null,
+    active: !state.includes('REMOVED') && !state.includes('REJECTED'),
+    metadata: {
+      source: 'app_store_connect',
+      store_resource_id: resource.id || null,
+      state: attributes.state || null,
+      subscription_period: attributes.subscriptionPeriod || null,
+      family_sharable: attributes.familySharable || false,
+    },
+  };
+}
+
+async function appleCollection(url: string, token: string): Promise<Record<string, unknown>[]> {
+  const values: Record<string, unknown>[] = [];
+  let next: string | null = url;
+  while (next) {
+    const payload = await fetchStoreJson(next, token, 'App Store Connect');
+    if (Array.isArray(payload.data)) values.push(...payload.data as Record<string, unknown>[]);
+    const links = payload.links && typeof payload.links === 'object' ? payload.links as Record<string, unknown> : {};
+    next = typeof links.next === 'string' && links.next ? links.next : null;
+  }
+  return values;
+}
+
+async function syncAppleCatalog(env: Env, projectId: string | number): Promise<StoreCatalogProduct[]> {
+  const app = await applicationForProject(env.DB, projectId, 'ios');
+  const token = await appleConnectToken(env, app);
+  const appsPayload = await fetchStoreJson(
+    `https://api.appstoreconnect.apple.com/v1/apps?filter%5BbundleId%5D=${encodeURIComponent(app.identifier)}&limit=2`,
+    token,
+    'App Store Connect',
+  );
+  const apps = Array.isArray(appsPayload.data) ? appsPayload.data as Record<string, unknown>[] : [];
+  const matchingApp = apps.find((item) => {
+    const attributes = item.attributes && typeof item.attributes === 'object'
+      ? item.attributes as Record<string, unknown>
+      : {};
+    return attributes.bundleId === app.identifier;
+  });
+  const resolvedAppId = String(matchingApp?.id || '').trim();
+  if (!resolvedAppId) throw new Error(`App Store Connect: no app found for bundle ID ${app.identifier}`);
+  if (String(app.appAppleId || '') !== resolvedAppId) {
+    await env.DB.prepare(`
+      UPDATE ios_configurations SET app_apple_id = ?, updated_at = datetime('now')
+      WHERE application_id = ?
+    `).bind(resolvedAppId, app.applicationId).run();
+  }
+  const appId = encodeURIComponent(resolvedAppId);
+  const oneTime = await appleCollection(
+    `https://api.appstoreconnect.apple.com/v1/apps/${appId}/inAppPurchasesV2?limit=200`,
+    token,
+  );
+  const groupPayload = await fetchStoreJson(
+    `https://api.appstoreconnect.apple.com/v1/apps/${appId}/subscriptionGroups?include=subscriptions&limit=200&limit%5Bsubscriptions%5D=50`,
+    token,
+    'App Store Connect',
+  );
+  const included = Array.isArray(groupPayload.included)
+    ? groupPayload.included as Record<string, unknown>[]
+    : [];
+  const subscriptions = included.filter((item) => item.type === 'subscriptions');
+  return [
+    ...oneTime.map((item) => appleProduct(item, app.applicationId)),
+    ...subscriptions.map((item) => appleSubscription(item, app.applicationId)),
+  ].filter((item): item is StoreCatalogProduct => item !== null);
+}
+
+function localizedListing(value: unknown): { title?: string; description?: string } {
+  if (Array.isArray(value)) {
+    const listing = value.find((item) => item && typeof item === 'object') as Record<string, unknown> | undefined;
+    return listing ? { title: String(listing.title || ''), description: String(listing.description || '') } : {};
+  }
+  if (value && typeof value === 'object') {
+    const listings = Object.values(value as Record<string, unknown>);
+    const listing = listings.find((item) => item && typeof item === 'object') as Record<string, unknown> | undefined;
+    return listing ? { title: String(listing.title || ''), description: String(listing.description || '') } : {};
+  }
+  return {};
+}
+
+async function googleCollection(
+  baseUrl: string,
+  token: string,
+  responseKey: string,
+): Promise<Record<string, unknown>[]> {
+  const values: Record<string, unknown>[] = [];
+  let pageToken = '';
+  do {
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    const url = `${baseUrl}${separator}pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
+    const payload = await fetchStoreJson(url, token, 'Google Play');
+    if (Array.isArray(payload[responseKey])) values.push(...payload[responseKey] as Record<string, unknown>[]);
+    pageToken = typeof payload.nextPageToken === 'string' ? payload.nextPageToken : '';
+  } while (pageToken);
+  return values;
+}
+
+async function syncGoogleCatalog(env: Env, projectId: string | number): Promise<StoreCatalogProduct[]> {
+  const app = await applicationForProject(env.DB, projectId, 'android');
+  const credentials = await googleCredentials(env, app);
+  const token = await googleAccessToken(credentials);
+  const packageName = encodeURIComponent(app.identifier);
+  const root = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}`;
+  const [subscriptions, oneTimeProducts] = await Promise.all([
+    googleCollection(`${root}/subscriptions`, token, 'subscriptions'),
+    googleCollection(`${root}/oneTimeProducts`, token, 'oneTimeProducts'),
+  ]);
+  return [
+    ...subscriptions.map((item): StoreCatalogProduct | null => {
+      const storeProductId = String(item.productId || '').trim();
+      if (!storeProductId) return null;
+      const listing = localizedListing(item.listings);
+      const basePlans = Array.isArray(item.basePlans) ? item.basePlans as Array<Record<string, unknown>> : [];
+      return {
+        applicationId: app.applicationId,
+        storeProductId,
+        productType: 'subscription',
+        displayName: listing.title || storeProductId,
+        description: listing.description || null,
+        active: item.archived !== true && basePlans.some((plan) => String(plan.state || '').toUpperCase() === 'ACTIVE'),
+        metadata: {
+          source: 'google_play',
+          archived: item.archived === true,
+          base_plans: basePlans.map((plan) => ({ base_plan_id: plan.basePlanId || null, state: plan.state || null })),
+        },
+      };
+    }),
+    ...oneTimeProducts.map((item): StoreCatalogProduct | null => {
+      const storeProductId = String(item.productId || '').trim();
+      if (!storeProductId) return null;
+      const listing = localizedListing(item.listings);
+      const purchaseOptions = Array.isArray(item.purchaseOptions) ? item.purchaseOptions as Array<Record<string, unknown>> : [];
+      return {
+        applicationId: app.applicationId,
+        storeProductId,
+        // Google does not distinguish consumable from non-consumable in its catalog.
+        // The upsert preserves an existing consumable classification when present.
+        productType: 'non_consumable',
+        displayName: listing.title || storeProductId,
+        description: listing.description || null,
+        active: purchaseOptions.length === 0 || purchaseOptions.some((option) => String(option.state || '').toUpperCase() === 'ACTIVE'),
+        metadata: {
+          source: 'google_play',
+          purchase_options: purchaseOptions.map((option) => ({ purchase_option_id: option.purchaseOptionId || null, state: option.state || null })),
+        },
+      };
+    }),
+  ].filter((item): item is StoreCatalogProduct => item !== null);
+}
+
+export async function fetchStoreCatalog(env: Env, params: {
+  projectId: string | number;
+  platform: 'ios' | 'android';
+}): Promise<StoreCatalogProduct[]> {
+  return params.platform === 'ios'
+    ? syncAppleCatalog(env, params.projectId)
+    : syncGoogleCatalog(env, params.projectId);
+}
+
 function googleSubscriptionStatus(value: string): BillingStatus {
   const status: Record<string, BillingStatus> = {
     SUBSCRIPTION_STATE_PENDING: 'pending',
@@ -419,9 +703,9 @@ export async function reconcileAppleSubscription(env: Env, params: {
   const app = await applicationForProject(env.DB, params.projectId, 'ios');
   const client = await appleServerClient(env, app, params.environment);
   const statuses = await client.getAllSubscriptionStatuses(params.transactionId);
-  const latest = (statuses.data || []).flatMap((group) => group.lastTransactions || [])
-    .find((item) => item.originalTransactionId === params.transactionId)
-    || (statuses.data || []).flatMap((group) => group.lastTransactions || [])[0];
+  const latest = (statuses.data || []).flatMap((group: { lastTransactions?: Array<Record<string, any>> }) => group.lastTransactions || [])
+    .find((item: Record<string, any>) => item.originalTransactionId === params.transactionId)
+    || (statuses.data || []).flatMap((group: { lastTransactions?: Array<Record<string, any>> }) => group.lastTransactions || [])[0];
   if (!latest?.signedTransactionInfo) throw new Error('Apple subscription status has no transaction');
   const verified = await verifyAppleTransaction(env, {
     projectId: params.projectId,
@@ -439,13 +723,12 @@ export async function testStoreCredentials(env: Env, params: {
   platform: 'ios' | 'android';
   environment: BillingEnvironment;
 }) {
-  const app = await applicationForProject(env.DB, params.projectId, params.platform);
   if (params.platform === 'ios') {
-    const client = await appleServerClient(env, app, params.environment);
-    const response = await client.requestTestNotification();
-    return { platform: 'ios', valid: true, test_notification_token: response.testNotificationToken || null };
+    const products = await syncAppleCatalog(env, params.projectId);
+    return { platform: 'ios', valid: true, catalog_products: products.length };
   }
+  const app = await applicationForProject(env.DB, params.projectId, 'android');
   const credentials = await googleCredentials(env, app);
-  await googleAccessToken(credentials);
-  return { platform: 'android', valid: true, service_account: credentials.client_email };
+  const products = await syncGoogleCatalog(env, params.projectId);
+  return { platform: 'android', valid: true, service_account: credentials.client_email, catalog_products: products.length };
 }
