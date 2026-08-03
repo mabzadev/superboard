@@ -236,7 +236,11 @@ export type BillingReleaseGate = {
     required_evidence: Array<"build" | "device" | "reference">;
     status: "pending" | "passed" | "failed";
     evidence: Record<string, unknown>;
+    evidence_valid: boolean;
+    missing_evidence: Array<"build" | "device" | "reference">;
+    certified: boolean;
     notes?: string | null;
+    verified_by?: string | null;
     verified_at?: string | null;
   }>;
   blockers: Array<{ type: "prerequisite" | "check"; key: string; message: string }>;

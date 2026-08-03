@@ -600,7 +600,19 @@ async function syncGoogleCatalog(env: BillingEnv, projectId: string | number): P
         metadata: {
           source: 'google_play',
           archived: item.archived === true,
-          base_plans: basePlans.map((plan) => ({ base_plan_id: plan.basePlanId || null, state: plan.state || null })),
+          base_plans: basePlans.map((plan) => {
+            const autoRenewing = plan.autoRenewingBasePlanType && typeof plan.autoRenewingBasePlanType === 'object'
+              ? plan.autoRenewingBasePlanType as Record<string, unknown>
+              : {};
+            const prepaid = plan.prepaidBasePlanType && typeof plan.prepaidBasePlanType === 'object'
+              ? plan.prepaidBasePlanType as Record<string, unknown>
+              : {};
+            return {
+              base_plan_id: plan.basePlanId || null,
+              state: plan.state || null,
+              billing_period: autoRenewing.billingPeriodDuration || prepaid.billingPeriodDuration || null,
+            };
+          }),
         },
       };
     }),
