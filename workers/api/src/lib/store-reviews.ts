@@ -23,6 +23,14 @@ export type ReviewProjection = {
   rawPayload: unknown;
 };
 
+type ReviewSyncCursor = {
+  version: 1;
+  watermark: string | null;
+  full_synced_at: string | null;
+};
+
+const APPLE_FULL_RECONCILIATION_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+
 function reviewError(code: string, message: string, retryable = false, retryDelaySeconds?: number) {
   return Object.assign(new Error(message), { code, retryable, retryDelaySeconds });
 }
@@ -58,6 +66,40 @@ async function sha256Hex(value: string) {
 function isoGoogleTimestamp(value: any): string | null {
   const seconds = Number(value?.seconds || 0);
   return seconds > 0 ? new Date(seconds * 1000 + Number(value?.nanos || 0) / 1_000_000).toISOString() : null;
+}
+
+export function parseReviewSyncCursor(value: string | null | undefined): ReviewSyncCursor {
+  try {
+    const parsed = JSON.parse(value || '') as Partial<ReviewSyncCursor>;
+    return {
+      version: 1,
+      watermark: normalizedIso(parsed.watermark),
+      full_synced_at: normalizedIso(parsed.full_synced_at),
+    };
+  } catch {
+    return { version: 1, watermark: null, full_synced_at: null };
+  }
+}
+
+function normalizedIso(value: unknown): string | null {
+  if (typeof value !== 'string' || !value) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+}
+
+function latestIso(current: string | null, candidate: unknown): string | null {
+  const normalized = normalizedIso(candidate);
+  if (!normalized) return current;
+  return !current || Date.parse(normalized) > Date.parse(current) ? normalized : current;
+}
+
+function appleReviewPage(url: string, appId: string): string {
+  const parsed = new URL(url);
+  const expectedPath = `/v1/apps/${encodeURIComponent(appId)}/customerReviews`;
+  if (parsed.protocol !== 'https:' || parsed.hostname !== 'api.appstoreconnect.apple.com' || parsed.pathname !== expectedPath) {
+    throw reviewError('store_reviews_pagination_invalid', 'Apple review pagination returned an invalid URL');
+  }
+  return parsed.toString();
 }
 
 export async function upsertReview(env: Env, projectId: string, review: ReviewProjection) {
@@ -134,9 +176,21 @@ async function fetchJson(url: string, token: string, init: RequestInit = {}) {
   return payload;
 }
 
-export async function syncAppleStoreReviews(env: Env, projectId: string) {
+export async function syncAppleStoreReviews(
+  env: Env,
+  projectId: string,
+  storedCursor?: string | null,
+  now = new Date(),
+) {
   const { token, appId } = await appStoreConnectAccess(env, projectId);
-  let next: string | null = `https://api.appstoreconnect.apple.com/v1/apps/${encodeURIComponent(appId)}/customerReviews?include=response&sort=-createdDate&limit=200`;
+  const cursor = parseReviewSyncCursor(storedCursor);
+  const fullSync = !cursor.watermark || !cursor.full_synced_at
+    || now.getTime() - Date.parse(cursor.full_synced_at) >= APPLE_FULL_RECONCILIATION_INTERVAL_MS;
+  let watermark = cursor.watermark;
+  let next: string | null = appleReviewPage(
+    `https://api.appstoreconnect.apple.com/v1/apps/${encodeURIComponent(appId)}/customerReviews?include=response&sort=-createdDate&limit=200`,
+    appId,
+  );
   let imported = 0;
   const seenPages = new Set<string>();
   while (next) {
@@ -149,9 +203,14 @@ export async function syncAppleStoreReviews(env: Env, projectId: string) {
       const reviewId = String(item.relationships?.review?.data?.id || '');
       if (reviewId) responses.set(reviewId, item);
     }
+    let reachedWatermark = false;
     for (const item of Array.isArray(payload.data) ? payload.data : []) {
       const attributes = item.attributes || {};
       const response = responses.get(String(item.id));
+      const createdAt = normalizedIso(attributes.createdDate);
+      if (!fullSync && cursor.watermark && createdAt && Date.parse(createdAt) <= Date.parse(cursor.watermark)) {
+        reachedWatermark = true;
+      }
       await upsertReview(env, projectId, {
         provider: 'apple', providerReviewId: String(item.id), rating: Number(attributes.rating),
         title: attributes.title, body: attributes.body, authorName: attributes.reviewerNickname,
@@ -160,15 +219,31 @@ export async function syncAppleStoreReviews(env: Env, projectId: string) {
         responseBody: response?.attributes?.responseBody, responseState: response?.attributes?.state,
         responseUpdatedAt: response?.attributes?.lastModifiedDate, rawPayload: { review: item, response },
       });
+      watermark = latestIso(watermark, attributes.createdDate);
       imported += 1;
     }
-    next = typeof payload.links?.next === 'string' && payload.links.next ? payload.links.next : null;
+    next = !fullSync && reachedWatermark
+      ? null
+      : typeof payload.links?.next === 'string' && payload.links.next
+        ? appleReviewPage(payload.links.next, appId)
+        : null;
   }
-  return { provider: 'apple' as const, imported };
+  return {
+    provider: 'apple' as const,
+    imported,
+    cursor: JSON.stringify({
+      version: 1,
+      watermark,
+      full_synced_at: fullSync ? now.toISOString() : cursor.full_synced_at,
+    } satisfies ReviewSyncCursor),
+    full_sync: fullSync,
+  };
 }
 
-export async function syncGooglePlayReviews(env: Env, projectId: string) {
+export async function syncGooglePlayReviews(env: Env, projectId: string, storedCursor?: string | null) {
   const { token, packageName } = await googlePlayAccess(env, projectId);
+  const cursor = parseReviewSyncCursor(storedCursor);
+  let watermark = cursor.watermark;
   let pageToken = '';
   let imported = 0;
   const seenPageTokens = new Set<string>();
@@ -194,27 +269,43 @@ export async function syncGooglePlayReviews(env: Env, projectId: string) {
         responseState: developer.text ? 'published' : null,
         responseUpdatedAt: isoGoogleTimestamp(developer.lastModified), rawPayload: item,
       });
+      watermark = latestIso(watermark, isoGoogleTimestamp(user.lastModified));
       imported += 1;
     }
     pageToken = String(payload.tokenPagination?.nextPageToken || '');
   } while (pageToken);
-  return { provider: 'google' as const, imported };
+  return {
+    provider: 'google' as const,
+    imported,
+    cursor: JSON.stringify({ version: 1, watermark, full_synced_at: null } satisfies ReviewSyncCursor),
+  };
 }
 
 export async function syncStoreReviews(env: Env, projectId: string) {
+  const syncState = await env.DB.prepare(`
+    SELECT provider, cursor FROM store_review_sync_state WHERE project_id = ?
+  `).bind(projectId).all<{ provider: 'apple' | 'google'; cursor: string | null }>();
+  const cursors = new Map((syncState.results || []).map((row) => [row.provider, row.cursor]));
   const results = await Promise.allSettled([
-    syncAppleStoreReviews(env, projectId),
-    syncGooglePlayReviews(env, projectId),
+    syncAppleStoreReviews(env, projectId, cursors.get('apple')),
+    syncGooglePlayReviews(env, projectId, cursors.get('google')),
   ]);
   for (const [index, result] of results.entries()) {
     const provider = index === 0 ? 'apple' : 'google';
     await env.DB.prepare(`
-      INSERT INTO store_review_sync_state (project_id, provider, last_synced_at, last_error)
-      VALUES (?, ?, CASE WHEN ? IS NULL THEN datetime('now') END, ?)
+      INSERT INTO store_review_sync_state (project_id, provider, cursor, last_synced_at, last_error)
+      VALUES (?, ?, ?, CASE WHEN ? IS NULL THEN datetime('now') END, ?)
       ON CONFLICT(project_id, provider) DO UPDATE SET
+        cursor = CASE WHEN excluded.last_error IS NULL THEN excluded.cursor ELSE store_review_sync_state.cursor END,
         last_synced_at = CASE WHEN excluded.last_error IS NULL THEN datetime('now') ELSE store_review_sync_state.last_synced_at END,
         last_error = excluded.last_error, updated_at = datetime('now')
-    `).bind(projectId, provider, result.status === 'fulfilled' ? null : 'failed', result.status === 'rejected' ? String(result.reason?.message || result.reason) : null).run();
+    `).bind(
+      projectId,
+      provider,
+      result.status === 'fulfilled' ? result.value.cursor : cursors.get(provider) || null,
+      result.status === 'fulfilled' ? null : 'failed',
+      result.status === 'rejected' ? String(result.reason?.message || result.reason) : null,
+    ).run();
   }
   return results.map((result, index) => result.status === 'fulfilled'
     ? { ok: true, ...result.value }
