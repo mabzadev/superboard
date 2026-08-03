@@ -71,6 +71,7 @@ import {
   getBillingVirtualCurrencies,
   getBillingWebhookDeliveries,
   grantBillingEntitlement,
+  mapBillingProductsToEntitlement,
   publishBillingPaywall,
   replayBillingWebhookDelivery,
   reviewBillingRefundEvidence,
@@ -169,7 +170,10 @@ const PurchasesPage = () => {
   const [store, setStore] = useState("apple");
   const [productType, setProductType] = useState("subscription");
   const [offeringId, setOfferingId] = useState("default");
-  const [packageId, setPackageId] = useState("monthly");
+  const [packageId, setPackageId] = useState("weekly");
+  const [packageType, setPackageType] = useState("weekly");
+  const [packageOfferingId, setPackageOfferingId] = useState("");
+  const [packageProductIds, setPackageProductIds] = useState<string[]>([]);
   const [customerQuery, setCustomerQuery] = useState("");
   const [paywallId, setPaywallId] = useState("premium");
   const [paywallTitle, setPaywallTitle] = useState("Go Premium");
@@ -253,6 +257,13 @@ const PurchasesPage = () => {
   }, [projectId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    setPackageId("weekly");
+    setPackageType("weekly");
+    setPackageOfferingId("");
+    setPackageProductIds([]);
+  }, [projectId]);
 
   const run = async (action: () => Promise<unknown>, success: string, refresh = true) => {
     try {
@@ -444,6 +455,32 @@ const PurchasesPage = () => {
     setProductId("");
   };
 
+  const mapActiveProductsToPremium = async () => {
+    const entitlement = overview?.entitlements.find((item) => item.identifier === "premium" && item.active);
+    const productIds = overview?.products.filter((item) => item.active && item.product_type === "subscription").map((item) => item.id) || [];
+    if (!projectId || !entitlement || productIds.length === 0) return;
+    await run(
+      () => mapBillingProductsToEntitlement(projectId, entitlement.id, productIds),
+      "Active subscription products mapped to Premium",
+    );
+  };
+
+  const addPackage = async () => {
+    const offering = overview?.offerings.find((item) => item.id === packageOfferingId)
+      || overview?.offerings.find((item) => item.is_current)
+      || overview?.offerings[0];
+    if (!projectId || !offering || !packageId.trim() || packageProductIds.length === 0) return;
+    await run(
+      () => createBillingPackage(projectId, offering.id, {
+        identifier: packageId.trim(),
+        package_type: packageType,
+        product_ids: packageProductIds,
+      }),
+      "Package created",
+    );
+    setPackageProductIds([]);
+  };
+
   const updateGateCheck = async (checkKey: string, status: "pending" | "passed" | "failed") => {
     if (!projectId) return;
     const evidence = Object.fromEntries(Object.entries({
@@ -463,6 +500,12 @@ const PurchasesPage = () => {
     ["Trials", metrics?.trials ?? 0, FlaskConical],
     ["Refunds", metrics?.refunds ?? 0, RefreshCw],
   ];
+
+  const activeSubscriptionProducts = overview?.products.filter((item) => item.active && item.product_type === "subscription") || [];
+  const premiumEntitlement = overview?.entitlements.find((item) => item.identifier === "premium" && item.active);
+  const premiumProductIds = new Set((overview?.product_entitlements || [])
+    .filter((item) => item.entitlement_id === premiumEntitlement?.id)
+    .map((item) => item.product_id));
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
@@ -562,12 +605,14 @@ const PurchasesPage = () => {
 
           <TabsContent value="entitlements" className="space-y-4">
             <Card><CardHeader><CardTitle>Access rights</CardTitle></CardHeader><CardContent className="flex gap-2"><Input className="max-w-sm" value={entitlementId} onChange={(event) => setEntitlementId(event.target.value)} placeholder="premium" /><Button onClick={() => projectId && entitlementId.trim() && void run(() => createEntitlement(projectId, { identifier: entitlementId.trim(), display_name: entitlementId.trim() }), "Entitlement created")}>Create</Button></CardContent></Card>
+            {premiumEntitlement && <Card><CardHeader><CardTitle>Premium product mapping</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Every active subscription product must grant the Premium entitlement after server verification.</p><div className="flex items-center justify-between gap-3"><span className="text-sm">{premiumProductIds.size} of {activeSubscriptionProducts.length} active products mapped</span><Button disabled={!activeSubscriptionProducts.length || activeSubscriptionProducts.every((item) => premiumProductIds.has(item.id))} onClick={() => void mapActiveProductsToPremium()}>Map active products</Button></div></CardContent></Card>}
             <div className="grid gap-3 md:grid-cols-2">{overview?.entitlements.map((item) => <Card key={item.id}><CardContent className="flex items-center justify-between pt-6"><div><div className="font-medium">{item.display_name}</div><div className="text-xs text-muted-foreground">{item.identifier}</div></div><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingEntitlement(projectId, item.id), "Entitlement archived")}>Archive</Button></CardContent></Card>)}</div>
           </TabsContent>
 
           <TabsContent value="offerings" className="space-y-4">
-            <Card><CardHeader><CardTitle>Offerings and packages</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Input className="max-w-xs" value={offeringId} onChange={(event) => setOfferingId(event.target.value)} placeholder="default" /><Button onClick={() => projectId && void run(() => createOffering(projectId, { identifier: offeringId, display_name: offeringId, placement: "default", is_current: !overview?.offerings.length }), "Offering created")}>Create offering</Button><Input className="max-w-xs" value={packageId} onChange={(event) => setPackageId(event.target.value)} placeholder="monthly" /><Button variant="outline" disabled={!overview?.offerings.length || !overview?.products.length} onClick={() => projectId && overview?.offerings[0] && void run(() => createBillingPackage(projectId, overview?.offerings[0]?.id || "", { identifier: packageId, package_type: packageId, product_ids: overview?.products.map((item) => item.id) || [] }), "Package created")}>Add package</Button></CardContent></Card>
-            <div className="grid gap-3 md:grid-cols-2">{overview?.offerings.map((item) => <Card key={item.id}><CardContent className="flex items-center justify-between pt-6"><div><div className="font-medium">{item.display_name}</div><div className="text-xs text-muted-foreground">{item.identifier} {item.is_current ? "· current" : ""}</div></div><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingOffering(projectId, item.id), "Offering archived")}>Archive</Button></CardContent></Card>)}</div>
+            <Card><CardHeader><CardTitle>Create an offering</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2"><Input className="max-w-xs" value={offeringId} onChange={(event) => setOfferingId(event.target.value)} placeholder="default" /><Button onClick={() => projectId && void run(() => createOffering(projectId, { identifier: offeringId, display_name: offeringId, placement: "default", is_current: !overview?.offerings.length }), "Offering created")}>Create offering</Button></CardContent></Card>
+            <Card><CardHeader><CardTitle>Create a package</CardTitle></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 md:grid-cols-3"><Input value={packageId} onChange={(event) => setPackageId(event.target.value)} placeholder="Package identifier" /><select className="rounded-md border bg-background px-3" value={packageType} onChange={(event) => setPackageType(event.target.value)}><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="two_month">Two months</option><option value="three_month">Three months</option><option value="six_month">Six months</option><option value="annual">Annual</option><option value="lifetime">Lifetime</option><option value="custom">Custom</option></select><select className="rounded-md border bg-background px-3" value={packageOfferingId || overview?.offerings.find((item) => item.is_current)?.id || overview?.offerings[0]?.id || ""} onChange={(event) => setPackageOfferingId(event.target.value)}><option value="" disabled>Select an offering</option>{overview?.offerings.map((item) => <option key={item.id} value={item.id}>{item.display_name}{item.is_current ? " (current)" : ""}</option>)}</select></div><div className="grid gap-2 md:grid-cols-2">{activeSubscriptionProducts.map((product) => <label key={product.id} className="flex items-start gap-3 rounded-md border p-3 text-sm"><input type="checkbox" className="mt-1" checked={packageProductIds.includes(product.id)} onChange={(event) => setPackageProductIds((current) => event.target.checked ? [...current, product.id] : current.filter((id) => id !== product.id))} /><span><span className="block font-medium">{product.display_name}</span><span className="block text-xs text-muted-foreground">{product.store} · {product.store_product_id}</span></span></label>)}</div><Button variant="outline" disabled={!overview?.offerings.length || !packageId.trim() || !packageProductIds.length} onClick={() => void addPackage()}>Create package with selected products</Button></CardContent></Card>
+            <div className="grid gap-3 md:grid-cols-2">{overview?.offerings.map((item) => <Card key={item.id}><CardContent className="flex items-start justify-between gap-3 pt-6"><div><div className="font-medium">{item.display_name}</div><div className="text-xs text-muted-foreground">{item.identifier} {item.is_current ? "· current" : ""}</div><div className="mt-2 space-y-1">{overview.packages.filter((entry) => entry.offering_id === item.id).map((entry) => <div key={entry.id} className="text-xs">{entry.identifier} · {entry.package_type} · {entry.product_ids.length} product(s)</div>)}</div></div><Button variant="outline" size="sm" onClick={() => projectId && void run(() => archiveBillingOffering(projectId, item.id), "Offering archived")}>Archive</Button></CardContent></Card>)}</div>
           </TabsContent>
 
           <TabsContent value="paywalls" className="space-y-4">
@@ -630,7 +675,7 @@ const PurchasesPage = () => {
             </div>
             <Card><CardHeader><CardTitle>Automated prerequisites</CardTitle></CardHeader><CardContent className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{releaseGate?.prerequisites.map((item) => <div key={item.key} className="rounded-md border p-3"><div className="flex items-center justify-between gap-2"><span className="font-medium">{item.label}</span><Badge variant={item.passed ? "default" : "destructive"}>{item.passed ? "passed" : "blocked"}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div>)}</CardContent></Card>
             <Card><CardHeader><CardTitle>Evidence for the next check update</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"><Input placeholder="Build number" value={gateBuild} onChange={(event) => setGateBuild(event.target.value)} /><Input placeholder="Device and OS" value={gateDevice} onChange={(event) => setGateDevice(event.target.value)} /><Input placeholder="Test run or transaction reference" value={gateReference} onChange={(event) => setGateReference(event.target.value)} /><Input placeholder="Notes" value={gateNotes} onChange={(event) => setGateNotes(event.target.value)} /></CardContent></Card>
-            {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}</TableCell><TableCell>{statusBadge(check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "passed")}>Pass</Button><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void updateGateCheck(check.key, "pending")}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
+            {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div><div className="mt-1 text-xs text-muted-foreground">Required evidence: {check.required_evidence.join(", ")}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}</TableCell><TableCell>{statusBadge(check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "passed")}>Pass</Button><Button size="sm" variant="outline" onClick={() => void updateGateCheck(check.key, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void updateGateCheck(check.key, "pending")}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
           </TabsContent>
         </Tabs>
       </main>

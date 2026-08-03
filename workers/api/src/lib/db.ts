@@ -34,7 +34,7 @@ export async function getPrimaryInstanceId(db: D1Database, userId: number): Prom
 export async function getOrCreateInstanceForUser(
   db: D1Database,
   userId: number,
-  name = 'Vocostar',
+  name = 'OpenGrow',
   revenueCollectionEnabled = false,
 ): Promise<number> {
   const current = await getPrimaryInstanceId(db, userId);

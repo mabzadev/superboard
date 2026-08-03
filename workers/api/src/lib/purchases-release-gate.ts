@@ -4,6 +4,7 @@ export type ReleaseGateCheckDefinition = {
   group: string;
   label: string;
   description: string;
+  required_evidence: Array<'build' | 'device' | 'reference'>;
 };
 
 export type StoredReleaseGateCheck = {
@@ -49,6 +50,7 @@ export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
     group: provider === 'apple' ? 'Apple App Store' : 'Google Play',
     label,
     description,
+    required_evidence: ['build', 'device', 'reference'] as Array<'build' | 'device' | 'reference'>,
   }))),
   ...([
     ['checkout', 'Checkout', 'Complete a Stripe Checkout session and redeem it for the identified customer.'],
@@ -57,7 +59,10 @@ export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
     ['portal', 'Billing Portal', 'Open the Billing Portal and return to the configured web application.'],
     ['refund', 'Refund', 'Process a Stripe refund and revoke the entitlement.'],
     ['dispute', 'Dispute', 'Process inquiry, evidence, and final dispute state.'],
-  ] as const).map(([key, label, description]) => ({ key: `stripe.${key}`, provider: 'stripe' as const, group: 'Stripe Web', label, description })),
+  ] as const).map(([key, label, description]) => ({
+    key: `stripe.${key}`, provider: 'stripe' as const, group: 'Stripe Web', label, description,
+    required_evidence: ['reference'] as Array<'reference'>,
+  })),
   ...([
     ['identity_sync', 'Authenticated identity', 'A failed identity synchronization blocks a new purchase.'],
     ['signed_customer_info', 'Signed CustomerInfo', 'The SDK rejects an invalid signature and caches only verified customer data.'],
@@ -67,8 +72,21 @@ export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
     ['flutterflow_ios', 'FlutterFlow on iOS', 'Run purchase, restore, synchronization, and subscription management on a real iOS device.'],
     ['flutterflow_android', 'FlutterFlow on Android', 'Run purchase, restore, synchronization, and subscription management on a real Android device.'],
     ['revenuecat_inventory', 'Legacy subscription inventory', 'Inventory and import every active legacy subscription before dependency removal.'],
-  ] as const).map(([key, label, description]) => ({ key: `cross_platform.${key}`, provider: 'cross_platform' as const, group: 'Cross-platform integrity', label, description })),
+  ] as const).map(([key, label, description]) => ({
+    key: `cross_platform.${key}`, provider: 'cross_platform' as const, group: 'Cross-platform integrity', label, description,
+    required_evidence: (key === 'flutterflow_ios' || key === 'flutterflow_android'
+      ? ['build', 'device', 'reference']
+      : key === 'revenuecat_inventory' ? ['reference'] : ['build', 'reference']) as Array<'build' | 'device' | 'reference'>,
+  })),
 ];
+
+export function validateReleaseGateEvidence(definition: ReleaseGateCheckDefinition, evidence: Record<string, unknown>) {
+  const missing = definition.required_evidence.filter((field) => {
+    const value = evidence[field];
+    return typeof value !== 'string' || !value.trim() || value.trim().length > 500;
+  });
+  return { valid: missing.length === 0, missing };
+}
 
 export function buildReleaseGate(stored: StoredReleaseGateCheck[], prerequisites: ReleaseGatePrerequisite[]) {
   const byKey = new Map(stored.map((row) => [row.check_key, row]));

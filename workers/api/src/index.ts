@@ -170,7 +170,7 @@ app.route('/oauth', oauthRoutes);
 app.route('/.well-known', wellKnownRoutes);
 app.route('', mcpOauthRoutes);
 
-// Short link redirect — DOIT être en dernier
+// Short link redirect — this must remain last.
 app.route('', redirectRoute);
 
 export default {

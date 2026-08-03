@@ -257,7 +257,7 @@ async function quickLinkResponse(c: any, path: string) {
   return c.html(generateQuickLinkPage(quickLink, `${requestOrigin(c)}/${quickLink.path}`));
 }
 
-// GET /:code — résolution et redirection d'un lien court
+// GET /:code — Resolve and redirect a short link.
 redirect.get('/:code', async (c) => {
   const code = c.req.param('code');
   const quickLink = await quickLinkResponse(c, code);
