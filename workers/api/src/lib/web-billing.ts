@@ -2,6 +2,7 @@ import type { BillingEnv } from '../types';
 import { decryptCredential, scopedStoreCredential } from './secrets';
 import { purchasesError } from './purchases-v2';
 import { identifyCustomer } from './billing';
+import { validateStripeCredentials } from './stripe-credentials';
 
 type WebConnection = {
   id: string;
@@ -92,7 +93,7 @@ async function providerCredentials(env: BillingEnv, connection: WebConnection) {
   if (!encrypted) throw purchasesError('connection_credentials_invalid', `${connection.provider} credentials are unavailable for this execution domain`, 500);
   try { value = JSON.parse(await decryptCredential(env, encrypted)); }
   catch { throw purchasesError('connection_credentials_invalid', `${connection.provider} credentials cannot be decrypted`, 500); }
-  return parseObject(value);
+  return validateStripeCredentials(parseObject(value), connection.environment);
 }
 
 async function stripeRequest(secretKey: string, path: string, values: Record<string, string>, idempotencyKey?: string) {
@@ -132,8 +133,7 @@ export async function createWebCheckoutSession(env: BillingEnv, params: {
   const priceId = product.provider_price_id || product.store_product_id;
   const localId = crypto.randomUUID();
   const redemptionCode = crypto.randomUUID().replaceAll('-', '');
-  const secretKey = String(credentials.secret_key || credentials.api_key || '');
-  if (!secretKey.startsWith('sk_')) throw purchasesError('stripe_secret_invalid', 'Stripe secret key is invalid');
+  const secretKey = credentials.secret_key;
   const mode = product.product_type === 'subscription' ? 'subscription' : 'payment';
   const values: Record<string, string> = {
     mode,
@@ -188,7 +188,7 @@ export async function createWebPortalSession(env: BillingEnv, params: {
   const connection = await connectionForCheckout(env, params.projectId, 'stripe', params.environment);
   const credentials = await providerCredentials(env, connection);
   const returnUrl = await allowedReturnUrl(env.DB, params.projectId, params.returnUrl, params.environment);
-  const session = await stripeRequest(String(credentials.secret_key || credentials.api_key || ''), '/billing_portal/sessions', {
+  const session = await stripeRequest(credentials.secret_key, '/billing_portal/sessions', {
     customer: stripeCustomerId,
     return_url: returnUrl,
   });

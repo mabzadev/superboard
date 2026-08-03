@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { BillingEnv, Env } from '../types';
 import { applyVerifiedPurchase, type BillingStatus, type VerifiedPurchase } from '../lib/billing';
 import { decryptCredential } from '../lib/secrets';
+import { validateStripeCredentials } from '../lib/stripe-credentials';
 import { readTextLimited } from '../lib/http-limits';
 import { billingServiceEnabled, ingestProviderEventWithBillingAuthority } from '../lib/billing-service';
 
@@ -206,9 +207,14 @@ webhooks.post('/:connectionId', async (c) => {
     .bind(c.req.param('connectionId')).first<Record<string, any>>();
   if (!connection?.configuration_encrypted) return c.json({ error: 'Connection not found' }, 404);
   let credentials: Record<string, any>;
-  try { credentials = parseObject(await decryptCredential(c.env, connection.configuration_encrypted)); }
+  try {
+    credentials = validateStripeCredentials(
+      parseObject(await decryptCredential(c.env, connection.configuration_encrypted)),
+      connection.environment === 'production' ? 'production' : 'sandbox',
+    );
+  }
   catch { return c.json({ error: 'Connection credentials invalid' }, 500); }
-  const webhookSecret = String(credentials.webhook_secret || '');
+  const webhookSecret = String(credentials.webhook_secret);
   const valid = await verifyStripe(payload, c.req.header('Stripe-Signature') || '', webhookSecret);
   if (!valid) return c.json({ error: 'Invalid webhook signature' }, 401);
   let event: Record<string, any>;

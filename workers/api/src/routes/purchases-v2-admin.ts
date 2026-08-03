@@ -14,6 +14,7 @@ import {
   catalogSyncFresh,
   certificationRunCompatibility,
   nativeCatalogCoverage,
+  releaseGateProviderReadiness,
   releaseGateProductCadences,
   RELEASE_GATE_CHECKS,
   validateReleaseGateEvidence,
@@ -26,6 +27,9 @@ import {
 import { callBillingServiceBinding } from '../lib/billing-service';
 import { billingWorkerReadiness, type BillingWorkerReadiness } from '../lib/billing-worker-readiness';
 import { testLegacySourceConnection } from '../lib/legacy-subscription-inventory';
+import { validateStripeCredentials } from '../lib/stripe-credentials';
+import { encryptStoreCredentialCopies } from '../lib/store-credential-copies';
+import { retrieveStripeCatalogProduct } from '../lib/stripe-catalog';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -384,14 +388,22 @@ admin.get('/:projectId/release-gate', async (c) => {
       String(row.project_id) === projectId && row.provider === provider && row.environment === environment
       && row.status === 'connected' && row.last_tested_at
       && (provider !== 'stripe' || Boolean(row.billing_configuration_encrypted)));
-    const catalogRecentlySynced = (projectId: string, provider: 'apple' | 'google', environment: 'production') =>
+    const catalogRecentlySynced = (projectId: string, provider: 'apple' | 'google' | 'stripe', environment: 'sandbox' | 'production') =>
       (connections.results || []).some((row) => String(row.project_id) === projectId
         && row.provider === provider
         && row.environment === environment
         && catalogSyncFresh(row.last_synced_at, catalogStaleHours));
     const products = catalog.results || [];
-    const hasStripePlan = (projectId: string, environment: string) => products.some((product) =>
-      String(product.project_id) === projectId && product.store === 'stripe' && product.environment === environment);
+    const hasStripePlan = (projectId: string, environment: 'sandbox' | 'production') => {
+      const stripeProducts = products.filter((product) => String(product.project_id) === projectId
+        && product.store === 'stripe' && product.environment === environment);
+      return catalogRecentlySynced(projectId, 'stripe', environment)
+        && stripeProducts.length > 0
+        && stripeProducts.every((product) => {
+          const readiness = releaseGateProviderReadiness(product);
+          return readiness.approved && readiness.available && readiness.purchasable;
+        });
+    };
     const stripeProductsReady = (projectId: string, environment: string, field: 'premium_mapped' | 'offering_mapped') => {
       const stripeProducts = products.filter((product) => String(product.project_id) === projectId
         && product.store === 'stripe' && product.environment === environment);
@@ -451,8 +463,8 @@ admin.get('/:projectId/release-gate', async (c) => {
       prerequisite('production_google_catalog_fresh', 'Production Google catalog freshness', catalogRecentlySynced(scope.productionProjectId, 'google', 'production'), `The Google catalog was synchronized within the past ${catalogStaleHours} hours.`, `Synchronize the production Google catalog. Its activation and availability evidence must be less than ${catalogStaleHours} hours old.`),
       prerequisite('production_google_products_active', 'Production Google base plan activation', productionGoogle.approved, 'Weekly and yearly subscriptions have active base plans.', 'Activate a base plan for the weekly and yearly Google subscriptions, then synchronize the catalog again.'),
       prerequisite('production_google_products_purchasable', 'Production Google regional availability', productionGoogle.available, 'Weekly and yearly subscriptions are available to new subscribers in at least one region.', 'Enable new subscriber availability for the weekly and yearly Google subscriptions in at least one region, then synchronize the catalog again.'),
-      prerequisite('sandbox_stripe_catalog', 'Stripe test subscription catalog', hasStripePlan(scope.testProjectId, 'sandbox'), 'A Stripe test subscription is active.', 'Add an active Stripe test subscription to the test project.'),
-      prerequisite('production_stripe_catalog', 'Stripe production subscription catalog', hasStripePlan(scope.productionProjectId, 'production'), 'A Stripe production subscription is active.', 'Add an active Stripe production subscription to the production project.'),
+      prerequisite('sandbox_stripe_catalog', 'Stripe test subscription catalog', hasStripePlan(scope.testProjectId, 'sandbox'), 'Every active Stripe test subscription is provider-verified and the catalog is current.', 'Import active Stripe test Prices from a tested connection and keep the catalog current.'),
+      prerequisite('production_stripe_catalog', 'Stripe production subscription catalog', hasStripePlan(scope.productionProjectId, 'production'), 'Every active Stripe production subscription is provider-verified and the catalog is current.', 'Import active Stripe live Prices from a tested connection and keep the catalog current.'),
       prerequisite('sandbox_premium_entitlement', 'Test Premium entitlement', hasEntitlement(scope.testProjectId), 'The Premium entitlement is active.', 'Create and activate the Premium entitlement in the test project.'),
       prerequisite('production_premium_entitlement', 'Production Premium entitlement', hasEntitlement(scope.productionProjectId), 'The Premium entitlement is active.', 'Create and activate the Premium entitlement in the production project.'),
       prerequisite('sandbox_native_entitlement_mappings', 'Test native Premium mappings', sandboxApple.premium && sandboxGoogle.premium, 'Every required native subscription grants Premium.', 'Map the test weekly and yearly Apple and Google subscriptions to Premium.'),
@@ -1069,19 +1081,21 @@ admin.post('/:projectId/connections', async (c) => {
     const environment = String(data.environment || '');
     if (!PROVIDERS.includes(provider as any)) throw purchasesError('unsupported_provider', 'Unsupported billing provider');
     if (!ENVIRONMENTS.includes(environment as any)) throw purchasesError('invalid_environment', 'Environment must be sandbox or production');
+    const expectedEnvironment = project.isTest ? 'sandbox' : 'production';
+    if (environment !== expectedEnvironment) {
+      throw purchasesError('invalid_environment', `This project requires the ${expectedEnvironment} environment`, 422);
+    }
     let secret: string | null = null;
     let billingSecret: string | null = null;
-    if (data.secret_configuration && Object.keys(data.secret_configuration).length) {
-      const clearCredential = JSON.stringify(data.secret_configuration);
-      const [apiCiphertext, billingResult] = await Promise.all([
-        encryptCredential(c.env, clearCredential),
-        callBillingServiceBinding<{ data: { ciphertext: string } }>(c.env, '/internal/v1/credentials/encrypt', {
-          credential: clearCredential,
-        }),
-      ]);
-      secret = apiCiphertext;
-      billingSecret = String(billingResult.data?.ciphertext || '');
-      if (!billingSecret) throw purchasesError('billing_credential_copy_failed', 'Billing credential encryption failed', 503, true);
+    if (provider !== 'stripe' && data.secret_configuration !== undefined) {
+      throw purchasesError('native_store_credentials_managed_separately', 'Apple App Store and Google Play credentials are managed by their platform configuration', 422);
+    }
+    if (provider === 'stripe') {
+      const stripeCredentials = validateStripeCredentials(data.secret_configuration, environment as 'sandbox' | 'production');
+      const clearCredential = JSON.stringify(stripeCredentials);
+      const copies = await encryptStoreCredentialCopies(c.env, clearCredential);
+      secret = copies.sourceCiphertext;
+      billingSecret = copies.billingCiphertext;
     }
     const id = crypto.randomUUID();
     const stored = await c.env.DB.prepare(`
@@ -1137,8 +1151,9 @@ admin.post('/:projectId/connections/:provider/test', async (c) => {
       if (!encrypted) throw purchasesError('connection_not_configured', `${provider} credentials are not configured`, 422);
       const credentials = JSON.parse(await decryptCredential(c.env, encrypted));
       if (provider === 'stripe') {
+        const stripeCredentials = validateStripeCredentials(credentials, environment as 'sandbox' | 'production');
         const response = await fetch('https://api.stripe.com/v1/account', {
-          headers: { Authorization: `Bearer ${credentials.secret_key || credentials.api_key || ''}` },
+          headers: { Authorization: `Bearer ${stripeCredentials.secret_key}` },
         });
         const payload = await response.json().catch(() => ({})) as Record<string, any>;
         if (!response.ok) throw purchasesError('stripe_connection_failed', payload?.error?.message || 'Stripe connection failed', 422);
@@ -1184,21 +1199,96 @@ admin.post('/:projectId/provider-products', async (c) => {
     const provider = String(data.provider || '');
     if (provider !== 'stripe') throw purchasesError('unsupported_provider', 'Only Stripe products can be added outside Apple App Store and Google Play');
     if (!['subscription', 'non_consumable', 'consumable'].includes(data.product_type)) throw purchasesError('invalid_product_type', 'Invalid product type');
-    const storeProductId = String(data.store_product_id || '').trim();
-    if (!storeProductId) throw purchasesError('product_id_required', 'Provider product or price ID is required');
-    const productId = crypto.randomUUID(); const priceId = crypto.randomUUID();
+    const environment = project.isTest ? 'sandbox' : 'production';
+    if (data.environment && data.environment !== environment) {
+      throw purchasesError('invalid_environment', `This project requires the Stripe ${environment === 'sandbox' ? 'test' : 'live'} environment`, 422);
+    }
+    const requestedPriceId = String(data.provider_price_id || data.store_product_id || '').trim();
+    if (!requestedPriceId) throw purchasesError('product_id_required', 'Stripe Price ID is required');
+    const connection = await c.env.DB.prepare(`
+      SELECT id, environment, status, configuration_encrypted, billing_configuration_encrypted
+      FROM billing_store_connections
+      WHERE project_id = ? AND provider = 'stripe' AND environment = ? LIMIT 1
+    `).bind(project.id, environment).first<Record<string, any>>();
+    if (!connection || connection.status !== 'connected') {
+      throw purchasesError('stripe_connection_required', `Connect and test Stripe ${environment === 'sandbox' ? 'test' : 'live'} credentials before importing a Price`, 422);
+    }
+    const encrypted = scopedStoreCredential(connection, c.env);
+    if (!encrypted) throw purchasesError('connection_credentials_invalid', 'Stripe credentials are unavailable for this execution domain', 500);
+    let stripeCredentials;
+    try {
+      stripeCredentials = validateStripeCredentials(JSON.parse(await decryptCredential(c.env, encrypted)), environment);
+    } catch (error) {
+      const tagged = error as { code?: string };
+      if (tagged.code) throw error;
+      throw purchasesError('connection_credentials_invalid', 'Stripe credentials cannot be decrypted', 500);
+    }
+    const imported = await retrieveStripeCatalogProduct({
+      secretKey: stripeCredentials.secret_key,
+      environment,
+      priceId: requestedPriceId,
+      productType: data.product_type as 'subscription' | 'non_consumable' | 'consumable',
+    });
+    const proposedProductId = crypto.randomUUID();
+    await c.env.DB.prepare(`
+      INSERT INTO billing_products (
+        id, project_id, store, environment, store_product_id, product_type,
+        display_name, description, active, metadata, updated_at
+      ) VALUES (?, ?, 'stripe', ?, ?, ?, ?, ?, 1, ?, datetime('now'))
+      ON CONFLICT(project_id, store, environment, store_product_id) DO UPDATE SET
+        product_type = excluded.product_type,
+        display_name = excluded.display_name,
+        description = excluded.description,
+        active = 1,
+        metadata = excluded.metadata,
+        updated_at = datetime('now')
+    `).bind(
+      proposedProductId, project.id, environment, imported.storeProductId, imported.productType,
+      imported.displayName, imported.description, JSON.stringify(imported.productMetadata),
+    ).run();
+    const storedProduct = await c.env.DB.prepare(`
+      SELECT id FROM billing_products
+      WHERE project_id = ? AND store = 'stripe' AND environment = ? AND store_product_id = ? LIMIT 1
+    `).bind(project.id, environment, imported.storeProductId).first<{ id: string }>();
+    if (!storedProduct) throw purchasesError('stripe_product_persistence_failed', 'Verified Stripe Product could not be persisted', 503, true);
+    const proposedPriceId = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(`
-        INSERT INTO billing_products (id, project_id, store, environment, store_product_id, product_type, display_name, description, metadata)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(productId, project.id, provider, data.environment || (project.isTest ? 'sandbox' : 'production'), storeProductId, data.product_type, data.display_name || storeProductId, data.description || null, JSON.stringify(data.metadata || {})),
+        INSERT INTO billing_product_prices (
+          id, product_id, provider_price_id, currency, price_micros,
+          billing_period, trial_period, active, metadata, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now'))
+        ON CONFLICT DO UPDATE SET
+          price_micros = excluded.price_micros,
+          billing_period = excluded.billing_period,
+          trial_period = excluded.trial_period,
+          active = 1,
+          metadata = excluded.metadata,
+          updated_at = datetime('now')
+      `).bind(
+        proposedPriceId, storedProduct.id, imported.providerPriceId, imported.currency,
+        imported.priceMicros, imported.billingPeriod, imported.trialPeriod,
+        JSON.stringify(imported.priceMetadata),
+      ),
       c.env.DB.prepare(`
-        INSERT INTO billing_product_prices (id, product_id, provider_price_id, currency, price_micros, billing_period, trial_period, metadata)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(priceId, productId, data.provider_price_id || storeProductId, data.currency || null, data.price_micros ?? null, data.billing_period || null, data.trial_period || null, JSON.stringify(data.price_metadata || {})),
+        UPDATE billing_store_connections
+        SET last_synced_at = datetime('now'), last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now')
+        WHERE id = ?
+      `).bind(connection.id),
     ]);
-    await audit(c, project.id, 'provider_product.created', 'product', productId, { provider, store_product_id: storeProductId });
-    return c.json({ id: productId, price_id: priceId }, 201);
+    const storedPrice = await c.env.DB.prepare(`
+      SELECT id FROM billing_product_prices
+      WHERE product_id = ? AND provider_price_id = ? AND currency = ? LIMIT 1
+    `).bind(storedProduct.id, imported.providerPriceId, imported.currency).first<{ id: string }>();
+    if (!storedPrice) throw purchasesError('stripe_product_persistence_failed', 'Verified Stripe Price could not be persisted', 503, true);
+    await audit(c, project.id, 'provider_product.imported', 'product', storedProduct.id, {
+      provider,
+      store_product_id: imported.storeProductId,
+      provider_price_id: imported.providerPriceId,
+      stripe_product_id: imported.productMetadata.stripe_product_id,
+      environment,
+    });
+    return c.json({ id: storedProduct.id, price_id: storedPrice.id, imported: true }, 201);
   } catch (error) { return replyError(c, error); }
 });
 
