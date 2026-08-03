@@ -28,6 +28,7 @@ export interface Env extends BillingEnv {
   MAINTENANCE_QUEUE?: Queue;
   MESSAGING?: Fetcher;
   BILLING?: Fetcher;
+  GROWTH?: Fetcher;
   EMAIL?: SendEmail;
   SHORTLINK_DOMAIN: string;
   API_DOMAIN: string;
@@ -45,6 +46,7 @@ export interface Env extends BillingEnv {
   IAP_PROCESS_KEY?: string;
   GOOGLE_PUBSUB_VERIFICATION_TOKEN?: string;
   MESSAGING_INTERNAL_TOKEN?: string;
+  GROWTH_INTERNAL_TOKEN?: string;
   BILLING_CREDENTIALS_REWRAP_KEY?: string;
   APP_URL?: string;
   MCP_CONSENT_URL?: string;

@@ -38,12 +38,13 @@
     "workers": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["api", "dashboard", "billing", "messaging"],
+      "required": ["api", "dashboard", "billing", "messaging", "growth"],
       "properties": {
         "api": { "$ref": "#/$defs/workerNames" },
         "dashboard": { "$ref": "#/$defs/workerNames" },
         "billing": { "$ref": "#/$defs/workerNames" },
-        "messaging": { "$ref": "#/$defs/workerNames" }
+        "messaging": { "$ref": "#/$defs/workerNames" },
+        "growth": { "$ref": "#/$defs/workerNames" }
       }
     },
     "oauth": {
@@ -91,7 +92,7 @@
     "queues": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["events", "eventsDlq", "push", "pushDlq", "maintenance", "maintenanceDlq", "billing", "billingDlq"],
+      "required": ["events", "eventsDlq", "push", "pushDlq", "maintenance", "maintenanceDlq", "billing", "billingDlq", "growth", "growthDlq"],
       "properties": {
         "events": { "type": "string" },
         "eventsDlq": { "type": "string" },
@@ -100,13 +101,15 @@
         "maintenance": { "type": "string" },
         "maintenanceDlq": { "type": "string" },
         "billing": { "type": "string" },
-        "billingDlq": { "type": "string" }
+        "billingDlq": { "type": "string" },
+        "growth": { "type": "string" },
+        "growthDlq": { "type": "string" }
       }
     },
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "queues"],
+      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "growthD1", "queues"],
       "properties": {
         "d1": { "$ref": "#/$defs/namedResource" },
         "kv": { "$ref": "#/$defs/namedResource" },
@@ -114,6 +117,7 @@
         "dashboardCache": { "$ref": "#/$defs/namedResource" },
         "messagingD1": { "$ref": "#/$defs/namedResource" },
         "messagingR2": { "$ref": "#/$defs/namedResource" },
+        "growthD1": { "$ref": "#/$defs/namedResource" },
         "queues": { "$ref": "#/$defs/queues" }
       }
     }

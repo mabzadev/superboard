@@ -1,0 +1,19 @@
+{
+  "name": "@opengrow/growth-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "deploy": "node ../../scripts/cloudflare-deploy.mjs --service growth --target vocostar --environment production"
+  },
+  "dependencies": {
+    "hono": "^4.7.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260721.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.6",
+    "wrangler": "^4.112.0"
+  }
+}

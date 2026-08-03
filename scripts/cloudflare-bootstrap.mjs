@@ -16,6 +16,7 @@ const planned = [];
 const d1 = await ensureNamed("D1 database", resources.d1, "/d1/database", { name: resources.d1.name });
 const kv = await ensureNamed("KV namespace", resources.kv, "/storage/kv/namespaces", { title: resources.kv.name });
 const messagingD1 = await ensureNamed("Messaging D1 database", resources.messagingD1, "/d1/database", { name: resources.messagingD1.name });
+const growthD1 = await ensureNamed("Growth D1 database", resources.growthD1, "/d1/database", { name: resources.growthD1.name });
 await ensureNamed("R2 bucket", resources.r2, "/r2/buckets", { name: resources.r2.name });
 await ensureNamed("dashboard R2 cache", resources.dashboardCache, "/r2/buckets", { name: resources.dashboardCache.name });
 await ensureNamed("Messaging R2 bucket", resources.messagingR2, "/r2/buckets", { name: resources.messagingR2.name });
@@ -28,6 +29,7 @@ if (apply) {
   if (d1?.uuid) resources.d1.id = d1.uuid;
   if (kv?.id) resources.kv.id = kv.id;
   if (messagingD1?.uuid) resources.messagingD1.id = messagingD1.uuid;
+  if (growthD1?.uuid) resources.growthD1.id = growthD1.uuid;
   await writeFile(path, `${JSON.stringify(target, null, 2)}\n`);
   console.log(`Updated ${path}`);
 } else {
