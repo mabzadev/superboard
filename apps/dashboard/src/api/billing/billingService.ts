@@ -572,6 +572,9 @@ export const startBillingLegacyInventory = async (
   environment: "sandbox" | "production" = "production",
 ) => (await POST(purchasesV2Path(projectId, "/legacy/revenuecat/inventory-runs"), { environment })).data.data;
 
+export const cancelBillingLegacyInventory = async (projectId: string, runId: string) =>
+  (await POST(purchasesV2Path(projectId, `/legacy/revenuecat/inventory-runs/${encodeURIComponent(runId)}/cancel`), {})).data.data;
+
 export const getBillingWebhookDeliveries = async (projectId: string) =>
   (await GET(purchasesV2Path(projectId, "/integrations/deliveries?limit=100"))).data;
 
