@@ -1,3 +1,9 @@
+## Unreleased
+
+* Resolve Google Play product contracts from the trusted server catalog instead of client timing
+* Bound Purchases API requests and response bodies with retryable timeout errors
+* Retry Store transaction completion after durable server validation without validating twice
+
 ## 2.1.3
 
 * Added an authenticated, signed CustomerInfo preflight before opening the Store purchase flow

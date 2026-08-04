@@ -92,7 +92,7 @@ app.post('/internal/v1/receipts/verify', async (c) => {
       customerId: request.customer_id,
       purchaseToken: request.purchase_token!,
       storeProductId: request.product_id!,
-      productType: request.product_type!,
+      productType: request.product_type,
       environment: request.environment,
     });
     purchase = verified.purchase;

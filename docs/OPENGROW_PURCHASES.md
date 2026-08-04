@@ -26,7 +26,9 @@ Mobile routes require the project, platform, application identifier, and anonymo
 - `POST /purchases/v2/sync`
 - `POST /purchases/v2/certification/device-results`
 
-The SDK persists a transaction in encrypted secure storage before server validation. It calls `completePurchase` only after the server has verified and persisted the transaction and the SDK has verified the ES256 CustomerInfo signature. Pending purchases grant no entitlement. Network loss and application restarts resume the outbox automatically.
+The SDK persists a transaction in encrypted secure storage before server validation. It calls `completePurchase` only after the server has verified and persisted the transaction and the SDK has verified the ES256 CustomerInfo signature. A Store completion failure is retried without repeating successful server validation. Pending purchases grant no entitlement. Network loss and application restarts resume the outbox automatically.
+
+For Google Play, Billing resolves the product type from the active project and environment catalog before selecting the subscriptions or one-time-products API. A client `product_type` value is accepted only as a backward-compatible hint and never controls provider verification or entitlement projection.
 
 ## Stripe Web
 

@@ -29,12 +29,42 @@ type GoogleCredentials = {
 export type StoreCatalogProduct = {
   applicationId: string;
   storeProductId: string;
-  productType: 'subscription' | 'non_consumable' | 'consumable';
+  productType: GoogleProductType;
   displayName: string;
   description: string | null;
   active: boolean;
   metadata: Record<string, unknown>;
 };
+
+export type GoogleProductType = 'subscription' | 'non_consumable' | 'consumable';
+
+export async function configuredGoogleProductType(
+  db: D1Database,
+  params: {
+    projectId: string | number;
+    environment: BillingEnvironment;
+    storeProductId: string;
+  },
+): Promise<GoogleProductType> {
+  const product = await db.prepare(`
+    SELECT product_type
+    FROM billing_products
+    WHERE project_id = ? AND store = 'google' AND environment = ?
+      AND store_product_id = ? AND active = 1
+    LIMIT 1
+  `).bind(
+    String(params.projectId),
+    params.environment,
+    params.storeProductId,
+  ).first<{ product_type: string }>();
+  if (!product || !['subscription', 'non_consumable', 'consumable'].includes(product.product_type)) {
+    throw Object.assign(
+      new Error('Google Play product is not configured in the server catalog'),
+      { code: 'google_product_not_configured', status: 409, retryable: false },
+    );
+  }
+  return product.product_type as GoogleProductType;
+}
 
 // The Apple library currently loads jsrsasign, which seeds its PRNG during
 // module initialization. Cloudflare Workers forbids random generation in the
@@ -725,25 +755,32 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
   customerId: string | null;
   purchaseToken: string;
   storeProductId: string;
-  productType: 'subscription' | 'non_consumable' | 'consumable';
+  productType?: GoogleProductType;
   environment: BillingEnvironment;
   allowTransfer?: boolean;
   detectEnvironment?: boolean;
 }) {
+  // The client value is only a compatibility hint. The server catalog owns
+  // the provider contract and therefore decides which Google API is called.
+  const productType = await configuredGoogleProductType(env.DB, {
+    projectId: params.projectId,
+    environment: params.environment,
+    storeProductId: params.storeProductId,
+  });
   const app = await applicationForProject(env.DB, params.projectId, 'android');
   const credentials = await googleCredentials(env, app);
   const accessToken = await googleAccessToken(credentials);
   const packageName = encodeURIComponent(app.identifier);
   const token = encodeURIComponent(params.purchaseToken);
   const productId = encodeURIComponent(params.storeProductId);
-  const url = params.productType === 'subscription'
+  const url = productType === 'subscription'
     ? `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${token}`
     : `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${token}`;
   const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
   const verified = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) throw new Error('Google Play purchase verification failed');
 
-  const verifiedEnvironment = googlePurchaseEnvironment(verified, params.productType);
+  const verifiedEnvironment = googlePurchaseEnvironment(verified, productType);
   if (!params.detectEnvironment && verifiedEnvironment !== params.environment) {
     throw new Error(`Google Play purchase belongs to the ${verifiedEnvironment} environment`);
   }
@@ -758,15 +795,15 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
   const effectiveCustomerId = params.customerId || (params.allowTransfer ? boundCustomer || null : null);
   const subscriptionState = String(verified.subscriptionState || '');
   const numericPurchaseState = Number(verified.purchaseState);
-  const status: BillingStatus = params.productType === 'subscription'
+  const status: BillingStatus = productType === 'subscription'
     ? googleSubscriptionStatus(subscriptionState)
     : numericPurchaseState === 0 ? 'active' : numericPurchaseState === 2 ? 'pending' : 'revoked';
   const autoRenewingPlan = lineItem.autoRenewingPlan as Record<string, unknown> | undefined;
   const recurringPrice = autoRenewingPlan?.recurringPrice as Record<string, unknown> | undefined;
-  const priceMicros = params.productType === 'subscription'
+  const priceMicros = productType === 'subscription'
     ? Number(recurringPrice?.units || 0) * 1_000_000 + Math.round(Number(recurringPrice?.nanos || 0) / 1000)
     : Number(verified.priceAmountMicros || 0);
-  const currency = params.productType === 'subscription'
+  const currency = productType === 'subscription'
     ? String(recurringPrice?.currencyCode || '')
     : String(verified.priceCurrencyCode || '');
   const orderId = String(verified.latestOrderId || verified.orderId || params.purchaseToken);
@@ -777,7 +814,7 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
     store: 'google',
     environment: verifiedEnvironment,
     storeProductId: String(lineItem.productId || params.storeProductId),
-    productType: params.productType,
+    productType,
     storeTransactionId: orderId,
     originalTransactionId: String(verified.linkedPurchaseToken || params.purchaseToken),
     orderId,

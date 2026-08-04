@@ -119,6 +119,33 @@ void main() {
   );
 
   test(
+    'rejects an oversized server response without completing the Store transaction',
+    () async {
+      final store = FakePurchaseStore([]);
+      final storage = MemoryPurchaseStorage([]);
+      final purchases = testPurchases(store, storage, (request) async {
+        if (request.url.path.endsWith('/receipts')) {
+          return http.Response(List.filled(1024 * 1024 + 1, 'x').join(), 200);
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+      await configure(purchases);
+
+      final failedFuture = purchases.purchaseResultStream.firstWhere(
+        (result) => result.code == 'server_response_too_large',
+      );
+      store.emit(purchased());
+      expect((await failedFuture).outcome, OpenGrowPurchaseOutcome.failed);
+      expect(store.completed, isEmpty);
+      expect(storage.outboxEntries, hasLength(1));
+    },
+  );
+
+  test(
     'does not complete a pending purchase and publishes its terminal resolution',
     () async {
       var receiptAttempts = 0;
@@ -156,6 +183,47 @@ void main() {
       );
       store.emit(purchased());
       expect((await resolvedFuture).outcome, OpenGrowPurchaseOutcome.purchased);
+      expect(store.completed, hasLength(1));
+      expect(storage.outboxEntries, isEmpty);
+    },
+  );
+
+  test(
+    'retries Store completion after server validation without validating twice',
+    () async {
+      var receiptAttempts = 0;
+      final store = FakePurchaseStore([])..completeFailuresRemaining = 1;
+      final storage = MemoryPurchaseStorage([]);
+      final purchases = testPurchases(store, storage, (request) async {
+        if (request.url.path.endsWith('/receipts')) {
+          receiptAttempts += 1;
+          return jsonResponse(verifiedPurchaseResponse());
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+      await configure(purchases);
+
+      final failedFuture = purchases.purchaseResultStream.firstWhere(
+        (result) => result.code == 'purchases_failed',
+      );
+      store.emit(purchased());
+      expect((await failedFuture).retryable, isTrue);
+      expect(storage.outboxEntries.single['server_validated'], isTrue);
+      expect(store.completed, isEmpty);
+
+      final recoveredFuture = purchases.purchaseResultStream.firstWhere(
+        (result) => result.code == 'purchase_verified',
+      );
+      await purchases.resumeOutboxForTesting();
+      expect(
+        (await recoveredFuture).outcome,
+        OpenGrowPurchaseOutcome.purchased,
+      );
+      expect(receiptAttempts, 1);
       expect(store.completed, hasLength(1));
       expect(storage.outboxEntries, isEmpty);
     },
@@ -467,6 +535,7 @@ class FakePurchaseStore implements OpenGrowPurchaseStore {
   final completed = <PurchaseDetails>[];
   int productQueryCount = 0;
   int purchaseStartCount = 0;
+  int completeFailuresRemaining = 0;
 
   void emit(PurchaseDetails purchase) => controller.add([purchase]);
 
@@ -506,6 +575,10 @@ class FakePurchaseStore implements OpenGrowPurchaseStore {
 
   @override
   Future<void> completePurchase(PurchaseDetails purchase) async {
+    if (completeFailuresRemaining > 0) {
+      completeFailuresRemaining -= 1;
+      throw StateError('Store completion failed');
+    }
     events.add('store.completed');
     completed.add(purchase);
   }
