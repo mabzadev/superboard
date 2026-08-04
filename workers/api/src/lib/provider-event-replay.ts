@@ -31,12 +31,15 @@ export function providerEventReplayJob(params: {
       throw replayError('Apple provider event replay data is invalid');
     }
   } else if (stored.type === 'billing.google.notification') {
+    const environment = stored.environment === undefined ? params.environment : stored.environment;
     if (stored.projectId !== params.projectId || !required(stored.purchaseToken, 4096)
       || !required(stored.productId, 512) || !required(stored.eventType, 255)
       || !required(stored.eventOccurredAt, 100)
+      || environment !== params.environment
       || !['subscription', 'non_consumable', 'consumable'].includes(stored.productType)) {
       throw replayError('Google provider event replay data is invalid');
     }
+    Object.assign(stored, { environment });
   } else if (stored.type === 'billing.stripe.notification') {
     if (!required(stored.connectionId, 255)) throw replayError('Stripe provider event replay data is invalid');
   } else {

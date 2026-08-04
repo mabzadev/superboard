@@ -42,6 +42,14 @@ The Purchases Stores section compares the live App Store Connect configuration w
 
 The release gate remains closed unless both V2 URLs were verified within the configured Store-readiness window. A mismatch or stale observation cannot be overridden by manual certification evidence.
 
+## Google Play real-time developer notifications
+
+Google Play RTDN uses an authenticated Pub/Sub push subscription. The API verifies the Google-signed OIDC token, accepted Google issuer, exact endpoint audience, verified email claim, and the service-account email already registered for Google Play access before it reads the notification as trusted. Google signing keys are cached in KV with bounded rotation and refreshed immediately when a new key identifier appears.
+
+The historical URL verification token remains accepted only as a migration compatibility path and can never satisfy the release gate. A successful OIDC-authenticated notification records readiness evidence without storing the bearer token. The Billing Worker verifies the referenced purchase with the Android Publisher API and derives `sandbox` or `production` from Google's verified `testPurchase`, `testPurchaseContext`, or legacy `purchaseType` marker. Client input never selects the entitlement environment.
+
+The generated Google Cloud setup script creates or updates the push subscription with `--push-auth-service-account` and the exact `--push-auth-token-audience`. The push identity must be the same service account uploaded for Google Play verification. Publication remains blocked until at least one authenticated, provider-verified RTDN event has been observed.
+
 ## FlutterFlow actions
 
 - `opengrowInitializeAuthenticated`

@@ -5,9 +5,15 @@ import { getOrCreateProject } from '../lib/db';
 import { applyVerifiedPurchase, type BillingStatus, type VerifiedPurchase } from '../lib/billing';
 import {
   billingServiceEnabled,
+  classifyGooglePurchaseWithBillingAuthority,
   ingestProviderEventWithBillingAuthority,
 } from '../lib/billing-service';
 import { providerHttpError, providerTaggedHttpError, providerUnhandledHttpError } from '../lib/provider-http-errors';
+import {
+  authenticateGooglePubSub,
+  persistGooglePubSubAuthentication,
+} from '../lib/google-pubsub-auth';
+import { classifyGooglePurchaseEnvironment, googlePlayWebhookIdentity } from '../lib/store-verification';
 
 const iap = new Hono<{ Bindings: Env }>();
 iap.onError((error, c) => providerUnhandledHttpError(c, error));
@@ -51,14 +57,6 @@ async function applePayload(body: any, env: Env): Promise<any> {
 async function appleTransactionPayload(value: unknown, fallback: any): Promise<any> {
   if (!value) return fallback || {};
   return verifyAppleJws(value);
-}
-
-function googleRtdnAllowed(c: any, body: any): boolean {
-  if (c.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN) {
-    const token = c.req.query('token') || c.req.header('X-Goog-Channel-Token') || body.token;
-    return token === c.env.GOOGLE_PUBSUB_VERIFICATION_TOKEN;
-  }
-  return c.env.ENVIRONMENT !== 'production' || c.env.IAP_ALLOW_UNSIGNED_FIXTURES === 'true';
 }
 
 function googleServiceAccount(env: Env): any | null {
@@ -387,8 +385,24 @@ async function handleGoogle(c: any) {
   const instanceId = Number(c.req.param('path'));
   if (!instanceId) return providerHttpError(c, 'instance_invalid', 'Instance identifier is invalid', 422, false);
   const body = await c.req.json().catch(() => ({}));
-  if (!googleRtdnAllowed(c, body)) {
-    return providerHttpError(c, 'google_pubsub_token_invalid', 'Google Pub/Sub verification token is invalid', 400, false);
+  const productionProject = await projectForInstance(c.env.DB, instanceId, false);
+  let expectedEmail: string | null = null;
+  if (/^Bearer\s+/i.test(c.req.header('Authorization') || '')) {
+    try {
+      expectedEmail = (await googlePlayWebhookIdentity(c.env, productionProject.id)).serviceAccountEmail;
+    } catch (error) {
+      return providerTaggedHttpError(c, error, 'Google Pub/Sub push identity is not configured');
+    }
+  }
+  let authentication;
+  try {
+    authentication = await authenticateGooglePubSub(c.env, c.req.raw, {
+      instanceId,
+      expectedEmail,
+      body,
+    });
+  } catch (error) {
+    return providerTaggedHttpError(c, error, 'Google Pub/Sub authentication failed');
   }
   let data: any;
   try {
@@ -397,12 +411,13 @@ async function handleGoogle(c: any) {
     return providerHttpError(c, 'google_pubsub_payload_invalid', 'Google Pub/Sub payload is invalid', 400, false);
   }
   const notification = data.subscriptionNotification || data.oneTimeProductNotification || data.voidedPurchaseNotification || data;
-  const project = await projectForInstance(c.env.DB, instanceId, false);
   const notificationType = String(notification.notificationType || data.notificationType || (data.voidedPurchaseNotification ? 'VOIDED_PURCHASE' : 'PURCHASED'));
   const purchaseType = data.subscriptionNotification ? 'subscription' : 'one_time';
   const transactionId = String(notification.purchaseToken || notification.orderId || data.purchaseToken || crypto.randomUUID());
   const productId = notification.subscriptionId || notification.sku || notification.productId || data.productId || null;
   const pubsubMessageId = body.message?.messageId || body.message?.message_id;
+  let project = productionProject;
+  let providerEnvironment: 'sandbox' | 'production' = 'production';
   let billingWebhookEventId: string | null = null;
   if (pubsubMessageId) {
     let productType: 'subscription' | 'non_consumable' | 'consumable' = purchaseType === 'subscription' ? 'subscription' : 'non_consumable';
@@ -410,15 +425,40 @@ async function handleGoogle(c: any) {
       const configured = await c.env.DB.prepare(`
         SELECT product_type FROM billing_products
         WHERE project_id = ? AND store = 'google' AND store_product_id = ? LIMIT 1
-      `).bind(project.id, productId).first() as { product_type: 'non_consumable' | 'consumable' } | null;
+      `).bind(productionProject.id, productId).first() as { product_type: 'non_consumable' | 'consumable' } | null;
       if (configured?.product_type) productType = configured.product_type;
+    }
+    const purchaseToken = String(notification.purchaseToken || data.purchaseToken || '');
+    if (!purchaseToken || !productId) {
+      return providerHttpError(c, 'google_rtdn_purchase_invalid', 'Google RTDN purchase data is incomplete', 400, false);
+    }
+    try {
+      providerEnvironment = billingServiceEnabled(c.env)
+        ? await classifyGooglePurchaseWithBillingAuthority(c.env, {
+          projectId: productionProject.id,
+          purchaseToken,
+          productId: String(productId),
+          productType,
+        })
+        : (await classifyGooglePurchaseEnvironment(c.env, {
+          projectId: productionProject.id,
+          purchaseToken,
+          storeProductId: String(productId),
+          productType,
+        })).environment;
+      project = providerEnvironment === 'sandbox'
+        ? await projectForInstance(c.env.DB, instanceId, true)
+        : productionProject;
+      await persistGooglePubSubAuthentication(c.env.DB, productionProject.id, authentication);
+    } catch (error) {
+      return providerTaggedHttpError(c, error, 'Google Play purchase environment could not be verified');
     }
     if (billingServiceEnabled(c.env)) {
       try {
         const result = await ingestProviderEventWithBillingAuthority(c.env, {
           projectId: String(project.id),
           store: 'google',
-          environment: 'production',
+          environment: providerEnvironment,
           externalEventId: String(pubsubMessageId),
           eventType: notificationType,
           payload: JSON.stringify(body),
@@ -430,6 +470,7 @@ async function handleGoogle(c: any) {
             productType,
             eventType: notificationType,
             eventOccurredAt: msDate(data.eventTimeMillis) || new Date().toISOString(),
+            environment: providerEnvironment,
           },
         });
         return c.json({
@@ -444,12 +485,12 @@ async function handleGoogle(c: any) {
     const inserted = await c.env.DB.prepare(`
       INSERT OR IGNORE INTO billing_webhook_events (
         id, project_id, store, environment, external_event_id, payload, status
-      ) VALUES (?, ?, 'google', 'production', ?, ?, 'received')
-    `).bind(billingWebhookEventId, project.id, String(pubsubMessageId), JSON.stringify(body)).run();
+      ) VALUES (?, ?, 'google', ?, ?, ?, 'received')
+    `).bind(billingWebhookEventId, project.id, providerEnvironment, String(pubsubMessageId), JSON.stringify(body)).run();
     const persisted = await c.env.DB.prepare(`
       SELECT id, status FROM billing_webhook_events
-      WHERE project_id = ? AND store = 'google' AND environment = 'production' AND external_event_id = ? LIMIT 1
-    `).bind(project.id, String(pubsubMessageId)).first() as { id: string; status: string } | null;
+      WHERE project_id = ? AND store = 'google' AND environment = ? AND external_event_id = ? LIMIT 1
+    `).bind(project.id, providerEnvironment, String(pubsubMessageId)).first() as { id: string; status: string } | null;
     if (!persisted) return providerHttpError(c, 'google_rtdn_persistence_failed', 'Google RTDN could not be persisted', 503, true);
     if (persisted.status === 'processed') return c.json({ message: 'Google RTDN already processed', duplicate: true });
     billingWebhookEventId = persisted.id;
@@ -464,6 +505,7 @@ async function handleGoogle(c: any) {
           productType,
           eventType: notificationType,
           eventOccurredAt: msDate(data.eventTimeMillis) || new Date().toISOString(),
+          environment: providerEnvironment,
         });
       } catch (error) {
         await markWebhookQueueFailure(c.env.DB, persisted.id);

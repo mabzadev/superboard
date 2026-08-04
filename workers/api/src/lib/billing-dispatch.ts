@@ -17,7 +17,7 @@ export type BillingQueueJob =
   | { type: 'billing.reconcile' }
   | { type: 'billing.webhook.deliver'; deliveryId: string }
   | { type: 'billing.apple.notification'; eventId: string; projectId: string; signedPayload: string; environment: 'sandbox' | 'production' }
-  | { type: 'billing.google.notification'; eventId: string; projectId: string; purchaseToken: string; productId: string; productType: 'subscription' | 'non_consumable' | 'consumable'; eventType: string; eventOccurredAt: string }
+  | { type: 'billing.google.notification'; eventId: string; projectId: string; purchaseToken: string; productId: string; productType: 'subscription' | 'non_consumable' | 'consumable'; eventType: string; eventOccurredAt: string; environment: 'sandbox' | 'production' }
   | { type: 'billing.google.voided.reconcile'; projectId: string }
   | { type: 'billing.stripe.notification'; eventId: string; connectionId: string }
   | { type: 'billing.stripe.catalog.reconcile'; projectId: string; environment: 'sandbox' | 'production' }

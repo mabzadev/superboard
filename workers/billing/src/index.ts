@@ -15,6 +15,7 @@ import { reconcileBillingState } from '../../api/src/lib/billing-jobs';
 import {
   fetchStoreCatalog,
   finalizeGooglePurchase,
+  classifyGooglePurchaseEnvironment,
   verifyAppleTransaction,
   verifyGooglePurchase,
 } from '../../api/src/lib/store-verification';
@@ -58,6 +59,20 @@ app.post('/internal/v1/provider-events/ingest', async (c) => {
     job,
   } as BillingProviderIngressRequest;
   return c.json({ data: await ingestBillingProviderEvent(c.env, request) });
+});
+
+app.post('/internal/v1/google/purchases/classify', async (c) => {
+  const body = await boundedRecord(c.req.raw);
+  const productType = requiredText(body.product_type, 'product_type');
+  if (!['subscription', 'non_consumable', 'consumable'].includes(productType)) {
+    throw publicError('product_type_invalid', 'product_type must be subscription, non_consumable, or consumable');
+  }
+  return c.json({ data: await classifyGooglePurchaseEnvironment(c.env, {
+    projectId: requiredText(body.project_id, 'project_id'),
+    purchaseToken: requiredText(body.purchase_token, 'purchase_token'),
+    storeProductId: requiredText(body.product_id, 'product_id'),
+    productType: productType as 'subscription' | 'non_consumable' | 'consumable',
+  }) });
 });
 
 app.post('/internal/v1/receipts/verify', async (c) => {

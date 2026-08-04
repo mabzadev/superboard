@@ -592,6 +592,12 @@ export async function googlePlayAccess(env: BillingEnv, projectId: string | numb
   return { token: await googleAccessToken(credentials), packageName: app.identifier };
 }
 
+export async function googlePlayWebhookIdentity(env: BillingEnv, projectId: string | number) {
+  const app = await applicationForProject(env.DB, projectId, 'android');
+  const credentials = await googleCredentials(env, app);
+  return { serviceAccountEmail: credentials.client_email, packageName: app.identifier };
+}
+
 function localizedListing(value: unknown): { title?: string; description?: string } {
   if (Array.isArray(value)) {
     const listing = value.find((item) => item && typeof item === 'object') as Record<string, unknown> | undefined;
@@ -722,6 +728,7 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
   productType: 'subscription' | 'non_consumable' | 'consumable';
   environment: BillingEnvironment;
   allowTransfer?: boolean;
+  detectEnvironment?: boolean;
 }) {
   const app = await applicationForProject(env.DB, params.projectId, 'android');
   const credentials = await googleCredentials(env, app);
@@ -735,6 +742,11 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
   const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
   const verified = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) throw new Error('Google Play purchase verification failed');
+
+  const verifiedEnvironment = googlePurchaseEnvironment(verified, params.productType);
+  if (!params.detectEnvironment && verifiedEnvironment !== params.environment) {
+    throw new Error(`Google Play purchase belongs to the ${verifiedEnvironment} environment`);
+  }
 
   const lineItems = Array.isArray(verified.lineItems) ? verified.lineItems as Array<Record<string, unknown>> : [];
   const lineItem = lineItems.find((item) => item.productId === params.storeProductId) || lineItems[0] || {};
@@ -763,7 +775,7 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
     applicationId: app.applicationId,
     customerId: effectiveCustomerId,
     store: 'google',
-    environment: params.environment,
+    environment: verifiedEnvironment,
     storeProductId: String(lineItem.productId || params.storeProductId),
     productType: params.productType,
     storeTransactionId: orderId,
@@ -783,7 +795,33 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
     rawPayload: verified,
     transfer: params.allowTransfer === true,
   };
-  return { purchase, verified, accessToken, app };
+  return { purchase, verified, accessToken, app, environment: verifiedEnvironment };
+}
+
+export function googlePurchaseEnvironment(
+  verified: Record<string, unknown>,
+  productType: 'subscription' | 'non_consumable' | 'consumable',
+): BillingEnvironment {
+  const test = productType === 'subscription'
+    ? Object.prototype.hasOwnProperty.call(verified, 'testPurchase')
+    : Object.prototype.hasOwnProperty.call(verified, 'testPurchaseContext') || Number(verified.purchaseType) === 0;
+  return test ? 'sandbox' : 'production';
+}
+
+export async function classifyGooglePurchaseEnvironment(env: BillingEnv, params: {
+  projectId: string | number;
+  purchaseToken: string;
+  storeProductId: string;
+  productType: 'subscription' | 'non_consumable' | 'consumable';
+}) {
+  const result = await verifyGooglePurchase(env, {
+    ...params,
+    customerId: null,
+    environment: 'production',
+    allowTransfer: true,
+    detectEnvironment: true,
+  });
+  return { environment: result.environment };
 }
 
 export async function finalizeGooglePurchase(params: {

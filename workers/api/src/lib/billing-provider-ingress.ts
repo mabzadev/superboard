@@ -108,6 +108,10 @@ function validateRequest(request: BillingProviderIngressRequest) {
     && request.job.environment !== request.environment) {
     throw ingressError('provider_event_job_invalid', 'Provider event job does not match its environment');
   }
+  if (request.store === 'google' && request.job.type === 'billing.google.notification'
+    && request.job.environment !== request.environment) {
+    throw ingressError('provider_event_job_invalid', 'Provider event job does not match its environment');
+  }
 }
 
 async function markQueueFailure(db: D1Database, eventId: string) {
