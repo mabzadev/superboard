@@ -30,8 +30,19 @@ describe('Provider event replay jobs', () => {
       jobPayload: JSON.stringify({
         type: 'billing.google.notification', projectId: '11', purchaseToken: '',
         productId: 'yearly', productType: 'subscription', eventType: 'RENEWED',
-        eventOccurredAt: '2026-08-04T00:00:00.000Z',
+        eventOccurredAt: '2026-08-04T00:00:00.000Z', environment: 'production',
       }),
     })).toThrow('Google provider event replay data is invalid');
+  });
+
+  it('preserves production routing for Google jobs stored before environment classification', () => {
+    expect(providerEventReplayJob({
+      eventId: 'event-1', projectId: '11', store: 'google', environment: 'production',
+      jobPayload: JSON.stringify({
+        type: 'billing.google.notification', projectId: '11', purchaseToken: 'purchase-token',
+        productId: 'yearly', productType: 'subscription', eventType: 'RENEWED',
+        eventOccurredAt: '2026-08-04T00:00:00.000Z',
+      }),
+    })).toMatchObject({ eventId: 'event-1', environment: 'production' });
   });
 });

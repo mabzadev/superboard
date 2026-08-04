@@ -298,7 +298,7 @@ describe('IAP webhooks', () => {
     expect(state.webhooks).toHaveLength(0);
   });
 
-  it('rejects Google RTDN without the configured production token', async () => {
+  it('rejects Google RTDN without valid Pub/Sub authentication', async () => {
     const env = baseEnv(projectDb({ webhooks: [], purchases: [], subscriptions: [] }), {
       ENVIRONMENT: 'production',
       GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'expected-token',
@@ -309,10 +309,10 @@ describe('IAP webhooks', () => {
       body: JSON.stringify({ subscriptionNotification: { purchaseToken: 'gpa-token', subscriptionId: 'premium' } }),
     }, env);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({
-      code: 'google_pubsub_token_invalid',
-      message: 'Google Pub/Sub verification token is invalid',
+      code: 'google_pubsub_authentication_invalid',
+      message: 'Google Pub/Sub authentication is invalid',
       retryable: false,
     });
   });
@@ -334,6 +334,53 @@ describe('IAP webhooks', () => {
       message: 'Google Pub/Sub payload is invalid',
       retryable: false,
       request_id: 'google-payload-test',
+    });
+  });
+
+  it('routes Google license-test notifications to the test project after provider classification', async () => {
+    const calls: Array<{ path: string; body: Record<string, any> }> = [];
+    const billing = {
+      fetch: vi.fn(async (request: Request) => {
+        const body = await request.json() as Record<string, any>;
+        calls.push({ path: new URL(request.url).pathname, body });
+        if (new URL(request.url).pathname.endsWith('/google/purchases/classify')) {
+          return Response.json({ data: { environment: 'sandbox' } });
+        }
+        return Response.json({ data: { event_id: 'event-1', duplicate: false, queued: true, processed: false } });
+      }),
+    };
+    const env = baseEnv(projectDb({ webhooks: [], purchases: [], subscriptions: [] }), {
+      ENVIRONMENT: 'production',
+      BILLING_EXECUTION_MODE: 'service',
+      BILLING: billing as unknown as Fetcher,
+      GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'migration-token',
+    });
+    const providerPayload = {
+      packageName: 'com.example.android',
+      eventTimeMillis: String(Date.now()),
+      subscriptionNotification: {
+        notificationType: 'SUBSCRIPTION_PURCHASED',
+        purchaseToken: 'license-test-token',
+        subscriptionId: 'premium_weekly',
+      },
+    };
+    const response = await iapRoutes.request('/google/10?token=migration-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: { messageId: 'pubsub-message-1', data: btoa(JSON.stringify(providerPayload)) },
+      }),
+    }, env);
+
+    expect(response.status).toBe(202);
+    expect(calls.map((call) => call.path)).toEqual([
+      '/internal/v1/google/purchases/classify',
+      '/internal/v1/provider-events/ingest',
+    ]);
+    expect(calls[1].body).toMatchObject({
+      project_id: '102',
+      environment: 'sandbox',
+      job: { projectId: '102', environment: 'sandbox' },
     });
   });
 
