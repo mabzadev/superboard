@@ -5,6 +5,7 @@ class OpenGrowConversation {
     required this.id,
     required this.status,
     required this.priority,
+    this.unreadCount = 0,
     this.subject,
     this.lastMessagePreview,
     this.lastMessageAt,
@@ -15,6 +16,7 @@ class OpenGrowConversation {
         id: json['id'] as String,
         status: json['status'] as String? ?? 'open',
         priority: json['priority'] as String? ?? 'normal',
+        unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
         subject: json['subject'] as String?,
         lastMessagePreview: json['last_message_preview'] as String?,
         lastMessageAt: json['last_message_at'] as String?,
@@ -23,6 +25,7 @@ class OpenGrowConversation {
   final String id;
   final String status;
   final String priority;
+  final int unreadCount;
   final String? subject;
   final String? lastMessagePreview;
   final String? lastMessageAt;

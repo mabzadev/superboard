@@ -14,6 +14,7 @@ export type InboxConversation = {
   last_message_at?: string | null;
   agent_last_read_at?: string | null;
   message_count: number;
+  unread_count: number;
   updated_at: string;
 };
 
