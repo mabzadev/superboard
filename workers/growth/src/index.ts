@@ -4,6 +4,7 @@ import { audit, enqueueAllProjects, syncProject } from './sync';
 import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_ACTIONS, type Env, type GrowthQueueJob } from './types';
 import {
   automationAction,
+  automationConfig,
   assertAutomationCompatibility,
   automationTrigger,
   booleanFlag,
@@ -203,8 +204,8 @@ app.post('/internal/projects/:projectId/automations', async (c) => {
   const projectId = project(c);
   const body = await boundedJson(c.req.raw);
   const id = crypto.randomUUID();
-  const triggerConfig = validatedAutomationConfig(body.trigger_config, 'trigger_config');
-  const actionConfig = validatedAutomationConfig(body.action_config, 'action_config');
+  const triggerConfig = automationConfig(body.trigger_config, 'trigger_config');
+  const actionConfig = automationConfig(body.action_config, 'action_config');
   const triggerType = automationTrigger(body.trigger_type);
   const actionType = automationAction(body.action_type);
   assertAutomationCompatibility(triggerType, actionType);
@@ -230,8 +231,8 @@ app.patch('/internal/projects/:projectId/automations/:id', async (c) => {
   const triggerType = body.trigger_type == null ? existing.trigger_type : automationTrigger(body.trigger_type);
   const actionType = body.action_type == null ? existing.action_type : automationAction(body.action_type);
   assertAutomationCompatibility(String(triggerType), String(actionType));
-  const triggerConfig = body.trigger_config == null ? parseJson(existing.trigger_config_json) : validatedAutomationConfig(body.trigger_config, 'trigger_config');
-  const actionConfig = body.action_config == null ? parseJson(existing.action_config_json) : validatedAutomationConfig(body.action_config, 'action_config');
+  const triggerConfig = body.trigger_config == null ? automationConfig(parseJson(existing.trigger_config_json), 'trigger_config') : automationConfig(body.trigger_config, 'trigger_config');
+  const actionConfig = body.action_config == null ? automationConfig(parseJson(existing.action_config_json), 'action_config') : automationConfig(body.action_config, 'action_config');
   const enabled = body.enabled == null ? Number(existing.enabled) === 1 : booleanFlag(body.enabled);
   const row = await c.env.DB.prepare(`
     UPDATE growth_automations SET name = ?, trigger_type = ?, action_type = ?, trigger_config_json = ?,
@@ -359,13 +360,6 @@ function parseJson(value: unknown): Record<string, unknown> {
     const parsed = JSON.parse(String(value || '{}'));
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch { return {}; }
-}
-
-function validatedAutomationConfig(value: unknown, field: string) {
-  const config = jsonObject(value, field);
-  const forbidden = JSON.stringify(config).match(/entitlement|premium|billing_status|subscription_status/i);
-  if (forbidden) throw failure(`${field}_invalid`, 'Automation messages cannot contain entitlement mutation fields');
-  return config;
 }
 
 function mapConstraint(error: unknown, code: string, message: string) {

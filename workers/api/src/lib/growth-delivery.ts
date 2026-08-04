@@ -20,6 +20,7 @@ type GrowthAction = {
 type ClaimedRun = GrowthAction & {
   terminal?: boolean;
   action_payload_json?: string;
+  claim_token?: string;
 };
 
 type DeliveryTarget = {
@@ -333,6 +334,7 @@ export async function deliverGrowthAutomation(env: Env, projectId: string | numb
   const claimed = claimedResponse?.data as ClaimedRun | undefined;
   if (!claimed) throw deliveryError('growth_run_invalid', 'Growth returned an invalid automation run', true);
   if (claimed.terminal) return { status: claimed.status, duplicate: true };
+  const claimToken = requiredText(claimed.claim_token, 'Growth returned an automation run without a lease token', 64);
   const payload = parseObject(claimed.action_payload_json || claimed.payload);
   const channel = String(claimed.action_type || payload.channel || '');
   const subjectId = requiredText(payload.subject_id, 'Automation subject is required', 255);
@@ -341,8 +343,8 @@ export async function deliverGrowthAutomation(env: Env, projectId: string | numb
   try {
     const receipt = await existingReceipt(env.DB, runId);
     if (receipt?.status === 'delivered') {
-      await markGrowthRun(env, projectId, runId, 'delivered');
-      return { status: 'delivered', duplicate: true };
+      const leaseTransferred = await settleGrowthRun(env, projectId, runId, claimToken, 'delivered');
+      return { status: 'delivered', duplicate: true, ...(leaseTransferred ? { lease_transferred: true } : {}) };
     }
     await beginReceipt(env.DB, runId, String(projectId), channel, subjectId);
     let result: Record<string, unknown>;
@@ -351,17 +353,23 @@ export async function deliverGrowthAutomation(env: Env, projectId: string | numb
     else if (channel === 'inbox') result = await deliverInboxAlert(env.DB, projectId, runId, subjectId, message, parseObject(payload.event));
     else throw deliveryError('growth_action_unsupported', 'Unsupported automation action', false);
     await completeReceipt(env.DB, runId, result.notification_id == null ? null : String(result.notification_id));
-    await markGrowthRun(env, projectId, runId, 'delivered');
-    return { status: 'delivered', channel, ...result };
+    const leaseTransferred = await settleGrowthRun(env, projectId, runId, claimToken, 'delivered');
+    return { status: 'delivered', channel, ...result, ...(leaseTransferred ? { lease_transferred: true } : {}) };
   } catch (error) {
     const normalized = normalizeError(error);
     if (normalized.retryable) {
-      await releaseGrowthRun(env, projectId, runId, normalized.message, normalized.retryDelaySeconds);
+      try {
+        await releaseGrowthRun(env, projectId, runId, claimToken, normalized.message, normalized.retryDelaySeconds);
+      } catch (releaseError) {
+        if (isClaimLost(releaseError)) return { status: 'superseded', channel, code: normalized.code };
+        throw releaseError;
+      }
       throw normalized;
     }
     await failReceipt(env.DB, runId, normalized.message);
-    await markGrowthRun(env, projectId, runId, 'failed', normalized.message);
-    return { status: 'failed', channel, code: normalized.code, error: normalized.message };
+    const leaseTransferred = await settleGrowthRun(env, projectId, runId, claimToken, 'failed', normalized.message);
+    return { status: 'failed', channel, code: normalized.code, error: normalized.message,
+      ...(leaseTransferred ? { lease_transferred: true } : {}) };
   }
 }
 
@@ -556,16 +564,47 @@ async function responsePayload(response: Response, fallbackCode: string) {
   return payload;
 }
 
-async function markGrowthRun(env: Env, projectId: string | number, runId: string, status: 'delivered' | 'failed', lastError?: string) {
+async function markGrowthRun(
+  env: Env,
+  projectId: string | number,
+  runId: string,
+  claimToken: string,
+  status: 'delivered' | 'failed',
+  lastError?: string,
+) {
   await growthRequest(env, projectId, `/automation-runs/${encodeURIComponent(runId)}`, {
-    method: 'PATCH', body: { status, last_error: lastError || null },
+    method: 'PATCH', body: { status, claim_token: claimToken, last_error: lastError || null },
   });
 }
 
-async function releaseGrowthRun(env: Env, projectId: string | number, runId: string, message: string, retryAfterSeconds = 60) {
+async function releaseGrowthRun(
+  env: Env,
+  projectId: string | number,
+  runId: string,
+  claimToken: string,
+  message: string,
+  retryAfterSeconds = 60,
+) {
   await growthRequest(env, projectId, `/automation-runs/${encodeURIComponent(runId)}/release`, {
-    method: 'POST', body: { last_error: message, retry_after_seconds: retryAfterSeconds },
+    method: 'POST', body: { claim_token: claimToken, last_error: message, retry_after_seconds: retryAfterSeconds },
   });
+}
+
+async function settleGrowthRun(
+  env: Env,
+  projectId: string | number,
+  runId: string,
+  claimToken: string,
+  status: 'delivered' | 'failed',
+  lastError?: string,
+) {
+  try {
+    await markGrowthRun(env, projectId, runId, claimToken, status, lastError);
+    return false;
+  } catch (error) {
+    if (isClaimLost(error)) return true;
+    throw error;
+  }
 }
 
 async function existingReceipt(db: D1Database, runId: string) {
@@ -589,7 +628,8 @@ async function completeReceipt(db: D1Database, runId: string, notificationId: st
 
 async function failReceipt(db: D1Database, runId: string, message: string) {
   await db.prepare(`
-    UPDATE growth_delivery_receipts SET status = 'failed', last_error = ?, updated_at = datetime('now') WHERE run_id = ?
+    UPDATE growth_delivery_receipts SET status = 'failed', last_error = ?, updated_at = datetime('now')
+    WHERE run_id = ? AND status != 'delivered'
   `).bind(message.slice(0, 2000), runId).run();
 }
 
@@ -629,4 +669,8 @@ function normalizeError(error: unknown) {
     retryDelaySeconds: Number((error as any).retryDelaySeconds || 60),
   });
   return deliveryError('growth_delivery_failed', String(error), true);
+}
+
+function isClaimLost(error: unknown) {
+  return String((error as { code?: string } | null)?.code || '') === 'automation_run_claim_lost';
 }
