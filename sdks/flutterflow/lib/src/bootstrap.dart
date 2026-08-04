@@ -19,6 +19,9 @@ class OpenGrowBootstrap extends StatefulWidget {
     this.height,
     this.sdkBaseUrl = 'https://sdk.vocostar.com',
     this.identityToken = '',
+    this.appVersion = '',
+    this.buildNumber = '',
+    this.purchasesSdkVersion = '2.1.3',
     this.initializePurchases = false,
     this.onInitialized,
     this.onDeepLinkJson,
@@ -34,6 +37,9 @@ class OpenGrowBootstrap extends StatefulWidget {
   final double? height;
   final String sdkBaseUrl;
   final String identityToken;
+  final String appVersion;
+  final String buildNumber;
+  final String purchasesSdkVersion;
 
   /// Set to false when the host app initializes Purchases after its own
   /// authentication flow with [opengrowInitializeAuthenticated].
@@ -102,6 +108,9 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
           projectKey: widget.projectKey,
           sdkBaseUrl: widget.sdkBaseUrl,
           identityToken: widget.identityToken,
+          appVersion: widget.appVersion,
+          buildNumber: widget.buildNumber,
+          sdkVersion: widget.purchasesSdkVersion,
         );
       }
       await widget.onInitialized?.call();

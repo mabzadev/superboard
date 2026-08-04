@@ -24,6 +24,7 @@ Mobile routes require the project, platform, application identifier, and anonymo
 - `POST /purchases/v2/receipts`
 - `POST /purchases/v2/restore`
 - `POST /purchases/v2/sync`
+- `POST /purchases/v2/certification/device-results`
 
 The SDK persists a transaction in encrypted secure storage before server validation. It calls `completePurchase` only after the server has verified and persisted the transaction and the SDK has verified the ES256 CustomerInfo signature. Pending purchases grant no entitlement. Network loss and application restarts resume the outbox automatically.
 
@@ -51,6 +52,7 @@ The release gate remains closed unless both V2 URLs were verified within the con
 - `opengrowGetOfferings`
 - `opengrowGetCustomerInfoJson`
 - `opengrowOpenSubscriptionManagement`
+- `opengrowRecordCertificationResultJson`
 - `OpenGrowPaywall`
 - `OpenGrowRestorePurchasesButton`
 
@@ -79,6 +81,27 @@ RevenueCat V2 customer and subscription pagination follows the official [Develop
 
 ## Certification authority
 
-Purchases Diagnostics is the release authority. Automated prerequisites validate credentials, catalogs, Premium mappings, offerings, packages, and isolated Store credential copies. Manual checks require build, device, and provider/test-run evidence. Publication and legacy dependency removal remain blocked until every required check passes.
+Purchases Diagnostics is the release authority. Automated prerequisites validate credentials, catalogs, Premium mappings, offerings, packages, and isolated Store credential copies. Publication and legacy dependency removal remain blocked until every required check passes.
 
 Certification evidence is run-based. Directly marking a check as passed is rejected unless it points to an immutable observation from a completed run. Provider transaction and Billing event references are resolved server-side; the stored observation contains a bounded snapshot and SHA-256 digest rather than a mutable free-text claim or raw provider payload.
+
+Scenarios that cannot be proven by a provider transaction or Billing event require an authenticated SDK device result. An administrator starts a run and receives a random four-hour challenge that is stored only as a SHA-256 hash. The Flutter, FlutterFlow, or Web SDK submits a structured assertion set with the run, build, application, SDK, device, OS, and verified customer context. The existing application identity JWT is mandatory; anonymous customers are rejected. Device results are immutable, idempotent, digest-protected, bound to one run and one customer, and must be promoted by an administrator before they can satisfy a release check. Arbitrary external text references are never accepted as certification evidence.
+
+Passed device results require every assertion for their scenario to be `true`:
+
+- `pending`: `pending_observed`, `entitlement_withheld_until_verified`, `terminal_resolution_observed`.
+- `user_cancelled`: `cancellation_observed`, `entitlement_unchanged`.
+- `restore`: `restore_completed`, `duplicate_transaction_absent`, `entitlement_verified`.
+- `device_change`: `second_device_authenticated`, `entitlement_restored`.
+- `reinstall`: `app_reinstalled`, `outbox_recovered`, `entitlement_restored`.
+- `interrupted_purchase`: `purchase_interrupted`, `validation_resumed`, `transaction_finalized_once`.
+- `network_loss`: `network_interrupted`, `outbox_retained`, `validation_resumed`.
+- `duplicate_event`: `same_event_replayed`, `single_transaction`, `single_entitlement_projection`.
+- `out_of_order_event`: `events_reordered`, `provider_occurrence_order_applied`, `final_state_converged`.
+- `portal`: `portal_session_created`, `return_url_verified`.
+- `identity_sync`: `authenticated_identity_verified`, `purchase_blocked_without_identity`.
+- `signed_customer_info`: `valid_signature_accepted`, `tampered_signature_rejected`, `unverified_state_unchanged`.
+- `restart_recovery`: `outbox_persisted`, `app_restarted`, `validation_resumed`, `transaction_finalized_once`.
+- `unverified_denied`: `unverified_receipt_submitted`, `entitlement_not_granted`.
+- `authority_convergence`: `provider_state_checked`, `billing_state_checked`, `application_projection_checked`, `states_match`.
+- `flutterflow_ios` and `flutterflow_android`: `purchase_completed`, `restore_completed`, `sync_completed`, `subscription_management_opened`, `verified_customer_info_applied`.

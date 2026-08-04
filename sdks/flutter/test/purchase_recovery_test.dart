@@ -275,6 +275,66 @@ void main() {
       expect(store.purchaseStartCount, 0);
     },
   );
+
+  test(
+    'submits challenge-bound certification evidence with build context',
+    () async {
+      http.Request? certificationRequest;
+      final store = FakePurchaseStore([]);
+      final purchases = testPurchases(store, MemoryPurchaseStorage([]), (
+        request,
+      ) async {
+        if (request.url.path.endsWith('/certification/device-results')) {
+          certificationRequest = request;
+          return jsonResponse({
+            'data': {
+              'id': 'device-result-104',
+              'run_id': 'run-device-1',
+              'check_key': 'cross_platform.identity_sync',
+              'outcome': 'passed',
+              'evidence_sha256': List.filled(64, 'a').join(),
+              'observed_at': '2026-08-04T12:00:00.000Z',
+              'received_at': '2026-08-04T12:00:01.000Z',
+              'duplicate': false,
+            },
+          }, 201);
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+      await configure(purchases);
+
+      final result = await purchases.submitCertificationResult(
+        runId: 'run-device-1',
+        challenge: 'device-challenge',
+        checkKey: 'cross_platform.identity_sync',
+        passed: true,
+        deviceModel: 'Pixel 10',
+        osVersion: 'Android 17',
+        assertions: const {
+          'authenticated_identity_verified': true,
+          'purchase_blocked_without_identity': true,
+        },
+        resultId: 'device-result-104',
+        observedAt: DateTime.parse('2026-08-04T12:00:00.000Z'),
+      );
+
+      expect(result.id, 'device-result-104');
+      expect(result.duplicate, isFalse);
+      expect(certificationRequest?.headers['x-opengrow-build-number'], '104');
+      expect(certificationRequest?.headers['x-opengrow-app-version'], '1.4.0');
+      final body =
+          jsonDecode(certificationRequest!.body) as Map<String, dynamic>;
+      expect(body, containsPair('challenge', 'device-challenge'));
+      expect(
+        body['assertions'],
+        containsPair('purchase_blocked_without_identity', true),
+      );
+    },
+  );
 }
 
 OpenGrowPurchases testPurchases(
@@ -293,6 +353,9 @@ Future<void> configure(OpenGrowPurchases purchases) => purchases.configure(
   platformIdentifier: 'com.example.app',
   baseUrl: 'https://sdk.example.com/purchases/v2',
   identityToken: 'identity-token',
+  appVersion: '1.4.0',
+  buildNumber: '104',
+  sdkVersion: '2.1.3',
 );
 
 Map<String, dynamic> customerInfo() => {

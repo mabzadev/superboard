@@ -79,6 +79,8 @@ After this technical cutover, run the complete certification matrix through `ser
 
 Manual free-text approval is not certification evidence. Each passed check must reference an immutable observation from a completed certification run. A run records the platform, environment, build, application and SDK versions, device model, OS version, operator, and server timestamps. Each observation stores a bounded evidence snapshot and its SHA-256 digest.
 
+Device-only scenarios use an authenticated SDK result rather than a free-text test reference. Start the run in Purchases Diagnostics, copy the expiring challenge into the temporary FlutterFlow or Web certification action, and submit the required structured assertions from the matching build. The challenge is stored only as a hash, is claimed by one verified customer, and must never be embedded in a release build.
+
 Billing transaction and event references are accepted only when the backend can resolve them in the run's project, provider, environment, and time window. Legacy inventory references must identify a completed production inventory with no unresolved active subscription. Device-only scenarios may use an external test-run reference, but it is still sealed inside the immutable observation. Completing, failing, or cancelling a run prevents additional observations.
 
 ## Cutover procedure

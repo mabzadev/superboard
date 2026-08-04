@@ -5,6 +5,7 @@ export type OpenGrowPurchasesOptions = {
   baseUrl?: string;
   domain?: string;
   appVersion?: string;
+  buildNumber?: string;
   campaign?: string;
 };
 
@@ -46,6 +47,17 @@ export type OpenGrowPurchaseConfiguration = {
   fetched_at: string;
 };
 
+export type OpenGrowCertificationResult = {
+  id: string;
+  run_id: string;
+  check_key: string;
+  outcome: "passed" | "failed";
+  evidence_sha256: string;
+  observed_at: string;
+  received_at: string;
+  duplicate: boolean;
+};
+
 export class OpenGrowPurchasesError extends Error {
   constructor(
     message: string,
@@ -67,6 +79,7 @@ export class OpenGrowPurchases {
   private readonly projectKey: string;
   private readonly domain: string;
   private readonly appVersion: string;
+  private readonly buildNumber: string;
   private readonly campaign: string;
   private appUserId: string;
   private identityToken?: string;
@@ -77,6 +90,7 @@ export class OpenGrowPurchases {
     this.baseUrl = (options.baseUrl ?? "https://sdk.vocostar.com/purchases/v2").replace(/\/+$/, "");
     this.domain = options.domain ?? globalThis.location?.hostname ?? "localhost";
     this.appVersion = options.appVersion ?? "";
+    this.buildNumber = options.buildNumber ?? "";
     this.campaign = options.campaign ?? "";
     this.identityToken = options.identityToken;
     const stored = globalThis.localStorage?.getItem("opengrow.purchases.anonymous_id");
@@ -161,6 +175,38 @@ export class OpenGrowPurchases {
     });
   }
 
+  async submitCertificationResult(input: {
+    runId: string;
+    challenge: string;
+    checkKey: string;
+    passed: boolean;
+    assertions: Record<string, boolean | number | string | null>;
+    deviceModel?: string;
+    osVersion?: string;
+    resultId?: string;
+    observedAt?: string;
+  }): Promise<OpenGrowCertificationResult> {
+    const response = await this.request<{ data: OpenGrowCertificationResult }>(
+      "/certification/device-results",
+      {
+        method: "POST",
+        body: {
+          id: input.resultId ?? randomId(),
+          run_id: input.runId,
+          challenge: input.challenge,
+          check_key: input.checkKey,
+          outcome: input.passed ? "passed" : "failed",
+          build_number: this.buildNumber,
+          device_model: input.deviceModel,
+          os_version: input.osVersion,
+          assertions: input.assertions,
+          observed_at: input.observedAt ?? new Date().toISOString(),
+        },
+      },
+    );
+    return response.data;
+  }
+
   private async request<T>(
     path: string,
     options: { method?: string; body?: unknown; idempotencyKey?: string } = {},
@@ -175,6 +221,7 @@ export class OpenGrowPurchases {
         "X-OpenGrow-Anonymous-ID": this.appUserId,
         "X-OpenGrow-SDK-Version": "purchases-js/1.0.0",
         ...(this.appVersion ? { "X-OpenGrow-App-Version": this.appVersion } : {}),
+        ...(this.buildNumber ? { "X-OpenGrow-Build-Number": this.buildNumber } : {}),
         ...(this.campaign ? { "X-OpenGrow-Campaign": this.campaign } : {}),
         ...(this.identityToken ? { Authorization: `Bearer ${this.identityToken}` } : {}),
         ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),

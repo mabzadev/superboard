@@ -17,6 +17,7 @@ import {
   customerInfoFromBillingAuthority,
   resolveCustomerFromBillingAuthority,
 } from '../lib/billing-service';
+import { recordDeviceCertificationResult } from '../lib/device-certification';
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
@@ -225,6 +226,48 @@ sdk.post('/events', async (c) => {
       }
     }
     return c.json({ accepted: results.reduce((sum: number, item: any) => sum + Number(item.meta.changes || 0), 0), received: events.length }, 202);
+  } catch (error) { return fail(c, error); }
+});
+
+sdk.post('/certification/device-results', async (c) => {
+  try {
+    const ctx = await context(c);
+    if (!ctx.identified) {
+      throw purchasesError(
+        'device_certification_identity_required',
+        'A verified application identity is required for device certification',
+        401,
+      );
+    }
+    const data = await body(c);
+    const platform = c.get('sdkPlatform');
+    if (!['ios', 'android', 'web'].includes(String(platform))) {
+      throw purchasesError('device_certification_platform_invalid', 'iOS, Android, or Web SDK context is required');
+    }
+    const assertions = data.assertions && typeof data.assertions === 'object' && !Array.isArray(data.assertions)
+      ? data.assertions as Record<string, unknown>
+      : {};
+    const result = await recordDeviceCertificationResult(c.env.DB, {
+      id: String(data.id || ''),
+      runId: String(data.run_id || ''),
+      challenge: String(data.challenge || ''),
+      checkKey: String(data.check_key || ''),
+      outcome: String(data.outcome || '') as 'passed' | 'failed',
+      customerId: String(ctx.customer.id),
+      projectId: ctx.projectId,
+      sourcePlatform: platform as 'ios' | 'android' | 'web',
+      applicationIdentifier: String(c.get('sdkIdentifier') || ''),
+      buildNumber: String(data.build_number || c.req.header('X-OpenGrow-Build-Number') || ''),
+      appVersion: c.req.header('X-OpenGrow-App-Version') || null,
+      sdkVersion: c.req.header('X-OpenGrow-SDK-Version') || null,
+      deviceModel: data.device_model == null ? null : String(data.device_model),
+      osVersion: data.os_version == null ? null : String(data.os_version),
+      assertions,
+      observedAt: data.observed_at == null ? null : String(data.observed_at),
+    });
+    return c.json({ data: result }, result.duplicate ? 200 : 201, {
+      'Cache-Control': 'private, no-store',
+    });
   } catch (error) { return fail(c, error); }
 });
 
