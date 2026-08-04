@@ -220,6 +220,20 @@ export type BillingHealth = {
   features?: Record<string, unknown>;
 };
 
+export type BillingProviderEvent = {
+  id: string;
+  store: "apple" | "google" | "stripe";
+  environment: "sandbox" | "production";
+  external_event_id: string;
+  event_type?: string | null;
+  status: "received" | "processed" | "failed";
+  attempts: number;
+  error_message?: string | null;
+  received_at: string;
+  processed_at?: string | null;
+  replay_available: number;
+};
+
 export type BillingReleaseGate = {
   environments: Array<"sandbox" | "production">;
   scope: { releaseProjectId: string; testProjectId: string; productionProjectId: string };
@@ -424,6 +438,12 @@ export const getBillingAnalytics = async (projectId: string): Promise<BillingAna
 
 export const getBillingHealth = async (projectId: string): Promise<BillingHealth> =>
   (await GET(purchasesV2Path(projectId, "/health"))).data;
+
+export const getBillingProviderEvents = async (projectId: string): Promise<{ data: BillingProviderEvent[] }> =>
+  (await GET(purchasesV2Path(projectId, "/provider-events"))).data;
+
+export const replayBillingProviderEvent = async (projectId: string, eventId: string) =>
+  (await POST(purchasesV2Path(projectId, `/provider-events/${eventId}/replay`), {})).data;
 
 export const getBillingReleaseGate = async (projectId: string): Promise<BillingReleaseGate> =>
   (await GET(purchasesV2Path(projectId, "/release-gate"))).data.data;

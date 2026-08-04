@@ -30,6 +30,7 @@ import { testLegacySourceConnection } from '../lib/legacy-subscription-inventory
 import { validateStripeCredentials } from '../lib/stripe-credentials';
 import { encryptStoreCredentialCopies } from '../lib/store-credential-copies';
 import { retrieveStripeCatalogProduct } from '../lib/stripe-catalog';
+import { providerEventReplayJob } from '../lib/provider-event-replay';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -1339,6 +1340,64 @@ admin.get('/:projectId/transactions', async (c) => {
     `).bind(project.id, store || null, store || null, environment || null, environment || null, status || null, status || null,
       cursor?.createdAt || null, cursor?.createdAt || null, cursor?.createdAt || null, cursor?.id || null, limit).all<Record<string, any>>();
     return c.json({ data: rows.results, next_cursor: nextCursor(rows.results || [], limit) });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.get('/:projectId/provider-events', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const status = String(c.req.query('status') || '');
+    if (status && !['received', 'processed', 'failed'].includes(status)) {
+      throw purchasesError('provider_event_status_invalid', 'Provider event status is invalid', 422);
+    }
+    const rows = await c.env.DB.prepare(`
+      SELECT id, store, environment, external_event_id, event_type, status, attempts,
+        error_message, received_at, processed_at, job_payload IS NOT NULL AS replay_available
+      FROM billing_webhook_events
+      WHERE project_id = ? AND (? = '' OR status = ?)
+      ORDER BY received_at DESC, id DESC
+      LIMIT 100
+    `).bind(project.id, status, status).all<Record<string, unknown>>();
+    return c.json({ data: rows.results || [] });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/provider-events/:eventId/replay', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const event = await c.env.DB.prepare(`
+      SELECT id, store, environment, status, job_payload
+      FROM billing_webhook_events
+      WHERE id = ? AND project_id = ? LIMIT 1
+    `).bind(c.req.param('eventId'), project.id).first<Record<string, unknown>>();
+    if (!event) throw purchasesError('provider_event_not_found', 'Provider event not found', 404);
+    if (event.status === 'processed') {
+      throw purchasesError('provider_event_already_processed', 'Processed provider events cannot be replayed', 409);
+    }
+    if (!c.env.BILLING_QUEUE) throw purchasesError('billing_queue_unavailable', 'Billing queue is unavailable', 503, true);
+    const job = providerEventReplayJob({
+      eventId: String(event.id),
+      projectId: String(project.id),
+      store: String(event.store),
+      environment: String(event.environment),
+      jobPayload: event.job_payload,
+    });
+    await c.env.DB.prepare(`
+      UPDATE billing_webhook_events SET status = 'received', error_message = NULL WHERE id = ?
+    `).bind(event.id).run();
+    try {
+      await c.env.BILLING_QUEUE.send(job);
+    } catch {
+      await c.env.DB.prepare(`
+        UPDATE billing_webhook_events SET status = 'failed', error_message = 'Queue delivery failed' WHERE id = ?
+      `).bind(event.id).run();
+      throw purchasesError('billing_queue_unavailable', 'Billing queue is unavailable', 503, true);
+    }
+    await audit(c, project.id, 'provider_event.replayed', 'provider_event', String(event.id), {
+      store: event.store,
+      job_type: job.type,
+    });
+    return c.json({ replay_queued: true }, 202);
   } catch (error) { return replyError(c, error); }
 });
 
