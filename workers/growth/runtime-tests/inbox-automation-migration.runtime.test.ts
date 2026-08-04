@@ -12,7 +12,7 @@ type TestEnv = {
 describe('Growth migrations in the Workers runtime', () => {
   it('preserves existing automation runs and accepts the Inbox action', async () => {
     const testEnv = env as unknown as TestEnv;
-    expect(testEnv.TEST_MIGRATIONS).toHaveLength(5);
+    expect(testEnv.TEST_MIGRATIONS).toHaveLength(6);
     await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS.slice(0, 2));
     await seedExistingRun(testEnv.DB);
 
@@ -31,6 +31,9 @@ describe('Growth migrations in the Workers runtime', () => {
       claim_expires_at: null,
       processed_at: expect.any(String),
     });
+    await expect(testEnv.DB.prepare(`
+      SELECT source, title, version FROM growth_app_snapshots WHERE id = 'snapshot-before-official-sources'
+    `).first()).resolves.toEqual({ source: 'apple_lookup', title: 'Existing app', version: '1.0' });
 
     const response = await SELF.fetch('https://growth.internal/internal/projects/11/automations', {
       method: 'POST',
@@ -55,6 +58,48 @@ describe('Growth migrations in the Workers runtime', () => {
 
     const integrity = await testEnv.DB.prepare('PRAGMA foreign_key_check').all();
     expect(integrity.results).toEqual([]);
+  });
+
+  it('accepts official owned-app snapshots and rejects platform/source mismatches', async () => {
+    const testEnv = env as unknown as TestEnv;
+    await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS);
+    await testEnv.DB.prepare(`
+      INSERT INTO growth_apps (
+        id, project_id, platform, app_identifier, display_name, country, language, device, is_primary, enabled
+      ) VALUES ('owned-google', 91, 'google', 'com.example.android', NULL, 'us', 'en', 'android', 1, 1)
+    `).run();
+
+    const projects = await internalGet('/internal/official-metadata/projects');
+    expect(projects.status).toBe(200);
+    await expect(projects.json()).resolves.toMatchObject({ data: expect.arrayContaining([{ project_id: 91 }]) });
+
+    const targets = await internalGet('/internal/official-metadata/targets?project_id=91');
+    expect(targets.status).toBe(200);
+    await expect(targets.json()).resolves.toMatchObject({
+      data: [expect.objectContaining({ id: 'owned-google', platform: 'google', official_synced_at: null })],
+    });
+
+    const accepted = await internalRequest('/internal/projects/91/official-metadata/snapshots', {
+      entity_id: 'owned-google',
+      app_identifier: 'com.example.android',
+      source: 'google_play',
+      title: 'Example',
+      version: '2.1',
+      metadata: { track: 'production' },
+    });
+    expect(accepted.status).toBe(201);
+    await expect(testEnv.DB.prepare(`
+      SELECT source, title, version FROM growth_app_snapshots WHERE entity_id = 'owned-google'
+    `).first()).resolves.toMatchObject({ source: 'google_play', title: 'Example', version: '2.1' });
+
+    const mismatch = await internalRequest('/internal/projects/91/official-metadata/snapshots', {
+      entity_id: 'owned-google',
+      app_identifier: 'com.example.android',
+      source: 'app_store_connect',
+      metadata: {},
+    });
+    expect(mismatch.status).toBe(409);
+    await expect(mismatch.json()).resolves.toMatchObject({ code: 'official_metadata_source_mismatch', retryable: false });
   });
 
   it('rejects event identity collisions and requires exact lease ownership', async () => {
@@ -205,7 +250,26 @@ function internalRequest(path: string, body: Record<string, unknown>, method = '
   });
 }
 
+function internalGet(path: string) {
+  return SELF.fetch(`https://growth.internal${path}`, {
+    headers: { 'X-OpenGrow-Internal-Token': 'runtime-test-internal-token' },
+  });
+}
+
 async function seedExistingRun(db: D1Database) {
+  await db.prepare(`
+    INSERT INTO growth_apps (
+      id, project_id, platform, app_identifier, display_name, country, language, device
+    ) VALUES ('app-before-official-sources', 12, 'apple', '123456789', 'Existing app', 'us', 'en', 'iphone')
+  `).run();
+  await db.prepare(`
+    INSERT INTO growth_app_snapshots (
+      id, project_id, entity_type, entity_id, source, observed_date, title, version
+    ) VALUES (
+      'snapshot-before-official-sources', 12, 'app', 'app-before-official-sources',
+      'apple_lookup', '2026-08-01', 'Existing app', '1.0'
+    )
+  `).run();
   await db.prepare(`
     INSERT INTO growth_automations (
       id, project_id, name, trigger_type, action_type, trigger_config_json,

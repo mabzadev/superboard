@@ -574,7 +574,16 @@ export async function appStoreConnectAccess(env: BillingEnv, projectId: string |
     return attributes.bundleId === app.identifier;
   });
   if (!matching?.id) throw new Error(`App Store Connect: no app found for bundle ID ${app.identifier}`);
-  return { token, appId: String(matching.id), bundleId: app.identifier };
+  const attributes = matching.attributes && typeof matching.attributes === 'object'
+    ? matching.attributes as Record<string, unknown>
+    : {};
+  return {
+    token,
+    appId: String(matching.id),
+    bundleId: app.identifier,
+    name: typeof attributes.name === 'string' ? attributes.name : null,
+    primaryLocale: typeof attributes.primaryLocale === 'string' ? attributes.primaryLocale : null,
+  };
 }
 
 export async function googlePlayAccess(env: BillingEnv, projectId: string | number) {
