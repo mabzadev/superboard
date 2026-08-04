@@ -34,6 +34,9 @@ export function createFakeD1(handler: FakeD1Handler): D1Database & { calls: Fake
 
   const db = {
     calls,
+    batch(statements: D1PreparedStatement[]) {
+      return Promise.all(statements.map((statement) => statement.run()));
+    },
     prepare(rawSql: string) {
       return {
         bind(...args: unknown[]) {
