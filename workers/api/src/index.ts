@@ -61,11 +61,13 @@ app.use('*', cors({
     'X-OpenGrow-Storefront',
     'X-OpenGrow-Campaign',
     'Idempotency-Key',
+    'X-Filename',
     'ENVIRONMENT',
     'LINKSQUARED',
     'x-maintenance-key',
     'x-diagnostics-key',
   ],
+  exposeHeaders: ['Content-Disposition'],
 }));
 
 // Health check for every subdomain

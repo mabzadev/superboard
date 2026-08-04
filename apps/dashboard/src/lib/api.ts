@@ -18,6 +18,8 @@ export interface RequestOptions {
   timeout?: number;
   signal?: AbortSignal;
   maxRetries?: number;
+  headers?: Record<string, string>;
+  responseType?: AxiosRequestConfig["responseType"];
 }
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -28,15 +30,19 @@ const buildConfig = (
   data?: unknown,
   onProgress?: ((percentage: number) => void) | null,
   timeout?: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  extraHeaders?: Record<string, string>,
+  responseType?: AxiosRequestConfig["responseType"]
 ): AxiosRequestConfig => ({
   signal,
   method,
   url: `${URL}${path}`,
   timeout: timeout ?? DEFAULT_TIMEOUT,
   headers: {
+    ...extraHeaders,
     Authorization: `Bearer ${LocalStorage.getAuthenticationToken()}`,
   },
+  responseType,
   onUploadProgress(progressEvent) {
     const { loaded, total } = progressEvent;
     if (total != null && onProgress != null) {
@@ -141,6 +147,8 @@ export const GET = async (
     timeout,
     signal,
     maxRetries = getDefaultRetries("GET"),
+    headers,
+    responseType,
   } = options;
 
   const config = buildConfig(
@@ -149,7 +157,9 @@ export const GET = async (
     undefined,
     undefined,
     timeout,
-    signal
+    signal,
+    headers,
+    responseType
   );
   return makeRequest(config, retry, maxRetries);
 };
@@ -165,9 +175,20 @@ export const POST = async (
     timeout,
     signal,
     maxRetries = getDefaultRetries("POST"),
+    headers,
+    responseType,
   } = options;
 
-  const config = buildConfig("POST", path, data, onProgress, timeout, signal);
+  const config = buildConfig(
+    "POST",
+    path,
+    data,
+    onProgress,
+    timeout,
+    signal,
+    headers,
+    responseType
+  );
   return makeRequest(config, retry, maxRetries);
 };
 
@@ -181,8 +202,19 @@ export const PATCH = async (
     timeout,
     signal,
     maxRetries = getDefaultRetries("PATCH"),
+    headers,
+    responseType,
   } = options;
-  const config = buildConfig("PATCH", path, data, undefined, timeout, signal);
+  const config = buildConfig(
+    "PATCH",
+    path,
+    data,
+    undefined,
+    timeout,
+    signal,
+    headers,
+    responseType
+  );
   return makeRequest(config, retry, maxRetries);
 };
 
@@ -196,8 +228,19 @@ export const PUT = async (
     timeout,
     signal,
     maxRetries = getDefaultRetries("PUT"),
+    headers,
+    responseType,
   } = options;
-  const config = buildConfig("PUT", path, data, undefined, timeout, signal);
+  const config = buildConfig(
+    "PUT",
+    path,
+    data,
+    undefined,
+    timeout,
+    signal,
+    headers,
+    responseType
+  );
   return makeRequest(config, retry, maxRetries);
 };
 
@@ -210,6 +253,8 @@ export const DELETE = async (
     timeout,
     signal,
     maxRetries = getDefaultRetries("DELETE"),
+    headers,
+    responseType,
   } = options;
   const config = buildConfig(
     "DELETE",
@@ -217,7 +262,9 @@ export const DELETE = async (
     undefined,
     undefined,
     timeout,
-    signal
+    signal,
+    headers,
+    responseType
   );
   return makeRequest(config, retry, maxRetries);
 };

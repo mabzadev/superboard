@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { evictDurableObject } from 'cloudflare:test';
+import { evictDurableObject, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import type { Env } from '../src/types';
 
@@ -61,6 +61,47 @@ describe('ConversationRoom in the Workers runtime', () => {
     await expect(accepted.json()).resolves.toMatchObject({
       data: { attachment_key: 'attachments/owned', sequence: 1 },
     });
+
+    const duplicate = await room.fetch(messageRequest('attachment-room', 'user-a', {
+      client_message_id: 'owned-attachment',
+      attachment_key: 'attachments/owned',
+      attachment_name: 'owned.txt',
+      attachment_content_type: 'text/plain',
+    }));
+    expect(duplicate.status).toBe(200);
+    await expect(duplicate.json()).resolves.toMatchObject({ duplicate: true, data: { sequence: 1 } });
+
+    const conflict = await room.fetch(messageRequest('attachment-room', 'user-a', {
+      client_message_id: 'owned-attachment',
+      attachment_key: 'attachments/owned',
+      attachment_name: 'renamed.txt',
+      attachment_content_type: 'text/plain',
+    }));
+    expect(conflict.status).toBe(409);
+    await expect(conflict.json()).resolves.toMatchObject({ code: 'idempotency_conflict' });
+
+    const afterDuplicate = await room.fetch(messageRequest('attachment-room', 'user-a', {
+      client_message_id: 'after-duplicate', body: 'No sequence gap',
+    }));
+    await expect(afterDuplicate.json()).resolves.toMatchObject({ data: { sequence: 2 } });
+  });
+
+  it('continues sequence numbers from durable D1 history when room storage is empty', async () => {
+    const testEnv = env as unknown as Env;
+    await seedConversation(testEnv.DB, 'restored-room', 11, 'user-a');
+    await testEnv.DB.prepare(`
+      INSERT INTO messages (
+        id, conversation_id, sender_kind, sender_id, body, client_message_id, sequence
+      ) VALUES ('restored-message', 'restored-room', 'user', 'user-a', 'Restored history', 'restored-history', 7)
+    `).run();
+
+    const room = testEnv.CONVERSATIONS.get(testEnv.CONVERSATIONS.idFromName('restored-room'));
+    const response = await room.fetch(messageRequest('restored-room', 'user-a', {
+      client_message_id: 'after-restore', body: 'Continue after restore',
+    }));
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ data: { sequence: 8 } });
   });
 
   it('keeps a hibernatable WebSocket usable after Durable Object eviction', async () => {
@@ -98,6 +139,54 @@ describe('ConversationRoom in the Workers runtime', () => {
       conversation_id: 'socket-room',
     });
     reconnected.close(1000, 'done');
+  });
+
+  it('supports agent receipts, typing, and owned attachments through internal routes', async () => {
+    const testEnv = env as unknown as Env;
+    await seedConversation(testEnv.DB, 'agent-room', 11, 'user-a');
+    const base = 'https://messaging.internal/internal/projects/11/conversations/agent-room';
+    const headers = {
+      'X-OpenGrow-Internal-Token': capability,
+      'X-OpenGrow-Agent-Id': 'agent-1',
+    };
+
+    const read = await SELF.fetch(`${base}/read`, { method: 'POST', headers });
+    expect(read.status).toBe(200);
+    await expect(testEnv.DB.prepare(`
+      SELECT agent_last_read_at FROM conversations WHERE id = 'agent-room'
+    `).first()).resolves.toMatchObject({ agent_last_read_at: expect.any(String) });
+
+    const typing = await SELF.fetch(`${base}/typing`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: true }),
+    });
+    expect(typing.status).toBe(204);
+
+    const upload = await SELF.fetch(`${base}/attachments`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'text/plain', 'X-Filename': 'evidence.txt' },
+      body: 'attachment evidence',
+    });
+    expect(upload.status).toBe(201);
+    const attachment = await upload.json() as { key: string; filename: string; content_type: string };
+    expect(attachment).toMatchObject({ filename: 'evidence.txt', content_type: 'text/plain' });
+
+    const message = await SELF.fetch(`${base}/messages`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        attachment_key: attachment.key,
+        attachment_name: attachment.filename,
+        attachment_content_type: attachment.content_type,
+        client_message_id: 'agent-attachment-message',
+      }),
+    });
+    expect(message.status).toBe(201);
+    const messagePayload = await message.json() as { data: { id: string } };
+
+    const download = await SELF.fetch(`${base}/attachments/${messagePayload.data.id}`, { headers });
+    expect(download.status).toBe(200);
+    expect(await download.text()).toBe('attachment evidence');
   });
 });
 
