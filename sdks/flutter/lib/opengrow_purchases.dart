@@ -81,6 +81,7 @@ class OpenGrowPurchases {
   String? _platformIdentifier;
   String _baseUrl = 'https://sdk.vocostar.com/purchases/v2';
   String _appVersion = '';
+  String _buildNumber = '';
   String _sdkVersion = '2.1.3';
   String _storefront = '';
   String _campaign = '';
@@ -101,6 +102,7 @@ class OpenGrowPurchases {
     String? identityToken,
     OpenGrowIdentityTokenProvider? identityTokenProvider,
     String appVersion = '',
+    String buildNumber = '',
     String sdkVersion = '2.1.3',
     String storefront = '',
     String campaign = '',
@@ -122,6 +124,7 @@ class OpenGrowPurchases {
     _identityToken = identityToken;
     _tokenProvider = identityTokenProvider;
     _appVersion = appVersion;
+    _buildNumber = buildNumber;
     _sdkVersion = sdkVersion;
     _storefront = storefront;
     _campaign = campaign;
@@ -165,6 +168,46 @@ class OpenGrowPurchases {
   }
 
   Future<void> setIdentityToken(String? token) async => _identityToken = token;
+
+  /// Records an authenticated, challenge-bound result for a live purchase
+  /// certification run. The server accepts only a verified application
+  /// identity and stores the structured result as immutable evidence.
+  Future<OpenGrowCertificationResult> submitCertificationResult({
+    required String runId,
+    required String challenge,
+    required String checkKey,
+    required bool passed,
+    required String deviceModel,
+    required String osVersion,
+    required Map<String, dynamic> assertions,
+    String? resultId,
+    DateTime? observedAt,
+  }) async {
+    final response = await _request(
+      'POST',
+      '/certification/device-results',
+      body: {
+        'id': resultId ?? const Uuid().v4(),
+        'run_id': runId,
+        'challenge': challenge,
+        'check_key': checkKey,
+        'outcome': passed ? 'passed' : 'failed',
+        'build_number': _buildNumber,
+        'device_model': deviceModel,
+        'os_version': osVersion,
+        'assertions': assertions,
+        'observed_at': (observedAt ?? DateTime.now().toUtc()).toIso8601String(),
+      },
+    );
+    final data = (response['data'] as Map?)?.cast<String, dynamic>();
+    if (data == null) {
+      throw const OpenGrowPurchasesException(
+        'Certification server returned an invalid device result',
+        code: 'device_certification_response_invalid',
+      );
+    }
+    return OpenGrowCertificationResult.fromJson(data);
+  }
 
   Future<OpenGrowCustomerInfo> logIn(String identityToken) async {
     _identityToken = identityToken;
@@ -876,6 +919,7 @@ class OpenGrowPurchases {
         'X-OpenGrow-Anonymous-ID': _anonymousId!,
         'X-OpenGrow-SDK-Version': _sdkVersion,
         if (_appVersion.isNotEmpty) 'X-OpenGrow-App-Version': _appVersion,
+        if (_buildNumber.isNotEmpty) 'X-OpenGrow-Build-Number': _buildNumber,
         if (_storefront.isNotEmpty) 'X-OpenGrow-Storefront': _storefront,
         if (_campaign.isNotEmpty) 'X-OpenGrow-Campaign': _campaign,
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',

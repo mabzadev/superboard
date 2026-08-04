@@ -6,6 +6,7 @@ import {
   BarChart3,
   CloudDownload,
   Coins,
+  Copy,
   CreditCard,
   FlaskConical,
   PanelTop,
@@ -94,6 +95,7 @@ import {
   replayBillingWebhookDelivery,
   replayBillingProviderEvent,
   recordBillingCertificationObservation,
+  rotateBillingCertificationDeviceChallenge,
   reviewBillingRefundEvidence,
   searchBillingCustomers,
   setBillingCustomerBlocked,
@@ -248,6 +250,9 @@ const PurchasesPage = () => {
   const [gatePlatform, setGatePlatform] = useState<"ios" | "android" | "web" | "cross_platform">("ios");
   const [gateEnvironment, setGateEnvironment] = useState<"sandbox" | "production">("sandbox");
   const [selectedCertificationRunId, setSelectedCertificationRunId] = useState("");
+  const [certificationDeviceToken, setCertificationDeviceToken] = useState("");
+  const [certificationDeviceTokenExpiresAt, setCertificationDeviceTokenExpiresAt] = useState("");
+  const [certificationDeviceEndpoint, setCertificationDeviceEndpoint] = useState("");
   const [gateReferences, setGateReferences] = useState<Record<string, string>>({});
   const [gateReferenceTypes, setGateReferenceTypes] = useState<Record<string, BillingCertificationReferenceType>>({});
   const [gateNotes, setGateNotes] = useState("");
@@ -348,15 +353,15 @@ const PurchasesPage = () => {
     setPackageProductIds([]);
   }, [projectId]);
 
-  const run = async (action: () => Promise<unknown>, success: string, refresh = true) => {
+  const run = async <T,>(action: () => Promise<T>, success: string, refresh = true): Promise<T | undefined> => {
     try {
-      await action();
+      const result = await action();
       showSuccessNotification(success);
       if (refresh) await load();
-      return true;
+      return result;
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "The action failed");
-      return false;
+      return undefined;
     }
   };
 
@@ -606,10 +611,26 @@ const PurchasesPage = () => {
       notes: gateNotes.trim(),
     }), "Certification run started");
     if (created) {
+      setCertificationDeviceToken(created.device_claim_token || "");
+      setCertificationDeviceTokenExpiresAt(created.device_claim_expires_at || "");
+      setCertificationDeviceEndpoint(created.device_result_endpoint || "");
       const runs = await getBillingCertificationRuns(projectId);
       setCertificationRuns(runs.runs || []);
-      setSelectedCertificationRunId(runs.runs.find((item) => item.status === "running")?.id || "");
+      setSelectedCertificationRunId(created.id);
     }
+  };
+
+  const rotateCertificationDeviceChallenge = async () => {
+    if (!projectId || !selectedCertificationRunId) return;
+    const challenge = await run(
+      () => rotateBillingCertificationDeviceChallenge(projectId, selectedCertificationRunId),
+      "Device challenge rotated",
+      false,
+    );
+    if (!challenge) return;
+    setCertificationDeviceToken(challenge.device_claim_token);
+    setCertificationDeviceTokenExpiresAt(challenge.device_claim_expires_at);
+    setCertificationDeviceEndpoint(challenge.device_result_endpoint);
   };
 
   const finishCertificationRun = async (status: "completed" | "failed" | "cancelled") => {
@@ -645,6 +666,7 @@ const PurchasesPage = () => {
         api_key: legacyApiKey.trim(),
       });
       await testBillingLegacySource(projectId);
+      return true;
     }, "Legacy source connected");
     if (connected) setLegacyApiKey("");
   };
@@ -1153,13 +1175,14 @@ const PurchasesPage = () => {
                 </div>
                 <Button disabled={!gateBuild.trim()} onClick={() => void startCertificationRun()}><FlaskConical className="mr-2 h-4 w-4" />Start certification run</Button>
                 <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                  <label className="grid gap-1 text-sm">Active run<select className="h-9 rounded-md border bg-background px-3" value={selectedCertificationRunId} onChange={(event) => setSelectedCertificationRunId(event.target.value)}><option value="">Select a running certification</option>{certificationRuns.filter((item) => item.status === "running").map((item) => <option key={item.id} value={item.id}>{item.platform} · build {item.build_number} · {date(item.started_at)}</option>)}</select></label>
-                  <div className="flex items-end gap-2"><Button variant="outline" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("completed")}>Complete run</Button><Button variant="ghost" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("cancelled")}>Cancel</Button></div>
+                  <label className="grid gap-1 text-sm">Active run<select className="h-9 rounded-md border bg-background px-3" value={selectedCertificationRunId} onChange={(event) => { setSelectedCertificationRunId(event.target.value); setCertificationDeviceToken(""); setCertificationDeviceTokenExpiresAt(""); setCertificationDeviceEndpoint(""); }}><option value="">Select a running certification</option>{certificationRuns.filter((item) => item.status === "running").map((item) => <option key={item.id} value={item.id}>{item.platform} · build {item.build_number} · {date(item.started_at)}</option>)}</select></label>
+                  <div className="flex items-end gap-2"><Button variant="outline" disabled={!selectedCertificationRun} onClick={() => void rotateCertificationDeviceChallenge()}>Generate device token</Button><Button variant="outline" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("completed")}>Complete run</Button><Button variant="ghost" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("cancelled")}>Cancel</Button></div>
                 </div>
-                {certificationRuns.slice(0, 5).map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"><div><span className="font-medium">{item.platform} build {item.build_number}</span><div className="text-xs text-muted-foreground">{item.environment} · {item.observation_count || 0} observations · {item.id}</div></div>{statusBadge(item.status)}</div>)}
+                {certificationDeviceToken && selectedCertificationRun && <Alert><ShieldCheck /><AlertTitle>Authenticated device challenge</AlertTitle><AlertDescription><p>Use this one-time dashboard value in the FlutterFlow or Web certification action. It is bound to the active run, expires at {date(certificationDeviceTokenExpiresAt)}, and is never shown again after leaving this selection.</p><div className="mt-3 grid gap-2"><div className="flex gap-2"><Input readOnly value={selectedCertificationRun.id} aria-label="Certification run ID" /><Button variant="outline" size="icon" aria-label="Copy certification run ID" onClick={() => void navigator.clipboard.writeText(selectedCertificationRun.id)}><Copy className="h-4 w-4" /></Button></div><div className="flex gap-2"><Input readOnly type="password" value={certificationDeviceToken} aria-label="Device challenge" /><Button variant="outline" size="icon" aria-label="Copy device challenge" onClick={() => void navigator.clipboard.writeText(certificationDeviceToken)}><Copy className="h-4 w-4" /></Button></div>{certificationDeviceEndpoint && <code className="block break-all rounded bg-muted p-2 text-xs">{certificationDeviceEndpoint}</code>}</div></AlertDescription></Alert>}
+                {certificationRuns.slice(0, 5).map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"><div><span className="font-medium">{item.platform} build {item.build_number}</span><div className="text-xs text-muted-foreground">{item.environment} · {item.observation_count || 0} observations · {item.device_result_count || 0} authenticated device results · {item.id}</div></div>{statusBadge(item.status)}</div>)}
               </CardContent>
             </Card>
-            {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div><div className="mt-1 text-xs text-muted-foreground">Required evidence: {check.required_evidence.join(", ")}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{Object.entries(check.evidence).map(([key, value]) => <div key={key} className="max-w-sm truncate text-xs text-muted-foreground" title={String(value)}><span className="font-medium">{key}:</span> {String(value)}</div>)}{check.status === "passed" && !check.evidence_valid && <div className="text-xs text-destructive">Missing evidence: {check.missing_evidence.join(", ")}</div>}{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}{selectedCertificationRun && <div className="mt-2 grid gap-2"><select aria-label={`${check.label} reference type`} className="h-8 rounded-md border bg-background px-2 text-xs" value={gateReferenceTypes[check.key] || check.reference_types[0]} onChange={(event) => setGateReferenceTypes((current) => ({ ...current, [check.key]: event.target.value as BillingCertificationReferenceType }))}>{check.reference_types.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select><Input className="h-8 text-xs" placeholder="Verified record or external test reference" value={gateReferences[check.key] || ""} onChange={(event) => setGateReferences((current) => ({ ...current, [check.key]: event.target.value }))} /></div>}</TableCell><TableCell>{statusBadge(check.status === "passed" && !check.evidence_valid ? "invalid" : check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "passed")}>Pass</Button><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void resetGateCheck(check.key)}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
+            {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div><div className="mt-1 text-xs text-muted-foreground">Required evidence: {check.required_evidence.join(", ")}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{Object.entries(check.evidence).map(([key, value]) => <div key={key} className="max-w-sm truncate text-xs text-muted-foreground" title={String(value)}><span className="font-medium">{key}:</span> {String(value)}</div>)}{check.status === "passed" && !check.evidence_valid && <div className="text-xs text-destructive">Missing evidence: {check.missing_evidence.join(", ")}</div>}{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}{selectedCertificationRun && <div className="mt-2 grid gap-2"><select aria-label={`${check.label} reference type`} className="h-8 rounded-md border bg-background px-2 text-xs" value={gateReferenceTypes[check.key] || check.reference_types[0]} onChange={(event) => setGateReferenceTypes((current) => ({ ...current, [check.key]: event.target.value as BillingCertificationReferenceType }))}>{check.reference_types.map((item) => <option key={item} value={item}>{item === "test_run" ? "authenticated device result" : item.replaceAll("_", " ")}</option>)}</select><Input className="h-8 text-xs" placeholder={(gateReferenceTypes[check.key] || check.reference_types[0]) === "test_run" ? "Authenticated device result ID" : "Verified Billing record ID"} value={gateReferences[check.key] || ""} onChange={(event) => setGateReferences((current) => ({ ...current, [check.key]: event.target.value }))} /></div>}</TableCell><TableCell>{statusBadge(check.status === "passed" && !check.evidence_valid ? "invalid" : check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "passed")}>Pass</Button><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void resetGateCheck(check.key)}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
           </TabsContent>
         </Tabs>
         <Dialog open={appleNotificationDialogOpen} onOpenChange={setAppleNotificationDialogOpen}>

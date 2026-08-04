@@ -93,11 +93,49 @@ describe('purchase certification references', () => {
     )).rejects.toMatchObject({ code: 'certification_legacy_inventory_incomplete' });
   });
 
-  it('keeps external test evidence inside the immutable certification snapshot contract', async () => {
-    const db = createFakeD1(() => undefined);
-    await expect(certificationReferenceSnapshot(db, run, 'cross_platform', 'test_run', 'device-lab-104'))
-      .resolves.toEqual({ external_test_reference: 'device-lab-104' });
-    expect(db.calls).toHaveLength(0);
+  it('accepts only authenticated SDK device evidence with a valid immutable digest', async () => {
+    const evidenceJson = JSON.stringify({ source: 'authenticated_sdk', assertions: { authenticated_identity_verified: true } });
+    const evidenceSha256 = await sha256(evidenceJson);
+    const db = createFakeD1((call) => call.op === 'first' ? {
+      id: 'device-result-104', run_id: 'run-1', target_project_id: '11', customer_id: 'customer-1',
+      check_key: 'cross_platform.identity_sync', outcome: 'passed', source_platform: 'ios',
+      application_identifier: 'com.example.app', build_number: '104', app_version: '1.4.0',
+      sdk_version: '2.1.0', device_model: 'iPhone', os_version: '19.0',
+      evidence_json: evidenceJson, evidence_sha256: evidenceSha256,
+      observed_at: '2026-08-03T10:01:00.000Z', received_at: '2026-08-03T10:01:01.000Z',
+    } : undefined);
+    await expect(certificationReferenceSnapshot(
+      db,
+      run,
+      'cross_platform',
+      'test_run',
+      'device-result-104',
+      'cross_platform.identity_sync',
+      'passed',
+    )).resolves.toMatchObject({
+      id: 'device-result-104', source: 'authenticated_sdk', evidence_sha256: evidenceSha256,
+    });
+    expect(db.calls[0].args).toEqual([
+      'device-result-104', 'run-1', '11', 'cross_platform.identity_sync',
+    ]);
+  });
+
+  it('rejects free-text and modified device evidence', async () => {
+    const missing = createFakeD1(() => null);
+    await expect(certificationReferenceSnapshot(
+      missing, run, 'cross_platform', 'test_run', 'external-lab-reference', 'cross_platform.identity_sync',
+    )).rejects.toMatchObject({ code: 'certification_device_result_not_found' });
+
+    const modified = createFakeD1(() => ({
+      id: 'device-result-104', run_id: 'run-1', target_project_id: '11', customer_id: 'customer-1',
+      check_key: 'cross_platform.identity_sync', outcome: 'passed', source_platform: 'ios',
+      application_identifier: 'com.example.app', build_number: '104', evidence_json: '{"modified":true}',
+      evidence_sha256: '0'.repeat(64), observed_at: '2026-08-03T10:01:00.000Z',
+      received_at: '2026-08-03T10:01:01.000Z',
+    }));
+    await expect(certificationReferenceSnapshot(
+      modified, run, 'cross_platform', 'test_run', 'device-result-104', 'cross_platform.identity_sync',
+    )).rejects.toMatchObject({ code: 'certification_device_result_invalid' });
   });
 
   it('interprets D1 UTC timestamps consistently when validating the run window', async () => {
@@ -115,3 +153,8 @@ describe('purchase certification references', () => {
     )).resolves.toMatchObject({ id: 'event-1', event_type: 'DID_RENEW' });
   });
 });
+
+async function sha256(value: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}

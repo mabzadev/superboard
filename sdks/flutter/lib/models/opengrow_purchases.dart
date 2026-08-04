@@ -275,6 +275,55 @@ class OpenGrowPurchaseResult {
   };
 }
 
+class OpenGrowCertificationResult {
+  const OpenGrowCertificationResult({
+    required this.id,
+    required this.runId,
+    required this.checkKey,
+    required this.outcome,
+    required this.evidenceSha256,
+    required this.observedAt,
+    required this.receivedAt,
+    required this.duplicate,
+  });
+
+  final String id;
+  final String runId;
+  final String checkKey;
+  final String outcome;
+  final String evidenceSha256;
+  final DateTime observedAt;
+  final DateTime receivedAt;
+  final bool duplicate;
+
+  factory OpenGrowCertificationResult.fromJson(Map<String, dynamic> json) =>
+      OpenGrowCertificationResult(
+        id: (json['id'] ?? '').toString(),
+        runId: (json['run_id'] ?? '').toString(),
+        checkKey: (json['check_key'] ?? '').toString(),
+        outcome: (json['outcome'] ?? '').toString(),
+        evidenceSha256: (json['evidence_sha256'] ?? '').toString(),
+        observedAt:
+            DateTime.tryParse(json['observed_at']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        receivedAt:
+            DateTime.tryParse(json['received_at']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        duplicate: json['duplicate'] == true,
+      );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'run_id': runId,
+    'check_key': checkKey,
+    'outcome': outcome,
+    'evidence_sha256': evidenceSha256,
+    'observed_at': observedAt.toIso8601String(),
+    'received_at': receivedAt.toIso8601String(),
+    'duplicate': duplicate,
+  };
+}
+
 class OpenGrowPlacement {
   const OpenGrowPlacement({
     required this.identifier,
