@@ -113,12 +113,8 @@ describe('official Store metadata', () => {
     const testEnv = baseEnv({
       DB: metadataDb({
         projectIds: [11, 12],
-        targets: [
-          { project_id: 11, platform: 'apple', app_identifier: '123456789', country: 'us', language: 'en', device: 'iphone' },
-          { project_id: 12, platform: 'google', app_identifier: 'com.example.android', country: 'us', language: 'en', device: 'android' },
-        ],
       }),
-      GROWTH: { fetch: async () => Response.json({ data: [] }) } as unknown as Fetcher,
+      GROWTH: { fetch: vi.fn(async () => Response.json({ data: [] })) } as unknown as Fetcher,
       EVENT_QUEUE: { sendBatch: async (messages: unknown[]) => { batches.push(messages); } } as unknown as Queue,
     });
     await expect(enqueueOfficialMetadataProjects(testEnv)).resolves.toEqual({ enqueued: 2 });
