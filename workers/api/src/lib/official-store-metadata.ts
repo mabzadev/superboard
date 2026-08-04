@@ -32,13 +32,7 @@ export type OfficialMetadataSnapshot = {
 export async function enqueueOfficialMetadataProjects(env: Env) {
   requireGrowth(env);
   if (!env.EVENT_QUEUE) throw officialError('official_metadata_queue_unavailable', 'Official metadata queue is unavailable', true);
-  const [projectIds, connectedTargets] = await Promise.all([
-    productionProjectIds(env),
-    connectedStoreTargets(env),
-  ]);
-  for (const projectId of projectIds) {
-    await reconcileConnectedTargets(env, projectId, connectedTargets.filter((target) => target.projectId === projectId));
-  }
+  const projectIds = await productionProjectIds(env);
   for (let index = 0; index < projectIds.length; index += 100) {
     await env.EVENT_QUEUE.sendBatch(projectIds.slice(index, index + 100).map((projectId) => ({
       body: { type: 'growth.official-metadata.sync-project', projectId: String(projectId) },
