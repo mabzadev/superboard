@@ -1,6 +1,6 @@
 import type { Env } from './types';
 import { AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_ACTIONS } from './types';
-import { failure, jsonObject, requiredString } from './validation';
+import { automationConfig, failure, jsonObject, requiredString } from './validation';
 import { audit } from './sync';
 
 type AutomationRow = {
@@ -27,19 +27,22 @@ export async function evaluateEvent(env: Env, projectId: number, input: Record<s
     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(project_id, provider_event_id) DO NOTHING
   `).bind(eventId, projectId, providerEventId, eventType, subjectId, occurredAt, JSON.stringify(payload)).run();
   const event = await env.DB.prepare(`
-    SELECT id, event_type, subject_id, occurred_at, payload_json FROM growth_events
+    SELECT id, event_type, subject_id, occurred_at, payload_json, processed_at FROM growth_events
     WHERE project_id = ? AND provider_event_id = ?
   `).bind(projectId, providerEventId).first<Record<string, unknown>>();
   if (!event) throw failure('event_persistence_failed', 'Unable to persist the growth event', 503, true);
-  if (inserted.meta.changes > 0) {
+  if (inserted.meta.changes === 0 && !sameEventIdentity(event, eventType, subjectId, payload)) {
+    throw failure('growth_event_identity_conflict', 'The event ID is already associated with different event data', 409, false);
+  }
+  if (event.processed_at == null) {
     const automations = await env.DB.prepare(`
       SELECT * FROM growth_automations WHERE project_id = ? AND enabled = 1 AND trigger_type = ? ORDER BY id
     `).bind(projectId, eventType).all<AutomationRow>();
     for (const automation of automations.results) {
       if (!(AUTOMATION_TRIGGER_ACTIONS[eventType as keyof typeof AUTOMATION_TRIGGER_ACTIONS] || []).includes(automation.action_type)) continue;
-      const triggerConfig = parseObject(automation.trigger_config_json);
+      const triggerConfig = automationConfig(parseObject(automation.trigger_config_json), 'trigger_config');
       if (!matchesAutomation(triggerConfig, payload)) continue;
-      const actionConfig = parseObject(automation.action_config_json);
+      const actionConfig = automationConfig(parseObject(automation.action_config_json), 'action_config');
       const actionPayload = {
         channel: automation.action_type,
         subject_id: subjectId,
@@ -52,9 +55,14 @@ export async function evaluateEvent(env: Env, projectId: number, input: Record<s
         ) VALUES (?, ?, ?, ?, ?) ON CONFLICT(automation_id, event_id) DO NOTHING
       `).bind(crypto.randomUUID(), projectId, automation.id, event.id, JSON.stringify(actionPayload)).run();
     }
-    await audit(env, projectId, 'growth.event.accepted', 'event', String(event.id), {
-      provider_event_id: providerEventId, event_type: eventType,
-    });
+    const processed = await env.DB.prepare(`
+      UPDATE growth_events SET processed_at = datetime('now') WHERE id = ? AND processed_at IS NULL
+    `).bind(event.id).run();
+    if (processed.meta.changes > 0) {
+      await audit(env, projectId, 'growth.event.processed', 'event', String(event.id), {
+        provider_event_id: providerEventId, event_type: eventType,
+      });
+    }
   }
   const runs = await env.DB.prepare(`
     SELECT r.id, r.status, r.action_payload_json, a.action_type, a.name AS automation_name
@@ -77,14 +85,17 @@ export async function evaluateEvent(env: Env, projectId: number, input: Record<s
 export async function markRun(env: Env, projectId: number, runId: string, input: Record<string, unknown>) {
   const status = requiredString(input.status, 'status', 32);
   if (!['delivered', 'failed', 'cancelled'].includes(status)) throw failure('status_invalid', 'status must be delivered, failed or cancelled');
+  const claimToken = requiredString(input.claim_token, 'claim_token', 64);
   const lastError = input.last_error == null ? null : requiredString(input.last_error, 'last_error', 2000);
   const run = await env.DB.prepare(`
     UPDATE growth_automation_runs SET status = ?, last_error = ?, claimed_at = NULL,
+      claim_token = NULL, claim_expires_at = NULL, next_attempt_at = NULL,
       delivered_at = CASE WHEN ? = 'delivered' THEN datetime('now') ELSE delivered_at END,
       updated_at = datetime('now')
-    WHERE id = ? AND project_id = ? AND status = 'pending' RETURNING id, status
-  `).bind(status, lastError, status, runId, projectId).first<Record<string, unknown>>();
-  if (!run) throw failure('automation_run_not_found', 'Pending automation run not found', 404);
+    WHERE id = ? AND project_id = ? AND status = 'pending' AND claim_token = ?
+    RETURNING id, status
+  `).bind(status, lastError, status, runId, projectId, claimToken).first<Record<string, unknown>>();
+  if (!run) return failedLeaseMutation(env, projectId, runId);
   await audit(env, projectId, `growth.automation_run.${status}`, 'automation_run', runId, { last_error: lastError });
   return run;
 }
@@ -93,31 +104,36 @@ export async function claimRun(env: Env, projectId: number, runId: string) {
   const current = await automationRun(env, projectId, runId);
   if (!current) throw failure('automation_run_not_found', 'Automation run not found', 404, false);
   if (current.status !== 'pending') return { ...current, terminal: true };
+  const claimToken = crypto.randomUUID();
   const claimed = await env.DB.prepare(`
-    UPDATE growth_automation_runs SET claimed_at = datetime('now'), attempt_count = attempt_count + 1,
-      updated_at = datetime('now')
+    UPDATE growth_automation_runs SET claim_token = ?, claimed_at = datetime('now'),
+      claim_expires_at = datetime('now', '+10 minutes'), next_attempt_at = NULL,
+      attempt_count = attempt_count + 1, updated_at = datetime('now')
     WHERE id = ? AND project_id = ? AND status = 'pending'
       AND (next_attempt_at IS NULL OR next_attempt_at <= datetime('now'))
-      AND (claimed_at IS NULL OR claimed_at <= datetime('now', '-5 minutes'))
+      AND (claimed_at IS NULL OR COALESCE(claim_expires_at, datetime(claimed_at, '+5 minutes')) <= datetime('now'))
     RETURNING id
-  `).bind(runId, projectId).first<Record<string, unknown>>();
+  `).bind(claimToken, runId, projectId).first<Record<string, unknown>>();
   if (!claimed) throw failure('automation_run_busy', 'Automation run is already being delivered', 409, true, 30);
   const run = await automationRun(env, projectId, runId);
   await audit(env, projectId, 'growth.automation_run.claimed', 'automation_run', runId, {
     attempt_count: run?.attempt_count,
   });
-  return { ...run, terminal: false };
+  return { ...run, claim_token: claimToken, terminal: false };
 }
 
 export async function releaseRun(env: Env, projectId: number, runId: string, input: Record<string, unknown>) {
   const lastError = requiredString(input.last_error, 'last_error', 2000);
-  const retryAfter = Math.max(30, Math.min(3600, Number(input.retry_after_seconds || 60)));
+  const claimToken = requiredString(input.claim_token, 'claim_token', 64);
+  const requestedRetryAfter = Number(input.retry_after_seconds || 60);
+  const retryAfter = Number.isFinite(requestedRetryAfter) ? Math.max(30, Math.min(3600, Math.floor(requestedRetryAfter))) : 60;
   const run = await env.DB.prepare(`
-    UPDATE growth_automation_runs SET claimed_at = NULL, last_error = ?,
+    UPDATE growth_automation_runs SET claim_token = NULL, claimed_at = NULL, claim_expires_at = NULL, last_error = ?,
       next_attempt_at = datetime('now', '+' || ? || ' seconds'), updated_at = datetime('now')
-    WHERE id = ? AND project_id = ? AND status = 'pending' RETURNING id, status, attempt_count, next_attempt_at
-  `).bind(lastError, retryAfter, runId, projectId).first<Record<string, unknown>>();
-  if (!run) throw failure('automation_run_not_found', 'Pending automation run not found', 404, false);
+    WHERE id = ? AND project_id = ? AND status = 'pending' AND claim_token = ?
+    RETURNING id, status, attempt_count, next_attempt_at
+  `).bind(lastError, retryAfter, runId, projectId, claimToken).first<Record<string, unknown>>();
+  if (!run) return failedLeaseMutation(env, projectId, runId);
   await audit(env, projectId, 'growth.automation_run.retry_scheduled', 'automation_run', runId, {
     last_error: lastError, retry_after_seconds: retryAfter,
   });
@@ -131,6 +147,12 @@ async function automationRun(env: Env, projectId: number, runId: string) {
     FROM growth_automation_runs r JOIN growth_automations a ON a.id = r.automation_id
     WHERE r.id = ? AND r.project_id = ?
   `).bind(runId, projectId).first<Record<string, unknown>>();
+}
+
+async function failedLeaseMutation(env: Env, projectId: number, runId: string) {
+  const current = await automationRun(env, projectId, runId);
+  if (!current) throw failure('automation_run_not_found', 'Automation run not found', 404, false);
+  throw failure('automation_run_claim_lost', 'Automation run lease ownership was lost', 409, false);
 }
 
 export function matchesAutomation(config: Record<string, unknown>, payload: Record<string, unknown>): boolean {
@@ -165,6 +187,28 @@ function parseObject(value: unknown): Record<string, unknown> {
     try { return parseObject(JSON.parse(value)); } catch { return {}; }
   }
   return typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function sameEventIdentity(
+  stored: Record<string, unknown>,
+  eventType: string,
+  subjectId: string | null,
+  payload: Record<string, unknown>,
+) {
+  return String(stored.event_type || '') === eventType
+    && (stored.subject_id == null ? null : String(stored.subject_id)) === subjectId
+    && canonicalJson(parseObject(stored.payload_json)) === canonicalJson(payload);
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right, 'en'))
+      .map(([key, nested]) => `${JSON.stringify(key)}:${canonicalJson(nested)}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
 }
 
 function validDate(value: unknown): string {
