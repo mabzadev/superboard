@@ -85,15 +85,19 @@ export async function processGoogleBillingNotification(env: BillingEnv, params: 
   productType: 'subscription' | 'non_consumable' | 'consumable';
   eventType: string;
   eventOccurredAt: string;
+  environment?: BillingEnvironment;
 }) {
   try {
+    // Jobs queued before environment classification was introduced were all
+    // persisted as production events. Preserve that replay behavior during cutover.
+    const environment = params.environment === 'sandbox' ? 'sandbox' : 'production';
     const verified = await verifyGooglePurchase(env, {
       projectId: params.projectId,
       customerId: null,
       purchaseToken: params.purchaseToken,
       storeProductId: params.productId,
       productType: params.productType,
-      environment: 'production',
+      environment,
       allowTransfer: true,
     });
     verified.purchase.eventType = params.eventType;

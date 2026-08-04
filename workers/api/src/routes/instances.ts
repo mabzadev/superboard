@@ -1248,11 +1248,34 @@ SA_ACCOUNT_ID="opengrow-play-api-service-account"
 TOPIC_NAME="opengrow-play-rtdn-topic"
 SUBSCRIPTION_NAME="play-rtdn-subscription"
 PUSH_ENDPOINT="${endpoint}"
+PUSH_AUDIENCE="${endpoint}"
 
 gcloud iam service-accounts create "$SA_ACCOUNT_ID" --display-name="OpenGrow Play API Service Account" --project="$PROJECT_ID" || true
 gcloud pubsub topics create "$TOPIC_NAME" --project="$PROJECT_ID" || true
-gcloud pubsub subscriptions create "$SUBSCRIPTION_NAME" --topic="$TOPIC_NAME" --push-endpoint="$PUSH_ENDPOINT" --project="$PROJECT_ID" || true
-echo "OpenGrow Google Play RTDN endpoint configured: $PUSH_ENDPOINT"
+SA_EMAIL="$SA_ACCOUNT_ID@$PROJECT_ID.iam.gserviceaccount.com"
+PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+PUBSUB_SERVICE_AGENT="service-$PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com"
+
+gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
+  --member="serviceAccount:$PUBSUB_SERVICE_AGENT" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project="$PROJECT_ID"
+
+if gcloud pubsub subscriptions describe "$SUBSCRIPTION_NAME" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  gcloud pubsub subscriptions update "$SUBSCRIPTION_NAME" \
+    --push-endpoint="$PUSH_ENDPOINT" \
+    --push-auth-service-account="$SA_EMAIL" \
+    --push-auth-token-audience="$PUSH_AUDIENCE" \
+    --project="$PROJECT_ID"
+else
+  gcloud pubsub subscriptions create "$SUBSCRIPTION_NAME" \
+    --topic="$TOPIC_NAME" \
+    --push-endpoint="$PUSH_ENDPOINT" \
+    --push-auth-service-account="$SA_EMAIL" \
+    --push-auth-token-audience="$PUSH_AUDIENCE" \
+    --project="$PROJECT_ID"
+fi
+echo "OpenGrow Google Play RTDN authenticated push configured: $PUSH_ENDPOINT"
 `, 200, { 'Content-Type': 'application/x-sh; charset=utf-8' });
 });
 

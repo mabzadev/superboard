@@ -314,6 +314,7 @@ admin.get('/:projectId/release-gate', async (c) => {
       refundActions,
       refundDeadlines,
       appleNotifications,
+      googleNotifications,
       workerReadiness,
     ] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
@@ -422,6 +423,12 @@ admin.get('/:projectId/release-gate', async (c) => {
         WHERE project_id = ? AND provider = 'apple' LIMIT 1
       `).bind(catalogStaleHours, scope.productionProjectId || scope.releaseProjectId)
         .first<{ ready: number; checked_at: string; configured_at: string | null; fresh: number }>(),
+      c.env.DB.prepare(`
+        SELECT ready, checked_at, configured_at, current_configuration, required_configuration
+        FROM billing_store_notification_configurations
+        WHERE project_id = ? AND provider = 'google' LIMIT 1
+      `).bind(scope.productionProjectId || scope.releaseProjectId)
+        .first<{ ready: number; checked_at: string; configured_at: string | null; current_configuration: string; required_configuration: string }>(),
       currentBillingWorkerReadiness(c.env),
     ]);
     const verifiedCertificationObservations = await Promise.all((certificationObservations.results || []).map(async (row) => ({
@@ -510,6 +517,13 @@ admin.get('/:projectId/release-gate', async (c) => {
           : Number(appleNotifications.ready || 0) !== 1
             ? 'Replace the current App Store Server Notification URLs with the required direct Billing ingress URLs.'
             : `Recheck the App Store Server Notification URLs; the last verification is older than ${catalogStaleHours} hours.`,
+      ),
+      prerequisite(
+        'google_pubsub_oidc',
+        'Google Pub/Sub authenticated push',
+        Number(googleNotifications?.ready || 0) === 1,
+        'A Google Play RTDN push was verified with the expected Pub/Sub OIDC identity and audience.',
+        'Configure authenticated Pub/Sub push and deliver a verified Google Play RTDN event. URL tokens alone cannot pass this gate.',
       ),
       prerequisite('sandbox_apple_catalog', 'Sandbox Apple subscription catalog', sandboxApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the test project.'),
       prerequisite('production_apple_catalog', 'Production Apple subscription catalog', productionApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the production project.'),

@@ -107,7 +107,8 @@ Auth-adjacent mail delivery is now covered by module 13.
 - Desktop setup persists fallback URL, generated-page flag, and macOS/Windows
   URI settings.
 - Android Google Cloud setup script now returns an executable setup script with
-  the instance RTDN push endpoint instead of a self-hosted placeholder.
+  the instance RTDN push endpoint, authenticated Pub/Sub OIDC identity, and an
+  exact audience instead of a self-hosted placeholder.
 - Public `/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json`
   no longer emit fake placeholder app ids when no platform is configured.
 - Local smoke validation covered iOS, Android, Web, Desktop config saves,
@@ -323,9 +324,10 @@ Auth-adjacent mail delivery is now covered by module 13.
   App Store Server Notification payloads, decode JWS transaction payloads when
   present, persist `iap_webhook_messages`, create idempotent validated
   `purchase_events`, and update `subscription_states`.
-- `POST /api/v1/iap/google/:path` now accepts Google Play RTDN Pub/Sub payloads,
-  decodes the base64 message body, persists webhook logs, creates validated
-  purchase events and updates subscription state.
+- `POST /api/v1/iap/google/:path` accepts Google Play RTDN Pub/Sub payloads,
+  verifies the Google-signed OIDC token, exact audience, verified service-account
+  email, and provider purchase before persistence. Google license-test markers
+  route the event to the test project; production purchases route to production.
 - IAP event mapping now uses the upstream event vocabulary: `buy`, `cancel`,
   `refund`, and `refund_reversed`, with subscription vs one-time purchase type
   handling.

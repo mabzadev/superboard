@@ -71,6 +71,29 @@ export async function ingestProviderEventWithBillingAuthority(env: Env, request:
   return response.data;
 }
 
+export async function classifyGooglePurchaseWithBillingAuthority(env: Env, params: {
+  projectId: string | number;
+  purchaseToken: string;
+  productId: string;
+  productType: 'subscription' | 'non_consumable' | 'consumable';
+}) {
+  const response = await callBillingServiceBinding<{ data?: { environment?: unknown } }>(
+    env,
+    '/internal/v1/google/purchases/classify',
+    {
+      project_id: String(params.projectId),
+      purchase_token: params.purchaseToken,
+      product_id: params.productId,
+      product_type: params.productType,
+    },
+  );
+  const environment = response.data?.environment;
+  if (environment !== 'sandbox' && environment !== 'production') {
+    throw invalidBillingAuthorityResponse('Billing returned an invalid Google Play environment');
+  }
+  return environment;
+}
+
 export async function customerInfoFromBillingAuthority(
   env: Env,
   projectId: string | number,

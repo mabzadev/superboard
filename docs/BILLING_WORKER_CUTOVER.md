@@ -68,20 +68,21 @@ After this technical cutover, run the complete certification matrix through `ser
 
 1. Approved and purchasable weekly and yearly products.
 2. Production and sandbox App Store Server Notification URLs verified as direct V2 Billing ingress endpoints.
-3. Apple Sandbox/TestFlight device evidence.
-4. Google Play License Testing/Internal device evidence.
-5. Stripe Test Mode Checkout, renewal, failure, Portal, refund, and dispute evidence.
-6. Duplicate and out-of-order event evidence.
-7. Store, OpenGrow, Stripe, and application projection convergence.
-8. Complete legacy subscription inventory and import.
-9. FlutterFlow iOS and Android recovery tests.
-10. Empty DLQ and active alerts throughout the observation window.
+3. Google Pub/Sub authenticated push observed with the expected OIDC identity and audience; a URL token is insufficient.
+4. Apple Sandbox/TestFlight device evidence.
+5. Google Play License Testing/Internal device evidence routed to the test project from provider-verified purchase markers.
+6. Stripe Test Mode Checkout, renewal, failure, Portal, refund, and dispute evidence.
+7. Duplicate and out-of-order event evidence.
+8. Store, OpenGrow, Stripe, and application projection convergence.
+9. Complete legacy subscription inventory and import.
+10. FlutterFlow iOS and Android recovery tests.
+11. Empty DLQ and active alerts throughout the observation window.
 
 Manual free-text approval is not certification evidence. Each passed check must reference an immutable observation from a completed certification run. A run records the platform, environment, build, application and SDK versions, device model, OS version, operator, and server timestamps. Each observation stores a bounded evidence snapshot and its SHA-256 digest.
 
 Device-only scenarios use an authenticated SDK result rather than a free-text test reference. Start the run in Purchases Diagnostics, copy the expiring challenge into the temporary FlutterFlow or Web certification action, and submit the required structured assertions from the matching build. The challenge is stored only as a hash, is claimed by one verified customer, and must never be embedded in a release build.
 
-Billing transaction and event references are accepted only when the backend can resolve them in the run's project, provider, environment, and time window. Legacy inventory references must identify a completed production inventory with no unresolved active subscription. Device-only scenarios may use an external test-run reference, but it is still sealed inside the immutable observation. Completing, failing, or cancelling a run prevents additional observations.
+Billing transaction and event references are accepted only when the backend can resolve them in the run's project, provider, environment, and time window. Legacy inventory references must identify a completed production inventory with no unresolved active subscription. Device-only scenarios require an authenticated SDK result bound to the run challenge; arbitrary external test references are rejected. Completing, failing, or cancelling a run prevents additional observations.
 
 ## Cutover procedure
 
