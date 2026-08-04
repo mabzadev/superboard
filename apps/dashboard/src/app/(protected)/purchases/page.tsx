@@ -26,6 +26,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -41,6 +49,7 @@ import {
   archiveBillingProduct,
   approveBillingRefundAction,
   configureBillingLegacySource,
+  configureAppleNotificationConfiguration,
   completeBillingCertificationRun,
   createBillingCertificationRun,
   createBillingExperiment,
@@ -59,6 +68,7 @@ import {
   createProduct,
   disableBillingLegacySource,
   getBillingAnalytics,
+  getAppleNotificationConfiguration,
   getBillingConnections,
   getBillingCertificationRuns,
   getBillingCustomer,
@@ -112,6 +122,7 @@ import {
   type BillingSubscription,
   type BillingTargetingRule,
   type BillingTransaction,
+  type AppleNotificationConfiguration,
 } from "@/api/billing/billingService";
 import { showErrorNotification, showSuccessNotification } from "@/lib/Notifications";
 
@@ -179,6 +190,7 @@ const PurchasesPage = () => {
   const projectId = selectedProject?.id;
   const [overview, setOverview] = useState<BillingOverview>();
   const [connections, setConnections] = useState<BillingConnection[]>([]);
+  const [appleNotifications, setAppleNotifications] = useState<AppleNotificationConfiguration>();
   const [transactions, setTransactions] = useState<BillingTransaction[]>([]);
   const [subscriptions, setSubscriptions] = useState<BillingSubscription[]>([]);
   const [paywalls, setPaywalls] = useState<BillingPaywall[]>([]);
@@ -200,6 +212,8 @@ const PurchasesPage = () => {
   const [customerDetail, setCustomerDetail] = useState<CustomerDetail>();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [configuringAppleNotifications, setConfiguringAppleNotifications] = useState(false);
+  const [appleNotificationDialogOpen, setAppleNotificationDialogOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
 
   const [entitlementId, setEntitlementId] = useState("premium");
@@ -244,9 +258,11 @@ const PurchasesPage = () => {
     if (!projectId) return;
     setLoading(true);
     try {
+      const appleNotificationRequest = getAppleNotificationConfiguration(projectId);
       const [
         nextOverview,
         nextConnections,
+        nextAppleNotifications,
         nextTransactions,
         nextSubscriptions,
         nextPaywalls,
@@ -266,6 +282,7 @@ const PurchasesPage = () => {
       ] = await Promise.allSettled([
         getBillingOverview(projectId),
         getBillingConnections(projectId),
+        appleNotificationRequest,
         getBillingTransactions(projectId),
         getBillingSubscriptions(projectId),
         getBillingPaywalls(projectId),
@@ -279,7 +296,7 @@ const PurchasesPage = () => {
         getBillingVirtualCurrencies(projectId),
         getBillingExports(projectId),
         getBillingRefundCases(projectId),
-        getBillingReleaseGate(projectId),
+        appleNotificationRequest.catch(() => undefined).then(() => getBillingReleaseGate(projectId)),
         getBillingCertificationRuns(projectId),
         getBillingLegacyInventory(projectId),
       ]);
@@ -287,6 +304,7 @@ const PurchasesPage = () => {
       const failed = (name: string, reason: unknown) => failures.push(`${name}: ${reason instanceof Error ? reason.message : "unable to load"}`);
       if (nextOverview.status === "fulfilled") setOverview(nextOverview.value); else failed("Overview", nextOverview.reason);
       if (nextConnections.status === "fulfilled") setConnections(nextConnections.value.data || []); else failed("Stores", nextConnections.reason);
+      if (nextAppleNotifications.status === "fulfilled") setAppleNotifications(nextAppleNotifications.value); else failed("Apple notifications", nextAppleNotifications.reason);
       if (nextTransactions.status === "fulfilled") setTransactions(nextTransactions.value.data || []); else failed("Transactions", nextTransactions.reason);
       if (nextSubscriptions.status === "fulfilled") setSubscriptions(nextSubscriptions.value.data || []); else failed("Subscriptions", nextSubscriptions.reason);
       if (nextPaywalls.status === "fulfilled") setPaywalls(nextPaywalls.value.data || []); else failed("Paywalls", nextPaywalls.reason);
@@ -339,6 +357,24 @@ const PurchasesPage = () => {
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "The action failed");
       return false;
+    }
+  };
+
+  const applyAppleNotificationConfiguration = async () => {
+    if (!projectId) return;
+    setConfiguringAppleNotifications(true);
+    try {
+      const result = await configureAppleNotificationConfiguration(projectId);
+      setAppleNotifications(result.data);
+      setAppleNotificationDialogOpen(false);
+      showSuccessNotification(result.changed
+        ? "App Store Server Notifications now point to the verified V2 ingress"
+        : "App Store Server Notifications were already configured");
+      await load();
+    } catch (error) {
+      showErrorNotification(error instanceof Error ? error.message : "Unable to configure App Store Server Notifications");
+    } finally {
+      setConfiguringAppleNotifications(false);
     }
   };
 
@@ -733,6 +769,46 @@ const PurchasesPage = () => {
               ))}
               {!connections.length && <Card><CardContent className="pt-6 text-sm text-muted-foreground">No store connection is configured.</CardContent></Card>}
             </div>
+            {appleNotifications && (
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle>App Store Server Notifications</CardTitle>
+                      <p className="mt-1 text-sm text-muted-foreground">Provider-signed V2 events must reach Billing directly before the purchase release gate can pass.</p>
+                    </div>
+                    {statusBadge(appleNotifications.ready ? "connected" : "configuration_required")}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(["production", "sandbox"] as const).map((environment) => {
+                    const currentUrl = appleNotifications.current[`${environment}_url`];
+                    const requiredUrl = appleNotifications.required[`${environment}_url`];
+                    const urlMatches = appleNotifications.checks[`${environment}_url`];
+                    const versionMatches = appleNotifications.checks[`${environment}_version`];
+                    return (
+                      <div key={environment} className="rounded-md border p-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="font-medium capitalize">{environment}</span>
+                          {statusBadge(urlMatches && versionMatches ? "connected" : "configuration_required")}
+                        </div>
+                        <div className="grid gap-2 text-xs">
+                          <div><span className="text-muted-foreground">Current destination</span><code className="mt-1 block break-all rounded bg-muted p-2">{currentUrl || "Not configured"}</code></div>
+                          {!urlMatches && <div><span className="text-muted-foreground">Required URL</span><code className="mt-1 block break-all rounded bg-muted p-2">{requiredUrl}</code></div>}
+                          <div className="flex items-center justify-between"><span>Notification version</span><span>{appleNotifications.current[`${environment}_version`] || "Not configured"} → V2</span></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">The server verifies Apple’s signed payload before persisting or queueing any financial event.</p>
+                    <Button disabled={appleNotifications.ready} onClick={() => setAppleNotificationDialogOpen(true)}>
+                      {appleNotifications.ready ? "V2 endpoints configured" : "Configure V2 endpoints"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <Card><CardHeader><CardTitle>Add Stripe</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-3"><Input type="password" value={providerSecret} onChange={(event) => setProviderSecret(event.target.value)} placeholder={projectType === "test" ? "Stripe test secret key (sk_test_…)" : "Stripe live secret key (sk_live_…)"} autoComplete="new-password" /><Input type="password" value={providerWebhookSecret} onChange={(event) => setProviderWebhookSecret(event.target.value)} placeholder="Stripe webhook signing secret (whsec_…)" autoComplete="new-password" /><Button disabled={!providerSecret.trim() || !providerWebhookSecret.trim()} onClick={() => void saveWebConnection()}>Encrypt and save Stripe</Button></CardContent></Card>
           </TabsContent>
 
@@ -1086,6 +1162,35 @@ const PurchasesPage = () => {
             {[...new Set(releaseGate?.checks.map((check) => check.group) || [])].map((group) => <Card key={group}><CardHeader><CardTitle>{group}</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Scenario</TableHead><TableHead>Evidence</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Review</TableHead></TableRow></TableHeader><TableBody>{releaseGate?.checks.filter((check) => check.group === group).map((check) => <TableRow key={check.key}><TableCell><div className="font-medium">{check.label}</div><div className="max-w-2xl text-xs text-muted-foreground">{check.description}</div><div className="mt-1 text-xs text-muted-foreground">Required evidence: {check.required_evidence.join(", ")}</div></TableCell><TableCell><div className="text-xs">{check.verified_at ? date(check.verified_at) : "Not verified"}</div>{Object.entries(check.evidence).map(([key, value]) => <div key={key} className="max-w-sm truncate text-xs text-muted-foreground" title={String(value)}><span className="font-medium">{key}:</span> {String(value)}</div>)}{check.status === "passed" && !check.evidence_valid && <div className="text-xs text-destructive">Missing evidence: {check.missing_evidence.join(", ")}</div>}{check.notes && <div className="max-w-xs truncate text-xs text-muted-foreground">{check.notes}</div>}{selectedCertificationRun && <div className="mt-2 grid gap-2"><select aria-label={`${check.label} reference type`} className="h-8 rounded-md border bg-background px-2 text-xs" value={gateReferenceTypes[check.key] || check.reference_types[0]} onChange={(event) => setGateReferenceTypes((current) => ({ ...current, [check.key]: event.target.value as BillingCertificationReferenceType }))}>{check.reference_types.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select><Input className="h-8 text-xs" placeholder="Verified record or external test reference" value={gateReferences[check.key] || ""} onChange={(event) => setGateReferences((current) => ({ ...current, [check.key]: event.target.value }))} /></div>}</TableCell><TableCell>{statusBadge(check.status === "passed" && !check.evidence_valid ? "invalid" : check.status)}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "passed")}>Pass</Button><Button size="sm" variant="outline" disabled={!selectedCertificationRun} onClick={() => void recordCertificationResult(check, "failed")}>Fail</Button>{check.status !== "pending" && <Button size="sm" variant="ghost" onClick={() => void resetGateCheck(check.key)}>Reset</Button>}</div></TableCell></TableRow>)}</TableBody></Table></CardContent></Card>)}
           </TabsContent>
         </Tabs>
+        <Dialog open={appleNotificationDialogOpen} onOpenChange={setAppleNotificationDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Switch App Store notifications to Billing?</DialogTitle>
+              <DialogDescription>
+                This updates both production and sandbox URLs in App Store Connect. New V2 purchase, renewal, expiration, and refund events will be delivered directly to the verified Billing ingress.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <Alert variant="destructive">
+                <ShieldAlert />
+                <AlertTitle>Live Store configuration</AlertTitle>
+                <AlertDescription>The previous notification destinations will be replaced. The change is recorded in the immutable administrator audit log.</AlertDescription>
+              </Alert>
+              {appleNotifications && (
+                <div className="space-y-2">
+                  <code className="block break-all rounded bg-muted p-2 text-xs">{appleNotifications.required.production_url}</code>
+                  <code className="block break-all rounded bg-muted p-2 text-xs">{appleNotifications.required.sandbox_url}</code>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" disabled={configuringAppleNotifications} onClick={() => setAppleNotificationDialogOpen(false)}>Cancel</Button>
+              <Button disabled={configuringAppleNotifications} onClick={() => void applyAppleNotificationConfiguration()}>
+                {configuringAppleNotifications ? "Configuring…" : "Confirm and configure V2"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

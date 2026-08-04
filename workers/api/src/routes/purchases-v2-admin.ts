@@ -37,6 +37,12 @@ import { validateStripeCredentials } from '../lib/stripe-credentials';
 import { encryptStoreCredentialCopies } from '../lib/store-credential-copies';
 import { retrieveStripeCatalogProduct } from '../lib/stripe-catalog';
 import { providerEventReplayJob } from '../lib/provider-event-replay';
+import {
+  APPLE_NOTIFICATION_CONFIRMATION,
+  configureAppleNotificationConfiguration,
+  persistAppleNotificationConfiguration,
+  readAppleNotificationConfiguration,
+} from '../lib/apple-notification-configuration';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -306,6 +312,7 @@ admin.get('/:projectId/release-gate', async (c) => {
       entitlementDeliveries,
       refundActions,
       refundDeadlines,
+      appleNotifications,
       workerReadiness,
     ] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
@@ -407,6 +414,13 @@ admin.get('/:projectId/release-gate', async (c) => {
         JOIN billing_refund_cases rc ON rc.id = d.case_id
         WHERE rc.project_id IN (${projectPlaceholders || "''"}) AND d.status = 'missed'
       `).bind(...scopedProjectIds).first<Record<string, number>>(),
+      c.env.DB.prepare(`
+        SELECT ready, checked_at, configured_at,
+          CASE WHEN datetime(checked_at) >= datetime('now', '-' || ? || ' hours') THEN 1 ELSE 0 END AS fresh
+        FROM billing_store_notification_configurations
+        WHERE project_id = ? AND provider = 'apple' LIMIT 1
+      `).bind(catalogStaleHours, scope.productionProjectId || scope.releaseProjectId)
+        .first<{ ready: number; checked_at: string; configured_at: string | null; fresh: number }>(),
       currentBillingWorkerReadiness(c.env),
     ]);
     const verifiedCertificationObservations = await Promise.all((certificationObservations.results || []).map(async (row) => ({
@@ -485,6 +499,17 @@ admin.get('/:projectId/release-gate', async (c) => {
         prerequisite(`sandbox_${provider}_connection`, `Sandbox ${providerDisplayName(provider)} connection`, connectionPassed(scope.testProjectId, provider, 'sandbox'), 'Credentials were tested successfully.', `Test the sandbox ${providerDisplayName(provider)} connection successfully.`),
         prerequisite(`production_${provider}_connection`, `Production ${providerDisplayName(provider)} connection`, connectionPassed(scope.productionProjectId, provider, 'production'), 'Credentials were tested successfully.', `Test the production ${providerDisplayName(provider)} connection successfully.`),
       ]),
+      prerequisite(
+        'apple_server_notifications_v2',
+        'App Store Server Notifications V2',
+        Number(appleNotifications?.ready || 0) === 1 && Number(appleNotifications?.fresh || 0) === 1,
+        'Production and sandbox V2 notifications point directly to the verified Billing ingress.',
+        !appleNotifications
+          ? 'Verify and configure the production and sandbox App Store Server Notification URLs.'
+          : Number(appleNotifications.ready || 0) !== 1
+            ? 'Replace the current App Store Server Notification URLs with the required direct Billing ingress URLs.'
+            : `Recheck the App Store Server Notification URLs; the last verification is older than ${catalogStaleHours} hours.`,
+      ),
       prerequisite('sandbox_apple_catalog', 'Sandbox Apple subscription catalog', sandboxApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the test project.'),
       prerequisite('production_apple_catalog', 'Production Apple subscription catalog', productionApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the production project.'),
       prerequisite('production_apple_catalog_fresh', 'Production Apple catalog freshness', catalogRecentlySynced(scope.productionProjectId, 'apple', 'production'), `The Apple catalog was synchronized within the past ${catalogStaleHours} hours.`, `Synchronize the production Apple catalog. Its approval and availability evidence must be less than ${catalogStaleHours} hours old.`),
@@ -1102,6 +1127,73 @@ admin.get('/:projectId/connections', async (c) => {
       } else rows.push(item);
     }
     return c.json({ data: rows });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.get('/:projectId/apple-server-notifications', async (c) => {
+  try {
+    const project = await projectFor(c);
+    const scope = await releaseGateScope(c, project);
+    const data = await readAppleNotificationConfiguration(
+      c.env,
+      scope.productionProjectId,
+      scope.testProjectId,
+    );
+    await persistAppleNotificationConfiguration(c.env.DB, scope.productionProjectId, data);
+    return c.json({ data });
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/apple-server-notifications/configure', async (c) => {
+  try {
+    const project = await projectFor(c);
+    requireAdmin(project);
+    const body = await jsonBody(c);
+    if (body.confirmation !== APPLE_NOTIFICATION_CONFIRMATION) {
+      throw purchasesError(
+        'apple_notification_confirmation_required',
+        'Explicit confirmation is required before changing App Store Server Notification URLs',
+        409,
+      );
+    }
+    const scope = await releaseGateScope(c, project);
+    const before = await readAppleNotificationConfiguration(
+      c.env,
+      scope.productionProjectId,
+      scope.testProjectId,
+    );
+    await persistAppleNotificationConfiguration(c.env.DB, scope.productionProjectId, before);
+    if (before.ready) return c.json({ data: before, changed: false });
+    await audit(c, scope.productionProjectId, 'apple_server_notifications.configuration_requested', 'store_connection', 'native-apple', {
+      current: before.current,
+      required: before.required,
+    });
+    try {
+      const configured = await configureAppleNotificationConfiguration(
+        c.env,
+        scope.productionProjectId,
+        scope.testProjectId,
+      );
+      await persistAppleNotificationConfiguration(c.env.DB, scope.productionProjectId, configured);
+      if (!configured.ready) {
+        throw purchasesError(
+          'apple_notification_configuration_not_applied',
+          'App Store Connect did not apply every required notification setting',
+          502,
+          true,
+        );
+      }
+      await audit(c, scope.productionProjectId, 'apple_server_notifications.configured', 'store_connection', 'native-apple', {
+        previous: before.current,
+        configured: configured.current,
+      });
+      return c.json({ data: configured, changed: true });
+    } catch (error) {
+      await audit(c, scope.productionProjectId, 'apple_server_notifications.configuration_failed', 'store_connection', 'native-apple', {
+        code: String((error as { code?: string }).code || 'apple_notification_configuration_failed'),
+      });
+      throw error;
+    }
   } catch (error) { return replyError(c, error); }
 });
 

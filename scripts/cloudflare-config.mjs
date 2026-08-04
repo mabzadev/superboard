@@ -114,12 +114,16 @@ function apiConfig() {
 }
 
 function billingConfig() {
+  const apiDomain = environment === "production"
+    ? target.domains.shortlinks
+    : `${target.workers.api.staging}.${target.workersDevSubdomain}.workers.dev`;
   return {
     ...baseConfig(),
     workers_dev: false,
     main: "../../workers/billing/src/index.ts",
     vars: {
       ENVIRONMENT: environment,
+      API_DOMAIN: apiDomain,
       CREDENTIAL_KEY_SCOPE: "billing",
       OPENGROW_ACCESS_MODE: target.accessMode,
       BILLING_RELEASE_STALE_MINUTES: "15",
