@@ -153,7 +153,7 @@ const date = (value: unknown) =>
 const statusBadge = (status: unknown) => {
   const value = String(status || "unknown");
   const destructive = [
-    "failed", "invalid", "error", "degraded", "refunded", "revoked", "expired", "billing_issue",
+    "failed", "invalid", "error", "degraded", "refunded", "revoked", "expired", "billing_issue", "missed", "lost",
     "unmatched_customer", "missing_product", "missing_verified_subscription", "unsupported_provider",
     "approval_required", "availability_required", "sync_required",
   ].includes(value);
@@ -637,6 +637,7 @@ const PurchasesPage = () => {
   const latestLegacyRun = legacyInventory?.runs[0];
   const legacyRunActive = latestLegacyRun?.status === "queued" || latestLegacyRun?.status === "running";
   const selectedCertificationRun = certificationRuns.find((item) => item.id === selectedCertificationRunId && item.status === "running");
+  const terminalRefundCase = Boolean(refundCaseDetail && ["won", "lost", "closed"].includes(refundCaseDetail.refund_case.status));
 
   useEffect(() => {
     if (!legacyRunActive) return;
@@ -772,15 +773,214 @@ const PurchasesPage = () => {
           <TabsContent value="subscriptions"><Card><CardContent className="pt-6"><Table><TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Product</TableHead><TableHead>Store</TableHead><TableHead>Period</TableHead><TableHead>Expiration</TableHead><TableHead>Renews</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{subscriptions.map((item) => <TableRow key={item.id}><TableCell>{item.primary_app_user_id || "Anonymous"}</TableCell><TableCell>{item.store_product_id || item.product_name || "—"}</TableCell><TableCell>{item.store}</TableCell><TableCell>{item.period_type}</TableCell><TableCell>{date(item.expires_at)}</TableCell><TableCell>{item.will_renew ? "Yes" : "No"}</TableCell><TableCell>{statusBadge(item.status)}</TableCell></TableRow>)}</TableBody></Table></CardContent></Card></TabsContent>
 
           <TabsContent value="refunds" className="space-y-4">
-            <Alert><ShieldAlert /><AlertTitle>Human approval required</AlertTitle><AlertDescription>OpenGrow prepares evidence and provider actions. Nothing is sent to Apple, Google, or Stripe before an administrator approves it.</AlertDescription></Alert>
-            <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
-              <Card><CardHeader><CardTitle>Refund and dispute cases</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Deadline</TableHead><TableHead>Customer</TableHead><TableHead>Store</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader><TableBody>{refundCases.map((item) => <TableRow key={item.id}><TableCell>{date(item.deadline_at)}</TableCell><TableCell><div>{item.primary_app_user_id || "—"}</div><div className="text-xs text-muted-foreground">{item.store_product_id || item.provider_case_id}</div></TableCell><TableCell>{item.provider} · {item.environment}</TableCell><TableCell>{item.case_type}</TableCell><TableCell>{statusBadge(item.status)}</TableCell><TableCell><Button size="sm" variant="outline" onClick={() => void openRefundCase(item.id)}>Open</Button></TableCell></TableRow>)}{!refundCases.length && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No refund case received.</TableCell></TableRow>}</TableBody></Table></CardContent></Card>
+            <Alert>
+              <ShieldAlert />
+              <AlertTitle>Human approval required</AlertTitle>
+              <AlertDescription>
+                OpenGrow prepares evidence and provider actions. Nothing is sent to Apple, Google, or Stripe before an administrator approves it.
+              </AlertDescription>
+            </Alert>
+
+            <div className="grid gap-4 xl:grid-cols-[1fr_440px]">
+              <Card>
+                <CardHeader><CardTitle>Refund and dispute cases</CardTitle></CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Deadline</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Store</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {refundCases.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{date(item.deadline_at)}</TableCell>
+                          <TableCell>
+                            <div>{item.primary_app_user_id || "—"}</div>
+                            <div className="text-xs text-muted-foreground">{item.store_product_id || item.provider_case_id}</div>
+                          </TableCell>
+                          <TableCell>{item.provider} · {item.environment}</TableCell>
+                          <TableCell>{item.case_type.replaceAll("_", " ")}</TableCell>
+                          <TableCell>{statusBadge(item.status)}</TableCell>
+                          <TableCell><Button size="sm" variant="outline" onClick={() => void openRefundCase(item.id)}>Open</Button></TableCell>
+                        </TableRow>
+                      ))}
+                      {!refundCases.length && (
+                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No refund case received.</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
               <div className="space-y-4">
-                <Card><CardHeader><CardTitle>Details and evidence</CardTitle></CardHeader><CardContent className="space-y-3">{refundCaseDetail ? <><div className="flex items-center justify-between"><span className="font-medium">{refundCaseDetail.refund_case.provider_case_id}</span>{statusBadge(refundCaseDetail.refund_case.status)}</div><div className="text-sm text-muted-foreground">{refundCaseDetail.refund_case.reason || refundCaseDetail.refund_case.case_type}</div><Input value={refundEvidenceType} onChange={(event) => setRefundEvidenceType(event.target.value)} placeholder="Evidence type" /><textarea className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm" value={refundEvidenceContent} onChange={(event) => setRefundEvidenceContent(event.target.value)} placeholder="Factual context, access history, and consumption details…" /><Button className="w-full" onClick={() => void addRefundEvidence()}>Add as draft</Button>{refundCaseDetail.evidence.map((evidence) => <div key={String(evidence.id)} className="rounded-md border p-3 text-sm"><div className="flex items-center justify-between"><span className="font-medium">{String(evidence.evidence_type)}</span>{statusBadge(evidence.review_status)}</div><p className="mt-2 whitespace-pre-wrap text-muted-foreground">{String(evidence.content || evidence.file_key || "")}</p>{evidence.review_status === "draft" && <div className="mt-2 flex gap-2"><Button size="sm" onClick={() => projectId && void run(async () => { await reviewBillingRefundEvidence(projectId, refundCaseDetail.refund_case.id, String(evidence.id), true); await openRefundCase(refundCaseDetail.refund_case.id); }, "Evidence approved", false)}>Approve</Button><Button size="sm" variant="outline" onClick={() => projectId && void run(async () => { await reviewBillingRefundEvidence(projectId, refundCaseDetail.refund_case.id, String(evidence.id), false); await openRefundCase(refundCaseDetail.refund_case.id); }, "Evidence rejected", false)}>Reject</Button></div>}</div>)}</> : <p className="text-sm text-muted-foreground">Open a case to prepare its response.</p>}</CardContent></Card>
-                {refundCaseDetail && <Card><CardHeader><CardTitle>Provider actions</CardTitle></CardHeader><CardContent className="space-y-3"><div className="flex gap-2"><select className="min-h-9 flex-1 rounded-md border bg-background px-3 text-sm" value={refundActionType} onChange={(event) => { const definition = refundCaseDetail.action_definitions.find((item) => item.action_type === event.target.value); setRefundActionType(event.target.value); if (definition) setRefundEvidenceType(definition.recommended_evidence_type); }}>{refundCaseDetail.action_definitions.map((definition) => <option key={definition.action_type} value={definition.action_type}>{definition.action_type}</option>)}</select><Button size="sm" variant="outline" disabled={!refundActionType} onClick={() => void createRefundAction()}>Prepare</Button></div>{refundCaseDetail.actions.map((action) => <div key={String(action.id)} className="rounded-md border p-3 text-sm"><div className="flex items-center justify-between"><span>{String(action.action_type)}</span>{statusBadge(action.status)}</div>{["draft", "failed"].includes(String(action.status)) && <><textarea className="mt-2 min-h-36 w-full rounded-md border bg-background px-3 py-2 font-mono text-xs" value={refundActionPayloads[String(action.id)] || "{}"} onChange={(event) => setRefundActionPayloads((current) => ({ ...current, [String(action.id)]: event.target.value }))} /><p className="mt-1 text-xs text-muted-foreground">Apple requires explicit consent that is separate from ATT. Stripe evidence must be approved above.</p><Button className="mt-2 w-full" size="sm" onClick={() => void saveAndApproveRefundAction(action)}>{action.status === "failed" ? "Correct and retry" : "Approve and send"}</Button></>}{action.last_error && <p className="mt-2 text-xs text-destructive">{String(action.last_error)}</p>}{action.sent_at && <p className="mt-2 text-xs text-muted-foreground">Sent on {date(action.sent_at)}</p>}</div>)}{!refundCaseDetail.actions.length && <p className="text-sm text-muted-foreground">No action has been prepared. Choose a provider action above.</p>}</CardContent></Card>}
+                <Card>
+                  <CardHeader><CardTitle>Details and evidence</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    {refundCaseDetail ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{refundCaseDetail.refund_case.provider_case_id}</span>
+                          {statusBadge(refundCaseDetail.refund_case.status)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {refundCaseDetail.refund_case.reason || refundCaseDetail.refund_case.case_type.replaceAll("_", " ")}
+                        </div>
+                        {terminalRefundCase && (
+                          <Alert>
+                            <ShieldCheck />
+                            <AlertTitle>Terminal case</AlertTitle>
+                            <AlertDescription>Evidence and provider actions are locked because the provider has resolved this case.</AlertDescription>
+                          </Alert>
+                        )}
+                        <Input
+                          value={refundEvidenceType}
+                          onChange={(event) => setRefundEvidenceType(event.target.value)}
+                          placeholder="Evidence type"
+                          disabled={terminalRefundCase}
+                        />
+                        <textarea
+                          className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                          value={refundEvidenceContent}
+                          onChange={(event) => setRefundEvidenceContent(event.target.value)}
+                          maxLength={20_000}
+                          placeholder="Factual context, access history, and consumption details…"
+                          disabled={terminalRefundCase}
+                        />
+                        <div className="text-right text-xs text-muted-foreground">{refundEvidenceContent.length}/20,000</div>
+                        <Button className="w-full" disabled={terminalRefundCase || !refundEvidenceContent.trim()} onClick={() => void addRefundEvidence()}>
+                          Add as draft
+                        </Button>
+                        {refundCaseDetail.evidence.map((evidence) => (
+                          <div key={String(evidence.id)} className="rounded-md border p-3 text-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{String(evidence.evidence_type).replaceAll("_", " ")}</span>
+                              {statusBadge(evidence.review_status)}
+                            </div>
+                            <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{String(evidence.content || evidence.file_key || "")}</p>
+                            {evidence.review_status === "draft" && !terminalRefundCase && (
+                              <div className="mt-2 flex gap-2">
+                                <Button size="sm" onClick={() => projectId && void run(async () => {
+                                  await reviewBillingRefundEvidence(projectId, refundCaseDetail.refund_case.id, String(evidence.id), true);
+                                  await openRefundCase(refundCaseDetail.refund_case.id);
+                                }, "Evidence approved", false)}>Approve</Button>
+                                <Button size="sm" variant="outline" onClick={() => projectId && void run(async () => {
+                                  await reviewBillingRefundEvidence(projectId, refundCaseDetail.refund_case.id, String(evidence.id), false);
+                                  await openRefundCase(refundCaseDetail.refund_case.id);
+                                }, "Evidence rejected", false)}>Reject</Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Open a case to prepare its response.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {refundCaseDetail && (
+                  <Card>
+                    <CardHeader><CardTitle>Provider actions</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex gap-2">
+                        <select
+                          className="min-h-9 flex-1 rounded-md border bg-background px-3 text-sm"
+                          value={refundActionType}
+                          disabled={terminalRefundCase}
+                          onChange={(event) => {
+                            const definition = refundCaseDetail.action_definitions.find((item) => item.action_type === event.target.value);
+                            setRefundActionType(event.target.value);
+                            if (definition) setRefundEvidenceType(definition.recommended_evidence_type);
+                          }}
+                        >
+                          {refundCaseDetail.action_definitions.map((definition) => (
+                            <option key={definition.action_type} value={definition.action_type}>{definition.action_type.replaceAll("_", " ")}</option>
+                          ))}
+                        </select>
+                        <Button size="sm" variant="outline" disabled={terminalRefundCase || !refundActionType} onClick={() => void createRefundAction()}>
+                          Prepare
+                        </Button>
+                      </div>
+                      {refundCaseDetail.actions.map((action) => (
+                        <div key={String(action.id)} className="rounded-md border p-3 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span>{String(action.action_type).replaceAll("_", " ")}</span>
+                            {statusBadge(action.status)}
+                          </div>
+                          {["draft", "failed"].includes(String(action.status)) && !terminalRefundCase && (
+                            <>
+                              <textarea
+                                className="mt-2 min-h-36 w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
+                                value={refundActionPayloads[String(action.id)] || "{}"}
+                                onChange={(event) => setRefundActionPayloads((current) => ({
+                                  ...current,
+                                  [String(action.id)]: event.target.value,
+                                }))}
+                              />
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Apple requires explicit consent that is separate from ATT. Stripe evidence must be approved above.
+                              </p>
+                              <Button className="mt-2 w-full" size="sm" onClick={() => void saveAndApproveRefundAction(action)}>
+                                {action.status === "failed" ? "Correct and retry" : "Approve and send"}
+                              </Button>
+                            </>
+                          )}
+                          {action.last_error && <p className="mt-2 text-xs text-destructive">{String(action.last_error)}</p>}
+                          {action.sent_at && <p className="mt-2 text-xs text-muted-foreground">Sent on {date(action.sent_at)}</p>}
+                        </div>
+                      ))}
+                      {!refundCaseDetail.actions.length && (
+                        <p className="text-sm text-muted-foreground">
+                          {terminalRefundCase ? "No provider action was recorded before this case became terminal." : "No action has been prepared. Choose a provider action above."}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {refundCaseDetail && (
+                  <Card>
+                    <CardHeader><CardTitle>Deadlines and audit</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Deadlines</h4>
+                        {refundCaseDetail.deadlines.map((deadline) => (
+                          <div key={String(deadline.id)} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                            <div>
+                              <div>{String(deadline.deadline_type).replaceAll("_", " ")}</div>
+                              <div className="text-xs text-muted-foreground">{date(deadline.due_at)}</div>
+                            </div>
+                            {statusBadge(deadline.status)}
+                          </div>
+                        ))}
+                        {!refundCaseDetail.deadlines.length && <p className="text-xs text-muted-foreground">No provider deadline was supplied.</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Immutable audit</h4>
+                        {refundCaseDetail.audit_events.map((event) => (
+                          <div key={String(event.id)} className="rounded-md border p-2 text-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <span>{String(event.event_type).replaceAll(".", " ").replaceAll("_", " ")}</span>
+                              <span className="text-xs text-muted-foreground">{date(event.occurred_at)}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">{String(event.actor_type || "system")}</div>
+                          </div>
+                        ))}
+                        {!refundCaseDetail.audit_events.length && <p className="text-xs text-muted-foreground">No audit event has been recorded.</p>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           </TabsContent>
+
 
           <TabsContent value="growth" className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-3">

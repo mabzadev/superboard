@@ -5,6 +5,50 @@ import { reconcileAppleSubscription, verifyGooglePurchase } from './store-verifi
 import { applyVerifiedPurchase, queueCustomerEntitlementChanged, type BillingEnvironment } from './billing';
 import { reconcileStripeSubscription } from './stripe-subscription-reconciliation';
 
+export async function reconcileRefundDeadlines(env: BillingEnv, limit = 100) {
+  const boundedLimit = Math.max(1, Math.min(500, Math.trunc(limit || 100)));
+  const deadlines = await env.DB.prepare(`
+    SELECT deadline.id, deadline.case_id, deadline.deadline_type, deadline.due_at
+    FROM billing_refund_deadlines deadline
+    JOIN billing_refund_cases refund ON refund.id = deadline.case_id
+    WHERE deadline.status = 'open' AND datetime(deadline.due_at) <= datetime('now')
+      AND refund.status NOT IN ('won','lost','closed')
+    ORDER BY deadline.due_at ASC, deadline.id ASC
+    LIMIT ?
+  `).bind(boundedLimit).all<{
+    id: string;
+    case_id: string;
+    deadline_type: string;
+    due_at: string;
+  }>();
+  const rows = deadlines.results || [];
+  if (!rows.length) return 0;
+  const statements = rows.flatMap((deadline) => [
+    env.DB.prepare(`
+      UPDATE billing_refund_deadlines
+      SET status = 'missed', completed_at = COALESCE(completed_at, datetime('now')), updated_at = datetime('now')
+      WHERE id = ? AND status = 'open' AND datetime(due_at) <= datetime('now')
+        AND case_id IN (
+          SELECT id FROM billing_refund_cases WHERE status NOT IN ('won','lost','closed')
+        )
+    `).bind(deadline.id),
+    env.DB.prepare(`
+      INSERT OR IGNORE INTO billing_refund_audit_events (id, case_id, event_type, actor_type, payload)
+      SELECT ?, ?, 'deadline.missed', 'system', ?
+      WHERE EXISTS (
+        SELECT 1 FROM billing_refund_deadlines WHERE id = ? AND status = 'missed'
+      )
+    `).bind(
+      `refund-deadline:${deadline.id}:missed`,
+      deadline.case_id,
+      JSON.stringify({ deadline_id: deadline.id, deadline_type: deadline.deadline_type, due_at: deadline.due_at }),
+      deadline.id,
+    ),
+  ]);
+  const results = await env.DB.batch(statements);
+  return rows.reduce((total, _deadline, index) => total + Number((results[index * 2] as D1Result | undefined)?.meta?.changes || 0), 0);
+}
+
 export async function processAppleBillingNotification(env: BillingEnv, params: {
   eventId: string;
   projectId: string;
@@ -198,20 +242,24 @@ export async function reconcileBillingState(env: BillingEnv) {
     }
   }
   const refundActions = await env.DB.prepare(`
-    SELECT id FROM billing_refund_provider_actions
-    WHERE (status = 'approved'
-        OR (status = 'queued'
-          AND (claim_token IS NULL OR claim_expires_at IS NULL OR datetime(claim_expires_at) <= datetime('now')))
-        OR (status = 'failed' AND next_attempt_at IS NOT NULL AND datetime(next_attempt_at) <= datetime('now')
-          AND (claim_token IS NULL OR claim_expires_at IS NULL OR datetime(claim_expires_at) <= datetime('now'))))
-      AND attempts < 8
-    ORDER BY updated_at ASC LIMIT 100
+    SELECT action.id
+    FROM billing_refund_provider_actions action
+    JOIN billing_refund_cases refund ON refund.id = action.case_id
+    WHERE refund.status NOT IN ('won','lost','closed')
+      AND (action.status = 'approved'
+        OR (action.status = 'queued'
+          AND (action.claim_token IS NULL OR action.claim_expires_at IS NULL OR datetime(action.claim_expires_at) <= datetime('now')))
+        OR (action.status = 'failed' AND action.next_attempt_at IS NOT NULL AND datetime(action.next_attempt_at) <= datetime('now')
+          AND (action.claim_token IS NULL OR action.claim_expires_at IS NULL OR datetime(action.claim_expires_at) <= datetime('now'))))
+      AND action.attempts < 8
+    ORDER BY action.updated_at ASC LIMIT 100
   `).all<{ id: string }>();
   if (env.BILLING_QUEUE) {
     for (const row of refundActions.results || []) {
       await env.BILLING_QUEUE.send({ type: 'billing.refund.action.execute', actionId: row.id });
     }
   }
+  const refundDeadlinesMissed = await reconcileRefundDeadlines(env);
   const googleVoidedProjects = await env.DB.prepare(`
     SELECT connection.project_id
     FROM billing_store_connections connection
@@ -270,6 +318,7 @@ export async function reconcileBillingState(env: BillingEnv) {
     webhook_deliveries_enqueued: pendingDeliveries.results?.length || 0,
     subscriptions_enqueued: subscriptions.results?.length || 0,
     refund_actions_enqueued: refundActions.results?.length || 0,
+    refund_deadlines_missed: refundDeadlinesMissed,
     google_voided_reconciliations_enqueued: googleVoidedProjects.results?.length || 0,
     stripe_catalog_reconciliations_enqueued: stripeCatalogs.results?.length || 0,
     legacy_inventory_runs_enqueued: legacyInventoryRuns.results?.length || 0,

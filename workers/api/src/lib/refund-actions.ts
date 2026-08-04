@@ -34,6 +34,7 @@ type ActionRow = {
   environment: 'sandbox' | 'production';
   provider_case_id: string;
   provider_payload: string;
+  refund_status: string;
   store_transaction_id: string | null;
   original_transaction_id: string | null;
   order_id: string | null;
@@ -41,6 +42,12 @@ type ActionRow = {
   store_product_id: string | null;
   product_type: string | null;
 };
+
+const TERMINAL_REFUND_CASE_STATUSES = new Set(['won', 'lost', 'closed']);
+
+export function refundCaseAllowsOperatorAction(status: unknown) {
+  return !TERMINAL_REFUND_CASE_STATUSES.has(String(status || '').toLowerCase());
+}
 
 const ACTION_DEFINITIONS: Record<RefundProvider, RefundActionDefinition[]> = {
   apple: [{
@@ -334,10 +341,22 @@ async function runProviderAction(env: BillingEnv, row: ActionRow, payload: Recor
   return { id: result.id, status: result.status, amount: result.amount, currency: result.currency };
 }
 
+async function refundActionClaimIsActive(env: BillingEnv, row: ActionRow, claimToken: string) {
+  const active = await env.DB.prepare(`
+    SELECT action.id
+    FROM billing_refund_provider_actions action
+    JOIN billing_refund_cases refund ON refund.id = action.case_id
+    WHERE action.id = ? AND action.claim_token = ? AND action.status = 'queued'
+      AND refund.status NOT IN ('won','lost','closed')
+    LIMIT 1
+  `).bind(row.id, claimToken).first<{ id: string }>();
+  return Boolean(active);
+}
+
 export async function executeRefundProviderAction(env: BillingEnv, actionId: string) {
   const row = await env.DB.prepare(`
     SELECT action.*, refund.project_id, refund.provider, refund.environment,
-      refund.provider_case_id, refund.provider_payload,
+      refund.provider_case_id, refund.provider_payload, refund.status AS refund_status,
       transaction_row.store_transaction_id, transaction_row.original_transaction_id,
       transaction_row.order_id, transaction_row.purchase_token,
       product.store_product_id, product.product_type
@@ -349,6 +368,9 @@ export async function executeRefundProviderAction(env: BillingEnv, actionId: str
   `).bind(actionId).first<ActionRow>();
   if (!row) throw actionError('refund_action_not_found', 'Refund provider action not found');
   if (row.status === 'sent') return { sent: true, duplicate: true };
+  if (!refundCaseAllowsOperatorAction(row.refund_status)) {
+    throw actionError('refund_case_terminal', 'A terminal refund case cannot send provider actions');
+  }
   if (!['approved', 'queued', 'failed'].includes(row.status)) {
     throw actionError('refund_action_not_approved', 'Refund provider action requires human approval');
   }
@@ -359,10 +381,18 @@ export async function executeRefundProviderAction(env: BillingEnv, actionId: str
       claim_token = ?, claim_expires_at = datetime('now', '+10 minutes'), updated_at = datetime('now')
     WHERE id = ? AND attempts = ? AND status IN ('approved','queued','failed')
       AND (claim_token IS NULL OR claim_expires_at IS NULL OR datetime(claim_expires_at) <= datetime('now'))
+      AND EXISTS (
+        SELECT 1 FROM billing_refund_cases refund
+        WHERE refund.id = billing_refund_provider_actions.case_id
+          AND refund.status NOT IN ('won','lost','closed')
+      )
   `).bind(claimToken, row.id, Number(row.attempts || 0)).run();
   if (!claimed.meta.changes) return { sent: false, claimed: false };
   try {
     const payload = validateRefundActionPayload(row.provider, row.action_type, row.payload);
+    if (!await refundActionClaimIsActive(env, row, claimToken)) {
+      return { sent: false, cancelled: true, provider: row.provider };
+    }
     const providerResponse = await runProviderAction(env, row, payload);
     const serializedResponse = JSON.stringify(providerResponse);
     const completion = await env.DB.batch([
@@ -424,7 +454,7 @@ export async function executeRefundProviderAction(env: BillingEnv, actionId: str
     const providerRetryable = taggedRetryability ? (error as { retryable?: boolean }).retryable === true : true;
     const retryable = providerRetryable && attempts < 8;
     const retryDelaySeconds = Math.min(3600, 30 * (2 ** Math.min(7, attempts)));
-    await env.DB.batch([
+    const failure = await env.DB.batch([
       env.DB.prepare(`
         UPDATE billing_refund_provider_actions
         SET status = 'failed', last_error = ?, next_attempt_at = CASE WHEN ? AND ? < 8
@@ -434,9 +464,22 @@ export async function executeRefundProviderAction(env: BillingEnv, actionId: str
       `).bind(message.slice(0, 1000), retryable ? 1 : 0, attempts, attempts, row.id, claimToken),
       env.DB.prepare(`
         INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, payload)
-        VALUES (?, ?, 'provider_action.failed', 'system', ?)
-      `).bind(crypto.randomUUID(), row.case_id, JSON.stringify({ action_id: row.id, action_type: row.action_type, retryable, error: message.slice(0, 1000) })),
+        SELECT ?, ?, 'provider_action.failed', 'system', ?
+        WHERE EXISTS (
+          SELECT 1 FROM billing_refund_provider_actions
+          WHERE id = ? AND status = 'failed' AND last_error = ?
+        )
+      `).bind(
+        crypto.randomUUID(),
+        row.case_id,
+        JSON.stringify({ action_id: row.id, action_type: row.action_type, retryable, error: message.slice(0, 1000) }),
+        row.id,
+        message.slice(0, 1000),
+      ),
     ]);
+    if (!Number((failure[0] as D1Result | undefined)?.meta?.changes || 0)) {
+      return { sent: false, cancelled: true, provider: row.provider };
+    }
     const output = error instanceof Error ? error : new Error(message);
     throw Object.assign(output, { retryable, retryDelaySeconds });
   }
