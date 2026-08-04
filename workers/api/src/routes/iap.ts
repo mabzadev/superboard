@@ -7,8 +7,10 @@ import {
   billingServiceEnabled,
   ingestProviderEventWithBillingAuthority,
 } from '../lib/billing-service';
+import { providerHttpError, providerTaggedHttpError, providerUnhandledHttpError } from '../lib/provider-http-errors';
 
 const iap = new Hono<{ Bindings: Env }>();
+iap.onError((error, c) => providerUnhandledHttpError(c, error));
 
 function b64urlDecode(value: string): any {
   const normalized = value.replaceAll('-', '+').replaceAll('_', '/');
@@ -282,7 +284,7 @@ async function upsertPurchaseEvent(db: D1Database, event: {
 
 async function handleApple(c: any, test: boolean) {
   const instanceId = Number(c.req.param('path'));
-  if (!instanceId) return c.json({ error: 'Invalid instance' }, 422);
+  if (!instanceId) return providerHttpError(c, 'instance_invalid', 'Instance identifier is invalid', 422, false);
   const body = await c.req.json().catch(() => ({}));
   const project = await projectForInstance(c.env.DB, instanceId, test);
   if (typeof body.signedPayload === 'string' && body.signedPayload && c.env.IAP_ALLOW_UNSIGNED_FIXTURES !== 'true') {
@@ -309,7 +311,7 @@ async function handleApple(c: any, test: boolean) {
           duplicate: result.duplicate,
         }, 202);
       } catch (error) {
-        return providerIngressError(c, error, 'Apple notification could not be accepted');
+        return providerTaggedHttpError(c, error, 'Apple notification could not be accepted');
       }
     }
     const eventId = crypto.randomUUID();
@@ -322,7 +324,9 @@ async function handleApple(c: any, test: boolean) {
       SELECT id, status FROM billing_webhook_events
       WHERE project_id = ? AND store = 'apple' AND environment = ? AND external_event_id = ? LIMIT 1
     `).bind(project.id, environment, externalEventId).first() as { id: string; status: string } | null;
-    if (!persisted) return c.json({ error: 'Apple notification persistence failed' }, 503);
+    if (!persisted) {
+      return providerHttpError(c, 'apple_notification_persistence_failed', 'Apple notification could not be persisted', 503, true);
+    }
     if (persisted.status === 'processed') {
       return c.json({ message: 'Apple IAP notification already processed', duplicate: true }, 202);
     }
@@ -342,22 +346,22 @@ async function handleApple(c: any, test: boolean) {
         event: 'apple_notification_queue_failed', webhook_event_id: persisted.id,
         error: error instanceof Error ? error.message : String(error),
       }));
-      return c.json({ error: 'Apple notification queue is temporarily unavailable', retryable: true }, 503);
+      return providerHttpError(c, 'apple_notification_queue_unavailable', 'Apple notification queue is temporarily unavailable', 503, true);
     }
     return c.json({ message: 'Apple IAP notification accepted', duplicate: inserted.meta.changes === 0 }, 202);
   }
   let payload: any;
   try {
     payload = await applePayload(body, c.env);
-  } catch (error: any) {
-    return c.json({ error: error?.message || 'Invalid Apple signature' }, 400);
+  } catch {
+    return providerHttpError(c, 'apple_signature_invalid', 'Apple notification signature is invalid', 400, false);
   }
   const data = payload.data || body.data || {};
   let transaction: any;
   try {
     transaction = await appleTransactionPayload(data.signedTransactionInfo, data.transactionInfo || body.transactionInfo || data);
-  } catch (error: any) {
-    return c.json({ error: error?.message || 'Invalid Apple transaction signature' }, 400);
+  } catch {
+    return providerHttpError(c, 'apple_transaction_signature_invalid', 'Apple transaction signature is invalid', 400, false);
   }
   const notificationType = String(payload.notificationType || body.notificationType || 'DID_RENEW');
   const purchaseType = transaction.type === 'Consumable' || transaction.type === 'Non-Consumable' ? 'one_time' : 'subscription';
@@ -381,10 +385,17 @@ async function handleApple(c: any, test: boolean) {
 
 async function handleGoogle(c: any) {
   const instanceId = Number(c.req.param('path'));
-  if (!instanceId) return c.json({ error: 'Invalid instance' }, 422);
+  if (!instanceId) return providerHttpError(c, 'instance_invalid', 'Instance identifier is invalid', 422, false);
   const body = await c.req.json().catch(() => ({}));
-  if (!googleRtdnAllowed(c, body)) return c.json({ error: 'Invalid Google Pub/Sub token' }, 400);
-  const data = body.message?.data ? JSON.parse(atob(body.message.data)) : body;
+  if (!googleRtdnAllowed(c, body)) {
+    return providerHttpError(c, 'google_pubsub_token_invalid', 'Google Pub/Sub verification token is invalid', 400, false);
+  }
+  let data: any;
+  try {
+    data = body.message?.data ? JSON.parse(atob(body.message.data)) : body;
+  } catch {
+    return providerHttpError(c, 'google_pubsub_payload_invalid', 'Google Pub/Sub payload is invalid', 400, false);
+  }
   const notification = data.subscriptionNotification || data.oneTimeProductNotification || data.voidedPurchaseNotification || data;
   const project = await projectForInstance(c.env.DB, instanceId, false);
   const notificationType = String(notification.notificationType || data.notificationType || (data.voidedPurchaseNotification ? 'VOIDED_PURCHASE' : 'PURCHASED'));
@@ -426,7 +437,7 @@ async function handleGoogle(c: any) {
           duplicate: result.duplicate,
         }, result.processed ? 200 : 202);
       } catch (error) {
-        return providerIngressError(c, error, 'Google RTDN could not be accepted');
+        return providerTaggedHttpError(c, error, 'Google RTDN could not be accepted');
       }
     }
     billingWebhookEventId = crypto.randomUUID();
@@ -439,7 +450,7 @@ async function handleGoogle(c: any) {
       SELECT id, status FROM billing_webhook_events
       WHERE project_id = ? AND store = 'google' AND environment = 'production' AND external_event_id = ? LIMIT 1
     `).bind(project.id, String(pubsubMessageId)).first() as { id: string; status: string } | null;
-    if (!persisted) return c.json({ error: 'Google RTDN persistence failed' }, 503);
+    if (!persisted) return providerHttpError(c, 'google_rtdn_persistence_failed', 'Google RTDN could not be persisted', 503, true);
     if (persisted.status === 'processed') return c.json({ message: 'Google RTDN already processed', duplicate: true });
     billingWebhookEventId = persisted.id;
     if (c.env.BILLING_QUEUE) {
@@ -460,7 +471,7 @@ async function handleGoogle(c: any) {
           event: 'google_notification_queue_failed', webhook_event_id: billingWebhookEventId,
           error: error instanceof Error ? error.message : String(error),
         }));
-        return c.json({ error: 'Google RTDN queue is temporarily unavailable', retryable: true }, 503);
+        return providerHttpError(c, 'google_rtdn_queue_unavailable', 'Google RTDN queue is temporarily unavailable', 503, true);
       }
       return c.json({ message: 'Google RTDN accepted', duplicate: inserted.meta.changes === 0 }, 202);
     }
@@ -473,8 +484,15 @@ async function handleGoogle(c: any) {
       purchaseToken: notification.purchaseToken || data.purchaseToken || null,
       purchaseType,
     });
-  } catch (error: any) {
-    return c.json({ error: error?.message || 'Google Play purchase verification failed' }, c.env.ENVIRONMENT === 'production' ? 503 : 400);
+  } catch {
+    const status = c.env.ENVIRONMENT === 'production' ? 503 : 400;
+    return providerHttpError(
+      c,
+      'google_purchase_verification_failed',
+      'Google Play purchase verification failed',
+      status,
+      status >= 500,
+    );
   }
   const verifiedLineItem = Array.isArray(verified?.lineItems) ? verified.lineItems[0] : null;
   await recordWebhook(c.env.DB, { source: 'google', notificationType, payload: body, instanceId, projectId: project.id });
@@ -535,16 +553,6 @@ async function handleGoogle(c: any) {
     `).bind(notificationType, billingWebhookEventId).run();
   }
   return c.json({ message: 'Google IAP webhook processed' });
-}
-
-function providerIngressError(c: any, error: unknown, fallback: string) {
-  const tagged = error as { code?: string; status?: number; retryable?: boolean; message?: string };
-  const status = Number(tagged.status || 503);
-  return c.json({
-    code: tagged.code || 'provider_ingress_failed',
-    error: tagged.message || fallback,
-    retryable: tagged.retryable === true || status >= 500,
-  }, status);
 }
 
 iap.post('/apple/production/:path', (c) => handleApple(c, false));

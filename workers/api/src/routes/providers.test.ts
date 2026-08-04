@@ -214,12 +214,17 @@ describe('IAP webhooks', () => {
 
     const response = await iapRoutes.request('/apple/production/10', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'cf-ray': 'apple-queue-test' },
       body: JSON.stringify({ signedPayload: 'header.payload.signature' }),
     }, env);
 
     expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toMatchObject({ retryable: true });
+    await expect(response.json()).resolves.toEqual({
+      code: 'apple_notification_queue_unavailable',
+      message: 'Apple notification queue is temporarily unavailable',
+      retryable: true,
+      request_id: 'apple-queue-test',
+    });
     expect(state.event?.status).toBe('failed');
     expect(state.queueFailures).toBe(1);
   });
@@ -285,6 +290,11 @@ describe('IAP webhooks', () => {
     }, env);
 
     expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'apple_signature_invalid',
+      message: 'Apple notification signature is invalid',
+      retryable: false,
+    });
     expect(state.webhooks).toHaveLength(0);
   });
 
@@ -300,6 +310,31 @@ describe('IAP webhooks', () => {
     }, env);
 
     expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'google_pubsub_token_invalid',
+      message: 'Google Pub/Sub verification token is invalid',
+      retryable: false,
+    });
+  });
+
+  it('returns a stable non-retryable error for an unreadable Google Pub/Sub payload', async () => {
+    const env = baseEnv(projectDb({ webhooks: [], purchases: [], subscriptions: [] }), {
+      ENVIRONMENT: 'production',
+      GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'expected-token',
+    });
+    const response = await iapRoutes.request('/google/10?token=expected-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'cf-ray': 'google-payload-test' },
+      body: JSON.stringify({ message: { data: 'not-json' } }),
+    }, env);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      code: 'google_pubsub_payload_invalid',
+      message: 'Google Pub/Sub payload is invalid',
+      retryable: false,
+      request_id: 'google-payload-test',
+    });
   });
 
   it('persists Google signed-fixture-equivalent subscription events when test fixtures are explicitly enabled', async () => {
@@ -339,7 +374,11 @@ describe('IAP webhooks', () => {
     }, env);
 
     expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({ error: 'Google Play verification is not configured' });
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'google_purchase_verification_failed',
+      message: 'Google Play purchase verification failed',
+      retryable: true,
+    });
   });
 
   it('verifies Google subscription purchases with the Android Publisher API when credentials are configured', async () => {
