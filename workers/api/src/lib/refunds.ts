@@ -36,16 +36,11 @@ function caseStatus(purchase: VerifiedPurchase): RefundCaseStatus {
 function providerCaseId(purchase: VerifiedPurchase): string {
   const root = objectValue(purchase.rawPayload);
   const provider = providerObject(purchase.rawPayload);
-  const candidates = [
-    provider.id,
-    root.disputeId,
-    root.refundId,
-    root.voidedPurchaseId,
-    root.notificationUUID,
-    purchase.originalTransactionId,
-    purchase.orderId,
-    purchase.storeTransactionId,
-  ];
+  const candidates = purchase.store === 'apple'
+    ? [purchase.originalTransactionId, purchase.storeTransactionId, root.notificationUUID]
+    : purchase.store === 'google'
+      ? [root.voidedPurchaseId, purchase.orderId, purchase.originalTransactionId, purchase.storeTransactionId]
+      : [provider.id, root.disputeId, root.refundId, purchase.originalTransactionId, purchase.orderId, purchase.storeTransactionId];
   return String(candidates.find((value) => typeof value === 'string' && value.length > 0));
 }
 
@@ -58,6 +53,29 @@ function deadlineFromPayload(payload: unknown): string | null {
   return null;
 }
 
+function normalizedProviderEventAt(purchase: VerifiedPurchase): string {
+  for (const value of [purchase.eventOccurredAt, purchase.purchasedAt]) {
+    if (typeof value === 'string' && Number.isFinite(Date.parse(value))) {
+      return new Date(value).toISOString();
+    }
+  }
+  return new Date().toISOString();
+}
+
+function refundEventPriority(eventType: string): number {
+  if (/REFUND[_.](DECLINED|REVERSED)|DISPUTE.*WON/i.test(eventType)) return 90;
+  if (/REFUND|REVOK|VOID|DISPUTE.*LOST|CHARGEBACK.*LOST/i.test(eventType)) return 80;
+  if (/CONSUMPTION_REQUEST|DISPUTE|CHARGEBACK|INQUIRY/i.test(eventType)) return 40;
+  if (/FRAUD_WARNING/i.test(eventType)) return 30;
+  return 10;
+}
+
+export function refundProjectionVersion(purchase: VerifiedPurchase): string {
+  const eventAt = normalizedProviderEventAt(purchase);
+  const priority = String(refundEventPriority(purchase.eventType)).padStart(3, '0');
+  return `${eventAt}|${priority}|${purchase.eventType.toUpperCase()}|${purchase.storeTransactionId}`;
+}
+
 export async function recordRefundCaseForPurchase(
   env: BillingEnv,
   purchase: VerifiedPurchase,
@@ -66,6 +84,8 @@ export async function recordRefundCaseForPurchase(
   if (!relevantRefundEvent(purchase)) return null;
   const externalId = providerCaseId(purchase);
   const status = caseStatus(purchase);
+  const providerEventAt = normalizedProviderEventAt(purchase);
+  const projectionVersion = refundProjectionVersion(purchase);
   const deadline = deadlineFromPayload(purchase.rawPayload) || (/CONSUMPTION_REQUEST/i.test(purchase.eventType)
     ? new Date(Date.now() + (purchase.environment === 'sandbox' ? 5 * 60_000 : 12 * 60 * 60_000)).toISOString()
     : null);
@@ -74,19 +94,30 @@ export async function recordRefundCaseForPurchase(
     INSERT INTO billing_refund_cases (
       id, project_id, customer_id, transaction_id, provider, environment,
       provider_case_id, case_type, status, reason, amount_micros, currency,
-      deadline_at, provider_payload, resolved_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IN ('won','lost','closed') THEN datetime('now') END)
+      deadline_at, provider_payload, resolved_at, provider_event_at, projection_version
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IN ('won','lost','closed') THEN datetime('now') END, ?, ?)
     ON CONFLICT(project_id, provider, environment, provider_case_id) DO UPDATE SET
       customer_id = COALESCE(excluded.customer_id, billing_refund_cases.customer_id),
-      transaction_id = excluded.transaction_id,
-      case_type = excluded.case_type,
-      status = excluded.status,
-      reason = excluded.reason,
-      amount_micros = COALESCE(excluded.amount_micros, billing_refund_cases.amount_micros),
-      currency = COALESCE(excluded.currency, billing_refund_cases.currency),
-      deadline_at = COALESCE(excluded.deadline_at, billing_refund_cases.deadline_at),
-      provider_payload = excluded.provider_payload,
-      resolved_at = CASE WHEN excluded.status IN ('won','lost','closed') THEN datetime('now') ELSE NULL END,
+      transaction_id = CASE WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN excluded.transaction_id ELSE billing_refund_cases.transaction_id END,
+      case_type = CASE WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN excluded.case_type ELSE billing_refund_cases.case_type END,
+      status = CASE WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN excluded.status ELSE billing_refund_cases.status END,
+      reason = CASE WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN excluded.reason ELSE billing_refund_cases.reason END,
+      amount_micros = CASE
+        WHEN billing_refund_cases.amount_micros IS NULL THEN excluded.amount_micros
+        WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN COALESCE(excluded.amount_micros, billing_refund_cases.amount_micros)
+        ELSE billing_refund_cases.amount_micros END,
+      currency = CASE
+        WHEN billing_refund_cases.currency IS NULL THEN excluded.currency
+        WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN COALESCE(excluded.currency, billing_refund_cases.currency)
+        ELSE billing_refund_cases.currency END,
+      deadline_at = CASE WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN excluded.deadline_at ELSE billing_refund_cases.deadline_at END,
+      provider_payload = CASE WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN excluded.provider_payload ELSE billing_refund_cases.provider_payload END,
+      resolved_at = CASE
+        WHEN excluded.projection_version < COALESCE(billing_refund_cases.projection_version, '') THEN billing_refund_cases.resolved_at
+        WHEN excluded.status IN ('won','lost','closed') THEN datetime('now')
+        ELSE NULL END,
+      provider_event_at = CASE WHEN excluded.projection_version >= COALESCE(billing_refund_cases.projection_version, '') THEN excluded.provider_event_at ELSE billing_refund_cases.provider_event_at END,
+      projection_version = MAX(COALESCE(billing_refund_cases.projection_version, ''), excluded.projection_version),
       updated_at = datetime('now')
   `).bind(
     proposedId,
@@ -104,12 +135,16 @@ export async function recordRefundCaseForPurchase(
     deadline,
     JSON.stringify(purchase.rawPayload),
     status,
+    providerEventAt,
+    projectionVersion,
   ).run();
   const refundCase = await env.DB.prepare(`
-    SELECT id FROM billing_refund_cases
+    SELECT id, status, projection_version FROM billing_refund_cases
     WHERE project_id = ? AND provider = ? AND environment = ? AND provider_case_id = ?
-  `).bind(String(purchase.projectId), purchase.store, purchase.environment, externalId).first<{ id: string }>();
+  `).bind(String(purchase.projectId), purchase.store, purchase.environment, externalId)
+    .first<{ id: string; status?: RefundCaseStatus; projection_version?: string | null }>();
   if (!refundCase) throw new Error('Unable to persist refund case');
+  const projectionAccepted = !refundCase.projection_version || refundCase.projection_version === projectionVersion;
 
   const auditId = `${refundCase.id}:${purchase.eventType}:${transactionId}`;
   await env.DB.prepare(`
@@ -117,7 +152,7 @@ export async function recordRefundCaseForPurchase(
     VALUES (?, ?, ?, 'provider', ?)
   `).bind(auditId, refundCase.id, purchase.eventType, JSON.stringify({ transaction_id: transactionId, status })).run();
 
-  if (deadline) {
+  if (projectionAccepted && deadline) {
     await env.DB.prepare(`
       INSERT INTO billing_refund_deadlines (id, case_id, deadline_type, due_at)
       VALUES (?, ?, 'provider_response', ?)
@@ -125,26 +160,42 @@ export async function recordRefundCaseForPurchase(
     `).bind(crypto.randomUUID(), refundCase.id, deadline).run();
   }
 
-  if (/CONSUMPTION_REQUEST/i.test(purchase.eventType)) {
+  if (projectionAccepted && ['won', 'lost', 'closed'].includes(refundCase.status || status)) {
+    await env.DB.batch([
+      env.DB.prepare(`
+        UPDATE billing_refund_deadlines
+        SET status = 'cancelled', updated_at = datetime('now')
+        WHERE case_id = ? AND status = 'open'
+      `).bind(refundCase.id),
+      env.DB.prepare(`
+        UPDATE billing_refund_provider_actions
+        SET status = 'cancelled', next_attempt_at = NULL, claim_token = NULL,
+          claim_expires_at = NULL, updated_at = datetime('now')
+        WHERE case_id = ? AND status IN ('draft','approved','queued','failed')
+      `).bind(refundCase.id),
+    ]);
+  }
+
+  if (projectionAccepted && /CONSUMPTION_REQUEST/i.test(purchase.eventType)) {
     await env.DB.prepare(`
       INSERT OR IGNORE INTO billing_refund_provider_actions (
         id, case_id, action_type, payload, status, idempotency_key
       ) VALUES (?, ?, 'submit_consumption_info', '{}', 'draft', ?)
     `).bind(crypto.randomUUID(), refundCase.id, `refund:${refundCase.id}:submit_consumption_info`).run();
   }
-  if (purchase.store === 'stripe' && /DISPUTE|CHARGEBACK|INQUIRY/i.test(purchase.eventType)) {
+  if (projectionAccepted && purchase.store === 'stripe' && /DISPUTE|CHARGEBACK|INQUIRY/i.test(purchase.eventType)) {
     await env.DB.prepare(`
       INSERT OR IGNORE INTO billing_refund_provider_actions (
         id, case_id, action_type, payload, status, idempotency_key
       ) VALUES (?, ?, 'submit_stripe_dispute_evidence', '{"evidence":{}}', 'draft', ?)
     `).bind(crypto.randomUUID(), refundCase.id, `refund:${refundCase.id}:submit_stripe_dispute_evidence`).run();
   }
-  if (purchase.store === 'stripe' && /FRAUD_WARNING/i.test(purchase.eventType)) {
+  if (projectionAccepted && purchase.store === 'stripe' && /FRAUD_WARNING/i.test(purchase.eventType)) {
     await env.DB.prepare(`
       INSERT OR IGNORE INTO billing_refund_provider_actions (
         id, case_id, action_type, payload, status, idempotency_key
       ) VALUES (?, ?, 'create_stripe_refund', '{"reason":"fraudulent"}', 'draft', ?)
     `).bind(crypto.randomUUID(), refundCase.id, `refund:${refundCase.id}:create_stripe_refund`).run();
   }
-  return { caseId: refundCase.id, status };
+  return { caseId: refundCase.id, status: refundCase.status || status };
 }
