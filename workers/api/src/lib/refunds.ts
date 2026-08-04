@@ -19,8 +19,8 @@ function relevantRefundEvent(purchase: VerifiedPurchase): boolean {
 
 function caseType(eventType: string): string {
   if (/CONSUMPTION_REQUEST/i.test(eventType)) return 'consumption_request';
-  if (/DISPUTE|CHARGEBACK/i.test(eventType)) return 'dispute';
   if (/INQUIRY/i.test(eventType)) return 'inquiry';
+  if (/DISPUTE|CHARGEBACK/i.test(eventType)) return 'dispute';
   if (/FRAUD_WARNING/i.test(eventType)) return 'fraud_warning';
   if (/VOID/i.test(eventType)) return 'voided_purchase';
   return 'refund';
