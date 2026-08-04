@@ -1226,6 +1226,25 @@ admin.post('/:projectId/legacy/revenuecat/inventory-runs', async (c) => {
   } catch (error) { return replyError(c, error); }
 });
 
+admin.post('/:projectId/legacy/revenuecat/inventory-runs/:runId/cancel', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const run = await c.env.DB.prepare(`
+      UPDATE billing_legacy_inventory_runs
+      SET status = 'cancelled', next_cursor = NULL, claim_token = NULL,
+        claim_expires_at = NULL, completed_at = COALESCE(completed_at, datetime('now')),
+        updated_at = datetime('now')
+      WHERE id = ? AND project_id = ? AND status IN ('queued', 'running')
+      RETURNING id, environment, status, completed_at
+    `).bind(c.req.param('runId'), project.id).first<Record<string, unknown>>();
+    if (!run) throw purchasesError('legacy_inventory_not_active', 'Active legacy inventory run not found', 409);
+    await audit(c, project.id, 'legacy_inventory.cancelled', 'legacy_inventory_run', c.req.param('runId'), {
+      environment: run.environment,
+    });
+    return c.json({ data: run });
+  } catch (error) { return replyError(c, error); }
+});
+
 admin.get('/:projectId/legacy/revenuecat/inventory', async (c) => {
   try {
     const project = await projectFor(c);

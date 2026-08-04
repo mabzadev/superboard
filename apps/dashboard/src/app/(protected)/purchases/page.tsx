@@ -49,6 +49,7 @@ import {
   archiveBillingOffering,
   archiveBillingProduct,
   approveBillingRefundAction,
+  cancelBillingLegacyInventory,
   configureBillingLegacySource,
   configureAppleNotificationConfiguration,
   completeBillingCertificationRun,
@@ -1171,7 +1172,7 @@ const PurchasesPage = () => {
                     ["Unsupported", latestLegacyRun.unsupported_subscriptions],
                   ] as Array<[string, string | number]>).map(([label, value]) => <div key={label} className="rounded-md border p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 font-medium">{String(value)}</div></div>)}
                 </div>}
-                {latestLegacyRun && <p className="text-xs text-muted-foreground">Run reference: {latestLegacyRun.id}</p>}
+                {latestLegacyRun && <div className="flex flex-wrap items-center gap-2"><p className="text-xs text-muted-foreground">Run reference: {latestLegacyRun.id}</p>{legacyRunActive && <Button size="sm" variant="outline" onClick={() => projectId && void run(() => cancelBillingLegacyInventory(projectId, latestLegacyRun.id), "Legacy inventory cancelled")}>Cancel inventory</Button>}</div>}
                 {latestLegacyRun?.last_error_message && <p className="text-sm text-destructive">{latestLegacyRun.last_error_message}</p>}
                 {legacyInventory?.unresolved.length ? <Table>
                   <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Store</TableHead><TableHead>Product</TableHead><TableHead>Expiration</TableHead><TableHead>Resolution</TableHead></TableRow></TableHeader>

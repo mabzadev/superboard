@@ -95,6 +95,8 @@ Subscription cancellation while access remains available emits `churn_risk`; act
 
 RevenueCat V2 customer and subscription pagination follows the official [Developer API](https://www.revenuecat.com/docs/api-v2). The source is migration-only and is never included in a mobile SDK or treated as a billing authority.
 
+An owner or administrator can cancel a queued or running inventory that is blocked by a persistent provider failure. Cancellation clears its lease and cursor, causes stale queue deliveries to be ignored, and allows the temporary credential to be rotated or destroyed. A cancelled inventory can never satisfy the release gate.
+
 ## Certification authority
 
 Purchases Diagnostics is the release authority. Automated prerequisites validate credentials, catalogs, Premium mappings, offerings, packages, and isolated Store credential copies. Publication and legacy dependency removal remain blocked until every required check passes.
