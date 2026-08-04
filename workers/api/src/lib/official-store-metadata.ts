@@ -32,9 +32,13 @@ export type OfficialMetadataSnapshot = {
 export async function enqueueOfficialMetadataProjects(env: Env) {
   requireGrowth(env);
   if (!env.EVENT_QUEUE) throw officialError('official_metadata_queue_unavailable', 'Official metadata queue is unavailable', true);
-  const payload = await growthJson(env, '/internal/official-metadata/projects');
-  const projects = Array.isArray(payload.data) ? payload.data as Array<Record<string, unknown>> : [];
-  const projectIds = [...new Set(projects.map((row) => positiveProjectId(row.project_id)))];
+  const [projectIds, connectedTargets] = await Promise.all([
+    productionProjectIds(env),
+    connectedStoreTargets(env),
+  ]);
+  for (const projectId of projectIds) {
+    await reconcileConnectedTargets(env, projectId, connectedTargets.filter((target) => target.projectId === projectId));
+  }
   for (let index = 0; index < projectIds.length; index += 100) {
     await env.EVENT_QUEUE.sendBatch(projectIds.slice(index, index + 100).map((projectId) => ({
       body: { type: 'growth.official-metadata.sync-project', projectId: String(projectId) },
@@ -46,6 +50,7 @@ export async function enqueueOfficialMetadataProjects(env: Env) {
 export async function syncOfficialMetadataProject(env: Env, rawProjectId: string | number) {
   requireGrowth(env);
   const projectId = positiveProjectId(rawProjectId);
+  await reconcileConnectedTargets(env, projectId, await connectedStoreTargets(env, projectId));
   const payload = await growthJson(env, `/internal/official-metadata/targets?project_id=${projectId}`);
   const targets = Array.isArray(payload.data) ? payload.data.map(parseTarget) : [];
   const failures: Array<{ platform: Platform; operation: string; error: string; retryable: boolean }> = [];
@@ -81,6 +86,87 @@ export async function syncOfficialMetadataProject(env: Env, rawProjectId: string
     throw error;
   }
   return { project_id: projectId, targets: targets.length, snapshots, failures };
+}
+
+type ConnectedStoreTarget = {
+  projectId: number;
+  platform: Platform;
+  appIdentifier: string;
+  country: string;
+  language: string;
+  device: string;
+};
+
+async function productionProjectIds(env: Env) {
+  const rows = await env.DB.prepare(`
+    SELECT id FROM projects
+    WHERE COALESCE(is_test, test, 0) = 0
+    ORDER BY id
+    LIMIT 1000
+  `).all<{ id: number }>();
+  return rows.results.map((row) => positiveProjectId(row.id));
+}
+
+async function connectedStoreTargets(env: Env, projectId?: number): Promise<ConnectedStoreTarget[]> {
+  const selectedProjectId = projectId == null ? null : positiveProjectId(projectId);
+  const rows = await env.DB.prepare(`
+    SELECT p.id AS project_id, 'apple' AS platform, CAST(ic.app_apple_id AS TEXT) AS app_identifier,
+      'us' AS country, 'en' AS language, 'iphone' AS device
+    FROM projects p
+    JOIN applications a ON a.instance_id = p.instance_id AND a.platform = 'ios'
+    JOIN ios_configurations ic ON ic.application_id = a.id
+    WHERE COALESCE(p.is_test, p.test, 0) = 0 AND COALESCE(a.enabled, 1) = 1
+      AND ic.app_apple_id IS NOT NULL
+      AND (? IS NULL OR p.id = ?)
+      AND EXISTS (
+        SELECT 1 FROM ios_server_api_keys credentials
+        WHERE (credentials.instance_id = CAST(a.instance_id AS TEXT) OR credentials.ios_configuration_id = ic.id)
+          AND credentials.encrypted_key IS NOT NULL
+          AND credentials.key_id IS NOT NULL
+          AND credentials.issuer_id IS NOT NULL
+      )
+    UNION ALL
+    SELECT p.id AS project_id, 'google' AS platform, ac.identifier AS app_identifier,
+      'us' AS country, 'en' AS language, 'android' AS device
+    FROM projects p
+    JOIN applications a ON a.instance_id = p.instance_id AND a.platform = 'android'
+    JOIN android_configurations ac ON ac.application_id = a.id
+    WHERE COALESCE(p.is_test, p.test, 0) = 0 AND COALESCE(a.enabled, 1) = 1
+      AND (? IS NULL OR p.id = ?)
+      AND EXISTS (
+        SELECT 1 FROM android_server_api_keys credentials
+        WHERE (credentials.instance_id = CAST(a.instance_id AS TEXT) OR credentials.android_configuration_id = ac.id)
+          AND credentials.encrypted_key IS NOT NULL
+          AND credentials.client_email IS NOT NULL
+      )
+    ORDER BY project_id, platform
+  `).bind(
+    selectedProjectId, selectedProjectId,
+    selectedProjectId, selectedProjectId,
+  ).all<Record<string, unknown>>();
+  return rows.results.map((row) => ({
+    projectId: positiveProjectId(row.project_id),
+    platform: row.platform === 'apple' ? 'apple' : row.platform === 'google' ? 'google' : invalidPlatform(),
+    appIdentifier: requiredText(row.app_identifier, 'app_identifier'),
+    country: requiredText(row.country, 'country'),
+    language: requiredText(row.language, 'language'),
+    device: requiredText(row.device, 'device'),
+  }));
+}
+
+async function reconcileConnectedTargets(env: Env, projectId: number, targets: ConnectedStoreTarget[]) {
+  await growthJson(env, `/internal/projects/${projectId}/official-metadata/targets/reconcile`, {
+    method: 'POST',
+    body: JSON.stringify({
+      targets: targets.map((target) => ({
+        platform: target.platform,
+        app_identifier: target.appIdentifier,
+        country: target.country,
+        language: target.language,
+        device: target.device,
+      })),
+    }),
+  });
 }
 
 export async function queueOfficialMetadataSyncIfDue(env: Env, now = new Date()) {
@@ -337,6 +423,10 @@ function positiveProjectId(value: unknown) {
     throw officialError('official_metadata_project_invalid', 'Official metadata project ID is invalid', false);
   }
   return parsed;
+}
+
+function invalidPlatform(): never {
+  throw officialError('official_metadata_target_invalid', 'Store configuration returned an invalid platform', false);
 }
 
 function appleVersionScore(version: Record<string, unknown>) {

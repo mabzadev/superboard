@@ -12,7 +12,7 @@ type TestEnv = {
 describe('Growth migrations in the Workers runtime', () => {
   it('preserves existing automation runs and accepts the Inbox action', async () => {
     const testEnv = env as unknown as TestEnv;
-    expect(testEnv.TEST_MIGRATIONS).toHaveLength(6);
+    expect(testEnv.TEST_MIGRATIONS).toHaveLength(7);
     await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS.slice(0, 2));
     await seedExistingRun(testEnv.DB);
 
@@ -32,8 +32,12 @@ describe('Growth migrations in the Workers runtime', () => {
       processed_at: expect.any(String),
     });
     await expect(testEnv.DB.prepare(`
-      SELECT source, title, version FROM growth_app_snapshots WHERE id = 'snapshot-before-official-sources'
-    `).first()).resolves.toEqual({ source: 'apple_lookup', title: 'Existing app', version: '1.0' });
+      SELECT s.source, s.title, s.version, a.management_source
+      FROM growth_app_snapshots s JOIN growth_apps a ON a.id = s.entity_id
+      WHERE s.id = 'snapshot-before-official-sources'
+    `).first()).resolves.toEqual({
+      source: 'apple_lookup', title: 'Existing app', version: '1.0', management_source: null,
+    });
 
     const response = await SELF.fetch('https://growth.internal/internal/projects/11/automations', {
       method: 'POST',
@@ -63,11 +67,20 @@ describe('Growth migrations in the Workers runtime', () => {
   it('accepts official owned-app snapshots and rejects platform/source mismatches', async () => {
     const testEnv = env as unknown as TestEnv;
     await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS);
-    await testEnv.DB.prepare(`
-      INSERT INTO growth_apps (
-        id, project_id, platform, app_identifier, display_name, country, language, device, is_primary, enabled
-      ) VALUES ('owned-google', 91, 'google', 'com.example.android', NULL, 'us', 'en', 'android', 1, 1)
-    `).run();
+    const reconciliation = await internalRequest('/internal/projects/91/official-metadata/targets/reconcile', {
+      targets: [{
+        platform: 'google', app_identifier: 'com.example.android',
+        country: 'us', language: 'en', device: 'android',
+      }],
+    });
+    expect(reconciliation.status).toBe(200);
+    const reconciliationPayload = await reconciliation.json() as { data: Array<{ id: string }> };
+    const ownedAppId = reconciliationPayload.data[0].id;
+    await expect(testEnv.DB.prepare(`
+      SELECT management_source, enabled, is_primary FROM growth_apps WHERE id = ?
+    `).bind(ownedAppId).first()).resolves.toEqual({
+      management_source: 'store_connection', enabled: 1, is_primary: 1,
+    });
 
     const projects = await internalGet('/internal/official-metadata/projects');
     expect(projects.status).toBe(200);
@@ -76,11 +89,11 @@ describe('Growth migrations in the Workers runtime', () => {
     const targets = await internalGet('/internal/official-metadata/targets?project_id=91');
     expect(targets.status).toBe(200);
     await expect(targets.json()).resolves.toMatchObject({
-      data: [expect.objectContaining({ id: 'owned-google', platform: 'google', official_synced_at: null })],
+      data: [expect.objectContaining({ id: ownedAppId, platform: 'google', official_synced_at: null })],
     });
 
     const accepted = await internalRequest('/internal/projects/91/official-metadata/snapshots', {
-      entity_id: 'owned-google',
+      entity_id: ownedAppId,
       app_identifier: 'com.example.android',
       source: 'google_play',
       title: 'Example',
@@ -89,17 +102,23 @@ describe('Growth migrations in the Workers runtime', () => {
     });
     expect(accepted.status).toBe(201);
     await expect(testEnv.DB.prepare(`
-      SELECT source, title, version FROM growth_app_snapshots WHERE entity_id = 'owned-google'
-    `).first()).resolves.toMatchObject({ source: 'google_play', title: 'Example', version: '2.1' });
+      SELECT source, title, version FROM growth_app_snapshots WHERE entity_id = ?
+    `).bind(ownedAppId).first()).resolves.toMatchObject({ source: 'google_play', title: 'Example', version: '2.1' });
 
     const mismatch = await internalRequest('/internal/projects/91/official-metadata/snapshots', {
-      entity_id: 'owned-google',
+      entity_id: ownedAppId,
       app_identifier: 'com.example.android',
       source: 'app_store_connect',
       metadata: {},
     });
     expect(mismatch.status).toBe(409);
     await expect(mismatch.json()).resolves.toMatchObject({ code: 'official_metadata_source_mismatch', retryable: false });
+
+    const disabled = await internalRequest('/internal/projects/91/official-metadata/targets/reconcile', { targets: [] });
+    expect(disabled.status).toBe(200);
+    await expect(testEnv.DB.prepare(`
+      SELECT enabled, is_primary FROM growth_apps WHERE id = ?
+    `).bind(ownedAppId).first()).resolves.toEqual({ enabled: 0, is_primary: 0 });
   });
 
   it('rejects event identity collisions and requires exact lease ownership', async () => {

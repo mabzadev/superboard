@@ -59,6 +59,9 @@ describe('official Store metadata', () => {
     const growth = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : new Request(input, init);
       const url = new URL(request.url);
+      if (url.pathname.endsWith('/official-metadata/targets/reconcile')) {
+        return Response.json({ data: [] });
+      }
       if (url.pathname === '/internal/official-metadata/targets') {
         return Response.json({ data: [{
           id: 'app-google', project_id: 11, platform: 'google', app_identifier: 'com.example.android',
@@ -72,7 +75,13 @@ describe('official Store metadata', () => {
       return Response.json({}, { status: 404 });
     });
 
-    await expect(syncOfficialMetadataProject(baseEnv({ GROWTH: { fetch: growth } as Fetcher }), 11))
+    await expect(syncOfficialMetadataProject(baseEnv({
+      DB: metadataDb({ targets: [{
+        project_id: 11, platform: 'google', app_identifier: 'com.example.android',
+        country: 'us', language: 'en', device: 'android',
+      }] }),
+      GROWTH: { fetch: growth } as Fetcher,
+    }), 11))
       .resolves.toMatchObject({ targets: 1, snapshots: 1, failures: [] });
     expect(persisted).toEqual([expect.objectContaining({
       entity_id: 'app-google', source: 'google_play', title: 'Example', version: '2.1',
@@ -102,7 +111,14 @@ describe('official Store metadata', () => {
   it('fans out project synchronization with queue batches', async () => {
     const batches: unknown[][] = [];
     const testEnv = baseEnv({
-      GROWTH: { fetch: async () => Response.json({ data: [{ project_id: 11 }, { project_id: 12 }] }) } as unknown as Fetcher,
+      DB: metadataDb({
+        projectIds: [11, 12],
+        targets: [
+          { project_id: 11, platform: 'apple', app_identifier: '123456789', country: 'us', language: 'en', device: 'iphone' },
+          { project_id: 12, platform: 'google', app_identifier: 'com.example.android', country: 'us', language: 'en', device: 'android' },
+        ],
+      }),
+      GROWTH: { fetch: async () => Response.json({ data: [] }) } as unknown as Fetcher,
       EVENT_QUEUE: { sendBatch: async (messages: unknown[]) => { batches.push(messages); } } as unknown as Queue,
     });
     await expect(enqueueOfficialMetadataProjects(testEnv)).resolves.toEqual({ enqueued: 2 });
@@ -130,4 +146,17 @@ function baseEnv(overrides: Partial<Env> = {}): Env {
     GROWTH: { fetch: async () => Response.json({ data: [] }) } as unknown as Fetcher,
     ...overrides,
   };
+}
+
+function metadataDb(options: { projectIds?: number[]; targets?: Array<Record<string, unknown>> }): D1Database {
+  return {
+    prepare: (sql: string) => {
+      const all = async () => ({
+        results: sql.includes('SELECT id FROM projects')
+          ? (options.projectIds || []).map((id) => ({ id }))
+          : options.targets || [],
+      });
+      return { all, bind: () => ({ all }) };
+    },
+  } as unknown as D1Database;
 }
