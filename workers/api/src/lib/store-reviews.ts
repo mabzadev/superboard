@@ -20,6 +20,7 @@ export type ReviewProjection = {
   responseBody?: string | null;
   responseState?: string | null;
   responseUpdatedAt?: string | null;
+  observedAt?: string | null;
   rawPayload: unknown;
 };
 
@@ -93,6 +94,34 @@ function latestIso(current: string | null, candidate: unknown): string | null {
   return !current || Date.parse(normalized) > Date.parse(current) ? normalized : current;
 }
 
+async function reviewProjectionMetadata(review: ReviewProjection) {
+  const observedAt = normalizedIso(review.observedAt) || new Date().toISOString();
+  const providerUpdatedAt = normalizedIso(review.providerUpdatedAt)
+    || normalizedIso(review.providerCreatedAt)
+    || '1970-01-01T00:00:00.000Z';
+  const snapshotHash = await sha256Hex(JSON.stringify({
+    rating: review.rating,
+    title: review.title || '',
+    body: review.body || '',
+    author_name: review.authorName || '',
+    language: review.language || '',
+    territory: review.territory || '',
+    app_version: review.appVersion || '',
+    response_id: review.responseId || '',
+    response_body: review.responseBody || '',
+    response_state: review.responseState || '',
+    response_updated_at: normalizedIso(review.responseUpdatedAt) || '',
+  }));
+  return {
+    observedAt,
+    projectionVersion: `${observedAt}|${providerUpdatedAt}|${snapshotHash}`,
+  };
+}
+
+export async function storeReviewProjectionVersion(review: ReviewProjection) {
+  return (await reviewProjectionMetadata(review)).projectionVersion;
+}
+
 function appleReviewPage(url: string, appId: string): string {
   const parsed = new URL(url);
   const expectedPath = `/v1/apps/${encodeURIComponent(appId)}/customerReviews`;
@@ -105,13 +134,16 @@ function appleReviewPage(url: string, appId: string): string {
 export async function upsertReview(env: Env, projectId: string, review: ReviewProjection) {
   const proposedId = crypto.randomUUID();
   const analysis = analyzeStoreReview(review.rating, `${review.title || ''}\n${review.body || ''}`);
+  const contentHash = await sha256Hex(JSON.stringify({ rating: review.rating, title: review.title || '', body: review.body || '' }));
+  const projection = await reviewProjectionMetadata(review);
   await env.DB.prepare(`
     INSERT INTO store_reviews (
       id, project_id, provider, provider_review_id, rating, title, body, author_name,
       language, territory, app_version, provider_created_at, provider_updated_at,
       response_id, response_body, response_state, response_updated_at,
-      original_body, translated_body, translation_language, sentiment, category, raw_payload
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      original_body, translated_body, translation_language, sentiment, category, raw_payload,
+      provider_observed_at, projection_version
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(project_id, provider, provider_review_id) DO UPDATE SET
       rating = excluded.rating, title = excluded.title, body = excluded.body,
       author_name = excluded.author_name, language = excluded.language,
@@ -123,7 +155,10 @@ export async function upsertReview(env: Env, projectId: string, review: ReviewPr
       original_body = excluded.original_body, translated_body = excluded.translated_body,
       translation_language = excluded.translation_language, sentiment = excluded.sentiment,
       category = excluded.category,
-      raw_payload = excluded.raw_payload, last_seen_at = datetime('now'), updated_at = datetime('now')
+      raw_payload = excluded.raw_payload, provider_observed_at = excluded.provider_observed_at,
+      projection_version = excluded.projection_version,
+      last_seen_at = datetime('now'), updated_at = datetime('now')
+    WHERE excluded.projection_version >= COALESCE(store_reviews.projection_version, '')
   `).bind(
     proposedId, projectId, review.provider, review.providerReviewId, review.rating,
     review.title || null, review.body || null, review.authorName || null,
@@ -133,23 +168,27 @@ export async function upsertReview(env: Env, projectId: string, review: ReviewPr
     review.responseUpdatedAt || null, review.originalBody || review.body || null,
     review.translatedBody || null, review.translationLanguage || null,
     analysis.sentiment, analysis.category, JSON.stringify(review.rawPayload),
+    projection.observedAt, projection.projectionVersion,
   ).run();
-  const row = await env.DB.prepare(`SELECT id FROM store_reviews WHERE project_id = ? AND provider = ? AND provider_review_id = ?`)
-    .bind(projectId, review.provider, review.providerReviewId).first<{ id: string }>();
+  const row = await env.DB.prepare(`
+    SELECT id, projection_version FROM store_reviews
+    WHERE project_id = ? AND provider = ? AND provider_review_id = ?
+  `).bind(projectId, review.provider, review.providerReviewId)
+    .first<{ id: string; projection_version?: string | null }>();
   if (!row) throw new Error('Unable to persist store review');
-  const hash = await sha256Hex(JSON.stringify({ rating: review.rating, title: review.title || '', body: review.body || '' }));
+  const projectionAccepted = !row.projection_version || row.projection_version === projection.projectionVersion;
   const revisionId = crypto.randomUUID();
   const revision = await env.DB.prepare(`
     INSERT OR IGNORE INTO store_review_revisions (id, review_id, content_sha256, rating, title, body, provider_updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(revisionId, row.id, hash, review.rating, review.title || null, review.body || null, review.providerUpdatedAt || null).run();
-  if (review.rating <= 2 && Number(revision.meta.changes || 0) > 0
+  `).bind(revisionId, row.id, contentHash, review.rating, review.title || null, review.body || null, review.providerUpdatedAt || null).run();
+  if (projectionAccepted && review.rating <= 2 && Number(revision.meta.changes || 0) > 0
     && env.EVENT_QUEUE && env.GROWTH && env.GROWTH_INTERNAL_TOKEN) {
     await env.EVENT_QUEUE.send({
       type: 'growth.review-negative.evaluate', projectId: String(projectId), revisionId,
     });
   }
-  if (review.responseBody) {
+  if (projectionAccepted && review.responseBody) {
     await env.DB.prepare(`
       UPDATE inbox_automation_alerts
       SET status = 'closed', closed_at = COALESCE(closed_at, datetime('now')), updated_at = datetime('now')
@@ -197,6 +236,7 @@ export async function syncAppleStoreReviews(
     if (seenPages.size >= 100 || seenPages.has(next)) throw reviewError('store_reviews_pagination_invalid', 'Apple review pagination exceeded its safety limit');
     seenPages.add(next);
     const payload = await fetchJson(next, token);
+    const observedAt = new Date().toISOString();
     const responses = new Map<string, Record<string, any>>();
     for (const item of Array.isArray(payload.included) ? payload.included : []) {
       if (item.type !== 'customerReviewResponses') continue;
@@ -215,9 +255,9 @@ export async function syncAppleStoreReviews(
         provider: 'apple', providerReviewId: String(item.id), rating: Number(attributes.rating),
         title: attributes.title, body: attributes.body, authorName: attributes.reviewerNickname,
         territory: attributes.territory, providerCreatedAt: attributes.createdDate,
-        providerUpdatedAt: attributes.createdDate, responseId: response?.id,
+        providerUpdatedAt: latestIso(createdAt, response?.attributes?.lastModifiedDate), responseId: response?.id,
         responseBody: response?.attributes?.responseBody, responseState: response?.attributes?.state,
-        responseUpdatedAt: response?.attributes?.lastModifiedDate, rawPayload: { review: item, response },
+        responseUpdatedAt: response?.attributes?.lastModifiedDate, observedAt, rawPayload: { review: item, response },
       });
       watermark = latestIso(watermark, attributes.createdDate);
       imported += 1;
@@ -255,6 +295,7 @@ export async function syncGooglePlayReviews(env: Env, projectId: string, storedC
     url.searchParams.set('translationLanguage', 'en');
     if (pageToken) url.searchParams.set('token', pageToken);
     const payload = await fetchJson(url.toString(), token);
+    const observedAt = new Date().toISOString();
     for (const item of Array.isArray(payload.reviews) ? payload.reviews : []) {
       const user = [...(item.comments || [])].reverse().find((comment: any) => comment.userComment)?.userComment || {};
       const developer = [...(item.comments || [])].reverse().find((comment: any) => comment.developerComment)?.developerComment || {};
@@ -265,9 +306,9 @@ export async function syncGooglePlayReviews(env: Env, projectId: string, storedC
         translationLanguage: user.originalText ? 'en' : null,
         authorName: item.authorName, language: user.reviewerLanguage,
         appVersion: user.appVersionName, providerCreatedAt: isoGoogleTimestamp(user.lastModified),
-        providerUpdatedAt: isoGoogleTimestamp(user.lastModified), responseBody: developer.text,
+        providerUpdatedAt: latestIso(isoGoogleTimestamp(user.lastModified), isoGoogleTimestamp(developer.lastModified)), responseBody: developer.text,
         responseState: developer.text ? 'published' : null,
-        responseUpdatedAt: isoGoogleTimestamp(developer.lastModified), rawPayload: item,
+        responseUpdatedAt: isoGoogleTimestamp(developer.lastModified), observedAt, rawPayload: item,
       });
       watermark = latestIso(watermark, isoGoogleTimestamp(user.lastModified));
       imported += 1;
@@ -283,29 +324,72 @@ export async function syncGooglePlayReviews(env: Env, projectId: string, storedC
 
 export async function syncStoreReviews(env: Env, projectId: string) {
   const syncState = await env.DB.prepare(`
-    SELECT provider, cursor FROM store_review_sync_state WHERE project_id = ?
-  `).bind(projectId).all<{ provider: 'apple' | 'google'; cursor: string | null }>();
-  const cursors = new Map((syncState.results || []).map((row) => [row.provider, row.cursor]));
+    SELECT provider, cursor, watermark, full_synced_at
+    FROM store_review_sync_state WHERE project_id = ?
+  `).bind(projectId).all<{
+    provider: 'apple' | 'google';
+    cursor: string | null;
+    watermark: string | null;
+    full_synced_at: string | null;
+  }>();
+  const cursors = new Map((syncState.results || []).map((row) => {
+    const legacy = parseReviewSyncCursor(row.cursor);
+    return [row.provider, JSON.stringify({
+      version: 1,
+      watermark: latestIso(legacy.watermark, row.watermark),
+      full_synced_at: latestIso(legacy.full_synced_at, row.full_synced_at),
+    } satisfies ReviewSyncCursor)];
+  }));
   const results = await Promise.allSettled([
     syncAppleStoreReviews(env, projectId, cursors.get('apple')),
     syncGooglePlayReviews(env, projectId, cursors.get('google')),
   ]);
   for (const [index, result] of results.entries()) {
     const provider = index === 0 ? 'apple' : 'google';
-    await env.DB.prepare(`
-      INSERT INTO store_review_sync_state (project_id, provider, cursor, last_synced_at, last_error)
-      VALUES (?, ?, ?, CASE WHEN ? IS NULL THEN datetime('now') END, ?)
-      ON CONFLICT(project_id, provider) DO UPDATE SET
-        cursor = CASE WHEN excluded.last_error IS NULL THEN excluded.cursor ELSE store_review_sync_state.cursor END,
-        last_synced_at = CASE WHEN excluded.last_error IS NULL THEN datetime('now') ELSE store_review_sync_state.last_synced_at END,
-        last_error = excluded.last_error, updated_at = datetime('now')
-    `).bind(
-      projectId,
-      provider,
-      result.status === 'fulfilled' ? result.value.cursor : cursors.get(provider) || null,
-      result.status === 'fulfilled' ? null : 'failed',
-      result.status === 'rejected' ? String(result.reason?.message || result.reason) : null,
-    ).run();
+    const nextCursor = parseReviewSyncCursor(result.status === 'fulfilled'
+      ? result.value.cursor
+      : cursors.get(provider));
+    const error = result.status === 'rejected' ? String(result.reason?.message || result.reason) : null;
+    await env.DB.batch([
+      env.DB.prepare(`
+        INSERT INTO store_review_sync_state (
+          project_id, provider, cursor, watermark, full_synced_at, last_synced_at, last_error
+        ) VALUES (?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN datetime('now') END, ?)
+        ON CONFLICT(project_id, provider) DO UPDATE SET
+          cursor = CASE WHEN excluded.last_error IS NULL THEN excluded.cursor ELSE store_review_sync_state.cursor END,
+          watermark = CASE
+            WHEN excluded.last_error IS NOT NULL THEN store_review_sync_state.watermark
+            WHEN store_review_sync_state.watermark IS NULL THEN excluded.watermark
+            WHEN excluded.watermark IS NULL THEN store_review_sync_state.watermark
+            WHEN datetime(excluded.watermark) >= datetime(store_review_sync_state.watermark) THEN excluded.watermark
+            ELSE store_review_sync_state.watermark END,
+          full_synced_at = CASE
+            WHEN excluded.last_error IS NOT NULL THEN store_review_sync_state.full_synced_at
+            WHEN store_review_sync_state.full_synced_at IS NULL THEN excluded.full_synced_at
+            WHEN excluded.full_synced_at IS NULL THEN store_review_sync_state.full_synced_at
+            WHEN datetime(excluded.full_synced_at) >= datetime(store_review_sync_state.full_synced_at) THEN excluded.full_synced_at
+            ELSE store_review_sync_state.full_synced_at END,
+          last_synced_at = CASE WHEN excluded.last_error IS NULL THEN datetime('now') ELSE store_review_sync_state.last_synced_at END,
+          last_error = excluded.last_error, updated_at = datetime('now')
+      `).bind(
+        projectId,
+        provider,
+        JSON.stringify(nextCursor),
+        nextCursor.watermark,
+        nextCursor.full_synced_at,
+        error,
+        error,
+      ),
+      env.DB.prepare(`
+        UPDATE store_review_sync_state
+        SET cursor = json_object(
+          'version', 1,
+          'watermark', watermark,
+          'full_synced_at', full_synced_at
+        )
+        WHERE project_id = ? AND provider = ?
+      `).bind(projectId, provider),
+    ]);
   }
   return results.map((result, index) => result.status === 'fulfilled'
     ? { ok: true, ...result.value }
@@ -328,6 +412,32 @@ export async function publishStoreReviewResponse(env: Env, projectId: string, re
   return fetchJson(`https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/reviews/${encodeURIComponent(review.provider_review_id)}:reply`, token, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replyText: body }),
   });
+}
+
+function publishedResponseProjection(provider: string, providerResponse: Record<string, any>, fallbackBody: string) {
+  if (provider === 'google') {
+    const result = providerResponse.result && typeof providerResponse.result === 'object'
+      ? providerResponse.result as Record<string, any>
+      : {};
+    return {
+      responseId: null,
+      body: String(result.replyText || fallbackBody),
+      state: 'published',
+      updatedAt: isoGoogleTimestamp(result.lastEdited),
+    };
+  }
+  const data = providerResponse.data && typeof providerResponse.data === 'object'
+    ? providerResponse.data as Record<string, any>
+    : {};
+  const attributes = data.attributes && typeof data.attributes === 'object'
+    ? data.attributes as Record<string, any>
+    : {};
+  return {
+    responseId: typeof data.id === 'string' ? data.id : null,
+    body: String(attributes.responseBody || fallbackBody),
+    state: String(attributes.state || 'submitted').toLowerCase(),
+    updatedAt: normalizedIso(attributes.lastModifiedDate),
+  };
 }
 
 export async function publishApprovedReviewDraft(env: Env, draftId: string) {
@@ -354,25 +464,71 @@ export async function publishApprovedReviewDraft(env: Env, draftId: string) {
   if (!claimed.meta.changes) return { published: false, claimed: false };
   try {
     const providerResponse = await publishStoreReviewResponse(env, String(draft.project_id), draft, String(draft.body));
-    await env.DB.batch([
+    const serializedResponse = JSON.stringify(providerResponse);
+    const response = publishedResponseProjection(String(draft.provider), providerResponse, String(draft.body));
+    const completion = await env.DB.batch([
       env.DB.prepare(`
         UPDATE store_review_response_drafts
         SET status = 'published', provider_response = ?, published_at = datetime('now'),
-          next_attempt_at = NULL, claim_token = NULL, claim_expires_at = NULL,
+          next_attempt_at = NULL, claim_token = ?, claim_expires_at = NULL,
           last_error = NULL, updated_at = datetime('now')
         WHERE id = ? AND claim_token = ?
-      `).bind(JSON.stringify(providerResponse), draftId, claimToken),
-      env.DB.prepare(`UPDATE store_reviews SET response_body = ?, response_state = 'published', response_updated_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`)
-        .bind(String(draft.body), draft.review_id),
+      `).bind(serializedResponse, claimToken, draftId, claimToken),
+      env.DB.prepare(`
+        UPDATE store_reviews
+        SET response_id = COALESCE(?, response_id), response_body = ?, response_state = ?,
+          response_updated_at = COALESCE(?, datetime('now')), updated_at = datetime('now')
+        WHERE id = ? AND EXISTS (
+          SELECT 1 FROM store_review_response_drafts
+          WHERE id = ? AND status = 'published' AND provider_response = ? AND claim_token = ?
+        )
+      `).bind(
+        response.responseId,
+        response.body,
+        response.state,
+        response.updatedAt,
+        draft.review_id,
+        draftId,
+        serializedResponse,
+        claimToken,
+      ),
       env.DB.prepare(`
         UPDATE inbox_automation_alerts
         SET status = 'closed', closed_at = COALESCE(closed_at, datetime('now')), updated_at = datetime('now')
         WHERE project_id = ? AND source_type = 'store_review' AND source_id = ? AND status = 'open'
-      `).bind(String(draft.project_id), draft.review_id),
-      env.DB.prepare(`INSERT INTO store_review_audit_events (id, review_id, event_type, actor_type, payload) VALUES (?, ?, 'response.published', 'system', ?)`)
-        .bind(crypto.randomUUID(), draft.review_id, JSON.stringify({ draft_id: draftId, provider: draft.provider })),
+          AND EXISTS (
+            SELECT 1 FROM store_review_response_drafts
+            WHERE id = ? AND status = 'published' AND provider_response = ? AND claim_token = ?
+          )
+      `).bind(String(draft.project_id), draft.review_id, draftId, serializedResponse, claimToken),
+      env.DB.prepare(`
+        INSERT INTO store_review_audit_events (id, review_id, event_type, actor_type, payload)
+        SELECT ?, ?, 'response.published', 'system', ?
+        WHERE EXISTS (
+          SELECT 1 FROM store_review_response_drafts
+          WHERE id = ? AND status = 'published' AND provider_response = ? AND claim_token = ?
+        )
+      `).bind(
+        crypto.randomUUID(),
+        draft.review_id,
+        JSON.stringify({ draft_id: draftId, provider: draft.provider, response_state: response.state }),
+        draftId,
+        serializedResponse,
+        claimToken,
+      ),
     ]);
-    return { published: true, provider: draft.provider };
+    if (!Number((completion[0] as D1Result | undefined)?.meta?.changes || 0)) {
+      await env.DB.prepare(`
+        INSERT INTO store_review_audit_events (id, review_id, event_type, actor_type, payload)
+        VALUES (?, ?, 'response.result_after_lease_loss', 'system', ?)
+      `).bind(
+        crypto.randomUUID(),
+        draft.review_id,
+        JSON.stringify({ draft_id: draftId, provider: draft.provider, provider_response: providerResponse }),
+      ).run();
+      return { published: false, claim_lost: true, provider: draft.provider };
+    }
+    return { published: true, provider: draft.provider, response_state: response.state };
   } catch (error) {
     const message = (error as Error)?.message || String(error);
     const attempts = Number(draft.attempts || 0) + 1;
