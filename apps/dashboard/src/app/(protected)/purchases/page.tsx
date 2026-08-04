@@ -68,6 +68,7 @@ import {
   getBillingLegacyInventory,
   getBillingOverview,
   getBillingPaywalls,
+  getBillingProviderEvents,
   getBillingPlacements,
   getBillingRefundCase,
   getBillingRefundCases,
@@ -81,6 +82,7 @@ import {
   mapBillingProductsToEntitlement,
   publishBillingPaywall,
   replayBillingWebhookDelivery,
+  replayBillingProviderEvent,
   recordBillingCertificationObservation,
   reviewBillingRefundEvidence,
   searchBillingCustomers,
@@ -102,6 +104,7 @@ import {
   type BillingLegacyInventory,
   type BillingOverview,
   type BillingPaywall,
+  type BillingProviderEvent,
   type BillingPlacement,
   type BillingRefundCase,
   type BillingRefundCaseDetail,
@@ -184,6 +187,7 @@ const PurchasesPage = () => {
   const [experiments, setExperiments] = useState<BillingExperiment[]>([]);
   const [analytics, setAnalytics] = useState<BillingAnalytics>();
   const [health, setHealth] = useState<BillingHealth>();
+  const [providerEvents, setProviderEvents] = useState<BillingProviderEvent[]>([]);
   const [releaseGate, setReleaseGate] = useState<BillingReleaseGate>();
   const [certificationRuns, setCertificationRuns] = useState<BillingCertificationRun[]>([]);
   const [legacyInventory, setLegacyInventory] = useState<BillingLegacyInventory>();
@@ -251,6 +255,7 @@ const PurchasesPage = () => {
         nextExperiments,
         nextAnalytics,
         nextHealth,
+        nextProviderEvents,
         nextDeliveries,
         nextCurrencies,
         nextExports,
@@ -269,6 +274,7 @@ const PurchasesPage = () => {
         getBillingExperiments(projectId),
         getBillingAnalytics(projectId),
         getBillingHealth(projectId),
+        getBillingProviderEvents(projectId),
         getBillingWebhookDeliveries(projectId),
         getBillingVirtualCurrencies(projectId),
         getBillingExports(projectId),
@@ -289,6 +295,7 @@ const PurchasesPage = () => {
       if (nextExperiments.status === "fulfilled") setExperiments(nextExperiments.value.data || []); else failed("Experiments", nextExperiments.reason);
       if (nextAnalytics.status === "fulfilled") setAnalytics(nextAnalytics.value); else failed("Analytics", nextAnalytics.reason);
       if (nextHealth.status === "fulfilled") setHealth(nextHealth.value); else failed("Diagnostics", nextHealth.reason);
+      if (nextProviderEvents.status === "fulfilled") setProviderEvents(nextProviderEvents.value.data || []); else failed("Provider events", nextProviderEvents.reason);
       if (nextDeliveries.status === "fulfilled") setDeliveries(nextDeliveries.value.data || []); else failed("Webhooks", nextDeliveries.reason);
       if (nextCurrencies.status === "fulfilled") setVirtualCurrencies(nextCurrencies.value.data || []); else failed("Currencies", nextCurrencies.reason);
       if (nextExports.status === "fulfilled") setExports(nextExports.value.data || []); else failed("Exports", nextExports.reason);
@@ -805,6 +812,7 @@ const PurchasesPage = () => {
               <Card><CardHeader><CardTitle className="flex items-center gap-2"><PlugZap className="h-5 w-5" />Webhooks</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Pending</span><span>{String(health?.deliveries?.pending_deliveries || 0)}</span></div><div className="flex justify-between"><span>Failures</span><span>{String(health?.deliveries?.failed_deliveries || 0)}</span></div></CardContent></Card>
             </div>
             <Card><CardHeader><CardTitle>Automated prerequisites</CardTitle></CardHeader><CardContent className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{releaseGate?.prerequisites.map((item) => <div key={item.key} className="rounded-md border p-3"><div className="flex items-center justify-between gap-2"><span className="font-medium">{item.label}</span><Badge variant={item.passed ? "default" : "destructive"}>{item.passed ? "passed" : "blocked"}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div>)}</CardContent></Card>
+            <Card><CardHeader><CardTitle>Provider event journal</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Received</TableHead><TableHead>Provider</TableHead><TableHead>Event</TableHead><TableHead>Attempts</TableHead><TableHead>Status</TableHead><TableHead>Error</TableHead><TableHead /></TableRow></TableHeader><TableBody>{providerEvents.map((item) => <TableRow key={item.id}><TableCell>{date(item.received_at)}</TableCell><TableCell>{item.store} · {item.environment}</TableCell><TableCell>{item.event_type || item.external_event_id}</TableCell><TableCell>{item.attempts}</TableCell><TableCell>{statusBadge(item.status)}</TableCell><TableCell className="max-w-sm truncate text-xs text-muted-foreground">{item.error_message || "—"}</TableCell><TableCell>{item.status === "failed" && Boolean(item.replay_available) && <Button size="sm" variant="outline" onClick={() => projectId && void run(() => replayBillingProviderEvent(projectId, item.id), "Provider event replay queued")}>Replay</Button>}</TableCell></TableRow>)}</TableBody></Table>{!providerEvents.length && <p className="py-6 text-center text-sm text-muted-foreground">No provider event has been received.</p>}</CardContent></Card>
             <Card>
               <CardHeader><CardTitle>Verified legacy subscription migration</CardTitle></CardHeader>
               <CardContent className="space-y-4">

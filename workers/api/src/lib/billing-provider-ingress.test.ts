@@ -24,6 +24,7 @@ describe('Billing provider ingress authority', () => {
       if (call.op === 'first' && call.sql.includes('FROM billing_webhook_events')) {
         return { id: 'event-1', status: 'received' };
       }
+      if (call.op === 'run' && call.sql.includes('SET job_payload = COALESCE')) return true;
       return undefined;
     });
     const env = { DB: db, BILLING_QUEUE: queue } as unknown as BillingEnv;
@@ -46,6 +47,7 @@ describe('Billing provider ingress authority', () => {
       if (call.op === 'first' && call.sql.includes('FROM billing_webhook_events')) {
         return { id: 'event-1', status: 'processed' };
       }
+      if (call.op === 'run' && call.sql.includes('SET job_payload = COALESCE')) return true;
       return undefined;
     });
     const env = { DB: db, BILLING_QUEUE: queue } as unknown as BillingEnv;
