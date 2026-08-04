@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useProjectSelection } from "@/context/useProjectSelection";
 import { showErrorNotification } from "@/lib/Notifications";
+import { inboxDeepLink } from "@/api/messaging/inboxDeepLink";
 import {
   getInboxMessages,
   getUnifiedInboxItems,
@@ -52,6 +53,7 @@ export default function InboxPage() {
   const typingTimer = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
   const pendingTextMessage = useRef<{ body: string; id: string } | null>(null);
+  const requestedSourceId = useRef("");
   const pendingAttachment = useRef<{
     signature: string;
     attachment: { key: string; filename: string; content_type: string; size: number };
@@ -67,7 +69,11 @@ export default function InboxPage() {
       const result = await getUnifiedInboxItems(projectId, { type: typeFilter, status: statusFilter });
       setItems(result.data || []);
       setDegradedSources(result.degraded_sources || []);
-      setSelectedId((current) => result.data?.some((item) => item.id === current) ? current : result.data?.[0]?.id || "");
+      setSelectedId((current) => {
+        if (result.data?.some((item) => item.id === current)) return current;
+        const requested = result.data?.find((item) => item.source_id === requestedSourceId.current);
+        return requested?.id || result.data?.[0]?.id || "";
+      });
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Unable to load the Inbox");
     } finally { setLoading(false); }
@@ -91,6 +97,12 @@ export default function InboxPage() {
     }
   }, [projectId, selected?.source_id, selected?.source_type]);
 
+  useEffect(() => {
+    const requested = inboxDeepLink(window.location.search);
+    requestedSourceId.current = requested.sourceId;
+    setTypeFilter(requested.type);
+    setStatusFilter(requested.status);
+  }, []);
   useEffect(() => { void loadItems(); }, [loadItems]);
   useEffect(() => { void loadMessages(); }, [loadMessages]);
   useEffect(() => {
