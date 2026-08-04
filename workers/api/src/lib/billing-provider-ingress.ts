@@ -34,8 +34,8 @@ export async function ingestBillingProviderEvent(env: BillingEnv, request: Billi
   const eventId = crypto.randomUUID();
   const inserted = await env.DB.prepare(`
     INSERT OR IGNORE INTO billing_webhook_events (
-      id, project_id, store, environment, external_event_id, event_type, status, payload
-    ) VALUES (?, ?, ?, ?, ?, ?, 'received', ?)
+      id, project_id, store, environment, external_event_id, event_type, status, payload, job_payload
+    ) VALUES (?, ?, ?, ?, ?, ?, 'received', ?, ?)
   `).bind(
     eventId,
     request.projectId,
@@ -44,6 +44,7 @@ export async function ingestBillingProviderEvent(env: BillingEnv, request: Billi
     request.externalEventId,
     request.eventType || null,
     request.payload,
+    JSON.stringify(request.job),
   ).run();
   const persisted = await env.DB.prepare(`
     SELECT id, status FROM billing_webhook_events
@@ -51,6 +52,9 @@ export async function ingestBillingProviderEvent(env: BillingEnv, request: Billi
   `).bind(request.projectId, request.store, request.environment, request.externalEventId)
     .first<{ id: string; status: string }>();
   if (!persisted) throw ingressError('provider_event_persistence_failed', 'Provider event persistence failed', 503, true);
+  await env.DB.prepare(`
+    UPDATE billing_webhook_events SET job_payload = COALESCE(job_payload, ?) WHERE id = ?
+  `).bind(JSON.stringify(request.job), persisted.id).run();
   if (persisted.status === 'processed') {
     return { event_id: persisted.id, duplicate: true, queued: false, processed: true };
   }
