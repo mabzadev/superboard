@@ -103,6 +103,8 @@ Certification evidence is run-based. Directly marking a check as passed is rejec
 
 Scenarios that cannot be proven by a provider transaction or Billing event require an authenticated SDK device result. An administrator starts a run and receives a random four-hour challenge that is stored only as a SHA-256 hash. The Flutter, FlutterFlow, or Web SDK submits a structured assertion set with the run, build, application, SDK, device, OS, and verified customer context. The existing application identity JWT is mandatory; anonymous customers are rejected. Device results are immutable, idempotent, digest-protected, bound to one run and one customer, and must be promoted by an administrator before they can satisfy a release check. Arbitrary external text references are never accepted as certification evidence.
 
+Rotating an expired device challenge never clears the customer already bound to the run. The dashboard lists the immutable device results and their digests for the selected run, and an administrator can select a compatible result directly as the observation reference.
+
 Passed device results require every assertion for their scenario to be `true`:
 
 - `pending`: `pending_observed`, `entitlement_withheld_until_verified`, `terminal_resolution_observed`.
