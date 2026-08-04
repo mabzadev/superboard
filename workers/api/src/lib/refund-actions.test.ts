@@ -5,6 +5,7 @@ import { encryptSecret } from './secrets';
 import {
   executeRefundProviderAction,
   refundActionDefinitions,
+  refundCaseAllowsOperatorAction,
   supportedRefundActions,
   validateRefundActionPayload,
 } from './refund-actions';
@@ -12,6 +13,28 @@ import {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('refund provider actions', () => {
+  it('treats provider-terminal refund cases as immutable', async () => {
+    expect(refundCaseAllowsOperatorAction('open')).toBe(true);
+    expect(refundCaseAllowsOperatorAction('submitted')).toBe(true);
+    expect(refundCaseAllowsOperatorAction('won')).toBe(false);
+    expect(refundCaseAllowsOperatorAction('lost')).toBe(false);
+    expect(refundCaseAllowsOperatorAction('closed')).toBe(false);
+
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM billing_refund_provider_actions action')) {
+        return actionRow({ status: 'approved', refund_status: 'lost' });
+      }
+      return undefined;
+    });
+
+    await expect(executeRefundProviderAction({ DB: db } as BillingEnv, 'action-1'))
+      .rejects.toThrow(/terminal refund case/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.calls.some((call) => call.op === 'run')).toBe(false);
+  });
+
   it('requires explicit Apple consent and validates delivery consistency', () => {
     expect(() => validateRefundActionPayload('apple', 'submit_consumption_info', {
       customerConsented: false,
@@ -89,6 +112,24 @@ describe('refund provider actions', () => {
 
     await expect(executeRefundProviderAction({ DB: db } as BillingEnv, 'action-1'))
       .resolves.toEqual({ sent: false, claimed: false });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not contact the provider when the case becomes terminal after the lease claim', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    let actionReads = 0;
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM billing_refund_provider_actions action')) {
+        actionReads += 1;
+        return actionReads === 1 ? actionRow({ status: 'approved' }) : null;
+      }
+      if (call.op === 'run' && call.sql.includes('attempts = attempts + 1')) return true;
+      return undefined;
+    });
+
+    await expect(executeRefundProviderAction({ DB: db } as BillingEnv, 'action-1'))
+      .resolves.toEqual({ sent: false, cancelled: true, provider: 'stripe' });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -188,6 +229,7 @@ function actionRow(overrides: Partial<Record<string, unknown>> = {}) {
     environment: 'sandbox',
     provider_case_id: 'dp_test',
     provider_payload: '{}',
+    refund_status: 'open',
     store_transaction_id: null,
     original_transaction_id: null,
     order_id: null,

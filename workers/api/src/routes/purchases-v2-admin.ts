@@ -7,7 +7,13 @@ import { testStoreCredentials } from '../lib/store-verification';
 import { errorEnvelope, PAYWALL_EVENT_TYPES, purchasesError } from '../lib/purchases-v2';
 import { signedCustomerInfo } from '../lib/billing-identity';
 import { identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
-import { refundActionDefinitions, supportedRefundActions, validateRefundActionPayload, type RefundActionType } from '../lib/refund-actions';
+import {
+  refundActionDefinitions,
+  refundCaseAllowsOperatorAction,
+  supportedRefundActions,
+  validateRefundActionPayload,
+  type RefundActionType,
+} from '../lib/refund-actions';
 import {
   billingOperationalPrerequisites,
   buildReleaseGate,
@@ -2014,13 +2020,20 @@ admin.get('/:projectId/refunds/:caseId', async (c) => {
 admin.post('/:projectId/refunds/:caseId/evidence', async (c) => {
   try {
     const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
-    const refundCase = await c.env.DB.prepare('SELECT id FROM billing_refund_cases WHERE id = ? AND project_id = ?')
-      .bind(c.req.param('caseId'), project.id).first<{ id: string }>();
+    const refundCase = await c.env.DB.prepare('SELECT id, status FROM billing_refund_cases WHERE id = ? AND project_id = ?')
+      .bind(c.req.param('caseId'), project.id).first<{ id: string; status: string }>();
     if (!refundCase) throw purchasesError('refund_case_not_found', 'Refund case not found', 404);
+    if (!refundCaseAllowsOperatorAction(refundCase.status)) {
+      throw purchasesError('refund_case_terminal', 'A terminal refund case cannot accept new evidence', 409);
+    }
     const evidenceType = identifier(data.evidence_type, 'evidence_type');
     const content = typeof data.content === 'string' ? data.content.trim() : '';
     const fileKey = typeof data.file_key === 'string' ? data.file_key.trim() : '';
     if (!content && !fileKey) throw purchasesError('evidence_content_required', 'Evidence content or file_key is required');
+    if (content.length > 20_000) throw purchasesError('refund_evidence_too_large', 'Refund evidence content must contain at most 20,000 characters', 413);
+    if (fileKey.length > 1024 || fileKey.includes('..') || fileKey.startsWith('/') || /[\x00-\x1f\x7f]/.test(fileKey)) {
+      throw purchasesError('refund_evidence_file_key_invalid', 'Refund evidence file_key is invalid', 422);
+    }
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(`
@@ -2044,9 +2057,13 @@ admin.post('/:projectId/refunds/:caseId/evidence/:evidenceId/review', async (c) 
     const result = await c.env.DB.prepare(`
       UPDATE billing_refund_evidence
       SET review_status = ?, reviewed_by = ?, reviewed_at = datetime('now'), updated_at = datetime('now')
-      WHERE id = ? AND case_id IN (SELECT id FROM billing_refund_cases WHERE id = ? AND project_id = ?)
+      WHERE id = ? AND review_status = 'draft'
+        AND case_id IN (
+          SELECT id FROM billing_refund_cases
+          WHERE id = ? AND project_id = ? AND status NOT IN ('won','lost','closed')
+        )
     `).bind(reviewStatus, String(c.get('userId')), c.req.param('evidenceId'), c.req.param('caseId'), project.id).run();
-    if (!result.meta.changes) throw purchasesError('refund_evidence_not_found', 'Refund evidence not found', 404);
+    if (!result.meta.changes) throw purchasesError('refund_evidence_not_reviewable', 'Refund evidence was not found or is no longer reviewable', 409);
     await c.env.DB.prepare(`
       INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, actor_id, payload)
       VALUES (?, ?, ?, 'admin', ?, ?)
@@ -2059,9 +2076,12 @@ admin.post('/:projectId/refunds/:caseId/actions', async (c) => {
   try {
     const project = await projectFor(c); requireAdmin(project); const data = await jsonBody(c);
     const refundCase = await c.env.DB.prepare(`
-      SELECT id, provider FROM billing_refund_cases WHERE id = ? AND project_id = ? LIMIT 1
-    `).bind(c.req.param('caseId'), project.id).first<{ id: string; provider: string }>();
+      SELECT id, provider, status FROM billing_refund_cases WHERE id = ? AND project_id = ? LIMIT 1
+    `).bind(c.req.param('caseId'), project.id).first<{ id: string; provider: string; status: string }>();
     if (!refundCase) throw purchasesError('refund_case_not_found', 'Refund case not found', 404);
+    if (!refundCaseAllowsOperatorAction(refundCase.status)) {
+      throw purchasesError('refund_case_terminal', 'A terminal refund case cannot prepare provider actions', 409);
+    }
     const actionType = String(data.action_type || '').trim();
     if (!supportedRefundActions(refundCase.provider).includes(actionType as RefundActionType)) {
       throw purchasesError('refund_action_unsupported', `${actionType || 'Refund action'} is not supported for ${refundCase.provider}`);
@@ -2094,7 +2114,8 @@ admin.patch('/:projectId/refunds/:caseId/actions/:actionId', async (c) => {
       SELECT action.id, action.action_type, refund.provider
       FROM billing_refund_provider_actions action
       JOIN billing_refund_cases refund ON refund.id = action.case_id
-      WHERE action.id = ? AND action.case_id = ? AND refund.project_id = ? AND action.status IN ('draft','failed')
+      WHERE action.id = ? AND action.case_id = ? AND refund.project_id = ?
+        AND refund.status NOT IN ('won','lost','closed') AND action.status IN ('draft','failed')
     `).bind(c.req.param('actionId'), c.req.param('caseId'), project.id)
       .first<{ id: string; action_type: string; provider: string }>();
     if (!action) throw purchasesError('refund_action_not_editable', 'Refund action was not found or cannot be edited in its current state', 409);
@@ -2119,6 +2140,7 @@ admin.post('/:projectId/refunds/:caseId/actions/:actionId/approve', async (c) =>
       FROM billing_refund_provider_actions action
       JOIN billing_refund_cases refund ON refund.id = action.case_id
       WHERE action.id = ? AND action.status = 'draft' AND refund.id = ? AND refund.project_id = ?
+        AND refund.status NOT IN ('won','lost','closed')
       LIMIT 1
     `).bind(c.req.param('actionId'), c.req.param('caseId'), project.id)
       .first<{ id: string; action_type: RefundActionType; payload: string; provider: string }>();
@@ -2144,9 +2166,12 @@ admin.post('/:projectId/refunds/:caseId/actions/:actionId/approve', async (c) =>
     const result = await c.env.DB.prepare(`
       UPDATE billing_refund_provider_actions
       SET status = 'approved', approved_by = ?, approved_at = datetime('now'), updated_at = datetime('now')
-      WHERE id = ? AND status = 'draft'
-        AND case_id IN (SELECT id FROM billing_refund_cases WHERE id = ? AND project_id = ?)
-    `).bind(String(c.get('userId')), c.req.param('actionId'), c.req.param('caseId'), project.id).run();
+      WHERE id = ? AND status = 'draft' AND payload = ?
+        AND case_id IN (
+          SELECT id FROM billing_refund_cases
+          WHERE id = ? AND project_id = ? AND status NOT IN ('won','lost','closed')
+        )
+    `).bind(String(c.get('userId')), c.req.param('actionId'), action.payload, c.req.param('caseId'), project.id).run();
     if (!result.meta.changes) throw purchasesError('refund_action_not_approvable', 'Refund action was modified concurrently', 409);
     await c.env.DB.prepare(`
       INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, actor_id, payload)
