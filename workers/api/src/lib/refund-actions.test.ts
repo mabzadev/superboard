@@ -131,6 +131,47 @@ describe('refund provider actions', () => {
     expect(writes.some((sql) => sql.includes("SET status = 'sent'"))).toBe(true);
     expect(writes.some((sql) => sql.startsWith('INSERT INTO billing_refund_audit_events'))).toBe(true);
   });
+
+  it('does not reopen a case when a terminal event cancels an in-flight provider action', async () => {
+    const encryptionKey = 'refund-cancellation-test-key';
+    const encrypted = await encryptSecret(JSON.stringify({ secret_key: 'sk_test_refund_action' }), encryptionKey);
+    const writes: string[] = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM billing_refund_provider_actions action')) {
+        return actionRow({
+          action_type: 'create_stripe_refund',
+          payload: JSON.stringify({ reason: 'fraudulent' }),
+          provider_payload: JSON.stringify({ data: { object: { payment_intent: 'pi_test' } } }),
+        });
+      }
+      if (call.op === 'first' && call.sql.includes('FROM billing_store_connections')) {
+        return { configuration_encrypted: encrypted };
+      }
+      if (call.op === 'run' && call.sql.includes('attempts = attempts + 1')) return true;
+      if (call.op === 'run' && call.sql.includes("SET status = 'sent'")) {
+        return { success: true, meta: { changes: 0 } };
+      }
+      if (call.op === 'run') {
+        writes.push(call.sql);
+        return true;
+      }
+      return undefined;
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      id: 're_test', status: 'succeeded', amount: 999, currency: 'usd',
+    })));
+
+    await expect(executeRefundProviderAction({
+      DB: db,
+      STORE_CREDENTIALS_ENCRYPTION_KEY: encryptionKey,
+    } as BillingEnv, 'action-1')).resolves.toEqual({
+      sent: false,
+      cancelled: true,
+      provider: 'stripe',
+    });
+
+    expect(writes.some((sql) => sql.includes('provider_action.result_after_cancellation'))).toBe(true);
+  });
 });
 
 function actionRow(overrides: Partial<Record<string, unknown>> = {}) {

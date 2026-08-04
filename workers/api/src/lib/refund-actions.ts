@@ -364,27 +364,58 @@ export async function executeRefundProviderAction(env: BillingEnv, actionId: str
   try {
     const payload = validateRefundActionPayload(row.provider, row.action_type, row.payload);
     const providerResponse = await runProviderAction(env, row, payload);
-    await env.DB.batch([
+    const serializedResponse = JSON.stringify(providerResponse);
+    const completion = await env.DB.batch([
       env.DB.prepare(`
         UPDATE billing_refund_provider_actions
         SET status = 'sent', sent_at = datetime('now'), provider_response = ?,
-          next_attempt_at = NULL, last_error = NULL, claim_token = NULL,
+          next_attempt_at = NULL, last_error = NULL, claim_token = ?,
           claim_expires_at = NULL, updated_at = datetime('now')
         WHERE id = ? AND claim_token = ?
-      `).bind(JSON.stringify(providerResponse), row.id, claimToken),
+      `).bind(serializedResponse, claimToken, row.id, claimToken),
       env.DB.prepare(`
         UPDATE billing_refund_cases SET status = 'submitted', updated_at = datetime('now')
         WHERE id = ? AND status NOT IN ('won','lost','closed')
-      `).bind(row.case_id),
+          AND EXISTS (
+            SELECT 1 FROM billing_refund_provider_actions
+            WHERE id = ? AND status = 'sent' AND provider_response = ? AND claim_token = ?
+          )
+      `).bind(row.case_id, row.id, serializedResponse, claimToken),
       env.DB.prepare(`
         UPDATE billing_refund_deadlines SET status = 'met', completed_at = datetime('now'), updated_at = datetime('now')
         WHERE case_id = ? AND status = 'open'
-      `).bind(row.case_id),
+          AND EXISTS (
+            SELECT 1 FROM billing_refund_provider_actions
+            WHERE id = ? AND status = 'sent' AND provider_response = ? AND claim_token = ?
+          )
+      `).bind(row.case_id, row.id, serializedResponse, claimToken),
       env.DB.prepare(`
         INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, payload)
-        VALUES (?, ?, 'provider_action.sent', 'system', ?)
-      `).bind(crypto.randomUUID(), row.case_id, JSON.stringify({ action_id: row.id, action_type: row.action_type, provider_response: providerResponse })),
+        SELECT ?, ?, 'provider_action.sent', 'system', ?
+        WHERE EXISTS (
+          SELECT 1 FROM billing_refund_provider_actions
+          WHERE id = ? AND status = 'sent' AND provider_response = ? AND claim_token = ?
+        )
+      `).bind(
+        crypto.randomUUID(),
+        row.case_id,
+        JSON.stringify({ action_id: row.id, action_type: row.action_type, provider_response: providerResponse }),
+        row.id,
+        serializedResponse,
+        claimToken,
+      ),
     ]);
+    if (!Number((completion[0] as D1Result | undefined)?.meta?.changes || 0)) {
+      await env.DB.prepare(`
+        INSERT INTO billing_refund_audit_events (id, case_id, event_type, actor_type, payload)
+        VALUES (?, ?, 'provider_action.result_after_cancellation', 'system', ?)
+      `).bind(
+        crypto.randomUUID(),
+        row.case_id,
+        JSON.stringify({ action_id: row.id, action_type: row.action_type, provider_response: providerResponse }),
+      ).run();
+      return { sent: false, cancelled: true, provider: row.provider };
+    }
     return { sent: true, provider: row.provider, response: providerResponse };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

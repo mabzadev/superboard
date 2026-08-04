@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Env } from '../types';
 import { createFakeD1 } from '../test/fake-d1';
 import type { VerifiedPurchase } from './billing';
-import { recordRefundCaseForPurchase } from './refunds';
+import { recordRefundCaseForPurchase, refundProjectionVersion } from './refunds';
 
 function purchase(overrides: Partial<VerifiedPurchase> = {}): VerifiedPurchase {
   return {
@@ -22,6 +22,33 @@ function purchase(overrides: Partial<VerifiedPurchase> = {}): VerifiedPurchase {
 }
 
 describe('Refund Center projection', () => {
+  it('orders projections by provider time and terminal-event priority', () => {
+    const eventOccurredAt = '2026-08-04T00:00:00.000Z';
+    const evidenceRequest = refundProjectionVersion(purchase({
+      eventType: 'CONSUMPTION_REQUEST',
+      status: 'active',
+      eventOccurredAt,
+    }));
+    const refund = refundProjectionVersion(purchase({
+      eventType: 'REFUND',
+      status: 'refunded',
+      eventOccurredAt,
+    }));
+    const reversal = refundProjectionVersion(purchase({
+      eventType: 'REFUND_REVERSED',
+      status: 'active',
+      eventOccurredAt,
+    }));
+
+    expect(refund > evidenceRequest).toBe(true);
+    expect(reversal > refund).toBe(true);
+    expect(refundProjectionVersion(purchase({
+      eventType: 'CONSUMPTION_REQUEST',
+      status: 'active',
+      eventOccurredAt: '2026-08-04T00:00:01.000Z',
+    })) > reversal).toBe(true);
+  });
+
   it('creates a lost refund case and immutable provider audit event', async () => {
     const writes: Array<{ sql: string; args: unknown[] }> = [];
     const db = createFakeD1((call) => {
@@ -29,7 +56,7 @@ describe('Refund Center projection', () => {
         writes.push({ sql: call.sql, args: call.args });
         return true;
       }
-      if (call.sql.startsWith('SELECT id FROM billing_refund_cases')) return { id: 'refund-case-1' };
+      if (call.sql.startsWith('SELECT id, status, projection_version FROM billing_refund_cases')) return { id: 'refund-case-1' };
       return undefined;
     });
     const result = await recordRefundCaseForPurchase(
@@ -39,7 +66,8 @@ describe('Refund Center projection', () => {
     );
 
     expect(result).toEqual({ caseId: 'refund-case-1', status: 'lost' });
-    expect(writes.some((write) => write.sql.startsWith('INSERT INTO billing_refund_cases'))).toBe(true);
+    const insert = writes.find((write) => write.sql.startsWith('INSERT INTO billing_refund_cases'));
+    expect(insert?.args[6]).toBe('original-1');
     expect(writes.some((write) => write.sql.startsWith('INSERT OR IGNORE INTO billing_refund_audit_events'))).toBe(true);
   });
 
@@ -60,7 +88,7 @@ describe('Refund Center projection', () => {
         writes.push({ sql: call.sql, args: call.args });
         return true;
       }
-      if (call.sql.startsWith('SELECT id FROM billing_refund_cases')) return { id: 'refund-case-2' };
+      if (call.sql.startsWith('SELECT id, status, projection_version FROM billing_refund_cases')) return { id: 'refund-case-2' };
       return undefined;
     });
     const result = await recordRefundCaseForPurchase(
@@ -81,7 +109,7 @@ describe('Refund Center projection', () => {
         writes.push({ sql: call.sql, args: call.args });
         return true;
       }
-      if (call.sql.startsWith('SELECT id FROM billing_refund_cases')) return { id: 'refund-case-stripe' };
+      if (call.sql.startsWith('SELECT id, status, projection_version FROM billing_refund_cases')) return { id: 'refund-case-stripe' };
       return undefined;
     });
     await recordRefundCaseForPurchase(
@@ -97,5 +125,76 @@ describe('Refund Center projection', () => {
     const action = writes.find(({ sql }) => sql.startsWith('INSERT OR IGNORE INTO billing_refund_provider_actions'));
     expect(action?.sql).toContain("'submit_stripe_dispute_evidence'");
     expect(action?.sql).toContain("'draft'");
+  });
+
+  it('does not reopen a terminal case from an older provider event', async () => {
+    const writes: Array<{ sql: string; args: unknown[] }> = [];
+    const terminalPurchase = purchase({
+      eventType: 'REFUND',
+      status: 'refunded',
+      eventOccurredAt: '2026-08-04T00:00:02.000Z',
+    });
+    const db = createFakeD1((call) => {
+      if (call.op === 'run') {
+        writes.push({ sql: call.sql, args: call.args });
+        return true;
+      }
+      if (call.sql.startsWith('SELECT id, status, projection_version FROM billing_refund_cases')) {
+        return {
+          id: 'refund-case-terminal',
+          status: 'lost',
+          projection_version: refundProjectionVersion(terminalPurchase),
+        };
+      }
+      return undefined;
+    });
+
+    const result = await recordRefundCaseForPurchase(
+      { DB: db } as unknown as Env,
+      purchase({
+        eventType: 'CONSUMPTION_REQUEST',
+        status: 'active',
+        eventOccurredAt: '2026-08-04T00:00:01.000Z',
+      }),
+      'transaction-stale',
+    );
+
+    expect(result).toEqual({ caseId: 'refund-case-terminal', status: 'lost' });
+    expect(writes.some(({ sql }) => sql.startsWith('INSERT INTO billing_refund_deadlines'))).toBe(false);
+    expect(writes.some(({ sql }) => sql.startsWith('INSERT OR IGNORE INTO billing_refund_provider_actions'))).toBe(false);
+    expect(writes.some(({ sql }) => sql.startsWith('INSERT OR IGNORE INTO billing_refund_audit_events'))).toBe(true);
+  });
+
+  it('closes open deadlines and unsent actions after a terminal provider outcome', async () => {
+    const writes: string[] = [];
+    const terminalPurchase = purchase({
+      eventType: 'REFUND_REVERSED',
+      status: 'active',
+      eventOccurredAt: '2026-08-04T00:00:02.000Z',
+    });
+    const db = createFakeD1((call) => {
+      if (call.op === 'run') {
+        writes.push(call.sql);
+        return true;
+      }
+      if (call.sql.startsWith('SELECT id, status, projection_version FROM billing_refund_cases')) {
+        return {
+          id: 'refund-case-won',
+          status: 'won',
+          projection_version: refundProjectionVersion(terminalPurchase),
+        };
+      }
+      return undefined;
+    }) as D1Database & { batch: (statements: D1PreparedStatement[]) => Promise<unknown> };
+    db.batch = async (statements) => Promise.all(statements.map((statement) => statement.run()));
+
+    await recordRefundCaseForPurchase(
+      { DB: db } as unknown as Env,
+      terminalPurchase,
+      'transaction-terminal',
+    );
+
+    expect(writes.some((sql) => sql.startsWith('UPDATE billing_refund_deadlines'))).toBe(true);
+    expect(writes.some((sql) => sql.startsWith('UPDATE billing_refund_provider_actions'))).toBe(true);
   });
 });
