@@ -33,6 +33,14 @@ Stripe is Web-only for digital purchases. Checkout, Billing Portal, redemption, 
 
 Webhook signatures are verified before persistence and queueing. When Billing service mode is enabled, Checkout, Portal, redemption, and provider actions execute only in the private Billing Worker.
 
+## App Store Server Notifications
+
+Production and sandbox App Store Server Notifications use separate project-scoped V2 endpoints under `/api/v2/purchases/providers/webhooks/apple/{environment}/{project_id}`. The public API validates the project/environment pair, bounds the request body, and delegates the signed payload to Billing. Billing verifies Apple’s certificate chain, application identity, and environment before the event is persisted or queued.
+
+The Purchases Stores section compares the live App Store Connect configuration with the required endpoints. Changing the live URLs requires an owner or administrator to open the confirmation dialog and submit the exact backend confirmation token. The backend updates both URLs and both notification versions in one App Store Connect request, reads the configuration back, persists only normalized readiness evidence, and records requested, completed, or failed administrator audit events.
+
+The release gate remains closed unless both V2 URLs were verified within the configured Store-readiness window. A mismatch or stale observation cannot be overridden by manual certification evidence.
+
 ## FlutterFlow actions
 
 - `opengrowInitializeAuthenticated`

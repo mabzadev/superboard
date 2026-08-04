@@ -5,6 +5,7 @@ import { createFakeD1, FakeD1Call } from './test/fake-d1';
 
 function env(overrides: Partial<Env> = {}): Env {
   const db = createFakeD1((call: FakeD1Call) => {
+    if (call.op === 'all' && call.sql.includes('FROM projects production')) return [];
     if (call.op === 'all' && call.sql.includes('FROM rpush_notifications rn JOIN rpush_apps ra')) return [];
     if (call.op === 'first' && call.sql.includes('FROM instances WHERE api_key = ?')) return { id: 10 };
     if (call.op === 'first' && call.sql.includes('FROM projects WHERE instance_id = ? AND is_test = ?')) return { id: 101 };
@@ -17,7 +18,7 @@ function env(overrides: Partial<Env> = {}): Env {
   });
   return {
     DB: db,
-    KV: {} as any,
+    KV: { get: async () => null, put: async () => undefined } as any,
     ENVIRONMENT: 'test',
     SHORTLINK_DOMAIN: 'go.test',
     API_DOMAIN: 'api.test',
@@ -73,8 +74,8 @@ describe('Worker scheduled and queue handlers', () => {
 
     await worker.scheduled?.({} as any, testEnv, { waitUntil } as any);
 
-    expect(waitUntil).toHaveBeenCalledTimes(1);
-    await waitUntil.mock.results[0].value;
+    expect(waitUntil).toHaveBeenCalledTimes(2);
+    await Promise.all(waitUntil.mock.results.map((result) => result.value));
     expect(sent).toEqual([{ type: 'maintenance.run', days: 3 }]);
   });
 

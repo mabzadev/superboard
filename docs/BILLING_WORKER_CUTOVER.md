@@ -67,14 +67,15 @@ Set the target environment's typed `billingExecutionMode` property to `service` 
 After this technical cutover, run the complete certification matrix through `service` mode. Do not publish until the Purchases Diagnostics release gate includes:
 
 1. Approved and purchasable weekly and yearly products.
-2. Apple Sandbox/TestFlight device evidence.
-3. Google Play License Testing/Internal device evidence.
-4. Stripe Test Mode Checkout, renewal, failure, Portal, refund, and dispute evidence.
-5. Duplicate and out-of-order event evidence.
-6. Store, OpenGrow, Stripe, and application projection convergence.
-7. Complete legacy subscription inventory and import.
-8. FlutterFlow iOS and Android recovery tests.
-9. Empty DLQ and active alerts throughout the observation window.
+2. Production and sandbox App Store Server Notification URLs verified as direct V2 Billing ingress endpoints.
+3. Apple Sandbox/TestFlight device evidence.
+4. Google Play License Testing/Internal device evidence.
+5. Stripe Test Mode Checkout, renewal, failure, Portal, refund, and dispute evidence.
+6. Duplicate and out-of-order event evidence.
+7. Store, OpenGrow, Stripe, and application projection convergence.
+8. Complete legacy subscription inventory and import.
+9. FlutterFlow iOS and Android recovery tests.
+10. Empty DLQ and active alerts throughout the observation window.
 
 Manual free-text approval is not certification evidence. Each passed check must reference an immutable observation from a completed certification run. A run records the platform, environment, build, application and SDK versions, device model, OS version, operator, and server timestamps. Each observation stores a bounded evidence snapshot and its SHA-256 digest.
 

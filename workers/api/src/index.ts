@@ -41,6 +41,7 @@ import { readTextLimited } from './lib/http-limits';
 import { emitBillingGrowthEvent } from './lib/growth-delivery';
 import { getAuthContext } from './lib/auth';
 import { queueOfficialMetadataSyncIfDue } from './lib/official-store-metadata';
+import { refreshAppleNotificationConfigurationsIfDue } from './lib/apple-notification-configuration';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -217,6 +218,14 @@ export default {
         }));
       }));
     }
+    ctx.waitUntil(refreshAppleNotificationConfigurationsIfDue(env).then((summary) => {
+      console.log(JSON.stringify({ event: 'apple_notification_configuration_checked', summary }));
+    }).catch((error) => {
+      console.error(JSON.stringify({
+        event: 'apple_notification_configuration_check_failed',
+        error: error instanceof Error ? error.message : String(error),
+      }));
+    }));
     if (env.MAINTENANCE_QUEUE) {
       ctx.waitUntil(env.MAINTENANCE_QUEUE.send({ type: 'maintenance.run', days: 3 }));
       return;
