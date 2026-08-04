@@ -3,6 +3,7 @@ import type { BillingEnv, Env } from '../types';
 import { applyVerifiedPurchase, type BillingStatus, type VerifiedPurchase } from '../lib/billing';
 import { decryptCredential } from '../lib/secrets';
 import { validateStripeCredentials } from '../lib/stripe-credentials';
+import { stripeAmountMicros } from '../lib/stripe-catalog';
 import { readTextLimited } from '../lib/http-limits';
 import { billingServiceEnabled, ingestProviderEventWithBillingAuthority } from '../lib/billing-service';
 
@@ -73,8 +74,9 @@ async function updateStripeCustomer(env: BillingEnv, customerId: string, stripeC
 
 function stripeStatus(type: string, object: Record<string, any>): BillingStatus {
   if (/refunded/.test(type) || (/dispute/.test(type) && object.status === 'lost')) return 'refunded';
-  if (/payment_failed/.test(type) || object.status === 'past_due' || object.status === 'unpaid') return 'billing_issue';
-  if (/deleted/.test(type) || object.status === 'canceled') return 'expired';
+  if (/payment_failed/.test(type) || object.status === 'past_due' || object.status === 'incomplete') return 'billing_issue';
+  if (/deleted/.test(type) || ['canceled', 'unpaid', 'incomplete_expired'].includes(object.status)) return 'expired';
+  if (object.status === 'paused') return 'paused';
   if (object.status === 'trialing') return 'trialing';
   if (object.cancel_at_period_end) return 'cancelled';
   return 'active';
@@ -144,9 +146,9 @@ async function processStripe(env: BillingEnv, connection: Record<string, any>, e
     originalTransactionId: isSubscription ? String(checkout?.provider_subscription_id || prior?.original_transaction_id || subscriptionId) : transactionId,
     eventType,
     status,
-    priceMicros: object.amount_total != null ? Number(object.amount_total) * 10000
-      : object.amount_paid != null ? Number(object.amount_paid) * 10000
-        : object.amount != null ? Number(object.amount) * 10000
+    priceMicros: object.amount_total != null && object.currency ? stripeAmountMicros(Number(object.amount_total), String(object.currency).toUpperCase())
+      : object.amount_paid != null && object.currency ? stripeAmountMicros(Number(object.amount_paid), String(object.currency).toUpperCase())
+        : object.amount != null && object.currency ? stripeAmountMicros(Number(object.amount), String(object.currency).toUpperCase())
           : prior?.price_micros ?? null,
     currency: object.currency ? String(object.currency).toUpperCase() : prior?.currency || null,
     purchasedAt: epoch(object.created),
