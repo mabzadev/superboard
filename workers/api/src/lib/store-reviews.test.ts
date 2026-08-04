@@ -6,6 +6,7 @@ import {
   parseReviewSyncCursor,
   publishApprovedReviewDraft,
   publishStoreReviewResponse,
+  storeReviewProjectionVersion,
   storeReviewResponseLimit,
   syncAppleStoreReviews,
   syncGooglePlayReviews,
@@ -56,7 +57,7 @@ describe('store review reliability', () => {
     const jobs: unknown[] = [];
     const db = createFakeD1((call) => {
       if (call.op === 'run' && call.sql.startsWith('INSERT INTO store_reviews')) return { meta: { changes: 1 } };
-      if (call.op === 'first' && call.sql.includes('SELECT id FROM store_reviews')) return { id: 'review-1' };
+      if (call.op === 'first' && call.sql.includes('SELECT id, projection_version FROM store_reviews')) return { id: 'review-1' };
       if (call.op === 'run' && call.sql.includes('INSERT OR IGNORE INTO store_review_revisions')) return { meta: { changes: 1 } };
       return undefined;
     });
@@ -74,6 +75,49 @@ describe('store review reliability', () => {
       type: 'growth.review-negative.evaluate', projectId: '11',
     })]);
     expect(String((jobs[0] as Record<string, unknown>).revisionId)).toBeTruthy();
+  });
+
+  it('orders review snapshots by provider observation time', async () => {
+    const older = await storeReviewProjectionVersion({
+      provider: 'google', providerReviewId: 'review-1', rating: 1,
+      body: 'Older text', providerUpdatedAt: '2026-08-03T10:00:00.000Z',
+      observedAt: '2026-08-04T10:00:00.000Z', rawPayload: {},
+    });
+    const newer = await storeReviewProjectionVersion({
+      provider: 'google', providerReviewId: 'review-1', rating: 5,
+      body: 'Newer text', providerUpdatedAt: '2026-08-03T09:00:00.000Z',
+      observedAt: '2026-08-04T10:00:01.000Z', rawPayload: {},
+    });
+
+    expect(newer > older).toBe(true);
+  });
+
+  it('captures a stale revision without sending a stale negative-review alert', async () => {
+    const jobs: unknown[] = [];
+    const currentProjection = await storeReviewProjectionVersion({
+      provider: 'apple', providerReviewId: 'review-1', rating: 5,
+      body: 'Current review', observedAt: '2026-08-04T10:00:02.000Z', rawPayload: {},
+    });
+    const db = createFakeD1((call) => {
+      if (call.op === 'run' && call.sql.startsWith('INSERT INTO store_reviews')) return true;
+      if (call.op === 'first' && call.sql.includes('SELECT id, projection_version FROM store_reviews')) {
+        return { id: 'review-1', projection_version: currentProjection };
+      }
+      if (call.op === 'run' && call.sql.includes('INSERT OR IGNORE INTO store_review_revisions')) return true;
+      return undefined;
+    });
+    await upsertReview({
+      DB: db,
+      EVENT_QUEUE: { send: async (job: unknown) => { jobs.push(job); } },
+      GROWTH: { fetch: async () => Response.json({}) },
+      GROWTH_INTERNAL_TOKEN: 'growth-token',
+    } as unknown as Env, '11', {
+      provider: 'apple', providerReviewId: 'review-1', rating: 1,
+      body: 'Stale negative review', observedAt: '2026-08-04T10:00:01.000Z', rawPayload: {},
+    });
+
+    expect(jobs).toEqual([]);
+    expect(db.calls.some((call) => call.sql.includes('INSERT OR IGNORE INTO store_review_revisions'))).toBe(true);
   });
 
   it('never publishes a response without an explicit publish request', async () => {
@@ -107,6 +151,61 @@ describe('store review reliability', () => {
     await expect(publishApprovedReviewDraft({ DB: db } as Env, 'draft-1'))
       .resolves.toEqual({ published: false, claimed: false });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('publishes an approved response and stores the provider-confirmed state', async () => {
+    accessMocks.google.mockResolvedValue({ token: 'google-token', packageName: 'com.example.app' });
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      result: {
+        replyText: 'Provider-confirmed response.',
+        lastEdited: { seconds: '1800000000', nanos: 0 },
+      },
+    })));
+    const writes: Array<{ sql: string; args: unknown[] }> = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM store_review_response_drafts')) return draftRow();
+      if (call.op === 'run') {
+        writes.push({ sql: call.sql, args: call.args });
+        return true;
+      }
+      return undefined;
+    });
+
+    await expect(publishApprovedReviewDraft({ DB: db } as Env, 'draft-1')).resolves.toEqual({
+      published: true,
+      provider: 'google',
+      response_state: 'published',
+    });
+    const reviewUpdate = writes.find(({ sql }) => sql.startsWith('UPDATE store_reviews'));
+    expect(reviewUpdate?.args).toContain('Provider-confirmed response.');
+    expect(reviewUpdate?.args).toContain(new Date(1_800_000_000 * 1000).toISOString());
+  });
+
+  it('audits a provider result without overwriting state after the delivery lease is lost', async () => {
+    accessMocks.google.mockResolvedValue({ token: 'google-token', packageName: 'com.example.app' });
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      result: { replyText: 'Approved response.' },
+    })));
+    const writes: string[] = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM store_review_response_drafts')) return draftRow();
+      if (call.op === 'run' && call.sql.includes("SET status = 'publishing'")) return true;
+      if (call.op === 'run' && call.sql.includes("SET status = 'published'")) {
+        return { success: true, meta: { changes: 0 } };
+      }
+      if (call.op === 'run') {
+        writes.push(call.sql);
+        return true;
+      }
+      return undefined;
+    });
+
+    await expect(publishApprovedReviewDraft({ DB: db } as Env, 'draft-1')).resolves.toEqual({
+      published: false,
+      claim_lost: true,
+      provider: 'google',
+    });
+    expect(writes.some((sql) => sql.includes('response.result_after_lease_loss'))).toBe(true);
   });
 
   it('treats a malformed checkpoint as an empty safe checkpoint', () => {
@@ -195,7 +294,7 @@ describe('store review reliability', () => {
     const db = createFakeD1((call) => {
       if (call.op === 'all' && call.sql.includes('FROM store_review_sync_state')) return [];
       if (call.op === 'run' && call.sql.startsWith('INSERT INTO store_reviews')) return { meta: { changes: 1 } };
-      if (call.op === 'first' && call.sql.includes('SELECT id FROM store_reviews')) {
+      if (call.op === 'first' && call.sql.includes('SELECT id, projection_version FROM store_reviews')) {
         return { id: `review-${String(call.args[2])}` };
       }
       if (call.op === 'run' && call.sql.includes('INSERT OR IGNORE INTO store_review_revisions')) {
@@ -205,6 +304,7 @@ describe('store review reliability', () => {
         persisted.push(call.args);
         return { meta: { changes: 1 } };
       }
+      if (call.op === 'run' && call.sql.startsWith('UPDATE store_review_sync_state')) return true;
       return undefined;
     });
 
@@ -217,9 +317,12 @@ describe('store review reliability', () => {
     expect(persisted).toHaveLength(2);
     expect(persisted.map((args) => args[1])).toEqual(['apple', 'google']);
     for (const args of persisted) {
-      expect(parseReviewSyncCursor(String(args[2])).watermark).toBeTruthy();
-      expect(args[3]).toBeNull();
-      expect(args[4]).toBeNull();
+      const cursor = parseReviewSyncCursor(String(args[2]));
+      expect(cursor.watermark).toBeTruthy();
+      expect(args[3]).toBe(cursor.watermark);
+      expect(args[4]).toBe(cursor.full_synced_at);
+      expect(args[5]).toBeNull();
+      expect(args[6]).toBeNull();
     }
   });
 });
@@ -244,7 +347,7 @@ function reviewDatabaseEnv() {
     if (call.op === 'run' && call.sql.startsWith('INSERT INTO store_reviews')) {
       return { success: true, meta: { changes: 1 } };
     }
-    if (call.op === 'first' && call.sql.includes('SELECT id FROM store_reviews')) {
+    if (call.op === 'first' && call.sql.includes('SELECT id, projection_version FROM store_reviews')) {
       return { id: `review-${String(call.args[2])}` };
     }
     if (call.op === 'run' && call.sql.includes('INSERT OR IGNORE INTO store_review_revisions')) {
