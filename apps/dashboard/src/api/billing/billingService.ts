@@ -131,6 +131,31 @@ export type BillingConnection = {
   last_error_message?: string | null;
 };
 
+export type AppleNotificationConfiguration = {
+  provider: "apple";
+  app_id: string;
+  bundle_id: string;
+  current: {
+    production_url: string | null;
+    sandbox_url: string | null;
+    production_version: string | null;
+    sandbox_version: string | null;
+  };
+  required: {
+    production_url: string;
+    sandbox_url: string;
+    production_version: "V2";
+    sandbox_version: "V2";
+  };
+  checks: {
+    production_url: boolean;
+    sandbox_url: boolean;
+    production_version: boolean;
+    sandbox_version: boolean;
+  };
+  ready: boolean;
+};
+
 export type BillingTransaction = {
   id: string;
   store: string;
@@ -375,6 +400,16 @@ export type BillingRefundCaseDetail = {
 
 export const getBillingConnections = async (projectId: string): Promise<{ data: BillingConnection[] }> =>
   (await GET(purchasesV2Path(projectId, "/connections"))).data;
+
+export const getAppleNotificationConfiguration = async (projectId: string): Promise<AppleNotificationConfiguration> =>
+  (await GET(purchasesV2Path(projectId, "/apple-server-notifications"))).data.data;
+
+export const configureAppleNotificationConfiguration = async (projectId: string): Promise<{
+  data: AppleNotificationConfiguration;
+  changed: boolean;
+}> => (await POST(purchasesV2Path(projectId, "/apple-server-notifications/configure"), {
+  confirmation: "configure_app_store_server_notifications_v2",
+})).data;
 
 export const testBillingConnection = async (projectId: string, provider: string, environment: string) =>
   (await POST(purchasesV2Path(projectId, `/connections/${provider}/test`), { environment })).data;
