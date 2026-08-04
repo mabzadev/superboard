@@ -1,6 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { applyD1Migrations, type D1Migration, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
+import { refreshRecommendations } from '../src/sync';
+import type { Env as GrowthEnv } from '../src/types';
 
 type TestEnv = {
   DB: D1Database;
@@ -10,7 +12,7 @@ type TestEnv = {
 describe('Growth migrations in the Workers runtime', () => {
   it('preserves existing automation runs and accepts the Inbox action', async () => {
     const testEnv = env as unknown as TestEnv;
-    expect(testEnv.TEST_MIGRATIONS).toHaveLength(4);
+    expect(testEnv.TEST_MIGRATIONS).toHaveLength(5);
     await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS.slice(0, 2));
     await seedExistingRun(testEnv.DB);
 
@@ -137,6 +139,58 @@ describe('Growth migrations in the Workers runtime', () => {
       SELECT status, claim_token, claim_expires_at FROM growth_automation_runs WHERE id = 'run-lease-test'
     `).first()).resolves.toMatchObject({ status: 'delivered', claim_token: null, claim_expires_at: null });
   });
+
+  it('reconciles keyword, rating, and competitor recommendations from current snapshots', async () => {
+    const testEnv = env as unknown as TestEnv;
+    await applyD1Migrations(testEnv.DB, testEnv.TEST_MIGRATIONS);
+    await seedRecommendationFixtures(testEnv.DB);
+
+    await refreshRecommendations(testEnv as unknown as GrowthEnv, 90);
+    const active = await testEnv.DB.prepare(`
+      SELECT recommendation_key, kind, status FROM growth_recommendations
+      WHERE project_id = 90 ORDER BY recommendation_key
+    `).all();
+    expect(active.results).toEqual([
+      { recommendation_key: 'app:owned-app:rating', kind: 'rating_risk', status: 'open' },
+      { recommendation_key: 'competitor:competitor-app:apple_lookup:change', kind: 'competitor_change', status: 'open' },
+      { recommendation_key: 'keyword:keyword-1:rank', kind: 'keyword_opportunity', status: 'open' },
+    ]);
+
+    await testEnv.DB.batch([
+      testEnv.DB.prepare(`
+        INSERT INTO growth_app_snapshots (
+          id, project_id, entity_type, entity_id, source, observed_date, title, version, rating, rating_count
+        ) VALUES ('owned-day-3', 90, 'app', 'owned-app', 'apple_lookup', '2026-08-03', 'Owned app', '1.0', 4.8, 120)
+      `),
+      testEnv.DB.prepare(`
+        INSERT INTO growth_app_snapshots (
+          id, project_id, entity_type, entity_id, source, observed_date, title, version, rating, rating_count
+        ) VALUES ('competitor-day-3', 90, 'competitor', 'competitor-app', 'apple_lookup', '2026-08-03', 'Competitor', '2.0', 4.3, 220)
+      `),
+      testEnv.DB.prepare(`
+        INSERT INTO growth_keyword_snapshots (
+          id, project_id, keyword_id, source, observed_date, rank, volume
+        ) VALUES ('keyword-day-3', 90, 'keyword-1', 'manual', '2026-08-03', 5, 80)
+      `),
+    ]);
+    await refreshRecommendations(testEnv as unknown as GrowthEnv, 90);
+    const resolved = await testEnv.DB.prepare(`
+      SELECT recommendation_key, status, auto_resolved_at FROM growth_recommendations
+      WHERE project_id = 90 ORDER BY recommendation_key
+    `).all<Record<string, unknown>>();
+    expect(resolved.results.every((row) => row.status === 'completed' && typeof row.auto_resolved_at === 'string')).toBe(true);
+
+    await testEnv.DB.prepare(`
+      INSERT INTO growth_keyword_snapshots (
+        id, project_id, keyword_id, source, observed_date, rank, volume
+      ) VALUES ('keyword-day-4', 90, 'keyword-1', 'manual', '2026-08-04', 45, 90)
+    `).run();
+    await refreshRecommendations(testEnv as unknown as GrowthEnv, 90);
+    await expect(testEnv.DB.prepare(`
+      SELECT status, auto_resolved_at FROM growth_recommendations
+      WHERE project_id = 90 AND recommendation_key = 'keyword:keyword-1:rank'
+    `).first()).resolves.toEqual({ status: 'open', auto_resolved_at: null });
+  });
 });
 
 function internalRequest(path: string, body: Record<string, unknown>, method = 'POST') {
@@ -188,4 +242,44 @@ async function seedLeaseRun(db: D1Database) {
       id, project_id, automation_id, event_id, status, action_payload_json
     ) VALUES ('run-lease-test', 11, 'automation-lease-test', 'event-lease-test', 'pending', '{}')
   `).run();
+}
+
+async function seedRecommendationFixtures(db: D1Database) {
+  await db.batch([
+    db.prepare(`
+      INSERT INTO growth_apps (
+        id, project_id, platform, app_identifier, display_name, country, language, device
+      ) VALUES ('owned-app', 90, 'apple', '123456789', 'Owned app', 'us', 'en', 'iphone')
+    `),
+    db.prepare(`
+      INSERT INTO growth_competitors (
+        id, project_id, platform, app_identifier, display_name, country, language, device
+      ) VALUES ('competitor-app', 90, 'apple', '987654321', 'Competitor', 'us', 'en', 'iphone')
+    `),
+    db.prepare(`
+      INSERT INTO growth_keywords (
+        id, project_id, app_id, keyword, country, language
+      ) VALUES ('keyword-1', 90, 'owned-app', 'voice training', 'us', 'en')
+    `),
+    db.prepare(`
+      INSERT INTO growth_app_snapshots (
+        id, project_id, entity_type, entity_id, source, observed_date, title, version, rating, rating_count
+      ) VALUES ('owned-day-2', 90, 'app', 'owned-app', 'apple_lookup', '2026-08-02', 'Owned app', '1.0', 3.5, 100)
+    `),
+    db.prepare(`
+      INSERT INTO growth_app_snapshots (
+        id, project_id, entity_type, entity_id, source, observed_date, title, version, rating, rating_count
+      ) VALUES ('competitor-day-1', 90, 'competitor', 'competitor-app', 'apple_lookup', '2026-08-01', 'Competitor', '1.0', 4.0, 180)
+    `),
+    db.prepare(`
+      INSERT INTO growth_app_snapshots (
+        id, project_id, entity_type, entity_id, source, observed_date, title, version, rating, rating_count
+      ) VALUES ('competitor-day-2', 90, 'competitor', 'competitor-app', 'apple_lookup', '2026-08-02', 'Competitor', '2.0', 4.3, 210)
+    `),
+    db.prepare(`
+      INSERT INTO growth_keyword_snapshots (
+        id, project_id, keyword_id, source, observed_date, rank, volume
+      ) VALUES ('keyword-day-2', 90, 'keyword-1', 'manual', '2026-08-02', 35, 75)
+    `),
+  ]);
 }
