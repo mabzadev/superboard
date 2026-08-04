@@ -45,7 +45,14 @@ export class ConversationRoom implements DurableObject {
         return Response.json({ code: 'attachment_not_owned', message: 'Attachment does not belong to this conversation' }, { status: 403 });
       }
     }
-    const sequence = await this.nextSequence();
+    const existing = await this.env.DB.prepare(
+      'SELECT * FROM messages WHERE conversation_id = ? AND client_message_id = ? LIMIT 1',
+    ).bind(conversation.id, input.client_message_id).first<Record<string, unknown>>();
+    if (existing) {
+      if (!messageMatchesInput(existing, input)) return idempotencyConflict();
+      return Response.json({ data: existing, duplicate: true });
+    }
+    const sequence = await this.nextSequence(conversation.id);
     const id = crypto.randomUUID();
     const inserted = await this.env.DB.prepare(`
       INSERT INTO messages (
@@ -64,15 +71,7 @@ export class ConversationRoom implements DurableObject {
     ).bind(conversation.id, input.client_message_id).first<Record<string, unknown>>();
     if (!message) throw new Error('Unable to persist message');
 
-    if (!inserted && (
-      (message.body ?? null) !== input.body
-      || (message.attachment_key ?? null) !== input.attachment_key
-    )) {
-      return Response.json({
-        code: 'idempotency_conflict',
-        message: 'client_message_id was already used with a different payload',
-      }, { status: 409 });
-    }
+    if (!inserted && !messageMatchesInput(message, input)) return idempotencyConflict();
 
     if (inserted) {
       const preview = input.body?.slice(0, 240) || `[Attachment] ${input.attachment_name || ''}`.trim();
@@ -133,9 +132,14 @@ export class ConversationRoom implements DurableObject {
       .bind(id).first<Conversation>();
   }
 
-  private async nextSequence(): Promise<number> {
+  private async nextSequence(conversationId: string): Promise<number> {
+    const persisted = await this.env.DB.prepare(`
+      SELECT COALESCE(MAX(sequence), 0) AS sequence FROM messages WHERE conversation_id = ?
+    `).bind(conversationId).first<{ sequence: number }>();
+    const persistedSequence = Number(persisted?.sequence || 0);
     return this.state.storage.transaction(async (transaction) => {
-      const current = Number(await transaction.get<number>('sequence') || 0);
+      const stored = await transaction.get<number>('sequence');
+      const current = Math.max(Number(stored || 0), persistedSequence);
       const next = current + 1;
       await transaction.put('sequence', next);
       return next;
@@ -176,4 +180,18 @@ export class ConversationRoom implements DurableObject {
   webSocketError(socket: WebSocket) {
     try { socket.close(1011, 'WebSocket error'); } catch { /* no-op */ }
   }
+}
+
+function messageMatchesInput(message: Record<string, unknown>, input: ReturnType<typeof parseMessageInput>) {
+  return (message.body ?? null) === input.body
+    && (message.attachment_key ?? null) === input.attachment_key
+    && (message.attachment_name ?? null) === input.attachment_name
+    && (message.attachment_content_type ?? null) === input.attachment_content_type;
+}
+
+function idempotencyConflict() {
+  return Response.json({
+    code: 'idempotency_conflict',
+    message: 'client_message_id was already used with a different payload',
+  }, { status: 409 });
 }

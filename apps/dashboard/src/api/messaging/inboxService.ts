@@ -24,6 +24,7 @@ export type InboxMessage = {
   sender_id: string;
   body?: string | null;
   attachment_name?: string | null;
+  attachment_content_type?: string | null;
   sequence: number;
   created_at: string;
 };
@@ -71,11 +72,60 @@ export const getInboxMessages = async (projectId: string, conversationId: string
 Promise<{ data: InboxMessage[] }> =>
   (await GET(path(projectId, `/conversations/${conversationId}/messages`))).data;
 
-export const sendInboxMessage = async (projectId: string, conversationId: string, body: string) =>
+export const sendInboxMessage = async (
+  projectId: string,
+  conversationId: string,
+  body: string,
+  clientMessageId: string,
+) =>
   (await POST(path(projectId, `/conversations/${conversationId}/messages`), {
     body,
-    client_message_id: crypto.randomUUID(),
+    client_message_id: clientMessageId,
   })).data;
+
+export const markInboxConversationRead = async (projectId: string, conversationId: string) =>
+  (await POST(path(projectId, `/conversations/${conversationId}/read`), {})).data;
+
+export const setInboxConversationTyping = async (
+  projectId: string,
+  conversationId: string,
+  active: boolean,
+) => (await POST(path(projectId, `/conversations/${conversationId}/typing`), { active })).data;
+
+export const uploadInboxAttachment = async (
+  projectId: string,
+  conversationId: string,
+  file: File,
+): Promise<{ key: string; filename: string; content_type: string; size: number }> =>
+  (await POST(path(projectId, `/conversations/${conversationId}/attachments`), file, {
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+      "X-Filename": file.name,
+    },
+    retry: false,
+  })).data;
+
+export const sendInboxAttachment = async (
+  projectId: string,
+  conversationId: string,
+  attachment: { key: string; filename: string; content_type: string },
+  clientMessageId: string,
+  body = "",
+) => (await POST(path(projectId, `/conversations/${conversationId}/messages`), {
+  ...(body.trim() ? { body: body.trim() } : {}),
+  attachment_key: attachment.key,
+  attachment_name: attachment.filename,
+  attachment_content_type: attachment.content_type,
+  client_message_id: clientMessageId,
+})).data;
+
+export const downloadInboxAttachment = async (
+  projectId: string,
+  conversationId: string,
+  messageId: string,
+) => (await GET(path(projectId, `/conversations/${conversationId}/attachments/${messageId}`), {
+  responseType: "blob",
+})).data as Blob;
 
 export const updateInboxConversation = async (
   projectId: string,

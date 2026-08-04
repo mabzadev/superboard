@@ -29,4 +29,6 @@ Billing does not depend on any Messaging component.
 
 ## FlutterFlow
 
-`sdks/flutterflow_messaging` is separate from Purchases. Its initialization talks only to the existing authentication gateway, then exposes conversations, messages, attachments, and WebSocket updates without increasing the financial SDK surface.
+`sdks/flutterflow_messaging` is separate from Purchases. Its initialization talks only to the existing authentication gateway, then exposes conversations, messages, attachments, read receipts, typing state, and WebSocket updates without increasing the financial SDK surface. The configured project ID is required and identity tokens are refreshed through the same gateway before expiry or after an authentication rejection.
+
+The unified Inbox exposes agent assignment, labels, priority, status, read receipts, typing state, and attachment transfer through the Messaging service binding. Durable Object sequence state is reconciled with D1 history so a database restoration cannot restart a conversation at sequence one.

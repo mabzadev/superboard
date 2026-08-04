@@ -18,6 +18,13 @@ describe('Messaging validation', () => {
 
   it('normalizes attachment filenames', () => {
     expect(safeFilename('../../voice note.m4a')).toBe('.._.._voice_note.m4a');
+    expect(parseMessageInput({
+      attachment_key: 'attachments/11/user/conversation/id/voice_note.m4a',
+      client_message_id: 'attachment-1',
+    }).attachment_key).toBe('attachments/11/user/conversation/id/voice_note.m4a');
+    expect(() => parseMessageInput({
+      attachment_key: 'attachments/11/../private/file.txt', client_message_id: 'attachment-2',
+    })).toThrow(/invalid/);
   });
 
   it('compares internal capabilities without early string equality', () => {

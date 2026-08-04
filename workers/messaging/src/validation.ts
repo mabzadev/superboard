@@ -22,7 +22,7 @@ export function parseMessageInput(value: unknown): MessageInput {
   if (!clientMessageId || clientMessageId.length > 128) {
     throw publicError('client_message_id_invalid', 'client_message_id is required and limited to 128 characters');
   }
-  if (attachmentKey && (!/^attachments\/[a-zA-Z0-9/_-]+$/.test(attachmentKey) || attachmentKey.length > 512)) {
+  if (attachmentKey && !validAttachmentKey(attachmentKey)) {
     throw publicError('attachment_key_invalid', 'Attachment key is invalid');
   }
   return {
@@ -32,6 +32,11 @@ export function parseMessageInput(value: unknown): MessageInput {
     attachment_content_type: typeof body.attachment_content_type === 'string' ? body.attachment_content_type.slice(0, 128) : null,
     client_message_id: clientMessageId,
   };
+}
+
+function validAttachmentKey(value: string): boolean {
+  if (value.length > 512 || !/^attachments\/[a-zA-Z0-9/_.-]+$/.test(value)) return false;
+  return value.split('/').every((segment) => segment !== '.' && segment !== '..');
 }
 
 export function safeFilename(value: string): string {
