@@ -47,12 +47,23 @@ app.post('/v1/conversations', async (c) => {
 app.get('/v1/conversations', async (c) => {
   const subject = c.get('subject');
   const projectId = requireProject(c.env, c.req.header('X-OpenGrow-Project-Id'));
-  const rows = await c.env.DB.prepare(`
-    SELECT * FROM conversations WHERE project_id = ? AND external_user_id = ?
-    ORDER BY updated_at DESC LIMIT 100
-  `).bind(projectId, subject).all();
-  return c.json({ data: rows.results });
+  return c.json({ data: await listUserConversations(c.env.DB, projectId, subject) });
 });
+
+export async function listUserConversations(db: D1Database, projectId: number, externalUserId: string) {
+  const rows = await db.prepare(`
+    SELECT conversation.*,
+      (SELECT COUNT(*) FROM messages message
+        WHERE message.conversation_id = conversation.id
+          AND message.sender_kind IN ('agent', 'system')
+          AND (conversation.user_last_read_at IS NULL OR message.created_at > conversation.user_last_read_at)
+      ) AS unread_count
+    FROM conversations conversation
+    WHERE conversation.project_id = ? AND conversation.external_user_id = ?
+    ORDER BY conversation.updated_at DESC LIMIT 100
+  `).bind(projectId, externalUserId).all<Record<string, unknown>>();
+  return rows.results;
+}
 
 app.get('/v1/conversations/:conversationId/messages', async (c) => {
   const projectId = requireProject(c.env, c.req.header('X-OpenGrow-Project-Id'));
@@ -116,16 +127,24 @@ app.use('/internal/*', async (c, next) => {
 app.get('/internal/projects/:projectId/conversations', async (c) => {
   const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');
   const status = c.req.query('status') || '';
-  const rows = await c.env.DB.prepare(`
+  return c.json({ data: await listProjectConversations(c.env.DB, projectId, status) });
+});
+
+export async function listProjectConversations(db: D1Database, projectId: number, status = '') {
+  const rows = await db.prepare(`
     SELECT c.*,
-      (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS message_count
+      (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS message_count,
+      (SELECT COUNT(*) FROM messages unread
+        WHERE unread.conversation_id = c.id AND unread.sender_kind = 'user'
+          AND (c.agent_last_read_at IS NULL OR unread.created_at > c.agent_last_read_at)
+      ) AS unread_count
     FROM conversations c
     WHERE c.project_id = ? AND (? = '' OR c.status = ?)
     ORDER BY CASE c.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
       COALESCE(c.last_message_at, c.created_at) DESC LIMIT 250
-  `).bind(projectId, status, status).all();
-  return c.json({ data: rows.results });
-});
+  `).bind(projectId, status, status).all<Record<string, unknown>>();
+  return rows.results;
+}
 
 app.post('/internal/projects/:projectId/conversations', async (c) => {
   const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');

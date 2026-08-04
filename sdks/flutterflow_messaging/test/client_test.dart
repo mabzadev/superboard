@@ -79,6 +79,7 @@ void main() {
                   'id': 'conversation-1',
                   'status': 'open',
                   'priority': 'normal',
+                  'unread_count': 3,
                 },
               ],
             }),
@@ -87,7 +88,9 @@ void main() {
         }),
       );
 
-      expect((await client.conversations()).single.id, 'conversation-1');
+      final conversation = (await client.conversations()).single;
+      expect(conversation.id, 'conversation-1');
+      expect(conversation.unreadCount, 3);
       expect(refreshes, 1);
       expect(requests, 2);
     },

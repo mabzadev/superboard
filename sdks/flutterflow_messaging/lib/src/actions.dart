@@ -117,6 +117,7 @@ Future<String> opengrowMessagingListConversationsJson() async => jsonEncode(
           'id': item.id,
           'status': item.status,
           'priority': item.priority,
+          'unread_count': item.unreadCount,
           'subject': item.subject,
           'last_message_preview': item.lastMessagePreview,
           'last_message_at': item.lastMessageAt,

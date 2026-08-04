@@ -1,3 +1,7 @@
+## 1.1.1
+
+* Added participant-specific unread counts to conversation list results
+
 ## 1.1.0
 
 * Added realtime connection and lifecycle actions for FlutterFlow
