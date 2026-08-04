@@ -1,3 +1,8 @@
+## 2.1.3
+
+* Added an authenticated, signed CustomerInfo preflight before opening the Store purchase flow
+* Refused new purchases when identity synchronization or CustomerInfo verification fails
+
 ## 2.0.0
 
 * Added remote paywall configuration with per-placement offline caching
