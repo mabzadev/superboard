@@ -110,6 +110,7 @@ import {
   type BillingAnalytics,
   type BillingCertificationReferenceType,
   type BillingCertificationRun,
+  type BillingCertificationDeviceResult,
   type BillingConnection,
   type BillingExperiment,
   type BillingHealth,
@@ -204,6 +205,7 @@ const PurchasesPage = () => {
   const [providerEvents, setProviderEvents] = useState<BillingProviderEvent[]>([]);
   const [releaseGate, setReleaseGate] = useState<BillingReleaseGate>();
   const [certificationRuns, setCertificationRuns] = useState<BillingCertificationRun[]>([]);
+  const [certificationDeviceResults, setCertificationDeviceResults] = useState<BillingCertificationDeviceResult[]>([]);
   const [legacyInventory, setLegacyInventory] = useState<BillingLegacyInventory>();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [virtualCurrencies, setVirtualCurrencies] = useState<Array<Record<string, unknown>>>([]);
@@ -326,6 +328,7 @@ const PurchasesPage = () => {
       if (nextReleaseGate.status === "fulfilled") setReleaseGate(nextReleaseGate.value); else failed("Release gate", nextReleaseGate.reason);
       if (nextCertificationRuns.status === "fulfilled") {
         setCertificationRuns(nextCertificationRuns.value.runs || []);
+        setCertificationDeviceResults(nextCertificationRuns.value.device_results || []);
         setSelectedCertificationRunId((current) => nextCertificationRuns.value.runs.some((item) => item.id === current && item.status === "running")
           ? current
           : nextCertificationRuns.value.runs.find((item) => item.status === "running")?.id || "");
@@ -619,6 +622,7 @@ const PurchasesPage = () => {
       setCertificationDeviceEndpoint(created.device_result_endpoint || "");
       const runs = await getBillingCertificationRuns(projectId);
       setCertificationRuns(runs.runs || []);
+      setCertificationDeviceResults(runs.device_results || []);
       setSelectedCertificationRunId(created.id);
     }
   };
@@ -698,6 +702,7 @@ const PurchasesPage = () => {
   const latestLegacyRun = legacyInventory?.runs[0];
   const legacyRunActive = latestLegacyRun?.status === "queued" || latestLegacyRun?.status === "running";
   const selectedCertificationRun = certificationRuns.find((item) => item.id === selectedCertificationRunId && item.status === "running");
+  const selectedCertificationDeviceResults = certificationDeviceResults.filter((item) => item.run_id === selectedCertificationRunId);
   const terminalRefundCase = Boolean(refundCaseDetail && ["won", "lost", "closed"].includes(refundCaseDetail.refund_case.status));
 
   useEffect(() => {
@@ -1204,6 +1209,17 @@ const PurchasesPage = () => {
                   <div className="flex items-end gap-2"><Button variant="outline" disabled={!selectedCertificationRun} onClick={() => void rotateCertificationDeviceChallenge()}>Generate device token</Button><Button variant="outline" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("completed")}>Complete run</Button><Button variant="ghost" disabled={!selectedCertificationRun} onClick={() => void finishCertificationRun("cancelled")}>Cancel</Button></div>
                 </div>
                 {certificationDeviceToken && selectedCertificationRun && <Alert><ShieldCheck /><AlertTitle>Authenticated device challenge</AlertTitle><AlertDescription><p>Use this one-time dashboard value in the FlutterFlow or Web certification action. It is bound to the active run, expires at {date(certificationDeviceTokenExpiresAt)}, and is never shown again after leaving this selection.</p><div className="mt-3 grid gap-2"><div className="flex gap-2"><Input readOnly value={selectedCertificationRun.id} aria-label="Certification run ID" /><Button variant="outline" size="icon" aria-label="Copy certification run ID" onClick={() => void navigator.clipboard.writeText(selectedCertificationRun.id)}><Copy className="h-4 w-4" /></Button></div><div className="flex gap-2"><Input readOnly type="password" value={certificationDeviceToken} aria-label="Device challenge" /><Button variant="outline" size="icon" aria-label="Copy device challenge" onClick={() => void navigator.clipboard.writeText(certificationDeviceToken)}><Copy className="h-4 w-4" /></Button></div>{certificationDeviceEndpoint && <code className="block break-all rounded bg-muted p-2 text-xs">{certificationDeviceEndpoint}</code>}</div></AlertDescription></Alert>}
+                {selectedCertificationRun && <div className="space-y-2 rounded-md border p-3">
+                  <div><div className="text-sm font-medium">Authenticated device results</div><div className="text-xs text-muted-foreground">Review immutable SDK evidence and select it without copying an opaque identifier by hand.</div></div>
+                  {selectedCertificationDeviceResults.map((result) => <div key={result.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-muted/50 p-3 text-sm">
+                    <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{releaseGate?.checks.find((check) => check.key === result.check_key)?.label || result.check_key}</span>{statusBadge(result.outcome)}</div><div className="mt-1 text-xs text-muted-foreground">{result.source_platform} · build {result.build_number} · {result.device_model || "Unspecified device"} · {date(result.observed_at)}</div><div className="mt-1 max-w-xl truncate font-mono text-[11px] text-muted-foreground" title={result.evidence_sha256}>{result.id} · {result.evidence_sha256}</div></div>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setGateReferenceTypes((current) => ({ ...current, [result.check_key]: "test_run" }));
+                      setGateReferences((current) => ({ ...current, [result.check_key]: result.id }));
+                    }}>Use as evidence</Button>
+                  </div>)}
+                  {!selectedCertificationDeviceResults.length && <p className="text-sm text-muted-foreground">No authenticated device result has been received for this run.</p>}
+                </div>}
                 {certificationRuns.slice(0, 5).map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"><div><span className="font-medium">{item.platform} build {item.build_number}</span><div className="text-xs text-muted-foreground">{item.environment} · {item.observation_count || 0} observations · {item.device_result_count || 0} authenticated device results · {item.id}</div></div>{statusBadge(item.status)}</div>)}
               </CardContent>
             </Card>

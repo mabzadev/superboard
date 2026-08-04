@@ -35,7 +35,48 @@ describe('device certification administration', () => {
     const audit = db.calls.find((call) => call.op === 'run' && call.sql.includes('billing_admin_audit_logs'))!;
     expect(String(audit.args[6])).not.toContain(String(payload.data.device_claim_token));
   });
+
+  it('lists immutable device results without returning raw evidence payloads', async () => {
+    const db = certificationListDb();
+    const response = await adminRoutes.request('/10-prod/certification-runs', {
+      headers: { 'X-OpenGrow-Internal-Actor': '7' },
+    }, baseEnv(db));
+
+    expect(response.status).toBe(200);
+    const payload = await response.json() as { data: Record<string, Array<Record<string, unknown>>> };
+    expect(payload.data.device_results).toEqual([expect.objectContaining({
+      id: 'device-result-1', run_id: 'run-device-1', check_key: 'apple.restore',
+      outcome: 'passed', evidence_sha256: 'a'.repeat(64),
+    })]);
+    expect(payload.data.device_results[0]).not.toHaveProperty('evidence_json');
+  });
 });
+
+function certificationListDb() {
+  return createFakeD1((call) => {
+    if (call.op === 'first' && call.sql.includes('FROM instance_roles')) return { role: 'owner' };
+    if (call.op === 'first' && call.sql.includes('SELECT id, name, identifier, instance_id, is_test FROM projects')) {
+      return { id: 20, name: 'Production', identifier: 'production', instance_id: 10, is_test: 0 };
+    }
+    if (call.op === 'all' && call.sql.includes('SELECT id, is_test FROM projects')) {
+      return [{ id: 20, is_test: 0 }, { id: 21, is_test: 1 }];
+    }
+    if (call.op === 'all' && call.sql.includes('FROM billing_certification_device_results d')) {
+      return [{
+        id: 'device-result-1', run_id: 'run-device-1', target_project_id: '21',
+        customer_id: 'customer-1', check_key: 'apple.restore', outcome: 'passed',
+        source_platform: 'ios', application_identifier: 'com.example.app',
+        build_number: '104', evidence_sha256: 'a'.repeat(64),
+        observed_at: '2026-08-04T12:00:00.000Z', received_at: '2026-08-04T12:00:01.000Z',
+      }];
+    }
+    if (call.op === 'all' && call.sql.includes('SELECT o.*')) return [];
+    if (call.op === 'all' && call.sql.includes('FROM billing_certification_runs r')) {
+      return [{ id: 'run-device-1', status: 'running', observation_count: 0, device_result_count: 1 }];
+    }
+    return undefined;
+  });
+}
 
 function certificationDb() {
   return createFakeD1((call) => {
