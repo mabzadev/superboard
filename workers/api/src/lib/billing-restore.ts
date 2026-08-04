@@ -37,15 +37,17 @@ export async function restoreVerifiedPurchases(env: BillingEnv, request: Restore
     const purchaseToken = text(item.purchase_token);
     const productId = text(item.product_id);
     const productType = text(item.product_type);
-    if (!purchaseToken || !productId || !['subscription', 'non_consumable', 'consumable'].includes(productType)) {
-      throw restoreError('restore_google_purchase_invalid', 'Every Google purchase requires purchase_token, product_id and product_type');
+    if (!purchaseToken || !productId) {
+      throw restoreError('restore_google_purchase_invalid', 'Every Google purchase requires purchase_token and product_id');
     }
     const verified = await verifyGooglePurchase(env, {
       projectId: request.projectId,
       customerId: request.customerId,
       purchaseToken,
       storeProductId: productId,
-      productType: productType as 'subscription' | 'non_consumable' | 'consumable',
+      productType: ['subscription', 'non_consumable', 'consumable'].includes(productType)
+        ? productType as 'subscription' | 'non_consumable' | 'consumable'
+        : undefined,
       environment: request.environment,
       allowTransfer,
     });

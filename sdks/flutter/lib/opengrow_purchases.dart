@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -30,6 +31,9 @@ class OpenGrowPurchasesException implements Exception {
 }
 
 class OpenGrowPurchases {
+  static const _requestTimeout = Duration(seconds: 20);
+  static const _maximumResponseBytes = 1024 * 1024;
+
   OpenGrowPurchases._({
     OpenGrowPurchaseStore? purchaseStore,
     OpenGrowPurchaseStorage? secureStorage,
@@ -66,6 +70,7 @@ class OpenGrowPurchases {
   final _customerInfoController =
       StreamController<OpenGrowCustomerInfo>.broadcast();
   final _purchaseCompleters = <String, Completer<OpenGrowPurchaseResult>>{};
+  final _pendingStoreCompletions = <String, PurchaseDetails>{};
   final _purchaseResultController =
       StreamController<OpenGrowPurchaseResult>.broadcast();
   final _products = <String, ProductDetails>{};
@@ -645,7 +650,9 @@ class OpenGrowPurchases {
           }
         }
         if (purchase.pendingCompletePurchase) {
+          _pendingStoreCompletions[entry.id] = purchase;
           await _iap.completePurchase(purchase);
+          _pendingStoreCompletions.remove(entry.id);
         }
         await _outbox.remove(entry.id);
         final info = validatedInfo ?? await getCustomerInfo();
@@ -780,10 +787,34 @@ class OpenGrowPurchases {
           );
         }
       }
+      await _retryStoreCompletions();
     } finally {
       _retryingOutbox = false;
-      if ((await _outbox.readAll()).any((entry) => !entry.serverValidated)) {
+      if (_pendingStoreCompletions.isNotEmpty ||
+          (await _outbox.readAll()).any((entry) => !entry.serverValidated)) {
         _scheduleOutboxRetry();
+      }
+    }
+  }
+
+  Future<void> _retryStoreCompletions() async {
+    for (final item in _pendingStoreCompletions.entries.toList()) {
+      try {
+        await _iap.completePurchase(item.value);
+        await _outbox.remove(item.key);
+        _pendingStoreCompletions.remove(item.key);
+        final info = _lastCustomerInfo ?? await getCustomerInfo();
+        _purchaseResultController.add(
+          OpenGrowPurchaseResult(
+            OpenGrowPurchaseOutcome.purchased,
+            customerInfo: info,
+            code: 'purchase_verified',
+            productIdentifier: item.value.productID,
+            transactionIdentifier: item.value.purchaseID,
+          ),
+        );
+      } catch (_) {
+        // The durable entry stays in the outbox and the retry timer remains active.
       }
     }
   }
@@ -795,6 +826,9 @@ class OpenGrowPurchases {
       () => unawaited(_resumeOutbox()),
     );
   }
+
+  @visibleForTesting
+  Future<void> resumeOutboxForTesting() => _resumeOutbox();
 
   void _completeAndPublish(
     Completer<OpenGrowPurchaseResult>? completer,
@@ -929,14 +963,29 @@ class OpenGrowPurchases {
     late final http.StreamedResponse streamed;
     late final String text;
     try {
-      streamed = await client.send(request);
-      text = await streamed.stream.bytesToString();
+      streamed = await client.send(request).timeout(_requestTimeout);
+      text = await _readBoundedResponse(streamed).timeout(_requestTimeout);
+    } on TimeoutException {
+      throw const OpenGrowPurchasesException(
+        'Purchases request timed out',
+        code: 'network_timeout',
+        retryable: true,
+      );
     } finally {
       client.close();
     }
-    final decoded = text.isEmpty
-        ? <String, dynamic>{}
-        : (jsonDecode(text) as Map).cast<String, dynamic>();
+    late final Map<String, dynamic> decoded;
+    try {
+      decoded = text.isEmpty
+          ? <String, dynamic>{}
+          : (jsonDecode(text) as Map).cast<String, dynamic>();
+    } catch (_) {
+      throw const OpenGrowPurchasesException(
+        'Purchases server returned an invalid response',
+        code: 'server_response_invalid',
+        retryable: true,
+      );
+    }
     if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
       final error = decoded['error'];
       final message = error is Map
@@ -954,6 +1003,22 @@ class OpenGrowPurchases {
       );
     }
     return decoded;
+  }
+
+  Future<String> _readBoundedResponse(http.StreamedResponse response) async {
+    final bytes = BytesBuilder(copy: false);
+    var length = 0;
+    await for (final chunk in response.stream) {
+      length += chunk.length;
+      if (length > _maximumResponseBytes) {
+        throw const OpenGrowPurchasesException(
+          'Purchases server response is too large',
+          code: 'server_response_too_large',
+        );
+      }
+      bytes.add(chunk);
+    }
+    return utf8.decode(bytes.takeBytes());
   }
 
   void _ensureConfigured() {
