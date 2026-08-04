@@ -57,7 +57,7 @@ function currencyExponent(currency: string) {
   return STRIPE_ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2;
 }
 
-function priceMicros(unitAmount: number, currency: string) {
+export function stripeAmountMicros(unitAmount: number, currency: string) {
   const exponent = currencyExponent(currency);
   const multiplier = 10 ** (6 - exponent);
   const value = unitAmount * multiplier;
@@ -149,7 +149,7 @@ export async function retrieveStripeCatalogProduct(params: {
     displayName: String(product.name || price.nickname || priceId),
     description: product.description == null ? null : String(product.description),
     currency,
-    priceMicros: priceMicros(Number(price.unit_amount), currency),
+    priceMicros: stripeAmountMicros(Number(price.unit_amount), currency),
     billingPeriod,
     trialPeriod,
     productMetadata: {

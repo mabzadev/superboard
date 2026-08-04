@@ -253,8 +253,14 @@ admin.get('/:projectId/health', async (c) => {
         FROM billing_events WHERE project_id = ?
       `).bind(project.id).first(),
       c.env.DB.prepare(`
-        SELECT MAX(updated_at) AS last_reconciled_at,
-          SUM(CASE WHEN status = 'billing_issue' THEN 1 ELSE 0 END) AS billing_issues
+        SELECT MAX(provider_last_verified_at) AS last_reconciled_at,
+          SUM(CASE WHEN status = 'billing_issue' THEN 1 ELSE 0 END) AS billing_issues,
+          SUM(CASE WHEN provider_verification_status = 'failed' THEN 1 ELSE 0 END) AS verification_failures,
+          SUM(CASE WHEN customer_id IS NOT NULL
+            AND status NOT IN ('expired', 'revoked', 'refunded')
+            AND ((provider_last_verified_at IS NULL AND datetime(updated_at) <= datetime('now', '-15 minutes'))
+              OR datetime(provider_last_verified_at) <= datetime('now', '-15 minutes'))
+            THEN 1 ELSE 0 END) AS stale_verifications
         FROM billing_subscriptions WHERE project_id = ?
       `).bind(project.id).first(),
       c.env.DB.prepare(`
@@ -267,7 +273,7 @@ admin.get('/:projectId/health', async (c) => {
         .bind(project.id).all(),
       featureFlagsFor(c, project.id),
     ]);
-    return c.json({ status: Number((events as any)?.failed_events || 0) + Number((deliveries as any)?.failed_deliveries || 0) > 0 ? 'degraded' : 'healthy', events, subscriptions, deliveries, connections: connections.results, features });
+    return c.json({ status: Number((events as any)?.failed_events || 0) + Number((deliveries as any)?.failed_deliveries || 0) + Number((subscriptions as any)?.verification_failures || 0) + Number((subscriptions as any)?.stale_verifications || 0) > 0 ? 'degraded' : 'healthy', events, subscriptions, deliveries, connections: connections.results, features });
   } catch (error) { return replyError(c, error); }
 });
 
@@ -288,6 +294,7 @@ admin.get('/:projectId/release-gate', async (c) => {
       legacyInventory,
       certificationObservations,
       canonicalOperations,
+      subscriptionReconciliations,
       providerOperations,
       entitlementDeliveries,
       refundActions,
@@ -348,6 +355,20 @@ admin.get('/:projectId/release-gate', async (c) => {
         FROM billing_events
         WHERE project_id IN (${projectPlaceholders || "''"})
       `).bind(staleMinutes, ...scopedProjectIds).first<Record<string, number>>(),
+      c.env.DB.prepare(`
+        SELECT
+          SUM(CASE WHEN customer_id IS NOT NULL
+            AND status NOT IN ('expired', 'revoked', 'refunded')
+            AND provider_verification_status = 'failed' THEN 1 ELSE 0 END) AS failed,
+          SUM(CASE WHEN customer_id IS NOT NULL
+            AND status NOT IN ('expired', 'revoked', 'refunded')
+            AND provider_verification_status <> 'failed'
+            AND ((provider_last_verified_at IS NULL AND datetime(updated_at) <= datetime('now', '-' || ? || ' minutes'))
+              OR datetime(provider_last_verified_at) <= datetime('now', '-' || ? || ' minutes'))
+            THEN 1 ELSE 0 END) AS stale
+        FROM billing_subscriptions
+        WHERE project_id IN (${projectPlaceholders || "''"})
+      `).bind(staleMinutes, staleMinutes, ...scopedProjectIds).first<Record<string, number>>(),
       c.env.DB.prepare(`
         SELECT
           SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
@@ -441,6 +462,8 @@ admin.get('/:projectId/release-gate', async (c) => {
         canonical_stale_pending: Number(canonicalOperations?.stale_pending || 0),
         provider_failed: Number(providerOperations?.failed || 0),
         provider_stale_received: Number(providerOperations?.stale_received || 0),
+        subscription_reconciliation_failed: Number(subscriptionReconciliations?.failed || 0),
+        subscription_reconciliation_stale: Number(subscriptionReconciliations?.stale || 0),
         entitlement_delivery_failed: Number(entitlementDeliveries?.failed || 0),
         entitlement_delivery_stale_pending: Number(entitlementDeliveries?.stale_pending || 0),
         refund_action_failed: Number(refundActions?.failed || 0),

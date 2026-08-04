@@ -50,6 +50,8 @@ export type BillingOperationalState = {
   canonical_stale_pending: number;
   provider_failed: number;
   provider_stale_received: number;
+  subscription_reconciliation_failed: number;
+  subscription_reconciliation_stale: number;
   entitlement_delivery_failed: number;
   entitlement_delivery_stale_pending: number;
   refund_action_failed: number;
@@ -165,6 +167,8 @@ export function billingOperationalPrerequisites(state: BillingOperationalState):
   });
   const financialFailures = state.canonical_failed + state.provider_failed;
   const staleFinancialWork = state.canonical_stale_pending + state.provider_stale_received;
+  const subscriptionReconciliationFailures = state.subscription_reconciliation_failed;
+  const staleSubscriptionReconciliations = state.subscription_reconciliation_stale;
   const projectionFailures = state.entitlement_delivery_failed;
   const staleProjections = state.entitlement_delivery_stale_pending;
   const refundFailures = state.refund_action_failed;
@@ -192,6 +196,13 @@ export function billingOperationalPrerequisites(state: BillingOperationalState):
       projectionFailures === 0 && staleProjections === 0,
       'Every entitlement projection is delivered or within its active retry window.',
       `Resolve ${projectionFailures} failed and ${staleProjections} stale entitlement projections.`,
+    ),
+    prerequisite(
+      'provider_subscription_reconciliation',
+      'Provider subscription reconciliation',
+      subscriptionReconciliationFailures === 0 && staleSubscriptionReconciliations === 0,
+      'Every owned active subscription has current provider verification.',
+      `Resolve ${subscriptionReconciliationFailures} failed and ${staleSubscriptionReconciliations} stale provider subscription verifications.`,
     ),
     prerequisite(
       'refund_action_pipeline',
