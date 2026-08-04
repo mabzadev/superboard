@@ -59,8 +59,6 @@ export async function issueCertificationDeviceChallenge(
     ON CONFLICT(run_id) DO UPDATE SET
       challenge_hash = excluded.challenge_hash,
       expires_at = excluded.expires_at,
-      claimed_customer_id = NULL,
-      claimed_at = NULL,
       updated_at = datetime('now')
   `).bind(runId, challengeHash, expiresAt).run();
   return { token, expires_at: expiresAt };

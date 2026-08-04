@@ -335,9 +335,29 @@ export type BillingCertificationDeviceChallenge = {
   device_result_endpoint: string;
 };
 
+export type BillingCertificationDeviceResult = {
+  id: string;
+  run_id: string;
+  target_project_id: string;
+  customer_id: string;
+  check_key: string;
+  outcome: "passed" | "failed";
+  source_platform: "ios" | "android" | "web";
+  application_identifier: string;
+  build_number: string;
+  app_version?: string | null;
+  sdk_version?: string | null;
+  device_model?: string | null;
+  os_version?: string | null;
+  evidence_sha256: string;
+  observed_at: string;
+  received_at: string;
+};
+
 export type BillingCertificationRuns = {
   runs: BillingCertificationRun[];
   observations: Array<Record<string, unknown>>;
+  device_results: BillingCertificationDeviceResult[];
 };
 
 export type BillingLegacyInventory = {

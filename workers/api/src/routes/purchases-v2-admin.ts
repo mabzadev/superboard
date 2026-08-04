@@ -625,7 +625,7 @@ admin.get('/:projectId/certification-runs', async (c) => {
   try {
     const project = await projectFor(c);
     const scope = await releaseGateScope(c, project);
-    const [runs, observations] = await Promise.all([
+    const [runs, observations, deviceResults] = await Promise.all([
       c.env.DB.prepare(`
         SELECT r.*,
           (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id) AS observation_count,
@@ -640,8 +640,22 @@ admin.get('/:projectId/certification-runs', async (c) => {
         JOIN billing_certification_runs r ON r.id = o.run_id
         WHERE r.release_project_id = ? ORDER BY o.observed_at DESC LIMIT 500
       `).bind(scope.releaseProjectId).all<Record<string, unknown>>(),
+      c.env.DB.prepare(`
+        SELECT d.id, d.run_id, d.target_project_id, d.customer_id, d.check_key,
+          d.outcome, d.source_platform, d.application_identifier, d.build_number,
+          d.app_version, d.sdk_version, d.device_model, d.os_version,
+          d.evidence_sha256, d.observed_at, d.received_at
+        FROM billing_certification_device_results d
+        JOIN billing_certification_runs r ON r.id = d.run_id
+        WHERE r.release_project_id = ?
+        ORDER BY d.received_at DESC, d.id DESC LIMIT 500
+      `).bind(scope.releaseProjectId).all<Record<string, unknown>>(),
     ]);
-    return c.json({ data: { runs: runs.results, observations: observations.results } });
+    return c.json({ data: {
+      runs: runs.results,
+      observations: observations.results,
+      device_results: deviceResults.results,
+    } });
   } catch (error) { return replyError(c, error); }
 });
 

@@ -18,6 +18,9 @@ describe('authenticated device certification evidence', () => {
     expect(db.calls[0].args[0]).toBe('run-device-1');
     expect(db.calls[0].args[1]).toMatch(/^[a-f0-9]{64}$/u);
     expect(db.calls[0].args[1]).not.toBe(result.token);
+    const conflictUpdate = db.calls[0].sql.split('ON CONFLICT(run_id) DO UPDATE SET')[1] || '';
+    expect(conflictUpdate).not.toContain('claimed_customer_id');
+    expect(conflictUpdate).not.toContain('claimed_at');
   });
 
   it('stores a verified identity result with structured assertions and a digest', async () => {
