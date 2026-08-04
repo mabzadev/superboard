@@ -8,6 +8,11 @@ import { readTextLimited } from '../lib/http-limits';
 import { billingServiceEnabled, ingestProviderEventWithBillingAuthority } from '../lib/billing-service';
 import { ingestBillingProviderEvent } from '../lib/billing-provider-ingress';
 import { providerHttpError, providerTaggedHttpError, providerUnhandledHttpError } from '../lib/provider-http-errors';
+import {
+  persistStripeWebhookDeliveryReadiness,
+  STRIPE_PURCHASE_EVENT_TYPES,
+  stripeWebhookUrl,
+} from '../lib/stripe-webhook-management';
 
 const webhooks = new Hono<{ Bindings: Env }>();
 webhooks.onError((error, c) => providerUnhandledHttpError(c, error));
@@ -120,13 +125,33 @@ function epoch(value: unknown) {
   return number > 0 ? new Date(number * 1000).toISOString() : null;
 }
 
-async function checkoutProduct(env: BillingEnv, checkoutId: string | null, providerSessionId: string | null) {
+async function checkoutProduct(
+  env: BillingEnv,
+  connection: Record<string, any>,
+  references: StripeObjectReferences,
+) {
   return env.DB.prepare(`
     SELECT s.*, p.store_product_id, p.product_type
     FROM billing_checkout_sessions s LEFT JOIN billing_products p ON p.id = s.product_id
-    WHERE (? IS NOT NULL AND s.id = ?) OR (? IS NOT NULL AND s.provider_session_id = ?)
+    WHERE s.project_id = ? AND s.environment = ? AND s.connection_id = ?
+      AND (
+        (? IS NOT NULL AND s.id = ?)
+        OR (? IS NOT NULL AND s.provider_session_id = ?)
+        OR (? IS NOT NULL AND s.provider_subscription_id = ?)
+        OR (? IS NOT NULL AND s.provider_payment_intent_id = ?)
+        OR (? IS NOT NULL AND s.provider_charge_id = ?)
+      )
     LIMIT 1
-  `).bind(checkoutId, checkoutId, providerSessionId, providerSessionId).first<Record<string, any>>();
+  `).bind(
+    String(connection.project_id),
+    String(connection.environment),
+    String(connection.id),
+    references.checkoutId, references.checkoutId,
+    references.checkoutSessionId, references.checkoutSessionId,
+    references.subscriptionId, references.subscriptionId,
+    references.paymentIntentId, references.paymentIntentId,
+    references.chargeId, references.chargeId,
+  ).first<Record<string, any>>();
 }
 
 async function updateStripeCustomer(env: BillingEnv, customerId: string, stripeCustomerId: unknown) {
@@ -139,14 +164,46 @@ async function updateStripeCustomer(env: BillingEnv, customerId: string, stripeC
     .bind(JSON.stringify(attributes), customerId).run();
 }
 
-function stripeStatus(type: string, object: Record<string, any>): BillingStatus {
-  if (/refunded/.test(type) || (/dispute/.test(type) && object.status === 'lost')) return 'refunded';
-  if (/payment_failed/.test(type) || object.status === 'past_due' || object.status === 'incomplete') return 'billing_issue';
-  if (/deleted/.test(type) || ['canceled', 'unpaid', 'incomplete_expired'].includes(object.status)) return 'expired';
-  if (object.status === 'paused') return 'paused';
-  if (object.status === 'trialing') return 'trialing';
-  if (object.cancel_at_period_end) return 'cancelled';
-  return 'active';
+function stripeStatus(type: string, object: Record<string, any>, priorPurchase: Record<string, any> | null): BillingStatus | null {
+  const prior = String(priorPurchase?.status || 'active') as BillingStatus;
+  if (type === 'checkout.session.completed') {
+    if (object.status !== 'complete' || !['paid', 'no_payment_required'].includes(String(object.payment_status))) return null;
+    return object.payment_status === 'no_payment_required' && object.mode === 'subscription' ? 'trialing' : 'active';
+  }
+  if (type === 'checkout.session.async_payment_succeeded' || type === 'invoice.paid'
+    || type === 'invoice.payment_succeeded') return 'active';
+  if (type === 'invoice.payment_failed' || type === 'invoice.payment_action_required') return 'billing_issue';
+  if (type === 'customer.subscription.deleted') return 'expired';
+  if (type === 'charge.refunded') return object.refunded === true ? 'refunded' : prior;
+  if (['charge.refund.updated', 'refund.created', 'refund.updated'].includes(type)) {
+    if (object.status !== 'succeeded') return prior;
+    const amount = object.amount != null && object.currency
+      ? stripeAmountMicros(Number(object.amount), String(object.currency).toUpperCase())
+      : null;
+    return amount != null && Number(priorPurchase?.price_micros || 0) > 0 && amount < Number(priorPurchase?.price_micros)
+      ? prior
+      : 'refunded';
+  }
+  if (type === 'refund.failed') return prior;
+  if (type === 'charge.dispute.funds_reinstated' || (type === 'charge.dispute.closed' && object.status === 'won')) return 'active';
+  if (type.startsWith('charge.dispute.')) return object.status === 'lost' ? 'refunded' : prior;
+  if (type.startsWith('radar.early_fraud_warning.')) return prior;
+  if (type.startsWith('customer.subscription.')) {
+    if (object.status === 'past_due' || object.status === 'incomplete') return 'billing_issue';
+    if (['canceled', 'unpaid', 'incomplete_expired'].includes(object.status)) return 'expired';
+    if (object.status === 'paused') return 'paused';
+    if (object.status === 'trialing') return 'trialing';
+    if (object.cancel_at_period_end) return 'cancelled';
+    if (object.status === 'active') return 'active';
+  }
+  return null;
+}
+
+async function customerInProject(env: BillingEnv, projectId: string, customerId: unknown) {
+  const id = String(customerId || '');
+  if (!id) return null;
+  return env.DB.prepare('SELECT id FROM billing_customers WHERE id = ? AND project_id = ? LIMIT 1')
+    .bind(id, projectId).first<{ id: string }>();
 }
 
 async function stripeCustomerForEvent(env: BillingEnv, connection: Record<string, any>, object: Record<string, any>) {
@@ -162,56 +219,171 @@ async function stripeCustomerForEvent(env: BillingEnv, connection: Record<string
   if (!providerObjectId) return null;
   return env.DB.prepare(`
     SELECT customer_id AS id FROM billing_transactions
-    WHERE project_id = ? AND store = 'stripe' AND customer_id IS NOT NULL
+    WHERE project_id = ? AND environment = ? AND store = 'stripe' AND customer_id IS NOT NULL
       AND (
         json_extract(raw_payload, '$.data.object.id') = ?
         OR json_extract(raw_payload, '$.data.object.payment_intent') = ?
         OR json_extract(raw_payload, '$.data.object.charge') = ?
       )
     ORDER BY COALESCE(event_occurred_at, created_at) DESC LIMIT 1
-  `).bind(String(connection.project_id), providerObjectId, providerObjectId, providerObjectId).first<{ id: string }>();
+  `).bind(
+    String(connection.project_id), String(connection.environment),
+    providerObjectId, providerObjectId, providerObjectId,
+  ).first<{ id: string }>();
 }
 
 async function latestStripeProduct(env: BillingEnv, connection: Record<string, any>, customerId: string) {
   return env.DB.prepare(`
     SELECT p.store_product_id, p.product_type, t.original_transaction_id,
-      t.expires_at, t.currency, t.price_micros
+      t.expires_at, t.currency, t.price_micros, t.status
     FROM billing_transactions t
     JOIN billing_products p ON p.id = t.product_id
-    WHERE t.project_id = ? AND t.customer_id = ? AND t.store = 'stripe'
+    WHERE t.project_id = ? AND t.customer_id = ? AND t.store = 'stripe' AND t.environment = ?
     ORDER BY COALESCE(t.event_occurred_at, t.created_at) DESC
     LIMIT 1
-  `).bind(String(connection.project_id), customerId).first<Record<string, any>>();
+  `).bind(String(connection.project_id), customerId, String(connection.environment)).first<Record<string, any>>();
 }
 
-async function processStripe(env: BillingEnv, connection: Record<string, any>, event: Record<string, any>) {
+type StripeObjectReferences = {
+  checkoutId: string | null;
+  checkoutSessionId: string | null;
+  subscriptionId: string | null;
+  paymentIntentId: string | null;
+  chargeId: string | null;
+};
+
+function stripeObjectId(value: unknown) {
+  if (typeof value === 'string') return value || null;
+  const object = parseObject(value);
+  return object.id ? String(object.id) : null;
+}
+
+function stripeObjectReferences(eventType: string, object: Record<string, any>, metadata: Record<string, any>): StripeObjectReferences {
+  return {
+    checkoutId: metadata.opengrow_checkout_id ? String(metadata.opengrow_checkout_id) : null,
+    checkoutSessionId: eventType.startsWith('checkout.session.') ? stripeObjectId(object.id) : null,
+    subscriptionId: stripeObjectId(
+      object.subscription
+      || object.parent?.subscription_details?.subscription
+      || (eventType.startsWith('customer.subscription.') ? object.id : null),
+    ),
+    paymentIntentId: stripeObjectId(object.payment_intent || (eventType.startsWith('payment_intent.') ? object.id : null)),
+    chargeId: stripeObjectId(object.charge || (eventType.startsWith('charge.') && !eventType.startsWith('charge.refund.') ? object.id : null)),
+  };
+}
+
+async function exactStripeProduct(
+  env: BillingEnv,
+  connection: Record<string, any>,
+  references: StripeObjectReferences,
+) {
+  return env.DB.prepare(`
+    SELECT p.store_product_id, p.product_type, t.original_transaction_id,
+      t.expires_at, t.currency, t.price_micros, t.status, t.customer_id
+    FROM billing_transactions t
+    JOIN billing_products p ON p.id = t.product_id
+    WHERE t.project_id = ? AND t.environment = ? AND t.store = 'stripe'
+      AND (
+        (? IS NOT NULL AND t.original_transaction_id = ?)
+        OR (? IS NOT NULL AND t.store_transaction_id LIKE ? || ':%')
+        OR (? IS NOT NULL AND t.store_transaction_id LIKE ? || ':%')
+      )
+    ORDER BY COALESCE(t.event_occurred_at, t.created_at) DESC
+    LIMIT 1
+  `).bind(
+    String(connection.project_id), String(connection.environment),
+    references.subscriptionId, references.subscriptionId,
+    references.paymentIntentId, references.paymentIntentId,
+    references.chargeId, references.chargeId,
+  ).first<Record<string, any>>();
+}
+
+async function updateStripeCheckout(
+  env: BillingEnv,
+  checkoutId: string,
+  status: string,
+  object: Record<string, any>,
+  references: StripeObjectReferences,
+) {
+  await env.DB.prepare(`
+    UPDATE billing_checkout_sessions
+    SET status = ?, provider_customer_id = COALESCE(?, provider_customer_id),
+      provider_subscription_id = COALESCE(?, provider_subscription_id),
+      provider_payment_intent_id = COALESCE(?, provider_payment_intent_id),
+      provider_charge_id = COALESCE(?, provider_charge_id),
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(
+    status,
+    stripeObjectId(object.customer),
+    references.subscriptionId,
+    references.paymentIntentId,
+    references.chargeId,
+    checkoutId,
+  ).run();
+}
+
+export async function processStripeVerifiedEvent(env: BillingEnv, connection: Record<string, any>, event: Record<string, any>) {
+  const eventType = String(event.type || '');
+  if (!STRIPE_PURCHASE_EVENT_TYPES.has(eventType)) return { ignored: true, reason: 'unsupported_event' };
   const object = parseObject(event.data?.object);
-  const metadata = parseObject(object.metadata || object.subscription_details?.metadata);
-  const checkout = await checkoutProduct(env, metadata.opengrow_checkout_id || null, event.type === 'checkout.session.completed' ? object.id : null);
-  const providerCustomer = await stripeCustomerForEvent(env, connection, object);
-  const customerId = String(metadata.opengrow_customer_id || checkout?.customer_id || providerCustomer?.id || '');
+  const metadata = {
+    ...parseObject(object.parent?.subscription_details?.metadata),
+    ...parseObject(object.subscription_details?.metadata),
+    ...parseObject(object.metadata),
+  };
+  const references = stripeObjectReferences(eventType, object, metadata);
+  const checkout = await checkoutProduct(env, connection, references);
+  if (eventType === 'checkout.session.async_payment_failed'
+    || eventType === 'payment_intent.payment_failed'
+    || eventType === 'payment_intent.canceled') {
+    if (checkout) await updateStripeCheckout(env, String(checkout.id), 'payment_failed', object, references);
+    return { ignored: true, reason: 'checkout_payment_failed' };
+  }
+  if (eventType === 'checkout.session.completed'
+    && (object.status !== 'complete' || !['paid', 'no_payment_required'].includes(String(object.payment_status)))) {
+    if (checkout) await updateStripeCheckout(env, String(checkout.id), 'pending', object, references);
+    return { ignored: true, reason: 'non_terminal_event_state' };
+  }
+  const exactPurchase = checkout ? null : await exactStripeProduct(env, connection, references);
+  const metadataCustomer = checkout
+    ? null
+    : await customerInProject(env, String(connection.project_id), metadata.opengrow_customer_id);
+  const providerCustomer = checkout || metadataCustomer || exactPurchase
+    ? null
+    : await stripeCustomerForEvent(env, connection, object);
+  const customerId = String(checkout?.customer_id || metadataCustomer?.id || exactPurchase?.customer_id || providerCustomer?.id || '');
   if (!customerId) return { ignored: true, reason: 'customer_not_found' };
-  const prior = checkout ? null : await latestStripeProduct(env, connection, customerId);
+  const prior = exactPurchase || await latestStripeProduct(env, connection, customerId);
   if (!checkout && !prior) return { ignored: true, reason: 'purchase_not_found' };
-  const status = stripeStatus(String(event.type), object);
+  const exactPurchaseRequired = eventType.startsWith('charge.')
+    || eventType.startsWith('refund.')
+    || eventType.startsWith('radar.')
+    || eventType.startsWith('payment_intent.');
+  if (exactPurchaseRequired && !checkout && !exactPurchase) {
+    return { ignored: true, reason: 'exact_purchase_not_found' };
+  }
+  const status = stripeStatus(eventType, object, prior);
+  if (!status) return { ignored: true, reason: 'non_terminal_event_state' };
   const isSubscription = (checkout?.product_type || prior?.product_type) === 'subscription';
-  const subscriptionId = String(object.subscription || object.id || event.id);
+  const subscriptionId = String(references.subscriptionId || object.id || event.id);
   const transactionId = String(object.payment_intent || object.charge || object.id || event.id);
   const line = object.lines?.data?.[0] || {};
   const periodEnd = epoch(line.period?.end || object.current_period_end);
-  const eventType = object.status && /dispute/.test(String(event.type))
-    ? `${String(event.type)}.${String(object.status)}`
-    : String(event.type);
+  const disputeState = String(object.status || '');
+  const canonicalEventType = disputeState && /dispute/.test(eventType)
+    ? `${eventType}.${disputeState.startsWith('warning_') ? `inquiry.${disputeState}` : disputeState}`
+    : eventType;
   const purchase: VerifiedPurchase = {
     projectId: String(connection.project_id),
     customerId,
     store: 'stripe',
     environment: connection.environment,
-    storeProductId: String(checkout?.store_product_id || prior?.store_product_id || line.price?.id || 'web-product'),
+    storeProductId: String(checkout?.store_product_id || prior?.store_product_id),
     productType: isSubscription ? 'subscription' : 'non_consumable',
     storeTransactionId: `${transactionId}:${event.id}`,
     originalTransactionId: isSubscription ? String(checkout?.provider_subscription_id || prior?.original_transaction_id || subscriptionId) : transactionId,
-    eventType,
+    eventType: canonicalEventType,
     status,
     priceMicros: object.amount_total != null && object.currency ? stripeAmountMicros(Number(object.amount_total), String(object.currency).toUpperCase())
       : object.amount_paid != null && object.currency ? stripeAmountMicros(Number(object.amount_paid), String(object.currency).toUpperCase())
@@ -227,8 +399,7 @@ async function processStripe(env: BillingEnv, connection: Record<string, any>, e
   };
   const applied = await applyVerifiedPurchase(env, purchase);
   if (checkout) {
-    await env.DB.prepare(`UPDATE billing_checkout_sessions SET status = ?, provider_customer_id = COALESCE(?, provider_customer_id), updated_at = datetime('now') WHERE id = ?`)
-      .bind(status, object.customer || null, checkout.id).run();
+    await updateStripeCheckout(env, String(checkout.id), status, object, references);
   }
   await updateStripeCustomer(env, customerId, object.customer);
   return applied;
@@ -252,7 +423,7 @@ export async function processStripeBillingNotification(env: BillingEnv, params: 
   if (!connection) throw new Error('Stripe connection not found');
   try {
     const event = JSON.parse(String(eventRow.payload || '{}')) as Record<string, any>;
-    const result = await processStripe(env, connection, event);
+    const result = await processStripeVerifiedEvent(env, connection, event);
     await env.DB.prepare(`
       UPDATE billing_webhook_events
       SET status = 'processed', attempts = attempts + 1, processed_at = datetime('now'), error_message = NULL
@@ -266,6 +437,28 @@ export async function processStripeBillingNotification(env: BillingEnv, params: 
     `).bind((error instanceof Error ? error.message : String(error)).slice(0, 1000), params.eventId).run();
     throw error;
   }
+}
+
+function observeStripeWebhook(c: any, connection: Record<string, any>, eventId: string, eventType: string) {
+  c.executionCtx.waitUntil(Promise.all([
+    persistStripeWebhookDeliveryReadiness(c.env.DB, {
+      projectId: String(connection.project_id),
+      connectionId: String(connection.id),
+      environment: connection.environment === 'production' ? 'production' : 'sandbox',
+      url: stripeWebhookUrl(c.env.API_DOMAIN, String(connection.id)),
+      eventId,
+      eventType,
+    }),
+    c.env.DB.prepare(`
+      UPDATE billing_store_connections
+      SET last_event_at = datetime('now'), updated_at = datetime('now')
+      WHERE id = ? AND project_id = ? AND provider = 'stripe'
+    `).bind(String(connection.id), String(connection.project_id)).run(),
+  ]).catch((error) => console.error(JSON.stringify({
+    event: 'stripe_webhook_readiness_observation_failed',
+    connection_id: String(connection.id),
+    error: error instanceof Error ? error.message : String(error),
+  }))));
 }
 
 webhooks.post('/:connectionId', async (c) => {
@@ -293,6 +486,16 @@ webhooks.post('/:connectionId', async (c) => {
   let event: Record<string, any>;
   try { event = JSON.parse(payload) as Record<string, any>; }
   catch { return providerHttpError(c, 'invalid_webhook_payload', 'Webhook payload must be valid JSON', 400, false); }
+  const expectedLiveMode = connection.environment === 'production';
+  if (event.livemode !== expectedLiveMode) {
+    return providerHttpError(
+      c,
+      'stripe_environment_mismatch',
+      `Webhook event does not belong to the Stripe ${expectedLiveMode ? 'live' : 'test'} environment`,
+      422,
+      false,
+    );
+  }
   const externalId = String(event.id || event.event_id || '');
   if (!externalId) return providerHttpError(c, 'webhook_event_id_required', 'Webhook event ID is required', 422, false);
   const eventType = String(event.type || event.event_type || 'unknown');
@@ -310,6 +513,7 @@ webhooks.post('/:connectionId', async (c) => {
           connectionId: String(connection.id),
         },
       });
+      observeStripeWebhook(c, connection, externalId, eventType);
       return c.json({ received: true, queued: result.queued, duplicate: result.duplicate }, result.processed ? 200 : 202);
     } catch (error) {
       return providerTaggedHttpError(c, error, 'Webhook could not be accepted');
@@ -346,6 +550,7 @@ webhooks.post('/:connectionId', async (c) => {
     }));
     return providerHttpError(c, 'webhook_queue_unavailable', 'Webhook queue is temporarily unavailable', 503, true);
   }
+  observeStripeWebhook(c, connection, externalId, eventType);
   return c.json({ received: true, queued: true, duplicate: !inserted.meta.changes }, 202);
 });
 

@@ -185,7 +185,7 @@ describe('Purchases provider webhooks', () => {
         retryable: true,
       }), { status: 503 }),
     } as Fetcher;
-    const payload = '{"id":"evt_queue_failure","type":"invoice.paid"}';
+    const payload = '{"id":"evt_queue_failure","type":"invoice.paid","livemode":false}';
 
     const response = await webhookRoutes.request('/stripe-test', {
       method: 'POST',
@@ -203,5 +203,35 @@ describe('Purchases provider webhooks', () => {
       retryable: true,
       request_id: 'stripe-billing-test',
     });
+  });
+
+  it('rejects a signed Stripe event from the wrong environment before Billing ingestion', async () => {
+    const env = envWithDb({} as D1Database);
+    const configuration = await encryptCredential(env, JSON.stringify({
+      secret_key: 'sk_test_example',
+      webhook_secret: 'whsec_example',
+    }));
+    const billing = vi.fn();
+    env.DB = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM billing_store_connections')) {
+        return {
+          id: 'stripe-test', project_id: 'project-test', provider: 'stripe',
+          environment: 'sandbox', configuration_encrypted: configuration,
+        };
+      }
+      return undefined;
+    });
+    env.BILLING_EXECUTION_MODE = 'service';
+    env.BILLING = { fetch: billing } as unknown as Fetcher;
+    const payload = '{"id":"evt_live","type":"invoice.paid","livemode":true}';
+    const response = await webhookRoutes.request('/stripe-test', {
+      method: 'POST',
+      headers: { 'Stripe-Signature': await stripeSignature('whsec_example', payload) },
+      body: payload,
+    }, env);
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({ code: 'stripe_environment_mismatch', retryable: false });
+    expect(billing).not.toHaveBeenCalled();
   });
 });
