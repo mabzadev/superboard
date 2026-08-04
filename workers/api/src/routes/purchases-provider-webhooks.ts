@@ -6,8 +6,10 @@ import { validateStripeCredentials } from '../lib/stripe-credentials';
 import { stripeAmountMicros } from '../lib/stripe-catalog';
 import { readTextLimited } from '../lib/http-limits';
 import { billingServiceEnabled, ingestProviderEventWithBillingAuthority } from '../lib/billing-service';
+import { providerHttpError, providerTaggedHttpError, providerUnhandledHttpError } from '../lib/provider-http-errors';
 
 const webhooks = new Hono<{ Bindings: Env }>();
+webhooks.onError((error, c) => providerUnhandledHttpError(c, error));
 
 function parseObject(value: unknown): Record<string, any> {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -204,10 +206,12 @@ export async function processStripeBillingNotification(env: BillingEnv, params: 
 webhooks.post('/:connectionId', async (c) => {
   let payload: string;
   try { payload = await readTextLimited(c.req.raw, 1_048_576, 'Webhook payload too large'); }
-  catch { return c.json({ error: 'Webhook payload too large' }, 413); }
+  catch { return providerHttpError(c, 'webhook_payload_too_large', 'Webhook payload is limited to 1 MB', 413, false); }
   const connection = await c.env.DB.prepare(`SELECT * FROM billing_store_connections WHERE id = ? AND provider = 'stripe' LIMIT 1`)
     .bind(c.req.param('connectionId')).first<Record<string, any>>();
-  if (!connection?.configuration_encrypted) return c.json({ error: 'Connection not found' }, 404);
+  if (!connection?.configuration_encrypted) {
+    return providerHttpError(c, 'store_connection_not_found', 'Store connection was not found', 404, false);
+  }
   let credentials: Record<string, any>;
   try {
     credentials = validateStripeCredentials(
@@ -215,15 +219,17 @@ webhooks.post('/:connectionId', async (c) => {
       connection.environment === 'production' ? 'production' : 'sandbox',
     );
   }
-  catch { return c.json({ error: 'Connection credentials invalid' }, 500); }
+  catch {
+    return providerHttpError(c, 'store_connection_credentials_invalid', 'Store connection credentials are invalid', 500, true);
+  }
   const webhookSecret = String(credentials.webhook_secret);
   const valid = await verifyStripe(payload, c.req.header('Stripe-Signature') || '', webhookSecret);
-  if (!valid) return c.json({ error: 'Invalid webhook signature' }, 401);
+  if (!valid) return providerHttpError(c, 'invalid_webhook_signature', 'Webhook signature is invalid', 401, false);
   let event: Record<string, any>;
   try { event = JSON.parse(payload) as Record<string, any>; }
-  catch { return c.json({ error: 'Webhook payload is invalid JSON' }, 400); }
+  catch { return providerHttpError(c, 'invalid_webhook_payload', 'Webhook payload must be valid JSON', 400, false); }
   const externalId = String(event.id || event.event_id || '');
-  if (!externalId) return c.json({ error: 'Webhook event ID is required' }, 422);
+  if (!externalId) return providerHttpError(c, 'webhook_event_id_required', 'Webhook event ID is required', 422, false);
   const eventType = String(event.type || event.event_type || 'unknown');
   if (billingServiceEnabled(c.env)) {
     try {
@@ -241,13 +247,7 @@ webhooks.post('/:connectionId', async (c) => {
       });
       return c.json({ received: true, queued: result.queued, duplicate: result.duplicate }, result.processed ? 200 : 202);
     } catch (error) {
-      const tagged = error as { code?: string; status?: number; retryable?: boolean; message?: string };
-      const status = Number(tagged.status || 503);
-      return c.json({
-        code: tagged.code || 'provider_ingress_failed',
-        error: tagged.message || 'Webhook could not be accepted',
-        retryable: tagged.retryable === true || status >= 500,
-      }, status as any);
+      return providerTaggedHttpError(c, error, 'Webhook could not be accepted');
     }
   }
   const eventId = crypto.randomUUID();
@@ -260,7 +260,9 @@ webhooks.post('/:connectionId', async (c) => {
     WHERE project_id = ? AND store = ? AND environment = ? AND external_event_id = ? LIMIT 1
   `).bind(connection.project_id, connection.provider, connection.environment, externalId)
     .first<{ id: string; status: string }>();
-  if (!persisted) return c.json({ error: 'Webhook event persistence failed' }, 503);
+  if (!persisted) {
+    return providerHttpError(c, 'webhook_event_persistence_failed', 'Webhook event could not be persisted', 503, true);
+  }
   if (persisted.status === 'processed') return c.json({ received: true, duplicate: true });
   const job = { type: 'billing.stripe.notification' as const, eventId: persisted.id, connectionId: String(connection.id) };
   try {
@@ -277,7 +279,7 @@ webhooks.post('/:connectionId', async (c) => {
       event: 'stripe_webhook_queue_failed', webhook_event_id: persisted.id,
       error: error instanceof Error ? error.message : String(error),
     }));
-    return c.json({ error: 'Webhook queue is temporarily unavailable', retryable: true }, 503);
+    return providerHttpError(c, 'webhook_queue_unavailable', 'Webhook queue is temporarily unavailable', 503, true);
   }
   return c.json({ received: true, queued: true, duplicate: !inserted.meta.changes }, 202);
 });
