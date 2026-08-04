@@ -40,6 +40,7 @@ import { isBillingQueueJob } from './lib/billing-dispatch';
 import { readTextLimited } from './lib/http-limits';
 import { emitBillingGrowthEvent } from './lib/growth-delivery';
 import { getAuthContext } from './lib/auth';
+import { queueOfficialMetadataSyncIfDue } from './lib/official-store-metadata';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -207,6 +208,14 @@ export default {
   async scheduled(_event, env, ctx) {
     if (env.BILLING_QUEUE) {
       ctx.waitUntil(env.BILLING_QUEUE.send({ type: 'billing.reconcile' }));
+    }
+    if (env.GROWTH && env.GROWTH_INTERNAL_TOKEN && env.EVENT_QUEUE) {
+      ctx.waitUntil(queueOfficialMetadataSyncIfDue(env).catch((error) => {
+        console.error(JSON.stringify({
+          event: 'official_metadata_schedule_failed',
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      }));
     }
     if (env.MAINTENANCE_QUEUE) {
       ctx.waitUntil(env.MAINTENANCE_QUEUE.send({ type: 'maintenance.run', days: 3 }));
