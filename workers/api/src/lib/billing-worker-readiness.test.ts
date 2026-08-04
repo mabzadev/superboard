@@ -1,7 +1,8 @@
 import { exportJWK, generateKeyPair } from 'jose';
 import { describe, expect, it } from 'vitest';
 import type { BillingEnv } from '../types';
-import { billingSigningAuthorityReady } from './billing-worker-readiness';
+import { createFakeD1 } from '../test/fake-d1';
+import { billingSigningAuthorityReady, billingStoreReadiness } from './billing-worker-readiness';
 
 describe('Billing signing authority readiness', () => {
   it('proves that the active private key signs data verifiable by the public JWKS', async () => {
@@ -26,5 +27,38 @@ describe('Billing signing authority readiness', () => {
     } as BillingEnv;
 
     await expect(billingSigningAuthorityReady(env)).resolves.toBe(false);
+  });
+});
+
+describe('billing store readiness', () => {
+  it('reports native platform credentials and Stripe connection credentials through one contract', async () => {
+    const expected = [
+      {
+        provider: 'apple',
+        environment: 'production',
+        credential_source: 'platform_configuration',
+        connections: 1,
+        configured: 1,
+        billing_credentials_ready: 1,
+      },
+      {
+        provider: 'stripe',
+        environment: 'production',
+        credential_source: 'store_connection',
+        connections: 1,
+        configured: 0,
+        billing_credentials_ready: 0,
+      },
+    ];
+    const db = createFakeD1((call) => {
+      if (call.op !== 'all') return undefined;
+      expect(call.sql).toContain('FROM ios_server_api_keys credential');
+      expect(call.sql).toContain('FROM android_server_api_keys credential');
+      expect(call.sql).toContain('connection.billing_configuration_encrypted IS NOT NULL');
+      expect(call.sql).toContain('SUM(credentials_ready) AS billing_credentials_ready');
+      return expected;
+    });
+
+    await expect(billingStoreReadiness(db)).resolves.toEqual(expected);
   });
 });
