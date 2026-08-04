@@ -3,6 +3,7 @@ import { decryptCredential, hmacSha256 } from './secrets';
 import { verifyAppleNotification } from './store-verification';
 import { reconcileAppleSubscription, verifyGooglePurchase } from './store-verification';
 import { applyVerifiedPurchase, queueCustomerEntitlementChanged, type BillingEnvironment } from './billing';
+import { reconcileStripeSubscription } from './stripe-subscription-reconciliation';
 
 export async function processAppleBillingNotification(env: BillingEnv, params: {
   eventId: string;
@@ -265,29 +266,59 @@ export async function reconcileStoreSubscription(env: BillingEnv, subscriptionId
   `).bind(subscriptionId).first<Record<string, unknown>>();
   if (!row) return { skipped: true, reason: 'not_found' };
   if (!row.customer_id) return { skipped: true, reason: 'unowned' };
-  const environment = String(row.environment) as BillingEnvironment;
-  if (row.store === 'apple') {
-    const purchase = await reconcileAppleSubscription(env, {
-      projectId: String(row.project_id),
-      customerId: String(row.customer_id),
-      transactionId: String(row.original_transaction_id),
-      environment,
-    });
-    const result = await applyVerifiedPurchase(env, purchase);
-    return { store: 'apple', ...result };
+  try {
+    const environment = String(row.environment) as BillingEnvironment;
+    let result: Record<string, unknown>;
+    if (row.store === 'apple') {
+      const purchase = await reconcileAppleSubscription(env, {
+        projectId: String(row.project_id),
+        customerId: String(row.customer_id),
+        transactionId: String(row.original_transaction_id),
+        environment,
+      });
+      result = { store: 'apple', ...await applyVerifiedPurchase(env, purchase) };
+    } else if (row.store === 'google' && row.purchase_token) {
+      const verified = await verifyGooglePurchase(env, {
+        projectId: String(row.project_id),
+        customerId: String(row.customer_id),
+        purchaseToken: String(row.purchase_token),
+        storeProductId: String(row.store_product_id),
+        productType: 'subscription',
+        environment,
+      });
+      verified.purchase.eventType = `RECONCILIATION_${verified.purchase.status.toUpperCase()}`;
+      result = { store: 'google', ...await applyVerifiedPurchase(env, verified.purchase) };
+    } else if (row.store === 'stripe') {
+      const purchase = await reconcileStripeSubscription(env, row);
+      result = { store: 'stripe', ...await applyVerifiedPurchase(env, purchase) };
+    } else {
+      throw Object.assign(new Error('Subscription cannot be reconciled without provider verification data'), {
+        code: 'subscription_reconciliation_data_missing', retryable: false,
+      });
+    }
+    await env.DB.prepare(`
+      UPDATE billing_subscriptions
+      SET provider_last_verified_at = datetime('now'), provider_verification_status = 'verified',
+        provider_verification_error_code = NULL, provider_verification_error_message = NULL,
+        provider_verification_attempts = provider_verification_attempts + 1,
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(subscriptionId).run();
+    return result;
+  } catch (error) {
+    const tagged = error as { code?: string; message?: string };
+    await env.DB.prepare(`
+      UPDATE billing_subscriptions
+      SET provider_verification_status = 'failed',
+        provider_verification_error_code = ?, provider_verification_error_message = ?,
+        provider_verification_attempts = provider_verification_attempts + 1,
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      String(tagged.code || 'subscription_reconciliation_failed').slice(0, 100),
+      String(tagged.message || 'Subscription reconciliation failed').slice(0, 1000),
+      subscriptionId,
+    ).run();
+    throw error;
   }
-  if (row.store === 'google' && row.purchase_token) {
-    const verified = await verifyGooglePurchase(env, {
-      projectId: String(row.project_id),
-      customerId: String(row.customer_id),
-      purchaseToken: String(row.purchase_token),
-      storeProductId: String(row.store_product_id),
-      productType: 'subscription',
-      environment,
-    });
-    verified.purchase.eventType = `RECONCILIATION_${verified.purchase.status.toUpperCase()}`;
-    const result = await applyVerifiedPurchase(env, verified.purchase);
-    return { store: 'google', ...result };
-  }
-  return { skipped: true, reason: 'missing_purchase_token' };
 }
