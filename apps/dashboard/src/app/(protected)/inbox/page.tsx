@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleUserRound, ExternalLink, Inbox, MessageSquareText, RefreshCw, RotateCcw, Send, ShieldCheck, Star } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CircleUserRound, Download, ExternalLink, Inbox, MessageSquareText, Paperclip, RefreshCw, RotateCcw, Send, ShieldCheck, Star } from "lucide-react";
 import AppHeader from "@/components/layout/app-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,12 @@ import { showErrorNotification } from "@/lib/Notifications";
 import {
   getInboxMessages,
   getUnifiedInboxItems,
+  downloadInboxAttachment,
+  markInboxConversationRead,
   sendInboxMessage,
+  sendInboxAttachment,
+  setInboxConversationTyping,
+  uploadInboxAttachment,
   updateInboxConversation,
   type InboxConversation,
   type InboxMessage,
@@ -43,6 +48,16 @@ export default function InboxPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const typingTimer = useRef<number | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const pendingTextMessage = useRef<{ body: string; id: string } | null>(null);
+  const pendingAttachment = useRef<{
+    signature: string;
+    attachment: { key: string; filename: string; content_type: string; size: number };
+    id: string;
+    body: string;
+  } | null>(null);
   const selected = useMemo(() => items.find((item) => item.id === selectedId), [items, selectedId]);
 
   const loadItems = useCallback(async () => {
@@ -63,6 +78,7 @@ export default function InboxPage() {
     try {
       const result = await getInboxMessages(projectId, selected.source_id);
       setMessages(result.data || []);
+      void markInboxConversationRead(projectId, selected.source_id).catch(() => undefined);
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Unable to load the conversation");
     }
@@ -74,13 +90,22 @@ export default function InboxPage() {
     const timer = window.setInterval(() => { void loadItems(); void loadMessages(); }, 15_000);
     return () => window.clearInterval(timer);
   }, [loadItems, loadMessages]);
+  useEffect(() => () => {
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+  }, []);
 
   const send = async () => {
     if (!projectId || selected?.source_type !== "conversation" || !reply.trim()) return;
     const value = reply.trim();
+    const pending = pendingTextMessage.current?.body === value
+      ? pendingTextMessage.current
+      : { body: value, id: crypto.randomUUID() };
+    pendingTextMessage.current = pending;
     setReply("");
     try {
-      await sendInboxMessage(projectId, selected.source_id, value);
+      await sendInboxMessage(projectId, selected.source_id, value, pending.id);
+      pendingTextMessage.current = null;
+      void setInboxConversationTyping(projectId, selected.source_id, false).catch(() => undefined);
       await Promise.all([loadMessages(), loadItems()]);
     } catch (error) {
       setReply(value);
@@ -88,13 +113,72 @@ export default function InboxPage() {
     }
   };
 
-  const update = async (value: Partial<Pick<InboxConversation, "status" | "priority">>) => {
+  const update = async (value: Partial<Pick<InboxConversation, "status" | "priority" | "assigned_user_id">> & { labels?: string[] }) => {
     if (!projectId || selected?.source_type !== "conversation") return;
     try {
       await updateInboxConversation(projectId, selected.source_id, value);
       await loadItems();
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Unable to update the conversation");
+    }
+  };
+
+  const updateReply = (value: string) => {
+    if (pendingTextMessage.current?.body !== value.trim()) pendingTextMessage.current = null;
+    setReply(value);
+    if (!projectId || selected?.source_type !== "conversation") return;
+    void setInboxConversationTyping(projectId, selected.source_id, value.trim().length > 0).catch(() => undefined);
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    typingTimer.current = window.setTimeout(() => {
+      void setInboxConversationTyping(projectId, selected.source_id, false).catch(() => undefined);
+    }, 2_000);
+  };
+
+  const attach = async (file?: File) => {
+    if (!file || !projectId || selected?.source_type !== "conversation") return;
+    if (file.size > 10 * 1024 * 1024) {
+      showErrorNotification("Attachments are limited to 10 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const signature = `${selected.source_id}:${file.name}:${file.size}:${file.lastModified}`;
+      let pending = pendingAttachment.current?.signature === signature
+        ? pendingAttachment.current
+        : null;
+      if (!pending) {
+        pending = {
+          signature,
+          attachment: await uploadInboxAttachment(projectId, selected.source_id, file),
+          id: crypto.randomUUID(),
+          body: reply.trim(),
+        };
+        pendingAttachment.current = pending;
+      }
+      await sendInboxAttachment(projectId, selected.source_id, pending.attachment, pending.id, pending.body);
+      pendingAttachment.current = null;
+      setReply("");
+      await Promise.all([loadMessages(), loadItems()]);
+    } catch (error) {
+      showErrorNotification(error instanceof Error ? error.message : "Unable to send the attachment");
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  };
+
+  const downloadAttachment = async (message: InboxMessage) => {
+    if (!projectId || selected?.source_type !== "conversation") return;
+    try {
+      const blob = await downloadInboxAttachment(projectId, selected.source_id, message.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = message.attachment_name || "attachment";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch (error) {
+      showErrorNotification(error instanceof Error ? error.message : "Unable to download the attachment");
     }
   };
 
@@ -125,16 +209,25 @@ export default function InboxPage() {
             <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
               <div className="flex min-w-0 items-center gap-3"><CircleUserRound className="h-8 w-8 shrink-0 text-muted-foreground" /><div className="min-w-0"><div className="truncate font-medium">{selected.title}</div><div className="truncate text-xs text-muted-foreground">Customer {selected.customer_reference || "—"}</div></div></div>
               <div className="flex gap-2"><select aria-label="Priority" className="rounded-md border bg-background px-2 text-sm" value={selected.priority} onChange={(event) => void update({ priority: event.target.value as InboxConversation["priority"] })}>{Object.entries(priorityLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><select aria-label="Status" className="rounded-md border bg-background px-2 text-sm" value={selected.status} onChange={(event) => void update({ status: event.target.value as InboxConversation["status"] })}><option value="open">Open</option><option value="pending">Pending</option><option value="closed">Closed</option></select></div>
+              <div className="grid w-full gap-2 sm:grid-cols-2"><input key={`${selected.id}:assigned:${String(selected.source.assigned_user_id || "")}`} aria-label="Assigned user" className="rounded-md border bg-background px-3 py-2 text-sm" defaultValue={String(selected.source.assigned_user_id || "")} placeholder="Assign to user ID" onBlur={(event) => void update({ assigned_user_id: event.target.value.trim() || null })} /><input key={`${selected.id}:labels:${String(selected.source.labels_json || "")}`} aria-label="Conversation labels" className="rounded-md border bg-background px-3 py-2 text-sm" defaultValue={conversationLabels(selected.source.labels_json).join(", ")} placeholder="Labels, comma separated" onBlur={(event) => void update({ labels: event.target.value.split(",").map((label) => label.trim()).filter(Boolean) })} /></div>
             </header>
             <div className="flex-1 space-y-3 overflow-auto bg-muted/20 p-5">
-              {messages.map((message) => <div key={message.id} className={`flex ${message.sender_kind === "agent" ? "justify-end" : "justify-start"}`}><Card className={`max-w-[78%] px-4 py-3 ${message.sender_kind === "agent" ? "bg-primary text-primary-foreground" : ""}`}><p className="whitespace-pre-wrap text-sm">{message.body || `Attachment: ${message.attachment_name || "file"}`}</p><div className={`mt-1 text-[11px] ${message.sender_kind === "agent" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{message.sender_kind === "agent" ? "Team" : "Customer"} · {dateTime(message.created_at)}</div></Card></div>)}
+              {messages.map((message) => <div key={message.id} className={`flex ${message.sender_kind === "agent" ? "justify-end" : "justify-start"}`}><Card className={`max-w-[78%] px-4 py-3 ${message.sender_kind === "agent" ? "bg-primary text-primary-foreground" : ""}`}><p className="whitespace-pre-wrap text-sm">{message.body || (message.attachment_name ? "Attachment" : "Empty message")}</p>{message.attachment_name && <Button type="button" size="sm" variant={message.sender_kind === "agent" ? "secondary" : "outline"} className="mt-2" onClick={() => void downloadAttachment(message)}><Download className="mr-2 h-4 w-4" />{message.attachment_name}</Button>}<div className={`mt-1 text-[11px] ${message.sender_kind === "agent" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{message.sender_kind === "agent" ? "Team" : "Customer"} · {dateTime(message.created_at)}</div></Card></div>)}
             </div>
-            <form className="flex gap-2 border-t p-4" onSubmit={(event) => { event.preventDefault(); void send(); }}><textarea className="min-h-12 flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm" maxLength={8000} value={reply} onChange={(event) => setReply(event.target.value)} placeholder="Reply to the customer…" /><Button type="submit" disabled={!reply.trim()}><Send className="mr-2 h-4 w-4" />Send</Button></form>
+            <form className="flex gap-2 border-t p-4" onSubmit={(event) => { event.preventDefault(); void send(); }}><input ref={fileInput} className="hidden" type="file" onChange={(event) => void attach(event.target.files?.[0])} /><Button type="button" variant="outline" disabled={uploading} aria-label="Attach a file" onClick={() => fileInput.current?.click()}><Paperclip className="h-4 w-4" /></Button><textarea className="min-h-12 flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm" maxLength={8000} value={reply} onChange={(event) => updateReply(event.target.value)} placeholder="Reply to the customer…" /><Button type="submit" disabled={!reply.trim() || uploading}><Send className="mr-2 h-4 w-4" />Send</Button></form>
           </> : <SourceDetail item={selected} /> : <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Select an Inbox item.</div>}
         </section>
       </div>
     </main>
   </div>;
+}
+
+function conversationLabels(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  try {
+    const parsed = JSON.parse(String(value || "[]"));
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch { return []; }
 }
 
 function SourceDetail({ item }: { item: UnifiedInboxItem }) {

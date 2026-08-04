@@ -98,38 +98,14 @@ app.post('/v1/conversations/:conversationId/attachments', async (c) => {
   const subject = c.get('subject');
   const projectId = requireProject(c.env, c.req.header('X-OpenGrow-Project-Id'));
   const conversation = await userConversation(c.env, c.req.param('conversationId'), subject, projectId);
-  const announced = Number(c.req.header('Content-Length') || 0);
-  if (announced > MAX_ATTACHMENT_BYTES) throw failure('attachment_too_large', 'Attachment is limited to 10 MB', 413);
-  const bytes = await c.req.arrayBuffer();
-  if (!bytes.byteLength || bytes.byteLength > MAX_ATTACHMENT_BYTES) throw failure('attachment_invalid', 'Attachment must contain between 1 byte and 10 MB', 422);
-  const filename = safeFilename(c.req.header('X-Filename') || 'attachment');
-  const userHash = (await sha256(subject)).slice(0, 24);
-  const key = `attachments/${conversation.project_id}/${userHash}/${conversation.id}/${crypto.randomUUID()}/${filename}`;
-  await c.env.ATTACHMENTS.put(key, bytes, {
-    httpMetadata: { contentType: c.req.header('Content-Type') || 'application/octet-stream' },
-    customMetadata: { conversationId: conversation.id, uploadedBy: userHash },
-  });
-  return c.json({ key, filename, content_type: c.req.header('Content-Type') || 'application/octet-stream', size: bytes.byteLength }, 201);
+  return storeAttachment(c.env, conversation, subject, c.req.raw);
 });
 
 app.get('/v1/conversations/:conversationId/attachments/:messageId', async (c) => {
   const subject = c.get('subject');
   const projectId = requireProject(c.env, c.req.header('X-OpenGrow-Project-Id'));
   const conversation = await userConversation(c.env, c.req.param('conversationId'), subject, projectId);
-  const message = await c.env.DB.prepare(`
-    SELECT attachment_key, attachment_name, attachment_content_type FROM messages
-    WHERE id = ? AND conversation_id = ? AND attachment_key IS NOT NULL
-  `).bind(c.req.param('messageId'), conversation.id).first<{
-    attachment_key: string; attachment_name: string | null; attachment_content_type: string | null;
-  }>();
-  if (!message) throw failure('attachment_not_found', 'Attachment not found', 404);
-  const object = await c.env.ATTACHMENTS.get(message.attachment_key);
-  if (!object) throw failure('attachment_not_found', 'Attachment not found', 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set('etag', object.httpEtag);
-  headers.set('Content-Disposition', `attachment; filename="${safeFilename(message.attachment_name || 'attachment')}"`);
-  return new Response(object.body, { headers });
+  return attachmentResponse(c.env, conversation, c.req.param('messageId'));
 });
 
 app.use('/internal/*', async (c, next) => {
@@ -181,6 +157,41 @@ app.post('/internal/projects/:projectId/conversations/:conversationId/messages',
   const agentId = c.req.header('X-OpenGrow-Agent-Id') || '';
   if (!agentId) throw failure('agent_required', 'Agent identity is required', 401);
   return roomFetch(c.env, conversation.id, { id: agentId, kind: 'agent' }, '/messages', c.req.raw);
+});
+
+app.post('/internal/projects/:projectId/conversations/:conversationId/read', async (c) => {
+  const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');
+  const conversation = await projectConversation(c.env, c.req.param('conversationId'), projectId);
+  const agentId = requiredAgent(c.req.header('X-OpenGrow-Agent-Id'));
+  return roomFetch(c.env, conversation.id, { id: agentId, kind: 'agent' }, '/read', c.req.raw);
+});
+
+app.post('/internal/projects/:projectId/conversations/:conversationId/typing', async (c) => {
+  const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');
+  const conversation = await projectConversation(c.env, c.req.param('conversationId'), projectId);
+  const agentId = requiredAgent(c.req.header('X-OpenGrow-Agent-Id'));
+  return roomFetch(c.env, conversation.id, { id: agentId, kind: 'agent' }, '/typing', c.req.raw);
+});
+
+app.get('/internal/projects/:projectId/conversations/:conversationId/ws', async (c) => {
+  const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');
+  const conversation = await projectConversation(c.env, c.req.param('conversationId'), projectId);
+  const agentId = requiredAgent(c.req.header('X-OpenGrow-Agent-Id'));
+  return roomFetch(c.env, conversation.id, { id: agentId, kind: 'agent' }, '/connect', c.req.raw);
+});
+
+app.post('/internal/projects/:projectId/conversations/:conversationId/attachments', async (c) => {
+  const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');
+  const conversation = await projectConversation(c.env, c.req.param('conversationId'), projectId);
+  const agentId = requiredAgent(c.req.header('X-OpenGrow-Agent-Id'));
+  return storeAttachment(c.env, conversation, agentId, c.req.raw);
+});
+
+app.get('/internal/projects/:projectId/conversations/:conversationId/attachments/:messageId', async (c) => {
+  const projectId = positiveInt(c.req.param('projectId'), 'project_id_invalid');
+  const conversation = await projectConversation(c.env, c.req.param('conversationId'), projectId);
+  requiredAgent(c.req.header('X-OpenGrow-Agent-Id'));
+  return attachmentResponse(c.env, conversation, c.req.param('messageId'));
 });
 
 app.patch('/internal/projects/:projectId/conversations/:conversationId', async (c) => {
@@ -288,6 +299,52 @@ function positiveInt(value: string, code: string): number {
 
 function failure(code: string, message: string, status = 422) {
   return Object.assign(new Error(message), { code, status });
+}
+
+function requiredAgent(value?: string): string {
+  const agentId = String(value || '').trim();
+  if (!agentId || agentId.length > 255) throw failure('agent_required', 'Agent identity is required', 401);
+  return agentId;
+}
+
+async function storeAttachment(
+  env: Env,
+  conversation: Conversation,
+  uploaderId: string,
+  request: Request,
+) {
+  const announced = Number(request.headers.get('Content-Length') || 0);
+  if (announced > MAX_ATTACHMENT_BYTES) throw failure('attachment_too_large', 'Attachment is limited to 10 MB', 413);
+  const bytes = await request.arrayBuffer();
+  if (!bytes.byteLength || bytes.byteLength > MAX_ATTACHMENT_BYTES) {
+    throw failure('attachment_invalid', 'Attachment must contain between 1 byte and 10 MB', 422);
+  }
+  const filename = safeFilename(request.headers.get('X-Filename') || 'attachment');
+  const uploaderHash = (await sha256(uploaderId)).slice(0, 24);
+  const key = `attachments/${conversation.project_id}/${uploaderHash}/${conversation.id}/${crypto.randomUUID()}/${filename}`;
+  const contentType = request.headers.get('Content-Type') || 'application/octet-stream';
+  await env.ATTACHMENTS.put(key, bytes, {
+    httpMetadata: { contentType },
+    customMetadata: { conversationId: conversation.id, uploadedBy: uploaderHash },
+  });
+  return Response.json({ key, filename, content_type: contentType, size: bytes.byteLength }, { status: 201 });
+}
+
+async function attachmentResponse(env: Env, conversation: Conversation, messageId: string) {
+  const message = await env.DB.prepare(`
+    SELECT attachment_key, attachment_name, attachment_content_type FROM messages
+    WHERE id = ? AND conversation_id = ? AND attachment_key IS NOT NULL
+  `).bind(messageId, conversation.id).first<{
+    attachment_key: string; attachment_name: string | null; attachment_content_type: string | null;
+  }>();
+  if (!message) throw failure('attachment_not_found', 'Attachment not found', 404);
+  const object = await env.ATTACHMENTS.get(message.attachment_key);
+  if (!object) throw failure('attachment_not_found', 'Attachment not found', 404);
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set('etag', object.httpEtag);
+  headers.set('Content-Disposition', `attachment; filename="${safeFilename(message.attachment_name || 'attachment')}"`);
+  return new Response(object.body, { headers });
 }
 
 async function sha256(value: string): Promise<string> {

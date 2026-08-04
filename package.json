@@ -32,6 +32,7 @@
     "growth:check": "npm run growth:types && npm run growth:typecheck && npm run growth:test && cd workers/growth && npx wrangler deploy --dry-run --config ../../deploy/generated/vocostar-growth-production.jsonc",
     "growth:deploy": "npm run cloudflare:deploy -- --service growth --target vocostar --environment production",
     "purchases-js:typecheck": "npm --prefix sdks/purchases-js run typecheck",
+    "flutterflow-messaging:check": "cd sdks/flutterflow_messaging && flutter analyze && flutter test",
     "worker:migrate:local": "npm --prefix workers/api run migrate:local",
     "worker:migrate:prod": "npm --prefix workers/api run migrate:prod",
     "worker:deploy": "npm run cloudflare:deploy -- --service api --target vocostar --environment production",
@@ -50,7 +51,7 @@
     "typecheck": "npm run worker:typecheck && npm run billing:typecheck && npm run messaging:typecheck && npm run growth:typecheck && npm run dashboard:typecheck && npm run purchases-js:typecheck",
     "test": "npm run dashboard:test && npm run worker:test && npm run billing:test && npm run messaging:test && npm run growth:test",
     "test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 npm run test:e2e",
-    "test:all": "npm run copy:check && npm run migration:inventory && npm run typecheck && npm run test && npm run dashboard:cf-build && npm run worker:check"
+    "test:all": "npm run copy:check && npm run migration:inventory && npm run typecheck && npm run flutterflow-messaging:check && npm run test && npm run dashboard:cf-build && npm run worker:check"
   },
   "workspaces": [
     "apps/dashboard",
