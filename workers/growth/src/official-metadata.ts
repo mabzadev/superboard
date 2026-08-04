@@ -1,6 +1,6 @@
-import type { Env, Platform } from './types';
+import type { Device, Env, Platform } from './types';
 import { audit, refreshRecommendations } from './sync';
-import { failure, jsonObject, optionalString, requiredString } from './validation';
+import { device, failure, jsonObject, locale, optionalString, platform, requiredString } from './validation';
 
 export type OfficialMetadataSource = 'app_store_connect' | 'google_play';
 
@@ -40,6 +40,98 @@ export async function listOfficialMetadataTargets(env: Env, projectId: number) {
     LIMIT 250
   `).bind(projectId).all<OfficialMetadataTarget>();
   return rows.results;
+}
+
+export async function reconcileManagedOfficialMetadataTargets(
+  env: Env,
+  projectId: number,
+  input: Record<string, unknown>,
+  actorId = 'official-store-sync',
+) {
+  if (!Array.isArray(input.targets) || input.targets.length > 4) {
+    throw failure('official_metadata_targets_invalid', 'targets must be an array with at most four Store apps');
+  }
+  const targets = input.targets.map(parseManagedTarget);
+  if (new Set(targets.map((target) => target.platform)).size !== targets.length) {
+    throw failure('official_metadata_targets_invalid', 'Only one managed Store app is allowed per platform');
+  }
+  const desiredPlatforms = new Set(targets.map((target) => target.platform));
+  const managedRows = await env.DB.prepare(`
+    SELECT id, platform FROM growth_apps
+    WHERE project_id = ? AND management_source = 'store_connection'
+  `).bind(projectId).all<{ id: string; platform: Platform }>();
+  for (const row of managedRows.results) {
+    if (desiredPlatforms.has(row.platform)) continue;
+    await env.DB.prepare(`
+      UPDATE growth_apps SET enabled = 0, is_primary = 0, updated_at = datetime('now')
+      WHERE id = ? AND project_id = ?
+    `).bind(row.id, projectId).run();
+  }
+
+  const reconciled: Array<Record<string, unknown>> = [];
+  for (const target of targets) {
+    const [managed, exact] = await Promise.all([
+      env.DB.prepare(`
+        SELECT * FROM growth_apps
+        WHERE project_id = ? AND platform = ? AND management_source = 'store_connection'
+        LIMIT 1
+      `).bind(projectId, target.platform).first<Record<string, unknown>>(),
+      env.DB.prepare(`
+        SELECT * FROM growth_apps
+        WHERE project_id = ? AND platform = ? AND app_identifier = ?
+          AND country = ? AND language = ? AND device = ?
+        LIMIT 1
+      `).bind(
+        projectId, target.platform, target.appIdentifier,
+        target.country, target.language, target.device,
+      ).first<Record<string, unknown>>(),
+    ]);
+    let id = String(managed?.id || exact?.id || crypto.randomUUID());
+    if (exact && managed && exact.id !== managed.id) {
+      await env.DB.prepare(`
+        UPDATE growth_apps
+        SET management_source = NULL, enabled = 0, is_primary = 0, updated_at = datetime('now')
+        WHERE id = ? AND project_id = ?
+      `).bind(String(managed.id), projectId).run();
+      id = String(exact.id);
+    }
+    if (exact) {
+      await env.DB.prepare(`
+        UPDATE growth_apps
+        SET management_source = 'store_connection', enabled = 1, is_primary = 1,
+          updated_at = datetime('now')
+        WHERE id = ? AND project_id = ?
+      `).bind(id, projectId).run();
+    } else if (managed) {
+      await env.DB.prepare(`
+        UPDATE growth_apps
+        SET app_identifier = ?, country = ?, language = ?, device = ?,
+          enabled = 1, is_primary = 1, updated_at = datetime('now')
+        WHERE id = ? AND project_id = ?
+      `).bind(
+        target.appIdentifier, target.country, target.language, target.device,
+        id, projectId,
+      ).run();
+    } else {
+      await env.DB.prepare(`
+        INSERT INTO growth_apps (
+          id, project_id, platform, app_identifier, country, language, device,
+          is_primary, enabled, management_source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 'store_connection')
+      `).bind(
+        id, projectId, target.platform, target.appIdentifier,
+        target.country, target.language, target.device,
+      ).run();
+    }
+    const row = await env.DB.prepare('SELECT * FROM growth_apps WHERE id = ? AND project_id = ?')
+      .bind(id, projectId).first<Record<string, unknown>>();
+    if (row) reconciled.push(row);
+  }
+  await audit(env, projectId, 'growth.official_metadata.targets_reconciled', 'project', String(projectId), {
+    platforms: targets.map((target) => target.platform),
+    target_count: targets.length,
+  }, actorId);
+  return reconciled;
 }
 
 export async function persistOfficialMetadataSnapshot(
@@ -128,4 +220,22 @@ function optionalCount(value: unknown, field: string): number | null {
     throw failure(`${field}_invalid`, `${field} must be a non-negative integer`);
   }
   return parsed;
+}
+
+function parseManagedTarget(value: unknown): {
+  platform: Platform;
+  appIdentifier: string;
+  country: string;
+  language: string;
+  device: Device;
+} {
+  const input = jsonObject(value, 'target');
+  const selectedPlatform = platform(input.platform);
+  return {
+    platform: selectedPlatform,
+    appIdentifier: requiredString(input.app_identifier, 'app_identifier', 255),
+    country: locale(input.country, 'country', 'us'),
+    language: locale(input.language, 'language', 'en'),
+    device: device(input.device, selectedPlatform),
+  };
 }
