@@ -32,7 +32,13 @@ The SDK persists a transaction in encrypted secure storage before server validat
 
 Stripe is Web-only for digital purchases. Checkout, Billing Portal, redemption, refunds, and disputes share the same entitlement projection as the native Stores. Mobile applications must not replace Apple or Google Play purchase buttons with Stripe Checkout.
 
-Webhook signatures are verified before persistence and queueing. When Billing service mode is enabled, Checkout, Portal, redemption, and provider actions execute only in the private Billing Worker.
+Webhook signatures and the event `livemode` value are verified before persistence and queueing. Only the explicit purchase, subscription, invoice, refund, dispute, and fraud-warning event contract can reach the entitlement projector; unrelated signed Stripe events are journaled as ignored. Checkout sessions, metadata customers, provider customers, products, and prior transactions are resolved inside the connection project and environment before any financial projection.
+
+The dashboard can provision the Stripe webhook directly from the test or live secret key. OpenGrow creates an endpoint with the exact project connection URL and required event allowlist, captures the signing secret once, encrypts separate API and Billing copies, reads the provider configuration back, and stores only non-secret readiness metadata. Operators may instead supply an existing signing secret; that manual connection becomes release-ready only after the endpoint configuration is read back with the exact event set and a correctly signed event reaches its project-scoped endpoint.
+
+Checkout reuses a previously verified Stripe Customer when available and asks Stripe to create one for a first one-time payment. Checkout metadata is copied to the subscription or PaymentIntent so later provider events can be correlated without trusting browser input. Provider subscription, PaymentIntent, and charge identifiers are attached to the exact Checkout reservation. Idempotency keys are bound to the complete normalized Checkout request, and a recoverable processing lease prevents concurrent provider-session creation.
+
+When Billing service mode is enabled, Checkout, Portal, redemption, webhook projection, and provider actions execute only in the private Billing Worker.
 
 ## App Store Server Notifications
 

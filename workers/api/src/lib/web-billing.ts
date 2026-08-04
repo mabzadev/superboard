@@ -1,5 +1,5 @@
 import type { BillingEnv } from '../types';
-import { decryptCredential, scopedStoreCredential } from './secrets';
+import { decryptCredential, encryptCredential, scopedStoreCredential } from './secrets';
 import { purchasesError } from './purchases-v2';
 import { identifyCustomer } from './billing';
 import { validateStripeCredentials } from './stripe-credentials';
@@ -120,19 +120,99 @@ export async function createWebCheckoutSession(env: BillingEnv, params: {
   cancelUrl: string;
   idempotencyKey: string;
 }) {
-  const existing = await env.DB.prepare(`SELECT checkout_url, provider_session_id FROM billing_checkout_sessions WHERE project_id = ? AND idempotency_key = ?`)
-    .bind(params.projectId, params.idempotencyKey).first<{ checkout_url: string; provider_session_id: string }>();
-  if (existing) return { url: existing.checkout_url, provider_session_id: existing.provider_session_id, duplicate: true };
+  if (!params.idempotencyKey || params.idempotencyKey !== params.idempotencyKey.trim() || params.idempotencyKey.length > 200) {
+    throw purchasesError('idempotency_key_invalid', 'Idempotency key must contain between 1 and 200 characters without surrounding whitespace');
+  }
+  const existing = await checkoutByIdempotency(env.DB, params.projectId, params.idempotencyKey);
+  if (existing) {
+    if (existing.customer_id !== params.customerId || existing.environment !== params.environment) {
+      throw purchasesError('checkout_idempotency_conflict', 'Checkout idempotency key is already bound to another customer or environment', 409);
+    }
+    if (existing.checkout_url && existing.provider_session_id) {
+      return completedCheckoutResult(env, existing, true);
+    }
+  }
   const [product, successUrl, cancelUrl] = await Promise.all([
     productForCheckout(env.DB, params.projectId, params.packageIdentifier, params.offeringIdentifier),
     allowedReturnUrl(env.DB, params.projectId, params.successUrl, params.environment),
     allowedReturnUrl(env.DB, params.projectId, params.cancelUrl, params.environment),
   ]);
+  const customer = await env.DB.prepare('SELECT attributes FROM billing_customers WHERE id = ? AND project_id = ? LIMIT 1')
+    .bind(params.customerId, params.projectId).first<{ attributes: string }>();
+  if (!customer) throw purchasesError('customer_not_found', 'Customer not found', 404);
+  const stripeCustomerId = String(parseObject(customer.attributes).stripe_customer_id || '');
+  if (stripeCustomerId && !stripeCustomerId.startsWith('cus_')) {
+    throw purchasesError('stripe_customer_invalid', 'The stored Stripe customer identifier is invalid', 409);
+  }
   const connection = await connectionForCheckout(env, params.projectId, params.provider || product.store, params.environment);
   const credentials = await providerCredentials(env, connection);
   const priceId = product.provider_price_id || product.store_product_id;
-  const localId = crypto.randomUUID();
-  const redemptionCode = crypto.randomUUID().replaceAll('-', '');
+  const proposedId = crypto.randomUUID();
+  const proposedLease = crypto.randomUUID();
+  const proposedRedemptionCode = crypto.randomUUID().replaceAll('-', '');
+  const requestFingerprint = await sha256(JSON.stringify([
+    params.customerId,
+    params.environment,
+    connection.id,
+    product.package_id,
+    product.product_id,
+    priceId,
+    successUrl,
+    cancelUrl,
+  ]));
+  const encryptedRedemptionCode = await encryptCredential(env, proposedRedemptionCode);
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO billing_checkout_sessions (
+      id, project_id, customer_id, connection_id, provider, environment, package_id,
+      product_id, success_url, cancel_url, idempotency_key, status, expires_at,
+      request_fingerprint, redemption_code_encrypted, processing_lease_id, processing_started_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'creating', datetime('now', '+24 hours'), ?, ?, ?, datetime('now'))
+  `).bind(
+    proposedId, params.projectId, params.customerId, connection.id, connection.provider,
+    params.environment, product.package_id, product.product_id, successUrl, cancelUrl,
+    params.idempotencyKey, requestFingerprint, encryptedRedemptionCode, proposedLease,
+  ).run();
+  let checkout = await checkoutByIdempotency(env.DB, params.projectId, params.idempotencyKey);
+  if (!checkout) throw purchasesError('checkout_reservation_failed', 'Checkout could not be reserved', 503, true);
+  if (checkout.customer_id !== params.customerId || checkout.environment !== params.environment
+    || (checkout.request_fingerprint && checkout.request_fingerprint !== requestFingerprint)) {
+    throw purchasesError('checkout_idempotency_conflict', 'Checkout idempotency key is already bound to different checkout parameters', 409);
+  }
+  if (checkout.checkout_url && checkout.provider_session_id) return completedCheckoutResult(env, checkout, true);
+  if (checkout.status === 'failed') {
+    throw purchasesError('checkout_previously_failed', 'Checkout previously failed; start a new checkout with a new idempotency key', 409);
+  }
+  if (!checkout.request_fingerprint) {
+    throw purchasesError('checkout_recovery_unavailable', 'This unfinished checkout cannot be recovered; start a new checkout with a new idempotency key', 409);
+  }
+  if (checkout.processing_lease_id !== proposedLease) {
+    await env.DB.prepare(`
+      UPDATE billing_checkout_sessions
+      SET processing_lease_id = ?, processing_started_at = datetime('now'), updated_at = datetime('now')
+      WHERE id = ? AND status = 'creating'
+        AND (processing_lease_id IS NULL OR processing_started_at IS NULL OR datetime(processing_started_at) <= datetime('now', '-2 minutes'))
+    `).bind(proposedLease, checkout.id).run();
+    checkout = await checkoutByIdempotency(env.DB, params.projectId, params.idempotencyKey);
+    if (!checkout || checkout.processing_lease_id !== proposedLease) {
+      throw purchasesError('checkout_in_progress', 'Checkout creation is already in progress', 409, true);
+    }
+  }
+  if (!checkout.redemption_code_encrypted) {
+    await releaseCheckoutLease(env.DB, checkout.id, proposedLease, 'failed');
+    throw purchasesError('checkout_redemption_unavailable', 'Checkout recovery data is unavailable; start a new checkout with a new idempotency key', 409);
+  }
+  const localId = checkout.id;
+  let redemptionCode: string;
+  try {
+    redemptionCode = await decryptCredential(env, checkout.redemption_code_encrypted);
+  } catch {
+    await releaseCheckoutLease(env.DB, localId, proposedLease, 'failed');
+    throw purchasesError('checkout_redemption_invalid', 'Checkout recovery data could not be decrypted; start a new checkout with a new idempotency key', 409);
+  }
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO billing_redemptions (id, project_id, checkout_session_id, code_hash, expires_at)
+    VALUES (?, ?, ?, ?, datetime('now', '+24 hours'))
+  `).bind(crypto.randomUUID(), params.projectId, localId, await sha256(redemptionCode)).run();
   const secretKey = credentials.secret_key;
   const mode = product.product_type === 'subscription' ? 'subscription' : 'payment';
   const values: Record<string, string> = {
@@ -147,30 +227,93 @@ export async function createWebCheckoutSession(env: BillingEnv, params: {
     'metadata[opengrow_checkout_id]': localId,
     'metadata[opengrow_redemption_code]': redemptionCode,
   };
+  if (stripeCustomerId) values.customer = stripeCustomerId;
+  else if (mode === 'payment') values.customer_creation = 'always';
   if (mode === 'subscription') {
     values['subscription_data[metadata][opengrow_project_id]'] = params.projectId;
     values['subscription_data[metadata][opengrow_customer_id]'] = params.customerId;
     values['subscription_data[metadata][opengrow_checkout_id]'] = localId;
+  } else {
+    values['payment_intent_data[metadata][opengrow_project_id]'] = params.projectId;
+    values['payment_intent_data[metadata][opengrow_customer_id]'] = params.customerId;
+    values['payment_intent_data[metadata][opengrow_checkout_id]'] = localId;
   }
-  const session = await stripeRequest(secretKey, '/checkout/sessions', values, `opengrow-${params.projectId}-${params.idempotencyKey}`.slice(0, 255));
+  let session: Record<string, any>;
+  const stripeIdempotencyKey = `opengrow-checkout-${await sha256(`${params.projectId}:${params.idempotencyKey}`)}`;
+  try {
+    session = await stripeRequest(secretKey, '/checkout/sessions', values, stripeIdempotencyKey);
+  } catch (error) {
+    const retryable = (error as { retryable?: boolean }).retryable === true;
+    await releaseCheckoutLease(env.DB, localId, proposedLease, retryable ? 'creating' : 'failed');
+    throw error;
+  }
   const providerSessionId = String(session.id || '');
   const checkoutUrl = String(session.url || '');
-  if (!providerSessionId || !checkoutUrl) throw purchasesError('checkout_session_incomplete', 'Provider did not return a checkout URL', 502, true);
+  if (!providerSessionId || !checkoutUrl) {
+    await releaseCheckoutLease(env.DB, localId, proposedLease, 'creating');
+    throw purchasesError('checkout_session_incomplete', 'Provider did not return a checkout URL', 502, true);
+  }
+  await env.DB.prepare(`
+    UPDATE billing_checkout_sessions
+    SET provider_session_id = ?, checkout_url = ?, status = 'created',
+      processing_lease_id = NULL, processing_started_at = NULL, updated_at = datetime('now')
+    WHERE id = ? AND processing_lease_id = ?
+  `).bind(providerSessionId, checkoutUrl, localId, proposedLease).run();
+  const persisted = await checkoutByIdempotency(env.DB, params.projectId, params.idempotencyKey);
+  if (!persisted?.checkout_url || persisted.provider_session_id !== providerSessionId) {
+    throw purchasesError('checkout_persistence_pending', 'Checkout was created but has not been persisted yet', 503, true);
+  }
+  return completedCheckoutResult(env, persisted, false);
+}
 
-  await env.DB.batch([
-    env.DB.prepare(`
-      INSERT INTO billing_checkout_sessions (
-        id, project_id, customer_id, connection_id, provider, environment, package_id,
-        product_id, provider_session_id, checkout_url, success_url, cancel_url,
-        idempotency_key, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+24 hours'))
-    `).bind(localId, params.projectId, params.customerId, connection.id, connection.provider, params.environment, product.package_id, product.product_id, providerSessionId, checkoutUrl, successUrl, cancelUrl, params.idempotencyKey),
-    env.DB.prepare(`
-      INSERT INTO billing_redemptions (id, project_id, checkout_session_id, code_hash, expires_at)
-      VALUES (?, ?, ?, ?, datetime('now', '+24 hours'))
-    `).bind(crypto.randomUUID(), params.projectId, localId, await sha256(redemptionCode)),
-  ]);
-  return { url: checkoutUrl, provider: connection.provider, provider_session_id: providerSessionId, redemption_code: redemptionCode, duplicate: false };
+type ReservedCheckout = {
+  id: string;
+  customer_id: string;
+  environment: string;
+  provider: string;
+  status: string;
+  checkout_url: string | null;
+  provider_session_id: string | null;
+  request_fingerprint: string | null;
+  redemption_code_encrypted: string | null;
+  processing_lease_id: string | null;
+  processing_started_at: string | null;
+};
+
+async function checkoutByIdempotency(db: D1Database, projectId: string, idempotencyKey: string) {
+  return db.prepare(`
+    SELECT id, customer_id, environment, provider, status, checkout_url, provider_session_id,
+      request_fingerprint, redemption_code_encrypted, processing_lease_id, processing_started_at
+    FROM billing_checkout_sessions WHERE project_id = ? AND idempotency_key = ? LIMIT 1
+  `).bind(projectId, idempotencyKey).first<ReservedCheckout>();
+}
+
+async function releaseCheckoutLease(
+  db: D1Database,
+  checkoutId: string,
+  leaseId: string,
+  status: 'creating' | 'failed',
+) {
+  await db.prepare(`
+    UPDATE billing_checkout_sessions
+    SET status = ?, processing_lease_id = NULL, processing_started_at = NULL, updated_at = datetime('now')
+    WHERE id = ? AND processing_lease_id = ?
+  `).bind(status, checkoutId, leaseId).run();
+}
+
+async function completedCheckoutResult(env: BillingEnv, checkout: ReservedCheckout, duplicate: boolean) {
+  let redemptionCode: string | undefined;
+  if (checkout.redemption_code_encrypted) {
+    try { redemptionCode = await decryptCredential(env, checkout.redemption_code_encrypted); }
+    catch { throw purchasesError('checkout_redemption_invalid', 'Checkout recovery data could not be decrypted', 500, true); }
+  }
+  return {
+    url: String(checkout.checkout_url),
+    provider: checkout.provider,
+    provider_session_id: String(checkout.provider_session_id),
+    ...(redemptionCode ? { redemption_code: redemptionCode } : {}),
+    duplicate,
+  };
 }
 
 export async function createWebPortalSession(env: BillingEnv, params: {

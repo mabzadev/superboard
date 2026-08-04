@@ -33,7 +33,7 @@ import {
 import { callBillingServiceBinding } from '../lib/billing-service';
 import { billingWorkerReadiness, type BillingWorkerReadiness } from '../lib/billing-worker-readiness';
 import { testLegacySourceConnection } from '../lib/legacy-subscription-inventory';
-import { validateStripeCredentials } from '../lib/stripe-credentials';
+import { validateStripeCredentials, validateStripeSecretKey } from '../lib/stripe-credentials';
 import { encryptStoreCredentialCopies } from '../lib/store-credential-copies';
 import { retrieveStripeCatalogProduct } from '../lib/stripe-catalog';
 import { providerEventReplayJob } from '../lib/provider-event-replay';
@@ -44,6 +44,17 @@ import {
   readAppleNotificationConfiguration,
 } from '../lib/apple-notification-configuration';
 import { issueCertificationDeviceChallenge } from '../lib/device-certification';
+import {
+  deleteStripeWebhookEndpoint,
+  discoverStripeWebhookConfiguration,
+  invalidateStripeWebhookReadiness,
+  persistStripeWebhookReadiness,
+  provisionStripeWebhookEndpoint,
+  retrieveStripeWebhookConfiguration,
+  stripeWebhookUrl,
+  type StripeWebhookConfiguration,
+} from '../lib/stripe-webhook-management';
+import { readTextLimited } from '../lib/http-limits';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -81,6 +92,15 @@ async function currentBillingWorkerReadiness(env: Env): Promise<BillingWorkerRea
 
 async function jsonBody(c: any): Promise<Record<string, any>> {
   return c.req.json().catch(() => ({}));
+}
+
+function objectValue(value: unknown): Record<string, any> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {};
+}
+
+function parseObjectValue(value: unknown): Record<string, any> {
+  if (typeof value !== 'string') return objectValue(value);
+  try { return objectValue(JSON.parse(value)); } catch { return {}; }
 }
 
 async function projectFor(c: any) {
@@ -315,6 +335,8 @@ admin.get('/:projectId/release-gate', async (c) => {
       refundDeadlines,
       appleNotifications,
       googleNotifications,
+      stripeTestNotifications,
+      stripeProductionNotifications,
       workerReadiness,
     ] = await Promise.all([
       c.env.DB.prepare(`SELECT * FROM billing_release_gate_checks WHERE project_id = ?`).bind(scope.releaseProjectId).all<StoredReleaseGateCheck>(),
@@ -429,6 +451,14 @@ admin.get('/:projectId/release-gate', async (c) => {
         WHERE project_id = ? AND provider = 'google' LIMIT 1
       `).bind(scope.productionProjectId || scope.releaseProjectId)
         .first<{ ready: number; checked_at: string; configured_at: string | null; current_configuration: string; required_configuration: string }>(),
+      c.env.DB.prepare(`
+        SELECT ready, checked_at, configured_at FROM billing_store_notification_configurations
+        WHERE project_id = ? AND provider = 'stripe' LIMIT 1
+      `).bind(scope.testProjectId || '').first<{ ready: number; checked_at: string; configured_at: string | null }>(),
+      c.env.DB.prepare(`
+        SELECT ready, checked_at, configured_at FROM billing_store_notification_configurations
+        WHERE project_id = ? AND provider = 'stripe' LIMIT 1
+      `).bind(scope.productionProjectId || '').first<{ ready: number; checked_at: string; configured_at: string | null }>(),
       currentBillingWorkerReadiness(c.env),
     ]);
     const verifiedCertificationObservations = await Promise.all((certificationObservations.results || []).map(async (row) => ({
@@ -524,6 +554,20 @@ admin.get('/:projectId/release-gate', async (c) => {
         Number(googleNotifications?.ready || 0) === 1,
         'A Google Play RTDN push was verified with the expected Pub/Sub OIDC identity and audience.',
         'Configure authenticated Pub/Sub push and deliver a verified Google Play RTDN event. URL tokens alone cannot pass this gate.',
+      ),
+      prerequisite(
+        'sandbox_stripe_webhook',
+        'Stripe test webhook',
+        Number(stripeTestNotifications?.ready || 0) === 1,
+        'The Stripe test webhook URL, event set, environment, and signature path are verified.',
+        'Provision the managed Stripe test webhook or deliver a valid signed test event to the project connection.',
+      ),
+      prerequisite(
+        'production_stripe_webhook',
+        'Stripe live webhook',
+        Number(stripeProductionNotifications?.ready || 0) === 1,
+        'The Stripe live webhook URL, event set, environment, and signature path are verified.',
+        'Provision and verify the managed Stripe live webhook for the production connection.',
       ),
       prerequisite('sandbox_apple_catalog', 'Sandbox Apple subscription catalog', sandboxApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the test project.'),
       prerequisite('production_apple_catalog', 'Production Apple subscription catalog', productionApple.catalog, 'Weekly and yearly subscriptions are imported.', 'Import the weekly and yearly Apple subscriptions into the production project.'),
@@ -1302,32 +1346,114 @@ admin.post('/:projectId/connections', async (c) => {
     if (environment !== expectedEnvironment) {
       throw purchasesError('invalid_environment', `This project requires the ${expectedEnvironment} environment`, 422);
     }
+    const existing = await c.env.DB.prepare(`
+      SELECT id, configuration_encrypted, public_configuration
+      FROM billing_store_connections
+      WHERE project_id = ? AND provider = ? AND environment = ? LIMIT 1
+    `).bind(project.id, provider, environment).first<{
+      id: string;
+      configuration_encrypted: string | null;
+      public_configuration: string | null;
+    }>();
+    const id = String(existing?.id || crypto.randomUUID());
+    let publicConfiguration = objectValue(data.public_configuration);
     let secret: string | null = null;
     let billingSecret: string | null = null;
+    let provisioned: { secretKey: string; configuration: StripeWebhookConfiguration } | null = null;
+    let replacedManagedEndpoint: { secretKey: string; endpointId: string } | null = null;
+    let stripeReadinessMustReset = false;
     if (provider !== 'stripe' && data.secret_configuration !== undefined) {
       throw purchasesError('native_store_credentials_managed_separately', 'Apple App Store and Google Play credentials are managed by their platform configuration', 422);
     }
     if (provider === 'stripe') {
-      const stripeCredentials = validateStripeCredentials(data.secret_configuration, environment as 'sandbox' | 'production');
+      publicConfiguration = Object.fromEntries(
+        Object.entries(publicConfiguration).filter(([key]) => !key.startsWith('webhook_')),
+      );
+      const supplied = objectValue(data.secret_configuration);
+      const stripeEnvironment = environment as 'sandbox' | 'production';
+      const secretKey = validateStripeSecretKey(supplied, stripeEnvironment);
+      let webhookSecret = String(supplied.webhook_secret || '').trim();
+      const existingPublicConfiguration = parseObjectValue(existing?.public_configuration);
+      let existingCredentials: ReturnType<typeof validateStripeCredentials> | null = null;
+      if (existing?.configuration_encrypted) {
+        try {
+          existingCredentials = validateStripeCredentials(
+            JSON.parse(await decryptCredential(c.env, existing.configuration_encrypted)),
+            stripeEnvironment,
+          );
+        } catch {
+          // An unreadable credential is replaced by the newly supplied provider configuration.
+        }
+      }
+      const sameCredentials = existingCredentials?.secret_key === secretKey
+        && (!webhookSecret || existingCredentials.webhook_secret === webhookSecret);
+      if (sameCredentials && existingCredentials) {
+        webhookSecret = existingCredentials.webhook_secret;
+        publicConfiguration = { ...existingPublicConfiguration, ...publicConfiguration };
+      } else if (webhookSecret) {
+        stripeReadinessMustReset = true;
+      }
+      const existingManagedEndpointId = existingPublicConfiguration.webhook_managed === true
+        ? String(existingPublicConfiguration.webhook_endpoint_id || '')
+        : '';
+      if (!sameCredentials && existingCredentials && existingManagedEndpointId.startsWith('we_')) {
+        replacedManagedEndpoint = {
+          secretKey: existingCredentials.secret_key,
+          endpointId: existingManagedEndpointId,
+        };
+      }
+      if (!webhookSecret) {
+        const managed = await provisionStripeWebhookEndpoint({
+          secretKey,
+          environment: stripeEnvironment,
+          url: stripeWebhookUrl(c.env.API_DOMAIN, id),
+          connectionId: id,
+        });
+        webhookSecret = managed.secret;
+        provisioned = { secretKey, configuration: managed.configuration };
+        publicConfiguration = {
+          ...publicConfiguration,
+          webhook_managed: true,
+          webhook_endpoint_id: managed.configuration.endpoint_id,
+          webhook_url: managed.configuration.url,
+          webhook_enabled_events: managed.configuration.enabled_events,
+        };
+      }
+      const stripeCredentials = validateStripeCredentials({ secret_key: secretKey, webhook_secret: webhookSecret }, stripeEnvironment);
       const clearCredential = JSON.stringify(stripeCredentials);
-      const copies = await encryptStoreCredentialCopies(c.env, clearCredential);
+      let copies;
+      try {
+        copies = await encryptStoreCredentialCopies(c.env, clearCredential);
+      } catch (error) {
+        if (provisioned) await deleteStripeWebhookEndpoint(provisioned.secretKey, provisioned.configuration.endpoint_id);
+        throw error;
+      }
       secret = copies.sourceCiphertext;
       billingSecret = copies.billingCiphertext;
     }
-    const id = crypto.randomUUID();
-    const stored = await c.env.DB.prepare(`
-      INSERT INTO billing_store_connections (
-        id, project_id, provider, environment, display_name, status, capabilities,
-        configuration_encrypted, billing_configuration_encrypted, public_configuration
-      ) VALUES (?, ?, ?, ?, ?, 'configured', ?, ?, ?, ?)
-      ON CONFLICT(project_id, provider, environment) DO UPDATE SET
-        display_name = excluded.display_name, status = 'configured', capabilities = excluded.capabilities,
-        configuration_encrypted = COALESCE(excluded.configuration_encrypted, billing_store_connections.configuration_encrypted),
-        billing_configuration_encrypted = COALESCE(excluded.billing_configuration_encrypted, billing_store_connections.billing_configuration_encrypted),
-        public_configuration = excluded.public_configuration, last_error_code = NULL,
-        last_error_message = NULL, updated_at = datetime('now')
-      RETURNING id
-    `).bind(id, project.id, provider, environment, data.display_name || provider, JSON.stringify(connectionCapabilities(provider, true)), secret, billingSecret, JSON.stringify(data.public_configuration || {})).first<{ id: string }>();
+    let stored: { id: string } | null | undefined;
+    try {
+      stored = await c.env.DB.prepare(`
+        INSERT INTO billing_store_connections (
+          id, project_id, provider, environment, display_name, status, capabilities,
+          configuration_encrypted, billing_configuration_encrypted, public_configuration
+        ) VALUES (?, ?, ?, ?, ?, 'configured', ?, ?, ?, ?)
+        ON CONFLICT(project_id, provider, environment) DO UPDATE SET
+          display_name = excluded.display_name, status = 'configured', capabilities = excluded.capabilities,
+          configuration_encrypted = COALESCE(excluded.configuration_encrypted, billing_store_connections.configuration_encrypted),
+          billing_configuration_encrypted = COALESCE(excluded.billing_configuration_encrypted, billing_store_connections.billing_configuration_encrypted),
+          public_configuration = excluded.public_configuration, last_error_code = NULL,
+          last_error_message = NULL, updated_at = datetime('now')
+        RETURNING id
+      `).bind(id, project.id, provider, environment, data.display_name || provider, JSON.stringify(connectionCapabilities(provider, true)), secret, billingSecret, JSON.stringify(publicConfiguration)).first<{ id: string }>();
+      if (provisioned) await persistStripeWebhookReadiness(c.env.DB, project.id, provisioned.configuration);
+      else if (provider === 'stripe' && stripeReadinessMustReset) {
+        await invalidateStripeWebhookReadiness(c.env.DB, project.id, 'manual_signing_secret_requires_delivery');
+      }
+    } catch (error) {
+      if (provisioned) await deleteStripeWebhookEndpoint(provisioned.secretKey, provisioned.configuration.endpoint_id);
+      throw error;
+    }
     const connectionId = String(stored?.id || id);
     await c.env.DB.batch([
       c.env.DB.prepare(`
@@ -1340,7 +1466,19 @@ admin.post('/:projectId/connections', async (c) => {
         VALUES (?, ?, ?, 'connection.upserted', 'store_connection', ?, ?)
       `).bind(crypto.randomUUID(), project.id, String(c.get('userId')), connectionId, JSON.stringify({ provider, environment })),
     ]);
-    return c.json({ id: connectionId, provider, environment, configured: true, billing_copy_ready: !secret || Boolean(billingSecret) }, 201);
+    if (replacedManagedEndpoint
+      && replacedManagedEndpoint.endpointId !== String(publicConfiguration.webhook_endpoint_id || '')) {
+      await deleteStripeWebhookEndpoint(replacedManagedEndpoint.secretKey, replacedManagedEndpoint.endpointId);
+    }
+    return c.json({
+      id: connectionId,
+      provider,
+      environment,
+      configured: true,
+      billing_copy_ready: !secret || Boolean(billingSecret),
+      webhook_managed: publicConfiguration.webhook_managed === true,
+      webhook_url: publicConfiguration.webhook_url || null,
+    }, 201);
   } catch (error) { return replyError(c, error); }
 });
 
@@ -1359,10 +1497,10 @@ admin.post('/:projectId/connections/:provider/test', async (c) => {
       result = await testStoreCredentials(c.env, { projectId: project.id, platform: provider === 'apple' ? 'ios' : 'android', environment: environment as 'sandbox' | 'production' });
     } else {
       const connection = await c.env.DB.prepare(`
-        SELECT id, configuration_encrypted, billing_configuration_encrypted
+        SELECT id, configuration_encrypted, billing_configuration_encrypted, public_configuration
         FROM billing_store_connections WHERE project_id = ? AND provider = ? AND environment = ?
       `).bind(project.id, provider, environment).first<{
-        id: string; configuration_encrypted: string | null; billing_configuration_encrypted: string | null;
+        id: string; configuration_encrypted: string | null; billing_configuration_encrypted: string | null; public_configuration: string | null;
       }>();
       const encrypted = connection && scopedStoreCredential(connection, c.env);
       if (!encrypted) throw purchasesError('connection_not_configured', `${provider} credentials are not configured`, 422);
@@ -1372,9 +1510,51 @@ admin.post('/:projectId/connections/:provider/test', async (c) => {
         const response = await fetch('https://api.stripe.com/v1/account', {
           headers: { Authorization: `Bearer ${stripeCredentials.secret_key}` },
         });
-        const payload = await response.json().catch(() => ({})) as Record<string, any>;
+        const responseText = await readTextLimited(response, 1_048_576, 'Stripe account response is too large');
+        let payload: Record<string, any> = {};
+        try { payload = JSON.parse(responseText || '{}') as Record<string, any>; } catch { /* handled below */ }
         if (!response.ok) throw purchasesError('stripe_connection_failed', payload?.error?.message || 'Stripe connection failed', 422);
-        result = { ok: true, provider, environment, account_id: payload.id, country: payload.country };
+        if (payload.object !== 'account' || !String(payload.id || '').startsWith('acct_')) {
+          throw purchasesError('stripe_connection_response_invalid', 'Stripe returned an invalid Account response', 502, true);
+        }
+        const publicConfiguration = parseObjectValue(connection.public_configuration);
+        let webhookConfiguration: StripeWebhookConfiguration | null = null;
+        if (publicConfiguration.webhook_endpoint_id) {
+          webhookConfiguration = await retrieveStripeWebhookConfiguration({
+            secretKey: stripeCredentials.secret_key,
+            environment: environment as 'sandbox' | 'production',
+            url: stripeWebhookUrl(c.env.API_DOMAIN, connection.id),
+            endpointId: String(publicConfiguration.webhook_endpoint_id),
+            managed: publicConfiguration.webhook_managed === true,
+          });
+        } else {
+          webhookConfiguration = await discoverStripeWebhookConfiguration({
+            secretKey: stripeCredentials.secret_key,
+            environment: environment as 'sandbox' | 'production',
+            url: stripeWebhookUrl(c.env.API_DOMAIN, connection.id),
+          });
+        }
+        const webhookReadiness = await persistStripeWebhookReadiness(c.env.DB, project.id, webhookConfiguration);
+        const updatedPublicConfiguration = {
+          ...publicConfiguration,
+          webhook_managed: webhookConfiguration.managed,
+          webhook_endpoint_id: webhookConfiguration.endpoint_id,
+          webhook_url: webhookConfiguration.url,
+          webhook_enabled_events: webhookConfiguration.enabled_events,
+        };
+        await c.env.DB.prepare(`
+          UPDATE billing_store_connections SET public_configuration = ?, updated_at = datetime('now')
+          WHERE id = ? AND project_id = ?
+        `).bind(JSON.stringify(updatedPublicConfiguration), connection.id, project.id).run();
+        result = {
+          ok: true,
+          provider,
+          environment,
+          account_id: payload.id,
+          country: payload.country,
+          webhook_managed: webhookConfiguration.managed,
+          webhook_ready: webhookReadiness.ready,
+        };
       } else {
         throw purchasesError('unsupported_provider', 'Only Apple App Store, Google Play and Stripe are enabled', 422);
       }

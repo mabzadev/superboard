@@ -18,8 +18,14 @@ export function validateStripeCredentials(
   environment: StripeEnvironment,
 ): StripeCredentials {
   const credentials = record(value);
+  const secretKey = validateStripeSecretKey(credentials, environment);
+  const webhookSecret = validateStripeWebhookSecret(credentials.webhook_secret);
+  return { secret_key: secretKey, webhook_secret: webhookSecret };
+}
+
+export function validateStripeSecretKey(value: unknown, environment: StripeEnvironment) {
+  const credentials = record(value);
   const secretKey = String(credentials.secret_key || credentials.api_key || '').trim();
-  const webhookSecret = String(credentials.webhook_secret || '').trim();
   const expectedPrefix = environment === 'sandbox' ? 'sk_test_' : 'sk_live_';
   const oppositePrefix = environment === 'sandbox' ? 'sk_live_' : 'sk_test_';
 
@@ -37,8 +43,13 @@ export function validateStripeCredentials(
       422,
     );
   }
+  return secretKey;
+}
+
+export function validateStripeWebhookSecret(value: unknown) {
+  const webhookSecret = String(value || '').trim();
   if (!webhookSecret.startsWith('whsec_') || webhookSecret.length <= 'whsec_'.length) {
     throw purchasesError('stripe_webhook_secret_invalid', 'Stripe webhook signing secret is invalid', 422);
   }
-  return { secret_key: secretKey, webhook_secret: webhookSecret };
+  return webhookSecret;
 }

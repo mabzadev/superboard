@@ -542,14 +542,17 @@ const PurchasesPage = () => {
   };
 
   const saveWebConnection = async () => {
-    if (!projectId || !providerSecret.trim() || !providerWebhookSecret.trim()) return;
+    if (!projectId || !providerSecret.trim()) return;
     await run(() => createBillingConnection(projectId, {
       provider: "stripe",
       environment: projectType === "test" ? "sandbox" : "production",
       display_name: "Stripe Billing",
-      secret_configuration: { secret_key: providerSecret, webhook_secret: providerWebhookSecret },
+      secret_configuration: {
+        secret_key: providerSecret,
+        ...(providerWebhookSecret.trim() ? { webhook_secret: providerWebhookSecret } : {}),
+      },
       public_configuration: {},
-    }), "Web connection saved");
+    }), providerWebhookSecret.trim() ? "Stripe connection saved" : "Stripe connection and managed webhook created");
     setProviderSecret("");
     setProviderWebhookSecret("");
   };
@@ -784,6 +787,18 @@ const PurchasesPage = () => {
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       {Object.entries(connection.capabilities || {}).map(([name, capability]) => <div key={name} className="flex items-center justify-between rounded-md border p-2"><span>{name}</span>{statusBadge(capability.status)}</div>)}
                     </div>
+                    {connection.provider === "stripe" && (
+                      <div className="rounded-md border p-3 text-xs">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>Webhook management</span>
+                          <span className="font-medium">{connection.public_configuration?.webhook_managed === true ? "Managed" : "Existing endpoint"}</span>
+                        </div>
+                        {typeof connection.public_configuration?.webhook_url === "string" && (
+                          <code className="mt-2 block break-all rounded bg-muted p-2">{connection.public_configuration.webhook_url}</code>
+                        )}
+                        <div className="mt-2 text-muted-foreground">Last signed event: {date(connection.last_event_at)}</div>
+                      </div>
+                    )}
                     {connection.last_error_message && <p className="text-sm text-destructive">{connection.last_error_code}: {connection.last_error_message}</p>}
                     <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Last test: {date(connection.last_tested_at)}</span><Button variant="outline" size="sm" onClick={() => projectId && void run(() => testBillingConnection(projectId, connection.provider, connection.environment), `${connection.display_name} verified`)}>Test connection</Button></div>
                   </CardContent>
@@ -831,7 +846,17 @@ const PurchasesPage = () => {
                 </CardContent>
               </Card>
             )}
-            <Card><CardHeader><CardTitle>Add Stripe</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-3"><Input type="password" value={providerSecret} onChange={(event) => setProviderSecret(event.target.value)} placeholder={projectType === "test" ? "Stripe test secret key (sk_test_…)" : "Stripe live secret key (sk_live_…)"} autoComplete="new-password" /><Input type="password" value={providerWebhookSecret} onChange={(event) => setProviderWebhookSecret(event.target.value)} placeholder="Stripe webhook signing secret (whsec_…)" autoComplete="new-password" /><Button disabled={!providerSecret.trim() || !providerWebhookSecret.trim()} onClick={() => void saveWebConnection()}>Encrypt and save Stripe</Button></CardContent></Card>
+            <Card>
+              <CardHeader><CardTitle>Add Stripe</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Input type="password" value={providerSecret} onChange={(event) => setProviderSecret(event.target.value)} placeholder={projectType === "test" ? "Stripe test secret key (sk_test_…)" : "Stripe live secret key (sk_live_…)"} autoComplete="new-password" />
+                  <Input type="password" value={providerWebhookSecret} onChange={(event) => setProviderWebhookSecret(event.target.value)} placeholder="Existing signing secret (optional)" autoComplete="new-password" />
+                  <Button disabled={!providerSecret.trim()} onClick={() => void saveWebConnection()}>Connect Stripe</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Leave the signing secret empty to create and verify a managed webhook with the required event set. Existing endpoints can still provide their current signing secret.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="products" className="space-y-4">
