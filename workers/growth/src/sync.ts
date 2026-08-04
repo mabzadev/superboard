@@ -9,6 +9,7 @@ import {
   scopeByKey,
 } from './providers';
 import type { Device, Env, Platform } from './types';
+import { failure } from './validation';
 
 type StoreEntity = {
   id: string;
@@ -111,6 +112,7 @@ export async function syncProject(env: Env, projectId: number) {
     failures,
     advanced_provider_configured: Boolean(env.APPTWEAK_API_KEY),
   });
+  assertSyncComplete(failures);
   return {
     app_snapshots: appSnapshots,
     keyword_snapshots: keywordSnapshots,
@@ -197,7 +199,8 @@ async function persistKeywordSnapshot(
   ).run();
 }
 
-async function refreshRecommendations(env: Env, projectId: number) {
+export async function refreshRecommendations(env: Env, projectId: number) {
+  const activeKeys = new Set<string>();
   const weakKeywords = await env.DB.prepare(`
     SELECT k.id, k.keyword, s.rank, s.volume, s.difficulty
     FROM growth_keywords k JOIN growth_keyword_snapshots s ON s.keyword_id = k.id
@@ -208,7 +211,9 @@ async function refreshRecommendations(env: Env, projectId: number) {
   `).bind(projectId).all<Record<string, unknown>>();
   for (const row of weakKeywords.results) {
     const rank = Number(row.rank);
-    await upsertRecommendation(env, projectId, `keyword:${row.id}:rank`, 'keyword_opportunity', rank > 100 ? 'high' : 'medium',
+    const key = `keyword:${row.id}:rank`;
+    activeKeys.add(key);
+    await upsertRecommendation(env, projectId, key, 'keyword_opportunity', rank > 100 ? 'high' : 'medium',
       `Improve ranking for “${String(row.keyword).slice(0, 80)}”`,
       `The latest observed rank is ${rank}. Review metadata relevance and competitor positioning.`, row);
   }
@@ -223,10 +228,65 @@ async function refreshRecommendations(env: Env, projectId: number) {
       )
   `).bind(projectId).all<Record<string, unknown>>();
   for (const row of lowRatings.results) {
-    await upsertRecommendation(env, projectId, `app:${row.entity_id}:rating`, 'rating_risk', 'high',
+    const key = `app:${row.entity_id}:rating`;
+    activeKeys.add(key);
+    await upsertRecommendation(env, projectId, key, 'rating_risk', 'high',
       `Address the rating decline for ${String(row.title || 'the app').slice(0, 80)}`,
       `The latest observed rating is ${Number(row.rating).toFixed(2)}. Prioritize unanswered negative reviews and recurring issues.`, row);
   }
+
+  const competitorChanges = await env.DB.prepare(`
+    WITH ranked AS (
+      SELECT entity_id, source, title, version, rating, rating_count, observed_date,
+        ROW_NUMBER() OVER (
+          PARTITION BY entity_id, source ORDER BY observed_date DESC, created_at DESC, id DESC
+        ) AS position
+      FROM growth_app_snapshots
+      WHERE project_id = ? AND entity_type = 'competitor'
+    )
+    SELECT latest.entity_id, latest.source, latest.title,
+      latest.version AS latest_version, previous.version AS previous_version,
+      latest.rating AS latest_rating, previous.rating AS previous_rating,
+      latest.rating_count, latest.observed_date
+    FROM ranked latest JOIN ranked previous
+      ON previous.entity_id = latest.entity_id AND previous.source = latest.source
+      AND previous.position = 2
+    WHERE latest.position = 1
+  `).bind(projectId).all<Record<string, unknown>>();
+  for (const row of competitorChanges.results) {
+    const versionChanged = Boolean(row.latest_version && row.previous_version
+      && String(row.latest_version) !== String(row.previous_version));
+    const latestRating = numberOrNull(row.latest_rating);
+    const previousRating = numberOrNull(row.previous_rating);
+    const ratingDelta = latestRating != null && previousRating != null ? latestRating - previousRating : null;
+    if (!versionChanged && (ratingDelta == null || Math.abs(ratingDelta) < 0.1)) continue;
+    const key = `competitor:${row.entity_id}:${row.source}:change`;
+    activeKeys.add(key);
+    const changes = [
+      versionChanged ? `version ${String(row.previous_version)} → ${String(row.latest_version)}` : '',
+      ratingDelta != null && Math.abs(ratingDelta) >= 0.1
+        ? `rating ${previousRating?.toFixed(2)} → ${latestRating?.toFixed(2)}` : '',
+    ].filter(Boolean);
+    const priority = ratingDelta != null && ratingDelta <= -0.25 ? 'high' : 'medium';
+    await upsertRecommendation(
+      env,
+      projectId,
+      key,
+      'competitor_change',
+      priority,
+      `Review the latest change from ${String(row.title || 'a competitor').slice(0, 80)}`,
+      `The latest store snapshot changed ${changes.join(' and ')}. Compare positioning and metadata before updating your listing.`,
+      row,
+    );
+  }
+
+  const placeholders = [...activeKeys].map(() => '?').join(', ') || "''";
+  await env.DB.prepare(`
+    UPDATE growth_recommendations
+    SET status = 'completed', auto_resolved_at = datetime('now'), updated_at = datetime('now')
+    WHERE project_id = ? AND kind IN ('keyword_opportunity', 'rating_risk', 'competitor_change')
+      AND status = 'open' AND recommendation_key NOT IN (${placeholders})
+  `).bind(projectId, ...activeKeys).run();
 }
 
 async function upsertRecommendation(
@@ -239,7 +299,16 @@ async function upsertRecommendation(
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(project_id, recommendation_key) DO UPDATE SET
       kind = excluded.kind, priority = excluded.priority, title = excluded.title,
-      summary = excluded.summary, evidence_json = excluded.evidence_json, updated_at = datetime('now')
+      summary = excluded.summary, evidence_json = excluded.evidence_json,
+      status = CASE
+        WHEN growth_recommendations.status = 'completed'
+          AND growth_recommendations.auto_resolved_at IS NOT NULL THEN 'open'
+        ELSE growth_recommendations.status END,
+      auto_resolved_at = CASE
+        WHEN growth_recommendations.status = 'completed'
+          AND growth_recommendations.auto_resolved_at IS NOT NULL THEN NULL
+        ELSE growth_recommendations.auto_resolved_at END,
+      updated_at = datetime('now')
   `).bind(crypto.randomUUID(), projectId, key, kind, priority, title, summary, JSON.stringify(evidence)).run();
 }
 
@@ -271,4 +340,16 @@ function providerFailure(operation: string, error: unknown) {
     error: error instanceof Error ? error.message : String(error),
     retryable: Boolean((error as { retryable?: boolean })?.retryable),
   };
+}
+
+export function assertSyncComplete(failures: Array<{ operation: string; error: string; retryable: boolean }>) {
+  if (!failures.some((item) => item.retryable)) return;
+  const error = failure('growth_sync_incomplete', 'Growth synchronization is incomplete and will be retried', 503, true, 300);
+  Object.assign(error, { failures });
+  throw error;
+}
+
+function numberOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  return value != null && Number.isFinite(parsed) ? parsed : null;
 }

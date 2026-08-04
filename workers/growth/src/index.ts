@@ -182,7 +182,7 @@ app.patch('/internal/projects/:projectId/recommendations/:id', async (c) => {
   const status = requiredString(body.status, 'status', 32);
   if (!['open', 'dismissed', 'completed'].includes(status)) throw failure('status_invalid', 'Unsupported recommendation status');
   const row = await c.env.DB.prepare(`
-    UPDATE growth_recommendations SET status = ?, updated_at = datetime('now')
+    UPDATE growth_recommendations SET status = ?, auto_resolved_at = NULL, updated_at = datetime('now')
     WHERE id = ? AND project_id = ? RETURNING *
   `).bind(status, c.req.param('id'), projectId).first();
   if (!row) throw failure('recommendation_not_found', 'Recommendation not found', 404);
