@@ -43,6 +43,7 @@ import {
   persistAppleNotificationConfiguration,
   readAppleNotificationConfiguration,
 } from '../lib/apple-notification-configuration';
+import { issueCertificationDeviceChallenge } from '../lib/device-certification';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
@@ -571,7 +572,8 @@ admin.get('/:projectId/certification-runs', async (c) => {
         SELECT r.*,
           (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id) AS observation_count,
           (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id AND o.outcome = 'passed') AS passed_count,
-          (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id AND o.outcome = 'failed') AS failed_count
+          (SELECT COUNT(*) FROM billing_certification_observations o WHERE o.run_id = r.id AND o.outcome = 'failed') AS failed_count,
+          (SELECT COUNT(*) FROM billing_certification_device_results d WHERE d.run_id = r.id) AS device_result_count
         FROM billing_certification_runs r
         WHERE r.release_project_id = ? ORDER BY r.started_at DESC LIMIT 50
       `).bind(scope.releaseProjectId).all<Record<string, unknown>>(),
@@ -617,10 +619,40 @@ admin.post('/:projectId/certification-runs', async (c) => {
       optionalCertificationText(data.app_version, 100), optionalCertificationText(data.sdk_version, 100),
       deviceModel, osVersion, optionalCertificationText(data.notes, 2000), String(c.get('userId')),
     ).first<Record<string, unknown>>();
+    const challenge = await issueCertificationDeviceChallenge(c.env.DB, id);
     await audit(c, scope.releaseProjectId, 'certification_run.created', 'certification_run', id, {
       target_project_id: targetProjectId, environment, platform, build_number: buildNumber,
+      device_challenge_expires_at: challenge.expires_at,
     });
-    return c.json({ data: row }, 201);
+    return c.json({ data: {
+      ...row,
+      device_claim_token: challenge.token,
+      device_claim_expires_at: challenge.expires_at,
+      device_result_endpoint: `https://${c.env.SDK_DOMAIN}/purchases/v2/certification/device-results`,
+    } }, 201);
+  } catch (error) { return replyError(c, error); }
+});
+
+admin.post('/:projectId/certification-runs/:runId/device-challenge', async (c) => {
+  try {
+    const project = await projectFor(c); requireAdmin(project);
+    const scope = await releaseGateScope(c, project);
+    const runId = c.req.param('runId');
+    const run = await c.env.DB.prepare(`
+      SELECT id FROM billing_certification_runs
+      WHERE id = ? AND release_project_id = ? AND status = 'running' LIMIT 1
+    `).bind(runId, scope.releaseProjectId).first<{ id: string }>();
+    if (!run) throw purchasesError('certification_run_not_running', 'Running certification run not found', 404);
+    const challenge = await issueCertificationDeviceChallenge(c.env.DB, runId);
+    await audit(c, scope.releaseProjectId, 'certification_run.device_challenge_rotated', 'certification_run', runId, {
+      expires_at: challenge.expires_at,
+    });
+    return c.json({ data: {
+      run_id: runId,
+      device_claim_token: challenge.token,
+      device_claim_expires_at: challenge.expires_at,
+      device_result_endpoint: `https://${c.env.SDK_DOMAIN}/purchases/v2/certification/device-results`,
+    } });
   } catch (error) { return replyError(c, error); }
 });
 
@@ -681,7 +713,15 @@ admin.post('/:projectId/certification-runs/:runId/observations', async (c) => {
       throw purchasesError('certification_reference_type_invalid', 'The selected reference type is not valid for this check');
     }
     const referenceId = certificationText(data.reference_id, 'reference_id', 500);
-    const reference = await certificationReferenceSnapshot(c.env.DB, run, definition.provider, referenceType, referenceId, checkKey);
+    const reference = await certificationReferenceSnapshot(
+      c.env.DB,
+      run,
+      definition.provider,
+      referenceType,
+      referenceId,
+      checkKey,
+      outcome as 'passed' | 'failed',
+    );
     const observationId = crypto.randomUUID();
     const observedAt = new Date().toISOString();
     const evidenceSnapshot = {
@@ -801,9 +841,48 @@ export async function certificationReferenceSnapshot(
   referenceType: CertificationReferenceType,
   referenceId: string,
   checkKey = '',
+  expectedOutcome: 'passed' | 'failed' = 'passed',
 ) {
   if (referenceType === 'test_run') {
-    return { external_test_reference: referenceId };
+    const row = await db.prepare(`
+      SELECT id, run_id, target_project_id, customer_id, check_key, outcome,
+        source_platform, application_identifier, build_number, app_version,
+        sdk_version, device_model, os_version, evidence_json, evidence_sha256,
+        observed_at, received_at
+      FROM billing_certification_device_results
+      WHERE id = ? AND run_id = ? AND target_project_id = ? AND check_key = ? LIMIT 1
+    `).bind(referenceId, run.id, run.target_project_id, checkKey).first<Record<string, unknown>>();
+    if (!row) {
+      throw purchasesError(
+        'certification_device_result_not_found',
+        'An authenticated SDK device result from this certification run is required',
+        409,
+      );
+    }
+    if (row.outcome !== expectedOutcome) {
+      throw purchasesError('certification_device_result_outcome_mismatch', 'Device result outcome does not match the review outcome', 409);
+    }
+    if (await sha256Hex(String(row.evidence_json || '')) !== row.evidence_sha256) {
+      throw purchasesError('certification_device_result_invalid', 'Device result evidence digest is invalid', 409);
+    }
+    requireReferenceDuringRun(row.observed_at || row.received_at, run.started_at);
+    return {
+      id: row.id,
+      run_id: row.run_id,
+      check_key: row.check_key,
+      outcome: row.outcome,
+      source: 'authenticated_sdk',
+      source_platform: row.source_platform,
+      application_identifier: row.application_identifier,
+      build_number: row.build_number,
+      app_version: row.app_version,
+      sdk_version: row.sdk_version,
+      device_model: row.device_model,
+      os_version: row.os_version,
+      evidence_sha256: row.evidence_sha256,
+      observed_at: row.observed_at,
+      received_at: row.received_at,
+    };
   }
   if (referenceType === 'billing_transaction') {
     const row = await db.prepare(`

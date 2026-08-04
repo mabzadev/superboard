@@ -35,12 +35,18 @@ Future<bool> opengrowInitialize({
   required String platformIdentifier,
   String purchasesBaseUrl = 'https://sdk.vocostar.com/purchases/v2',
   String identityToken = '',
+  String appVersion = '',
+  String buildNumber = '',
+  String sdkVersion = '2.1.3',
 }) async {
   await OpenGrowPurchases.instance.configure(
     projectKey: projectKey,
     platformIdentifier: platformIdentifier,
     baseUrl: purchasesBaseUrl,
     identityToken: identityToken.isEmpty ? null : identityToken,
+    appVersion: appVersion,
+    buildNumber: buildNumber,
+    sdkVersion: sdkVersion,
   );
   return true;
 }
@@ -52,6 +58,9 @@ Future<bool> opengrowInitializeAuto({
   required String projectKey,
   String sdkBaseUrl = 'https://sdk.vocostar.com',
   String identityToken = '',
+  String appVersion = '',
+  String buildNumber = '',
+  String sdkVersion = '2.1.3',
 }) async {
   final platformIdentifier = await OpenGrow().getPlatformIdentifier();
   final trimmedBaseUrl = sdkBaseUrl
@@ -65,6 +74,9 @@ Future<bool> opengrowInitializeAuto({
     platformIdentifier: platformIdentifier,
     purchasesBaseUrl: purchasesBaseUrl,
     identityToken: identityToken,
+    appVersion: appVersion,
+    buildNumber: buildNumber,
+    sdkVersion: sdkVersion,
   );
 }
 
@@ -75,6 +87,9 @@ Future<bool> opengrowInitializeAuthenticated({
   required String applicationAccessToken,
   String sdkBaseUrl = 'https://sdk.vocostar.com',
   String authGatewayBaseUrl = 'https://api.vocostar.com',
+  String appVersion = '',
+  String buildNumber = '',
+  String sdkVersion = '2.1.3',
 }) async {
   if (applicationAccessToken.trim().isEmpty) {
     throw const OpenGrowPurchasesException(
@@ -120,8 +135,43 @@ Future<bool> opengrowInitializeAuthenticated({
     baseUrl: '$base/purchases/v2',
     identityToken: initialToken,
     identityTokenProvider: tokenProvider,
+    appVersion: appVersion,
+    buildNumber: buildNumber,
+    sdkVersion: sdkVersion,
   );
   return true;
+}
+
+/// Submits structured evidence from the authenticated FlutterFlow build to an
+/// active Purchases certification run. The challenge is issued from the
+/// dashboard and is never persisted by this wrapper.
+Future<String> opengrowRecordCertificationResultJson({
+  required String runId,
+  required String deviceChallenge,
+  required String checkKey,
+  required bool passed,
+  required String deviceModel,
+  required String osVersion,
+  required String assertionsJson,
+  String resultId = '',
+}) async {
+  final decoded = jsonDecode(assertionsJson);
+  if (decoded is! Map) {
+    throw const FormatException(
+      'Certification assertions must be a JSON object',
+    );
+  }
+  final result = await OpenGrowPurchases.instance.submitCertificationResult(
+    runId: runId,
+    challenge: deviceChallenge,
+    checkKey: checkKey,
+    passed: passed,
+    deviceModel: deviceModel,
+    osVersion: osVersion,
+    assertions: decoded.cast<String, dynamic>(),
+    resultId: resultId.trim().isEmpty ? null : resultId.trim(),
+  );
+  return jsonEncode(result.toJson());
 }
 
 /// Associates both OpenGrow attribution and verified purchases with a user.

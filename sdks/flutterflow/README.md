@@ -45,6 +45,7 @@ FlutterFlow-ready actions:
 - `opengrowGetVirtualCurrenciesJson`
 - `opengrowGetCustomerCenterJson`
 - `opengrowOpenSubscriptionManagement`
+- `opengrowRecordCertificationResultJson`
 
 Use `OpenGrowBootstrap.onPurchaseResultJson` to handle the terminal result of
 a pending purchase or a purchase recovered after restart. Use
@@ -61,3 +62,12 @@ token for a short-lived ES256 OpenGrow identity JWT through
 Purchase actions always return a structured JSON result, including identity or
 network failures that happen before the Store sheet opens.
 No Apple or Google secret is embedded in the application.
+
+For a real-device certification run, pass `appVersion`, `buildNumber`, and the
+Purchases SDK version during initialization. Generate the expiring device
+challenge in Purchases Diagnostics, then call
+`opengrowRecordCertificationResultJson` with the run ID, challenge, check key,
+device model, OS version, and the documented assertion JSON. The action uses
+the already configured identity token; anonymous evidence is rejected. It
+returns the immutable device result ID that an administrator reviews in the
+same dashboard. Never save the challenge in application state or source code.

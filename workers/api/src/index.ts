@@ -59,6 +59,7 @@ app.use('*', cors({
     'IDENTIFIER',
     'X-OpenGrow-Anonymous-ID',
     'X-OpenGrow-App-Version',
+    'X-OpenGrow-Build-Number',
     'X-OpenGrow-SDK-Version',
     'X-OpenGrow-Storefront',
     'X-OpenGrow-Campaign',

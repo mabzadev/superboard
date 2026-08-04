@@ -124,6 +124,7 @@ function billingConfig() {
     vars: {
       ENVIRONMENT: environment,
       API_DOMAIN: apiDomain,
+      SDK_DOMAIN: target.domains.sdk,
       CREDENTIAL_KEY_SCOPE: "billing",
       OPENGROW_ACCESS_MODE: target.accessMode,
       BILLING_RELEASE_STALE_MINUTES: "15",

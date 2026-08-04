@@ -322,6 +322,17 @@ export type BillingCertificationRun = {
   observation_count: number;
   passed_count: number;
   failed_count: number;
+  device_result_count?: number;
+  device_claim_token?: string;
+  device_claim_expires_at?: string;
+  device_result_endpoint?: string;
+};
+
+export type BillingCertificationDeviceChallenge = {
+  run_id: string;
+  device_claim_token: string;
+  device_claim_expires_at: string;
+  device_result_endpoint: string;
 };
 
 export type BillingCertificationRuns = {
@@ -503,6 +514,12 @@ export const completeBillingCertificationRun = async (
   runId: string,
   status: "completed" | "failed" | "cancelled",
 ) => (await PATCH(purchasesV2Path(projectId, `/certification-runs/${runId}`), { status })).data.data;
+
+export const rotateBillingCertificationDeviceChallenge = async (
+  projectId: string,
+  runId: string,
+): Promise<BillingCertificationDeviceChallenge> =>
+  (await POST(purchasesV2Path(projectId, `/certification-runs/${runId}/device-challenge`), {})).data.data;
 
 export const recordBillingCertificationObservation = async (
   projectId: string,
