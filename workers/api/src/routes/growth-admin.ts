@@ -16,9 +16,17 @@ async function projectFor(c: any) {
   return { ...project, id: String(project.id), role: access.role };
 }
 
+export function requireGrowthWriteAccess(method: string, role: string) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) return;
+  if (!['owner', 'admin'].includes(role)) {
+    throw purchasesError('insufficient_role', 'Owner or admin access is required to change Growth configuration', 403);
+  }
+}
+
 growth.all('/:projectId/*', async (c) => {
   try {
     const project = await projectFor(c);
+    requireGrowthWriteAccess(c.req.method, project.role);
     if (!c.env.GROWTH || !c.env.GROWTH_INTERNAL_TOKEN) {
       throw purchasesError('growth_unavailable', 'Growth services are not configured', 503);
     }
