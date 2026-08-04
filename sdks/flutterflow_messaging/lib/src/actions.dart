@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -5,8 +6,15 @@ import 'package:http/http.dart' as http;
 
 import 'client.dart';
 import 'models.dart';
+import 'realtime.dart';
 
 OpenGrowMessagingClient? _client;
+OpenGrowMessagingRealtime? _realtime;
+StreamSubscription<String>? _realtimeSubscription;
+final _realtimeEvents = StreamController<String>.broadcast();
+String _lastRealtimeEventJson = '';
+
+Stream<String> get opengrowMessagingEventJsonStream => _realtimeEvents.stream;
 
 Future<bool> opengrowMessagingInitializeAuthenticated({
   required String applicationAccessToken,
@@ -74,6 +82,8 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
   }
 
   final initialToken = await tokenProvider();
+  await _realtimeSubscription?.cancel();
+  await _realtime?.dispose();
   _client?.close();
   _client = OpenGrowMessagingClient(
     baseUri: Uri.parse(messagingUrl),
@@ -81,6 +91,11 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
     identityToken: initialToken,
     identityTokenProvider: tokenProvider,
   );
+  _realtime = OpenGrowMessagingRealtime(_client!);
+  _realtimeSubscription = _realtime!.events.listen((event) {
+    _lastRealtimeEventJson = event;
+    _realtimeEvents.add(event);
+  });
   return true;
 }
 
@@ -146,6 +161,11 @@ Future<String> opengrowMessagingUploadAttachmentJson({
   ),
 );
 
+Future<Uint8List> opengrowMessagingDownloadAttachment({
+  required String conversationId,
+  required String messageId,
+}) => _requiredClient.downloadAttachment(conversationId, messageId);
+
 Future<String> opengrowMessagingSendAttachment({
   required String conversationId,
   required String attachmentJson,
@@ -175,8 +195,43 @@ Future<bool> opengrowMessagingSetTyping(
   return true;
 }
 
+Future<bool> opengrowMessagingConnectRealtime(String conversationId) async {
+  await _requiredRealtime.connect(conversationId);
+  return true;
+}
+
+Future<bool> opengrowMessagingDisconnectRealtime() async {
+  await _requiredRealtime.disconnect();
+  return true;
+}
+
+Future<String> opengrowMessagingGetLastRealtimeEventJson() async =>
+    _lastRealtimeEventJson;
+
+Future<bool> opengrowMessagingDispose() async {
+  await _realtimeSubscription?.cancel();
+  _realtimeSubscription = null;
+  await _realtime?.dispose();
+  _realtime = null;
+  _client?.close();
+  _client = null;
+  _lastRealtimeEventJson = '';
+  return true;
+}
+
 OpenGrowMessagingClient get _requiredClient {
   final value = _client;
+  if (value == null) {
+    throw const OpenGrowMessagingException(
+      'not_initialized',
+      'Call opengrowMessagingInitializeAuthenticated first',
+    );
+  }
+  return value;
+}
+
+OpenGrowMessagingRealtime get _requiredRealtime {
+  final value = _realtime;
   if (value == null) {
     throw const OpenGrowMessagingException(
       'not_initialized',

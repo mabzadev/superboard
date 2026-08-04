@@ -2,6 +2,16 @@
 
 This library is independent from Purchases. It creates no token and maintains no account. `opengrowMessagingInitializeAuthenticated` exchanges the existing application access token only through the configured authentication gateway, then uses the short-lived ES256 token for Messaging.
 
+Add the private dependency with an immutable release reference:
+
+```yaml
+opengrow_flutterflow_messaging:
+  git:
+    url: git@github.com:mbzadev/opengrow.git
+    ref: sdk-flutterflow-messaging-v1.1.0
+    path: sdks/flutterflow_messaging
+```
+
 Available FlutterFlow actions:
 
 - `opengrowMessagingInitializeAuthenticated`
@@ -11,8 +21,19 @@ Available FlutterFlow actions:
 - `opengrowMessagingSend`
 - `opengrowMessagingUploadAttachmentJson`
 - `opengrowMessagingSendAttachment`
+- `opengrowMessagingDownloadAttachment`
 - `opengrowMessagingMarkRead`
 - `opengrowMessagingSetTyping`
+- `opengrowMessagingConnectRealtime`
+- `opengrowMessagingDisconnectRealtime`
+- `opengrowMessagingGetLastRealtimeEventJson`
+- `opengrowMessagingDispose`
+
+Subscribe to `opengrowMessagingEventJsonStream` once during application
+bootstrap. It emits server events and `connection.changed` lifecycle events.
+Unexpected disconnects use bounded exponential reconnect. Switching
+conversations or calling disconnect invalidates the previous socket so it
+cannot reconnect in the background.
 
 Generate `clientMessageId` once in the application and reuse it for every retry. The server then guarantees idempotent message creation.
 
