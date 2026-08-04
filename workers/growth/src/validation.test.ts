@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertAutomationCompatibility, automationAction, automationTrigger, device, locale, platform } from './validation';
+import { assertAutomationCompatibility, automationAction, automationConfig, automationTrigger, device, locale, platform } from './validation';
 import { AUTOMATION_ACTIONS } from './types';
 
 describe('growth contracts', () => {
@@ -19,6 +19,15 @@ describe('growth contracts', () => {
     expect(automationTrigger('payment_failed')).toBe('payment_failed');
     expect(automationTrigger('review_negative')).toBe('review_negative');
     expect(() => automationTrigger('grant_premium')).toThrow(/unsupported/i);
+  });
+
+  it('blocks entitlement mutation fields without rejecting neutral English message copy', () => {
+    expect(automationConfig({ title: 'Plan update', body: 'Your premium plan was renewed.' }, 'action_config'))
+      .toEqual({ title: 'Plan update', body: 'Your premium plan was renewed.' });
+    expect(() => automationConfig({ nested: { entitlement_id: 'premium' } }, 'action_config'))
+      .toThrow(/entitlement mutation/i);
+    expect(() => automationConfig({ subscriptionStatus: 'active' }, 'action_config'))
+      .toThrow(/entitlement mutation/i);
   });
 
   it('keeps platform and device pairs consistent', () => {

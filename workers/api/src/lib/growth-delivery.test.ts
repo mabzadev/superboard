@@ -44,6 +44,7 @@ function baseEnv(options: {
       const path = new URL(request.url).pathname;
       if (path.endsWith('/claim')) return json({ data: {
         id: 'run-1', status: 'pending', action_type: 'chat', terminal: false,
+        claim_token: 'claim-token-1',
         action_payload_json: JSON.stringify({ subject_id: 'customer-1', message: { title: 'Update', body: 'Your subscription has been renewed.' } }),
       } });
       return json({ data: { id: 'run-1', status: 'delivered' } });
@@ -211,6 +212,7 @@ describe('growth automation delivery', () => {
         const request = requestFrom(input, init);
         if (new URL(request.url).pathname.endsWith('/claim')) return json({ data: {
           id: 'run-1', status: 'pending', action_type: 'inbox', terminal: false,
+          claim_token: 'claim-token-1',
           action_payload_json: JSON.stringify({
             subject_id: 'store-review:review-1',
             message: { title: 'Review needs attention', body: 'Prepare a helpful response.' },
@@ -237,6 +239,7 @@ describe('growth automation delivery', () => {
         growthPaths.push(path);
         if (path.endsWith('/claim')) return json({ data: {
           id: 'run-1', status: 'pending', action_type: 'chat', terminal: false,
+          claim_token: 'claim-token-1',
           action_payload_json: JSON.stringify({ subject_id: 'customer-1', message: { body: 'Retry this message.' } }),
         } });
         return json({ data: { id: 'run-1', status: 'pending' } });
@@ -246,6 +249,42 @@ describe('growth automation delivery', () => {
     await expect(deliverGrowthAutomation(env, 11, 'run-1')).rejects.toMatchObject({ code: 'messaging_unavailable', retryable: true });
     expect(growthPaths.some((path) => path.endsWith('/release'))).toBe(true);
     expect(growthPaths.some((path) => path.endsWith('/run-1'))).toBe(false);
+  });
+
+  it('passes the exact lease token when completing a delivery', async () => {
+    const requestBodies: Record<string, unknown>[] = [];
+    const { env } = baseEnv({
+      growth: async (input, init) => {
+        const request = requestFrom(input, init);
+        if (new URL(request.url).pathname.endsWith('/claim')) return json({ data: {
+          id: 'run-1', status: 'pending', action_type: 'chat', terminal: false,
+          claim_token: 'claim-token-exact',
+          action_payload_json: JSON.stringify({ subject_id: 'customer-1', message: { body: 'Lease-safe message.' } }),
+        } });
+        requestBodies.push(JSON.parse(String(init?.body || '{}')));
+        return json({ data: { id: 'run-1', status: 'delivered' } });
+      },
+    });
+    await expect(deliverGrowthAutomation(env, 11, 'run-1')).resolves.toMatchObject({ status: 'delivered' });
+    expect(requestBodies).toContainEqual(expect.objectContaining({ status: 'delivered', claim_token: 'claim-token-exact' }));
+  });
+
+  it('does not regress a completed receipt when lease ownership moved to another worker', async () => {
+    const { env, db } = baseEnv({
+      growth: async (input, init) => {
+        const request = requestFrom(input, init);
+        if (new URL(request.url).pathname.endsWith('/claim')) return json({ data: {
+          id: 'run-1', status: 'pending', action_type: 'chat', terminal: false,
+          claim_token: 'stale-token',
+          action_payload_json: JSON.stringify({ subject_id: 'customer-1', message: { body: 'Idempotent message.' } }),
+        } });
+        return json({ code: 'automation_run_claim_lost', message: 'Automation run lease ownership was lost', retryable: false }, 409);
+      },
+    });
+    await expect(deliverGrowthAutomation(env, 11, 'run-1')).resolves.toMatchObject({
+      status: 'delivered', lease_transferred: true,
+    });
+    expect(db.calls.some((call) => call.sql.includes("status = 'failed'"))).toBe(false);
   });
 
   it('queues only pending actions returned by an idempotent event evaluation', async () => {

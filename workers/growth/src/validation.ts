@@ -50,6 +50,12 @@ export function jsonObject(value: unknown, field: string): Record<string, unknow
   return value as Record<string, unknown>;
 }
 
+export function automationConfig(value: unknown, field: string): Record<string, unknown> {
+  const config = jsonObject(value, field);
+  assertSafeAutomationValue(config, field, 0, new WeakSet<object>());
+  return config;
+}
+
 export function automationTrigger(value: unknown): string {
   const parsed = requiredString(value, 'trigger_type', 64);
   if (!(AUTOMATION_TRIGGERS as readonly string[]).includes(parsed)) {
@@ -89,5 +95,27 @@ export async function boundedJson(request: Request): Promise<Record<string, unkn
   } catch (error) {
     if ((error as { code?: string }).code) throw error;
     throw failure('json_invalid', 'Request body must contain valid JSON', 400);
+  }
+}
+
+function assertSafeAutomationValue(value: unknown, field: string, depth: number, seen: WeakSet<object>) {
+  if (depth > 8) throw failure(`${field}_invalid`, 'Automation configuration nesting is limited to 8 levels');
+  if (!value || typeof value !== 'object') return;
+  if (seen.has(value as object)) throw failure(`${field}_invalid`, 'Automation configuration must be valid JSON');
+  seen.add(value as object);
+  if (Array.isArray(value)) {
+    for (const item of value) assertSafeAutomationValue(item, field, depth + 1, seen);
+    return;
+  }
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    const normalized = key.toLocaleLowerCase('en').replace(/[^a-z0-9]/g, '');
+    if (['__proto__', 'prototype', 'constructor'].includes(key.toLocaleLowerCase('en'))
+      || normalized.includes('entitlement')
+      || normalized === 'premium'
+      || normalized === 'billingstatus'
+      || normalized === 'subscriptionstatus') {
+      throw failure(`${field}_invalid`, 'Automation configuration cannot contain entitlement mutation fields');
+    }
+    assertSafeAutomationValue(nested, field, depth + 1, seen);
   }
 }
