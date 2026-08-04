@@ -4,6 +4,7 @@ import {
   listOfficialMetadataProjects,
   listOfficialMetadataTargets,
   persistOfficialMetadataSnapshot,
+  reconcileManagedOfficialMetadataTargets,
 } from './official-metadata';
 import { audit, enqueueAllProjects, syncProject } from './sync';
 import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_ACTIONS, type Env, type GrowthQueueJob } from './types';
@@ -93,6 +94,16 @@ app.post('/internal/projects/:projectId/official-metadata/snapshots', async (c) 
     c.get('actorId'),
   );
   return c.json({ data }, 201);
+});
+
+app.post('/internal/projects/:projectId/official-metadata/targets/reconcile', async (c) => {
+  const data = await reconcileManagedOfficialMetadataTargets(
+    c.env,
+    project(c),
+    await boundedJson(c.req.raw),
+    c.get('actorId'),
+  );
+  return c.json({ data });
 });
 
 app.get('/internal/projects/:projectId/overview', async (c) => {
