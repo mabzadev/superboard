@@ -81,7 +81,7 @@ class OpenGrowPurchases {
   String? _platformIdentifier;
   String _baseUrl = 'https://sdk.vocostar.com/purchases/v2';
   String _appVersion = '';
-  String _sdkVersion = '2.1.2';
+  String _sdkVersion = '2.1.3';
   String _storefront = '';
   String _campaign = '';
   String? _anonymousId;
@@ -101,7 +101,7 @@ class OpenGrowPurchases {
     String? identityToken,
     OpenGrowIdentityTokenProvider? identityTokenProvider,
     String appVersion = '',
-    String sdkVersion = '2.1.2',
+    String sdkVersion = '2.1.3',
     String storefront = '',
     String campaign = '',
   }) async {
@@ -404,15 +404,33 @@ class OpenGrowPurchases {
   Future<OpenGrowPurchaseResult> purchasePackage(
     OpenGrowPackage package,
   ) async {
-    _ensureConfigured();
-    final identityToken = await _identityTokenForRequest();
-    if (identityToken == null || identityToken.isEmpty) {
-      throw const OpenGrowPurchasesException(
-        'Verified identity synchronization is required before purchasing',
-        code: 'identity_required',
+    try {
+      return await _purchasePackage(package);
+    } on OpenGrowPurchasesException catch (error) {
+      return OpenGrowPurchaseResult(
+        OpenGrowPurchaseOutcome.failed,
+        code: error.code,
+        error: error.message,
+        retryable: error.retryable,
+        productIdentifier: package.product.identifier,
+        requestId: error.requestId,
+      );
+    } catch (_) {
+      return OpenGrowPurchaseResult(
+        OpenGrowPurchaseOutcome.failed,
+        code: 'purchase_failed',
+        error: 'Purchase could not start',
         retryable: true,
+        productIdentifier: package.product.identifier,
       );
     }
+  }
+
+  Future<OpenGrowPurchaseResult> _purchasePackage(
+    OpenGrowPackage package,
+  ) async {
+    _ensureConfigured();
+    await _assertPurchaseIdentitySynchronized();
     var product = _products[package.product.identifier];
     if (product == null) {
       final response = await _iap.queryProductDetails({
@@ -435,9 +453,18 @@ class OpenGrowPurchases {
       productDetails: product,
       applicationUserName: _customerId,
     );
-    final started = package.product.type == 'consumable'
-        ? await _iap.buyConsumable(purchaseParam: parameter, autoConsume: false)
-        : await _iap.buyNonConsumable(purchaseParam: parameter);
+    late final bool started;
+    try {
+      started = package.product.type == 'consumable'
+          ? await _iap.buyConsumable(
+              purchaseParam: parameter,
+              autoConsume: false,
+            )
+          : await _iap.buyNonConsumable(purchaseParam: parameter);
+    } catch (_) {
+      _purchaseCompleters.remove(product.id);
+      rethrow;
+    }
     if (!started) {
       _purchaseCompleters.remove(product.id);
       return OpenGrowPurchaseResult(
@@ -797,13 +824,47 @@ class OpenGrowPurchases {
     return info;
   }
 
+  Future<void> _assertPurchaseIdentitySynchronized() async {
+    final token = await _identityTokenForRequest();
+    if (token == null || token.isEmpty) {
+      throw const OpenGrowPurchasesException(
+        'Verified identity synchronization is required before purchasing',
+        code: 'identity_required',
+        retryable: true,
+      );
+    }
+    try {
+      await _storeCustomerInfo(
+        await _request('GET', '/customer-info', authorizationToken: token),
+      );
+    } on OpenGrowPurchasesException catch (error) {
+      throw OpenGrowPurchasesException(
+        'Identity synchronization failed',
+        code: 'identity_sync_failed',
+        retryable: error.retryable,
+        requestId: error.requestId,
+      );
+    } on OpenGrowCustomerInfoVerificationException {
+      throw const OpenGrowPurchasesException(
+        'Identity synchronization returned unverified customer information',
+        code: 'identity_verification_failed',
+      );
+    } catch (_) {
+      throw const OpenGrowPurchasesException(
+        'Identity synchronization returned invalid customer information',
+        code: 'identity_verification_failed',
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {
     Map<String, dynamic>? body,
+    String? authorizationToken,
   }) async {
     _ensureConfigured();
-    final token = await _identityTokenForRequest();
+    final token = authorizationToken ?? await _identityTokenForRequest();
     final request = http.Request(method, Uri.parse('$_baseUrl$path'))
       ..headers.addAll({
         'Content-Type': 'application/json',

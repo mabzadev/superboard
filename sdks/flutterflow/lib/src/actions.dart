@@ -257,39 +257,64 @@ Future<String> opengrowPurchase({
   required String packageIdentifier,
   String offeringIdentifier = '',
 }) async {
-  final offerings = await OpenGrowPurchases.instance.getOfferings();
-  final offering = offeringIdentifier.isEmpty
-      ? offerings.current
-      : offerings.all[offeringIdentifier];
-  if (offering == null) {
-    return jsonEncode(
-      const OpenGrowPurchaseResult(
-        OpenGrowPurchaseOutcome.failed,
-        code: 'offering_not_found',
-        error: 'Offering not found',
-      ).toJson(),
-    );
-  }
-  OpenGrowPackage? selected;
-  for (final package in offering.packages) {
-    if (package.identifier == packageIdentifier) {
-      selected = package;
-      break;
+  String? productIdentifier;
+  try {
+    final offerings = await OpenGrowPurchases.instance.getOfferings();
+    final offering = offeringIdentifier.isEmpty
+        ? offerings.current
+        : offerings.all[offeringIdentifier];
+    if (offering == null) {
+      return jsonEncode(
+        const OpenGrowPurchaseResult(
+          OpenGrowPurchaseOutcome.failed,
+          code: 'offering_not_found',
+          error: 'Offering not found',
+        ).toJson(),
+      );
     }
-  }
-  if (selected == null) {
+    OpenGrowPackage? selected;
+    for (final package in offering.packages) {
+      if (package.identifier == packageIdentifier) {
+        selected = package;
+        break;
+      }
+    }
+    if (selected == null) {
+      return jsonEncode(
+        OpenGrowPurchaseResult(
+          OpenGrowPurchaseOutcome.failed,
+          code: 'package_not_found',
+          error: 'Package not found',
+          productIdentifier: packageIdentifier,
+        ).toJson(),
+      );
+    }
+    productIdentifier = selected.product.identifier;
+    return jsonEncode(
+      (await OpenGrowPurchases.instance.purchasePackage(selected)).toJson(),
+    );
+  } on OpenGrowPurchasesException catch (error) {
     return jsonEncode(
       OpenGrowPurchaseResult(
         OpenGrowPurchaseOutcome.failed,
-        code: 'package_not_found',
-        error: 'Package not found',
-        productIdentifier: packageIdentifier,
+        code: error.code,
+        error: error.message,
+        retryable: error.retryable,
+        productIdentifier: productIdentifier,
+        requestId: error.requestId,
+      ).toJson(),
+    );
+  } catch (_) {
+    return jsonEncode(
+      OpenGrowPurchaseResult(
+        OpenGrowPurchaseOutcome.failed,
+        code: 'purchase_failed',
+        error: 'Purchase could not start',
+        retryable: true,
+        productIdentifier: productIdentifier,
       ).toJson(),
     );
   }
-  return jsonEncode(
-    (await OpenGrowPurchases.instance.purchasePackage(selected)).toJson(),
-  );
 }
 
 Future<bool> opengrowRestore() async {

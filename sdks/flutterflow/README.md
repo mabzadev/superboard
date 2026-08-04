@@ -8,7 +8,7 @@ Import-ready library for replacing RevenueCat actions in FlutterFlow.
    opengrow_flutterflow:
      git:
        url: git@github.com:mbzadev/opengrow.git
-       ref: sdk-flutterflow-v2.1.5
+       ref: sdk-flutterflow-v2.1.6
        path: sdks/flutterflow
    ```
 
@@ -58,4 +58,6 @@ only payloads that passed SDK JWS verification.
 library never issues an application token. It exchanges the existing access
 token for a short-lived ES256 OpenGrow identity JWT through
 `POST /auth/opengrow-token`. A purchase cannot start when this exchange fails.
+Purchase actions always return a structured JSON result, including identity or
+network failures that happen before the Store sheet opens.
 No Apple or Google secret is embedded in the application.

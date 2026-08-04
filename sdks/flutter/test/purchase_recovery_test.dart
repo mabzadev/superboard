@@ -227,6 +227,54 @@ void main() {
       expect(storage.outboxEntries, isEmpty);
     },
   );
+
+  test(
+    'refuses to open the store when authenticated identity preflight fails',
+    () async {
+      var identityAvailable = true;
+      final store = FakePurchaseStore([]);
+      final purchases = testPurchases(store, MemoryPurchaseStorage([]), (
+        request,
+      ) async {
+        if (request.url.path.endsWith('/customer-info')) {
+          if (!identityAvailable) {
+            return jsonResponse({
+              'error': {
+                'code': 'invalid_identity',
+                'message': 'Identity is invalid',
+                'retryable': false,
+                'request_id': 'request-identity-1',
+              },
+            }, 401);
+          }
+          return jsonResponse(customerInfo());
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+      await configure(purchases);
+      identityAvailable = false;
+
+      final result = await purchases.purchasePackage(
+        const OpenGrowPackage(
+          identifier: 'weekly',
+          packageType: 'weekly',
+          product: OpenGrowStoreProduct(
+            identifier: 'premium-weekly',
+            type: 'subscription',
+          ),
+        ),
+      );
+      expect(result.outcome, OpenGrowPurchaseOutcome.failed);
+      expect(result.code, 'identity_sync_failed');
+      expect(result.requestId, 'request-identity-1');
+      expect(store.productQueryCount, 0);
+      expect(store.purchaseStartCount, 0);
+    },
+  );
 }
 
 OpenGrowPurchases testPurchases(
@@ -354,6 +402,8 @@ class FakePurchaseStore implements OpenGrowPurchaseStore {
   final List<String> events;
   final controller = StreamController<List<PurchaseDetails>>.broadcast();
   final completed = <PurchaseDetails>[];
+  int productQueryCount = 0;
+  int purchaseStartCount = 0;
 
   void emit(PurchaseDetails purchase) => controller.add([purchase]);
 
@@ -368,20 +418,28 @@ class FakePurchaseStore implements OpenGrowPurchaseStore {
   @override
   Future<ProductDetailsResponse> queryProductDetails(
     Set<String> identifiers,
-  ) async => ProductDetailsResponse(
-    productDetails: const [],
-    notFoundIDs: identifiers.toList(),
-  );
+  ) async {
+    productQueryCount += 1;
+    return ProductDetailsResponse(
+      productDetails: const [],
+      notFoundIDs: identifiers.toList(),
+    );
+  }
 
   @override
-  Future<bool> buyNonConsumable({required PurchaseParam purchaseParam}) async =>
-      true;
+  Future<bool> buyNonConsumable({required PurchaseParam purchaseParam}) async {
+    purchaseStartCount += 1;
+    return true;
+  }
 
   @override
   Future<bool> buyConsumable({
     required PurchaseParam purchaseParam,
     bool autoConsume = true,
-  }) async => true;
+  }) async {
+    purchaseStartCount += 1;
+    return true;
+  }
 
   @override
   Future<void> completePurchase(PurchaseDetails purchase) async {
