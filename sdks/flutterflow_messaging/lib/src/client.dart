@@ -251,16 +251,35 @@ class OpenGrowMessagingClient {
 
   Future<WebSocketChannel> connect(String conversationId) async {
     await _refreshIfExpiring();
+    try {
+      return await _connectWebSocket(conversationId);
+    } catch (_) {
+      if (_identityTokenProvider == null) rethrow;
+      await _refreshIdentityToken();
+      return _connectWebSocket(conversationId);
+    }
+  }
+
+  Future<WebSocketChannel> _connectWebSocket(String conversationId) async {
     final uri = _url(
       '/v1/conversations/${Uri.encodeComponent(conversationId)}/ws',
     ).replace(scheme: _baseUri.scheme == 'https' ? 'wss' : 'ws');
-    return IOWebSocketChannel.connect(
+    final channel = IOWebSocketChannel.connect(
       uri,
       headers: {
         'Authorization': 'Bearer $_identityToken',
         'X-OpenGrow-Project-Id': '$_projectId',
       },
+      pingInterval: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 10),
     );
+    try {
+      await channel.ready;
+      return channel;
+    } catch (_) {
+      await channel.sink.close();
+      rethrow;
+    }
   }
 
   void close() => _http.close();
