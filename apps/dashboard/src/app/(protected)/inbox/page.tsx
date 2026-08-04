@@ -78,7 +78,14 @@ export default function InboxPage() {
     try {
       const result = await getInboxMessages(projectId, selected.source_id);
       setMessages(result.data || []);
-      void markInboxConversationRead(projectId, selected.source_id).catch(() => undefined);
+      try {
+        await markInboxConversationRead(projectId, selected.source_id);
+        setItems((current) => current.map((item) => item.id === selected.id
+          ? { ...item, source: { ...item.source, unread_count: 0 } }
+          : item));
+      } catch {
+        // A failed receipt does not hide messages and will retry on refresh.
+      }
     } catch (error) {
       showErrorNotification(error instanceof Error ? error.message : "Unable to load the conversation");
     }
@@ -198,7 +205,7 @@ export default function InboxPage() {
       <div className="grid min-h-0 flex-1 overflow-hidden rounded-xl border bg-card lg:grid-cols-[380px_1fr]">
         <aside className="min-h-0 overflow-auto border-r">
           {items.map((item) => <button key={item.id} onClick={() => setSelectedId(item.id)} className={`w-full border-b p-4 text-left transition-colors hover:bg-muted ${selectedId === item.id ? "bg-muted" : ""}`}>
-            <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><SourceIcon type={item.source_type} /><span className="truncate font-medium">{item.title}</span></div><Badge variant={item.priority === "urgent" ? "destructive" : "outline"}>{priorityLabel[item.priority]}</Badge></div>
+            <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><SourceIcon type={item.source_type} /><span className="truncate font-medium">{item.title}</span>{item.source_type === "conversation" && Number(item.source.unread_count || 0) > 0 && <Badge>{String(item.source.unread_count)}</Badge>}</div><Badge variant={item.priority === "urgent" ? "destructive" : "outline"}>{priorityLabel[item.priority]}</Badge></div>
             <div className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.preview}</div>
             <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground"><span>{sourceLabel[item.source_type]} · {item.status}</span><span>{dateTime(item.updated_at)}</span></div>
           </button>)}
