@@ -40,16 +40,68 @@ export function billingSecretReadiness(env: BillingSecretEnv) {
   return { ready: missing.length === 0, missing };
 }
 
+export async function billingStoreReadiness(db: D1Database): Promise<Record<string, unknown>[]> {
+  const stores = await db.prepare(`
+    WITH connection_readiness AS (
+      SELECT connection.provider, connection.environment,
+        CASE connection.provider
+          WHEN 'apple' THEN 'platform_configuration'
+          WHEN 'google' THEN 'platform_configuration'
+          WHEN 'stripe' THEN 'store_connection'
+        END AS credential_source,
+        CASE
+          WHEN connection.provider = 'apple' AND EXISTS (
+            SELECT 1 FROM ios_server_api_keys credential
+            WHERE credential.billing_encrypted_key IS NOT NULL
+              AND credential.key_id IS NOT NULL
+              AND credential.issuer_id IS NOT NULL
+              AND (
+                credential.instance_id = project.instance_id
+                OR credential.ios_configuration_id IN (
+                  SELECT configuration.id
+                  FROM ios_configurations configuration
+                  JOIN applications application ON application.id = configuration.application_id
+                  WHERE application.instance_id = project.instance_id
+                )
+              )
+          ) THEN 1
+          WHEN connection.provider = 'google' AND EXISTS (
+            SELECT 1 FROM android_server_api_keys credential
+            WHERE credential.billing_encrypted_key IS NOT NULL
+              AND credential.client_email IS NOT NULL
+              AND credential.project_id IS NOT NULL
+              AND (
+                credential.instance_id = project.instance_id
+                OR credential.android_configuration_id IN (
+                  SELECT configuration.id
+                  FROM android_configurations configuration
+                  JOIN applications application ON application.id = configuration.application_id
+                  WHERE application.instance_id = project.instance_id
+                )
+              )
+          ) THEN 1
+          WHEN connection.provider = 'stripe'
+            AND connection.billing_configuration_encrypted IS NOT NULL THEN 1
+          ELSE 0
+        END AS credentials_ready
+      FROM billing_store_connections connection
+      JOIN projects project ON project.id = connection.project_id
+      WHERE connection.provider IN ('apple', 'google', 'stripe')
+    )
+    SELECT provider, environment, credential_source, COUNT(*) AS connections,
+      SUM(credentials_ready) AS configured,
+      SUM(credentials_ready) AS billing_credentials_ready
+    FROM connection_readiness
+    GROUP BY provider, environment, credential_source
+    ORDER BY provider, environment
+  `).all<Record<string, unknown>>();
+  return stores.results || [];
+}
+
 export async function billingWorkerReadiness(env: BillingEnv): Promise<BillingWorkerReadiness> {
   const secrets = billingSecretReadiness(env);
   const [stores, credentialCopies, signingAuthorityReady] = await Promise.all([
-    env.DB.prepare(`
-      SELECT provider, environment, COUNT(*) AS connections,
-        SUM(CASE WHEN billing_configuration_encrypted IS NOT NULL THEN 1 ELSE 0 END) AS configured
-      FROM billing_store_connections
-      WHERE provider IN ('apple', 'google', 'stripe')
-      GROUP BY provider, environment ORDER BY provider, environment
-    `).all<Record<string, unknown>>(),
+    billingStoreReadiness(env.DB),
     env.DB.prepare(`
       SELECT
         (SELECT COUNT(*) FROM ios_server_api_keys WHERE encrypted_key IS NOT NULL) AS apple_source,
@@ -78,7 +130,7 @@ export async function billingWorkerReadiness(env: BillingEnv): Promise<BillingWo
     credential_decryption_ready: decryptionReady,
     signing_authority_ready: signingAuthorityReady,
     credential_copies: credentialCopies,
-    store_connections: stores.results || [],
+    store_connections: stores,
   };
 }
 
