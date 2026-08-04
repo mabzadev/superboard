@@ -9,10 +9,14 @@ describe('Billing service contracts', () => {
     }).store).toBe('apple');
   });
 
-  it('requires Google token, product and product type', () => {
+  it('requires Google token and product while treating client product type as optional', () => {
     expect(() => parseReceiptRequest({
       project_id: '11', customer_id: 'customer', store: 'google', environment: 'production',
     })).toThrow(/purchase_token/);
+    expect(parseReceiptRequest({
+      project_id: '11', customer_id: 'customer', store: 'google', environment: 'production',
+      purchase_token: 'token', product_id: 'weekly-plan',
+    })).toMatchObject({ product_id: 'weekly-plan', product_type: undefined });
   });
 
   it('rejects unsupported providers and environments', () => {

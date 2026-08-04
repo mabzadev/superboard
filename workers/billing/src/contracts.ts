@@ -30,9 +30,8 @@ export function parseReceiptRequest(value: unknown): ReceiptRequest {
   if (store === 'google' && (
     !String(body.purchase_token || '').trim()
     || !String(body.product_id || '').trim()
-    || !['subscription', 'non_consumable', 'consumable'].includes(String(body.product_type || ''))
   )) {
-    throw publicError('receipt_required', 'purchase_token, product_id and product_type are required for Google');
+    throw publicError('receipt_required', 'purchase_token and product_id are required for Google');
   }
   return {
     project_id: projectId,
@@ -42,7 +41,9 @@ export function parseReceiptRequest(value: unknown): ReceiptRequest {
     signed_transaction: body.signed_transaction ? String(body.signed_transaction) : undefined,
     purchase_token: body.purchase_token ? String(body.purchase_token) : undefined,
     product_id: body.product_id ? String(body.product_id) : undefined,
-    product_type: body.product_type as ReceiptRequest['product_type'],
+    product_type: ['subscription', 'non_consumable', 'consumable'].includes(String(body.product_type || ''))
+      ? body.product_type as ReceiptRequest['product_type']
+      : undefined,
   };
 }
 

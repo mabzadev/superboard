@@ -152,7 +152,7 @@ sdk.post('/receipts', async (c) => {
         environment: ctx.environment,
       })).purchase;
     } else if (data.store === 'google') {
-      if (!data.purchase_token || !data.product_id || !data.product_type) throw purchasesError('receipt_required', 'purchase_token, product_id and product_type are required');
+      if (!data.purchase_token || !data.product_id) throw purchasesError('receipt_required', 'purchase_token and product_id are required');
       const verified = await verifyGooglePurchase(c.env, {
         projectId: ctx.projectId,
         customerId: String(ctx.customer.id),

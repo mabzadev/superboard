@@ -137,11 +137,8 @@ purchases.post('/google/purchases', async (c) => {
   try {
     const ctx = await context(c);
     const body = await jsonBody(c);
-    if (!body.purchase_token || !body.product_id || !body.product_type) {
-      return c.json({ error: 'purchase_token, product_id and product_type are required' }, 422);
-    }
-    if (!['subscription', 'non_consumable', 'consumable'].includes(body.product_type)) {
-      return c.json({ error: 'product_type is invalid' }, 422);
+    if (!body.purchase_token || !body.product_id) {
+      return c.json({ error: 'purchase_token and product_id are required' }, 422);
     }
     if (billingServiceEnabled(c.env)) {
       const result = await callBillingService<Record<string, any>>(c.env, '/internal/v1/receipts/verify', {
