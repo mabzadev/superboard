@@ -228,6 +228,25 @@ export async function reconcileBillingState(env: BillingEnv) {
       await env.BILLING_QUEUE.send({ type: 'billing.google.voided.reconcile', projectId: row.project_id });
     }
   }
+  const stripeCatalogs = await env.DB.prepare(`
+    SELECT project_id, environment
+    FROM billing_store_connections
+    WHERE provider = 'stripe' AND status = 'connected'
+      AND (last_synced_at IS NULL
+        OR datetime(last_synced_at) <= datetime('now', '-12 hours')
+        OR last_error_code IS NOT NULL)
+    ORDER BY COALESCE(last_synced_at, '1970-01-01') ASC
+    LIMIT 25
+  `).all<{ project_id: string; environment: BillingEnvironment }>();
+  if (env.BILLING_QUEUE) {
+    for (const row of stripeCatalogs.results || []) {
+      await env.BILLING_QUEUE.send({
+        type: 'billing.stripe.catalog.reconcile',
+        projectId: row.project_id,
+        environment: row.environment,
+      });
+    }
+  }
   const legacyInventoryRuns = await env.DB.prepare(`
     SELECT id, next_cursor
     FROM billing_legacy_inventory_runs
@@ -252,6 +271,7 @@ export async function reconcileBillingState(env: BillingEnv) {
     subscriptions_enqueued: subscriptions.results?.length || 0,
     refund_actions_enqueued: refundActions.results?.length || 0,
     google_voided_reconciliations_enqueued: googleVoidedProjects.results?.length || 0,
+    stripe_catalog_reconciliations_enqueued: stripeCatalogs.results?.length || 0,
     legacy_inventory_runs_enqueued: legacyInventoryRuns.results?.length || 0,
   };
 }
