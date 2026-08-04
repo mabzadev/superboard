@@ -35,6 +35,13 @@ growth.all('/:projectId/*', async (c) => {
       headers,
       body: ['GET', 'HEAD'].includes(c.req.method) ? null : c.req.raw.body,
     }));
+    if (response.ok && c.req.method === 'POST' && suffix === '/sync') {
+      if (!c.env.EVENT_QUEUE) throw purchasesError('growth_queue_unavailable', 'Growth synchronization queue is unavailable', 503);
+      await c.env.EVENT_QUEUE.send({
+        type: 'growth.official-metadata.sync-project',
+        projectId: String(project.id),
+      });
+    }
     return new Response(response.body, { status: response.status, headers: response.headers });
   } catch (error: any) {
     const status = Number(error?.status || 422);

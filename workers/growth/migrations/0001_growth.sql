@@ -76,7 +76,7 @@ CREATE TABLE growth_app_snapshots (
   project_id INTEGER NOT NULL,
   entity_type TEXT NOT NULL CHECK (entity_type IN ('app', 'competitor')),
   entity_id TEXT NOT NULL,
-  source TEXT NOT NULL CHECK (source IN ('apple_lookup', 'apptweak', 'manual')),
+  source TEXT NOT NULL CHECK (source IN ('app_store_connect', 'google_play', 'apple_lookup', 'apptweak', 'manual')),
   observed_date TEXT NOT NULL,
   title TEXT,
   version TEXT,

@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
 import { claimRun, evaluateEvent, markRun, releaseRun } from './automations';
+import {
+  listOfficialMetadataProjects,
+  listOfficialMetadataTargets,
+  persistOfficialMetadataSnapshot,
+} from './official-metadata';
 import { audit, enqueueAllProjects, syncProject } from './sync';
 import { AUTOMATION_ACTIONS, AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_ACTIONS, type Env, type GrowthQueueJob } from './types';
 import {
@@ -50,10 +55,12 @@ app.use('/internal/*', async (c, next) => {
 const contracts = (env: Env) => ({
   data: {
     platforms: [
-      { id: 'apple', devices: ['iphone', 'ipad'], public_metadata: true },
-      { id: 'google', devices: ['android'], public_metadata: false },
+      { id: 'apple', devices: ['iphone', 'ipad'], public_metadata: true, official_owned_metadata: true },
+      { id: 'google', devices: ['android'], public_metadata: false, official_owned_metadata: true },
     ],
     sources: [
+      { id: 'app_store_connect', configuration_scope: 'project_store_connection', capabilities: ['official_owned_metadata'] },
+      { id: 'google_play', configuration_scope: 'project_store_connection', capabilities: ['official_owned_metadata'] },
       { id: 'apple_lookup', configured: true, capabilities: ['public_metadata'] },
       { id: 'apptweak', configured: Boolean(env.APPTWEAK_API_KEY), capabilities: ['metadata', 'keyword_rank', 'keyword_volume', 'keyword_difficulty'] },
     ],
@@ -67,6 +74,25 @@ app.get('/internal/contracts', (c) => c.json(contracts(c.env)));
 app.get('/internal/projects/:projectId/contracts', (c) => {
   project(c);
   return c.json(contracts(c.env));
+});
+
+app.get('/internal/official-metadata/projects', async (c) => {
+  return c.json({ data: await listOfficialMetadataProjects(c.env) });
+});
+
+app.get('/internal/official-metadata/targets', async (c) => {
+  const projectId = positiveInt(c.req.query('project_id'), 'project_id');
+  return c.json({ data: await listOfficialMetadataTargets(c.env, projectId) });
+});
+
+app.post('/internal/projects/:projectId/official-metadata/snapshots', async (c) => {
+  const data = await persistOfficialMetadataSnapshot(
+    c.env,
+    project(c),
+    await boundedJson(c.req.raw),
+    c.get('actorId'),
+  );
+  return c.json({ data }, 201);
 });
 
 app.get('/internal/projects/:projectId/overview', async (c) => {
