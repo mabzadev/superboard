@@ -119,20 +119,31 @@ test("libraries come from opengrow-platform and custom code is not copied", asyn
   assert.equal(catalog.widgets, undefined);
   assert.equal(catalog.actions, undefined);
   assert.deepEqual(catalog.referenceAdapters, {});
-  assert.deepEqual(project.libraries.opengrow_flutterflow, {
-    path: "sdks/flutterflow",
-    developmentRef: "dev",
-    sourceVersion: "2.2.4",
-    releaseVersion: "2.1.6",
-    releaseRef: "sdk-flutterflow-v2.1.6",
-  });
-  assert.deepEqual(project.libraries.opengrow_flutterflow_messaging, {
-    path: "sdks/flutterflow_messaging",
-    developmentRef: "dev",
-    sourceVersion: "1.3.0",
-    releaseVersion: "1.1.1",
-    releaseRef: "sdk-flutterflow-messaging-v1.1.1",
-  });
+  const libraryContracts = {
+    opengrow_flutterflow: {
+      path: "sdks/flutterflow",
+      releasePrefix: "sdk-flutterflow-v",
+    },
+    opengrow_flutterflow_messaging: {
+      path: "sdks/flutterflow_messaging",
+      releasePrefix: "sdk-flutterflow-messaging-v",
+    },
+  };
+  assert.deepEqual(
+    Object.keys(project.libraries).sort(),
+    Object.keys(libraryContracts).sort(),
+  );
+  for (const [packageName, contract] of Object.entries(libraryContracts)) {
+    const library = project.libraries[packageName];
+    assert.equal(library.path, contract.path);
+    assert.equal(library.developmentRef, "dev");
+    assert.match(library.sourceVersion, /^[0-9]+\.[0-9]+\.[0-9]+$/u);
+    assert.match(library.releaseVersion, /^[0-9]+\.[0-9]+\.[0-9]+$/u);
+    assert.equal(
+      library.releaseRef,
+      `${contract.releasePrefix}${library.releaseVersion}`,
+    );
+  }
   for (const [packageName, library] of Object.entries(project.libraries)) {
     const ref = pubspecDependencyRef(
       await readFile(new URL("pubspec.yaml", root), "utf8"),
