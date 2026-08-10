@@ -9,7 +9,7 @@ import {
 
 function manifest() {
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     repositories: {
       platform: {
         nameWithOwner: "mbzadev/opengrow-platform",
@@ -315,4 +315,256 @@ test("GitHub mutation requests use the current versioned REST contract", () => {
   assert.deepEqual(request.body, { default_branch: "dev" });
   assert.equal(request.args.includes("X-GitHub-Api-Version: 2026-03-10"), true);
   assert.equal(request.args.includes("repos/mbzadev/opengrow-platform"), true);
+});
+
+test("pending external Environment hardening is reported but never planned as a mutation", () => {
+  const configuration = manifest();
+  configuration.repositories.platform.environments.development.protection = {
+    enforcement: "pending-external",
+    pendingReason: "A second trusted human reviewer is required.",
+    waitTimerMinutes: 5,
+    preventSelfReview: true,
+    allowAdminBypass: false,
+    minimumEligibleReviewers: 2,
+    reviewers: [{ type: "User", id: 11, name: "release-one" }],
+    deploymentPolicies: [{ type: "branch", pattern: "dev" }],
+  };
+  const plan = buildGitHubReconcilePlan(configuration, [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: true,
+      workflowPermissionsMatch: true,
+      defaultBranch: "dev",
+      branches: [
+        { name: "dev", exists: true, protectionMatches: true },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: true },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+          protection: {
+            enforcement: "pending-external",
+            eligibleReviewersReady: false,
+            eligibleReviewerCount: 1,
+            remote: { deploymentPolicies: [] },
+          },
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+    },
+  ]);
+  assert.deepEqual(plan.repositories[0].operations, []);
+  assert.deepEqual(
+    plan.repositories[0].manual.filter(
+      ({ type }) => type === "activate-environment-protection",
+    ),
+    [
+      {
+        type: "activate-environment-protection",
+        environment: "development",
+        pendingReason: "A second trusted human reviewer is required.",
+        minimumEligibleReviewers: 2,
+        configuredEligibleReviewers: 1,
+        remotelyEligibleReviewers: 1,
+      },
+    ],
+  );
+});
+
+test("enforced Environment hardening plans reviewers, timer and missing branch-tag policies without deleting drift", () => {
+  const configuration = manifest();
+  configuration.repositories.platform.environments.development.protection = {
+    enforcement: "enforced",
+    pendingReason: null,
+    waitTimerMinutes: 5,
+    preventSelfReview: true,
+    allowAdminBypass: false,
+    minimumEligibleReviewers: 2,
+    reviewers: [
+      { type: "User", id: 11, name: "release-one" },
+      { type: "User", id: 22, name: "release-two" },
+    ],
+    deploymentPolicies: [
+      { type: "branch", pattern: "dev" },
+      { type: "tag", pattern: "sdk-android-v*" },
+    ],
+  };
+  const plan = buildGitHubReconcilePlan(configuration, [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: true,
+      workflowPermissionsMatch: true,
+      defaultBranch: "dev",
+      branches: [
+        { name: "dev", exists: true, protectionMatches: true },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: true },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+          protection: {
+            eligibleReviewersReady: true,
+            eligibleReviewerCount: 2,
+            reviewersMatch: false,
+            waitTimerMatches: false,
+            preventSelfReviewMatches: false,
+            adminBypassMatches: false,
+            customDeploymentPoliciesEnabled: false,
+            remote: {
+              deploymentPolicies: [
+                { id: 99, type: "branch", pattern: "legacy" },
+              ],
+            },
+          },
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+    },
+  ]);
+  assert.deepEqual(
+    plan.repositories[0].operations.map(({ type }) => type),
+    [
+      "put-environment-protection",
+      "create-environment-deployment-policy",
+      "create-environment-deployment-policy",
+    ],
+  );
+  assert.equal(
+    plan.repositories[0].manual.some(
+      ({ type, pattern }) =>
+        type === "review-unexpected-environment-deployment-policy" &&
+        pattern === "legacy",
+    ),
+    true,
+  );
+  assert.equal(
+    plan.repositories[0].manual.some(
+      ({ type, allowAdminBypass }) =>
+        type === "set-environment-admin-bypass" && allowAdminBypass === false,
+    ),
+    true,
+  );
+
+  const environmentRequest = mutationRequest(
+    configuration.repositories.platform,
+    plan.repositories[0].operations[0],
+  );
+  assert.deepEqual(environmentRequest.body, {
+    wait_timer: 5,
+    prevent_self_review: true,
+    reviewers: [
+      { type: "User", id: 11 },
+      { type: "User", id: 22 },
+    ],
+    deployment_branch_policy: {
+      protected_branches: false,
+      custom_branch_policies: true,
+    },
+  });
+  const policyRequest = mutationRequest(
+    configuration.repositories.platform,
+    plan.repositories[0].operations[2],
+  );
+  assert.deepEqual(policyRequest.body, {
+    name: "sdk-android-v*",
+    type: "tag",
+  });
+});
+
+test("a pending protection cannot be converted into a mutation request", () => {
+  const configuration = manifest();
+  configuration.repositories.platform.environments.development.protection = {
+    enforcement: "pending-external",
+    pendingReason: "A second trusted human reviewer is required.",
+    waitTimerMinutes: 0,
+    preventSelfReview: true,
+    allowAdminBypass: false,
+    minimumEligibleReviewers: 2,
+    reviewers: [{ type: "User", id: 11, name: "release-one" }],
+    deploymentPolicies: [{ type: "branch", pattern: "dev" }],
+  };
+  assert.throws(
+    () =>
+      mutationRequest(configuration.repositories.platform, {
+        type: "put-environment-protection",
+        environment: "development",
+      }),
+    /Environment protection is not enforceable/u,
+  );
+});
+
+test("enforcement is structurally blocked when declared reviewers lack verified read access", () => {
+  const configuration = manifest();
+  configuration.repositories.platform.environments.development.protection = {
+    enforcement: "enforced",
+    pendingReason: null,
+    waitTimerMinutes: 0,
+    preventSelfReview: true,
+    allowAdminBypass: false,
+    minimumEligibleReviewers: 2,
+    reviewers: [
+      { type: "User", id: 11, name: "release-one" },
+      { type: "User", id: 22, name: "release-two" },
+    ],
+    deploymentPolicies: [{ type: "branch", pattern: "dev" }],
+  };
+  const plan = buildGitHubReconcilePlan(configuration, [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: true,
+      workflowPermissionsMatch: true,
+      defaultBranch: "dev",
+      branches: [
+        { name: "dev", exists: true, protectionMatches: true },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: true },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+          protection: {
+            eligibleReviewersReady: false,
+            eligibleReviewerCount: 1,
+            remote: { deploymentPolicies: [] },
+          },
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+    },
+  ]);
+  assert.equal(
+    plan.repositories[0].blockers.some(
+      ({ type }) => type === "environment-reviewer-access",
+    ),
+    true,
+  );
+  assert.equal(
+    plan.repositories[0].operations.some(
+      ({ type }) => type === "put-environment-protection",
+    ),
+    false,
+  );
 });

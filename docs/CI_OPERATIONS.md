@@ -35,8 +35,12 @@ The SDK catalogue is validated in the planning job even when no SDK build is
 selected. Immutable package tags are created only by the separate
 `Prepare immutable SDK release` workflow, protected by the `sdk-release`
 GitHub Environment. The tag-driven release workflow validates that the source
-version and tag are identical before publishing. It then proposes the released
-catalogue state through a PR; it never pushes through branch protection. Once
+version and tag are identical, then pauses at the `authorize-publication` job
+in the same Environment before any selected Flutter, iOS, Android or npm job
+can publish. The approval is therefore bound to the validated immutable tag and
+SHA, not only to the later catalogue proposal. The workflow then proposes the
+released catalogue state through a PR; it never pushes through branch
+protection. Once
 the complete FlutterFlow/Support set is merged into `dev`, a separate workflow
 verifies all tags and GitHub releases before dispatching one protected PR to
 `opengrow-reference`.
@@ -72,6 +76,49 @@ Their declared workflow policy enables GitHub Actions to create PRs only so the
 two promotion workflows can request `contents: write` and
 `pull-requests: write` explicitly. No workflow approves or merges its own PR;
 the required human review and `CI gate`/`Reference gate` remain authoritative.
+
+## GitHub Environment hardening lifecycle
+
+`config/github-control-plane.json` is also the source of truth for managed
+Environment protections. Each managed Environment declares the eligible
+reviewer identities, minimum eligible reviewer count, self-review policy, wait
+timer, administrator-bypass policy, and the exact branch/tag deployment
+patterns. `github:readiness:remote` compares every field without requesting a
+secret value. `github:reconcile` can plan the documented Environment REST
+updates and missing branch/tag policies, but never deletes an unexpected remote
+policy automatically. The administrator-bypass switch remains an explicit
+manual operation because GitHub's documented Environment update payload does
+not expose that switch.
+
+Protection intent initially uses `enforcement: pending-external`. In that
+state, readiness is deliberately incomplete and reconciliation emits an
+`activate-environment-protection` manual action without generating a protection
+mutation. This prevents a control-plane PR from unexpectedly pausing existing
+publication or deployment runs. Activation requires a separate reviewed change
+to `enforcement: enforced` after every pending reason has been resolved.
+
+The current activation contract is:
+
+- `development`: branch `dev` only, no reviewer and no wait timer, preserving
+  automatic development deployment after the successful aggregate CI gate;
+- `production`: branch `main` only, five-minute wait, self-review prevented and
+  administrator bypass disabled;
+- `sdk-release`: branch `dev` plus the seven declared `sdk-*-v*` tag families,
+  self-review prevented and administrator bypass disabled.
+
+`production` and `sdk-release` require at least two eligible human identities.
+GitHub needs only one approval, but `preventSelfReview` guarantees that the
+approver is not the run initiator. The repository currently declares only
+`mbzadev`; therefore those protections stay `pending-external` until a second
+trusted human has repository read access and is added by stable GitHub user ID.
+Do not weaken `minimumEligibleReviewers` or temporarily enable administrator
+bypass to work around that prerequisite.
+
+Branch and tag policies are installed only after the Environment has been
+switched to custom deployment policies. Perform activation with no pending jobs
+because GitHub rejects policy creation before that switch and an empty custom
+policy set blocks every ref. Re-read the Environment after application and
+verify the exact policy set before starting the next release or deployment.
 
 The reusable FlutterFlow project has a separate protected Environment named
 `flutterflow-library`. Its non-secret project identifier is the Environment

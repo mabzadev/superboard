@@ -115,7 +115,7 @@ opengrow.createLink(
   },
   (err) => {
     console.error("Error creating link:", err);
-  }
+  },
 );
 ```
 
@@ -217,7 +217,7 @@ opengrow.getMessages(
   },
   (err) => {
     console.error("Error retrieving messages:", err);
-  }
+  },
 );
 ```
 
@@ -237,7 +237,7 @@ opengrow.getNumberOfUnreadMessages(
   },
   (err) => {
     console.error("Error retrieving unread messages count:", err);
-  }
+  },
 );
 ```
 
@@ -276,3 +276,20 @@ opengrow.start(
 console.log("User ID:", opengrow.userIdentifier());
 console.log("User Attributes:", opengrow.userAttributes());
 ```
+
+## Development checks
+
+The JavaScript SDK has no runtime npm dependencies. Its complete first-party
+check audits the production package graph and the development toolchain
+separately before running unit tests, producing both bundles, loading the built
+package through ESM and CommonJS, and verifying the publishable archive:
+
+```bash
+npm ci
+npm run check
+```
+
+The development server and current Webpack toolchain require the Node.js 22 LTS
+line used by the repository CI. Do not bypass audit findings with
+`npm audit fix --force`; upgrade the declared toolchain, regenerate the lockfile,
+and re-run the complete check instead.

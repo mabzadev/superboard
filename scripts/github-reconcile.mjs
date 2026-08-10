@@ -179,6 +179,82 @@ export function buildGitHubReconcilePlan(manifest, inspections) {
             });
           }
         }
+        const protection = expected.protection;
+        if (protection?.enforcement === "pending-external") {
+          manual.push({
+            type: "activate-environment-protection",
+            environment: environmentName,
+            pendingReason: protection.pendingReason,
+            minimumEligibleReviewers: protection.minimumEligibleReviewers,
+            configuredEligibleReviewers: protection.reviewers.length,
+            remotelyEligibleReviewers:
+              environment?.protection?.eligibleReviewerCount ?? 0,
+          });
+        } else if (protection?.enforcement === "enforced") {
+          const remoteProtection = environment?.protection;
+          if (!remoteProtection?.eligibleReviewersReady) {
+            blockers.push({
+              type: "environment-reviewer-access",
+              environment: environmentName,
+              minimumEligibleReviewers: protection.minimumEligibleReviewers,
+              eligibleReviewers: remoteProtection?.eligibleReviewerCount ?? 0,
+              message:
+                "Every declared Environment reviewer must resolve to the stable GitHub id and have repository read access before enforcement.",
+            });
+            continue;
+          }
+          if (
+            !remoteProtection?.reviewersMatch ||
+            !remoteProtection?.waitTimerMatches ||
+            !remoteProtection?.preventSelfReviewMatches ||
+            !remoteProtection?.customDeploymentPoliciesEnabled
+          ) {
+            operations.push({
+              type: "put-environment-protection",
+              environment: environmentName,
+            });
+          }
+          const remotePolicies = new Map(
+            (remoteProtection?.remote?.deploymentPolicies || []).map(
+              (policy) => [`${policy.type}:${policy.pattern}`, policy],
+            ),
+          );
+          const expectedPolicies = new Set(
+            protection.deploymentPolicies.map(
+              (policy) => `${policy.type}:${policy.pattern}`,
+            ),
+          );
+          for (const policy of protection.deploymentPolicies) {
+            if (!remotePolicies.has(`${policy.type}:${policy.pattern}`)) {
+              operations.push({
+                type: "create-environment-deployment-policy",
+                environment: environmentName,
+                policyType: policy.type,
+                pattern: policy.pattern,
+              });
+            }
+          }
+          for (const [key, policy] of remotePolicies) {
+            if (!expectedPolicies.has(key)) {
+              manual.push({
+                type: "review-unexpected-environment-deployment-policy",
+                environment: environmentName,
+                policyType: policy.type,
+                pattern: policy.pattern,
+                id: policy.id,
+              });
+            }
+          }
+          if (!remoteProtection?.adminBypassMatches) {
+            manual.push({
+              type: "set-environment-admin-bypass",
+              environment: environmentName,
+              allowAdminBypass: protection.allowAdminBypass,
+              message:
+                "GitHub's documented Environment REST update does not expose this switch; review and set it explicitly in the Environment UI.",
+            });
+          }
+        }
       }
 
       for (const secret of state.repositorySecrets ||
@@ -306,6 +382,37 @@ export function mutationRequest(repository, operation) {
         "PUT",
         `${base}/environments/${operation.environment}`,
         {},
+      );
+    case "put-environment-protection": {
+      const protection =
+        repository.environments[operation.environment]?.protection;
+      if (!protection || protection.enforcement !== "enforced") {
+        throw new Error(
+          `Environment protection is not enforceable for ${operation.environment}`,
+        );
+      }
+      return githubJsonRequest(
+        "PUT",
+        `${base}/environments/${operation.environment}`,
+        {
+          wait_timer: protection.waitTimerMinutes,
+          prevent_self_review: protection.preventSelfReview,
+          reviewers: protection.reviewers.map(({ type, id }) => ({
+            type,
+            id,
+          })),
+          deployment_branch_policy: {
+            protected_branches: false,
+            custom_branch_policies: true,
+          },
+        },
+      );
+    }
+    case "create-environment-deployment-policy":
+      return githubJsonRequest(
+        "POST",
+        `${base}/environments/${operation.environment}/deployment-branch-policies`,
+        { name: operation.pattern, type: operation.policyType },
       );
     case "create-environment-variable":
     case "update-environment-variable": {

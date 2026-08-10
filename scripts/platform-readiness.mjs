@@ -993,9 +993,17 @@ export async function buildReadiness({
         inspectRepository(repository),
       )
     : null;
+  const disconnectedBranchHistories = remote
+    ? repositories.filter(
+        (repository) => repository.branchHistory?.ready === false,
+      )
+    : [];
   const github = {
     inspected: remote,
     ready: remote ? repositories.every((repository) => repository.ready) : null,
+    branchHistoryReady: remote
+      ? disconnectedBranchHistories.length === 0
+      : null,
     repositories,
   };
   const historicalSourceAvailable = existsSync(
@@ -1169,6 +1177,14 @@ export async function buildReadiness({
     "source-control",
     "The declared repositories, branches, protections, Environments, variables or secret names are incomplete.",
     "Run the read-only GitHub bootstrap plan, explicitly create or grant the repositories, push both branches, reconcile structure and supply encrypted secrets.",
+  );
+  addBlocker(
+    blockers,
+    remote && disconnectedBranchHistories.length > 0,
+    "github.main_dev_history",
+    "source-control",
+    `${disconnectedBranchHistories.length} repositories do not have a verified main/dev merge base.`,
+    "Run npm run github:history:bridge:plan, preserve each exact pre-bridge main audit ref, and execute the separately reviewed protected bridge procedure before production promotion.",
   );
   addBlocker(
     blockers,

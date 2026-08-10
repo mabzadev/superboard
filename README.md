@@ -72,6 +72,10 @@ visibility without changing GitHub;
 `npm run github:history:plan -- --fetch` verifies both canonical remotes,
 detects unrelated or divergent histories and derives exact audit refs without
 committing or pushing;
+`npm run github:history:bridge:plan` fails closed once published `main` and
+`dev` have no merge base and emits the exact non-mutating two-parent bridge
+procedure documented in
+[`docs/GIT_HISTORY_BRIDGE.md`](docs/GIT_HISTORY_BRIDGE.md);
 `npm run github:reconcile` separately plans repository-setting drift, branch
 protection, Environments and non-secret variables. Both mutation modes require
 their own schema-versioned exact confirmation, and neither command commits,
@@ -217,7 +221,8 @@ release. The Dashboard exposes the same read-only catalogue and licence links at
 - `.github/workflows/prepare-sdk-release.yml` is the reviewed manual authority
   that creates a new immutable tag from a release-ready catalogue entry.
 - `.github/workflows/release-sdk.yml` validates that tag again before testing
-  and publishing the selected package, then opens a protected catalogue PR.
+  and binds an `sdk-release` Environment approval to its exact tag and SHA
+  before publishing the selected package, then opens a protected catalogue PR.
 - `.github/workflows/promote-reference-sdk.yml` waits until the complete
   FlutterFlow and Support set is published, verifies every official tag and
   GitHub release, then dispatches one atomic set promotion to the reference

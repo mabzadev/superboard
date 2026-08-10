@@ -20,6 +20,13 @@ the reviewed `dev` history, then use `npm run github:reconcile` for repository
 settings, branch protection and Environment structure. None of these planning
 commands publishes the local worktree or handles secret values.
 
+After `dev` exists, unrelated `main` and `dev` histories are a production
+blocker even when the original `main` audit ref is present. Generate the exact
+procedure with `npm run github:history:bridge:plan` and follow
+[`GIT_HISTORY_BRIDGE.md`](./GIT_HISTORY_BRIDGE.md). A squash or rebase copies
+the tree but does not create a merge base, so it cannot complete this one-time
+bridge.
+
 SDK automation follows the same protection boundary. A successful immutable
 tag release opens a catalogue PR instead of pushing `dev`. Once the complete
 FlutterFlow and Support set is reviewed and merged, GitHub verifies every tag

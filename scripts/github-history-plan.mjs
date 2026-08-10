@@ -20,6 +20,9 @@ export function inspectGitHistory(
   const remoteDev = optional(
     run(["rev-parse", "--verify", "refs/remotes/origin/dev"]),
   );
+  const remoteDevTree = remoteDev
+    ? optional(run(["rev-parse", "--verify", `${remoteDev}^{tree}`]))
+    : null;
   const archiveBranch = remoteMain
     ? `audit/pre-opengrow-main-${remoteMain.slice(0, 12)}`
     : null;
@@ -30,6 +33,10 @@ export function inspectGitHistory(
     : null;
   const mergeBase =
     head && remoteMain ? optional(run(["merge-base", head, remoteMain])) : null;
+  const remoteMainDevMergeBase =
+    remoteMain && remoteDev
+      ? optional(run(["merge-base", remoteMain, remoteDev]))
+      : null;
   const remoteDevMergeBase =
     head && remoteDev ? optional(run(["merge-base", head, remoteDev])) : null;
   const status = optional(run(["status", "--porcelain=v1"])) ?? "";
@@ -42,8 +49,12 @@ export function inspectGitHistory(
     remoteMatches: remoteMatches(remoteUrl, repository.nameWithOwner),
     remoteMain,
     remoteDev,
+    remoteDevTree,
     mergeBase,
     commonHistoryWithRemoteMain: head && remoteMain ? Boolean(mergeBase) : null,
+    remoteMainDevMergeBase,
+    commonRemoteMainDevHistory:
+      remoteMain && remoteDev ? Boolean(remoteMainDevMergeBase) : null,
     remoteDevMergeBase,
     remoteDevFastForward:
       head && remoteDev ? remoteDevMergeBase === remoteDev : null,
@@ -142,6 +153,16 @@ export function buildGitHubHistoryPlan(manifest, inspections) {
           };
         }
       }
+      const bridgeProcedure = buildGitHistoryBridgeProcedure(state);
+      if (bridgeProcedure) {
+        blockers.push({
+          type: "remote-main-dev-unrelated",
+          main: state.remoteMain,
+          dev: state.remoteDev,
+          auditBranch: state.archiveBranch,
+          auditPreserved: state.remoteMainPreserved,
+        });
+      }
       if (blockers.length === 0) {
         if (preserveRemoteMain) operations.push(preserveRemoteMain);
         if (publishDev) operations.push(publishDev);
@@ -158,6 +179,7 @@ export function buildGitHubHistoryPlan(manifest, inspections) {
           state.head && state.remoteMain
             ? state.commonHistoryWithRemoteMain === false
             : null,
+        bridgeProcedure,
         blockers,
         operations,
       };
@@ -172,6 +194,117 @@ export function buildGitHubHistoryPlan(manifest, inspections) {
     ),
     repositories,
     note: "Commands are evidence only. This plan never commits, creates a remote branch or pushes a ref; a blocked repository emits no executable operation.",
+  };
+}
+
+export function buildGitHistoryBridgeProcedure(state) {
+  if (
+    !state?.remoteMain ||
+    !state?.remoteDev ||
+    state.commonRemoteMainDevHistory === true ||
+    state.remoteMainDevMergeBase
+  ) {
+    return null;
+  }
+  const mainSha = state.remoteMain;
+  const devSha = state.remoteDev;
+  const bridgeBranch = `history/bridge-main-dev-${mainSha.slice(0, 12)}-${devSha.slice(0, 12)}`;
+  return {
+    schemaVersion: 1,
+    status:
+      state.remoteMainPreserved === true && state.remoteDevTree
+        ? "manual-bridge-required"
+        : "blocked-preconditions-incomplete",
+    repository: state.nameWithOwner,
+    remoteMutationPerformed: false,
+    strategy: "dev-tree-two-parent-merge",
+    mainSha,
+    devSha,
+    mergeBase: null,
+    auditBranch: state.archiveBranch,
+    auditSha: state.remoteArchive ?? null,
+    bridgeBranch,
+    preconditions: [
+      {
+        id: "audit-main-preserved",
+        ready: state.remoteMainPreserved === true,
+        expectedBranch: state.archiveBranch,
+        expectedSha: mainSha,
+      },
+      {
+        id: "local-dev-matches-remote-dev",
+        ready: state.head === devSha && state.branch === "dev",
+        expectedSha: devSha,
+      },
+      {
+        id: "worktree-clean",
+        ready: state.clean === true,
+      },
+      {
+        id: "remote-dev-tree-resolved",
+        ready: /^[0-9a-f]{40}$/u.test(String(state.remoteDevTree || "")),
+        expectedTreeSha: state.remoteDevTree ?? null,
+      },
+    ],
+    localPreparation: [
+      {
+        id: "refresh-exact-refs",
+        command: ["git", "fetch", "origin", "--prune"],
+      },
+      {
+        id: "create-isolated-bridge-branch",
+        command: ["git", "switch", "--create", bridgeBranch, devSha],
+      },
+      {
+        id: "join-histories-without-changing-dev-tree",
+        command: [
+          "git",
+          "merge",
+          "--no-ff",
+          "--allow-unrelated-histories",
+          "--strategy=ours",
+          "--message",
+          `chore(history): bridge protected main ${mainSha.slice(0, 12)} to dev ${devSha.slice(0, 12)}`,
+          mainSha,
+        ],
+      },
+    ],
+    requiredVerification: {
+      exactParentsInOrder: [devSha, mainSha],
+      exactTreeSha: state.remoteDevTree ?? null,
+      treeSourceCommit: devSha,
+      originalMainStillAtAuditBranch: true,
+      mainMustAdvanceWithoutForce: true,
+    },
+    protectedMainProcedure: [
+      "Push only the dedicated bridge branch and open a pull request into main.",
+      "Require aggregate CI, secret scan and an independent CODEOWNER approval on the exact bridge commit.",
+      "In an approved maintenance window, temporarily allow merge commits and disable linear-history enforcement on main only; keep required pull requests, checks, administrator enforcement, force-push denial and deletion denial enabled.",
+      "Merge the reviewed bridge pull request with a merge commit so both parents remain reachable; squash or rebase would discard the dev parent and must not be used.",
+      "Verify main contains both exact source SHAs and has the exact dev tree, then immediately restore squash-only merges and linear-history enforcement.",
+      "Rerun GitHub history planning and remote readiness; neither may report an unrelated main/dev history.",
+    ],
+    rollback: [
+      "Do not force-reset main.",
+      "If verification fails before merge, close the pull request and delete only the bridge branch.",
+      "If verification fails after merge, stop deployment and preserve the bridge evidence; the audit branch remains the immutable pre-bridge recovery ref.",
+    ],
+  };
+}
+
+export function buildGitHubHistoryBridgePlan(plan) {
+  const repositories = plan.repositories.map((repository) => ({
+    nameWithOwner: repository.nameWithOwner,
+    status: repository.status,
+    blockers: repository.blockers,
+    bridgeProcedure: repository.bridgeProcedure,
+  }));
+  return {
+    schemaVersion: 1,
+    mode: "local-read-only-history-bridge-plan",
+    ready: plan.ready,
+    repositories,
+    note: "This report performs no commit, merge, branch creation, push, protection change or pull-request action.",
   };
 }
 
@@ -228,7 +361,10 @@ async function main() {
     inspectGitHistory(path, manifest.repositories[key]),
   );
   const plan = buildGitHubHistoryPlan(manifest, inspections);
-  process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+  const output = process.argv.includes("--bridge-only")
+    ? buildGitHubHistoryBridgePlan(plan)
+    : plan;
+  process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   if (!plan.ready) process.exitCode = 2;
 }
 

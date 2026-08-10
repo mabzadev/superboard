@@ -27,7 +27,53 @@ export async function loadGitHubControlPlane() {
       `Invalid GitHub control-plane manifest: ${JSON.stringify(validate.errors)}`,
     );
   }
+  validateEnvironmentProtections(manifest);
   return manifest;
+}
+
+export function validateEnvironmentProtections(manifest) {
+  for (const repository of Object.values(manifest.repositories || {})) {
+    for (const [environmentName, environment] of Object.entries(
+      repository.environments || {},
+    )) {
+      const protection = environment.protection;
+      if (!protection) continue;
+      const reviewerKeys = protection.reviewers.map(
+        (reviewer) => `${reviewer.type}:${reviewer.id}`,
+      );
+      if (new Set(reviewerKeys).size !== reviewerKeys.length) {
+        throw new Error(
+          `Invalid GitHub Environment protection ${repository.nameWithOwner}/${environmentName}: reviewer identities must be unique`,
+        );
+      }
+      const policyKeys = protection.deploymentPolicies.map(
+        (policy) => `${policy.type}:${policy.pattern}`,
+      );
+      if (new Set(policyKeys).size !== policyKeys.length) {
+        throw new Error(
+          `Invalid GitHub Environment protection ${repository.nameWithOwner}/${environmentName}: deployment policies must be unique`,
+        );
+      }
+      const eligible = protection.reviewers.length;
+      if (
+        protection.enforcement === "enforced" &&
+        eligible < protection.minimumEligibleReviewers
+      ) {
+        throw new Error(
+          `Invalid GitHub Environment protection ${repository.nameWithOwner}/${environmentName}: enforced protection declares ${eligible} of ${protection.minimumEligibleReviewers} required eligible reviewers`,
+        );
+      }
+      if (
+        protection.enforcement === "enforced" &&
+        protection.preventSelfReview &&
+        protection.minimumEligibleReviewers < 2
+      ) {
+        throw new Error(
+          `Invalid GitHub Environment protection ${repository.nameWithOwner}/${environmentName}: self-review prevention requires at least two eligible reviewers`,
+        );
+      }
+    }
+  }
 }
 
 export function readinessPlan(manifest) {
@@ -56,6 +102,23 @@ export function readinessPlan(manifest) {
               name,
               variables: Object.keys(environment.variables).sort(),
               secrets: [...environment.secrets].sort(),
+              protection: environment.protection
+                ? {
+                    enforcement: environment.protection.enforcement,
+                    pendingReason: environment.protection.pendingReason,
+                    waitTimerMinutes: environment.protection.waitTimerMinutes,
+                    preventSelfReview: environment.protection.preventSelfReview,
+                    allowAdminBypass: environment.protection.allowAdminBypass,
+                    minimumEligibleReviewers:
+                      environment.protection.minimumEligibleReviewers,
+                    reviewers: environment.protection.reviewers.map(
+                      ({ type, name }) => ({ type, name }),
+                    ),
+                    deploymentPolicies: [
+                      ...environment.protection.deploymentPolicies,
+                    ],
+                  }
+                : null,
             }),
           ),
           repositorySecrets: [...repository.repositorySecrets].sort(),
@@ -113,6 +176,7 @@ export function inspectRepository(repository, run = runGh) {
         "api",
         `repos/${repository.nameWithOwner}/branches/${name}`,
       ]);
+      const branchPayload = resultJson(branch);
       const protectionResult = branch.ok
         ? run([
             "api",
@@ -152,6 +216,7 @@ export function inspectRepository(repository, run = runGh) {
       return {
         name,
         exists: branch.ok,
+        sha: branchPayload?.commit?.sha || null,
         protectionMatches: policyMatches,
         requiredCheckPresent: requiredChecks.has(expected.requiredCheck),
         approvalsMatch:
@@ -163,6 +228,19 @@ export function inspectRepository(repository, run = runGh) {
       };
     },
   );
+  const mainBranch = branches.find(({ name }) => name === "main");
+  const devBranch = branches.find(({ name }) => name === "dev");
+  const historyRequired = Boolean(mainBranch && devBranch);
+  const comparisonResult = historyRequired
+    ? run(["api", `repos/${repository.nameWithOwner}/compare/main...dev`])
+    : { ok: true, stdout: "" };
+  const branchHistory = remoteBranchHistoryState({
+    required: historyRequired,
+    mainSha: mainBranch?.sha,
+    devSha: devBranch?.sha,
+    comparisonOk: comparisonResult.ok,
+    comparison: resultJson(comparisonResult),
+  });
   const environmentResult = run([
     "api",
     `repos/${repository.nameWithOwner}/environments`,
@@ -192,6 +270,30 @@ export function inspectRepository(repository, run = runGh) {
             ]),
           )
         : null;
+      const environmentDetails =
+        exists && expected.protection
+          ? resultJson(
+              run([
+                "api",
+                `repos/${repository.nameWithOwner}/environments/${name}`,
+              ]),
+            )
+          : null;
+      const deploymentPoliciesPayload =
+        environmentDetails?.deployment_branch_policy?.custom_branch_policies ===
+        true
+          ? resultJson(
+              run([
+                "api",
+                `repos/${repository.nameWithOwner}/environments/${name}/deployment-branch-policies`,
+              ]),
+            )
+          : { branch_policies: [] };
+      const reviewerAccess = expected.protection
+        ? expected.protection.reviewers.map((reviewer) =>
+            environmentReviewerAccess(repository, reviewer, run),
+          )
+        : [];
       const remoteVariables = new Map(
         (variablesPayload?.variables || []).map((variable) => [
           variable.name,
@@ -212,6 +314,14 @@ export function inspectRepository(repository, run = runGh) {
         name: secretName,
         configured: remoteSecrets.has(secretName),
       }));
+      const protection = expected.protection
+        ? environmentProtectionState(
+            expected.protection,
+            environmentDetails,
+            deploymentPoliciesPayload,
+            reviewerAccess,
+          )
+        : null;
       return {
         name,
         exists,
@@ -220,7 +330,9 @@ export function inspectRepository(repository, run = runGh) {
         ready:
           exists &&
           variables.every((variable) => variable.configured) &&
-          secrets.every((secret) => secret.configured),
+          secrets.every((secret) => secret.configured) &&
+          (!protection || protection.ready),
+        protection,
       };
     },
   );
@@ -242,6 +354,7 @@ export function inspectRepository(repository, run = runGh) {
     settingsMatch &&
     workflowPermissionsMatch &&
     branches.every((branch) => branch.exists && branch.protectionMatches) &&
+    branchHistory.ready &&
     environments.every((environment) => environment.ready) &&
     repositorySecrets.every((secret) => secret.configured);
 
@@ -256,12 +369,190 @@ export function inspectRepository(repository, run = runGh) {
     workflowPermissions,
     workflowPermissionsMatch,
     branches,
+    branchHistory,
     environments,
     repositorySecrets,
     note: "Secret values are never requested or returned; only configured names are compared.",
   };
 }
 
+function environmentProtectionState(
+  expected,
+  environmentDetails,
+  deploymentPoliciesPayload,
+  reviewerAccess,
+) {
+  const protectionRules = environmentDetails?.protection_rules || [];
+  const reviewerRule = protectionRules.find(
+    (rule) => rule.type === "required_reviewers",
+  );
+  const waitRule = protectionRules.find((rule) => rule.type === "wait_timer");
+  const remoteReviewers = (reviewerRule?.reviewers || [])
+    .map((entry) => ({
+      type: entry.type,
+      id: Number(entry.reviewer?.id),
+      name:
+        entry.type === "Team"
+          ? entry.reviewer?.slug || entry.reviewer?.name || null
+          : entry.reviewer?.login || null,
+    }))
+    .filter((reviewer) => reviewer.type && reviewer.id > 0)
+    .sort((left, right) =>
+      `${left.type}:${left.id}`.localeCompare(`${right.type}:${right.id}`),
+    );
+  const expectedReviewers = [...expected.reviewers].sort((left, right) =>
+    `${left.type}:${left.id}`.localeCompare(`${right.type}:${right.id}`),
+  );
+  const reviewersMatch =
+    JSON.stringify(remoteReviewers.map(({ type, id }) => ({ type, id }))) ===
+    JSON.stringify(expectedReviewers.map(({ type, id }) => ({ type, id })));
+  const waitTimerMinutes = Number(waitRule?.wait_timer || 0);
+  const waitTimerMatches = waitTimerMinutes === expected.waitTimerMinutes;
+  const preventSelfReview = reviewerRule?.prevent_self_review === true;
+  const preventSelfReviewMatches =
+    preventSelfReview === expected.preventSelfReview;
+  const allowAdminBypass = environmentDetails?.can_admins_bypass === true;
+  const adminBypassMatches = allowAdminBypass === expected.allowAdminBypass;
+  const remotePolicies = (deploymentPoliciesPayload?.branch_policies || [])
+    .map((policy) => ({
+      id: Number(policy.id),
+      type: policy.type || "branch",
+      pattern: policy.name,
+    }))
+    .filter((policy) => policy.pattern)
+    .sort((left, right) =>
+      `${left.type}:${left.pattern}`.localeCompare(
+        `${right.type}:${right.pattern}`,
+      ),
+    );
+  const expectedPolicies = [...expected.deploymentPolicies].sort(
+    (left, right) =>
+      `${left.type}:${left.pattern}`.localeCompare(
+        `${right.type}:${right.pattern}`,
+      ),
+  );
+  const deploymentPoliciesMatch =
+    environmentDetails?.deployment_branch_policy?.protected_branches ===
+      false &&
+    environmentDetails?.deployment_branch_policy?.custom_branch_policies ===
+      true &&
+    JSON.stringify(
+      remotePolicies.map(({ type, pattern }) => ({ type, pattern })),
+    ) === JSON.stringify(expectedPolicies);
+  const eligibleReviewerCount = reviewerAccess.filter(
+    (reviewer) => reviewer.eligible,
+  ).length;
+  const eligibleReviewersReady =
+    eligibleReviewerCount >= expected.minimumEligibleReviewers;
+  const matches =
+    environmentDetails !== null &&
+    eligibleReviewersReady &&
+    reviewersMatch &&
+    waitTimerMatches &&
+    preventSelfReviewMatches &&
+    adminBypassMatches &&
+    deploymentPoliciesMatch;
+  return {
+    enforcement: expected.enforcement,
+    pendingReason: expected.pendingReason,
+    eligibleReviewersReady,
+    protectionDetailsAvailable: environmentDetails !== null,
+    expectedMinimumEligibleReviewers: expected.minimumEligibleReviewers,
+    configuredEligibleReviewers: expected.reviewers.length,
+    eligibleReviewerCount,
+    reviewerAccess,
+    reviewersMatch,
+    waitTimerMatches,
+    preventSelfReviewMatches,
+    adminBypassMatches,
+    customDeploymentPoliciesEnabled:
+      environmentDetails?.deployment_branch_policy?.protected_branches ===
+        false &&
+      environmentDetails?.deployment_branch_policy?.custom_branch_policies ===
+        true,
+    deploymentPoliciesMatch,
+    matches,
+    ready: expected.enforcement === "enforced" && matches,
+    remote: {
+      reviewers: remoteReviewers,
+      waitTimerMinutes,
+      preventSelfReview,
+      allowAdminBypass,
+      deploymentPolicies: remotePolicies,
+    },
+  };
+}
+
+function environmentReviewerAccess(repository, reviewer, run) {
+  const [owner, repositoryName] = repository.nameWithOwner.split("/");
+  if (reviewer.type === "User") {
+    const payload = resultJson(
+      run([
+        "api",
+        `repos/${repository.nameWithOwner}/collaborators/${reviewer.name}/permission`,
+      ]),
+    );
+    const permission = payload?.permission || null;
+    const eligible =
+      Number(payload?.user?.id) === reviewer.id &&
+      ["read", "triage", "write", "maintain", "admin"].includes(permission);
+    return { ...reviewer, permission, eligible };
+  }
+  const teamPayload = resultJson(
+    run(["api", `orgs/${owner}/teams/${reviewer.name}`]),
+  );
+  const repositoryPayload = resultJson(
+    run([
+      "api",
+      `orgs/${owner}/teams/${reviewer.name}/repos/${owner}/${repositoryName}`,
+    ]),
+  );
+  const permission =
+    repositoryPayload?.role_name || repositoryPayload?.permission || null;
+  const eligible =
+    Number(teamPayload?.id) === reviewer.id &&
+    (repositoryPayload?.permissions?.pull === true ||
+      ["read", "triage", "write", "maintain", "admin"].includes(permission));
+  return { ...reviewer, permission, eligible };
+}
+
+export function remoteBranchHistoryState({
+  required,
+  mainSha,
+  devSha,
+  comparisonOk,
+  comparison,
+}) {
+  if (!required) {
+    return {
+      required: false,
+      ready: true,
+      status: "not-required",
+      mainSha: mainSha || null,
+      devSha: devSha || null,
+      mergeBase: null,
+    };
+  }
+  const validSha = (value) => /^[0-9a-f]{40}$/u.test(String(value || ""));
+  const mergeBase = comparison?.merge_base_commit?.sha || null;
+  const branchesExist = validSha(mainSha) && validSha(devSha);
+  const mergeBaseValid = validSha(mergeBase);
+  const ready = branchesExist && comparisonOk === true && mergeBaseValid;
+  return {
+    required: true,
+    ready,
+    status: ready
+      ? "connected"
+      : !branchesExist
+        ? "branches-missing-or-invalid"
+        : comparisonOk !== true
+          ? "unrelated-or-inaccessible"
+          : "invalid-comparison-response",
+    mainSha: validSha(mainSha) ? mainSha : null,
+    devSha: validSha(devSha) ? devSha : null,
+    mergeBase: mergeBaseValid ? mergeBase : null,
+  };
+}
 function resultJson(result) {
   if (!result?.ok) return null;
   try {

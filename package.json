@@ -149,6 +149,7 @@
     "github:deployment:plan": "node scripts/github-deployment-matrix.mjs",
     "github:bootstrap": "node scripts/github-bootstrap.mjs",
     "github:history:plan": "node scripts/github-history-plan.mjs",
+    "github:history:bridge:plan": "node scripts/github-history-plan.mjs --fetch --bridge-only",
     "platform:readiness": "node scripts/platform-readiness.mjs",
     "platform:readiness:remote": "node scripts/platform-readiness.mjs --remote",
     "platform:readiness:test": "node --test scripts/platform-readiness.test.mjs",

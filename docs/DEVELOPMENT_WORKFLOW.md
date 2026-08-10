@@ -104,6 +104,11 @@ command at all. In particular, a dirty worktree can never produce a
 `publish-dev` command for its older committed `HEAD`.
 An audit branch that already points at another SHA or a non-fast-forward remote
 `dev` is a blocker; the plan never proposes a force-push.
+Once both remote branches exist, a missing `main`/`dev` merge base is also a
+blocker. `npm run github:history:bridge:plan` generates the exact local-only
+preparation and protected maintenance-window controls for both repositories;
+see [`GIT_HISTORY_BRIDGE.md`](./GIT_HISTORY_BRIDGE.md). The planner never
+executes the generated merge or any remote operation.
 
 After repository creation, inspect the real structure without changing it:
 
@@ -174,9 +179,15 @@ payload follows GitHub's versioned REST contracts for
 and [Actions variables](https://docs.github.com/en/rest/actions/variables).
 
 Create the GitHub Environments referenced by
-`config/cloudflare-deployments.json` with no required deployment reviewers if
-automatic deployment is desired, or let the confirmed reconciler create their
-non-secret structure. The current entries are `development` and `production`.
+`config/cloudflare-deployments.json`, or let the confirmed reconciler create
+their non-secret structure. The current entries are `development` and
+`production`; `cloudflare-*` is only the workflow concurrency group and is not
+an Environment name. Protection intent is versioned beside variables and secret
+names. While it is marked `pending-external`, reconciliation reports activation
+as a manual prerequisite and cannot apply reviewer, timer or branch/tag rules.
+After the current publication sequence, add the required second trusted human,
+change the reviewed intent to `enforced`, apply the exact confirmed plan with no
+pending jobs, then disable administrator bypass in the GitHub Environment UI.
 In each environment:
 
 - variable `OPENGROW_TARGET`: target manifest name; it must equal the `target`
@@ -637,7 +648,9 @@ Après une modification de bibliothèque :
 4. lancer `Prepare immutable SDK release` sur le commit `dev` relu.
    L'Environment
    GitHub `sdk-release` protège la création du tag; le workflow de publication
-   revalide le catalogue depuis ce tag, publie la release puis ouvre une PR qui
+   revalide le catalogue depuis ce tag puis attend le job
+   `authorize-publication` dans le même Environment avant tout envoi de package
+   ou GitHub Release. Il ouvre ensuite une PR qui
    met à jour `latestReleaseVersion`, `releaseRef` et `releaseStatus`;
 5. fusionner les PR de catalogue après CI. Dès que FlutterFlow et Support sont
    tous deux publiés, GitHub vérifie leurs tags/releases et ouvre une PR unique

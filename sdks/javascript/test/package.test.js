@@ -17,6 +17,23 @@ test("the published package keeps its public name and explicit dual-module expor
     },
   });
   assert.deepEqual(packageJson.files, ["dist"]);
+  assert.equal(packageJson.dependencies, undefined);
+});
+
+test("the first-party check audits production and development dependencies", () => {
+  assert.equal(
+    packageJson.scripts["audit:production"],
+    "npm audit --omit=dev --workspaces=false --audit-level=low",
+  );
+  assert.equal(
+    packageJson.scripts["audit:development"],
+    "npm audit --include=dev --workspaces=false --audit-level=low",
+  );
+  assert.equal(
+    packageJson.scripts.audit,
+    "npm run audit:production && npm run audit:development",
+  );
+  assert.match(packageJson.scripts.check, /^npm run audit && /u);
 });
 
 test("the built package loads through both ESM import and CommonJS require", async () => {

@@ -83,9 +83,26 @@ jobs:
           node scripts/sdk-catalog.mjs check --candidate-release-tag "$RELEASE_TAG"
           node scripts/sdk-documentation.mjs check
 
+  authorize-publication:
+    name: Authorize immutable SDK publication
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: sdk-release
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ needs.validate-tag.outputs.tag }}
+      RELEASE_SHA: ${{ needs.validate-tag.outputs.release_sha }}
+    steps:
+      - name: Bind approval to the validated immutable release
+        run: |
+          [[ "$RELEASE_TAG" =~ ^sdk-[a-z0-9-]+-v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+
   flutter:
     if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow' || needs.validate-tag.outputs.sdk == 'flutterflow-messaging'
-    needs: validate-tag
+    needs: [validate-tag, authorize-publication]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -109,7 +126,7 @@ jobs:
 
   ios:
     if: needs.validate-tag.outputs.sdk == 'ios'
-    needs: validate-tag
+    needs: [validate-tag, authorize-publication]
     runs-on: macos-latest
     timeout-minutes: 10
     permissions:
@@ -129,7 +146,7 @@ jobs:
 
   android:
     if: needs.validate-tag.outputs.sdk == 'android'
-    needs: validate-tag
+    needs: [validate-tag, authorize-publication]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -158,7 +175,7 @@ jobs:
 
   npm:
     if: needs.validate-tag.outputs.sdk == 'js' || needs.validate-tag.outputs.sdk == 'react-native'
-    needs: validate-tag
+    needs: [validate-tag, authorize-publication]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -197,12 +214,13 @@ jobs:
   release-gate:
     name: SDK release gate
     if: ${{ always() }}
-    needs: [validate-tag, flutter, ios, android, npm]
+    needs: [validate-tag, authorize-publication, flutter, ios, android, npm]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       SDK: ${{ needs.validate-tag.outputs.sdk }}
       VALIDATE_RESULT: ${{ needs.validate-tag.result }}
+      AUTHORIZATION_RESULT: ${{ needs.authorize-publication.result }}
       FLUTTER_RESULT: ${{ needs.flutter.result }}
       IOS_RESULT: ${{ needs.ios.result }}
       ANDROID_RESULT: ${{ needs.android.result }}
@@ -211,6 +229,7 @@ jobs:
       - name: Require the selected publication job to pass
         run: |
           test "$VALIDATE_RESULT" = "success"
+          test "$AUTHORIZATION_RESULT" = "success"
           case "$SDK" in
             flutter|flutterflow|flutterflow-messaging) test "$FLUTTER_RESULT" = "success" ;;
             ios) test "$IOS_RESULT" = "success" ;;

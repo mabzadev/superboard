@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/github-control-plane.schema.json",
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "owner": {
     "login": "mbzadev",
     "type": "user"
@@ -50,7 +50,17 @@
             "CLOUDFLARE_ACCOUNT_ID",
             "CLOUDFLARE_API_TOKEN",
             "OPENGROW_REFERENCE_DISPATCH_TOKEN"
-          ]
+          ],
+          "protection": {
+            "enforcement": "pending-external",
+            "pendingReason": "Activate after the current publication sequence is complete and no development deployment is pending.",
+            "waitTimerMinutes": 0,
+            "preventSelfReview": false,
+            "allowAdminBypass": false,
+            "minimumEligibleReviewers": 0,
+            "reviewers": [],
+            "deploymentPolicies": [{ "type": "branch", "pattern": "dev" }]
+          }
         },
         "production": {
           "variables": {
@@ -60,13 +70,49 @@
             "CLOUDFLARE_ACCOUNT_ID",
             "CLOUDFLARE_API_TOKEN",
             "OPENGROW_BACKUP_ENCRYPTION_KEY"
-          ]
+          ],
+          "protection": {
+            "enforcement": "pending-external",
+            "pendingReason": "A second trusted human reviewer must receive repository read access before self-review prevention can be activated safely.",
+            "waitTimerMinutes": 5,
+            "preventSelfReview": true,
+            "allowAdminBypass": false,
+            "minimumEligibleReviewers": 2,
+            "reviewers": [
+              { "type": "User", "id": 95926658, "name": "mbzadev" }
+            ],
+            "deploymentPolicies": [{ "type": "branch", "pattern": "main" }]
+          }
         },
         "sdk-release": {
           "variables": {
             "OPENGROW_REFERENCE_REPOSITORY": "mbzadev/opengrow-reference"
           },
-          "secrets": ["OPENGROW_REFERENCE_DISPATCH_TOKEN"]
+          "secrets": ["OPENGROW_REFERENCE_DISPATCH_TOKEN"],
+          "protection": {
+            "enforcement": "pending-external",
+            "pendingReason": "A second trusted human reviewer must receive repository read access before self-review prevention can be activated safely.",
+            "waitTimerMinutes": 0,
+            "preventSelfReview": true,
+            "allowAdminBypass": false,
+            "minimumEligibleReviewers": 2,
+            "reviewers": [
+              { "type": "User", "id": 95926658, "name": "mbzadev" }
+            ],
+            "deploymentPolicies": [
+              { "type": "branch", "pattern": "dev" },
+              { "type": "tag", "pattern": "sdk-flutter-v*" },
+              { "type": "tag", "pattern": "sdk-flutterflow-v*" },
+              {
+                "type": "tag",
+                "pattern": "sdk-flutterflow-messaging-v*"
+              },
+              { "type": "tag", "pattern": "sdk-ios-v*" },
+              { "type": "tag", "pattern": "sdk-android-v*" },
+              { "type": "tag", "pattern": "sdk-js-v*" },
+              { "type": "tag", "pattern": "sdk-react-native-v*" }
+            ]
+          }
         },
         "flutterflow-library": {
           "variables": {

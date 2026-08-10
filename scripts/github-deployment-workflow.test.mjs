@@ -317,7 +317,18 @@ test("JavaScript CI and releases execute the complete first-party package check"
     javascriptManifest.scripts.test,
     "node --test test/opengrow.test.js",
   );
-  assert.match(javascriptManifest.scripts.check, /^npm test && npm run build/);
+  assert.equal(
+    javascriptManifest.scripts["audit:production"],
+    "npm audit --omit=dev --workspaces=false --audit-level=low",
+  );
+  assert.equal(
+    javascriptManifest.scripts["audit:development"],
+    "npm audit --include=dev --workspaces=false --audit-level=low",
+  );
+  assert.match(
+    javascriptManifest.scripts.check,
+    /^npm run audit && npm test && npm run build/,
+  );
   assert.match(javascriptManifest.scripts.check, /npm run test:package/);
   assert.match(javascriptManifest.scripts.check, /npm run pack:check$/);
   assert.match(ciWorkflow, /npm ci && npm run check/);
@@ -354,6 +365,19 @@ test("immutable SDK publication revalidates native and React Native packages", (
     releaseWorkflow,
     /git merge-base --is-ancestor "\$release_sha" FETCH_HEAD/,
   );
+  assert.match(
+    releaseWorkflow,
+    /authorize-publication:[\s\S]*?name: Authorize immutable SDK publication[\s\S]*?needs: validate-tag[\s\S]*?environment: sdk-release[\s\S]*?Bind approval to the validated immutable release/u,
+  );
+  for (const job of ["flutter", "ios", "android", "npm"]) {
+    assert.match(
+      releaseWorkflow,
+      new RegExp(
+        `\\n  ${job}:[\\s\\S]*?needs: \\[validate-tag, authorize-publication\\]`,
+        "u",
+      ),
+    );
+  }
   assert.equal(
     (
       releaseWorkflow.match(
@@ -488,6 +512,14 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(prepareReleaseWorkflow, /git push --atomic origin/);
   assert.match(prepareReleaseWorkflow, /git ls-remote --exit-code --tags/);
   assert.match(releaseWorkflow, /name: SDK release gate/);
+  assert.match(
+    releaseWorkflow,
+    /needs: \[validate-tag, authorize-publication, flutter, ios, android, npm\]/u,
+  );
+  assert.match(
+    releaseWorkflow,
+    /AUTHORIZATION_RESULT: \$\{\{ needs\.authorize-publication\.result \}\}[\s\S]*?test "\$AUTHORIZATION_RESULT" = "success"/u,
+  );
   assert.match(releaseWorkflow, /sdk-catalog\.mjs promote/);
   assert.match(
     releaseWorkflow,
