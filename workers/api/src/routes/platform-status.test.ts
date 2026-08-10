@@ -4,6 +4,7 @@ vi.mock("../lib/auth", () => ({ getAuthContext: vi.fn() }));
 
 import { getAuthContext } from "../lib/auth";
 import platform from "./platform-status";
+import sdkCatalog from "../../../../config/sdk-libraries.json";
 
 const auth = vi.mocked(getAuthContext);
 
@@ -559,14 +560,12 @@ describe("platform status", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as any;
     expect(body.data.releasePolicy).toBe("immutable-tag");
+    expect(body.data.libraries).toEqual(sdkCatalog.libraries);
     expect(
       body.data.libraries.find((library: any) => library.id === "flutterflow"),
     ).toMatchObject({
       license: "MIT",
       licensePath: "sdks/flutterflow/LICENSE",
-      sourceVersion: "2.2.4",
-      latestReleaseVersion: "2.1.6",
-      releaseStatus: "pending-release",
     });
     expect(body.data.customCode.actions.support).toContain(
       "opengrowSupportInitializeAuthenticated",
