@@ -56,7 +56,7 @@ yarn add @mbzadev/opengrow-react-native-sdk@1.0.1
 Add the released native Android SDK to `android/app/build.gradle`:
 
 ```kotlin
-implementation("io.opengrow:opengrow-android-sdk:1.0.2")
+implementation("io.opengrow:opengrow-android-sdk:1.0.3")
 ```
 
 ### iOS dependency

@@ -24,7 +24,7 @@ jobs:
       ready: ${{ steps.sdk-set.outputs.ready }}
       catalogue_sha: ${{ steps.sdk-set.outputs.sha }}
     env:
-      GH_TOKEN: ${{ secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
       OPENGROW_REFERENCE_REPOSITORY: ${{ vars.OPENGROW_REFERENCE_REPOSITORY }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -68,10 +68,9 @@ jobs:
             git merge-base --is-ancestor "refs/tags/$tag^{}" HEAD
             gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" >/dev/null
           done
-      - name: Validate cross-repository dispatch configuration
+      - name: Validate cross-repository dispatch destination
         if: ${{ steps.sdk-set.outputs.ready == 'true' }}
         run: |
-          test -n "$GH_TOKEN"
           test -n "$OPENGROW_REFERENCE_REPOSITORY"
           case "$OPENGROW_REFERENCE_REPOSITORY" in
             */*) ;;
@@ -81,7 +80,12 @@ jobs:
         if: ${{ steps.sdk-set.outputs.ready == 'true' }}
         env:
           CATALOGUE_SHA: ${{ steps.sdk-set.outputs.sha }}
+          GH_TOKEN: ${{ secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::OPENGROW_REFERENCE_DISPATCH_TOKEN is required in the sdk-release Environment for cross-repository dispatch."
+            exit 1
+          fi
           gh api --method POST "repos/$OPENGROW_REFERENCE_REPOSITORY/dispatches" \
             --raw-field event_type=sdk-release-set-published \
             --raw-field "client_payload[catalogue_sha]=$CATALOGUE_SHA"

@@ -94,14 +94,12 @@ jobs:
     env:
       DEPLOY_BRANCH: ${{ needs.plan.outputs.branch }}
       DEPLOY_SHA: ${{ needs.plan.outputs.sha }}
-      OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-      OPENGROW_EXPECTED_TARGET: ${{ matrix.target }}
-      OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
       OPENGROW_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - name: Restrict deployments to successful long-lived branch revisions
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_EXPECTED_TARGET: ${{ matrix.target }}
         run: |
           case "$DEPLOY_BRANCH" in
             dev|main) ;;
@@ -154,6 +152,9 @@ jobs:
         run: npm ci
       - name: Validate target, generated bindings and deployment order
         if: steps.revision.outputs.deploy == 'true'
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
         run: |
           test -n "$OPENGROW_TARGET"
           npm run cloudflare:test:targets
@@ -164,21 +165,39 @@ jobs:
           npm run cloudflare:deploy:all -- --plan
       - name: Validate custom Worker implementations
         if: steps.revision.outputs.deploy == 'true'
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
         run: npm run custom:check
       - name: Validate platform code
         if: steps.revision.outputs.deploy == 'true'
         run: npm run typecheck && npm test
       - name: Enforce staged or receipt-bound public routing
         if: steps.revision.outputs.deploy == 'true'
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:routing:check
       - name: Verify public domain ownership without mutation
         if: steps.revision.outputs.deploy == 'true'
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:domains:plan -- --strict
       - name: Verify required Cloudflare secret names without exposing values
         if: steps.revision.outputs.deploy == 'true'
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:secrets:check
       - name: Validate the production backup encryption key before mutation
-        if: steps.revision.outputs.deploy == 'true' && env.OPENGROW_ENVIRONMENT == 'production'
+        if: steps.revision.outputs.deploy == 'true' && matrix.cloudflareEnvironment == 'production'
         env:
           OPENGROW_BACKUP_ENCRYPTION_KEY: ${{ secrets.OPENGROW_BACKUP_ENCRYPTION_KEY }}
         run: npm run cloudflare:d1:key:check
@@ -188,11 +207,21 @@ jobs:
           git fetch --no-tags origin "refs/heads/$DEPLOY_BRANCH"
           test "$(git rev-parse FETCH_HEAD)" = "$DEPLOY_SHA"
       - name: Upload isolated production preflight versions
-        if: steps.revision.outputs.deploy == 'true' && env.OPENGROW_ENVIRONMENT == 'production'
+        if: steps.revision.outputs.deploy == 'true' && matrix.cloudflareEnvironment == 'production'
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:deploy:all -- --preflight --upload-only
       - name: Migrate, verify Identity project cutover receipt and deploy all enabled Workers
         id: deploy-workers
         if: steps.revision.outputs.deploy == 'true'
+        env:
+          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           if [ "$OPENGROW_ENVIRONMENT" = "production" ]; then
             npm run cloudflare:deploy:all -- --backup-directory "$RUNNER_TEMP/opengrow-d1-backups"
@@ -201,7 +230,7 @@ jobs:
           fi
       - name: Encrypt production D1 migration backups
         id: encrypt-backups
-        if: ${{ always() && env.OPENGROW_ENVIRONMENT == 'production' && steps.deploy-workers.outcome != 'skipped' }}
+        if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.deploy-workers.outcome != 'skipped' }}
         env:
           OPENGROW_BACKUP_ENCRYPTION_KEY: ${{ secrets.OPENGROW_BACKUP_ENCRYPTION_KEY }}
           DEPLOY_WORKERS_OUTCOME: ${{ steps.deploy-workers.outcome }}
@@ -215,7 +244,7 @@ jobs:
               --directory "$RUNNER_TEMP/opengrow-d1-backups"
           fi
       - name: Retain production D1 migration backups
-        if: ${{ always() && env.OPENGROW_ENVIRONMENT == 'production' && steps.encrypt-backups.outcome == 'success' }}
+        if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.encrypt-backups.outcome == 'success' }}
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: opengrow-d1-backups-${{ matrix.id }}-${{ github.run_id }}
@@ -225,7 +254,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Retain any recoverable encrypted backup after encryption failure
-        if: ${{ always() && env.OPENGROW_ENVIRONMENT == 'production' && steps.encrypt-backups.outcome == 'failure' }}
+        if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.encrypt-backups.outcome == 'failure' }}
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: opengrow-d1-recovery-${{ matrix.id }}-${{ github.run_id }}

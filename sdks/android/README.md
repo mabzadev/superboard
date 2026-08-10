@@ -52,7 +52,7 @@ The OpenGrow Android SDK provides deep linking, app links, link generation, in-a
 Add the published OpenGrow dependency to the application module:
 
 ```kotlin
-implementation("io.opengrow:opengrow-android-sdk:1.0.2")
+implementation("io.opengrow:opengrow-android-sdk:1.0.3")
 ```
 
 <!-- opengrow-sdk-documentation:android:end -->

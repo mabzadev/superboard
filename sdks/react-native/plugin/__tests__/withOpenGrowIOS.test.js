@@ -5,6 +5,10 @@ const {
   addOpenGrowURLHandler,
   addOpenGrowPodDependency,
 } = require('../withOpenGrowIOS');
+const nativeContract = require('../native-contract.json');
+
+const IOS_POD = `pod '${nativeContract.ios.packageName}'`;
+const IOS_PODSPEC_DEPENDENCY = `${IOS_POD}, :podspec => '${nativeContract.ios.podspecUrl}'`;
 
 const SAMPLE_PODFILE = `platform :ios, min_ios_version_supported
 
@@ -211,10 +215,8 @@ describe('withOpenGrowIOS - AppDelegate transforms', () => {
 describe('withOpenGrowIOS - immutable native pod dependency', () => {
   it('injects the catalog SDK tag before React Native autolinking', () => {
     const result = addOpenGrowPodDependency(SAMPLE_PODFILE);
-    expect(result).toContain(
-      "pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/opengrow-platform/sdk-ios-v1.0.2/sdks/ios/OpenGrow.podspec'"
-    );
-    expect(result.indexOf("pod 'OpenGrow'")).toBeLessThan(
+    expect(result).toContain(IOS_PODSPEC_DEPENDENCY);
+    expect(result.indexOf(IOS_POD)).toBeLessThan(
       result.indexOf('use_native_modules!')
     );
   });
@@ -228,6 +230,6 @@ describe('withOpenGrowIOS - immutable native pod dependency', () => {
     const second = addOpenGrowPodDependency(first);
     expect(first).toBe(second);
     expect(first).not.toContain("pod 'OpenGrow', '~> 1.0'");
-    expect((first.match(/pod 'OpenGrow'/g) || []).length).toBe(1);
+    expect(first.split(IOS_POD).length - 1).toBe(1);
   });
 });

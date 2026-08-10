@@ -82,12 +82,12 @@
       "licensePath": "sdks/android/LICENSE",
       "versionSource": "sdks/android/OpenGrow/OpenGrow/build.gradle.kts",
       "sourceVersion": "1.0.3",
-      "latestReleaseVersion": "1.0.2",
-      "releaseRef": "sdk-android-v1.0.2",
-      "releaseStatus": "pending-release",
-      "releaseSha": "e01acba82e4de94a98a36bf63992c1f1f137dd31",
+      "latestReleaseVersion": "1.0.3",
+      "releaseRef": "sdk-android-v1.0.3",
+      "releaseStatus": "released",
+      "releaseSha": "21549c99fbe65668e0488f0f5ea2fc62219b53c4",
       "notes": "The 1.0.2 release moves to a collision-free package coordinate owned by opengrow-platform; the legacy 1.0.0 coordinate remains available from mbzadev/opengrow.",
-      "install": "implementation(\"io.opengrow:opengrow-android-sdk:1.0.2\")"
+      "install": "implementation(\"io.opengrow:opengrow-android-sdk:1.0.3\")"
     },
     {
       "id": "javascript",

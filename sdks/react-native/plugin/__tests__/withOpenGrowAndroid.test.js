@@ -7,6 +7,14 @@ const {
   addOpenGrowOnNewIntent,
   addOpenGrowAppDependency,
 } = require('../withOpenGrowAndroid');
+const nativeContract = require('../native-contract.json');
+
+const ANDROID_COORDINATE = `${nativeContract.android.packageName}:${nativeContract.android.version}`;
+const ANDROID_DEPENDENCY = `implementation '${ANDROID_COORDINATE}'`;
+const ANDROID_COORDINATE_PATTERN = new RegExp(
+  ANDROID_COORDINATE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+  'g'
+);
 
 const SAMPLE_MAIN_APPLICATION = `package com.myapp
 
@@ -53,9 +61,7 @@ dependencies {
 describe('withOpenGrowAndroid - app dependency', () => {
   it('injects the released Android SDK coordinate with the new marker', () => {
     const result = addOpenGrowAppDependency(SAMPLE_APP_BUILD_GRADLE);
-    expect(result).toContain(
-      "implementation 'io.opengrow:opengrow-android-sdk:1.0.2'"
-    );
+    expect(result).toContain(ANDROID_DEPENDENCY);
     expect(result).toContain('// @mbzadev/opengrow-react-native-sdk:dep');
   });
 
@@ -66,7 +72,7 @@ describe('withOpenGrowAndroid - app dependency', () => {
     );
     const result = addOpenGrowAppDependency(legacy);
     expect(result).toContain(
-      "implementation 'io.opengrow:opengrow-android-sdk:1.0.2' // @mbzadev/opengrow-react-native-sdk:dep"
+      `${ANDROID_DEPENDENCY} // @mbzadev/opengrow-react-native-sdk:dep`
     );
     expect(result).not.toContain('io.opengrow:OpenGrow:1.1.1');
     expect(addOpenGrowAppDependency(result)).toBe(result);
@@ -78,9 +84,7 @@ describe('withOpenGrowAndroid - app dependency', () => {
       'implementation("io.opengrow:opengrow-android:1.0.0")'
     );
     const result = addOpenGrowAppDependency(legacy);
-    expect(result).toContain(
-      "implementation 'io.opengrow:opengrow-android-sdk:1.0.2'"
-    );
+    expect(result).toContain(ANDROID_DEPENDENCY);
     expect(result).not.toContain('io.opengrow:opengrow-android:1.0.0');
   });
 
@@ -88,12 +92,10 @@ describe('withOpenGrowAndroid - app dependency', () => {
     const duplicate = SAMPLE_APP_BUILD_GRADLE.replace(
       'implementation "com.facebook.react:react-android"',
       `implementation 'io.opengrow:OpenGrow:1.1.1'
-  implementation 'io.opengrow:opengrow-android-sdk:1.0.2'`
+  ${ANDROID_DEPENDENCY}`
     );
     const result = addOpenGrowAppDependency(duplicate);
-    expect(
-      (result.match(/io\.opengrow:opengrow-android-sdk:1\.0\.2/g) || []).length
-    ).toBe(1);
+    expect((result.match(ANDROID_COORDINATE_PATTERN) || []).length).toBe(1);
     expect(result).not.toContain('io.opengrow:OpenGrow:1.1.1');
   });
 

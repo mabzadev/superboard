@@ -44,6 +44,14 @@ const javascriptManifest = JSON.parse(
   ),
 );
 
+function workflowSection(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  assert.notEqual(start, -1, `Missing workflow marker: ${startMarker}`);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  assert.notEqual(end, -1, `Missing workflow marker: ${endMarker}`);
+  return source.slice(start, end);
+}
+
 async function readActionWorkflows(directory) {
   const names = (await readdir(directory)).filter(
     (name) => name.endsWith(".yml") || name.endsWith(".yaml"),
@@ -180,6 +188,70 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
     workflow.indexOf("npm run cloudflare:d1:key:check") <
       workflow.indexOf("npm run cloudflare:deploy:all -- --backup-directory"),
   );
+});
+
+test("deployment validation cannot inherit operational Cloudflare context", () => {
+  const deployJobHeader = workflowSection(
+    workflow,
+    "\n  deploy:",
+    "\n    steps:",
+  );
+  assert.doesNotMatch(
+    deployJobHeader,
+    /OPENGROW_(?:TARGET|EXPECTED_TARGET|ENVIRONMENT)|CLOUDFLARE_(?:ACCOUNT_ID|API_TOKEN)/u,
+  );
+
+  const platformValidation = workflowSection(
+    workflow,
+    "      - name: Validate platform code",
+    "      - name: Enforce staged or receipt-bound public routing",
+  );
+  assert.match(platformValidation, /npm run typecheck && npm test/u);
+  assert.doesNotMatch(
+    platformValidation,
+    /OPENGROW_(?:TARGET|EXPECTED_TARGET|ENVIRONMENT)|CLOUDFLARE_(?:ACCOUNT_ID|API_TOKEN)/u,
+  );
+
+  for (const [start, end] of [
+    [
+      "      - name: Validate target, generated bindings and deployment order",
+      "      - name: Validate custom Worker implementations",
+    ],
+    [
+      "      - name: Validate custom Worker implementations",
+      "      - name: Validate platform code",
+    ],
+    [
+      "      - name: Enforce staged or receipt-bound public routing",
+      "      - name: Verify public domain ownership without mutation",
+    ],
+    [
+      "      - name: Verify public domain ownership without mutation",
+      "      - name: Verify required Cloudflare secret names without exposing values",
+    ],
+    [
+      "      - name: Verify required Cloudflare secret names without exposing values",
+      "      - name: Validate the production backup encryption key before mutation",
+    ],
+    [
+      "      - name: Upload isolated production preflight versions",
+      "      - name: Migrate, verify Identity project cutover receipt and deploy all enabled Workers",
+    ],
+    [
+      "      - name: Migrate, verify Identity project cutover receipt and deploy all enabled Workers",
+      "      - name: Encrypt production D1 migration backups",
+    ],
+  ]) {
+    const operationalStep = workflowSection(workflow, start, end);
+    assert.match(
+      operationalStep,
+      /OPENGROW_TARGET: \$\{\{ vars\.OPENGROW_TARGET \}\}/u,
+    );
+    assert.match(
+      operationalStep,
+      /OPENGROW_ENVIRONMENT: \$\{\{ matrix\.cloudflareEnvironment \}\}/u,
+    );
+  }
 });
 
 test("development dispatches the exact deployed revision to the reference repository", () => {
@@ -458,5 +530,54 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.doesNotMatch(
     syncFlutterFlowWorkflow,
     /workflows: \[Release OpenGrow SDK\]/,
+  );
+});
+
+test("reference promotion separates repository reads from cross-repository credentials", () => {
+  const dispatchJobHeader = workflowSection(
+    promoteReferenceSdkWorkflow,
+    "\n  dispatch:",
+    "\n    steps:",
+  );
+  assert.match(dispatchJobHeader, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
+  assert.doesNotMatch(
+    dispatchJobHeader,
+    /secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN/u,
+  );
+
+  const releaseVerification = workflowSection(
+    promoteReferenceSdkWorkflow,
+    "      - name: Verify every immutable SDK tag and GitHub release",
+    "      - name: Validate cross-repository dispatch destination",
+  );
+  assert.match(
+    releaseVerification,
+    /gh api "repos\/\$GITHUB_REPOSITORY\/releases\/tags\/\$tag"/u,
+  );
+  assert.doesNotMatch(
+    releaseVerification,
+    /OPENGROW_REFERENCE_DISPATCH_TOKEN/u,
+  );
+
+  const crossRepositoryDispatch = workflowSection(
+    promoteReferenceSdkWorkflow,
+    "      - name: Dispatch the verified SDK set",
+    "\n\n  sync-development-library:",
+  );
+  assert.match(
+    crossRepositoryDispatch,
+    /GH_TOKEN: \$\{\{ secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN \}\}/u,
+  );
+  assert.match(
+    crossRepositoryDispatch,
+    /::error::OPENGROW_REFERENCE_DISPATCH_TOKEN is required in the sdk-release Environment for cross-repository dispatch\./u,
+  );
+  assert.equal(
+    (
+      promoteReferenceSdkWorkflow.match(
+        /secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN/gu,
+      ) ?? []
+    ).length,
+    1,
   );
 });
