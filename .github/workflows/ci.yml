@@ -21,11 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   promote-sdk:
     needs: security
@@ -38,11 +40,11 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
@@ -70,7 +72,7 @@ jobs:
             git checkout -b "$branch"
           fi
           echo "name=$branch" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: ${{ steps.metadata.outputs.platform_repository }}
           ref: ${{ github.event.client_payload.catalogue_sha }}
@@ -154,11 +156,11 @@ jobs:
       platform_repository: ${{ steps.metadata.outputs.platform_repository }}
       deployment_branch: ${{ steps.metadata.outputs.deployment_branch }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event_name == 'repository_dispatch' && github.event.repository.default_branch || github.ref }}
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
@@ -191,6 +193,7 @@ jobs:
 
   flutter:
     needs: contract
+    if: ${{ always() && needs.contract.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -199,7 +202,7 @@ jobs:
     env:
       OPENGROW_PLATFORM_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.platform_sha || ((github.ref_name == 'main' || github.base_ref == 'main') && 'main' || needs.contract.outputs.deployment_branch) }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event_name == 'repository_dispatch' && needs.contract.outputs.deployment_branch || github.ref }}
           persist-credentials: false
@@ -209,14 +212,14 @@ jobs:
           sha="$(git rev-parse HEAD)"
           [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
       - name: Validate dispatched platform revision
         if: ${{ github.event_name == 'repository_dispatch' }}
         run: '[[ "$OPENGROW_PLATFORM_REF" =~ ^[0-9a-f]{40}$ ]]'
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: ${{ needs.contract.outputs.platform_repository }}
           ref: ${{ env.OPENGROW_PLATFORM_REF }}
@@ -279,17 +282,17 @@ jobs:
       OPENGROW_PLATFORM_REVISION: ${{ needs.flutter.outputs.platform_sha }}
       OPENGROW_REFERENCE_REVISION: ${{ needs.flutter.outputs.reference_sha }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.flutter.outputs.reference_sha }}
           persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: ${{ needs.contract.outputs.platform_repository }}
           ref: ${{ needs.flutter.outputs.platform_sha }}
           path: vendor/opengrow-platform
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
@@ -316,7 +319,7 @@ jobs:
           OPENGROW_PROJECT_KEY: ${{ secrets.OPENGROW_PROJECT_KEY }}
           OPENGROW_PROJECT_ID: ${{ secrets.OPENGROW_PROJECT_ID }}
         run: npm run flutter:web:live
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: reference-web-${{ github.run_id }}
           path: build/web
@@ -333,11 +336,11 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.flutter.outputs.reference_sha }}
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
@@ -346,7 +349,7 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           test -n "$CLOUDFLARE_API_TOKEN"
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: reference-web-${{ github.run_id }}
           path: build/web

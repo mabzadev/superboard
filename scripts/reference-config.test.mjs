@@ -32,6 +32,10 @@ const workflow = await readFile(
   new URL(".github/workflows/ci.yml", root),
   "utf8",
 );
+const analysisOptions = await readFile(
+  new URL("analysis_options.yaml", root),
+  "utf8",
+);
 const dependabot = await readFile(
   new URL(".github/dependabot.yml", root),
   "utf8",
@@ -59,6 +63,10 @@ test("CI dependencies stay pinned and receive automated update proposals", () =>
   assert.match(dependabot, /package-ecosystem: github-actions/);
   assert.match(dependabot, /package-ecosystem: npm/);
   assert.match(dependabot, /package-ecosystem: pub/);
+});
+
+test("reference analysis excludes the vendored platform checkout", () => {
+  assert.match(analysisOptions, /analyzer:\n  exclude:\n    - vendor\/\*\*/);
 });
 
 test("reference project matches its strict versioned schema", () => {
@@ -291,7 +299,12 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.doesNotMatch(workflow, /gh pr (?:merge|review)/);
   assert.match(workflow, /name: Secret scan/);
   assert.match(workflow, /gitleaks\/gitleaks-action@[0-9a-f]{40}/);
+  assert.match(workflow, /GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
   assert.match(workflow, /SECURITY_RESULT/);
+  assert.match(
+    workflow,
+    /if: \$\{\{ always\(\) && needs\.contract\.result == 'success' \}\}/,
+  );
   assert.match(workflow, /client_payload\.platform_sha/);
   assert.match(workflow, /\^\[0-9a-f\]\{40\}\$/);
   assert.match(workflow, /fetch-depth: 0/);
