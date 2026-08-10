@@ -11,49 +11,60 @@ import {
 
 const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const semanticVersion = /^[0-9]+\.[0-9]+\.[0-9]+$/u;
 
 export const sdkContracts = Object.freeze({
   flutter: Object.freeze({
+    lifecycle: "active",
     packageName: "opengrow_flutter",
+    candidatePackageName: "superboard_flutter",
     sourcePath: "sdks/flutter",
     releasePrefix: "sdk-flutter-v",
     coverageMode: "dart-transitive-override",
   }),
   flutterflow: Object.freeze({
+    lifecycle: "active",
     packageName: "opengrow_flutterflow",
+    candidatePackageName: "superboard_flutterflow",
     sourcePath: "sdks/flutterflow",
     releasePrefix: "sdk-flutterflow-v",
     coverageMode: "dart-direct",
   }),
   "flutterflow-support": Object.freeze({
+    lifecycle: "archived",
     packageName: "opengrow_flutterflow_messaging",
     sourcePath: "sdks/flutterflow_messaging",
     releasePrefix: "sdk-flutterflow-messaging-v",
-    coverageMode: "dart-direct",
+    coverageMode: "dart-legacy-direct",
+    promotedCoverageMode: "historical-release",
   }),
   ios: Object.freeze({
+    lifecycle: "internal",
     packageName: "OpenGrow",
     sourcePath: "sdks/ios",
     releasePrefix: "sdk-ios-v",
-    coverageMode: "release-contract",
+    coverageMode: "historical-release",
   }),
   android: Object.freeze({
+    lifecycle: "internal",
     packageName: "io.opengrow:opengrow-android-sdk",
     sourcePath: "sdks/android/OpenGrow",
     releasePrefix: "sdk-android-v",
-    coverageMode: "release-contract",
+    coverageMode: "historical-release",
   }),
   javascript: Object.freeze({
+    lifecycle: "archived",
     packageName: "@mbzadev/opengrow-js-sdk",
     sourcePath: "sdks/javascript",
     releasePrefix: "sdk-js-v",
-    coverageMode: "release-contract",
+    coverageMode: "historical-release",
   }),
   "react-native": Object.freeze({
+    lifecycle: "archived",
     packageName: "@mbzadev/opengrow-react-native-sdk",
     sourcePath: "sdks/react-native",
     releasePrefix: "sdk-react-native-v",
-    coverageMode: "release-contract",
+    coverageMode: "historical-release",
   }),
 });
 
@@ -72,10 +83,10 @@ function parseYamlScalar(value) {
 
 export function gitDependency(source, sectionName, packageName) {
   const lines = source.split("\n");
-  const sectionStart = lines.findIndex(
-    (line) => line === `${sectionName}:`,
-  );
-  if (sectionStart < 0) throw new Error(`${sectionName} is missing from pubspec.yaml`);
+  const sectionStart = lines.findIndex((line) => line === `${sectionName}:`);
+  if (sectionStart < 0) {
+    throw new Error(`${sectionName} is missing from pubspec.yaml`);
+  }
   let sectionEnd = lines.length;
   for (let index = sectionStart + 1; index < lines.length; index += 1) {
     if (/^[A-Za-z_][A-Za-z0-9_]*:\s*(?:#.*)?$/u.test(lines[index])) {
@@ -113,11 +124,59 @@ export function gitDependency(source, sectionName, packageName) {
   return result;
 }
 
+function expectedBaselineTag(contract, version) {
+  return `${contract.releasePrefix}${version}`;
+}
+
+function isActiveReleased(library) {
+  return (
+    library.lifecycle === "active" &&
+    library.catalogueStatus === "released" &&
+    library.sourceVersion === library.baselineVersion
+  );
+}
+
+export function sdkReadiness(libraries) {
+  const lifecycle = Object.fromEntries(
+    ["active", "internal", "archived"].map((value) => [
+      value,
+      libraries.filter((library) => library.lifecycle === value).length,
+    ]),
+  );
+  const active = libraries.filter((library) => library.lifecycle === "active");
+  const pendingActive = active
+    .filter((library) => !isActiveReleased(library))
+    .map((library) => ({
+      id: library.id,
+      baselineVersion: library.baselineVersion,
+      candidateVersion: library.sourceVersion,
+      candidatePackageName: library.candidatePackageName,
+      candidateRef: library.candidateRef,
+      status: library.catalogueStatus,
+    }));
+  return {
+    lifecycle,
+    activeIds: active.map(({ id }) => id),
+    pendingActive,
+    promotionReady: active.length === 2 && pendingActive.length === 0,
+  };
+}
+
 export function validateSdkCoverage(manifest) {
-  if (manifest?.schemaVersion !== 1) {
-    throw new Error("SDK coverage schemaVersion must be 1");
+  if (manifest?.schemaVersion !== 2) {
+    throw new Error("SDK coverage schemaVersion must be 2");
   }
-  if (!/^https:\/\/github\.com\/[^/]+\/[^/]+$/u.test(manifest.platformRepository ?? "")) {
+  if (manifest?.catalogueSchemaVersion !== 4) {
+    throw new Error("SDK coverage catalogueSchemaVersion must be 4");
+  }
+  if (manifest?.promotionPolicy !== "complete-active-set") {
+    throw new Error("SDK coverage promotionPolicy must be complete-active-set");
+  }
+  if (
+    !/^https:\/\/github\.com\/[^/]+\/[^/]+$/u.test(
+      manifest.platformRepository ?? "",
+    )
+  ) {
     throw new Error("SDK coverage platformRepository must be a public GitHub URL");
   }
   if (!Array.isArray(manifest.libraries)) {
@@ -134,25 +193,97 @@ export function validateSdkCoverage(manifest) {
   }
   for (const library of manifest.libraries) {
     const contract = sdkContracts[library.id];
-    for (const key of ["packageName", "sourcePath", "coverageMode"]) {
+    for (const key of ["lifecycle", "sourcePath"]) {
       if (library[key] !== contract[key]) {
         throw new Error(`${library.id}.${key} must be ${contract[key]}`);
       }
     }
-    if (!/^[0-9]+\.[0-9]+\.[0-9]+$/u.test(library.version ?? "")) {
-      throw new Error(`${library.id}.version must be semantic`);
+    if (
+      library.coverageMode !== contract.coverageMode &&
+      library.coverageMode !== contract.promotedCoverageMode
+    ) {
+      throw new Error(`${library.id}.coverageMode is invalid`);
     }
-    const expectedTag = `${contract.releasePrefix}${library.version}`;
-    if (library.releaseTag !== expectedTag) {
-      throw new Error(`${library.id}.releaseTag must be ${expectedTag}`);
+    for (const key of ["sourceVersion", "baselineVersion"]) {
+      if (!semanticVersion.test(library[key] ?? "")) {
+        throw new Error(`${library.id}.${key} must be semantic`);
+      }
     }
-    const expectedRef = library.id === "ios" ? library.version : expectedTag;
-    if (library.releaseRef !== expectedRef) {
-      throw new Error(`${library.id}.releaseRef must be ${expectedRef}`);
+    const baselineTag = expectedBaselineTag(contract, library.baselineVersion);
+    if (library.baselineTag !== baselineTag) {
+      throw new Error(`${library.id}.baselineTag must be ${baselineTag}`);
     }
-    if (!/^[0-9a-f]{40}$/u.test(library.releaseSha ?? "")) {
-      throw new Error(`${library.id}.releaseSha must be a full commit SHA`);
+    const baselineRef = library.id === "ios" ? library.baselineVersion : baselineTag;
+    if (library.baselineRef !== baselineRef) {
+      throw new Error(`${library.id}.baselineRef must be ${baselineRef}`);
     }
+    if (!/^[0-9a-f]{40}$/u.test(library.baselineSha ?? "")) {
+      throw new Error(`${library.id}.baselineSha must be a full commit SHA`);
+    }
+    if (library.lifecycle === "active") {
+      const pending = library.catalogueStatus === "pending-release";
+      const released = isActiveReleased(library);
+      if (!pending && !released) {
+        throw new Error(`${library.id} active release state is inconsistent`);
+      }
+      if (pending) {
+        if (library.packageName !== contract.packageName) {
+          throw new Error(`${library.id}.packageName must keep the published baseline`);
+        }
+        if (library.candidatePackageName !== contract.candidatePackageName) {
+          throw new Error(
+            `${library.id}.candidatePackageName must be ${contract.candidatePackageName}`,
+          );
+        }
+        if (library.sourceVersion === library.baselineVersion) {
+          throw new Error(`${library.id} pending candidate must advance the baseline`);
+        }
+        const candidateRef = `${contract.releasePrefix}${library.sourceVersion}`;
+        if (library.candidateRef !== candidateRef) {
+          throw new Error(`${library.id}.candidateRef must be ${candidateRef}`);
+        }
+      } else {
+        if (library.packageName !== contract.candidatePackageName) {
+          throw new Error(`${library.id} released v3 must use the SuperBoard package`);
+        }
+        if (library.candidatePackageName || library.candidateRef) {
+          throw new Error(`${library.id} released baseline must not retain a candidate`);
+        }
+      }
+    } else {
+      if (library.packageName !== contract.packageName) {
+        throw new Error(`${library.id}.packageName must be ${contract.packageName}`);
+      }
+      if (
+        library.catalogueStatus !== "released" ||
+        library.sourceVersion !== library.baselineVersion
+      ) {
+        throw new Error(`${library.id} ${library.lifecycle} baseline must stay frozen`);
+      }
+      if (library.candidatePackageName || library.candidateRef) {
+        throw new Error(`${library.id} ${library.lifecycle} SDK cannot have a candidate`);
+      }
+    }
+  }
+  const readiness = sdkReadiness(manifest.libraries);
+  if (
+    readiness.lifecycle.active !== 2 ||
+    readiness.lifecycle.internal !== 2 ||
+    readiness.lifecycle.archived !== 3
+  ) {
+    throw new Error("SDK lifecycle must be 2 active, 2 internal and 3 archived");
+  }
+  if (readiness.pendingActive.length !== 0 && readiness.pendingActive.length !== 2) {
+    throw new Error("SDK active set must advance atomically");
+  }
+  const support = manifest.libraries.find(({ id }) => id === "flutterflow-support");
+  const expectedSupportCoverage = readiness.promotionReady
+    ? "historical-release"
+    : "dart-legacy-direct";
+  if (support.coverageMode !== expectedSupportCoverage) {
+    throw new Error(
+      `flutterflow-support.coverageMode must be ${expectedSupportCoverage}`,
+    );
   }
   return manifest.libraries;
 }
@@ -165,6 +296,17 @@ export function verifyReferenceCoverage({ manifest, project, pubspec, lockSource
   ) {
     throw new Error("SDK coverage repository must match reference.project.json");
   }
+  const projectLifecycle = project.sdkCatalogue ?? {};
+  for (const lifecycle of ["active", "internal", "archived"]) {
+    const expected = libraries
+      .filter((library) => library.lifecycle === lifecycle)
+      .map(({ id }) => id)
+      .sort();
+    const actual = [...(projectLifecycle[lifecycle] ?? [])].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      throw new Error(`reference.project.json sdkCatalogue.${lifecycle} is stale`);
+    }
+  }
   const locked = parseLockedGitDependencies(lockSource);
   for (const library of libraries.filter(({ coverageMode }) =>
     coverageMode.startsWith("dart-"),
@@ -175,18 +317,18 @@ export function verifyReferenceCoverage({ manifest, project, pubspec, lockSource
     }
     const expected = {
       url: `${manifest.platformRepository}.git`,
-      ref: library.releaseRef,
+      ref: library.baselineRef,
       path: library.sourcePath,
-      version: library.version,
-      "resolved-ref": library.releaseSha,
+      version: library.baselineVersion,
+      "resolved-ref": library.baselineSha,
     };
     for (const [key, value] of Object.entries(expected)) {
       const actual =
-        key === "url"
-          ? `${normalizedRepository(dependency[key])}.git`
-          : dependency[key];
+        key === "url" ? `${normalizedRepository(dependency[key])}.git` : dependency[key];
       if (actual !== value) {
-        throw new Error(`${library.id} lock ${key} must be ${value}, got ${actual ?? "none"}`);
+        throw new Error(
+          `${library.id} lock ${key} must be ${value}, got ${actual ?? "none"}`,
+        );
       }
     }
     const section =
@@ -196,27 +338,25 @@ export function verifyReferenceCoverage({ manifest, project, pubspec, lockSource
     const declaration = gitDependency(pubspec, section, library.packageName);
     for (const [key, value] of Object.entries({
       url: `${manifest.platformRepository}.git`,
-      ref: library.releaseRef,
+      ref: library.baselineRef,
       path: library.sourcePath,
     })) {
       const actual =
-        key === "url"
-          ? `${normalizedRepository(declaration[key])}.git`
-          : declaration[key];
+        key === "url" ? `${normalizedRepository(declaration[key])}.git` : declaration[key];
       if (actual !== value) {
         throw new Error(`${library.id} pubspec ${key} must be ${value}`);
       }
     }
-    if (library.coverageMode === "dart-direct") {
+    if (library.coverageMode !== "dart-transitive-override") {
       const declared = project.libraries?.[library.packageName];
       if (
         !declared ||
         declared.path !== library.sourcePath ||
-        declared.sourceVersion !== library.version ||
-        declared.releaseVersion !== library.version ||
-        declared.releaseRef !== library.releaseRef
+        declared.sourceVersion !== library.baselineVersion ||
+        declared.releaseVersion !== library.baselineVersion ||
+        declared.releaseRef !== library.baselineRef
       ) {
-        throw new Error(`${library.id} must match reference.project.json`);
+        throw new Error(`${library.id} baseline must match reference.project.json`);
       }
     }
   }
@@ -225,6 +365,11 @@ export function verifyReferenceCoverage({ manifest, project, pubspec, lockSource
 
 export function verifyCatalogueCoverage(manifest, catalogue) {
   const libraries = validateSdkCoverage(manifest);
+  if (catalogue?.schemaVersion !== manifest.catalogueSchemaVersion) {
+    throw new Error(
+      `SDK catalogue schemaVersion must be ${manifest.catalogueSchemaVersion}`,
+    );
+  }
   if (
     normalizedRepository(catalogue?.repository) !==
     normalizedRepository(manifest.platformRepository)
@@ -239,27 +384,40 @@ export function verifyCatalogueCoverage(manifest, catalogue) {
     catalogue.libraries.length !== libraries.length ||
     catalogueLibraries.size !== libraries.length
   ) {
-    throw new Error("SDK catalogue must contain exactly the seven covered libraries");
+    throw new Error("SDK catalogue must contain exactly the seven governed libraries");
   }
   for (const library of libraries) {
     const catalogued = catalogueLibraries.get(library.id);
     if (!catalogued) throw new Error(`${library.id} is missing from the SDK catalogue`);
     const expected = {
+      lifecycle: library.lifecycle,
       packageName: library.packageName,
       sourcePath: library.sourcePath,
-      sourceVersion: library.version,
-      latestReleaseVersion: library.version,
-      releaseStatus: "released",
-      releaseRef: library.releaseRef,
-      releaseSha: library.releaseSha,
+      sourceVersion: library.sourceVersion,
+      latestReleaseVersion: library.baselineVersion,
+      releaseStatus: library.catalogueStatus,
+      releaseRef: library.baselineRef,
+      releaseSha: library.baselineSha,
     };
     for (const [key, value] of Object.entries(expected)) {
       if (catalogued[key] !== value) {
         throw new Error(`${library.id} catalogue ${key} must be ${value}`);
       }
     }
+    if (
+      library.candidatePackageName !== catalogued.candidatePackageName ||
+      Boolean(library.candidateRef) !== Boolean(catalogued.candidateInstall)
+    ) {
+      throw new Error(`${library.id} catalogue candidate metadata is inconsistent`);
+    }
+    if (
+      library.candidateRef &&
+      !String(catalogued.candidateInstall).includes(library.candidateRef)
+    ) {
+      throw new Error(`${library.id} catalogue candidate install must pin ${library.candidateRef}`);
+    }
   }
-  return libraries;
+  return { libraries, readiness: sdkReadiness(libraries) };
 }
 
 async function defaultListRemote(repository, releaseRef) {
@@ -297,17 +455,17 @@ export async function verifyRemoteCoverage({
 }) {
   const libraries = validateSdkCoverage(manifest);
   for (const library of libraries) {
-    for (const ref of new Set([library.releaseRef, library.releaseTag])) {
+    for (const ref of new Set([library.baselineRef, library.baselineTag])) {
       const output = await listRemote(manifest.platformRepository, ref);
       const remoteSha = resolveRemoteTag(output, ref);
-      if (remoteSha !== library.releaseSha) {
+      if (remoteSha !== library.baselineSha) {
         throw new Error(
-          `${library.id} tag ${ref} resolves to ${remoteSha}, expected ${library.releaseSha}`,
+          `${library.id} tag ${ref} resolves to ${remoteSha}, expected ${library.baselineSha}`,
         );
       }
     }
-    if (!(await releaseExists(manifest.platformRepository, library.releaseTag))) {
-      throw new Error(`GitHub Release ${library.releaseTag} does not exist`);
+    if (!(await releaseExists(manifest.platformRepository, library.baselineTag))) {
+      throw new Error(`GitHub Release ${library.baselineTag} does not exist`);
     }
   }
   return libraries;
@@ -341,25 +499,49 @@ async function run() {
   const manifest = JSON.parse(manifestSource);
   const project = JSON.parse(projectSource);
   let entries;
+  let readiness;
   if (args.command === "verify-remote") {
     verifyReferenceCoverage({ manifest, project, pubspec, lockSource });
     entries = await verifyRemoteCoverage({ manifest });
+    readiness = sdkReadiness(entries);
   } else if (args.command === "verify-catalog") {
     const catalogue = JSON.parse(await readFile(args.catalog, "utf8"));
-    entries = verifyCatalogueCoverage(manifest, catalogue);
+    const result = verifyCatalogueCoverage(manifest, catalogue);
+    entries = result.libraries;
+    readiness = result.readiness;
   } else {
     entries = verifyReferenceCoverage({ manifest, project, pubspec, lockSource });
+    readiness = sdkReadiness(entries);
   }
   process.stdout.write(
     `${JSON.stringify(
       {
-        sdkCoverage: entries.map(({ id, version, releaseTag, releaseSha, coverageMode }) => ({
-          id,
-          version,
-          releaseTag,
-          releaseSha,
-          coverageMode,
-        })),
+        sdkCoverage: entries.map(
+          ({
+            id,
+            lifecycle,
+            baselineVersion,
+            baselineTag,
+            baselineSha,
+            sourceVersion,
+            catalogueStatus,
+            candidatePackageName,
+            candidateRef,
+            coverageMode,
+          }) => ({
+            id,
+            lifecycle,
+            baselineVersion,
+            baselineTag,
+            baselineSha,
+            sourceVersion,
+            catalogueStatus,
+            candidatePackageName,
+            candidateRef,
+            coverageMode,
+          }),
+        ),
+        readiness,
       },
       null,
       2,

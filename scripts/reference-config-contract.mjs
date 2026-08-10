@@ -10,22 +10,22 @@ export const referenceEndpointContract = Object.freeze({
 });
 
 export const developmentDartDefineContract = Object.freeze({
-  OPENGROW_ENVIRONMENT: "development",
-  OPENGROW_TARGET: "mbza-development",
-  OPENGROW_API_URL: "https://api.mbza.dev",
-  OPENGROW_SDK_URL: "https://sdk.mbza.dev",
-  OPENGROW_SUPPORT_URL: "https://api.mbza.dev/api/v1/support-client",
-  OPENGROW_SHORT_LINKS_URL: "https://in.mbza.dev",
-  OPENGROW_FILES_URL: "https://files.mbza.dev",
-  OPENGROW_MAIL_PREVIEW_URL: "https://mail.mbza.dev",
-  OPENGROW_PROJECT_KEY: "",
-  OPENGROW_PROJECT_ID: "0",
-  OPENGROW_SDK_PLATFORM: "web",
-  OPENGROW_SDK_IDENTIFIER: "reference.mbza.dev",
-  OPENGROW_PROJECT_ENVIRONMENT: "test",
-  OPENGROW_LIVE_MODE: "false",
-  OPENGROW_PLATFORM_REVISION: "local",
-  OPENGROW_REFERENCE_REVISION: "local",
+  SUPERBOARD_ENVIRONMENT: "development",
+  SUPERBOARD_TARGET: "mbza-development",
+  SUPERBOARD_API_URL: "https://api.mbza.dev",
+  SUPERBOARD_SDK_URL: "https://sdk.mbza.dev",
+  SUPERBOARD_SUPPORT_URL: "https://api.mbza.dev/api/v1/support-client",
+  SUPERBOARD_SHORT_LINKS_URL: "https://in.mbza.dev",
+  SUPERBOARD_FILES_URL: "https://files.mbza.dev",
+  SUPERBOARD_MAIL_PREVIEW_URL: "https://mail.mbza.dev",
+  SUPERBOARD_PROJECT_KEY: "",
+  SUPERBOARD_PROJECT_ID: "0",
+  SUPERBOARD_SDK_PLATFORM: "web",
+  SUPERBOARD_SDK_IDENTIFIER: "reference.mbza.dev",
+  SUPERBOARD_PROJECT_ENVIRONMENT: "test",
+  SUPERBOARD_LIVE_MODE: "false",
+  SUPERBOARD_PLATFORM_REVISION: "local",
+  SUPERBOARD_REFERENCE_REVISION: "local",
 });
 
 export const developmentDartDefineKeys = Object.freeze(
@@ -33,12 +33,12 @@ export const developmentDartDefineKeys = Object.freeze(
 );
 
 const developmentEndpointMapping = Object.freeze({
-  OPENGROW_API_URL: "api",
-  OPENGROW_SDK_URL: "sdk",
-  OPENGROW_SUPPORT_URL: "support",
-  OPENGROW_SHORT_LINKS_URL: "shortLinks",
-  OPENGROW_FILES_URL: "files",
-  OPENGROW_MAIL_PREVIEW_URL: "mailPreview",
+  SUPERBOARD_API_URL: "api",
+  SUPERBOARD_SDK_URL: "sdk",
+  SUPERBOARD_SUPPORT_URL: "support",
+  SUPERBOARD_SHORT_LINKS_URL: "shortLinks",
+  SUPERBOARD_FILES_URL: "files",
+  SUPERBOARD_MAIL_PREVIEW_URL: "mailPreview",
 });
 
 function requireRecord(value, label) {
@@ -97,23 +97,23 @@ export function assertCoordinatedReferenceConfig(project, development) {
   assertReferenceEndpointContract(project.endpoints);
   assertDevelopmentDartDefineContract(development);
 
-  if (project.environment !== development.OPENGROW_ENVIRONMENT) {
+  if (project.environment !== development.SUPERBOARD_ENVIRONMENT) {
     throw new Error("Project and development environment values must match");
   }
-  if (project.target !== development.OPENGROW_TARGET) {
+  if (project.target !== development.SUPERBOARD_TARGET) {
     throw new Error("Project and development target values must match");
   }
-  if (project.sdkApplication?.platform !== development.OPENGROW_SDK_PLATFORM) {
+  if (project.sdkApplication?.platform !== development.SUPERBOARD_SDK_PLATFORM) {
     throw new Error("Project and development SDK platform values must match");
   }
   if (
-    project.sdkApplication?.identifier !== development.OPENGROW_SDK_IDENTIFIER
+    project.sdkApplication?.identifier !== development.SUPERBOARD_SDK_IDENTIFIER
   ) {
     throw new Error("Project and development SDK identifier values must match");
   }
   if (
     project.sdkApplication?.projectEnvironment !==
-    development.OPENGROW_PROJECT_ENVIRONMENT
+    development.SUPERBOARD_PROJECT_ENVIRONMENT
   ) {
     throw new Error(
       "Project and development SDK project-environment values must match",

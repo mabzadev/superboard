@@ -19,32 +19,77 @@ class ReferenceConfig {
   });
 
   factory ReferenceConfig.fromEnvironment() => ReferenceConfig(
-    environment: const String.fromEnvironment('OPENGROW_ENVIRONMENT'),
-    target: const String.fromEnvironment('OPENGROW_TARGET'),
-    apiBaseUrl: const String.fromEnvironment('OPENGROW_API_URL'),
-    sdkBaseUrl: const String.fromEnvironment('OPENGROW_SDK_URL'),
-    supportBaseUrl: const String.fromEnvironment('OPENGROW_SUPPORT_URL'),
-    shortLinksBaseUrl: const String.fromEnvironment('OPENGROW_SHORT_LINKS_URL'),
-    filesBaseUrl: const String.fromEnvironment('OPENGROW_FILES_URL'),
+    environment: const String.fromEnvironment(
+      'SUPERBOARD_ENVIRONMENT',
+      defaultValue: String.fromEnvironment('OPENGROW_ENVIRONMENT'),
+    ),
+    target: const String.fromEnvironment(
+      'SUPERBOARD_TARGET',
+      defaultValue: String.fromEnvironment('OPENGROW_TARGET'),
+    ),
+    apiBaseUrl: const String.fromEnvironment(
+      'SUPERBOARD_API_URL',
+      defaultValue: String.fromEnvironment('OPENGROW_API_URL'),
+    ),
+    sdkBaseUrl: const String.fromEnvironment(
+      'SUPERBOARD_SDK_URL',
+      defaultValue: String.fromEnvironment('OPENGROW_SDK_URL'),
+    ),
+    supportBaseUrl: const String.fromEnvironment(
+      'SUPERBOARD_SUPPORT_URL',
+      defaultValue: String.fromEnvironment('OPENGROW_SUPPORT_URL'),
+    ),
+    shortLinksBaseUrl: const String.fromEnvironment(
+      'SUPERBOARD_SHORT_LINKS_URL',
+      defaultValue: String.fromEnvironment('OPENGROW_SHORT_LINKS_URL'),
+    ),
+    filesBaseUrl: const String.fromEnvironment(
+      'SUPERBOARD_FILES_URL',
+      defaultValue: String.fromEnvironment('OPENGROW_FILES_URL'),
+    ),
     mailPreviewBaseUrl: const String.fromEnvironment(
-      'OPENGROW_MAIL_PREVIEW_URL',
+      'SUPERBOARD_MAIL_PREVIEW_URL',
+      defaultValue: String.fromEnvironment('OPENGROW_MAIL_PREVIEW_URL'),
     ),
-    projectKey: const String.fromEnvironment('OPENGROW_PROJECT_KEY'),
-    projectId:
-        int.tryParse(const String.fromEnvironment('OPENGROW_PROJECT_ID')) ?? 0,
-    sdkPlatform: const String.fromEnvironment('OPENGROW_SDK_PLATFORM'),
-    sdkIdentifier: const String.fromEnvironment('OPENGROW_SDK_IDENTIFIER'),
+    projectKey: const String.fromEnvironment(
+      'SUPERBOARD_PROJECT_KEY',
+      defaultValue: String.fromEnvironment('OPENGROW_PROJECT_KEY'),
+    ),
+    projectId: int.tryParse(
+      const String.fromEnvironment(
+        'SUPERBOARD_PROJECT_ID',
+        defaultValue: String.fromEnvironment('OPENGROW_PROJECT_ID'),
+      ),
+    ) ?? 0,
+    sdkPlatform: const String.fromEnvironment(
+      'SUPERBOARD_SDK_PLATFORM',
+      defaultValue: String.fromEnvironment('OPENGROW_SDK_PLATFORM'),
+    ),
+    sdkIdentifier: const String.fromEnvironment(
+      'SUPERBOARD_SDK_IDENTIFIER',
+      defaultValue: String.fromEnvironment('OPENGROW_SDK_IDENTIFIER'),
+    ),
     projectEnvironment: const String.fromEnvironment(
-      'OPENGROW_PROJECT_ENVIRONMENT',
+      'SUPERBOARD_PROJECT_ENVIRONMENT',
+      defaultValue: String.fromEnvironment('OPENGROW_PROJECT_ENVIRONMENT'),
     ),
-    liveMode: const bool.fromEnvironment('OPENGROW_LIVE_MODE'),
+    liveMode: const bool.fromEnvironment(
+      'SUPERBOARD_LIVE_MODE',
+      defaultValue: bool.fromEnvironment('OPENGROW_LIVE_MODE'),
+    ),
     platformRevision: const String.fromEnvironment(
-      'OPENGROW_PLATFORM_REVISION',
-      defaultValue: 'local',
+      'SUPERBOARD_PLATFORM_REVISION',
+      defaultValue: String.fromEnvironment(
+        'OPENGROW_PLATFORM_REVISION',
+        defaultValue: 'local',
+      ),
     ),
     referenceRevision: const String.fromEnvironment(
-      'OPENGROW_REFERENCE_REVISION',
-      defaultValue: 'local',
+      'SUPERBOARD_REFERENCE_REVISION',
+      defaultValue: String.fromEnvironment(
+        'OPENGROW_REFERENCE_REVISION',
+        defaultValue: 'local',
+      ),
     ),
   );
 
@@ -68,9 +113,9 @@ class ReferenceConfig {
   List<String> validate() {
     final errors = <String>[];
     if (!{'development', 'production'}.contains(environment)) {
-      errors.add('OPENGROW_ENVIRONMENT must be development or production.');
+      errors.add('SUPERBOARD_ENVIRONMENT must be development or production.');
     }
-    if (target.trim().isEmpty) errors.add('OPENGROW_TARGET is required.');
+    if (target.trim().isEmpty) errors.add('SUPERBOARD_TARGET is required.');
     for (final entry in endpoints.entries) {
       final expected = _endpointContract[entry.key];
       if (entry.value != expected) {
@@ -78,25 +123,25 @@ class ReferenceConfig {
       }
     }
     if (liveMode && projectKey.trim().isEmpty) {
-      errors.add('OPENGROW_PROJECT_KEY is required in live mode.');
+      errors.add('SUPERBOARD_PROJECT_KEY is required in live mode.');
     }
     if (liveMode && projectId <= 0) {
-      errors.add('OPENGROW_PROJECT_ID must be positive in live mode.');
+      errors.add('SUPERBOARD_PROJECT_ID must be positive in live mode.');
     }
     if (liveMode && !{'ios', 'android', 'web'}.contains(sdkPlatform)) {
-      errors.add('OPENGROW_SDK_PLATFORM must be ios, android or web.');
+      errors.add('SUPERBOARD_SDK_PLATFORM must be ios, android or web.');
     }
     if (liveMode && sdkIdentifier.trim().isEmpty) {
-      errors.add('OPENGROW_SDK_IDENTIFIER is required in live mode.');
+      errors.add('SUPERBOARD_SDK_IDENTIFIER is required in live mode.');
     }
     if (liveMode && !{'production', 'test'}.contains(projectEnvironment)) {
-      errors.add('OPENGROW_PROJECT_ENVIRONMENT must be production or test.');
+      errors.add('SUPERBOARD_PROJECT_ENVIRONMENT must be production or test.');
     }
     if (liveMode && !_gitRevision.hasMatch(platformRevision)) {
-      errors.add('OPENGROW_PLATFORM_REVISION must be an exact Git SHA.');
+      errors.add('SUPERBOARD_PLATFORM_REVISION must be an exact Git SHA.');
     }
     if (liveMode && !_gitRevision.hasMatch(referenceRevision)) {
-      errors.add('OPENGROW_REFERENCE_REVISION must be an exact Git SHA.');
+      errors.add('SUPERBOARD_REFERENCE_REVISION must be an exact Git SHA.');
     }
     return errors;
   }

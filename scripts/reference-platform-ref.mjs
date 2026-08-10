@@ -97,17 +97,22 @@ async function main() {
     throw new Error("reference-platform-ref.mjs accepts no arguments.");
   }
   const result = selectOfficialPlatformRef({
-    eventName: process.env.OPENGROW_GITHUB_EVENT_NAME ?? "",
-    refName: process.env.OPENGROW_GITHUB_REF_NAME ?? "",
-    baseRef: process.env.OPENGROW_GITHUB_BASE_REF ?? "",
-    dispatchPlatformSha: process.env.OPENGROW_DISPATCH_PLATFORM_SHA ?? "",
-    deploymentBranch: process.env.OPENGROW_DEPLOYMENT_BRANCH ?? "",
-    productionBranch: process.env.OPENGROW_PRODUCTION_BRANCH ?? "",
+    eventName: environmentValue("SUPERBOARD_GITHUB_EVENT_NAME"),
+    refName: environmentValue("SUPERBOARD_GITHUB_REF_NAME"),
+    baseRef: environmentValue("SUPERBOARD_GITHUB_BASE_REF"),
+    dispatchPlatformSha: environmentValue("SUPERBOARD_DISPATCH_PLATFORM_SHA"),
+    deploymentBranch: environmentValue("SUPERBOARD_DEPLOYMENT_BRANCH"),
+    productionBranch: environmentValue("SUPERBOARD_PRODUCTION_BRANCH"),
     historyBridgeValidated:
-      process.env.OPENGROW_HISTORY_BRIDGE_VALIDATED ?? "",
+      environmentValue("SUPERBOARD_HISTORY_BRIDGE_VALIDATED"),
   });
   process.stdout.write(`ref=${result.ref}\n`);
   process.stdout.write(`source=${result.source}\n`);
+}
+
+function environmentValue(canonicalName) {
+  const legacyName = canonicalName.replace(/^SUPERBOARD_/u, "OPENGROW_");
+  return process.env[canonicalName] ?? process.env[legacyName] ?? "";
 }
 
 const invokedPath = process.argv[1]

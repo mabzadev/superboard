@@ -1,36 +1,56 @@
-# Seven-SDK reference contract
+# SDK lifecycle and v3 promotion contract
 
-`config/sdk-coverage.json` is the reviewed, versioned coverage manifest for the
-complete public SuperBoard SDK set. It is deliberately separate from
-`reference.project.json`: the latter describes the two libraries imported
-directly by the FlutterFlow application, while the coverage manifest describes
-every SDK release that belongs to the reusable platform baseline.
+`config/sdk-coverage.json` is the reviewed Reference view of Platform catalogue
+schema v4. It separates the immutable SDK baseline compiled by the application
+from the next SuperBoard candidate set.
 
-| SDK                 | Version | Coverage in this repository       | Immutable release tag                 |
-| ------------------- | ------- | --------------------------------- | ------------------------------------- |
-| Flutter             | 2.1.4   | transitive Git override + lock    | `sdk-flutter-v2.1.4`                  |
-| FlutterFlow         | 2.2.5   | direct Git dependency + lock      | `sdk-flutterflow-v2.2.5`              |
-| Messaging / Support | 1.3.0   | direct Git dependency + lock      | `sdk-flutterflow-messaging-v1.3.0`    |
-| iOS                 | 1.0.3   | release/catalogue contract        | `sdk-ios-v1.0.3`                      |
-| Android             | 1.0.3   | release/catalogue contract        | `sdk-android-v1.0.3`                  |
-| JavaScript          | 1.0.2   | release/catalogue contract        | `sdk-js-v1.0.2`                       |
-| React Native        | 1.0.2   | release/catalogue contract        | `sdk-react-native-v1.0.2`             |
+| SDK | Lifecycle | Compiled/reference baseline | Candidate | Reference coverage |
+| --- | --- | --- | --- | --- |
+| Flutter | active | OpenGrow 2.1.4 | SuperBoard 3.0.0 | transitive Git override + lock |
+| FlutterFlow | active | OpenGrow 2.2.5 | SuperBoard 3.0.0 | direct Git dependency + lock |
+| Messaging / Support | archived | OpenGrow 1.3.0 | none; folded into FlutterFlow v3 | legacy direct dependency until v3 |
+| Android | internal | OpenGrow 1.0.3 | none | immutable historical release |
+| iOS | internal | OpenGrow 1.0.3 | none | immutable historical release |
+| JavaScript | archived | OpenGrow 1.0.2 | none | immutable historical release |
+| React Native | archived | OpenGrow 1.0.2 | none | immutable historical release |
 
-The executable Web reference cannot run native iOS, Android, JavaScript or
-React Native packages. Their `release-contract` mode therefore proves the
-public package identity, source path, version, catalogue state, immutable tag,
-peeled commit SHA and GitHub Release. Platform SDK repositories remain
-responsible for each package's own build and test suite.
+Only Flutter and FlutterFlow are active products. Android and iOS remain
+internal implementations of Flutter. Messaging/Support, JavaScript and React
+Native remain reproducible historical entries but cannot trigger a new release.
 
-FlutterFlow 2.2.5 was published before Flutter 2.1.4 and its immutable tag still
-contains a path dependency whose package version is 2.1.3. The root
-`dependency_overrides` declaration intentionally selects the separately
-published `sdk-flutter-v2.1.4` tag. `pubspec.lock` records its exact peeled SHA,
-so this convergence neither mutates nor replaces the FlutterFlow release tag.
+## Baseline-first compilation
+
+The Reference application compiles only against published immutable tags.
+Platform `dev` can expose 3.0.0 source and candidate metadata without making an
+unpublished package part of the deployable Reference artifact. The app and its
+SDK status dialog continue to show both v3 candidates while `pubspec.yaml` and
+`pubspec.lock` stay pinned to the published 2.x/1.x baseline.
+
+FlutterFlow 2.2.5 still resolves Flutter transitively. The reviewed root
+override converges that dependency to the separately published Flutter 2.1.4
+tag and exact commit. This does not mutate either historical tag.
+
+## Atomic promotion
+
+The promotion policy is `complete-active-set`. Promotion fails unless:
+
+- the catalogue uses schema version 4;
+- exactly Flutter and FlutterFlow are `active`;
+- both active entries are `released` at their 3.0.0 source versions;
+- both released package coordinates use the SuperBoard namespace;
+- Android and iOS remain `internal` and frozen;
+- Support, JavaScript and React Native remain `archived` and frozen;
+- every immutable tag and release SHA is valid.
+
+When the complete active set is ready, the promotion script updates both active
+Dart coordinates together, removes the standalone Support dependency, keeps its
+historical coverage entry, regenerates `pubspec.lock`, and opens a protected PR.
+An individual Flutter or FlutterFlow promotion is intentionally impossible.
+The generated PR still passes through the full Flutter compile gate. It cannot
+merge unless the v3 packages expose the reviewed transition surface or the
+Reference bridge migration is included through a separately reviewed change.
 
 ## Secretless gates
-
-Run the same gates locally or in CI:
 
 ```bash
 npm run sdk:coverage:check
@@ -41,21 +61,14 @@ flutter pub get --enforce-lockfile
 git diff --exit-code -- pubspec.lock
 ```
 
-- `sdk:coverage:check` validates the seven identities and validates every Dart
-  dependency against `pubspec.yaml`, `reference.project.json` and
-  `pubspec.lock`.
-- `sdk:coverage:verify` performs public `git ls-remote` reads, peels annotated
-  tags, compares every commit SHA, and checks each public GitHub Release URL.
-- `sdk:coverage:catalog` compares the manifest with the exact catalogue from
-  the platform revision checked out by CI.
+- `sdk:coverage:check` validates lifecycle, baseline locks, project metadata and
+  the two displayed candidates.
+- `sdk:coverage:verify` uses public Git reads and GitHub Release URLs to verify
+  every immutable baseline and historical tag.
+- `sdk:coverage:catalog` compares the Reference snapshot with the exact checked
+  out Platform catalogue v4, including lifecycle and pending candidate state.
 
-These commands use no GitHub token, Cloudflare credential, dispatch token or
-application secret. The iOS package is the only dual-ref case: Swift Package
-Manager consumes `1.0.3`, while the canonical GitHub Release is
-`sdk-ios-v1.0.3`; both tags must peel to the same commit.
-
-The SDK promotion script updates the complete manifest and the Flutter override
-from a fully released seven-entry catalogue. It fails closed on a missing,
-pending, non-canonical or incomplete entry. Regenerating the Dart lockfile and
-opening the protected update PR remain separate reviewed steps; the coverage
-gate does not need or use a cross-repository dispatch token.
+The iOS baseline consumes SwiftPM tag `1.0.3`, while its canonical historical
+GitHub Release tag remains `sdk-ios-v1.0.3`; both must resolve to the same
+commit. None of these gates requires a GitHub token, Cloudflare credential,
+dispatch token or application secret.

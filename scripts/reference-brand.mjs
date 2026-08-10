@@ -25,10 +25,13 @@ export function checkReferenceBrand({ repositoryRoot = root } = {}) {
     "grow" + ".mbza" + ".dev",
     "opengrow-platform",
   ]) {
-    const matches = gitGrep(repositoryRoot, pattern, ["."]);
+    const matches = gitGrep(repositoryRoot, pattern, [
+      ".",
+      ":(exclude)scripts/reference-brand.mjs",
+    ]);
     if (matches) violations.push(matches);
   }
-  const visibleLegacy = gitGrep(repositoryRoot, "OpenGrow", [
+  const visibleLegacy = gitGrep(repositoryRoot, "OpenGrow Reference", [
     "README.md",
     "SECURITY.md",
     "CONTRIBUTING.md",

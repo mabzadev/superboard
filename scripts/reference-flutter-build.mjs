@@ -19,40 +19,47 @@ export function buildFlutterDefines(
   const defines = Object.fromEntries(
     Object.entries(base).map(([name, value]) => [name, String(value ?? "")]),
   );
-  defines.OPENGROW_LIVE_MODE = live ? "true" : "false";
-  defines.OPENGROW_PLATFORM_REVISION = revision(
-    environment.OPENGROW_PLATFORM_REVISION,
-    "OPENGROW_PLATFORM_REVISION",
+  defines.SUPERBOARD_LIVE_MODE = live ? "true" : "false";
+  defines.SUPERBOARD_PLATFORM_REVISION = revision(
+    environmentValue(environment, "SUPERBOARD_PLATFORM_REVISION"),
+    "SUPERBOARD_PLATFORM_REVISION",
     live,
   );
-  defines.OPENGROW_REFERENCE_REVISION = revision(
-    environment.OPENGROW_REFERENCE_REVISION,
-    "OPENGROW_REFERENCE_REVISION",
+  defines.SUPERBOARD_REFERENCE_REVISION = revision(
+    environmentValue(environment, "SUPERBOARD_REFERENCE_REVISION"),
+    "SUPERBOARD_REFERENCE_REVISION",
     live,
   );
 
   if (!live) {
-    defines.OPENGROW_PROJECT_KEY = "";
-    defines.OPENGROW_PROJECT_ID = "0";
+    defines.SUPERBOARD_PROJECT_KEY = "";
+    defines.SUPERBOARD_PROJECT_ID = "0";
     return defines;
   }
 
   const projectKey = boundedBuildValue(
-    environment.OPENGROW_PROJECT_KEY,
-    "OPENGROW_PROJECT_KEY",
+    environmentValue(environment, "SUPERBOARD_PROJECT_KEY"),
+    "SUPERBOARD_PROJECT_KEY",
     512,
   );
   const projectId = boundedBuildValue(
-    environment.OPENGROW_PROJECT_ID,
-    "OPENGROW_PROJECT_ID",
+    environmentValue(environment, "SUPERBOARD_PROJECT_ID"),
+    "SUPERBOARD_PROJECT_ID",
     20,
   );
   if (!/^\d+$/.test(projectId) || Number(projectId) <= 0) {
-    throw new Error("OPENGROW_PROJECT_ID must be a positive integer.");
+    throw new Error("SUPERBOARD_PROJECT_ID must be a positive integer.");
   }
-  defines.OPENGROW_PROJECT_KEY = projectKey;
-  defines.OPENGROW_PROJECT_ID = projectId;
+  defines.SUPERBOARD_PROJECT_KEY = projectKey;
+  defines.SUPERBOARD_PROJECT_ID = projectId;
   return defines;
+}
+
+export function environmentValue(environment, canonicalName) {
+  const legacyName = canonicalName.replace(/^SUPERBOARD_/u, "OPENGROW_");
+  const canonical = environment[canonicalName];
+  if (canonical !== undefined && String(canonical).trim() !== "") return canonical;
+  return environment[legacyName];
 }
 
 function revision(value, name, required) {
@@ -100,11 +107,13 @@ async function run() {
   });
   try {
     const flutterEnvironment = { ...process.env };
+    delete flutterEnvironment.SUPERBOARD_PROJECT_KEY;
+    delete flutterEnvironment.SUPERBOARD_PROJECT_ID;
     delete flutterEnvironment.OPENGROW_PROJECT_KEY;
     delete flutterEnvironment.OPENGROW_PROJECT_ID;
     const result = spawnSync(
       "flutter",
-      ["build", "web", `--dart-define-from-file=${temporaryPath}`],
+      ["build", "web", "--no-pub", `--dart-define-from-file=${temporaryPath}`],
       { cwd: root, env: flutterEnvironment, stdio: "inherit" },
     );
     if (result.error) throw result.error;

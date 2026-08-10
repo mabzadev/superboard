@@ -37,7 +37,7 @@ abstract interface class ReferenceActions {
   });
 }
 
-/// Thin injectable bridge over the public OpenGrow FlutterFlow surface.
+/// Thin injectable bridge over the public SuperBoard FlutterFlow surface.
 ///
 /// The live reference app invokes only these public actions. Tests replace the
 /// bridge with a recorder so every advertised journey proves its actual action
@@ -385,7 +385,7 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
         );
       default:
         throw UnsupportedError(
-          'Unsupported OpenGrow reference action: $action',
+          'Unsupported SuperBoard reference action: $action',
         );
     }
   }
@@ -702,7 +702,7 @@ class LiveReferenceActions implements ReferenceActions {
         }
         final link = await _sdk.invoke('opengrowGenerateLinkJson', {
           'parameters': {
-            'title': input['title']?.toString() ?? 'OpenGrow reference',
+            'title': input['title']?.toString() ?? 'SuperBoard reference',
             'data': input['data'] is Map
                 ? input['data']
                 : {'source': 'superboard-reference'},
@@ -754,7 +754,7 @@ class LiveReferenceActions implements ReferenceActions {
               }
             : rawPayload is Map
             ? rawPayload.cast<String, dynamic>()
-            : const <String, Object?>{'message': 'OpenGrow reference'};
+            : const <String, Object?>{'message': 'SuperBoard reference'};
         final idempotencyKey =
             input['idempotency_key']?.toString().trim() ?? '';
         if (idempotencyKey.isEmpty) {
@@ -882,7 +882,7 @@ class LiveReferenceActions implements ReferenceActions {
     )) {
       bytes.addAll(chunk);
       if (bytes.length > 1024 * 1024) {
-        throw const FormatException('OpenGrow response exceeded 1 MiB.');
+        throw const FormatException('SuperBoard response exceeded 1 MiB.');
       }
     }
     final text = utf8.decode(bytes);
@@ -946,7 +946,7 @@ class ReferenceHttpException implements Exception {
 
   @override
   String toString() =>
-      'OpenGrow request failed with HTTP $statusCode: $payload';
+      'SuperBoard request failed with HTTP $statusCode: $payload';
 }
 
 String _stateChannel(ReferenceFeatureId id) => switch (id) {
@@ -970,7 +970,7 @@ String _sanitizeError(Object error) {
 Map<String, dynamic> _decodeJson(String value) {
   final decoded = jsonDecode(value);
   if (decoded is! Map) {
-    throw const FormatException('OpenGrow response must be a JSON object.');
+    throw const FormatException('SuperBoard response must be a JSON object.');
   }
   return decoded.cast<String, dynamic>();
 }

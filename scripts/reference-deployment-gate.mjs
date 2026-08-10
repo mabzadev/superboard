@@ -65,15 +65,20 @@ async function run() {
   const { deployment_branch: deploymentBranch } =
     buildReferenceCiMetadata(project);
   const decision = evaluateDevelopmentDeploymentGate({
-    eventName: process.env.OPENGROW_GITHUB_EVENT_NAME ?? "",
-    refName: process.env.OPENGROW_GITHUB_REF_NAME ?? "",
-    dispatchAction: process.env.OPENGROW_GITHUB_EVENT_ACTION ?? "",
-    defaultBranch: process.env.OPENGROW_GITHUB_DEFAULT_BRANCH ?? "",
+    eventName: environmentValue("SUPERBOARD_GITHUB_EVENT_NAME"),
+    refName: environmentValue("SUPERBOARD_GITHUB_REF_NAME"),
+    dispatchAction: environmentValue("SUPERBOARD_GITHUB_EVENT_ACTION"),
+    defaultBranch: environmentValue("SUPERBOARD_GITHUB_DEFAULT_BRANCH"),
     deploymentBranch,
   });
 
   process.stdout.write(`eligible=${decision.eligible ? "true" : "false"}\n`);
   process.stdout.write(`reason=${decision.reason}\n`);
+}
+
+function environmentValue(canonicalName) {
+  const legacyName = canonicalName.replace(/^SUPERBOARD_/u, "OPENGROW_");
+  return process.env[canonicalName] ?? process.env[legacyName] ?? "";
 }
 
 const invokedPath = process.argv[1]

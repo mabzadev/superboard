@@ -15,7 +15,7 @@ paths, private Worker tokens, signatures, retry rules or business policy.
 1. Use the `mbza-development` target and a test project.
 2. Confirm `/infrastructure` on `https://board.mbza.dev` reports the API,
    Identity, Files and each enabled feature Worker as healthy.
-3. Build with `OPENGROW_LIVE_MODE=true`, a positive test project ID, the
+3. Build with `SUPERBOARD_LIVE_MODE=true`, a positive test project ID, the
    registered Web identifier, and the SDK access key supplied through the
    protected GitHub `development` Environment. Never commit that key.
    The live build must also display the exact platform and reference Git SHAs

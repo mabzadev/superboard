@@ -40,7 +40,7 @@ const referenceFeatures = <ReferenceFeature>[
     id: ReferenceFeatureId.bootstrap,
     title: 'Bootstrap',
     description:
-        'Validate target configuration and initialize the OpenGrow SDK.',
+        'Validate target configuration and initialize the SuperBoard SDK.',
     actions: [
       'OpenGrowBootstrap',
       'opengrowInitializeAuto',
@@ -48,7 +48,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowApplicationRuntimePolicyJson',
     ],
     stateKeys: ['environment', 'projectKey', 'lastIntegrationError'],
-    owner: 'OpenGrow SDK',
+    owner: 'SuperBoard SDK',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.signIn,
@@ -60,7 +60,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowApplicationSignInProviderJson',
     ],
     stateKeys: ['applicationAccessToken', 'currentUserId'],
-    owner: 'OpenGrow Identity',
+    owner: 'SuperBoard Identity',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.createAccount,
@@ -69,7 +69,7 @@ const referenceFeatures = <ReferenceFeature>[
         'Create an allowlisted account and exercise verification policy.',
     actions: ['opengrowApplicationRegisterJson'],
     stateKeys: ['currentUserId'],
-    owner: 'OpenGrow Identity',
+    owner: 'SuperBoard Identity',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.passwordRecovery,
@@ -81,7 +81,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowApplicationResetPasswordJson',
     ],
     stateKeys: ['lastIntegrationError'],
-    owner: 'OpenGrow Identity + Email',
+    owner: 'SuperBoard Identity + Email',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.home,
@@ -90,7 +90,7 @@ const referenceFeatures = <ReferenceFeature>[
         'Show the authenticated identity and enabled application capabilities.',
     actions: ['loadProfile', 'loadFeatureManifest'],
     stateKeys: ['currentUserId'],
-    owner: 'OpenGrow App',
+    owner: 'SuperBoard App',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.profile,
@@ -106,7 +106,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowApplicationLogoutJson',
     ],
     stateKeys: ['currentUserId', 'applicationAccessToken'],
-    owner: 'OpenGrow Identity + App',
+    owner: 'SuperBoard Identity + App',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.notifications,
@@ -118,7 +118,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowDisplayMessages',
     ],
     stateKeys: ['lastNotificationJson'],
-    owner: 'OpenGrow Notifications',
+    owner: 'SuperBoard Notifications',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.files,
@@ -132,7 +132,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowApplicationDeleteFileJson',
     ],
     stateKeys: ['lastFileJson'],
-    owner: 'OpenGrow Files',
+    owner: 'SuperBoard Files',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.products,
@@ -145,7 +145,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowRestore',
     ],
     stateKeys: ['lastCustomerInfoJson'],
-    owner: 'OpenGrow Products + Billing',
+    owner: 'SuperBoard Products + Billing',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.paywall,
@@ -158,7 +158,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowGetLastPurchaseResultJson',
     ],
     stateKeys: ['lastPurchaseResultJson'],
-    owner: 'OpenGrow Paywalls + Billing',
+    owner: 'SuperBoard Paywalls + Billing',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.dynamicLinks,
@@ -166,7 +166,7 @@ const referenceFeatures = <ReferenceFeature>[
     description: 'Generate a short link and inspect deep-link attribution.',
     actions: ['opengrowGenerateLinkJson', 'opengrowGetLastDeepLinkJson'],
     stateKeys: ['lastDeepLinkJson'],
-    owner: 'OpenGrow Dynamic Links',
+    owner: 'SuperBoard Dynamic Links',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.support,
@@ -191,7 +191,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowSupportSubmitCsatJson',
     ],
     stateKeys: ['lastSupportEventJson'],
-    owner: 'OpenGrow Support',
+    owner: 'SuperBoard Support',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.marketingConsent,
@@ -203,7 +203,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowApplicationMarketingPreferencesJson',
     ],
     stateKeys: ['lastMarketingConsentJson'],
-    owner: 'OpenGrow Marketing',
+    owner: 'SuperBoard Marketing',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.onboarding,
@@ -212,7 +212,7 @@ const referenceFeatures = <ReferenceFeature>[
         'Resolve, progress, complete, and roll back a versioned onboarding flow.',
     actions: ['OpenGrowOnboarding'],
     stateKeys: ['lastOnboardingJson'],
-    owner: 'OpenGrow Onboardings',
+    owner: 'SuperBoard Onboardings',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.customExtension,
@@ -226,7 +226,7 @@ const referenceFeatures = <ReferenceFeature>[
       'opengrowApplicationCancelCustomJobJson',
     ],
     stateKeys: ['lastCustomJobJson'],
-    owner: 'OpenGrow API + application Custom Worker',
+    owner: 'SuperBoard API + application Custom Worker',
   ),
   ReferenceFeature(
     id: ReferenceFeatureId.diagnostics,
@@ -235,6 +235,6 @@ const referenceFeatures = <ReferenceFeature>[
         'Show sanitized configuration, SDK state, service health, and the last recoverable error.',
     actions: ['loadHealth', 'copyDiagnostics'],
     stateKeys: ['lastIntegrationError'],
-    owner: 'OpenGrow Platform',
+    owner: 'SuperBoard Platform',
   ),
 ];

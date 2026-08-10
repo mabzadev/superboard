@@ -4,41 +4,40 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   sdkContracts,
+  sdkReadiness,
   validateSdkCoverage,
 } from "./reference-sdk-coverage.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const activeIds = Object.freeze(
+  Object.entries(sdkContracts)
+    .filter(([, contract]) => contract.lifecycle === "active")
+    .map(([id]) => id),
+);
 
 export const referenceSdkMappings = Object.freeze({
-  flutterflow: Object.freeze({
-    projectKey: "opengrow_flutterflow",
-    packageName: "opengrow_flutterflow",
-    sourcePath: "sdks/flutterflow",
-    releasePrefix: "sdk-flutterflow-v",
+  flutter: Object.freeze({
+    section: "dependency_overrides",
   }),
-  "flutterflow-support": Object.freeze({
-    projectKey: "opengrow_flutterflow_messaging",
-    packageName: "opengrow_flutterflow_messaging",
-    sourcePath: "sdks/flutterflow_messaging",
-    releasePrefix: "sdk-flutterflow-messaging-v",
+  flutterflow: Object.freeze({
+    section: "dependencies",
+    projectLibrary: true,
   }),
 });
 
-export function replaceGitDependencyRef(source, packageName, releaseRef) {
+function dependencyRange(source, packageName) {
   const lines = source.split("\n");
-  const packageRows = [];
+  const rows = [];
   for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index].match(/^(\s*)([a-z0-9_]+):\s*$/u);
+    const match = lines[index].match(/^(\s*)([A-Za-z0-9_]+):\s*$/u);
     if (match?.[2] === packageName) {
-      packageRows.push({ index, indent: match[1].length });
+      rows.push({ index, indent: match[1].length });
     }
   }
-  if (packageRows.length !== 1) {
-    throw new Error(
-      `${packageName} must be declared exactly once in the dependency file`,
-    );
+  if (rows.length !== 1) {
+    throw new Error(`${packageName} must be declared exactly once in the dependency file`);
   }
-  const [{ index: start, indent }] = packageRows;
+  const [{ index: start, indent }] = rows;
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
     const match = lines[index].match(/^(\s*)([^\s#][^:]*):/u);
@@ -47,6 +46,17 @@ export function replaceGitDependencyRef(source, packageName, releaseRef) {
       break;
     }
   }
+  return { lines, start, end, indent };
+}
+
+export function replaceGitDependency(
+  source,
+  packageName,
+  nextPackageName,
+  releaseRef,
+) {
+  const { lines, start, end, indent } = dependencyRange(source, packageName);
+  lines[start] = `${" ".repeat(indent)}${nextPackageName}:`;
   const refRows = [];
   for (let index = start + 1; index < end; index += 1) {
     if (/^\s+ref:\s*\S+\s*$/u.test(lines[index])) refRows.push(index);
@@ -55,68 +65,94 @@ export function replaceGitDependencyRef(source, packageName, releaseRef) {
     throw new Error(`${packageName} must contain exactly one Git ref`);
   }
   const row = refRows[0];
-  const rowIndent = lines[row].match(/^\s*/u)[0];
-  lines[row] = `${rowIndent}ref: ${releaseRef}`;
+  lines[row] = `${lines[row].match(/^\s*/u)[0]}ref: ${releaseRef}`;
   return lines.join("\n");
 }
 
-export function promoteReferenceSdk({
-  project,
-  catalogue,
-  libraryId,
-  pubspec,
-  dependencySnippet,
-}) {
-  const mapping = referenceSdkMappings[libraryId];
-  if (!mapping) throw new Error(`Unsupported reference SDK: ${libraryId}`);
-  const library = catalogue?.libraries?.find((item) => item.id === libraryId);
-  if (!library) throw new Error(`${libraryId} is missing from the catalogue`);
-  if (
-    library.releaseStatus !== "released" ||
-    library.sourceVersion !== library.latestReleaseVersion
-  ) {
-    throw new Error(`${libraryId} is not a fully published SDK release`);
-  }
-  const expectedRef = `${mapping.releasePrefix}${library.sourceVersion}`;
-  if (library.releaseRef !== expectedRef) {
-    throw new Error(`${libraryId} release ref must be ${expectedRef}`);
-  }
-  if (library.sourcePath !== mapping.sourcePath) {
-    throw new Error(`${libraryId} source path must be ${mapping.sourcePath}`);
-  }
-  if (
-    String(catalogue.repository || "").replace(/\.git$/u, "") !==
-    String(project.platformRepository || "").replace(/\.git$/u, "")
-  ) {
-    throw new Error("The SDK catalogue does not belong to platformRepository");
-  }
-  const promotedProject = structuredClone(project);
-  const declared = promotedProject.libraries?.[mapping.projectKey];
-  if (!declared || declared.path !== mapping.sourcePath) {
-    throw new Error(`${mapping.projectKey} has an invalid reference mapping`);
-  }
-  declared.sourceVersion = library.sourceVersion;
-  declared.releaseVersion = library.latestReleaseVersion;
-  declared.releaseRef = library.releaseRef;
+export function replaceGitDependencyRef(source, packageName, releaseRef) {
+  return replaceGitDependency(source, packageName, packageName, releaseRef);
+}
 
-  return {
-    project: promotedProject,
-    pubspec: replaceGitDependencyRef(
-      pubspec,
-      mapping.packageName,
-      library.releaseRef,
-    ),
-    dependencySnippet: replaceGitDependencyRef(
-      dependencySnippet,
-      mapping.packageName,
-      library.releaseRef,
-    ),
-    promotion: {
-      library: libraryId,
-      version: library.sourceVersion,
-      releaseRef: library.releaseRef,
-    },
-  };
+export function removeGitDependency(source, packageName) {
+  const { lines, start, end } = dependencyRange(source, packageName);
+  let removalEnd = end;
+  if (removalEnd < lines.length && lines[removalEnd - 1] === "") {
+    removalEnd -= 1;
+  } else if (removalEnd < lines.length && lines[removalEnd] === "") {
+    removalEnd += 1;
+  }
+  lines.splice(start, removalEnd - start);
+  return lines.join("\n");
+}
+
+function catalogueLibraries(catalogue, coverageManifest) {
+  if (catalogue?.schemaVersion !== 4) {
+    throw new Error("The SDK catalogue must use schemaVersion 4");
+  }
+  if (
+    String(catalogue?.repository || "").replace(/\.git$/u, "") !==
+    String(coverageManifest.platformRepository || "").replace(/\.git$/u, "")
+  ) {
+    throw new Error("The SDK catalogue does not belong to the coverage manifest");
+  }
+  const entries = new Map(
+    (catalogue.libraries ?? []).map((library) => [library.id, library]),
+  );
+  if (
+    !Array.isArray(catalogue.libraries) ||
+    catalogue.libraries.length !== Object.keys(sdkContracts).length ||
+    entries.size !== Object.keys(sdkContracts).length
+  ) {
+    throw new Error("The SDK catalogue must contain the complete governed set");
+  }
+  for (const [id, contract] of Object.entries(sdkContracts)) {
+    const library = entries.get(id);
+    if (!library) throw new Error(`${id} is missing from the SDK catalogue`);
+    if (
+      library.lifecycle !== contract.lifecycle ||
+      library.sourcePath !== contract.sourcePath
+    ) {
+      throw new Error(`${id} has an invalid lifecycle or source path`);
+    }
+    if (contract.lifecycle !== "active") {
+      if (
+        library.releaseStatus !== "released" ||
+        library.sourceVersion !== library.latestReleaseVersion
+      ) {
+        throw new Error(`${id} ${contract.lifecycle} baseline must stay frozen`);
+      }
+    }
+  }
+  return entries;
+}
+
+function requireCompleteActiveSet(entries) {
+  const incomplete = activeIds.filter((id) => {
+    const library = entries.get(id);
+    return (
+      library.releaseStatus !== "released" ||
+      library.sourceVersion !== library.latestReleaseVersion ||
+      !String(library.packageName ?? "").startsWith("superboard_") ||
+      library.candidatePackageName ||
+      library.candidateInstall
+    );
+  });
+  if (incomplete.length > 0) {
+    throw new Error(
+      `Active SDK promotion is incomplete: ${incomplete.join(", ")} must be fully published together`,
+    );
+  }
+}
+
+function promotedRef(library, contract) {
+  const expected = `${contract.releasePrefix}${library.sourceVersion}`;
+  if (library.releaseRef !== expected) {
+    throw new Error(`${library.id} release ref must be ${expected}`);
+  }
+  if (!/^[0-9a-f]{40}$/u.test(library.releaseSha ?? "")) {
+    throw new Error(`${library.id} release SHA must be a full commit SHA`);
+  }
+  return expected;
 }
 
 export function promoteReferenceSdkSet({
@@ -126,101 +162,91 @@ export function promoteReferenceSdkSet({
   dependencySnippet,
   coverageManifest,
 }) {
-  let state = { project, pubspec, dependencySnippet };
+  validateSdkCoverage(coverageManifest);
+  const entries = catalogueLibraries(catalogue, coverageManifest);
+  requireCompleteActiveSet(entries);
+
+  const nextProject = structuredClone(project);
+  const nextCoverage = structuredClone(coverageManifest);
+  let nextPubspec = pubspec;
+  let nextSnippet = dependencySnippet;
   const promotions = [];
-  for (const libraryId of Object.keys(referenceSdkMappings)) {
-    const result = promoteReferenceSdk({
-      ...state,
-      catalogue,
-      libraryId,
+
+  for (const id of activeIds) {
+    const source = entries.get(id);
+    const contract = sdkContracts[id];
+    const baseline = nextCoverage.libraries.find((library) => library.id === id);
+    const releaseRef = promotedRef(source, contract);
+    nextPubspec = replaceGitDependency(
+      nextPubspec,
+      baseline.packageName,
+      source.packageName,
+      releaseRef,
+    );
+    if (referenceSdkMappings[id].projectLibrary) {
+      nextSnippet = replaceGitDependency(
+        nextSnippet,
+        baseline.packageName,
+        source.packageName,
+        releaseRef,
+      );
+      delete nextProject.libraries[baseline.packageName];
+      nextProject.libraries[source.packageName] = {
+        path: source.sourcePath,
+        developmentRef: nextProject.deployment.branch,
+        sourceVersion: source.sourceVersion,
+        releaseVersion: source.latestReleaseVersion,
+        releaseRef,
+      };
+    }
+    Object.assign(baseline, {
+      packageName: source.packageName,
+      sourceVersion: source.sourceVersion,
+      baselineVersion: source.latestReleaseVersion,
+      baselineRef: releaseRef,
+      baselineTag: releaseRef,
+      baselineSha: source.releaseSha,
+      catalogueStatus: "released",
     });
-    state = {
-      project: result.project,
-      pubspec: result.pubspec,
-      dependencySnippet: result.dependencySnippet,
-    };
-    promotions.push(result.promotion);
+    delete baseline.candidatePackageName;
+    delete baseline.candidateRef;
+    promotions.push({ library: id, version: source.sourceVersion, releaseRef });
   }
-  if (!coverageManifest) return { ...state, promotions };
-  const coverage = promoteSdkCoverageManifest({
-    coverageManifest,
-    catalogue,
-    pubspec: state.pubspec,
-  });
+
+  const support = nextCoverage.libraries.find(
+    ({ id }) => id === "flutterflow-support",
+  );
+  nextPubspec = removeGitDependency(nextPubspec, support.packageName);
+  nextSnippet = removeGitDependency(nextSnippet, support.packageName);
+  delete nextProject.libraries[support.packageName];
+  support.coverageMode = "historical-release";
+
+  validateSdkCoverage(nextCoverage);
+  const readiness = sdkReadiness(nextCoverage.libraries);
+  if (!readiness.promotionReady) {
+    throw new Error("The promoted active SDK set is not ready");
+  }
   return {
-    ...state,
-    pubspec: coverage.pubspec,
-    coverageManifest: coverage.coverageManifest,
+    project: nextProject,
+    pubspec: nextPubspec,
+    dependencySnippet: nextSnippet,
+    coverageManifest: nextCoverage,
     promotions,
+    readiness,
   };
 }
 
-export function promoteSdkCoverageManifest({
-  coverageManifest,
-  catalogue,
-  pubspec,
-}) {
-  validateSdkCoverage(coverageManifest);
-  if (
-    String(catalogue?.repository || "").replace(/\.git$/u, "") !==
-    String(coverageManifest.platformRepository || "").replace(/\.git$/u, "")
-  ) {
-    throw new Error("The SDK catalogue does not belong to the coverage manifest");
-  }
-  const catalogued = new Map(
-    (catalogue.libraries ?? []).map((library) => [library.id, library]),
+export function promoteReferenceSdk(input) {
+  throw new Error(
+    `Individual SDK promotion is disabled; ${activeIds.join(" and ")} must be promoted together`,
   );
-  if (
-    !Array.isArray(catalogue.libraries) ||
-    catalogue.libraries.length !== Object.keys(sdkContracts).length ||
-    catalogued.size !== Object.keys(sdkContracts).length
-  ) {
-    throw new Error("The SDK catalogue must contain the complete seven-SDK set");
-  }
-  const promoted = structuredClone(coverageManifest);
-  for (const library of promoted.libraries) {
-    const source = catalogued.get(library.id);
-    const contract = sdkContracts[library.id];
-    if (!source) throw new Error(`${library.id} is missing from the SDK catalogue`);
-    if (
-      source.releaseStatus !== "released" ||
-      source.sourceVersion !== source.latestReleaseVersion
-    ) {
-      throw new Error(`${library.id} is not a fully published SDK release`);
-    }
-    if (
-      source.packageName !== contract.packageName ||
-      source.sourcePath !== contract.sourcePath
-    ) {
-      throw new Error(`${library.id} has an invalid SDK catalogue identity`);
-    }
-    const releaseTag = `${contract.releasePrefix}${source.sourceVersion}`;
-    const releaseRef = library.id === "ios" ? source.sourceVersion : releaseTag;
-    if (source.releaseRef !== releaseRef) {
-      throw new Error(`${library.id} release ref must be ${releaseRef}`);
-    }
-    if (!/^[0-9a-f]{40}$/u.test(source.releaseSha ?? "")) {
-      throw new Error(`${library.id} release SHA must be a full commit SHA`);
-    }
-    Object.assign(library, {
-      packageName: contract.packageName,
-      sourcePath: contract.sourcePath,
-      version: source.sourceVersion,
-      releaseRef,
-      releaseTag,
-      releaseSha: source.releaseSha,
-      coverageMode: contract.coverageMode,
-    });
-  }
-  validateSdkCoverage(promoted);
-  const flutter = promoted.libraries.find(({ id }) => id === "flutter");
+}
+
+export function promoteSdkCoverageManifest(input) {
+  const result = promoteReferenceSdkSet(input);
   return {
-    coverageManifest: promoted,
-    pubspec: replaceGitDependencyRef(
-      pubspec,
-      flutter.packageName,
-      flutter.releaseRef,
-    ),
+    coverageManifest: result.coverageManifest,
+    pubspec: result.pubspec,
   };
 }
 
@@ -230,15 +256,15 @@ function parseArguments(values) {
     const value = values[index];
     if (!value.startsWith("--") || !values[index + 1]) {
       throw new Error(
-        "Usage: reference-sdk-promotion.mjs --catalog <path> --library <id>",
+        "Usage: reference-sdk-promotion.mjs --catalog <path> --library all",
       );
     }
     result[value.slice(2)] = values[index + 1];
     index += 1;
   }
-  if (!result.catalog || !result.library) {
+  if (!result.catalog || result.library !== "all") {
     throw new Error(
-      "Usage: reference-sdk-promotion.mjs --catalog <path> --library <id>",
+      "Usage: reference-sdk-promotion.mjs --catalog <path> --library all",
     );
   }
   return result;
@@ -249,11 +275,7 @@ async function run() {
   const paths = {
     project: path.join(root, "reference.project.json"),
     pubspec: path.join(root, "pubspec.yaml"),
-    dependencySnippet: path.join(
-      root,
-      "flutterflow",
-      "dependency-snippet.yaml",
-    ),
+    dependencySnippet: path.join(root, "flutterflow", "dependency-snippet.yaml"),
     coverageManifest: path.join(root, "config/sdk-coverage.json"),
     catalogue: path.resolve(args.catalog),
   };
@@ -263,32 +285,25 @@ async function run() {
     dependencySnippet,
     coverageManifestSource,
     catalogueSource,
-  ] =
-    await Promise.all([
-      readFile(paths.project, "utf8"),
-      readFile(paths.pubspec, "utf8"),
-      readFile(paths.dependencySnippet, "utf8"),
-      readFile(paths.coverageManifest, "utf8"),
-      readFile(paths.catalogue, "utf8"),
-    ]);
-  const input = {
+  ] = await Promise.all([
+    readFile(paths.project, "utf8"),
+    readFile(paths.pubspec, "utf8"),
+    readFile(paths.dependencySnippet, "utf8"),
+    readFile(paths.coverageManifest, "utf8"),
+    readFile(paths.catalogue, "utf8"),
+  ]);
+  const result = promoteReferenceSdkSet({
     project: JSON.parse(projectSource),
     catalogue: JSON.parse(catalogueSource),
     pubspec,
     dependencySnippet,
     coverageManifest: JSON.parse(coverageManifestSource),
-  };
-  const result =
-    args.library === "all"
-      ? promoteReferenceSdkSet(input)
-      : promoteReferenceSdk({ ...input, libraryId: args.library });
+  });
   const next = {
     project: `${JSON.stringify(result.project, null, 2)}\n`,
     pubspec: result.pubspec,
     dependencySnippet: result.dependencySnippet,
-    coverageManifest: result.coverageManifest
-      ? `${JSON.stringify(result.coverageManifest, null, 2)}\n`
-      : coverageManifestSource,
+    coverageManifest: `${JSON.stringify(result.coverageManifest, null, 2)}\n`,
   };
   const changed =
     next.project !== projectSource ||
@@ -304,14 +319,7 @@ async function run() {
     ]);
   }
   process.stdout.write(
-    `${JSON.stringify(
-      {
-        promotions: result.promotions ?? [result.promotion],
-        changed,
-      },
-      null,
-      2,
-    )}\n`,
+    `${JSON.stringify({ promotions: result.promotions, readiness: result.readiness, changed }, null, 2)}\n`,
   );
 }
 
@@ -320,9 +328,7 @@ const invokedPath = process.argv[1]
   : "";
 if (import.meta.url === invokedPath) {
   run().catch((error) => {
-    process.stderr.write(
-      `${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;
   });
 }

@@ -6,6 +6,7 @@ import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
 import '../model/reference_feature.dart';
 import '../services/reference_actions.dart';
 import '../state/reference_state.dart';
+import '../widgets/sdk_catalog_status.dart';
 
 class ReferenceShell extends StatefulWidget {
   const ReferenceShell({
@@ -65,6 +66,7 @@ class _ReferenceShellState extends State<ReferenceShell> {
           ],
         ),
         actions: [
+          const SdkCatalogueStatus(),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Chip(
@@ -291,7 +293,7 @@ class _ReferenceFeaturePageState extends State<ReferenceFeaturePage> {
           const _MessageCard(
             title: 'Safe demo mode',
             lines: [
-              'Remote writes and provider calls are disabled. Start with OPENGROW_LIVE_MODE=true only against the development target.',
+              'Remote writes and provider calls are disabled. Start with SUPERBOARD_LIVE_MODE=true only against the development target.',
             ],
           ),
         Card(

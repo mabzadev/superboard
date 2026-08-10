@@ -1,6 +1,6 @@
 {
   "$schema": "schemas/reference-project.schema.json",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "name": "SuperBoard Reference",
   "platformRepository": "https://github.com/mbzadev/superboard-platform",
   "referenceRepository": "https://github.com/mbzadev/superboard-reference",
@@ -14,7 +14,9 @@
   "deployment": {
     "branch": "dev",
     "environment": "development",
+    "logicalName": "superboard-reference",
     "workerName": "opengrow-reference-app-dev",
+    "resourceIdentity": "legacy-compatible",
     "compatibilityDate": "2026-08-08"
   },
   "endpoints": {
@@ -26,6 +28,14 @@
     "files": "https://files.mbza.dev",
     "mailPreview": "https://mail.mbza.dev",
     "support": "https://api.mbza.dev/api/v1/support-client"
+  },
+  "sdkCatalogue": {
+    "schemaVersion": 4,
+    "coverageManifest": "config/sdk-coverage.json",
+    "promotionPolicy": "complete-active-set",
+    "active": ["flutter", "flutterflow"],
+    "internal": ["android", "ios"],
+    "archived": ["flutterflow-support", "javascript", "react-native"]
   },
   "libraries": {
     "opengrow_flutterflow": {

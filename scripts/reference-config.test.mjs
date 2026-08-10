@@ -83,7 +83,7 @@ test("reference project matches its strict versioned schema", () => {
 });
 
 test("the project schema pins every MBZA endpoint to its exact public URL", () => {
-  assert.equal(project.schemaVersion, 3);
+  assert.equal(project.schemaVersion, 4);
   assert.equal(project.target, "mbza-development");
   assert.deepEqual(project.endpoints, referenceEndpointContract);
   assert.deepEqual(
@@ -126,12 +126,12 @@ test("every runtime endpoint is derived from the same reference project manifest
   assertCoordinatedReferenceConfig(project, development);
   assert.deepEqual(
     {
-      api: development.OPENGROW_API_URL,
-      sdk: development.OPENGROW_SDK_URL,
-      support: development.OPENGROW_SUPPORT_URL,
-      shortLinks: development.OPENGROW_SHORT_LINKS_URL,
-      files: development.OPENGROW_FILES_URL,
-      mailPreview: development.OPENGROW_MAIL_PREVIEW_URL,
+      api: development.SUPERBOARD_API_URL,
+      sdk: development.SUPERBOARD_SDK_URL,
+      support: development.SUPERBOARD_SUPPORT_URL,
+      shortLinks: development.SUPERBOARD_SHORT_LINKS_URL,
+      files: development.SUPERBOARD_FILES_URL,
+      mailPreview: development.SUPERBOARD_MAIL_PREVIEW_URL,
     },
     {
       api: project.endpoints.api,
@@ -150,15 +150,15 @@ test("coordinated project and development drift still fails closed", () => {
   driftedProject.endpoints.api = "https://api-next.mbza.dev";
   driftedProject.endpoints.support =
     "https://api-next.mbza.dev/api/v1/support-client";
-  driftedDevelopment.OPENGROW_API_URL = driftedProject.endpoints.api;
-  driftedDevelopment.OPENGROW_SUPPORT_URL = driftedProject.endpoints.support;
+  driftedDevelopment.SUPERBOARD_API_URL = driftedProject.endpoints.api;
+  driftedDevelopment.SUPERBOARD_SUPPORT_URL = driftedProject.endpoints.support;
 
   assert.equal(
-    driftedDevelopment.OPENGROW_API_URL,
+    driftedDevelopment.SUPERBOARD_API_URL,
     driftedProject.endpoints.api,
   );
   assert.equal(
-    driftedDevelopment.OPENGROW_SUPPORT_URL,
+    driftedDevelopment.SUPERBOARD_SUPPORT_URL,
     driftedProject.endpoints.support,
   );
   const validate = new Ajv({ allErrors: true }).compile(projectSchema);
@@ -184,6 +184,14 @@ test("libraries come from superboard-platform and custom code is not copied", as
   assert.equal(catalog.widgets, undefined);
   assert.equal(catalog.actions, undefined);
   assert.deepEqual(catalog.referenceAdapters, {});
+  assert.deepEqual(project.sdkCatalogue, {
+    schemaVersion: 4,
+    coverageManifest: "config/sdk-coverage.json",
+    promotionPolicy: "complete-active-set",
+    active: ["flutter", "flutterflow"],
+    internal: ["android", "ios"],
+    archived: ["flutterflow-support", "javascript", "react-native"],
+  });
   const libraryContracts = {
     opengrow_flutterflow: {
       path: "sdks/flutterflow",
@@ -237,25 +245,25 @@ test("the executable development profile has public endpoints but no credential"
     [...developmentDartDefineKeys].sort(),
   );
   assertDevelopmentDartDefineContract(development);
-  assert.equal(development.OPENGROW_SHORT_LINKS_URL, "https://in.mbza.dev");
+  assert.equal(development.SUPERBOARD_SHORT_LINKS_URL, "https://in.mbza.dev");
   assert.equal(
-    development.OPENGROW_SUPPORT_URL,
+    development.SUPERBOARD_SUPPORT_URL,
     "https://api.mbza.dev/api/v1/support-client",
   );
-  assert.equal(development.OPENGROW_LIVE_MODE, "false");
-  assert.equal(development.OPENGROW_PROJECT_KEY, "");
-  assert.equal(development.OPENGROW_PLATFORM_REVISION, "local");
-  assert.equal(development.OPENGROW_REFERENCE_REVISION, "local");
+  assert.equal(development.SUPERBOARD_LIVE_MODE, "false");
+  assert.equal(development.SUPERBOARD_PROJECT_KEY, "");
+  assert.equal(development.SUPERBOARD_PLATFORM_REVISION, "local");
+  assert.equal(development.SUPERBOARD_REFERENCE_REVISION, "local");
   assert.equal(
-    development.OPENGROW_SDK_PLATFORM,
+    development.SUPERBOARD_SDK_PLATFORM,
     project.sdkApplication.platform,
   );
   assert.equal(
-    development.OPENGROW_SDK_IDENTIFIER,
+    development.SUPERBOARD_SDK_IDENTIFIER,
     project.sdkApplication.identifier,
   );
   assert.equal(
-    development.OPENGROW_PROJECT_ENVIRONMENT,
+    development.SUPERBOARD_PROJECT_ENVIRONMENT,
     project.sdkApplication.projectEnvironment,
   );
   assert.ok(
@@ -277,64 +285,64 @@ test("development Dart defines use a strict, complete key allowlist", () => {
     () =>
       assertDevelopmentDartDefineContract({
         ...development,
-        OPENGROW_API_TOKEN: "must-never-be-a-Dart-define",
+        SUPERBOARD_API_TOKEN: "must-never-be-a-Dart-define",
       }),
-    /unexpected: OPENGROW_API_TOKEN/u,
+    /unexpected: SUPERBOARD_API_TOKEN/u,
   );
   assert.throws(
     () =>
       assertDevelopmentDartDefineContract({
         ...development,
-        OPENGROW_PROJECT_ID: 0,
+        SUPERBOARD_PROJECT_ID: 0,
       }),
-    /OPENGROW_PROJECT_ID must be a string/u,
+    /SUPERBOARD_PROJECT_ID must be a string/u,
   );
   assert.throws(
     () =>
       assertDevelopmentDartDefineContract({
         ...development,
-        OPENGROW_FILES_URL: "https://files.mbza.dev/private",
+        SUPERBOARD_FILES_URL: "https://files.mbza.dev/private",
       }),
-    /OPENGROW_FILES_URL must be "https:\/\/files\.mbza\.dev"/u,
+    /SUPERBOARD_FILES_URL must be "https:\/\/files\.mbza\.dev"/u,
   );
 });
 
 test("live Flutter builds require project identity and exact tested revisions", () => {
   const environment = {
-    OPENGROW_PROJECT_KEY: "reference-public-sdk-key",
-    OPENGROW_PROJECT_ID: "42",
-    OPENGROW_PLATFORM_REVISION: "a".repeat(40),
-    OPENGROW_REFERENCE_REVISION: "b".repeat(40),
-    OPENGROW_API_URL: "https://attacker.example",
-    OPENGROW_UNREVIEWED_DEFINE: "must-not-ship",
+    SUPERBOARD_PROJECT_KEY: "reference-public-sdk-key",
+    SUPERBOARD_PROJECT_ID: "42",
+    SUPERBOARD_PLATFORM_REVISION: "a".repeat(40),
+    SUPERBOARD_REFERENCE_REVISION: "b".repeat(40),
+    SUPERBOARD_API_URL: "https://attacker.example",
+    SUPERBOARD_UNREVIEWED_DEFINE: "must-not-ship",
   };
   const defines = buildFlutterDefines(development, environment, { live: true });
   assert.deepEqual(
     Object.keys(defines).sort(),
     [...developmentDartDefineKeys].sort(),
   );
-  assert.equal(defines.OPENGROW_LIVE_MODE, "true");
-  assert.equal(defines.OPENGROW_PROJECT_KEY, environment.OPENGROW_PROJECT_KEY);
-  assert.equal(defines.OPENGROW_PROJECT_ID, "42");
-  assert.equal(defines.OPENGROW_API_URL, referenceEndpointContract.api);
-  assert.equal(defines.OPENGROW_UNREVIEWED_DEFINE, undefined);
+  assert.equal(defines.SUPERBOARD_LIVE_MODE, "true");
+  assert.equal(defines.SUPERBOARD_PROJECT_KEY, environment.SUPERBOARD_PROJECT_KEY);
+  assert.equal(defines.SUPERBOARD_PROJECT_ID, "42");
+  assert.equal(defines.SUPERBOARD_API_URL, referenceEndpointContract.api);
+  assert.equal(defines.SUPERBOARD_UNREVIEWED_DEFINE, undefined);
   assert.equal(
-    defines.OPENGROW_PLATFORM_REVISION,
-    environment.OPENGROW_PLATFORM_REVISION,
+    defines.SUPERBOARD_PLATFORM_REVISION,
+    environment.SUPERBOARD_PLATFORM_REVISION,
   );
   assert.equal(
-    defines.OPENGROW_REFERENCE_REVISION,
-    environment.OPENGROW_REFERENCE_REVISION,
+    defines.SUPERBOARD_REFERENCE_REVISION,
+    environment.SUPERBOARD_REFERENCE_REVISION,
   );
   assert.throws(
     () => buildFlutterDefines(development, {}, { live: true }),
-    /OPENGROW_PLATFORM_REVISION/,
+    /SUPERBOARD_PLATFORM_REVISION/,
   );
   assert.throws(
     () =>
       buildFlutterDefines(
         development,
-        { ...environment, OPENGROW_PROJECT_ID: "0" },
+        { ...environment, SUPERBOARD_PROJECT_ID: "0" },
         { live: true },
       ),
     /positive integer/,
@@ -343,13 +351,13 @@ test("live Flutter builds require project identity and exact tested revisions", 
 
 test("demo Flutter builds discard credentials and mark unproven revisions local", () => {
   const defines = buildFlutterDefines(development, {
-    OPENGROW_PROJECT_KEY: "also-must-not-ship",
+    SUPERBOARD_PROJECT_KEY: "also-must-not-ship",
   });
-  assert.equal(defines.OPENGROW_LIVE_MODE, "false");
-  assert.equal(defines.OPENGROW_PROJECT_KEY, "");
-  assert.equal(defines.OPENGROW_PROJECT_ID, "0");
-  assert.equal(defines.OPENGROW_PLATFORM_REVISION, "local");
-  assert.equal(defines.OPENGROW_REFERENCE_REVISION, "local");
+  assert.equal(defines.SUPERBOARD_LIVE_MODE, "false");
+  assert.equal(defines.SUPERBOARD_PROJECT_KEY, "");
+  assert.equal(defines.SUPERBOARD_PROJECT_ID, "0");
+  assert.equal(defines.SUPERBOARD_PLATFORM_REVISION, "local");
+  assert.equal(defines.SUPERBOARD_REFERENCE_REVISION, "local");
   assert.deepEqual(
     Object.keys(defines).sort(),
     [...developmentDartDefineKeys].sort(),
@@ -358,10 +366,38 @@ test("demo Flutter builds discard credentials and mark unproven revisions local"
     () =>
       buildFlutterDefines({
         ...development,
-        OPENGROW_PROJECT_KEY: "must-not-ship",
+        SUPERBOARD_PROJECT_KEY: "must-not-ship",
       }),
-    /OPENGROW_PROJECT_KEY must be ""/u,
+    /SUPERBOARD_PROJECT_KEY must be ""/u,
   );
+});
+
+test("legacy OpenGrow build inputs remain fallback-only behind canonical variables", () => {
+  const legacy = {
+    OPENGROW_PROJECT_KEY: "legacy-reference-public-sdk-key",
+    OPENGROW_PROJECT_ID: "42",
+    OPENGROW_PLATFORM_REVISION: "a".repeat(40),
+    OPENGROW_REFERENCE_REVISION: "b".repeat(40),
+  };
+  const defines = buildFlutterDefines(development, legacy, { live: true });
+  assert.equal(defines.SUPERBOARD_PROJECT_KEY, legacy.OPENGROW_PROJECT_KEY);
+  assert.equal(defines.SUPERBOARD_PROJECT_ID, legacy.OPENGROW_PROJECT_ID);
+  assert.deepEqual(Object.keys(defines).sort(), [...developmentDartDefineKeys].sort());
+  assert.ok(Object.keys(defines).every((key) => key.startsWith("SUPERBOARD_")));
+
+  const canonical = buildFlutterDefines(
+    development,
+    {
+      ...legacy,
+      SUPERBOARD_PROJECT_KEY: "canonical-key",
+      SUPERBOARD_PROJECT_ID: "84",
+      SUPERBOARD_PLATFORM_REVISION: "c".repeat(40),
+      SUPERBOARD_REFERENCE_REVISION: "d".repeat(40),
+    },
+    { live: true },
+  );
+  assert.equal(canonical.SUPERBOARD_PROJECT_KEY, "canonical-key");
+  assert.equal(canonical.SUPERBOARD_PROJECT_ID, "84");
 });
 
 test("reference deployment is restricted to the development branch and custom domain", () => {
@@ -369,6 +405,8 @@ test("reference deployment is restricted to the development branch and custom do
 
   assert.equal(project.deployment.branch, "dev");
   assert.equal(project.deployment.environment, "development");
+  assert.equal(project.deployment.logicalName, "superboard-reference");
+  assert.equal(project.deployment.resourceIdentity, "legacy-compatible");
   assert.equal(
     new URL(project.endpoints.referenceWeb).hostname,
     project.sdkApplication.identifier,
@@ -514,9 +552,9 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   );
   assert.match(
     workflow,
-    /OPENGROW_HISTORY_BRIDGE_VALIDATED: \$\{\{ needs\.contract\.outputs\.history_bridge_validated \}\}/,
+    /SUPERBOARD_HISTORY_BRIDGE_VALIDATED: \$\{\{ needs\.contract\.outputs\.history_bridge_validated \}\}/,
   );
-  assert.match(workflow, /OPENGROW_PRODUCTION_BRANCH: main/);
+  assert.match(workflow, /SUPERBOARD_PRODUCTION_BRANCH: main/);
   assert.match(
     workflow,
     /ref: \$\{\{ steps\.platform-ref\.outputs\.ref \}\}/,
@@ -536,22 +574,24 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   );
   assert.match(
     workflow,
-    /OPENGROW_GITHUB_EVENT_NAME: \$\{\{ github\.event_name \}\}/u,
+    /SUPERBOARD_GITHUB_EVENT_NAME: \$\{\{ github\.event_name \}\}/u,
   );
   assert.match(
     workflow,
-    /OPENGROW_GITHUB_REF_NAME: \$\{\{ github\.ref_name \}\}/u,
+    /SUPERBOARD_GITHUB_REF_NAME: \$\{\{ github\.ref_name \}\}/u,
   );
   assert.match(
     workflow,
-    /OPENGROW_GITHUB_EVENT_ACTION: \$\{\{ github\.event\.action \}\}/u,
+    /SUPERBOARD_GITHUB_EVENT_ACTION: \$\{\{ github\.event\.action \}\}/u,
   );
   assert.match(workflow, /environment: development/);
   assert.match(workflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
   assert.match(workflow, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.match(workflow, /secrets\.SUPERBOARD_PROJECT_KEY/);
+  assert.match(workflow, /secrets\.SUPERBOARD_PROJECT_ID/);
   assert.match(workflow, /secrets\.OPENGROW_PROJECT_KEY/);
   assert.match(workflow, /secrets\.OPENGROW_PROJECT_ID/);
-  assert.doesNotMatch(workflow, /OPENGROW_PLATFORM_READ_TOKEN/);
+  assert.doesNotMatch(workflow, /SUPERBOARD_PLATFORM_READ_TOKEN/);
   assert.match(workflow, /node scripts\/reference-ci-metadata\.mjs/);
   assert.match(
     workflow,
@@ -582,11 +622,11 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /npm run flutter:web:live/);
   assert.match(
     workflow,
-    /OPENGROW_PLATFORM_REVISION: \$\{\{ needs\.flutter\.outputs\.platform_sha \}\}/,
+    /SUPERBOARD_PLATFORM_REVISION: \$\{\{ needs\.flutter\.outputs\.platform_sha \}\}/,
   );
   assert.match(
     workflow,
-    /OPENGROW_REFERENCE_REVISION: \$\{\{ needs\.flutter\.outputs\.reference_sha \}\}/,
+    /SUPERBOARD_REFERENCE_REVISION: \$\{\{ needs\.flutter\.outputs\.reference_sha \}\}/,
   );
   assert.match(
     workflow,
@@ -622,46 +662,32 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /gh workflow run ci\.yml --ref "\$PROMOTION_BRANCH"/);
   assert.doesNotMatch(workflow, /gh pr (?:merge|review)/);
   assert.ok(
-    workflow.indexOf("Verify the official development catalogue") <
+    workflow.indexOf("Verify the official lifecycle catalogue") <
       workflow.indexOf("Propose the immutable SDK set"),
   );
   assert.match(
     workflow,
-    /Verify all seven immutable SDK tags and public GitHub Releases/,
+    /Verify immutable published baselines and historical releases/,
   );
   assert.match(workflow, /npm run sdk:coverage:verify/);
   assert.match(workflow, /npm run sdk:coverage:catalog/);
   assert.match(
     workflow,
-    /Verify locked immutable SDK tags before local overrides/,
+    /Compile only against locked immutable SDK baselines/,
   );
   assert.match(workflow, /reference-sdk-lock\.mjs verify-remote/);
   assert.match(workflow, /flutter pub get --enforce-lockfile/);
-  assert.match(workflow, /OPENGROW_FLUTTER_VERSION: "3\.44\.9"/);
+  assert.match(workflow, /SUPERBOARD_FLUTTER_VERSION: "3\.44\.9"/);
   assert.equal(
     (
       workflow.match(
-        /flutter-version: \$\{\{ env\.OPENGROW_FLUTTER_VERSION \}\}/gu,
+        /flutter-version: \$\{\{ env\.SUPERBOARD_FLUTTER_VERSION \}\}/gu,
       ) ?? []
     ).length,
     3,
   );
-  assert.match(
-    workflow,
-    /Restore the reviewed lockfile after local override resolution/,
-  );
-  assert.match(
-    workflow,
-    /git restore --source=HEAD --worktree -- pubspec\.lock/,
-  );
-  assert.ok(
-    workflow.indexOf(
-      "Verify locked immutable SDK tags before local overrides",
-    ) <
-      workflow.indexOf(
-        'dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/superboard-platform"',
-      ),
-  );
+  assert.doesNotMatch(workflow, /dart tool\/use_local_platform\.dart/);
+  assert.doesNotMatch(workflow, /git restore --source=HEAD --worktree -- pubspec\.lock/);
 });
 
 function pubspecDependencyRef(source, packageName) {

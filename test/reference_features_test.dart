@@ -32,7 +32,7 @@ void main() {
   });
 
   test(
-    'support uses canonical OpenGrow Support and never declares Chatwoot actions',
+    'support uses canonical SuperBoard Support and never declares Chatwoot actions',
     () {
       final support = referenceFeatures.singleWhere(
         (feature) => feature.id == ReferenceFeatureId.support,
