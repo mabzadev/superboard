@@ -55,6 +55,7 @@ jobs:
           path="$sdk"
           test "$sdk" != "flutterflow-messaging" || path="flutterflow_messaging"
           catalog_id="$sdk"
+          test "$sdk" != "js" || catalog_id="javascript"
           test "$sdk" != "flutterflow-messaging" || catalog_id="flutterflow-support"
           development_branch="$(node -p 'require("./config/sdk-libraries.json").developmentBranch')"
           release_sha="$(git rev-parse HEAD)"
@@ -246,6 +247,7 @@ jobs:
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           git merge-base --is-ancestor "$RELEASE_SHA" HEAD
           catalog_id="$SDK"
+          test "$SDK" != "js" || catalog_id="javascript"
           test "$SDK" != "flutterflow-messaging" || catalog_id="flutterflow-support"
           node scripts/sdk-catalog.mjs promote \
             --library "$catalog_id" \

@@ -256,6 +256,11 @@ test("immutable SDK publication revalidates native and React Native packages", (
   );
   assert.match(releaseWorkflow, /npm ci && npm test && npm run build/);
   assert.match(releaseWorkflow, /npm run react-native:native-contract:check/);
+  assert.equal(
+    (releaseWorkflow.match(/test "\$[A-Z_a-z]+" != "js" \|\| catalog_id="javascript"/gu) ?? [])
+      .length,
+    2,
+  );
   assert.match(releaseWorkflow, /:OpenGrow:testDebugUnitTest/);
   assert.match(
     releaseWorkflow,
