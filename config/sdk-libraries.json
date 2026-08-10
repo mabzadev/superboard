@@ -104,19 +104,17 @@
       "id": "react-native",
       "displayName": "OpenGrow React Native",
       "ecosystem": "npm",
-      "packageName": "@mbzadev/opengrow-react-native",
-      "candidatePackageName": "@mbzadev/opengrow-react-native-sdk",
+      "packageName": "@mbzadev/opengrow-react-native-sdk",
       "sourcePath": "sdks/react-native",
       "license": "MIT",
       "licensePath": "sdks/react-native/LICENSE",
       "versionSource": "sdks/react-native/package.json",
       "sourceVersion": "1.0.1",
-      "latestReleaseVersion": "1.0.0",
-      "releaseRef": "sdk-react-native-v1.0.0",
-      "releaseStatus": "pending-release",
+      "latestReleaseVersion": "1.0.1",
+      "releaseRef": "sdk-react-native-v1.0.1",
+      "releaseStatus": "released",
       "notes": "The 1.0.1 release moves to a collision-free package name owned by opengrow-platform; the legacy 1.0.0 package remains linked to mbzadev/opengrow.",
-      "install": "npm install @mbzadev/opengrow-react-native@1.0.0",
-      "candidateInstall": "npm install @mbzadev/opengrow-react-native-sdk@1.0.1"
+      "install": "npm install @mbzadev/opengrow-react-native-sdk@1.0.1"
     }
   ]
 }
