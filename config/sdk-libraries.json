@@ -63,10 +63,10 @@
       "licensePath": "sdks/ios/LICENSE",
       "versionSource": "sdks/ios/OpenGrow.podspec",
       "sourceVersion": "1.0.2",
-      "latestReleaseVersion": "1.0.0",
-      "releaseRef": "1.0.0",
-      "releaseStatus": "pending-release",
-      "install": ".package(url: \"https://github.com/mbzadev/opengrow-platform.git\", exact: \"1.0.0\")"
+      "latestReleaseVersion": "1.0.2",
+      "releaseRef": "1.0.2",
+      "releaseStatus": "released",
+      "install": ".package(url: \"https://github.com/mbzadev/opengrow-platform.git\", exact: \"1.0.2\")"
     },
     {
       "id": "android",
