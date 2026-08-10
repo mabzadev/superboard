@@ -30,11 +30,11 @@
       "licensePath": "sdks/flutterflow/LICENSE",
       "versionSource": "sdks/flutterflow/pubspec.yaml",
       "sourceVersion": "2.2.4",
-      "latestReleaseVersion": "2.1.6",
-      "releaseRef": "sdk-flutterflow-v2.1.6",
-      "releaseStatus": "pending-release",
+      "latestReleaseVersion": "2.2.4",
+      "releaseRef": "sdk-flutterflow-v2.2.4",
+      "releaseStatus": "released",
       "surfaceManifest": "config/flutterflow-custom-code.json",
-      "install": "opengrow_flutterflow:\n  git:\n    url: https://github.com/mbzadev/opengrow-platform.git\n    ref: sdk-flutterflow-v2.1.6\n    path: sdks/flutterflow"
+      "install": "opengrow_flutterflow:\n  git:\n    url: https://github.com/mbzadev/opengrow-platform.git\n    ref: sdk-flutterflow-v2.2.4\n    path: sdks/flutterflow"
     },
     {
       "id": "flutterflow-support",
