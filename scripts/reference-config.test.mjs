@@ -464,9 +464,22 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /fetch-depth: 0/);
   assert.match(workflow, /git merge-base --is-ancestor/);
   assert.match(workflow, /refs\/heads\/\$DEPLOYMENT_BRANCH/);
+  assert.match(workflow, /Resolve fail-closed development deployment gate/);
   assert.match(
     workflow,
-    /github\.ref_name == needs\.contract\.outputs\.deployment_branch/,
+    /deployment_eligible: \$\{\{ steps\.deployment-gate\.outputs\.eligible \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /OPENGROW_GITHUB_EVENT_NAME: \$\{\{ github\.event_name \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /OPENGROW_GITHUB_REF_NAME: \$\{\{ github\.ref_name \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /OPENGROW_GITHUB_EVENT_ACTION: \$\{\{ github\.event\.action \}\}/u,
   );
   assert.match(workflow, /environment: development/);
   assert.match(workflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
@@ -485,6 +498,22 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /validation-gate:/);
   assert.match(workflow, /name: Reference gate/);
   assert.match(workflow, /build-development:/);
+  assert.equal(
+    (
+      workflow.match(
+        /!cancelled\(\) &&\n\s+needs\.contract\.result == 'success' &&\n\s+needs\.validation-gate\.result == 'success' &&\n\s+needs\.flutter\.result == 'success' &&/gu,
+      ) ?? []
+    ).length,
+    2,
+  );
+  assert.match(
+    workflow,
+    /needs\.build-development\.result == 'success' &&\n\s+needs\.contract\.outputs\.deployment_eligible == 'true'/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /\|\| github\.event_name == 'repository_dispatch'/u,
+  );
   assert.match(workflow, /npm run flutter:web:live/);
   assert.match(
     workflow,

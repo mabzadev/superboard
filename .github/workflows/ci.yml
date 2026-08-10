@@ -183,6 +183,7 @@ jobs:
     outputs:
       platform_repository: ${{ steps.metadata.outputs.platform_repository }}
       deployment_branch: ${{ steps.metadata.outputs.deployment_branch }}
+      deployment_eligible: ${{ steps.deployment-gate.outputs.eligible }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -198,6 +199,14 @@ jobs:
       - name: Resolve validated project-owned CI metadata
         id: metadata
         run: node scripts/reference-ci-metadata.mjs >> "$GITHUB_OUTPUT"
+      - name: Resolve fail-closed development deployment gate
+        id: deployment-gate
+        env:
+          OPENGROW_GITHUB_EVENT_NAME: ${{ github.event_name }}
+          OPENGROW_GITHUB_REF_NAME: ${{ github.ref_name }}
+          OPENGROW_GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          OPENGROW_GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: node scripts/reference-deployment-gate.mjs >> "$GITHUB_OUTPUT"
       - name: Require every fully published dependency tag to exist
         env:
           PLATFORM_REPOSITORY: ${{ steps.metadata.outputs.platform_repository }}
@@ -310,7 +319,15 @@ jobs:
           test "$FLUTTER_RESULT" = "success"
 
   build-development:
-    if: ${{ (github.event_name == 'push' && github.ref_name == needs.contract.outputs.deployment_branch) || github.event_name == 'repository_dispatch' }}
+    # A normal push skips promote-sdk, which is an ancestor of this job. The
+    # status function prevents GitHub from injecting success() for that skip;
+    # every direct prerequisite is then checked explicitly below.
+    if: >-
+      !cancelled() &&
+      needs.contract.result == 'success' &&
+      needs.validation-gate.result == 'success' &&
+      needs.flutter.result == 'success' &&
+      needs.contract.outputs.deployment_eligible == 'true'
     needs: [contract, validation-gate, flutter]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -365,7 +382,13 @@ jobs:
           retention-days: 7
 
   deploy-development:
-    if: ${{ (github.event_name == 'push' && github.ref_name == needs.contract.outputs.deployment_branch) || github.event_name == 'repository_dispatch' }}
+    if: >-
+      !cancelled() &&
+      needs.contract.result == 'success' &&
+      needs.validation-gate.result == 'success' &&
+      needs.flutter.result == 'success' &&
+      needs.build-development.result == 'success' &&
+      needs.contract.outputs.deployment_eligible == 'true'
     needs: [contract, validation-gate, flutter, build-development]
     runs-on: ubuntu-latest
     timeout-minutes: 15
