@@ -109,7 +109,7 @@ test("development uses one Cloudflare Workers Builds controller while production
     authority: "cloudflare-workers-builds",
     controllerService: "dashboard",
     buildCommand:
-      "npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check",
+      "git clone --depth 1 --branch dev https://github.com/mbzadev/superboard-reference.git ../superboard-reference && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check",
     deployCommand:
       'npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"',
     buildVariables: [

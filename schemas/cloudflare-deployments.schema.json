@@ -57,7 +57,7 @@
                   "authority": { "const": "cloudflare-workers-builds" },
                   "controllerService": { "const": "dashboard" },
                   "buildCommand": {
-                    "const": "npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check"
+                    "const": "git clone --depth 1 --branch dev https://github.com/mbzadev/superboard-reference.git ../superboard-reference && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check"
                   },
                   "deployCommand": {
                     "type": "string",

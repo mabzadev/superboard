@@ -35,7 +35,8 @@ secret of its own.
 
 - `mbza-development` is deployed from `dev` by Cloudflare Workers Builds. Only
   the target's Dashboard Worker is connected to `mbzadev/superboard-platform`.
-  Its build command installs dependencies and runs the target, service,
+  Cloudflare installs dependencies, then the build command clones the public
+  `superboard-reference` contract and runs the deployment-policy, service,
   typecheck, application and Custom Worker gates before its versioned
   `cloudflare:deploy:all` deploy command can run. Non-production branch builds
   are disabled.
@@ -56,7 +57,7 @@ credential. The exact source-owned Workers Builds contract is:
 ```text
 repository: mbzadev/superboard-platform
 production branch: dev
-build command: npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check
+build command: git clone --depth 1 --branch dev https://github.com/mbzadev/superboard-reference.git ../superboard-reference && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check
 deploy command: npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"
 build variables: CLOUDFLARE_ACCOUNT_ID, SUPERBOARD_TARGET=mbza-development, SUPERBOARD_ENVIRONMENT=development
 non-production branch builds: disabled
