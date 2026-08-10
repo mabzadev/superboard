@@ -45,10 +45,10 @@ The OpenGrow React Native SDK provides deep linking, universal links, app links,
 
 ```bash
 # npm
-npm install @mbzadev/opengrow-react-native-sdk@1.0.1
+npm install @mbzadev/opengrow-react-native-sdk@1.0.2
 
 # yarn
-yarn add @mbzadev/opengrow-react-native-sdk@1.0.1
+yarn add @mbzadev/opengrow-react-native-sdk@1.0.2
 ```
 
 ### Android dependency

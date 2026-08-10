@@ -116,12 +116,12 @@
       "licensePath": "sdks/react-native/LICENSE",
       "versionSource": "sdks/react-native/package.json",
       "sourceVersion": "1.0.2",
-      "latestReleaseVersion": "1.0.1",
-      "releaseRef": "sdk-react-native-v1.0.1",
-      "releaseStatus": "pending-release",
-      "releaseSha": "8f5bcee1a14a1e454d43da391295e9c12d806f30",
+      "latestReleaseVersion": "1.0.2",
+      "releaseRef": "sdk-react-native-v1.0.2",
+      "releaseStatus": "released",
+      "releaseSha": "969bacf6f5c52d205ffe6da18cb4c47d85dfbaeb",
       "notes": "The 1.0.1 release moves to a collision-free package name owned by opengrow-platform; the legacy 1.0.0 package remains linked to mbzadev/opengrow.",
-      "install": "npm install @mbzadev/opengrow-react-native-sdk@1.0.1"
+      "install": "npm install @mbzadev/opengrow-react-native-sdk@1.0.2"
     }
   ]
 }
