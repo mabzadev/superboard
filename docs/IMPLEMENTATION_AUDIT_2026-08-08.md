@@ -1,4 +1,4 @@
-# OpenGrow implementation and readiness audit — updated 9 August 2026
+# OpenGrow implementation and readiness audit — updated 10 August 2026
 
 This is the hand-off record for the `opengrow-platform` and `opengrow-reference`
 baseline. It distinguishes code that exists and has been validated locally from
@@ -27,9 +27,15 @@ the DNS ownership gate cannot inspect records with the current short-lived
 OAuth grant and `in.mbza.dev` is known to have an externally managed record.
 
 The two configured GitHub repositories exist publicly under the authenticated
-`mbzadev` user, but their reviewed local histories have not been pushed. No
-VocoStar production migration, DNS cutover, Chatwoot removal or legacy resource
-deletion was performed.
+`mbzadev` user. Their reviewed histories are pushed to `dev`, both `dev` and
+`main` are protected, the declared GitHub Environments and non-secret variables
+are reconciled, and all repository settings match the versioned control-plane
+manifest. Protected CI has published Flutter `2.1.3`, FlutterFlow `2.2.4`,
+Support `1.3.0` and iOS `1.0.2`; `opengrow-reference/dev` now pins the two
+FlutterFlow packages to their immutable released tags. The remaining GitHub
+gates are encrypted Environment secrets and the Android, JavaScript and React
+Native `1.0.1` package publications. No VocoStar production migration, DNS
+cutover, Chatwoot removal or legacy resource deletion was performed.
 
 VocoStar now explicitly uses `publicRouting: staged`. Generated production
 Workers have no custom-domain routes, while MBZA development remains `active`.
@@ -187,6 +193,33 @@ The last local pass completed the public, reusable repository boundary:
   exist only in generated target output or target manifests.
 
 ## Requirement-by-requirement status
+
+### Git publication update — 10 August 2026
+
+This update supersedes the pre-publication wording retained in the detailed
+baseline narrative below:
+
+- `mbzadev/opengrow-platform` and `mbzadev/opengrow-reference` are public MIT
+  repositories with `dev` as the default branch and protected `dev`/`main`
+  branches. Repository settings, workflow permissions, CODEOWNERS, aggregate
+  checks, Environments and non-secret variables match control-plane schema 5.
+- Remote reconciliation reports no structural operation and no blocker. Its
+  only remaining manual items are encrypted Environment secrets; secret values
+  are neither requested nor returned by the audit.
+- Flutter `2.1.3`, FlutterFlow `2.2.4`, Support `1.3.0` and iOS `1.0.2` have
+  immutable tags and public GitHub releases. The canonical catalogue marks all
+  four released, and remote publication readiness verifies their tags, releases
+  and package refs.
+- The protected reference promotion passed its native pull-request gate and
+  pins FlutterFlow to `sdk-flutterflow-v2.2.4` and Support to
+  `sdk-flutterflow-messaging-v1.3.0` in `reference.project.json`, `pubspec.yaml`
+  and the FlutterFlow dependency snippet.
+- Android, JavaScript and React Native `1.0.1` remain pending. Their legacy
+  GitHub Packages are still associated with `mbzadev/opengrow`; publication
+  from `opengrow-platform` requires the explicit package Actions-access change.
+- Remote FlutterFlow synchronization remains gated by `FF_API_KEY`; VocoStar
+  client convergence remains gated by a fresh reviewed export and its project
+  credential. Neither gate is represented as completed.
 
 | Requirement                                                    | Local implementation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Remaining external gate                                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -536,43 +569,45 @@ data, Chatwoot service or legacy resource was deleted.
 
 ## Authorized execution sequence still required
 
-1. Keep both repositories public and verify `npm run github:bootstrap` reports
-   them as present with no creation operation.
-2. Run `npm run github:history:plan -- --fetch`, separate/review the large local
-   migration diff, then commit `opengrow-platform` and the new
-   `opengrow-reference`. Preserve both exact remote `main` SHAs under the audit
-   refs emitted by the plan before pushing `dev`; do not create a silent
-   unrelated-history merge.
-3. Run the read-only GitHub reconciliation plan, apply its non-secret structure
-   with the exact plan-specific confirmation emitted by the command, then
-   supply the documented repository/Environment secrets through GitHub's
-   encrypted secret interface.
-4. Replace the temporary Analytics OAuth value with a durable least-privilege
+1. Keep both repositories public. The GitHub histories, default `dev` branches,
+   protected `dev`/`main` policies, CODEOWNERS, aggregate gates, Environments
+   and declared non-secret variables are already reconciled. Remote readiness
+   currently reports zero structural operations and only the documented
+   encrypted secrets as manual work.
+2. Supply the documented repository/Environment secrets through GitHub's
+   encrypted secret interface. In particular, install the Cloudflare account
+   IDs/tokens, reference dispatch token, production backup key, FlutterFlow API
+   key and per-application project credentials; never derive them from a local
+   GitHub OAuth token or commit them to Git.
+3. Replace the temporary Analytics OAuth value with a durable least-privilege
    token in the MBZA secret manager/GitHub development Environment. Supply a
    separate deployment token whose read scope covers zones, DNS records and
    Worker custom domains so the strict domain plan can produce verified facts.
-5. Identify the owner and rollback requirement of the existing
+4. Identify the owner and rollback requirement of the existing
    `in.mbza.dev` record. After explicit cutover approval, remove or reassign that
    record and explicitly replace the orphaned `api.mbza.dev` Worker DNS entry so
    the API Worker can own both required custom domains.
-6. Run the now-green name-only secret preflight from GitHub, deploy the exact
+5. Run the now-green name-only secret preflight from GitHub, deploy the exact
    committed `dev` revision, then attach the seven verified platform domains.
-7. Let `opengrow-reference/dev` replace the private bootstrap version through
+6. Let `opengrow-reference/dev` replace the private bootstrap version through
    GitHub, attach `https://reference.mbza.dev` only after the DNS gate, register
    the reference application/project and validate all sixteen journeys,
    infrastructure health, Support realtime/attachments and captured emails.
-8. Publish reviewed immutable FlutterFlow/Support SDK tags, let the protected
-   GitHub workflow test and sync the Git-owned `OpenGrow` FlutterFlow library,
-   then pin the production reference to those tags.
-9. VocoStar's exact nine resources and six private Worker shells are now
+7. FlutterFlow `2.2.4`, Support `1.3.0`, Flutter `2.1.3` and iOS `1.0.2`
+   are published and the reference is pinned to the immutable FlutterFlow tag
+   pair. Supply `FF_API_KEY` to synchronize the reviewed Git-owned `OpenGrow`
+   library, and finish Android/JavaScript/React Native `1.0.1` publication after
+   granting the platform repository the required GitHub Packages access.
+8. VocoStar's exact nine resources and six private Worker shells are now
    provisioned and remotely verified. Supply the missing API/Billing and common
    service production secrets through the encrypted secret channel. Back up
    every existing D1, apply the nineteen-migration batch, verify its receipts and
    deploy privately; then prove project/owner job isolation and custom-job
    parity without moving any public route.
-10. Migrate the VocoStar FlutterFlow client and Chatwoot data, validate rollback,
+9. Migrate the VocoStar FlutterFlow client and Chatwoot data, validate rollback,
     then perform the separately approved DNS/decommission cutover.
-11. Promote the exact reviewed Git revision from `dev` to `main`.
+10. Promote the exact reviewed Git revision from `dev` to `main` only after the
+    production client, secret, backup, database, domain and rollback gates pass.
 
 Until those external steps are performed, the accurate state is **implemented,
 fully validated and privately deployed on MBZA; public MBZA acceptance and all

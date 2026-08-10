@@ -225,10 +225,12 @@ project named `OpenGrow`. `config/flutterflow-library.json` inventories its 11
 target-supplied Library Values and 64 custom actions. Run
 `npm run flutterflow-library:check` to prove that its DSL, public HTTPS
 dependencies, immutable refs, token-state policy and GitHub sync workflow stay
-aligned. After both reviewed FlutterFlow SDK tags exist, the protected
-`sync-flutterflow-library.yml` workflow initializes the workspace from the
-`FF_LIBRARY_PROJECT_ID` variable, tests the DSL, then updates the remote project
-with `FF_API_KEY`; neither value is hardcoded in Git.
+aligned. Both reviewed FlutterFlow SDK tags are now published and the reference
+application pins them immutably. The protected `sync-flutterflow-library.yml`
+workflow initializes the workspace from the `FF_LIBRARY_PROJECT_ID` variable,
+tests the DSL, then updates the remote project with `FF_API_KEY`; neither value
+is hardcoded in Git. Remote synchronization remains intentionally gated until
+that encrypted Environment secret is installed.
 
 The migration provenance and source SHAs are documented in
 `docs/HISTORY_MIGRATION.md`.
