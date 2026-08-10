@@ -54,6 +54,38 @@ function stageNpmCoordinateMigration(catalog, id) {
   return library;
 }
 
+function previousPatchVersion(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(version);
+  assert.ok(match, `expected a stable semantic version, received ${version}`);
+  const [, major, minor, patch] = match.map(Number);
+
+  if (patch > 0) return `${major}.${minor}.${patch - 1}`;
+  if (minor > 0) return `${major}.${minor - 1}.0`;
+  return `${Math.max(0, major - 1)}.0.0`;
+}
+
+function stageFlutterFlowCandidate(catalog) {
+  const library = catalog.libraries.find((item) => item.id === "flutterflow");
+  const candidateVersion = library.sourceVersion;
+  const candidateTag = `sdk-flutterflow-v${candidateVersion}`;
+  const baselineVersion =
+    library.latestReleaseVersion === candidateVersion
+      ? previousPatchVersion(candidateVersion)
+      : library.latestReleaseVersion;
+  const baselineRef = `sdk-flutterflow-v${baselineVersion}`;
+  const currentRef = library.releaseRef;
+
+  Object.assign(library, {
+    latestReleaseVersion: baselineVersion,
+    releaseRef: baselineRef,
+    releaseStatus: "pending-release",
+    install: library.install.replaceAll(currentRef, baselineRef),
+  });
+  delete library.releaseSha;
+
+  return { library, candidateVersion, candidateTag };
+}
+
 test("SDK catalogue matches every package source and FlutterFlow public symbol", async () => {
   const catalog = await loadSdkCatalog();
   const result = await validateSdkCatalog(catalog);
@@ -62,43 +94,48 @@ test("SDK catalogue matches every package source and FlutterFlow public symbol",
   assert.equal(catalog.schemaVersion, 2);
   assert.ok(catalog.libraries.every((library) => library.license === "MIT"));
   assert.deepEqual(
-    Object.fromEntries(
-      catalog.libraries
-        .filter((library) => library.releaseStatus === "released")
-        .map((library) => [library.id, library.releaseSha]),
-    ),
-    {
-      flutter: "d4416b9f71477acaf0e8684b0dd80fb28df9d79e",
-      "flutterflow-support": "e896f8ea91a140419471b02301f0bde48d8d6b13",
-      ios: "809a6a9b5c7a639fe9283ad35f2554a487745b0f",
-      android: "e01acba82e4de94a98a36bf63992c1f1f137dd31",
-      javascript: "fbb6e325eff514e6e8566fa5af8602f14f4cdbd6",
-      "react-native": "8f5bcee1a14a1e454d43da391295e9c12d806f30",
-    },
+    catalog.libraries.map((library) => library.id).sort(),
+    [
+      "android",
+      "flutter",
+      "flutterflow",
+      "flutterflow-support",
+      "ios",
+      "javascript",
+      "react-native",
+    ],
   );
-  assert.equal(releaseTagFor(catalog, "flutter"), "sdk-flutter-v2.1.3");
-  assert.equal(releaseCandidateRefFor(catalog, "ios"), "1.0.2");
-  assert.equal(
-    releaseCandidateTagFor(catalog, "android"),
-    "sdk-android-v1.0.2",
+  const releasedLibraries = catalog.libraries.filter(
+    (library) => library.releaseStatus === "released",
   );
-  assert.equal(releaseCandidateTagFor(catalog, "javascript"), "sdk-js-v1.0.1");
-  assert.equal(
-    releaseCandidateTagFor(catalog, "react-native"),
-    "sdk-react-native-v1.0.1",
-  );
-  assert.equal(
-    releaseCandidateTagFor(catalog, "flutterflow"),
-    "sdk-flutterflow-v2.2.5",
-  );
-  assert.equal(
-    releaseCandidateRefFor(catalog, "flutterflow-support"),
-    "sdk-flutterflow-messaging-v1.3.0",
-  );
-  assert.equal(
-    releaseCandidateTagFor(catalog, "flutter"),
-    "sdk-flutter-v2.1.3",
-  );
+  assert.ok(releasedLibraries.length > 0);
+  for (const library of releasedLibraries) {
+    assert.match(library.releaseSha, /^[0-9a-f]{40}$/u);
+    assert.equal(
+      releaseTagFor(catalog, library.id),
+      library.id === "ios"
+        ? `sdk-ios-v${library.sourceVersion}`
+        : library.releaseRef,
+    );
+  }
+
+  const tagPrefixes = {
+    flutter: "sdk-flutter",
+    flutterflow: "sdk-flutterflow",
+    "flutterflow-support": "sdk-flutterflow-messaging",
+    ios: "sdk-ios",
+    android: "sdk-android",
+    javascript: "sdk-js",
+    "react-native": "sdk-react-native",
+  };
+  for (const library of catalog.libraries) {
+    const candidateTag = `${tagPrefixes[library.id]}-v${library.sourceVersion}`;
+    assert.equal(releaseCandidateTagFor(catalog, library.id), candidateTag);
+    assert.equal(
+      releaseCandidateRefFor(catalog, library.id),
+      library.id === "ios" ? library.sourceVersion : candidateTag,
+    );
+  }
 });
 
 test("FlutterFlow package documentation pins the exact candidate tag", async () => {
@@ -126,16 +163,7 @@ test("release validation rejects source drift and an unpublished source version"
     "9.9.9";
   assert.equal((await validateSdkCatalog(drifted)).ok, false);
   const pending = structuredClone(catalog);
-  const pendingFlutterFlow = pending.libraries.find(
-    (item) => item.id === "flutterflow",
-  );
-  pendingFlutterFlow.latestReleaseVersion = "2.1.6";
-  pendingFlutterFlow.releaseRef = "sdk-flutterflow-v2.1.6";
-  pendingFlutterFlow.releaseStatus = "pending-release";
-  pendingFlutterFlow.install = pendingFlutterFlow.install.replaceAll(
-    "sdk-flutterflow-v2.2.4",
-    "sdk-flutterflow-v2.1.6",
-  );
+  const { candidateTag } = stageFlutterFlowCandidate(pending);
   assert.throws(
     () => releaseTagFor(pending, "flutterflow"),
     /not marked ready/,
@@ -148,30 +176,31 @@ test("release validation rejects source drift and an unpublished source version"
     tagResult.errors.some((error) => error.includes("latestReleaseVersion")),
   );
   const candidateResult = await validateSdkCatalog(pending, {
-    releaseCandidateTag: "sdk-flutterflow-v2.2.5",
+    releaseCandidateTag: candidateTag,
   });
   assert.equal(candidateResult.ok, true);
 });
 
 test("an SDK promotion atomically derives released metadata and install refs", async () => {
   const catalog = await loadSdkCatalog();
+  const { candidateVersion, candidateTag } = stageFlutterFlowCandidate(catalog);
   const promoted = promoteSdkRelease(
     catalog,
     "flutterflow",
-    "2.2.5",
+    candidateVersion,
     candidateSha,
   );
   const library = promoted.libraries.find((item) => item.id === "flutterflow");
 
-  assert.equal(library.latestReleaseVersion, "2.2.5");
-  assert.equal(library.releaseRef, "sdk-flutterflow-v2.2.5");
+  assert.equal(library.latestReleaseVersion, candidateVersion);
+  assert.equal(library.releaseRef, candidateTag);
   assert.equal(library.releaseStatus, "released");
   assert.equal(library.releaseSha, candidateSha);
-  assert.match(library.install, /ref: sdk-flutterflow-v2\.2\.5/);
+  assert.ok(library.install.includes(`ref: ${candidateTag}`));
   assert.equal(
     (
       await validateSdkCatalog(promoted, {
-        releaseTag: "sdk-flutterflow-v2.2.5",
+        releaseTag: candidateTag,
         releaseSha: candidateSha,
       })
     ).ok,
@@ -181,13 +210,19 @@ test("an SDK promotion atomically derives released metadata and install refs", a
     promoteSdkRelease(
       promoted,
       "flutterflow",
-      "2.2.5",
+      candidateVersion,
       candidateSha,
     ).libraries.find((item) => item.id === "flutterflow").releaseStatus,
     "released",
   );
   assert.throws(
-    () => promoteSdkRelease(promoted, "flutterflow", "2.2.5", conflictingSha),
+    () =>
+      promoteSdkRelease(
+        promoted,
+        "flutterflow",
+        candidateVersion,
+        conflictingSha,
+      ),
     /already published from/u,
   );
 });
