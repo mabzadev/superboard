@@ -1,0 +1,104 @@
+{
+  "$schema": "../schemas/configuration-boundaries.schema.json",
+  "schemaVersion": 1,
+  "authorities": {
+    "sharedPlatform": {
+      "serviceRegistry": "scripts/cloudflare-services.mjs",
+      "projectManifest": "opengrow.project.json",
+      "runtimeRoots": [
+        "apps/dashboard/src",
+        "apps/mcp/src",
+        "packages",
+        "scripts",
+        "sdks",
+        "workers"
+      ]
+    },
+    "reference": {
+      "targetSelector": "opengrow.project.json#/development/target",
+      "requiredEnvironment": "development",
+      "domainSuffixPolicy": "derive-from-domains.api",
+      "requiredMailTransport": "capture"
+    },
+    "applications": {
+      "targetDirectory": "deploy/targets",
+      "targetSchema": "deploy/targets/schema.json",
+      "customPackageField": "customWorker.packagePath",
+      "derivedProjectionPaths": [
+        "config/flutterflow-application-bindings.json",
+        "config/flutterflow-applications.json",
+        "config/flutterflow-migrations",
+        "config/flutterflow-releases",
+        "config/flutterflow-sources",
+        "tools/flutterflow-applications"
+      ]
+    }
+  },
+  "injection": {
+    "accountId": {
+      "defaultEnvironmentName": "CLOUDFLARE_ACCOUNT_ID",
+      "scopedEnvironmentPrefix": "CLOUDFLARE_ACCOUNT_ID_"
+    },
+    "deploymentCredentialEnvironmentNames": ["CLOUDFLARE_API_TOKEN"],
+    "projectCredentialEnvironmentNames": [
+      "OPENGROW_PROJECT_ID",
+      "OPENGROW_PROJECT_KEY"
+    ],
+    "secretRegistries": [
+      "PLATFORM_SERVICE_SECRETS",
+      "DOMAIN_SERVICE_REGISTRY",
+      "customWorker.secrets"
+    ]
+  },
+  "scan": {
+    "ignoredDirectoryNames": [
+      ".build",
+      ".dart_tool",
+      ".git",
+      ".gradle",
+      ".next",
+      ".open-next",
+      ".swiftpm",
+      ".wrangler",
+      ".yarn",
+      "DerivedData",
+      "Pods",
+      "build",
+      "coverage",
+      "deploy/generated",
+      "dist",
+      "node_modules",
+      "out"
+    ],
+    "ignoredFileSuffixes": [".lock", ".snap"],
+    "portableExtensions": [
+      ".cjs",
+      ".dart",
+      ".js",
+      ".json",
+      ".jsonc",
+      ".jsx",
+      ".mjs",
+      ".ts",
+      ".tsx",
+      ".yaml",
+      ".yml"
+    ],
+    "localOnlyPathSegments": [
+      "/example/",
+      "/fixtures/",
+      "/runtime-tests/",
+      "/test/",
+      "/tests/"
+    ],
+    "localOnlyFileMarkers": [".test.", ".spec.", "wrangler.test.jsonc"],
+    "localWranglerTemplates": [
+      "workers/app/wrangler.jsonc",
+      "workers/dynamic-links/wrangler.jsonc",
+      "workers/identity/wrangler.jsonc",
+      "workers/onboardings/wrangler.jsonc",
+      "workers/paywalls/wrangler.jsonc",
+      "workers/products/wrangler.jsonc"
+    ]
+  }
+}

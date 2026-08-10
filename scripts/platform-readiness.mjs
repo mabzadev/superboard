@@ -147,6 +147,11 @@ export function inspectSdkRemoteState(
         ? tagState
         : inspectGitHubTag(repository, packageRef, run);
     const releaseExists = githubReleaseExists(repository, tag, run);
+    const packageArtifact = inspectGitHubPackageArtifact(
+      library,
+      repository,
+      run,
+    );
     const failedCandidate = pending
       ? immutableFailureFor(releaseHistory, library.id, library.sourceVersion)
       : null;
@@ -154,10 +159,11 @@ export function inspectSdkRemoteState(
       ? failedCandidate === null &&
         !tagState.exists &&
         !packageRefState.exists &&
-        !releaseExists
+        !releaseExists &&
+        !packageArtifact?.versions.includes(library.sourceVersion)
       : null;
     const baseline = pending
-      ? inspectPublishedBaseline(library, repository, run)
+      ? inspectPublishedBaseline(library, repository, run, packageArtifact)
       : null;
     const blockers = [];
     if (pending) {
@@ -167,6 +173,8 @@ export function inspectSdkRemoteState(
         if (packageRefState.exists && packageRef !== tag)
           blockers.push("candidate-package-ref-exists");
         if (releaseExists) blockers.push("candidate-release-exists");
+        if (packageArtifact?.versions.includes(library.sourceVersion))
+          blockers.push("candidate-package-version-exists");
       }
       blockers.push(...baseline.blockers);
     } else {
@@ -177,6 +185,12 @@ export function inspectSdkRemoteState(
       else if (packageRefState.sha !== library.releaseSha)
         blockers.push("package-ref-sha-mismatch");
       if (!releaseExists) blockers.push("github-release-missing");
+      blockers.push(
+        ...packageArtifactBlockers(
+          packageArtifact,
+          library.latestReleaseVersion,
+        ),
+      );
     }
     return {
       id: library.id,
@@ -198,6 +212,7 @@ export function inspectSdkRemoteState(
           }
         : null,
       baseline,
+      packageArtifact,
       blockers,
       ready: pending ? candidateReady && baseline.ready : blockers.length === 0,
     };
@@ -268,7 +283,7 @@ export function inspectGitHubTag(repository, reference, run = runGitHubRead) {
   };
 }
 
-function inspectPublishedBaseline(library, repository, run) {
+function inspectPublishedBaseline(library, repository, run, packageArtifact) {
   const tag = canonicalReleaseTag(library.id, library.latestReleaseVersion);
   const tagState = inspectGitHubTag(repository, tag, run);
   const packageRefState =
@@ -285,6 +300,13 @@ function inspectPublishedBaseline(library, repository, run) {
   else if (library.releaseSha && packageRefState.sha !== library.releaseSha)
     blockers.push("baseline-package-ref-sha-mismatch");
   if (!releaseExists) blockers.push("baseline-github-release-missing");
+  blockers.push(
+    ...packageArtifactBlockers(
+      packageArtifact,
+      library.latestReleaseVersion,
+      "baseline-",
+    ),
+  );
   return {
     tag,
     expectedSha: library.releaseSha ?? null,
@@ -294,9 +316,97 @@ function inspectPublishedBaseline(library, repository, run) {
     packageRefExists: packageRefState.exists,
     packageRefSha: packageRefState.sha,
     releaseExists,
+    packageArtifact,
     blockers,
     ready: blockers.length === 0,
   };
+}
+
+function packageDescriptor(library) {
+  if (["javascript", "react-native"].includes(library.id)) {
+    return {
+      packageType: "npm",
+      packageName: String(library.packageName ?? "").replace(/^@[^/]+\//u, ""),
+    };
+  }
+  if (library.id === "android") {
+    return {
+      packageType: "maven",
+      packageName: String(library.packageName ?? "").replace(":", "."),
+    };
+  }
+  return null;
+}
+
+function inspectGitHubPackageArtifact(library, repository, run) {
+  const descriptor = packageDescriptor(library);
+  if (!descriptor) return null;
+  const [owner] = repository.split("/");
+  let selected = null;
+  let packageResult = null;
+  for (const scope of ["users", "orgs"]) {
+    const root = `${scope}/${owner}/packages/${descriptor.packageType}/${encodeURIComponent(descriptor.packageName)}`;
+    const result = run(["api", root]);
+    if (result.ok) {
+      selected = root;
+      packageResult = result;
+      break;
+    }
+    if (result.notFound !== true) {
+      return {
+        ...descriptor,
+        expectedRepository: repository,
+        exists: false,
+        valid: false,
+        visibility: null,
+        repository: null,
+        versions: [],
+      };
+    }
+  }
+  if (!selected) {
+    return {
+      ...descriptor,
+      expectedRepository: repository,
+      exists: false,
+      valid: true,
+      visibility: null,
+      repository: null,
+      versions: [],
+    };
+  }
+  const details = responseData(packageResult);
+  const versionsResult = run(["api", `${selected}/versions?per_page=100`]);
+  const versionsData = responseData(versionsResult);
+  return {
+    ...descriptor,
+    expectedRepository: repository,
+    exists: true,
+    valid: versionsResult.ok && Array.isArray(versionsData),
+    visibility: details?.visibility ?? null,
+    repository: details?.repository?.full_name ?? null,
+    versions: Array.isArray(versionsData)
+      ? versionsData
+          .map((version) => version?.name)
+          .filter((version) => typeof version === "string")
+      : [],
+  };
+}
+
+function packageArtifactBlockers(artifact, version, prefix = "") {
+  if (!artifact) return [];
+  const blockers = [];
+  if (!artifact.exists) blockers.push(`${prefix}package-artifact-missing`);
+  else {
+    if (!artifact.valid) blockers.push(`${prefix}package-artifact-invalid`);
+    if (artifact.visibility !== "public")
+      blockers.push(`${prefix}package-artifact-not-public`);
+    if (artifact.repository !== artifact.expectedRepository)
+      blockers.push(`${prefix}package-artifact-repository-mismatch`);
+    if (!artifact.versions.includes(version))
+      blockers.push(`${prefix}package-version-missing`);
+  }
+  return blockers;
 }
 
 function releaseHistoryRemoteState(history, repository, run) {

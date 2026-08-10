@@ -42,18 +42,19 @@ pas être ajouté silencieusement sans propriétaire ni stratégie de rotation.
 
 ## Contrats communs
 
-| Contrat logique | Bindings recevant la même valeur | Rôle |
-| --- | --- | --- |
-| `module-internal-token` | API `MODULE_INTERNAL_TOKEN` + `INTERNAL_API_TOKEN` de chaque module activé | Authentifie les appels privés API vers App, Products, Paywalls, Dynamic Links, Support, Marketing et Onboardings. |
-| `email-internal-token` | API, Email et Identity | Authentifie la création d'e-mails transactionnels par l'API et les parcours d'identité. |
-| `files-internal-token` | Identity et Files | Autorise Identity à publier ou lire les artefacts privés nécessaires aux parcours d'identité. |
-| `observability-internal-token` | API et Observability | Autorise Grow à agréger l'état des Workers et des jobs sans exposer Observability publiquement. |
-| `custom-worker-internal-token` | API et Custom Worker de la cible | Authentifie les jobs propres à l'application sans rendre le Custom Worker public. |
-| `billing-credential-keyring` | API et Billing | Chiffre et déchiffre les copies de credentials Apple/Google. Le format keyring versionné est obligatoire pour toute nouvelle installation. |
-| `billing-credential-active-version` | API et Billing | Désigne la version d'écriture active du keyring. |
-| `purchases-signing-keyset` | Autorité d'exécution Billing ; API également en mode local | Signe les informations d'abonnement consommées par les SDK. |
-| `apple-root-certificates` | Autorité d'exécution Billing ; API également en mode local | Matériel de confiance public téléchargé et vérifié par empreinte. |
-| `entitlement-webhook-secret` | Autorité d'exécution + destinataires externes configurés | Signe les webhooks d'entitlements. Sa rotation doit inclure chaque destinataire. |
+| Contrat logique                         | Bindings recevant la même valeur                                           | Rôle                                                                                                                                       |
+| --------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `module-internal-token`                 | API `MODULE_INTERNAL_TOKEN` + `INTERNAL_API_TOKEN` de chaque module activé | Authentifie les appels privés API vers App, Products, Paywalls, Dynamic Links, Support, Marketing et Onboardings.                          |
+| `email-internal-token`                  | API, Email, Identity et Marketing                                          | Authentifie la création d'e-mails transactionnels et la délégation privée du transport SMTP Marketing.                                    |
+| `files-internal-token`                  | Identity et Files                                                          | Autorise Identity à publier ou lire les artefacts privés nécessaires aux parcours d'identité.                                              |
+| `observability-internal-token`          | API et Observability                                                       | Autorise Grow à agréger l'état des Workers et des jobs sans exposer Observability publiquement.                                            |
+| `custom-worker-internal-token`          | API et Custom Worker de la cible                                           | Authentifie les jobs propres à l'application sans rendre le Custom Worker public.                                                          |
+| `billing-credential-keyring`            | API et Billing                                                             | Chiffre et déchiffre les copies de credentials Apple/Google. Le format keyring versionné est obligatoire pour toute nouvelle installation. |
+| `billing-credential-active-version`     | API et Billing                                                             | Désigne la version d'écriture active du keyring.                                                                                           |
+| `purchases-signing-keyset`              | Autorité d'exécution Billing ; API également en mode local                 | Signe les informations d'abonnement consommées par les SDK.                                                                                |
+| `apple-root-certificates`               | Autorité d'exécution Billing ; API également en mode local                 | Matériel de confiance public téléchargé et vérifié par empreinte.                                                                          |
+| `entitlement-webhook-secret`            | Autorité d'exécution + destinataires externes configurés                   | Signe les webhooks d'entitlements. Sa rotation doit inclure chaque destinataire.                                                           |
+| `managed-worker-gateway-callback-token` | Orchestrateurs applicatifs + binding déclaré du gateway externe            | Authentifie les callbacks de progression/notification. Le bundle reste bloqué sans confirmation explicite du peer externe.                 |
 
 Les contrats partagés sont propres à une cible. Par exemple,
 `vocostar/production/module-internal-token` et
@@ -73,9 +74,14 @@ toutes les applications :
 - les capacités, bindings, D1, crons et fournisseurs propres à l'application
   restent dans son manifest et son répertoire `workers/custom/<application>`.
 
-Pour VocoStar, le seul contrat custom obligatoire actuel est
-`custom-worker-internal-token`. Les orchestrateurs de clonage vocal et de
-conversion sont des Service Bindings non secrets déclarés dans le manifest.
+Pour VocoStar, `custom-worker-internal-token` protège l'adaptateur. Les
+orchestrateurs de clonage vocal et de conversion sont des Service Bindings privés,
+mais leurs callbacks partagent en plus le contrat
+`managed-worker-gateway-callback-token`. Ses membres Worker reçoivent exactement
+la même valeur que le peer externe déclaré par la target,
+`api-auth-gateway/INTERNAL_CALLBACK_TOKEN`. Le plan de bundle refuse toute
+préparation de ce contrat sans `--external-peers-ready`; aucune valeur n'est
+stockée dans le manifest.
 
 ## Valeurs locales et valeurs externes
 
@@ -99,9 +105,11 @@ explicite du plan :
 
 Les clés SMTP de Marketing ne sont pas les credentials SMTP eux-mêmes. Elles
 chiffrent les profils de fournisseurs saisis dans Grow. Le Worker Email utilise
-les credentials SMTP de la cible pour les e-mails transactionnels. Newsletter
-et transactionnel restent donc séparés au niveau métier tout en partageant la
-même politique de sécurité.
+les credentials SMTP de la cible pour les e-mails transactionnels. Marketing
+décrypte uniquement le profil sélectionné en mémoire et le transmet au Worker
+Email via Service Binding authentifié; Email n'en conserve que l'empreinte de
+requête et le reçu. Newsletter et transactionnel restent donc séparés au niveau
+métier avec une seule autorité d'effet SMTP.
 
 ## Arborescence logique dans le gestionnaire de secrets
 
@@ -121,6 +129,7 @@ opengrow/
         purchases-signing-keyset
         entitlement-webhook-secret
         custom-worker-internal-token
+        managed-worker-gateway-callback-token
       services/
         api/<secret-name>
         dashboard/client-secret
@@ -146,7 +155,8 @@ secrets de déploiement sont attachés aux GitHub Environments, pas au dépôt :
 - `production` sélectionne `vocostar` et le compte Cloudflare VocoStar ;
 - `config/cloudflare-deployments.json` permet à une même branche de sélectionner
   plusieurs Environments et donc plusieurs comptes/applications ;
-- `OPENGROW_TARGET` est une variable d'Environment ;
+- `OPENGROW_TARGET` est une variable d'Environment qui doit être strictement
+  égale à la cible versionnée dans l'entrée de matrice correspondante ;
 - `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` et la clé de chiffrement des
   sauvegardes D1 sont des secrets d'Environment ;
 - le workflow commun découvre tous les Workers activés dans le manifest, vérifie
@@ -238,6 +248,7 @@ variable permanente à remplir ni un second secret partagé entre applications.
    et reçus. Pour le keyring Billing, l'entrée contient aussi `name` avec
    `STORE_CREDENTIALS_ENCRYPTION_KEYS`. Le secret OAuth Dashboard est refusé et
    passe obligatoirement par `cloudflare:rotate-oauth`.
+
 6. Le reçu ne contient aucune valeur. La promotion le relit, vérifie que chaque
    tag inactif existe, capture l'unique version active à 100 % comme rollback et
    produit une nouvelle confirmation liée au compte Cloudflare :
@@ -262,6 +273,7 @@ variable permanente à remplir ni un second secret partagé entre applications.
    réservé au bootstrap sans trafic ou à une vraie fenêtre de maintenance.
    Si une promotion échoue, l'outil redéploie en ordre inverse les versions
    actives exactes capturées dans le plan.
+
 7. Après succès, exécuter le contrôle des noms actifs et observer au minimum
    trente minutes les endpoints de santé, les erreurs d'authentification, les
    Queues, les jobs et le Dashboard :
@@ -291,15 +303,16 @@ variable permanente à remplir ni un second secret partagé entre applications.
    reçu ou si le compte Cloudflare diffère. Il crée une version inactive
    taguée, retire uniquement le binding précédent, l'active explicitement et
    restaure toutes les versions initiales si une étape échoue.
+
 9. Pour un keyring, ajouter la nouvelle clé, déployer, re-chiffrer les données,
    vérifier la lecture, changer la version active, puis seulement retirer
    l'ancienne clé.
 10. Pour OAuth Dashboard, utiliser `cloudflare:rotate-oauth` après la migration
-   0056. L'outil charge une version inactive, conserve l'ancien vérificateur
-   pendant une fenêtre bornée, active la version taguée et restaure la base si
-   l'activation échoue.
+    `0056`. L'outil charge une version inactive, conserve l'ancien vérificateur
+    pendant une fenêtre bornée, active la version taguée et restaure la base si
+    l'activation échoue.
 11. Pour la production, exporter et chiffrer toutes les D1 concernées avant la
-   première migration. Conserver le reçu de batch et les artefacts chiffrés.
+    première migration. Conserver le reçu de batch et les artefacts chiffrés.
 12. Vérifier les endpoints de santé, les jobs, l'envoi transactionnel, les
     notifications et le Dashboard avant de retirer une ancienne version ou un
     credential fournisseur.
@@ -314,20 +327,20 @@ activerait immédiatement une version partielle.
 
 Le compte possède désormais toutes les ressources et tous les noms de Workers
 déclarés. Les six nouveaux Workers sont des shells privés, sans route ni trafic.
-Le plan VocoStar contient 43 bindings obligatoires regroupés dans 29 contrats,
-dont 10 contrats à valeur partagée et un contrat propre à l'application.
+Le plan VocoStar contient 55 bindings obligatoires regroupés dans 37 contrats,
+dont 11 contrats à valeur partagée et huit contrats propres à l'application.
 
 Le contrôle distant par nom indique encore les valeurs manquantes suivantes :
 
-| Service | Noms manquants |
-| --- | --- |
-| API | `EMAIL_INTERNAL_TOKEN`, `PUSH_PROCESS_KEY`, `IAP_PROCESS_KEY`, `ADMIN_API_KEY`, `MAINTENANCE_PROCESS_KEY`, `DIAGNOSTICS_API_KEY`, `OBSERVABILITY_INTERNAL_TOKEN`, `CUSTOM_WORKER_TOKEN` |
-| Billing | `STORE_CREDENTIALS_ACTIVE_KEY_VERSION`, `OPENGROW_ENTITLEMENT_WEBHOOK_SECRET` |
-| Email | `EMAIL_INTERNAL_TOKEN`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD` |
-| Identity | `IDENTITY_KEYSET`, `EMAIL_INTERNAL_TOKEN`, `FILES_INTERNAL_TOKEN` |
-| Files | `FILES_INTERNAL_TOKEN`, `FILES_DOWNLOAD_SIGNING_KEY` |
-| Observability | `OBSERVABILITY_INTERNAL_TOKEN`, `CLOUDFLARE_ANALYTICS_ACCOUNT_ID`, `CLOUDFLARE_ANALYTICS_TOKEN` |
-| Custom VocoStar | `CUSTOM_WORKER_TOKEN` |
+| Service         | Noms manquants                                                                                                                                                                          |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API             | `EMAIL_INTERNAL_TOKEN`, `PUSH_PROCESS_KEY`, `IAP_PROCESS_KEY`, `ADMIN_API_KEY`, `MAINTENANCE_PROCESS_KEY`, `DIAGNOSTICS_API_KEY`, `OBSERVABILITY_INTERNAL_TOKEN`, `CUSTOM_WORKER_TOKEN` |
+| Billing         | `STORE_CREDENTIALS_ACTIVE_KEY_VERSION`, `OPENGROW_ENTITLEMENT_WEBHOOK_SECRET`                                                                                                           |
+| Email           | `EMAIL_INTERNAL_TOKEN`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`                                                                                     |
+| Identity        | `IDENTITY_KEYSET`, `EMAIL_INTERNAL_TOKEN`, `FILES_INTERNAL_TOKEN`                                                                                                                       |
+| Files           | `FILES_INTERNAL_TOKEN`, `FILES_DOWNLOAD_SIGNING_KEY`                                                                                                                                    |
+| Observability   | `OBSERVABILITY_INTERNAL_TOKEN`, `CLOUDFLARE_ANALYTICS_ACCOUNT_ID`, `CLOUDFLARE_ANALYTICS_TOKEN`                                                                                         |
+| Custom VocoStar | `CUSTOM_WORKER_TOKEN`                                                                                                                                                                   |
 
 Ces valeurs ne sont pas générées arbitrairement par le dépôt. Les tokens
 internes et keysets peuvent être créés dans le gestionnaire de secrets ; SMTP,

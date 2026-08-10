@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@opengrow/contracts": "*",
-    "@opengrow/email-transport": "*",
     "hono": "^4.13.1"
   },
   "devDependencies": {

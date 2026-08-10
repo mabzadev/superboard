@@ -14,6 +14,21 @@ if (flutterRoot == null) {
     throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 }
 
+// Keep the native BuildConfig header aligned with the published Flutter
+// package. The pubspec is the canonical version source declared by the SDK
+// catalogue, so a release version is changed in exactly one place.
+def flutterPubspecFile = project.file("../pubspec.yaml")
+if (!flutterPubspecFile.isFile()) {
+    throw new GradleException("OpenGrow Flutter pubspec not found at ${flutterPubspecFile}")
+}
+
+def flutterPubspecVersionMatches = flutterPubspecFile.getText("UTF-8") =~
+        /(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\s*$/
+if (flutterPubspecVersionMatches.count != 1) {
+    throw new GradleException("OpenGrow Flutter pubspec must declare exactly one valid semantic version")
+}
+def flutterSdkVersion = flutterPubspecVersionMatches[0][1]
+
 buildscript {
     ext.kotlin_version = "2.1.0"
     repositories {
@@ -66,8 +81,7 @@ android {
     defaultConfig {
         minSdk = 24
         consumerProguardFiles "../../android/OpenGrow/OpenGrow/consumer-rules.pro"
-        buildConfigField "String", "TEST_SERVER_URL", "\"http://localhost:8080/\""
-        buildConfigField "String", "SDK_VERSION", "\"1.1.1\""
+        buildConfigField "String", "SDK_VERSION", "\"${flutterSdkVersion}\""
         buildConfigField "boolean", "NETWORK_LOGGING", "false"
     }
 

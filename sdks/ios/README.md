@@ -7,9 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dswift-versions" alt="Swift versions"/></a>
-  <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dplatforms" alt="Platforms"/></a>
-  <a href="https://cocoapods.org/pods/OpenGrow"><img src="https://img.shields.io/cocoapods/v/OpenGrow.svg?style=flat-square&color=4F46E5" alt="CocoaPods"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform"><img src="https://img.shields.io/badge/distribution-SwiftPM-4F46E5?style=flat-square&logo=swift&logoColor=white" alt="Swift Package Manager"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
   <a href="https://github.com/mbzadev/opengrow-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
@@ -45,28 +43,25 @@ The OpenGrow iOS SDK provides deep linking, universal linking, link generation, 
 - Swift 5.0+
 - Xcode 14+
 
+<!-- opengrow-sdk-documentation:ios:start -->
+
 ## Installation
 
 ### Swift Package Manager
 
-1. In Xcode, go to **File → Swift Packages → Add Package Dependency**
-2. Enter the repository URL: `https://github.com/mbzadev/opengrow-platform.git`
-3. Select the version range that fits your project
-4. Click **Next**, then **Finish**
+The published iOS SDK is distributed from public Git with Swift Package
+Manager at the exact release `1.0.2`:
 
-### CocoaPods
-
-Add the pod to your `Podfile`:
-
-```ruby
-pod 'OpenGrow'
+```swift
+.package(url: "https://github.com/mbzadev/opengrow-platform.git", exact: "1.0.2")
 ```
 
-Then run:
+In Xcode, use **File → Add Package Dependencies**, enter
+`https://github.com/mbzadev/opengrow-platform.git`, and select exact version
+`1.0.2`. CocoaPods Trunk is not a published or supported
+distribution channel for this SDK.
 
-```bash
-pod install
-```
+<!-- opengrow-sdk-documentation:ios:end -->
 
 ## Quick Start
 

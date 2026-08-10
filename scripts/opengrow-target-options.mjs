@@ -2,9 +2,21 @@ const CUSTOM_RESERVED_VARS = new Set([
   "APP_KEY",
   "ENVIRONMENT",
   "CUSTOM_WORKER_CAPABILITIES",
+  "FILES_INPUT_ORIGIN",
 ]);
 const SENSITIVE_VAR_NAME =
   /(?:^|_)(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY|ACCESS_KEY)$/;
+const MANAGED_RESERVED_VARS = new Set([
+  "OPENGROW_TARGET",
+  "ENVIRONMENT",
+  "GATEWAY_URL",
+  "FILES_INPUT_ORIGIN",
+  "FILES_INPUT_MAX_BYTES",
+  "OUTPUT_FILE_ORIGIN",
+  "R2_ENDPOINT_URL",
+  "R2_BUCKET_NAME",
+  "WATERMARK_URL",
+]);
 
 export function dashboardCacheResourceName(baseResourceName) {
   const base = nonEmpty(baseResourceName, "base resource name");
@@ -127,6 +139,93 @@ export function validateCustomWorkerBindings(customWorker) {
     if (SENSITIVE_VAR_NAME.test(name)) {
       throw new Error(
         `Invalid target manifest: customWorker.vars.${name} looks sensitive and must be declared as a secret`,
+      );
+    }
+  }
+  validateManagedWorkers(customWorker);
+}
+
+export function validateManagedWorkers(customWorker) {
+  const workers = customWorker?.managedWorkers ?? [];
+  const ids = new Set();
+  const packages = new Set();
+  for (const worker of workers) {
+    if (ids.has(worker.id)) {
+      throw new Error(
+        `Invalid target manifest: duplicate managed Worker id ${worker.id}`,
+      );
+    }
+    ids.add(worker.id);
+    if (packages.has(worker.packagePath)) {
+      throw new Error(
+        `Invalid target manifest: managed Worker package ${worker.packagePath} has multiple owners`,
+      );
+    }
+    packages.add(worker.packagePath);
+    if (worker.source !== `${worker.packagePath}/src/index.ts`) {
+      throw new Error(
+        `Invalid target manifest: managed Worker ${worker.id} source must belong to its package`,
+      );
+    }
+    const dockerfiles = new Set(
+      worker.containers.map(({ dockerfile }) => dockerfile),
+    );
+    for (const dockerfile of dockerfiles) {
+      if (!dockerfile.startsWith(`${worker.packagePath}/container/`)) {
+        throw new Error(
+          `Invalid target manifest: managed Worker ${worker.id} Dockerfile must belong to its package`,
+        );
+      }
+    }
+    const bindings = [
+      ...[...MANAGED_RESERVED_VARS].map((name) => [name, "generated var"]),
+      ...worker.containers.map(({ binding }) => [
+        `${binding}_MAX_INSTANCES`,
+        "generated var",
+      ]),
+      ...Object.keys(worker.vars ?? {}).map((name) => [name, "managed var"]),
+      ...worker.secrets.map((name) => [name, "secret"]),
+      [worker.d1Binding, "D1"],
+      [worker.workflow.binding, "Workflow"],
+      ...worker.containers.map(({ binding }) => [binding, "Container"]),
+      ...worker.durableObjects.map(({ binding }) => [
+        binding,
+        "Durable Object",
+      ]),
+    ];
+    const occupied = new Map();
+    for (const [name, owner] of bindings) {
+      const existing = occupied.get(name);
+      if (existing) {
+        throw new Error(
+          `Invalid target manifest: managed Worker ${worker.id} binding ${name} is declared as both ${existing} and ${owner}`,
+        );
+      }
+      occupied.set(name, owner);
+    }
+    for (const name of Object.keys(worker.vars ?? {})) {
+      if (SENSITIVE_VAR_NAME.test(name)) {
+        throw new Error(
+          `Invalid target manifest: managed Worker ${worker.id} var ${name} looks sensitive and must be declared as a secret`,
+        );
+      }
+    }
+    const expectedClasses = new Set([
+      ...worker.containers.map(({ className }) => className),
+      ...worker.durableObjects.map(({ className }) => className),
+    ]);
+    const migratedClasses = new Set(
+      worker.migrations.flatMap((migration) => [
+        ...(migration.newClasses ?? []),
+        ...(migration.newSqliteClasses ?? []),
+      ]),
+    );
+    if (
+      expectedClasses.size !== migratedClasses.size ||
+      [...expectedClasses].some((className) => !migratedClasses.has(className))
+    ) {
+      throw new Error(
+        `Invalid target manifest: managed Worker ${worker.id} migrations must declare every local Durable Object class exactly once`,
       );
     }
   }

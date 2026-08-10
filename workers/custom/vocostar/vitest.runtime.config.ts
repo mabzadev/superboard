@@ -22,6 +22,7 @@ export default defineConfig({
           bindings: {
             CUSTOM_WORKER_TOKEN: "custom-runtime-secret",
             FILES_INTERNAL_TOKEN: "files-runtime-secret",
+            FILES_INPUT_ORIGIN: "https://files.example.test",
             ...d1RuntimeBindings(migrations),
           },
           serviceBindings: {

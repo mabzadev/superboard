@@ -24,7 +24,7 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 9 },
+    "schemaVersion": { "const": 11 },
     "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "accountAlias": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "workersDevSubdomain": { "type": "string", "pattern": "^[a-z0-9-]+$" },
@@ -302,6 +302,15 @@
               "workers": { "$ref": "#/$defs/workerNames" }
             }
           }
+        },
+        "managedWorkers": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/managedWorker" }
+        },
+        "runtimeBridge": {
+          "$ref": "#/$defs/runtimeBridge"
         }
       }
     },
@@ -367,6 +376,204 @@
       "properties": {
         "development": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "production": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+      }
+    },
+    "managedWorker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "packagePath",
+        "description",
+        "workers",
+        "secrets",
+        "r2Resource",
+        "d1Binding",
+        "workflow",
+        "containers",
+        "durableObjects",
+        "migrations"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,21}$"
+        },
+        "source": {
+          "type": "string",
+          "pattern": "^workers/custom/[a-z0-9-]+/orchestrators/[a-z0-9-]+/src/index\\.ts$"
+        },
+        "packagePath": {
+          "type": "string",
+          "pattern": "^workers/custom/[a-z0-9-]+/orchestrators/[a-z0-9-]+$"
+        },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "workers": { "$ref": "#/$defs/workerNames" },
+        "secrets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "uniqueItems": true
+        },
+        "vars": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "r2Resource": { "enum": ["r2", "customR2"] },
+        "watermarkPath": {
+          "type": "string",
+          "pattern": "^/[A-Za-z0-9._/-]+$",
+          "maxLength": 255
+        },
+        "d1Binding": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]+$"
+        },
+        "workflow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["binding", "className", "names"],
+          "properties": {
+            "binding": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+            "className": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$" },
+            "names": { "$ref": "#/$defs/workerNames" }
+          }
+        },
+        "containers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "binding",
+              "className",
+              "dockerfile",
+              "maxInstances",
+              "instanceType"
+            ],
+            "properties": {
+              "binding": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+              "className": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Za-z0-9]+$"
+              },
+              "dockerfile": {
+                "type": "string",
+                "pattern": "^workers/custom/[a-z0-9-]+/orchestrators/[a-z0-9-]+/container/Dockerfile$"
+              },
+              "maxInstances": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "instanceType": {
+                "enum": [
+                  "lite",
+                  "basic",
+                  "standard-1",
+                  "standard-2",
+                  "standard-3",
+                  "standard-4"
+                ]
+              }
+            }
+          }
+        },
+        "durableObjects": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["binding", "className", "storage"],
+            "properties": {
+              "binding": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+              "className": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Za-z0-9]+$"
+              },
+              "storage": { "enum": ["sqlite", "legacy-kv"] }
+            }
+          }
+        },
+        "migrations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tag"],
+            "properties": {
+              "tag": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+              "newClasses": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$" },
+                "uniqueItems": true
+              },
+              "newSqliteClasses": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$" },
+                "uniqueItems": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "runtimeBridge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesInputOrigin",
+        "outputFileOrigin",
+        "gatewayOrigin",
+        "gatewayWorker",
+        "gatewaySecretBinding",
+        "callbackPaths",
+        "deploymentStatus",
+        "blockedReason"
+      ],
+      "properties": {
+        "filesInputOrigin": {
+          "type": "string",
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?$"
+        },
+        "outputFileOrigin": {
+          "type": "string",
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?$"
+        },
+        "gatewayOrigin": {
+          "type": "string",
+          "pattern": "^https://[A-Za-z0-9.-]+(?::443)?$"
+        },
+        "gatewayWorker": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "gatewaySecretBinding": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]+$"
+        },
+        "callbackPaths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^/[A-Za-z0-9._/-]+$"
+          }
+        },
+        "deploymentStatus": { "enum": ["blocked", "verified"] },
+        "blockedReason": { "type": "string", "minLength": 1, "maxLength": 500 }
       }
     },
     "namedResource": {
@@ -489,6 +696,7 @@
         "identityD1": { "$ref": "#/$defs/namedResource" },
         "filesD1": { "$ref": "#/$defs/namedResource" },
         "customD1": { "$ref": "#/$defs/namedResource" },
+        "customR2": { "$ref": "#/$defs/namedResource" },
         "analyticsDataset": {
           "type": "string",
           "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"

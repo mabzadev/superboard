@@ -26,9 +26,20 @@ describe("platform status", () => {
           status: "ok",
           schema: currentSchema("0003_email_idempotency.sql", 3),
           metrics: {
-            messages: { queued: 2, sending: 1, failed: 3 },
-            deliveries: { queued: 4, sending: 1, failed: 2 },
-            deadLetters: { quarantined: 6 },
+            messages: {
+              queued: 2,
+              sending: 1,
+              failed: 3,
+              outcomeUnknown: 1,
+            },
+            deliveries: {
+              queued: 4,
+              sending: 1,
+              failed: 2,
+              outcomeUnknown: 1,
+            },
+            delegatedTransport: { outcomeUnknown: 2 },
+            deadLetters: { quarantined: 6, replayed: 4, discarded: 2 },
           },
         }),
       ),
@@ -91,6 +102,7 @@ describe("platform status", () => {
         R2: {},
         ENVIRONMENT: "development",
         OPENGROW_TARGET: "mbza-development",
+        PLATFORM_WORKERS_JSON: workerCatalog(),
         OPENGROW_RELEASE: "abcdef123456",
         D1_EXPECTED_MIGRATION: "0057_application_account_erasure.sql",
         PUBLIC_ROUTING_MODE: "active",
@@ -124,10 +136,15 @@ describe("platform status", () => {
       messagesQueued: 2,
       messagesSending: 1,
       messagesFailed: 3,
+      messagesOutcomeUnknown: 1,
       deliveriesQueued: 4,
       deliveriesSending: 1,
       deliveriesFailed: 2,
+      deliveriesOutcomeUnknown: 1,
+      delegatedTransportOutcomeUnknown: 2,
       deadLettersQuarantined: 6,
+      deadLettersReplayed: 4,
+      deadLettersDiscarded: 2,
     });
     expect(body.jobs.marketing).toMatchObject({
       campaignsScheduled: 2,
@@ -143,6 +160,30 @@ describe("platform status", () => {
       release: "abcdef123456",
       publicRouting: "active",
     });
+    expect(body.catalog).toEqual({
+      schemaVersion: 1,
+      status: "ok",
+      target: "mbza-development",
+      environment: "development",
+    });
+    expect(body.services).toHaveLength(
+      JSON.parse(workerCatalog()).workers.length,
+    );
+    expect(
+      body.services.find((service: any) => service.id === "api"),
+    ).toMatchObject({
+      workerName: "opengrow-api-dev",
+      enabled: true,
+      health: { mode: "self", path: "/health" },
+      capabilities: expect.arrayContaining(["identity", "billing", "platform"]),
+      dependencies: { stores: ["DB", "KV", "R2"] },
+    });
+    expect(
+      body.services.find((service: any) => service.id === "email"),
+    ).toMatchObject({
+      workerName: "opengrow-email-dev",
+      jobs: { messagesQueued: 2, deliveriesFailed: 2 },
+    });
     expect(
       body.dataStores.find((store: any) => store.id === "central"),
     ).toMatchObject({
@@ -156,13 +197,13 @@ describe("platform status", () => {
     ).toMatchObject({ owner: "email", status: "ok" });
     expect(
       body.dataStores.find((store: any) => store.id === "support"),
-    ).toMatchObject({ status: "disabled" });
+    ).toMatchObject({ status: "misconfigured" });
     expect(
       body.services.find((service: any) => service.id === "billing").status,
     ).toBe("ok");
     expect(
       body.services.find((service: any) => service.id === "custom").status,
-    ).toBe("disabled");
+    ).toBe("misconfigured");
     expect(
       body.services.find((service: any) => service.id === "observability")
         .status,
@@ -191,6 +232,14 @@ describe("platform status", () => {
     });
     expect(
       body.api.capabilities.find(
+        (capability: any) => capability.id === "email-operations",
+      ),
+    ).toMatchObject({
+      access: "Authenticated Dashboard owner or administrator",
+      entrypoints: ["/api/v1/platform/email/*"],
+    });
+    expect(
+      body.api.capabilities.find(
         (capability: any) => capability.id === "files",
       ),
     ).toMatchObject({
@@ -203,6 +252,104 @@ describe("platform status", () => {
         headers: { "x-observability-token": "private-observability-token" },
       }),
     );
+  });
+
+  it("distinguishes target-disabled Workers from missing required bindings", async () => {
+    const response = await platform.request(
+      "/status",
+      { headers: { authorization: "Bearer dashboard-token" } },
+      {
+        DB: database(),
+        ENVIRONMENT: "development",
+        OPENGROW_TARGET: "mbza-development",
+        PLATFORM_WORKERS_JSON: workerCatalog(),
+      } as never,
+    );
+    const body = (await response.json()) as any;
+    expect(
+      body.services.find((service: any) => service.id === "messaging"),
+    ).toMatchObject({
+      enabled: false,
+      status: "disabled",
+      workerName: null,
+    });
+    expect(
+      body.services.find((service: any) => service.id === "billing"),
+    ).toMatchObject({
+      enabled: true,
+      status: "misconfigured",
+      workerName: "opengrow-billing-dev",
+      error: "Required service binding is missing",
+    });
+  });
+
+  it("includes target-managed Workers and checks their service-binding reachability", async () => {
+    const managed = managedWorkerCatalogEntry();
+    const managedBinding = {
+      fetch: vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({ error: "Method not allowed" }, { status: 405 }),
+        ),
+    };
+    const response = await platform.request(
+      "/status",
+      { headers: { authorization: "Bearer dashboard-token" } },
+      {
+        DB: database(),
+        ENVIRONMENT: "development",
+        OPENGROW_TARGET: "mbza-development",
+        PLATFORM_WORKERS_JSON: workerCatalog([managed]),
+        MANAGED_VOCALS_ORCHESTRATOR: managedBinding,
+      } as never,
+    );
+    const body = (await response.json()) as any;
+    expect(body.catalog.status).toBe("ok");
+    expect(
+      body.services.find(
+        (service: any) => service.id === "managed-vocals-orchestrator",
+      ),
+    ).toMatchObject({
+      kind: "managed",
+      workerName: "send-users-vocals-orchestrator-dev",
+      status: "ok",
+      health: { mode: "binding", path: "/health" },
+      capabilities: [
+        "workflow:VocalProcessingWorkflow",
+        "container:Standard",
+        "durable-object:Dispatcher",
+      ],
+      routes: ["POST /"],
+      dependencies: {
+        services: ["custom"],
+        stores: ["DB", "customR2"],
+        queues: ["workflow:send-users-vocals-workflows-dev"],
+      },
+      jobs: null,
+    });
+    expect(managedBinding.fetch).toHaveBeenCalledWith(
+      "https://managed-vocals-orchestrator.internal/health",
+      expect.objectContaining({ method: "GET", redirect: "manual" }),
+    );
+  });
+
+  it("fails closed when the target Worker catalog is malformed", async () => {
+    const response = await platform.request(
+      "/status",
+      { headers: { authorization: "Bearer dashboard-token" } },
+      {
+        DB: database(),
+        ENVIRONMENT: "development",
+        OPENGROW_TARGET: "mbza-development",
+        PLATFORM_WORKERS_JSON: '{"schemaVersion":1,"target":"other"}',
+      } as never,
+    );
+    const body = (await response.json()) as any;
+    expect(body.status).toBe("degraded");
+    expect(body.catalog).toMatchObject({
+      status: "misconfigured",
+      error: "Worker catalog does not match this target and environment",
+    });
   });
 
   it("marks a mismatched custom Worker protocol or target as incompatible", async () => {
@@ -894,6 +1041,71 @@ describe("platform status", () => {
       error: "custom_worker_unavailable",
     });
   });
+
+  it("proxies body-free email operations and audited DLQ decisions only for admins", async () => {
+    const email = {
+      fetch: vi.fn(async (request: Request | string) => {
+        const url = new URL(
+          typeof request === "string" ? request : request.url,
+        );
+        if (url.pathname.endsWith("/replay")) {
+          return Response.json(
+            { id: "dead-letter-1", status: "replayed", messageId: "mail-1" },
+            { status: 202 },
+          );
+        }
+        return Response.json({
+          generatedAt: "2026-08-10T10:00:00.000Z",
+          messages: [{ id: "mail-1", status: "failed" }],
+          deadLetters: [{ id: "dead-letter-1", status: "quarantined" }],
+        });
+      }),
+    };
+    const env = {
+      DB: database(),
+      EMAIL_SERVICE: email,
+      EMAIL_INTERNAL_TOKEN: "email-internal-secret",
+    } as never;
+    const list = await platform.request(
+      "/email/operations?status=failed",
+      { headers: { authorization: "Bearer dashboard-token" } },
+      env,
+    );
+    expect(list.status).toBe(200);
+    await expect(list.json()).resolves.toMatchObject({
+      messages: [{ id: "mail-1", status: "failed" }],
+      deadLetters: [{ id: "dead-letter-1" }],
+    });
+    expect(email.fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://email.internal/internal/v1/operations?status=failed",
+      expect.objectContaining({
+        headers: { "x-internal-token": "email-internal-secret" },
+      }),
+    );
+
+    const replay = await platform.request(
+      "/email/dead-letters/dead-letter-1/replay",
+      {
+        method: "POST",
+        headers: { authorization: "Bearer dashboard-token" },
+      },
+      env,
+    );
+    expect(replay.status).toBe(202);
+    await expect(replay.json()).resolves.toMatchObject({ status: "replayed" });
+
+    const denied = await platform.request(
+      "/email/operations",
+      { headers: { authorization: "Bearer dashboard-token" } },
+      {
+        ...env,
+        DB: database("member"),
+      } as never,
+    );
+    expect(denied.status).toBe(403);
+    await expect(denied.json()).resolves.toEqual({ error: "admin_required" });
+  });
 });
 
 function database(role = "admin") {
@@ -1013,5 +1225,65 @@ function currentSchema(expectedMigration: string, count: number) {
     expectedMigration,
     latestMigration: expectedMigration,
     appliedMigrationCount: count,
+  };
+}
+
+function workerCatalog(managedWorkers: unknown[] = []) {
+  const ids = [
+    "api",
+    "dashboard",
+    "billing",
+    "messaging",
+    "email",
+    "identity",
+    "files",
+    "observability",
+    "mcp",
+    "custom",
+    "app",
+    "products",
+    "paywalls",
+    "dynamic-links",
+    "support",
+    "marketing",
+    "onboardings",
+  ];
+  return JSON.stringify({
+    schemaVersion: 1,
+    target: "mbza-development",
+    environment: "development",
+    workers: [
+      ...ids.map((id) => ({
+        id,
+        workerName: id === "messaging" ? null : `opengrow-${id}-dev`,
+        enabled: id !== "messaging",
+        publicSurfaceIds:
+          id === "api"
+            ? ["api", "sdk", "shortlinks"]
+            : id === "dashboard" || id === "mcp"
+              ? [id]
+              : [],
+      })),
+      ...managedWorkers,
+    ],
+    customDependencies: [],
+  });
+}
+
+function managedWorkerCatalogEntry() {
+  return {
+    id: "managed-vocals-orchestrator",
+    workerName: "send-users-vocals-orchestrator-dev",
+    enabled: true,
+    publicSurfaceIds: [],
+    managed: {
+      binding: "MANAGED_VOCALS_ORCHESTRATOR",
+      description: "Target-managed vocal workflow",
+      workflow: "send-users-vocals-workflows-dev",
+      workflowClass: "VocalProcessingWorkflow",
+      containers: [{ className: "Standard", instanceType: "standard-1" }],
+      durableObjects: [{ className: "Dispatcher", storage: "legacy-kv" }],
+      stores: ["DB", "customR2"],
+    },
   };
 }

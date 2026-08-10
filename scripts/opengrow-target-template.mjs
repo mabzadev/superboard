@@ -122,7 +122,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 
   return {
     $schema: "./schema.json",
-    schemaVersion: 9,
+    schemaVersion: 11,
     target,
     accountAlias: args["account-alias"],
     workersDevSubdomain: args["workers-dev-subdomain"],

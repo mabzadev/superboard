@@ -141,6 +141,21 @@ export async function validateTarget(target) {
   }
   if (target.customWorker) {
     validateCustomWorkerBindings(target.customWorker);
+    const managedWorkers = target.customWorker.managedWorkers ?? [];
+    const runtimeBridge = target.customWorker.runtimeBridge;
+    if (managedWorkers.length > 0 && !runtimeBridge) {
+      throw new Error(
+        "Invalid target manifest: customWorker.runtimeBridge is required by managed Workers",
+      );
+    }
+    if (
+      runtimeBridge &&
+      runtimeBridge.filesInputOrigin !== `https://${target.domains.files}`
+    ) {
+      throw new Error(
+        "Invalid target manifest: runtimeBridge.filesInputOrigin must match the Files public target origin",
+      );
+    }
     for (const environment of environments) {
       if (
         target.customWorker.d1Binding &&
@@ -154,6 +169,33 @@ export async function validateTarget(target) {
         if (!binding.workers?.[environment]) {
           throw new Error(
             `Invalid target manifest: customWorker service binding ${binding.binding} needs a ${environment} Worker name`,
+          );
+        }
+      }
+      const declaredServiceNames = new Set(
+        (target.customWorker.serviceBindings ?? []).map(
+          (binding) => binding.workers[environment],
+        ),
+      );
+      for (const component of target.customWorker.managedWorkers ?? []) {
+        if (!target.environments[environment][component.r2Resource]) {
+          throw new Error(
+            `Invalid target manifest: managed Worker ${component.id} needs environments.${environment}.${component.r2Resource}`,
+          );
+        }
+        if (!component.workers?.[environment]) {
+          throw new Error(
+            `Invalid target manifest: managed Worker ${component.id} needs a ${environment} Worker name`,
+          );
+        }
+        if (!component.workflow.names?.[environment]) {
+          throw new Error(
+            `Invalid target manifest: managed Worker ${component.id} needs a ${environment} Workflow name`,
+          );
+        }
+        if (!declaredServiceNames.has(component.workers[environment])) {
+          throw new Error(
+            `Invalid target manifest: managed Worker ${component.id} is not connected to the custom Worker in ${environment}`,
           );
         }
       }

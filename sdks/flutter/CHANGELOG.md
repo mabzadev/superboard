@@ -1,4 +1,4 @@
-## Unreleased
+## 2.1.4
 
 * Resolve Google Play product contracts from the trusted server catalog instead of client timing
 * Bound Purchases API requests and response bodies with retryable timeout errors

@@ -6,6 +6,9 @@ Each deployment target has one manifest under `deploy/targets` and declares
 either `development` or `production`. Secret values and Cloudflare account IDs
 are rejected by the manifest schema. `OPENGROW_TARGET` and
 `OPENGROW_ENVIRONMENT` select the manifest and environment used by automation.
+The exact shared/reference/application/injected ownership boundary is enforced
+by `npm run configuration:check` and documented in
+[`CONFIGURATION_BOUNDARIES.md`](./CONFIGURATION_BOUNDARIES.md).
 
 Storage, queues, Workers, domains, registration realms, and OAuth applications are target-scoped. An accidental shared resource must not allow one target to authenticate, read, or mutate another target.
 
@@ -20,7 +23,10 @@ secret of its own.
 `.github/workflows/deploy-cloudflare.yml` connects all enabled Workers to GitHub
 as one ordered release. `dev` deploys the development target; `main` deploys the
 production target. GitHub Environments hold the target/account selection and
-least-privilege token. Worker source contains no account-specific constant.
+least-privilege token. The versioned deployment matrix also declares the exact
+target expected from each Environment, and the job fails before checkout or any
+Cloudflare command when `OPENGROW_TARGET` differs. Worker source contains no
+account-specific constant.
 
 Do not enable a second automatic Cloudflare Workers Builds deployment for the
 same Workers: two deployment authorities can race migrations, routes and Queue
@@ -68,6 +74,14 @@ No SMTP password, API key, or preview access token is stored in the repository.
 The value is supplied only during the separately confirmed apply phase, using
 the exact stdin JSON contract documented in `SECRET_MANAGEMENT.md`.
 
+The Infrastructure page reads a body-free operations projection through the
+API-to-Email Service Binding. Administrators can inspect live Queue backlog,
+message kind, status, recipient/error counts, attempts and timestamps without
+exposing recipients or message bodies. Terminal Queue failures remain in the Email D1 quarantine;
+retained payloads without secret redaction can be replayed, while every replay
+or discard decision records its resolution and timestamp. A failed Queue replay
+returns the record to quarantine instead of reporting a false success.
+
 Shared internal tokens use the same uploader with `--overlap`. Consumers first
 receive current and optional `*_PREVIOUS` bindings, then new-token-only
 producers are promoted. The value-free promotion receipt is retained outside
@@ -77,13 +91,23 @@ automatically rolls back affected Workers if activation fails.
 
 Newsletter/campaign mail belongs to the optional Marketing Worker because it
 needs project-scoped consent, suppressions, lists, templates, quotas, failover,
-tracking and provider events. Both Workers use the single
-`@opengrow/email-transport` SMTP implementation. Before enabling a production
-Marketing profile, enter its DKIM selector and run **Verify sender DNS** in
+tracking and provider events. Marketing selects and decrypts the project
+profile in memory, then delegates the fully materialized message to the Email
+Worker over a private `EMAIL_SERVICE` binding. Email is therefore the sole SMTP
+socket authority and stores only an idempotent transport receipt, never the
+delegated body or credential. Ambiguous binding failures retry the same profile
+and key before failover, preventing an unconfirmed send from being duplicated.
+Before enabling a production Marketing profile, enter its DKIM selector and run
+**Verify sender DNS** in
 `/marketing/settings`. OpenGrow checks SPF, DKIM and DMARC using Cloudflare's
 binary DNS-over-HTTPS response and records the evidence. SMTP connectivity alone
 does not mark the profile ready, and production campaign/double-opt-in queues do
 not select an unverified profile.
+
+`/marketing/settings` also exposes the project-scoped Marketing quarantine.
+Administrators inspect body-free terminal job metadata and can replay or
+discard one item. Every mutation is idempotent and audited; a replay that cannot
+reach Queue returns the item to quarantine.
 
 ## Resource bootstrap
 

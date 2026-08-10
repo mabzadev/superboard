@@ -84,6 +84,9 @@ identifiers, but never credentials or Cloudflare account IDs. Development and
 production are separate targets and may live in different Cloudflare accounts.
 The account is selected at runtime with a scoped environment variable derived
 from `accountAlias`, with `CLOUDFLARE_ACCOUNT_ID` as a CI-friendly fallback.
+The automated ownership rules are documented in
+[`docs/CONFIGURATION_BOUNDARIES.md`](docs/CONFIGURATION_BOUNDARIES.md) and can
+be audited offline with `npm run configuration:check`.
 
 ```bash
 # Validate the OpenGrow development target (no remote write)
@@ -207,6 +210,10 @@ release. The Dashboard exposes the same read-only catalogue and licence links at
 
 - `npm run sdk:catalog:check` verifies source versions, tags and the complete
   FlutterFlow public-code surface.
+- `npm run sdk:documentation:check` proves that every canonical installation
+  section uses the catalogue's published coordinate, immutable ref and version;
+  `npm run sdk:documentation:write` refreshes those bounded sections after a
+  protected catalogue promotion.
 - `.github/workflows/prepare-sdk-release.yml` is the reviewed manual authority
   that creates a new immutable tag from a release-ready catalogue entry.
 - `.github/workflows/release-sdk.yml` validates that tag again before testing
@@ -225,12 +232,13 @@ project named `OpenGrow`. `config/flutterflow-library.json` inventories its 11
 target-supplied Library Values and 64 custom actions. Run
 `npm run flutterflow-library:check` to prove that its DSL, public HTTPS
 dependencies, immutable refs, token-state policy and GitHub sync workflow stay
-aligned. Both reviewed FlutterFlow SDK tags are now published and the reference
-application pins them immutably. The protected `sync-flutterflow-library.yml`
-workflow initializes the workspace from the `FF_LIBRARY_PROJECT_ID` variable,
-tests the DSL, then updates the remote project with `FF_API_KEY`; neither value
-is hardcoded in Git. Remote synchronization remains intentionally gated until
-that encrypted Environment secret is installed.
+aligned. Published status and the immutable dependency ref come only from the
+SDK catalogue; reference promotion refuses any pending entry. The protected
+`sync-flutterflow-library.yml` workflow initializes the workspace from the
+`FF_LIBRARY_PROJECT_ID` variable, tests the DSL, then updates the remote project
+with `FF_API_KEY`; neither value is hardcoded in Git. Remote synchronization
+remains intentionally gated until that encrypted Environment secret is
+installed.
 
 The migration provenance and source SHAs are documented in
 `docs/HISTORY_MIGRATION.md`.

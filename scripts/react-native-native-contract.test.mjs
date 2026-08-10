@@ -7,7 +7,7 @@ import {
   validateNativeContract,
 } from "./react-native-native-contract.mjs";
 
-test("React Native native contract is derived from released SDK entries", async () => {
+test("React Native native contract is derived from published SDK baselines", async () => {
   const catalog = await loadSdkCatalog();
   const contract = nativeContractFromCatalog(catalog);
   const android = catalog.libraries.find((item) => item.id === "android");
@@ -21,9 +21,29 @@ test("React Native native contract is derived from released SDK entries", async 
     packageName: ios.packageName,
     repository: `${catalog.repository}.git`,
     releaseRef: `sdk-ios-v${ios.latestReleaseVersion}`,
+    podspecUrl:
+      `https://raw.githubusercontent.com/mbzadev/opengrow-platform/` +
+      `sdk-ios-v${ios.latestReleaseVersion}/${ios.versionSource}`,
     version: ios.latestReleaseVersion,
   });
   assert.equal((await validateNativeContract()).ok, true);
+});
+
+test("pending native sources preserve the latest immutable consumer baseline", async () => {
+  const catalog = await loadSdkCatalog();
+  const staged = structuredClone(catalog);
+  for (const id of ["android", "ios"]) {
+    const library = staged.libraries.find((item) => item.id === id);
+    library.releaseStatus = "pending-release";
+    library.sourceVersion = "99.0.0";
+  }
+
+  const contract = nativeContractFromCatalog(staged);
+  const android = staged.libraries.find((item) => item.id === "android");
+  const ios = staged.libraries.find((item) => item.id === "ios");
+  assert.equal(contract.android.version, android.latestReleaseVersion);
+  assert.equal(contract.ios.version, ios.latestReleaseVersion);
+  assert.equal(contract.ios.releaseRef, `sdk-ios-v${ios.latestReleaseVersion}`);
 });
 
 test("React Native consumers contain no retired Android coordinate", async () => {
@@ -38,4 +58,55 @@ test("React Native consumers contain no retired Android coordinate", async () =>
   const source = sources.join("\n");
   assert.doesNotMatch(source, /io\.opengrow:OpenGrow:/);
   assert.doesNotMatch(source, /io\.opengrow:opengrow-android:/);
+});
+
+test("React Native example substitutes the catalog coordinate with local Android source", async () => {
+  const [settings, fixtureSettings, fixtureBuild] = await Promise.all(
+    [
+      "../sdks/react-native/example/android/settings.gradle",
+      "./fixtures/react-native-android-contract/settings.gradle",
+      "./fixtures/react-native-android-contract/build.gradle",
+    ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
+  );
+  for (const source of [settings, fixtureSettings]) {
+    assert.match(source, /plugin\/native-contract\.json/);
+    assert.match(
+      source,
+      /substitute module\([^)]*\.android\.packageName\) using project\(':OpenGrow'\)/,
+    );
+    assert.match(source, /includeBuild\(/);
+  }
+  assert.match(settings, /includeBuild\(openGrowAndroidSource\)/);
+  assert.match(
+    fixtureBuild,
+    /dependency\.selected\.id instanceof ProjectComponentIdentifier/,
+  );
+  assert.match(
+    fixtureBuild,
+    /resolved from a registry instead of sdks\/android/,
+  );
+});
+
+test("React Native iOS consumers use the immutable catalog podspec", async () => {
+  const catalog = await loadSdkCatalog();
+  const contract = nativeContractFromCatalog(catalog);
+  const [podspec, podfile, readme] = await Promise.all(
+    [
+      "../sdks/react-native/opengrow-react-native.podspec",
+      "../sdks/react-native/example/ios/Podfile",
+      "../sdks/react-native/README.md",
+    ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
+  );
+
+  assert.match(
+    podspec,
+    /s\.dependency native_contract\["ios"\]\["packageName"\], "= #\{native_contract\["ios"\]\["version"\]\}"/,
+  );
+  assert.doesNotMatch(podspec, /s\.dependency\s+["']OpenGrow["']\s*,\s*["']~>/);
+  assert.match(podfile, /native_contract\["ios"\]\["podspecUrl"\]/);
+  assert.match(
+    readme,
+    new RegExp(contract.ios.releaseRef.replaceAll(".", "\\.")),
+  );
+  assert.match(readme, /does not claim a CocoaPods Trunk release/i);
 });

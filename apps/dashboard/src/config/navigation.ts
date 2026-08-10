@@ -53,6 +53,7 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     href: "/app/customers",
     pages: [
       page("Customers", "/app/customers"),
+      page("Users", "/app/users"),
       page("Referrals", "/app/referrals"),
       page("Access Key", "/app/access-key"),
       page("Libraries", "/app/libraries"),
@@ -136,7 +137,9 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
 
 export function sectionForPath(pathname: string) {
   return DASHBOARD_SECTIONS.find(
-    (section) => pathname === `/${section.slug}` || pathname.startsWith(`/${section.slug}/`)
+    (section) =>
+      pathname === `/${section.slug}` ||
+      pathname.startsWith(`/${section.slug}/`)
   );
 }
 
@@ -144,5 +147,7 @@ export function pageForPath(pathname: string) {
   const section = sectionForPath(pathname);
   return [...(section?.pages ?? [])]
     .sort((left, right) => right.href.length - left.href.length)
-    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+    .find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+    );
 }

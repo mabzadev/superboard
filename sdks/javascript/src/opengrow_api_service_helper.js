@@ -58,7 +58,7 @@ class OpenGrowAPIServiceHelper {
     xhr.send(JSON.stringify(data));
   }
 
-  GET(path, data, success, error) {
+  GET(path, success, error) {
     const headers = this.buildHeaders();
     const endpoint = this.endpoint(path);
 
@@ -77,6 +77,8 @@ class OpenGrowAPIServiceHelper {
     };
     xhr.onerror = () => error("OpenGrow network request failed");
 
+    // Sending no argument is required for GET: some runtimes reject or drop a
+    // GET request whose XMLHttpRequest body is non-null.
     xhr.send();
   }
 

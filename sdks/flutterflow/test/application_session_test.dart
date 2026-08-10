@@ -14,6 +14,9 @@ void main() {
       final client = OpenGrowApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
+        projectKey: 'project-key',
+        platform: 'ios',
+        identifier: 'com.example.app',
         httpClient: MockClient(
           (_) async => http.Response(
             jsonEncode({
@@ -99,6 +102,9 @@ void main() {
       final client = OpenGrowApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
+        projectKey: 'project-key',
+        platform: 'ios',
+        identifier: 'com.example.app',
         httpClient: MockClient((request) async {
           refreshRequest = request;
           return http.Response(
@@ -123,6 +129,9 @@ void main() {
       final restored = await manager.restore();
 
       expect(refreshRequest.url.path, '/auth/refresh');
+      expect(refreshRequest.headers['project-key'], 'project-key');
+      expect(refreshRequest.headers['platform'], 'ios');
+      expect(refreshRequest.headers['identifier'], 'com.example.app');
       expect(jsonDecode(refreshRequest.body), {'refresh_token': 'refresh-1'});
       expect(restored?.accessToken, 'access-2');
       expect(
@@ -146,6 +155,9 @@ void main() {
     final client = OpenGrowApplicationClient(
       apiBaseUrl: 'https://api.example.test',
       filesBaseUrl: 'https://files.example.test',
+      projectKey: 'project-key',
+      platform: 'ios',
+      identifier: 'com.example.app',
       httpClient: MockClient(
         (_) async => http.Response(
           jsonEncode({
@@ -178,6 +190,9 @@ void main() {
       final client = OpenGrowApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
+        projectKey: 'project-key',
+        platform: 'ios',
+        identifier: 'com.example.app',
         httpClient: MockClient((request) async {
           if (request.url.path == '/auth/signin/password') {
             return http.Response(

@@ -14,12 +14,18 @@ import {
   targetSelectionFromArgs,
 } from "./cloudflare-target.mjs";
 import {
+  ALL_SERVICES,
   DOMAIN_SERVICES,
   DOMAIN_SERVICE_REGISTRY,
   DOMAIN_SERVICE_BINDINGS,
-  assertService,
+  assertServiceForTarget,
   isServiceEnabled,
+  managedWorkerDefinition,
+  managedWorkerDefinitions,
+  managedWorkerOperationalBinding,
+  managedWorkerService,
   moduleResourceKey,
+  workerNameForService,
 } from "./cloudflare-services.mjs";
 import { requiredSecretInventory } from "./cloudflare-secret-inventory.mjs";
 import { assertPublicRoutingReady } from "./public-routing-gate.mjs";
@@ -42,14 +48,14 @@ const outputSuffix = args["output-suffix"];
 if (outputSuffix && !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(outputSuffix)) {
   throw new Error("--output-suffix must be a safe lowercase name");
 }
-assertService(service);
-
 const { target } = await loadTarget(targetName);
+assertServiceForTarget(target, service);
+const managedWorker = managedWorkerDefinition(target, service);
 if (!isServiceEnabled(target, service) && !args["allow-disabled"]) {
   throw new Error(`${service} is disabled for target ${targetName}`);
 }
 const resources = target.environments[environment];
-if (!resources || !target.workers[service]?.[environment]) {
+if (!resources || !workerNameForService(target, service, environment)) {
   throw new Error(`${targetName} does not define a ${environment} environment`);
 }
 const routing = assertPublicRoutingReady(target, environment);
@@ -68,6 +74,7 @@ if (
   (service === "custom" &&
     target.customWorker?.d1Binding &&
     !resources.customD1?.id) ||
+  (managedWorker && !resources.customD1?.id) ||
   (DOMAIN_SERVICES.includes(service) && !domainResource?.id)
 ) {
   if (allowUnprovisioned) {
@@ -110,7 +117,9 @@ const config =
                     ? mcpConfig()
                     : service === "custom"
                       ? customConfig()
-                      : domainConfig();
+                      : managedWorker
+                        ? managedWorkerConfig()
+                        : domainConfig();
 await writeConfigAtomically(outputPath, `${JSON.stringify(config, null, 2)}\n`);
 console.log(relative(root, outputPath));
 
@@ -147,7 +156,7 @@ function baseConfig() {
   const requiredSecrets = requiredSecretNamesForService();
   return {
     $schema: "../../node_modules/wrangler/config-schema.json",
-    name: target.workers[service][environment],
+    name: workerNameForService(target, service, environment),
     ...(accountId ? { account_id: accountId } : {}),
     // Pin to the newest date supported by the current Wrangler/workerd toolchain.
     compatibility_date: "2026-08-08",
@@ -205,6 +214,7 @@ function apiConfig() {
       FILES_DOMAIN: target.domains.files,
       MCP_DOMAIN: target.domains.mcp,
       PUBLIC_SURFACES_JSON: JSON.stringify(publicSurfaceMonitors(target)),
+      PLATFORM_WORKERS_JSON: JSON.stringify(platformWorkerTopology(target)),
       CORS_ORIGIN: publicDashboardUrl(target),
       CORS_ORIGINS_JSON: JSON.stringify([
         publicDashboardUrl(target),
@@ -287,6 +297,10 @@ function apiConfig() {
       ).map((domainService) => ({
         binding: DOMAIN_SERVICE_BINDINGS[domainService],
         service: target.workers[domainService][environment],
+      })),
+      ...managedWorkerDefinitions(target).map((component) => ({
+        binding: managedWorkerOperationalBinding(component),
+        service: component.workers[environment],
       })),
     ],
   };
@@ -386,6 +400,12 @@ function domainConfig() {
     config.r2_buckets = definition.r2.map((binding) => ({
       binding: binding.binding,
       bucket_name: resources.moduleR2[binding.resourceKey].name,
+    }));
+  }
+  if (definition.services.length) {
+    config.services = definition.services.map((binding) => ({
+      binding: binding.binding,
+      service: target.workers[binding.service][environment],
     }));
   }
   if (definition.queue) {
@@ -665,6 +685,12 @@ function customConfig() {
       APP_KEY: target.target,
       ENVIRONMENT: environment,
       CUSTOM_WORKER_CAPABILITIES: target.customWorker.capabilities.join(","),
+      ...(target.customWorker.runtimeBridge
+        ? {
+            FILES_INPUT_ORIGIN:
+              target.customWorker.runtimeBridge.filesInputOrigin,
+          }
+        : {}),
       ...(target.customWorker.d1Binding ? d1SchemaVars() : {}),
       ...(target.customWorker.vars ?? {}),
     },
@@ -692,6 +718,92 @@ function customConfig() {
     config.triggers = { crons: [...target.customWorker.crons] };
   }
   return config;
+}
+
+function managedWorkerConfig() {
+  if (!managedWorker) {
+    throw new Error(`${service} is not a managed Worker for ${targetName}`);
+  }
+  const accountId = cloudflareAccountId(target, process.env, {
+    required: !allowUnprovisioned,
+  });
+  if (!accountId && !allowUnprovisioned) {
+    throw new Error(
+      `CLOUDFLARE_ACCOUNT_ID is required to derive the R2 endpoint for ${service}`,
+    );
+  }
+  const commonVars = {
+    OPENGROW_TARGET: targetName,
+    ENVIRONMENT: environment,
+    GATEWAY_URL: target.customWorker.runtimeBridge.gatewayOrigin,
+    FILES_INPUT_ORIGIN: target.customWorker.runtimeBridge.filesInputOrigin,
+    FILES_INPUT_MAX_BYTES: String(target.filePolicy.maxBytes),
+    OUTPUT_FILE_ORIGIN: target.customWorker.runtimeBridge.outputFileOrigin,
+    R2_ENDPOINT_URL: accountId
+      ? `https://${accountId}.r2.cloudflarestorage.com`
+      : "https://validation.invalid",
+    R2_BUCKET_NAME: resources[managedWorker.r2Resource].name,
+    ...Object.fromEntries(
+      managedWorker.containers.map((container) => [
+        `${container.binding}_MAX_INSTANCES`,
+        String(container.maxInstances),
+      ]),
+    ),
+    ...(managedWorker.watermarkPath
+      ? {
+          WATERMARK_URL: `${target.customWorker.runtimeBridge.outputFileOrigin}${managedWorker.watermarkPath}`,
+        }
+      : {}),
+  };
+  return {
+    ...baseConfig(),
+    main: `../../${managedWorker.source}`,
+    vars: {
+      ...commonVars,
+      ...(managedWorker.vars ?? {}),
+    },
+    d1_databases: [
+      {
+        binding: managedWorker.d1Binding,
+        database_name: resources.customD1.name,
+        database_id: resourceId(resources.customD1, "customD1"),
+      },
+    ],
+    workflows: [
+      {
+        binding: managedWorker.workflow.binding,
+        name: managedWorker.workflow.names[environment],
+        class_name: managedWorker.workflow.className,
+      },
+    ],
+    containers: managedWorker.containers.map((container) => ({
+      class_name: container.className,
+      image: `../../${container.dockerfile}`,
+      max_instances: container.maxInstances,
+      instance_type: container.instanceType,
+    })),
+    durable_objects: {
+      bindings: [
+        ...managedWorker.containers.map((container) => ({
+          name: container.binding,
+          class_name: container.className,
+        })),
+        ...managedWorker.durableObjects.map((durableObject) => ({
+          name: durableObject.binding,
+          class_name: durableObject.className,
+        })),
+      ],
+    },
+    migrations: managedWorker.migrations.map((migration) => ({
+      tag: migration.tag,
+      ...(migration.newClasses?.length
+        ? { new_classes: migration.newClasses }
+        : {}),
+      ...(migration.newSqliteClasses?.length
+        ? { new_sqlite_classes: migration.newSqliteClasses }
+        : {}),
+    })),
+  };
 }
 
 function observabilityConfig() {
@@ -840,6 +952,60 @@ function publicSurfaceMonitors(selectedTarget) {
     ids.add(surface.id);
   }
   return monitored;
+}
+
+function platformWorkerTopology(selectedTarget) {
+  const publicSurfaceIds = {
+    api: ["api", "sdk", "shortlinks"],
+    dashboard: ["dashboard"],
+    email: selectedTarget.domains.mailPreview ? ["mail-preview"] : [],
+    files: ["files"],
+    mcp: ["mcp"],
+  };
+  return {
+    schemaVersion: 1,
+    target: targetName,
+    environment,
+    workers: [
+      ...ALL_SERVICES.map((id) => ({
+        id,
+        workerName: selectedTarget.workers[id]?.[environment] ?? null,
+        enabled: isServiceEnabled(selectedTarget, id),
+        publicSurfaceIds: publicSurfaceIds[id] ?? [],
+      })),
+      ...managedWorkerDefinitions(selectedTarget).map((component) => ({
+        id: managedWorkerService(component),
+        workerName: component.workers[environment],
+        enabled: true,
+        publicSurfaceIds: [],
+        managed: {
+          binding: managedWorkerOperationalBinding(component),
+          description: component.description,
+          workflow: component.workflow.names[environment],
+          workflowClass: component.workflow.className,
+          containers: component.containers.map(
+            ({ className, instanceType }) => ({
+              className,
+              instanceType,
+            }),
+          ),
+          durableObjects: component.durableObjects.map(
+            ({ className, storage }) => ({
+              className,
+              storage,
+            }),
+          ),
+          stores: [component.d1Binding, component.r2Resource],
+        },
+      })),
+    ],
+    customDependencies: (
+      selectedTarget.customWorker?.serviceBindings ?? []
+    ).map(({ binding, workers }) => ({
+      binding,
+      workerName: workers[environment],
+    })),
+  };
 }
 
 function queueConsumer(

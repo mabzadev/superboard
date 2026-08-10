@@ -45,17 +45,17 @@ The OpenGrow Android SDK provides deep linking, app links, link generation, in-a
 - Kotlin 1.6+ or Java 8+
 - Android Studio Arctic Fox+
 
+<!-- opengrow-sdk-documentation:android:start -->
+
 ## Installation
 
-### Gradle
+Add the published OpenGrow dependency to the application module:
 
-Add the OpenGrow dependency to your app-level `build.gradle`:
-
-```groovy
-dependencies {
-    implementation("io.opengrow:opengrow-android-sdk:1.0.2")
-}
+```kotlin
+implementation("io.opengrow:opengrow-android-sdk:1.0.2")
 ```
+
+<!-- opengrow-sdk-documentation:android:end -->
 
 ## Quick Start
 

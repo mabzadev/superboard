@@ -166,7 +166,7 @@ Cloudflare secrets and support overlap rotation.
 - the per-application upload ceiling, processor-ticket lifetime and
   exact/wildcard MIME allowlist enforced by the common Files Worker.
 
-The current contract is `schemaVersion: 9`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
+The current contract is `schemaVersion: 11`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
 provider secrets, signing keys or preview tokens. Account selection resolves in
 this order:
 
@@ -189,9 +189,14 @@ payload and rejects reuse with different content.
 The optional Marketing Worker owns the complete newsletter boundary: subscriber
 lists, consent, suppression, segments, templates, scheduling, per-project SMTP
 profiles, quotas/failover, one-click unsubscribe, tracking, provider events and
-reports. It uses the same `@opengrow/email-transport` implementation as Email,
-so there is one SMTP protocol implementation without forcing applications that
-do not enable Marketing to deploy campaign state or credentials.
+reports. It does not execute the shared SMTP implementation directly. After
+applying consent, segmentation, personalization, tracking, quotas and profile
+failover, Marketing delegates the fully materialized message and selected
+in-memory profile to Email through a private Service Binding. Email is the sole
+SMTP socket authority and retains an idempotent transport receipt without
+persisting the delegated body or secret. This avoids a second transport
+authority without forcing applications that do not enable Marketing to deploy
+campaign state or credentials.
 
 Applications read and update their own consent through
 `/api/v1/sdk/marketing/v1/preferences`. The client supplies only consent,
@@ -224,6 +229,11 @@ to 128 KiB, sensitive fields are redacted and made non-replayable, the original
 body receives a SHA-256 fingerprint, and each service retains at most 10,000
 quarantine records. `/infrastructure` reports the durable quarantine counters;
 Cloudflare Queue backlog remains a separate Analytics/API metric.
+
+Email quarantine is operated from `/infrastructure`; Marketing quarantine is
+project-scoped under `/marketing/settings`. Both expose body-free item metadata
+and replay/discard actions. Marketing replay/discard passes through its normal
+signed project context, admin role, idempotency and audit middleware.
 
 APNs private keys, Firebase service accounts and cached FCM OAuth tokens are
 encrypted before central D1 persistence with the API Worker's versioned

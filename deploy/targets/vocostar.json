@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 9,
+  "schemaVersion": 11,
   "target": "vocostar",
   "accountAlias": "vocostar-production",
   "workersDevSubdomain": "vocostar",
@@ -146,7 +146,137 @@
           "production": "opengrow-files"
         }
       }
-    ]
+    ],
+    "managedWorkers": [
+      {
+        "id": "vocals-orchestrator",
+        "source": "workers/custom/vocostar/orchestrators/vocals/src/index.ts",
+        "packagePath": "workers/custom/vocostar/orchestrators/vocals",
+        "description": "VocoStar vocal-cloning Workflow with a bounded Standard container pool.",
+        "workers": {
+          "production": "send-users-vocals-orchestrator"
+        },
+        "secrets": [
+          "MODAL_API_KEY",
+          "GATEWAY_INTERNAL_TOKEN",
+          "R2_ACCESS_KEY_ID",
+          "R2_SECRET_ACCESS_KEY"
+        ],
+        "vars": {
+          "DISPATCH_LEASE_MS": "3600000",
+          "MODAL_TTS_URL": "https://vocostar--vocostar-ttsengine-engine.modal.run",
+          "R2_READY_MAX_ATTEMPTS": "60"
+        },
+        "r2Resource": "customR2",
+        "d1Binding": "DB",
+        "workflow": {
+          "binding": "VOCAL_WORKFLOW",
+          "className": "VocalProcessingWorkflow",
+          "names": {
+            "production": "send-users-vocals-workflows"
+          }
+        },
+        "containers": [
+          {
+            "binding": "STANDARD",
+            "className": "Standard",
+            "dockerfile": "workers/custom/vocostar/orchestrators/vocals/container/Dockerfile",
+            "maxInstances": 20,
+            "instanceType": "standard-1"
+          }
+        ],
+        "durableObjects": [
+          {
+            "binding": "DISPATCHER",
+            "className": "Dispatcher",
+            "storage": "legacy-kv"
+          }
+        ],
+        "migrations": [
+          {
+            "tag": "v1",
+            "newSqliteClasses": ["Standard"],
+            "newClasses": ["Dispatcher"]
+          }
+        ]
+      },
+      {
+        "id": "medias-orchestrator",
+        "source": "workers/custom/vocostar/orchestrators/medias/src/index.ts",
+        "packagePath": "workers/custom/vocostar/orchestrators/medias",
+        "description": "VocoStar media-conversion Workflow with Standard and Premium container pools.",
+        "workers": {
+          "production": "send-users-medias-orchestrator"
+        },
+        "secrets": [
+          "MODAL_API_KEY",
+          "GATEWAY_INTERNAL_TOKEN",
+          "R2_ACCESS_KEY_ID",
+          "R2_SECRET_ACCESS_KEY"
+        ],
+        "vars": {
+          "DISPATCH_LEASE_MS": "3600000",
+          "MODAL_ATS_URL": "https://vocostar--vocostar-atsengine-engine.modal.run",
+          "MODAL_TTS_URL": "https://vocostar--vocostar-ttsengine-engine.modal.run",
+          "R2_READY_MAX_ATTEMPTS": "60"
+        },
+        "r2Resource": "customR2",
+        "watermarkPath": "/img/vocostarthumb.png",
+        "d1Binding": "DB",
+        "workflow": {
+          "binding": "MEDIA_WORKFLOW",
+          "className": "MediaProcessingWorkflow",
+          "names": {
+            "production": "send-users-medias-workflows"
+          }
+        },
+        "containers": [
+          {
+            "binding": "STANDARD",
+            "className": "Standard",
+            "dockerfile": "workers/custom/vocostar/orchestrators/medias/container/Dockerfile",
+            "maxInstances": 20,
+            "instanceType": "standard-1"
+          },
+          {
+            "binding": "PREMIUM",
+            "className": "Premium",
+            "dockerfile": "workers/custom/vocostar/orchestrators/medias/container/Dockerfile",
+            "maxInstances": 10,
+            "instanceType": "standard-2"
+          }
+        ],
+        "durableObjects": [
+          {
+            "binding": "DISPATCHER",
+            "className": "Dispatcher",
+            "storage": "legacy-kv"
+          }
+        ],
+        "migrations": [
+          {
+            "tag": "v1",
+            "newSqliteClasses": ["Standard", "Premium"],
+            "newClasses": ["Dispatcher"]
+          }
+        ]
+      }
+    ],
+    "runtimeBridge": {
+      "filesInputOrigin": "https://files.vocostar.com",
+      "outputFileOrigin": "https://file.vocostar.com",
+      "gatewayOrigin": "https://api.vocostar.com",
+      "gatewayWorker": "api-auth-gateway",
+      "gatewaySecretBinding": "INTERNAL_CALLBACK_TOKEN",
+      "callbackPaths": [
+        "/internal/notify",
+        "/ws/vocals/notify",
+        "/ws/vocals/progress",
+        "/ws/medias/progress"
+      ],
+      "deploymentStatus": "blocked",
+      "blockedReason": "OpenGrow Files routing is staged and the callback routes are still owned by the external legacy api-auth-gateway; do not replace api.vocostar.com or activate these orchestrators until a reviewed cutover ports the callbacks and coordinates INTERNAL_CALLBACK_TOKEN."
+    }
   },
   "oauth": {
     "dashboardClientId": "opengrow-vocostar"
@@ -205,6 +335,10 @@
       "customD1": {
         "name": "vocostar-db",
         "id": "07c6f044-e00a-421f-90de-b56db7bcfc40",
+        "legacyName": true
+      },
+      "customR2": {
+        "name": "app-vocostar",
         "legacyName": true
       },
       "analyticsDataset": "opengrow_vocostar_production",

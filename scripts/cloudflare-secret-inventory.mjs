@@ -8,6 +8,8 @@ import {
   PLATFORM_SERVICE_SECRETS,
   isServiceEnabled,
   isOptionalSecretBinding,
+  managedWorkerDefinition,
+  managedWorkerServices,
 } from "./cloudflare-services.mjs";
 import {
   loadTarget,
@@ -16,22 +18,30 @@ import {
 } from "./cloudflare-target.mjs";
 
 export function secretInventory(target) {
-  return ALL_SERVICES.filter((service) => isServiceEnabled(target, service))
+  return [...ALL_SERVICES, ...managedWorkerServices(target)]
+    .filter((service) => isServiceEnabled(target, service))
     .map((service) => ({
       service,
-      names:
-        service === "custom"
-          ? [
-              ...new Set([
-                ...target.customWorker.secrets,
-                "CUSTOM_WORKER_TOKEN_PREVIOUS",
-              ]),
-            ]
-          : DOMAIN_SERVICES.includes(service)
-            ? [...DOMAIN_SERVICE_REGISTRY[service].secrets]
-            : [...(PLATFORM_SERVICE_SECRETS[service] || [])],
+      names: secretNamesForService(target, service),
     }))
     .filter(({ names }) => names.length > 0);
+}
+
+function secretNamesForService(target, service) {
+  if (service === "custom") {
+    return [
+      ...new Set([
+        ...target.customWorker.secrets,
+        "CUSTOM_WORKER_TOKEN_PREVIOUS",
+      ]),
+    ];
+  }
+  const managedWorker = managedWorkerDefinition(target, service);
+  if (managedWorker) return [...managedWorker.secrets];
+  if (DOMAIN_SERVICES.includes(service)) {
+    return [...DOMAIN_SERVICE_REGISTRY[service].secrets];
+  }
+  return [...(PLATFORM_SERVICE_SECRETS[service] || [])];
 }
 
 const BILLING_REQUIRED = Object.freeze([
@@ -114,6 +124,9 @@ export function requiredSecretInventory(target, environment) {
     "CLOUDFLARE_ANALYTICS_TOKEN",
   ]);
   if (target.customWorker) add("custom", target.customWorker.secrets);
+  for (const component of target.customWorker?.managedWorkers ?? []) {
+    add(`managed-${component.id}`, component.secrets);
+  }
   for (const service of DOMAIN_SERVICES) {
     if (target.features?.[service]) {
       add(
@@ -268,6 +281,7 @@ export function secretCoordinationPlan(target, environment) {
         "EMAIL_INTERNAL_TOKEN_PREVIOUS",
       ),
       exactMember("identity", "EMAIL_INTERNAL_TOKEN"),
+      exactMember("marketing", "EMAIL_INTERNAL_TOKEN"),
     ],
   });
   addContract({
@@ -374,12 +388,31 @@ export function secretCoordinationPlan(target, environment) {
     ],
   });
 
+  const runtimeBridge = target.customWorker?.runtimeBridge;
+  if (runtimeBridge) {
+    addContract({
+      id: "managed-worker-gateway-callback-token",
+      scope: "application-specific",
+      source: "coordinated-external-peer-secret",
+      sameValueRequired: true,
+      rotation: "coordinate-external-gateway-before-promoting-worker-versions",
+      externalPeers: [
+        `${runtimeBridge.gatewayWorker}/${runtimeBridge.gatewaySecretBinding}`,
+      ],
+      members: managedWorkerServices(target).map((service) =>
+        exactMember(service, "GATEWAY_INTERNAL_TOKEN"),
+      ),
+    });
+  }
+
   for (const requirement of requirements) {
     for (const name of requirement.names) {
       const member = { service: requirement.service, name };
       if (claimed.has(memberKey(member))) continue;
       const metadata = PRODUCTION_SECRET_METADATA[name] ?? {};
-      const applicationSpecific = requirement.service === "custom";
+      const applicationSpecific =
+        requirement.service === "custom" ||
+        requirement.service.startsWith("managed-");
       addContract({
         id: `${requirement.service}-${name.toLowerCase().replaceAll("_", "-")}`,
         scope: applicationSpecific ? "application-specific" : "platform-common",
@@ -403,7 +436,8 @@ export function secretCoordinationPlan(target, environment) {
       addContract({
         id: `${requirement.service}-${alternative.oneOf.join("-or-").toLowerCase().replaceAll("_", "-")}`,
         scope:
-          requirement.service === "custom"
+          requirement.service === "custom" ||
+          requirement.service.startsWith("managed-")
             ? "application-specific"
             : "platform-common",
         source: "operator-supplied",

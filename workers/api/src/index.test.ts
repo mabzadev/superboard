@@ -1,10 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
+import { verifyInternalProjectContextRequest } from "@opengrow/contracts/project-context";
 import worker from "./index";
 import { Env } from "./types";
 import { createFakeD1, FakeD1Call } from "./test/fake-d1";
 
 function env(overrides: Partial<Env> = {}): Env {
   const db = createFakeD1((call: FakeD1Call) => {
+    if (call.op === "first" && call.sql.includes("FROM instances i")) {
+      return call.args[0] === "project-two-key"
+        ? { project_id: 202, instance_id: 20, is_test: 0 }
+        : { project_id: 101, instance_id: 10, is_test: 0 };
+    }
+    if (call.op === "first" && call.sql.includes("FROM applications a")) {
+      return { id: 1 };
+    }
     if (
       call.op === "all" &&
       call.sql.includes("FROM application_account_erasures")
@@ -172,6 +181,23 @@ describe("Worker scheduled and queue handlers", () => {
         forwardedUrl = String(input);
         forwardedHeaders = new Headers(init?.headers);
         forwardedBody = await new Response(init?.body).json();
+        await expect(
+          verifyInternalProjectContextRequest(
+            new Request(input, {
+              method: init?.method,
+              headers: init?.headers,
+            }),
+            "module-secret",
+            "identity",
+          ),
+        ).resolves.toMatchObject({
+          ok: true,
+          context: {
+            projectId: 101,
+            projectRef: "10-prod",
+            instanceId: 10,
+          },
+        });
         return Response.json({ path: new URL(forwardedUrl).pathname });
       },
     );
@@ -181,16 +207,96 @@ describe("Worker scheduled and queue handlers", () => {
         headers: {
           "content-type": "application/json",
           "cf-connecting-ip": "192.0.2.10",
+          "PROJECT-KEY": "project-one-key",
+          PLATFORM: "ios",
+          IDENTIFIER: "com.example.one",
         },
         body: JSON.stringify({ token: "provider-token" }),
       }),
-      env({ IDENTITY_SERVICE: { fetch } as unknown as Fetcher }),
+      env({
+        IDENTITY_SERVICE: { fetch } as unknown as Fetcher,
+        MODULE_INTERNAL_TOKEN: "module-secret",
+      }),
       {} as ExecutionContext,
     );
     expect(response?.status).toBe(200);
     expect(new URL(forwardedUrl).pathname).toBe("/auth/signin/apple");
     expect(forwardedHeaders.get("cf-connecting-ip")).toBe("192.0.2.10");
+    expect(forwardedHeaders.get("x-project-id")).toBe("101");
     expect(forwardedBody).toEqual({ token: "provider-token" });
+  });
+
+  it("fails closed before Identity when initial auth lacks project credentials", async () => {
+    const fetch = vi.fn(async () => Response.json({ unexpected: true }));
+    const response = await worker.fetch?.(
+      new Request("https://api.test/auth/signin/password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "user@example.test",
+          password: "secret",
+        }),
+      }),
+      env({
+        IDENTITY_SERVICE: { fetch } as unknown as Fetcher,
+        MODULE_INTERNAL_TOKEN: "module-secret",
+      }),
+      {} as ExecutionContext,
+    );
+    expect(response?.status).toBe(401);
+    await expect(response?.json()).resolves.toMatchObject({
+      error: { code: "sdk_credentials_required", retryable: false },
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("resolves and signs a distinct Identity context for each SDK project", async () => {
+    const contexts: Array<{ projectId: number; projectRef: string }> = [];
+    const fetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const verified = await verifyInternalProjectContextRequest(
+          new Request(input, {
+            method: init?.method,
+            headers: init?.headers,
+          }),
+          "module-secret",
+          "identity",
+        );
+        expect(verified.ok).toBe(true);
+        if (verified.ok) {
+          contexts.push({
+            projectId: verified.context.projectId,
+            projectRef: verified.context.projectRef,
+          });
+        }
+        return Response.json({ accepted: true });
+      },
+    );
+    const testEnv = env({
+      IDENTITY_SERVICE: { fetch } as unknown as Fetcher,
+      MODULE_INTERNAL_TOKEN: "module-secret",
+    });
+    for (const projectKey of ["project-one-key", "project-two-key"]) {
+      const response = await worker.fetch?.(
+        new Request("https://api.test/auth/anonymous", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "PROJECT-KEY": projectKey,
+            PLATFORM: "ios",
+            IDENTIFIER: "com.example.shared",
+          },
+          body: JSON.stringify({ installation_id: "shared-installation" }),
+        }),
+        testEnv,
+        {} as ExecutionContext,
+      );
+      expect(response?.status).toBe(200);
+    }
+    expect(contexts).toEqual([
+      { projectId: 101, projectRef: "10-prod" },
+      { projectId: 202, projectRef: "20-prod" },
+    ]);
   });
 
   it("rejects incomplete legacy account deletion before Identity is reached", async () => {

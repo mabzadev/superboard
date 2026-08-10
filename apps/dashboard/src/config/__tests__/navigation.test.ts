@@ -27,6 +27,7 @@ describe("dashboard navigation", () => {
         "App",
         [
           "Customers",
+          "Users",
           "Referrals",
           "Access Key",
           "Libraries",
@@ -80,9 +81,9 @@ describe("dashboard navigation", () => {
     expect(pageForPath("/onboardings/statistics")?.label).toBe("Statistics");
   });
 
-  it("defines Dashboard and exactly 30 physical module pages", () => {
+  it("defines Dashboard and exactly 31 physical module pages", () => {
     expect(DASHBOARD_SECTIONS.flatMap((section) => section.pages)).toHaveLength(
-      31
+      32
     );
   });
 

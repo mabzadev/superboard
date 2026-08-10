@@ -39,27 +39,18 @@ export function desiredCloudflareResources(target, environment) {
   const desired = [
     idResource("d1", "d1", "Central API D1", resources.d1, ["d1", "id"]),
     idResource("kv", "kv", "API KV", resources.kv, ["kv", "id"]),
-    idResource(
+    idResource("emailD1", "d1", "Email D1", resources.emailD1, [
       "emailD1",
-      "d1",
-      "Email D1",
-      resources.emailD1,
-      ["emailD1", "id"],
-    ),
-    idResource(
+      "id",
+    ]),
+    idResource("identityD1", "d1", "Identity D1", resources.identityD1, [
       "identityD1",
-      "d1",
-      "Identity D1",
-      resources.identityD1,
-      ["identityD1", "id"],
-    ),
-    idResource(
+      "id",
+    ]),
+    idResource("filesD1", "d1", "Files D1", resources.filesD1, [
       "filesD1",
-      "d1",
-      "Files D1",
-      resources.filesD1,
-      ["filesD1", "id"],
-    ),
+      "id",
+    ]),
   ];
   if (target.features.messaging) {
     desired.push(
@@ -74,13 +65,19 @@ export function desiredCloudflareResources(target, environment) {
   }
   if (target.customWorker?.d1Binding) {
     desired.push(
-      idResource(
+      idResource("customD1", "d1", "Custom Worker D1", resources.customD1, [
         "customD1",
-        "d1",
-        "Custom Worker D1",
-        resources.customD1,
-        ["customD1", "id"],
-      ),
+        "id",
+      ]),
+    );
+  }
+  if (
+    (target.customWorker?.managedWorkers ?? []).some(
+      ({ r2Resource }) => r2Resource === "customR2",
+    )
+  ) {
+    desired.push(
+      namedResource("customR2", "r2", "Custom Worker R2", resources.customR2),
     );
   }
   const enabledModuleKeys = new Set(
@@ -92,13 +89,11 @@ export function desiredCloudflareResources(target, environment) {
     resources.moduleD1 ?? {},
   ).filter(([moduleName]) => enabledModuleKeys.has(moduleName))) {
     desired.push(
-      idResource(
-        `moduleD1.${moduleName}`,
-        "d1",
-        `${moduleName} D1`,
-        resource,
-        ["moduleD1", moduleName, "id"],
-      ),
+      idResource(`moduleD1.${moduleName}`, "d1", `${moduleName} D1`, resource, [
+        "moduleD1",
+        moduleName,
+        "id",
+      ]),
     );
   }
   desired.push(
@@ -146,12 +141,9 @@ export function desiredCloudflareResources(target, environment) {
   ];
   for (const key of queueKeys) {
     desired.push(
-      namedResource(
-        `queues.${key}`,
-        "queue",
-        `${key} Queue`,
-        { name: resources.queues[key] },
-      ),
+      namedResource(`queues.${key}`, "queue", `${key} Queue`, {
+        name: resources.queues[key],
+      }),
     );
   }
   for (const [moduleName, queue] of Object.entries(
@@ -207,15 +199,16 @@ export function buildCloudflareBootstrapPlan({
       continue;
     }
     const remoteByName = named[0] ?? null;
-    const remoteId = remoteByName && definition.idField
-      ? String(remoteByName[definition.idField] ?? "") || null
-      : null;
+    const remoteId =
+      remoteByName && definition.idField
+        ? String(remoteByName[definition.idField] ?? "") || null
+        : null;
     if (resource.manifestId) {
       const remoteById = definition.idField
-        ? inventory.find(
+        ? (inventory.find(
             (item) =>
               String(item?.[definition.idField] ?? "") === resource.manifestId,
-          ) ?? null
+          ) ?? null)
         : null;
       if (!remoteById) {
         blockers.push({
@@ -311,10 +304,14 @@ export async function applyCloudflareBootstrapPlan(
 ) {
   const expected = cloudflareBootstrapConfirmation(plan);
   if (confirm !== expected) {
-    throw new Error(`Refusing Cloudflare bootstrap: pass --confirm ${expected}`);
+    throw new Error(
+      `Refusing Cloudflare bootstrap: pass --confirm ${expected}`,
+    );
   }
   if (plan.blockers.length > 0) {
-    throw new Error("Refusing Cloudflare bootstrap while drift blockers remain");
+    throw new Error(
+      "Refusing Cloudflare bootstrap while drift blockers remain",
+    );
   }
   if (typeof create !== "function") {
     throw new Error("Cloudflare bootstrap create adapter is required");
@@ -350,7 +347,8 @@ export async function applyCloudflareBootstrapPlan(
 
 export function cloudflareResourceKind(kind) {
   const definition = KIND[kind];
-  if (!definition) throw new Error(`Unsupported Cloudflare resource kind ${kind}`);
+  if (!definition)
+    throw new Error(`Unsupported Cloudflare resource kind ${kind}`);
   return definition;
 }
 
@@ -424,7 +422,9 @@ function assertUniqueDesiredResources(resources) {
 
 function accountFingerprint(accountId) {
   if (!/^[a-f0-9]{32}$/iu.test(String(accountId ?? ""))) {
-    throw new Error("A valid Cloudflare account id is required for a remote plan");
+    throw new Error(
+      "A valid Cloudflare account id is required for a remote plan",
+    );
   }
   return createHash("sha256").update(accountId).digest("hex").slice(0, 12);
 }

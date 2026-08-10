@@ -29,6 +29,7 @@ import {
   deleteEmailSubscriber,
   deleteEmailTemplate,
   deleteMarketingMedia,
+  discardMarketingDeadLetter,
   deleteProviderWebhook,
   deleteSmtpSettings,
   deleteSubscriberList,
@@ -40,6 +41,7 @@ import {
   getEmailSubscribers,
   getEmailTemplates,
   getMarketingAudit,
+  getMarketingDeadLetters,
   getMarketingMedia,
   getMarketingStatistics,
   getProviderWebhooks,
@@ -48,6 +50,7 @@ import {
   getSubscriberSegments,
   importEmailSubscribers,
   refreshSubscriberSegment,
+  replayMarketingDeadLetter,
   removeSubscriberFromList,
   retryDeliveryOutbox,
   saveSmtpSettings,
@@ -69,6 +72,7 @@ import {
   type EmailSubscriber,
   type EmailTemplate,
   type MarketingMedia,
+  type MarketingDeadLetter,
   type MarketingStatistics,
   type ProviderWebhook,
   type SmtpSettings,
@@ -1754,6 +1758,7 @@ export function MarketingSettingsPage() {
   const [profiles, setProfiles] = useState<SmtpSettings[]>([]);
   const [webhooks, setWebhooks] = useState<ProviderWebhook[]>([]);
   const [outbox, setOutbox] = useState<DeliveryOutboxItem[]>([]);
+  const [deadLetters, setDeadLetters] = useState<MarketingDeadLetter[]>([]);
   const [auditCount, setAuditCount] = useState(0);
   const [smtp, setSmtp] = useState<SmtpSettings>({
     id: crypto.randomUUID(),
@@ -1772,16 +1777,19 @@ export function MarketingSettingsPage() {
   const load = useCallback(async () => {
     if (!selectedProject) return;
     try {
-      const [smtpResult, hookRows, outboxRows, auditRows] = await Promise.all([
-        getSmtpSettings(selectedProject.id),
-        getProviderWebhooks(selectedProject.id),
-        getDeliveryOutbox(selectedProject.id),
-        getMarketingAudit(selectedProject.id),
-      ]);
+      const [smtpResult, hookRows, outboxRows, deadLetterRows, auditRows] =
+        await Promise.all([
+          getSmtpSettings(selectedProject.id),
+          getProviderWebhooks(selectedProject.id),
+          getDeliveryOutbox(selectedProject.id),
+          getMarketingDeadLetters(selectedProject.id),
+          getMarketingAudit(selectedProject.id),
+        ]);
       const rows = smtpResult.profiles || (smtpResult.id ? [smtpResult] : []);
       setProfiles(rows);
       setWebhooks(hookRows);
       setOutbox(outboxRows);
+      setDeadLetters(deadLetterRows);
       setAuditCount(auditRows.length);
       setError(null);
     } catch (cause) {
@@ -2116,7 +2124,7 @@ export function MarketingSettingsPage() {
               </CardContent>
             </Card>
           </div>
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-3">
             <FormCard title="Provider webhook">
               <Input
                 placeholder="Provider identifier"
@@ -2230,6 +2238,84 @@ export function MarketingSettingsPage() {
                           Retry
                         </Button>
                       )}
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Marketing dead letters</CardTitle>
+                <CardDescription>
+                  Inspect and resolve individual terminal Queue jobs
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {deadLetters.length === 0 ? (
+                  <Empty text="No marketing dead letters." />
+                ) : (
+                  deadLetters.map((item) => (
+                    <div key={item.id} className="rounded-md border p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">
+                            {item.job_type || "Unknown Queue job"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.status}
+                            {item.resolution
+                              ? ` · ${item.resolution}`
+                              : ""} · {item.attempts} attempts
+                          </p>
+                          <p className="truncate font-mono text-xs text-muted-foreground">
+                            {item.resource_id || item.queue_message_id}
+                          </p>
+                        </div>
+                        {item.status === "quarantined" && (
+                          <div className="flex shrink-0">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Replay dead letter ${item.id}`}
+                              disabled={!item.replayable}
+                              title={
+                                item.replayable
+                                  ? "Replay"
+                                  : "Payload was redacted and cannot be replayed"
+                              }
+                              onClick={() =>
+                                void run(
+                                  () =>
+                                    replayMarketingDeadLetter(
+                                      selectedProject.id,
+                                      item.id
+                                    ),
+                                  "Marketing job queued again"
+                                )
+                              }
+                            >
+                              <RotateCcw />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Discard dead letter ${item.id}`}
+                              onClick={() =>
+                                void run(
+                                  () =>
+                                    discardMarketingDeadLetter(
+                                      selectedProject.id,
+                                      item.id
+                                    ),
+                                  "Marketing dead letter discarded"
+                                )
+                              }
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}

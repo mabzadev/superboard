@@ -116,6 +116,7 @@ describe("VocoStar custom job validation", () => {
         {
           FILES_SERVICE: { fetch } as unknown as Fetcher,
           FILES_INTERNAL_TOKEN: "files-token",
+          FILES_INPUT_ORIGIN: "https://files.example.test",
         },
       ),
     ).resolves.toEqual({
@@ -138,9 +139,35 @@ describe("VocoStar custom job validation", () => {
         {
           FILES_SERVICE: { fetch: vi.fn() } as unknown as Fetcher,
           FILES_INTERNAL_TOKEN: "files-token",
+          FILES_INPUT_ORIGIN: "https://files.example.test",
         },
       ),
     ).rejects.toThrow("dispatch_source_file_mismatch");
+  });
+
+  it("rejects a Files ticket issued for an unexpected public origin", async () => {
+    await expect(
+      resolveDispatchPayload(
+        {
+          user_id: "user-1",
+          source_file_id: "11111111-1111-4111-8111-111111111111",
+        },
+        { audio_file_id: "11111111-1111-4111-8111-111111111111" },
+        {
+          FILES_SERVICE: {
+            fetch: vi.fn(async () =>
+              Response.json({
+                download: {
+                  url: "https://attacker.example/v1/downloads/ticket",
+                },
+              }),
+            ),
+          } as unknown as Fetcher,
+          FILES_INTERNAL_TOKEN: "files-token",
+          FILES_INPUT_ORIGIN: "https://files.example.test",
+        },
+      ),
+    ).rejects.toThrow("files_ticket_origin_invalid");
   });
 });
 

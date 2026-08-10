@@ -21,7 +21,7 @@ export function validateDeploymentConfiguration(configuration) {
     !configuration ||
     typeof configuration !== "object" ||
     Array.isArray(configuration) ||
-    configuration.schemaVersion !== 1 ||
+    configuration.schemaVersion !== 2 ||
     !Array.isArray(configuration.deployments) ||
     configuration.deployments.length === 0
   ) {
@@ -40,12 +40,14 @@ export function validateDeploymentConfiguration(configuration) {
     );
   }
   const safeName = /^[a-z][a-z0-9-]{1,62}$/u;
+  const targetName = /^[a-z][a-z0-9-]{1,30}$/u;
   const expectedKeys = [
     "branch",
     "cloudflareEnvironment",
     "githubEnvironment",
     "id",
     "referenceAcceptance",
+    "target",
   ];
   for (const deployment of configuration.deployments) {
     if (
@@ -59,7 +61,8 @@ export function validateDeploymentConfiguration(configuration) {
     }
     if (
       !safeName.test(deployment.id) ||
-      !safeName.test(deployment.githubEnvironment)
+      !safeName.test(deployment.githubEnvironment) ||
+      !targetName.test(deployment.target)
     ) {
       throw new Error("Cloudflare deployment names are invalid");
     }
@@ -114,6 +117,7 @@ export function selectDeployments(configuration, branch) {
     matrix: {
       include: deployments.map((deployment) => ({
         id: deployment.id,
+        target: deployment.target,
         githubEnvironment: deployment.githubEnvironment,
         cloudflareEnvironment: deployment.cloudflareEnvironment,
       })),
@@ -151,6 +155,11 @@ export function validateControlPlaneCoverage(configuration, controlPlane) {
     if (environment.variables?.OPENGROW_TARGET == null) {
       throw new Error(
         `${deployment.githubEnvironment} must define OPENGROW_TARGET`,
+      );
+    }
+    if (environment.variables.OPENGROW_TARGET !== deployment.target) {
+      throw new Error(
+        `${deployment.githubEnvironment} OPENGROW_TARGET must equal the versioned deployment target ${deployment.target}`,
       );
     }
     for (const name of ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]) {

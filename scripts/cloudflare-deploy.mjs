@@ -13,19 +13,41 @@ import {
   root,
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
-import { assertService } from "./cloudflare-services.mjs";
-import { D1_SCHEMA_OWNERS, d1Descriptor } from "./cloudflare-d1-registry.mjs";
+import { assertServiceForTarget } from "./cloudflare-services.mjs";
+import {
+  D1_SCHEMA_OWNERS,
+  d1Descriptor,
+  localMigrationFiles,
+} from "./cloudflare-d1-registry.mjs";
 import { migrationConfirmation } from "./cloudflare-d1-converge.mjs";
 import { readMigrationBatchReceipt } from "./cloudflare-migration-batch.mjs";
+import { runtimeBridgeDeploymentBlockers } from "./cloudflare-deploy-plan.mjs";
+import {
+  enforceIdentityProjectCutover,
+  resolveDeploymentRevision,
+} from "./cloudflare-identity-cutover.mjs";
 
 const args = parseArgs();
 const targetName = targetNameFromArgs(args);
 const environment = environmentFromArgs(args);
 const service = args.service ?? "api";
-const uploadOnly = Boolean(args["upload-only"]);
-assertService(service);
+const uploadOnly = Boolean(args["upload-only"] || args.preflight);
 
 const { target } = await loadTarget(targetName);
+assertServiceForTarget(target, service);
+const blockers = runtimeBridgeDeploymentBlockers({
+  target,
+  environment,
+  services: [service],
+  uploadOnly,
+});
+if (blockers.length > 0) {
+  throw new Error(
+    `Refusing active deployment: ${blockers
+      .map(({ id, action }) => `${id}: ${action}`)
+      .join(" | ")}`,
+  );
+}
 const targetCloudflareEnv = cloudflareEnv(target);
 const schemaOwner = D1_SCHEMA_OWNERS.includes(service)
   ? d1Descriptor(target, targetName, environment, service)
@@ -44,12 +66,33 @@ if (schemaOwner && environment === "production" && args["skip-migrations"]) {
 }
 let migrationsConvergedByBatch = false;
 if (
+  Boolean(args["identity-cutover-receipt"]) !==
+  Boolean(args["identity-cutover-sha256"])
+) {
+  throw new Error(
+    "--identity-cutover-receipt and --identity-cutover-sha256 are required together",
+  );
+}
+if (
   Boolean(args["migration-batch-receipt"]) !==
   Boolean(args["migration-batch-sha256"])
 ) {
   throw new Error(
     "--migration-batch-receipt and --migration-batch-sha256 are required together",
   );
+}
+
+let suppliedIdentityCutover = null;
+if (args["identity-cutover-receipt"]) {
+  if (service !== "identity" || uploadOnly) {
+    throw new Error(
+      "--identity-cutover-receipt is valid only for an active Identity deployment",
+    );
+  }
+  suppliedIdentityCutover = {
+    path: args["identity-cutover-receipt"],
+    sha256: args["identity-cutover-sha256"],
+  };
 }
 if (args["migration-batch-receipt"] && args["migration-batch-sha256"]) {
   if (environment !== "production" || !schemaOwner || uploadOnly) {
@@ -154,6 +197,33 @@ if (
       targetCloudflareEnv,
     );
   }
+}
+
+if (service === "identity" && !uploadOnly) {
+  const migration = (await localMigrationFiles(schemaOwner)).at(-1);
+  const revision = resolveDeploymentRevision(targetCloudflareEnv);
+  const expected = {
+    targetName,
+    environment,
+    accountId: targetCloudflareEnv.CLOUDFLARE_ACCOUNT_ID,
+    databaseName: schemaOwner.databaseName,
+    databaseId: schemaOwner.databaseId,
+    migration,
+    revision,
+  };
+  await enforceIdentityProjectCutover({
+    suppliedReceipt: suppliedIdentityCutover,
+    expected,
+    verification: {
+      target,
+      targetName,
+      environment,
+      accountId: targetCloudflareEnv.CLOUDFLARE_ACCOUNT_ID,
+      revision,
+      receiptDirectory: args["identity-cutover-directory"] ?? backupDirectory,
+      env: targetCloudflareEnv,
+    },
+  });
 }
 
 if (service === "dashboard") {

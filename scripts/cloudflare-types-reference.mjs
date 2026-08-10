@@ -5,9 +5,12 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { DOMAIN_SERVICES } from "./cloudflare-services.mjs";
 import { selectedCustomWorkerTypeSelections } from "./custom-worker-check.mjs";
+import {
+  parseArgs,
+  targetSelectionFromArgs,
+} from "./cloudflare-target.mjs";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
-const check = process.argv.includes("--check");
 const services = [
   "billing",
   "email",
@@ -17,64 +20,158 @@ const services = [
   "mcp",
   ...DOMAIN_SERVICES,
 ];
-const customSelections = await selectedCustomWorkerTypeSelections(
-  { all: true },
-  {},
-);
-const outputs = [
-  resolve(root, "workers/api/src/generated-env.d.ts"),
-  ...services.map((service) => resolve(root, "workers", service, "worker-configuration.d.ts")),
-  ...customSelections.map(({ packagePath }) =>
-    resolve(root, packagePath, "worker-configuration.d.ts")
-  ),
-];
-const before = check
-  ? new Map(await Promise.all(outputs.map(async (path) => [path, await file(path)])))
-  : new Map();
+export async function cloudflareTypesMode(args, env = process.env) {
+  if (args.reference) {
+    const selection = await targetSelectionFromArgs(args, env, {
+      allowReference: true,
+    });
+    return {
+      ...selection,
+      mode: "reference",
+      generatorArgs: ["--reference"],
+      customSelectionArgs: { all: true },
+      customSelectionEnv: {},
+    };
+  }
 
-run(process.execPath, [
-  resolve(root, "scripts/cloudflare-api-types.mjs"),
-  "--reference",
-  "--allow-unprovisioned",
-]);
-for (const service of services) {
-  run(process.execPath, [
-    resolve(root, "scripts/cloudflare-types.mjs"),
-    "--service",
-    service,
-    "--reference",
+  if (!args.target || !args.environment) {
+    throw new Error(
+      "Cloudflare type generation requires either --reference or an explicit --target and --environment",
+    );
+  }
+  if (env.OPENGROW_TARGET && env.OPENGROW_TARGET !== args.target) {
+    throw new Error(
+      `--target ${args.target} does not match OPENGROW_TARGET ${env.OPENGROW_TARGET}`,
+    );
+  }
+  if (
+    env.OPENGROW_ENVIRONMENT &&
+    env.OPENGROW_ENVIRONMENT !== args.environment
+  ) {
+    throw new Error(
+      `--environment ${args.environment} does not match OPENGROW_ENVIRONMENT ${env.OPENGROW_ENVIRONMENT}`,
+    );
+  }
+  const selection = await targetSelectionFromArgs(args, env, {
+    allowReference: true,
+  });
+  return {
+    ...selection,
+    mode: "target",
+    generatorArgs: [
+      "--target",
+      selection.targetName,
+      "--environment",
+      selection.environment,
+    ],
+    customSelectionArgs: {
+      target: selection.targetName,
+      environment: selection.environment,
+    },
+    customSelectionEnv: env,
+  };
+}
+
+export async function main(
+  argv = process.argv.slice(2),
+  env = process.env,
+  execute = run,
+) {
+  const args = parseArgs(argv);
+  const check = Boolean(args.check);
+  const mode = await cloudflareTypesMode(args, env);
+  const compareReferenceOutputs = check && mode.mode === "reference";
+  const customSelections = await selectedCustomWorkerTypeSelections(
+    mode.customSelectionArgs,
+    mode.customSelectionEnv,
+  );
+  const managedSelections = customSelections.flatMap((selection) =>
+    selection.managedServices.map((service) => ({ ...selection, service })),
+  );
+  const outputs = [
+    resolve(root, "workers/api/src/generated-env.d.ts"),
+    ...services.map((service) =>
+      resolve(root, "workers", service, "worker-configuration.d.ts")
+    ),
+    ...customSelections.map(({ packagePath }) =>
+      resolve(root, packagePath, "worker-configuration.d.ts")
+    ),
+    ...managedSelections.map(({ managedPackages, service }) =>
+      resolve(root, managedPackages[service], "worker-configuration.d.ts")
+    ),
+  ];
+  const before = compareReferenceOutputs
+    ? new Map(
+      await Promise.all(outputs.map(async (path) => [path, await file(path)])),
+    )
+    : new Map();
+
+  execute(process.execPath, [
+    resolve(root, "scripts/cloudflare-api-types.mjs"),
+    ...mode.generatorArgs,
     "--allow-unprovisioned",
   ]);
-}
-for (const selection of customSelections) {
-  run(process.execPath, [
-    resolve(root, "scripts/cloudflare-types.mjs"),
-    "--service",
-    "custom",
-    "--target",
-    selection.targetName,
-    "--environment",
-    selection.environment,
-    "--allow-unprovisioned",
-  ]);
-}
-
-if (check) {
-  const stale = [];
-  for (const path of outputs) {
-    if (before.get(path) !== await file(path)) stale.push(path.slice(root.length + 1));
+  for (const service of services) {
+    execute(process.execPath, [
+      resolve(root, "scripts/cloudflare-types.mjs"),
+      "--service",
+      service,
+      ...mode.generatorArgs,
+      "--allow-unprovisioned",
+    ]);
   }
-  if (stale.length) {
-    throw new Error(`Generated Cloudflare binding types were stale:\n${stale.join("\n")}`);
+  for (const selection of customSelections) {
+    execute(process.execPath, [
+      resolve(root, "scripts/cloudflare-types.mjs"),
+      "--service",
+      "custom",
+      "--target",
+      selection.targetName,
+      "--environment",
+      selection.environment,
+      "--allow-unprovisioned",
+    ]);
+    for (const service of selection.managedServices) {
+      execute(process.execPath, [
+        resolve(root, "scripts/cloudflare-types.mjs"),
+        "--service",
+        service,
+        "--target",
+        selection.targetName,
+        "--environment",
+        selection.environment,
+        "--allow-unprovisioned",
+      ]);
+    }
   }
-}
 
-process.stdout.write(`${JSON.stringify({
-  schema_version: 1,
-  status: "ok",
-  checked: check,
-  generated: outputs.map((path) => path.slice(root.length + 1)),
-}, null, 2)}\n`);
+  if (compareReferenceOutputs) {
+    const stale = [];
+    for (const path of outputs) {
+      if (before.get(path) !== await file(path)) {
+        stale.push(path.slice(root.length + 1));
+      }
+    }
+    if (stale.length) {
+      throw new Error(
+        `Generated Cloudflare binding types were stale:\n${stale.join("\n")}`,
+      );
+    }
+  }
+
+  const result = {
+    schema_version: 1,
+    status: "ok",
+    mode: mode.mode,
+    target: mode.targetName,
+    environment: mode.environment,
+    checked: check,
+    reference_outputs_checked: compareReferenceOutputs,
+    generated: outputs.map((path) => path.slice(root.length + 1)),
+  };
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  return result;
+}
 
 async function file(path) {
   return readFile(path, "utf8").catch((error) => {
@@ -94,4 +191,11 @@ function run(command, args) {
   if (result.stdout) process.stderr.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   process.exit(result.status ?? 1);
+}
+
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  await main();
 }

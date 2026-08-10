@@ -2,32 +2,47 @@
 
 Import-ready library for replacing RevenueCat actions in FlutterFlow.
 
-1. Add the public Git dependency with an immutable ref:
+<!-- opengrow-sdk-documentation:flutterflow:start -->
 
-   ```yaml
-   opengrow_flutterflow:
-     git:
-       url: https://github.com/mbzadev/opengrow-platform.git
-       ref: sdk-flutterflow-v2.2.5
-       path: sdks/flutterflow
-   ```
+## Installation
 
-   No repository read token is required. Never put runtime credentials in the
-   Git dependency or exported application code.
+Add the published FlutterFlow package `opengrow_flutterflow`
+at the immutable release `sdk-flutterflow-v2.2.5`:
 
-2. Add `OpenGrowBootstrap` once to the initial page. It never initializes
+```yaml
+opengrow_flutterflow:
+  git:
+    url: https://github.com/mbzadev/opengrow-platform.git
+    ref: sdk-flutterflow-v2.2.5
+    path: sdks/flutterflow
+```
+
+No repository read token is required. Runtime credentials must never be
+placed in the Git dependency or exported application source.
+
+Then resolve the immutable dependency:
+
+```bash
+flutter pub get
+```
+
+<!-- opengrow-sdk-documentation:flutterflow:end -->
+
+## Integration
+
+1. Add `OpenGrowBootstrap` once to the initial page. It never initializes
    Purchases anonymously. Call `opengrowInitializeAuthenticated` immediately
    after `userAuthenticate` with the existing access token issued by the
    application authentication gateway.
-3. Use `OpenGrowPaywall` with a `placement`. Its published definition and A/B
+2. Use `OpenGrowPaywall` with a `placement`. Its published definition and A/B
    assignment resolve through `POST /api/v1/paywalls/resolve`; Products remains
    responsible only for offerings and purchases.
-4. Use `OpenGrowOnboarding` with a placement such as `app_launch`. It renders
+3. Use `OpenGrowOnboarding` with a placement such as `app_launch`. It renders
    the published screens and reports impression, step, progress, skip,
    abandonment and completion events.
-5. Protect a page with `opengrowHasEntitlement('premium')` and redirect to the
+4. Protect a page with `opengrowHasEntitlement('premium')` and redirect to the
    paywall when it returns false.
-6. Add `OpenGrowCustomerCenter` to Settings. It includes purchase history,
+5. Add `OpenGrowCustomerCenter` to Settings. It includes purchase history,
    subscriptions, balances, and restoration.
 
 FlutterFlow-ready actions:

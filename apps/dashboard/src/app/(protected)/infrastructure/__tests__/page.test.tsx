@@ -6,6 +6,9 @@ const platform = vi.hoisted(() => ({
   getStatus: vi.fn(),
   getJobs: vi.fn(),
   getErasures: vi.fn(),
+  getEmailOperations: vi.fn(),
+  replayEmailDeadLetter: vi.fn(),
+  discardEmailDeadLetter: vi.fn(),
   retryJob: vi.fn(),
 }));
 
@@ -13,6 +16,9 @@ vi.mock("@/api/platform/platformService", () => ({
   getPlatformStatus: platform.getStatus,
   getPlatformCustomJobs: platform.getJobs,
   getPlatformAccountErasures: platform.getErasures,
+  getPlatformEmailOperations: platform.getEmailOperations,
+  replayPlatformEmailDeadLetter: platform.replayEmailDeadLetter,
+  discardPlatformEmailDeadLetter: platform.discardEmailDeadLetter,
   retryPlatformCustomJob: platform.retryJob,
 }));
 
@@ -65,6 +71,72 @@ describe("InfrastructurePage", () => {
         completedAt: null,
       },
     ]);
+    platform.getEmailOperations.mockResolvedValue({
+      generatedAt: "2026-08-10T09:00:00.000Z",
+      queue: {
+        backlogCount: 3,
+        backlogBytes: 1_024,
+        oldestMessageAt: "2026-08-10T08:59:00.000Z",
+      },
+      messages: [
+        {
+          id: "transactional-mail-1",
+          kind: "transactional",
+          projectId: 20,
+          templateKey: "identity.verify",
+          subject: "Verify your email",
+          status: "failed",
+          transport: "smtp",
+          recipientCount: 1,
+          failedRecipients: 1,
+          attempts: 4,
+          lastError: "SMTP unavailable",
+          createdAt: "2026-08-10T08:00:00.000Z",
+          updatedAt: "2026-08-10T08:05:00.000Z",
+          sentAt: null,
+        },
+      ],
+      transportDeliveries: [
+        {
+          id: "transport-unknown-1",
+          source: "marketing",
+          projectId: 20,
+          referenceId: "campaign-delivery-1",
+          profileId: "smtp-profile-1",
+          status: "outcome_unknown",
+          attempts: 1,
+          providerMessageId: "provider-message-1",
+          lastError: "Accepted SMTP receipt persistence failed",
+          createdAt: "2026-08-10T08:02:00.000Z",
+          updatedAt: "2026-08-10T08:05:30.000Z",
+          sentAt: null,
+        },
+      ],
+      deadLetters: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          queueMessageId: "queue-message-1",
+          emailMessageId: "transactional-mail-1",
+          sourceQueue: "opengrow-email-delivery-dlq",
+          jobType: "email.deliver",
+          replayable: true,
+          attempts: 9,
+          status: "quarantined",
+          resolution: null,
+          receivedAt: "2026-08-10T08:06:00.000Z",
+          resolvedAt: null,
+        },
+      ],
+    });
+    platform.replayEmailDeadLetter.mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+      status: "replayed",
+      messageId: "transactional-mail-1",
+    });
+    platform.discardEmailDeadLetter.mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+      status: "discarded",
+    });
     platform.retryJob.mockResolvedValue({
       id: "conversion-job-1",
       capability: "vocostar.media.convert",
@@ -88,6 +160,25 @@ describe("InfrastructurePage", () => {
     expect(
       screen.getByText("Transactional and marketing email delivery")
     ).toBeInTheDocument();
+    expect(screen.getByText("opengrow-email-dev · common")).toBeInTheDocument();
+    expect(
+      screen.getByText("Health: binding /health · 4 ms")
+    ).toBeInTheDocument();
+    expect(screen.getByText("/api/v1/push/*")).toBeInTheDocument();
+    expect(screen.getByText("EMAIL_QUEUE")).toBeInTheDocument();
+    expect(
+      screen.getByText("Jobs: messagesQueued: 2 · deliveriesFailed: 1")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("send-users-vocals-orchestrator · managed")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("workflow:VocalProcessingWorkflow")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("workflow:send-users-vocals-workflows")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Jobs: unavailable")).toBeInTheDocument();
     expect(screen.getByText("OpenGrow gateway")).toBeInTheDocument();
     expect(
       screen.getByText("Access: Application identity or Dashboard session")
@@ -115,6 +206,17 @@ describe("InfrastructurePage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("opengrow-api-dev")).toBeInTheDocument();
     expect(screen.getByText("Account erasure operations")).toBeInTheDocument();
+    expect(screen.getByText("Email delivery operations")).toBeInTheDocument();
+    expect(screen.getByText("Queue backlog")).toBeInTheDocument();
+    expect(screen.getByText("Backlog bytes")).toBeInTheDocument();
+    expect(screen.getByText("Verify your email")).toBeInTheDocument();
+    expect(screen.getByText("SMTP unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText("Email dead-letter quarantine")
+    ).toBeInTheDocument();
+    expect(screen.getByText("campaign-delivery-1")).toBeInTheDocument();
+    expect(screen.getByText("outcome_unknown")).toBeInTheDocument();
+    expect(screen.getAllByText("transactional-mail-1")).toHaveLength(2);
     expect(screen.getByText("erase-operation-123456789")).toBeInTheDocument();
     expect(screen.getByText("0123456789ab")).toBeInTheDocument();
     expect(screen.getByText("app → marketing")).toBeInTheDocument();
@@ -127,6 +229,66 @@ describe("InfrastructurePage", () => {
     ).toBeInTheDocument();
     expect(platform.getJobs).toHaveBeenCalledTimes(1);
     expect(platform.getErasures).toHaveBeenCalledTimes(1);
+    expect(platform.getEmailOperations).toHaveBeenCalledTimes(1);
+  });
+
+  it("replays an email dead letter and refreshes its body-free operation list", async () => {
+    platform.getEmailOperations
+      .mockResolvedValueOnce({
+        generatedAt: "2026-08-10T09:00:00.000Z",
+        messages: [],
+        deadLetters: [
+          {
+            id: "11111111-1111-4111-8111-111111111111",
+            queueMessageId: "queue-message-1",
+            emailMessageId: "transactional-mail-1",
+            sourceQueue: "opengrow-email-delivery-dlq",
+            jobType: "email.deliver",
+            replayable: true,
+            attempts: 9,
+            status: "quarantined",
+            resolution: null,
+            receivedAt: "2026-08-10T08:06:00.000Z",
+            resolvedAt: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        generatedAt: "2026-08-10T09:01:00.000Z",
+        messages: [],
+        deadLetters: [
+          {
+            id: "11111111-1111-4111-8111-111111111111",
+            queueMessageId: "queue-message-1",
+            emailMessageId: "transactional-mail-1",
+            sourceQueue: "opengrow-email-delivery-dlq",
+            jobType: "email.deliver",
+            replayable: true,
+            attempts: 9,
+            status: "discarded",
+            resolution: "replayed",
+            receivedAt: "2026-08-10T08:06:00.000Z",
+            resolvedAt: "2026-08-10T09:01:00.000Z",
+          },
+        ],
+      });
+    render(<InfrastructurePage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Replay email dead letter 11111111-1111-4111-8111-111111111111",
+      })
+    );
+
+    await waitFor(() =>
+      expect(platform.replayEmailDeadLetter).toHaveBeenCalledWith(
+        "11111111-1111-4111-8111-111111111111"
+      )
+    );
+    await waitFor(() =>
+      expect(platform.getEmailOperations).toHaveBeenCalledTimes(2)
+    );
+    expect(await screen.findByText(/^replayed ·/)).toBeInTheDocument();
   });
 
   it("retries a failed application job and refreshes the job list", async () => {
@@ -205,6 +367,7 @@ describe("InfrastructurePage", () => {
     ).toBeInTheDocument();
     expect(platform.getJobs).not.toHaveBeenCalled();
     expect(platform.getErasures).not.toHaveBeenCalled();
+    expect(platform.getEmailOperations).not.toHaveBeenCalled();
   });
 });
 
@@ -218,6 +381,12 @@ function statusFixture(): PlatformStatus {
       target: "mbza-development",
       release: "abc123",
       publicRouting: "active",
+    },
+    catalog: {
+      schemaVersion: 1,
+      status: "ok",
+      target: "mbza-development",
+      environment: "development",
     },
     endpoints: {
       api: "https://api.example.test",
@@ -252,9 +421,43 @@ function statusFixture(): PlatformStatus {
     services: [
       {
         id: "email",
+        kind: "common",
+        workerName: "opengrow-email-dev",
+        enabled: true,
         status: "ok",
         description: "Transactional and marketing email delivery",
         responseTimeMs: 4,
+        health: { mode: "binding", path: "/health", url: null },
+        capabilities: ["notifications", "marketing-consent"],
+        routes: ["/api/v1/push/*"],
+        dependencies: {
+          services: [],
+          stores: ["email"],
+          queues: ["EMAIL_QUEUE"],
+          externalWorkers: [],
+        },
+        jobTypes: ["messages", "deliveries", "deadLetters"],
+        jobs: { messagesQueued: 2, deliveriesFailed: 1 },
+      },
+      {
+        id: "managed-vocals-orchestrator",
+        kind: "managed",
+        workerName: "send-users-vocals-orchestrator",
+        enabled: true,
+        status: "ok",
+        description: "Target-managed vocal workflow",
+        responseTimeMs: 6,
+        health: { mode: "binding", path: "/health", url: null },
+        capabilities: ["workflow:VocalProcessingWorkflow"],
+        routes: ["POST /"],
+        dependencies: {
+          services: ["custom"],
+          stores: ["DB", "customR2"],
+          queues: ["workflow:send-users-vocals-workflows"],
+          externalWorkers: [],
+        },
+        jobTypes: ["managed-vocals-orchestrator"],
+        jobs: null,
       },
     ],
     dataStores: [

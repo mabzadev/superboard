@@ -13,6 +13,7 @@ import {
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
 import { deploymentOrder } from "./cloudflare-deploy-plan.mjs";
+import { workerNameForService } from "./cloudflare-services.mjs";
 import { buildSecretBundlePlan } from "./cloudflare-secret-bundle.mjs";
 import { promotionArgs } from "./cloudflare-secret-promote.mjs";
 
@@ -46,7 +47,9 @@ export function buildSecretRetirementPlan({
     minimumOverlapMinutes < DEFAULT_MINIMUM_OVERLAP_MINUTES ||
     minimumOverlapMinutes > 7 * 24 * 60
   ) {
-    throw new Error("Minimum overlap must be an integer from 30 to 10080 minutes");
+    throw new Error(
+      "Minimum overlap must be an integer from 30 to 10080 minutes",
+    );
   }
   const nowDate = now instanceof Date ? now : new Date(now);
   const promotedAt = new Date(receipt.promotedAt);
@@ -56,10 +59,14 @@ export function buildSecretRetirementPlan({
     promotedAt.toISOString() !== receipt.promotedAt ||
     promotedAt.getTime() > nowDate.getTime()
   ) {
-    throw new Error("Secret promotion receipt has an invalid promotedAt timestamp");
+    throw new Error(
+      "Secret promotion receipt has an invalid promotedAt timestamp",
+    );
   }
   if (!/^[a-f0-9]{12}$/u.test(receipt.cloudflareAccountFingerprint ?? "")) {
-    throw new Error("Secret promotion receipt has an invalid account fingerprint");
+    throw new Error(
+      "Secret promotion receipt has an invalid account fingerprint",
+    );
   }
   const bundlePlan = buildSecretBundlePlan({
     target,
@@ -77,7 +84,7 @@ export function buildSecretRetirementPlan({
   }
   const expectedServices = new Set(
     bundlePlan.contracts.flatMap(({ members }) =>
-      members.map(({ service }) => service)
+      members.map(({ service }) => service),
     ),
   );
   if (!Array.isArray(receipt.workers) || receipt.workers.length === 0) {
@@ -89,7 +96,8 @@ export function buildSecretRetirementPlan({
       !worker ||
       typeof worker !== "object" ||
       promotedByService.has(worker.service) ||
-      worker.worker !== target.workers?.[worker.service]?.[environment] ||
+      worker.worker !==
+        workerNameForService(target, worker.service, environment) ||
       !/^[0-9a-f-]{36}$/iu.test(worker.versionId ?? "")
     ) {
       throw new Error("Secret promotion receipt contains an invalid Worker");
@@ -108,7 +116,7 @@ export function buildSecretRetirementPlan({
       if (!member.previousName) continue;
       const entry = previousByService.get(member.service) ?? {
         service: member.service,
-        worker: target.workers[member.service][environment],
+        worker: workerNameForService(target, member.service, environment),
         names: [],
       };
       if (entry.names.includes(member.previousName)) {
@@ -121,7 +129,9 @@ export function buildSecretRetirementPlan({
     }
   }
   if (previousByService.size === 0) {
-    throw new Error("Secret promotion receipt has no previous bindings to retire");
+    throw new Error(
+      "Secret promotion receipt has no previous bindings to retire",
+    );
   }
   for (const entry of previousByService.values()) {
     if (entry.names.length !== 1) {
@@ -134,19 +144,26 @@ export function buildSecretRetirementPlan({
   const eligibleAt = new Date(
     promotedAt.getTime() + minimumOverlapMinutes * 60_000,
   );
-  const blockers = nowDate < eligibleAt
-    ? [{
-        id: "overlap-observation-window",
-        action: `Wait until ${eligibleAt.toISOString()} before retiring previous secrets.`,
-      }]
-    : [];
+  const blockers =
+    nowDate < eligibleAt
+      ? [
+          {
+            id: "overlap-observation-window",
+            action: `Wait until ${eligibleAt.toISOString()} before retiring previous secrets.`,
+          },
+        ]
+      : [];
   const services = deploymentOrder(target)
     .filter((service) => previousByService.has(service))
     .map((service) => ({
       ...previousByService.get(service),
       names: previousByService.get(service).names.map((name) => ({
         name,
-        versionTag: retirementVersionTag(bundlePlan.confirmation, service, name),
+        versionTag: retirementVersionTag(
+          bundlePlan.confirmation,
+          service,
+          name,
+        ),
       })),
     }));
   return {
@@ -176,7 +193,9 @@ export function attachRetirementRemoteState(plan, remoteState, accountId) {
     .digest("hex")
     .slice(0, 12);
   if (fingerprint !== plan.cloudflareAccountFingerprint) {
-    throw new Error("Secret promotion receipt belongs to another Cloudflare account");
+    throw new Error(
+      "Secret promotion receipt belongs to another Cloudflare account",
+    );
   }
   const activeByService = new Map();
   for (const promoted of plan.promotedWorkers) {
@@ -203,14 +222,19 @@ export function attachRetirementRemoteState(plan, remoteState, accountId) {
       rollbackVersionId: activeByService.get(service.service),
       names: service.names.map((entry) => {
         const tagged = versions.find(
-          (version) => version.annotations?.["workers/tag"] === entry.versionTag,
+          (version) =>
+            version.annotations?.["workers/tag"] === entry.versionTag,
         );
         if (tagged && !/^[0-9a-f-]{36}$/iu.test(tagged.id ?? "")) {
-          throw new Error(`${service.worker} has an invalid retirement version`);
+          throw new Error(
+            `${service.worker} has an invalid retirement version`,
+          );
         }
         return {
           ...entry,
-          strategy: tagged ? "reuse-inactive-version" : "create-inactive-version",
+          strategy: tagged
+            ? "reuse-inactive-version"
+            : "create-inactive-version",
           versionId: tagged?.id ?? null,
         };
       }),
@@ -234,26 +258,31 @@ export function retirementVersionTag(bundleConfirmation, service, name) {
   if (!/^[A-Z][A-Z0-9_]+$/u.test(name)) {
     throw new Error(`Invalid previous secret binding: ${name}`);
   }
-  const nameDigest = createHash("sha256").update(name).digest("hex").slice(0, 6);
+  const nameDigest = createHash("sha256")
+    .update(name)
+    .digest("hex")
+    .slice(0, 6);
   return `opengrow-retire-${digest}-${service}-${nameDigest}`;
 }
 
 export function retirementConfirmation(plan) {
   const digest = createHash("sha256")
-    .update(JSON.stringify({
-      schemaVersion: plan.schemaVersion,
-      target: plan.target,
-      environment: plan.environment,
-      bundleConfirmation: plan.bundleConfirmation,
-      cloudflareAccountFingerprint: plan.cloudflareAccountFingerprint,
-      contracts: plan.contracts,
-      promotedAt: plan.promotedAt,
-      minimumOverlapMinutes: plan.minimumOverlapMinutes,
-      eligibleAt: plan.eligibleAt,
-      promotedWorkers: plan.promotedWorkers,
-      services: plan.services,
-      blockers: plan.blockers,
-    }))
+    .update(
+      JSON.stringify({
+        schemaVersion: plan.schemaVersion,
+        target: plan.target,
+        environment: plan.environment,
+        bundleConfirmation: plan.bundleConfirmation,
+        cloudflareAccountFingerprint: plan.cloudflareAccountFingerprint,
+        contracts: plan.contracts,
+        promotedAt: plan.promotedAt,
+        minimumOverlapMinutes: plan.minimumOverlapMinutes,
+        eligibleAt: plan.eligibleAt,
+        promotedWorkers: plan.promotedWorkers,
+        services: plan.services,
+        blockers: plan.blockers,
+      }),
+    )
     .digest("hex")
     .slice(0, 12);
   return `CLOUDFLARE:SECRET-RETIRE:${plan.target}:${plan.environment}:${digest}`;
@@ -281,9 +310,10 @@ async function main() {
   const environment = environmentFromArgs(args);
   const { target } = await loadTarget(targetName);
   const receipt = readReceipt(args.receipt);
-  const minimumOverlapMinutes = args["minimum-overlap-minutes"] == null
-    ? DEFAULT_MINIMUM_OVERLAP_MINUTES
-    : Number(args["minimum-overlap-minutes"]);
+  const minimumOverlapMinutes =
+    args["minimum-overlap-minutes"] == null
+      ? DEFAULT_MINIMUM_OVERLAP_MINUTES
+      : Number(args["minimum-overlap-minutes"]);
   const structuralPlan = buildSecretRetirementPlan({
     target,
     targetName,
@@ -299,13 +329,33 @@ async function main() {
     structuralPlan.promotedWorkers.map((worker) => [
       worker.service,
       {
-        deployment: runJson("npx", [
-          "wrangler", "deployments", "status", "--name", worker.worker, "--json",
-        ], childEnv, `${worker.worker} deployment status`),
+        deployment: runJson(
+          "npx",
+          [
+            "wrangler",
+            "deployments",
+            "status",
+            "--name",
+            worker.worker,
+            "--json",
+          ],
+          childEnv,
+          `${worker.worker} deployment status`,
+        ),
         versions: retirementServices.has(worker.service)
-          ? runJson("npx", [
-              "wrangler", "versions", "list", "--name", worker.worker, "--json",
-            ], childEnv, `${worker.worker} version list`)
+          ? runJson(
+              "npx",
+              [
+                "wrangler",
+                "versions",
+                "list",
+                "--name",
+                worker.worker,
+                "--json",
+              ],
+              childEnv,
+              `${worker.worker} version list`,
+            )
           : [],
       },
     ]),
@@ -326,7 +376,9 @@ async function main() {
     );
   }
   if (plan.blockers.length) {
-    throw new Error("Refusing previous-secret retirement while blockers remain");
+    throw new Error(
+      "Refusing previous-secret retirement while blockers remain",
+    );
   }
   const changed = [];
   const completed = [];
@@ -336,14 +388,29 @@ async function main() {
       for (const entry of service.names) {
         let versionId = entry.versionId;
         if (!versionId) {
-          run("npx", retirementDeleteArgs(
-            service,
-            entry,
-            `OpenGrow previous-secret retirement ${plan.bundleConfirmation}`,
-          ), childEnv, `${service.worker} inactive retirement version`);
-          const versions = runJson("npx", [
-            "wrangler", "versions", "list", "--name", service.worker, "--json",
-          ], childEnv, `${service.worker} retirement version lookup`);
+          run(
+            "npx",
+            retirementDeleteArgs(
+              service,
+              entry,
+              `OpenGrow previous-secret retirement ${plan.bundleConfirmation}`,
+            ),
+            childEnv,
+            `${service.worker} inactive retirement version`,
+          );
+          const versions = runJson(
+            "npx",
+            [
+              "wrangler",
+              "versions",
+              "list",
+              "--name",
+              service.worker,
+              "--json",
+            ],
+            childEnv,
+            `${service.worker} retirement version lookup`,
+          );
           const tagged = versions.find(
             (version) =>
               version.annotations?.["workers/tag"] === entry.versionTag,
@@ -355,11 +422,16 @@ async function main() {
           }
           versionId = tagged.id;
         }
-        run("npx", promotionArgs(
-          service,
-          versionId,
-          `OpenGrow activate previous-secret retirement ${plan.bundleConfirmation}`,
-        ), childEnv, `${service.worker} retirement promotion`);
+        run(
+          "npx",
+          promotionArgs(
+            service,
+            versionId,
+            `OpenGrow activate previous-secret retirement ${plan.bundleConfirmation}`,
+          ),
+          childEnv,
+          `${service.worker} retirement promotion`,
+        );
         finalVersionId = versionId;
         if (!changed.some(({ service: name }) => name === service.service)) {
           changed.push(service);
@@ -376,11 +448,16 @@ async function main() {
     const rollbackFailures = [];
     for (const service of [...changed].reverse()) {
       try {
-        run("npx", promotionArgs(
-          service,
-          service.rollbackVersionId,
-          `OpenGrow automatic retirement rollback ${plan.bundleConfirmation}`,
-        ), childEnv, `${service.worker} retirement rollback`);
+        run(
+          "npx",
+          promotionArgs(
+            service,
+            service.rollbackVersionId,
+            `OpenGrow automatic retirement rollback ${plan.bundleConfirmation}`,
+          ),
+          childEnv,
+          `${service.worker} retirement rollback`,
+        );
       } catch {
         rollbackFailures.push(service.worker);
       }
@@ -396,24 +473,33 @@ async function main() {
       { cause: error },
     );
   }
-  process.stdout.write(`${JSON.stringify({
-    schemaVersion: 1,
-    mode: "secret-overlap-retirement-complete",
-    target: targetName,
-    environment,
-    valuesIncluded: false,
-    bundleConfirmation: plan.bundleConfirmation,
-    retiredAt: new Date().toISOString(),
-    workers: completed,
-    nextAction: "Run secret preflight and all affected Worker health checks.",
-  }, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        mode: "secret-overlap-retirement-complete",
+        target: targetName,
+        environment,
+        valuesIncluded: false,
+        bundleConfirmation: plan.bundleConfirmation,
+        retiredAt: new Date().toISOString(),
+        workers: completed,
+        nextAction:
+          "Run secret preflight and all affected Worker health checks.",
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 function readReceipt(receiptPath) {
   let source;
   if (receiptPath) {
     if (!isAbsolute(receiptPath)) {
-      throw new Error("--receipt must be an absolute path outside the checkout");
+      throw new Error(
+        "--receipt must be an absolute path outside the checkout",
+      );
     }
     const absolute = resolve(receiptPath);
     if (absolute === root || absolute.startsWith(`${root}/`)) {
@@ -422,7 +508,9 @@ function readReceipt(receiptPath) {
     source = readFileSync(absolute);
   } else {
     if (process.stdin.isTTY) {
-      throw new Error("Pipe the non-secret promotion receipt or pass --receipt");
+      throw new Error(
+        "Pipe the non-secret promotion receipt or pass --receipt",
+      );
     }
     source = readFileSync(0);
   }

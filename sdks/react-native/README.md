@@ -39,38 +39,39 @@ The OpenGrow React Native SDK provides deep linking, universal links, app links,
 - iOS 13.0+
 - Android API 21+ (Android 5.0)
 
+<!-- opengrow-sdk-documentation:react-native:start -->
+
 ## Installation
 
 ```bash
-# Using npm
+# npm
 npm install @mbzadev/opengrow-react-native-sdk@1.0.1
 
-# Using yarn
+# yarn
 yarn add @mbzadev/opengrow-react-native-sdk@1.0.1
 ```
 
 ### Android dependency
 
-Add the OpenGrow Android SDK to `android/app/build.gradle`:
+Add the released native Android SDK to `android/app/build.gradle`:
 
-```groovy
-dependencies {
-    implementation 'io.opengrow:opengrow-android-sdk:1.0.2'
-}
+```kotlin
+implementation("io.opengrow:opengrow-android-sdk:1.0.2")
 ```
 
 ### iOS dependency
 
-The React Native pod depends on `OpenGrow` 1.x. Until the native pod is
-published to CocoaPods Trunk, declare the reviewed podspec from the immutable
-Git tag in your application's `ios/Podfile`, then run `pod install`:
+The React Native pod consumes the native OpenGrow podspec directly from its
+reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:
 
 ```ruby
 pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/opengrow-platform/sdk-ios-v1.0.2/sdks/ios/OpenGrow.podspec'
 ```
 
-The tag and version are generated from the repository's native dependency
-contract; no branch or moving revision is accepted.
+The URL is pinned to `sdk-ios-v1.0.2`. Run `pod install` after updating
+the dependency.
+
+<!-- opengrow-sdk-documentation:react-native:end -->
 
 ## Expo Integration
 

@@ -1,17 +1,21 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import Ajv from "ajv";
 import {
-  ALL_SERVICES,
   DOMAIN_SERVICE_REGISTRY,
   PLATFORM_SERVICE_SECRETS,
-  isServiceEnabled,
+  managedWorkerDefinition,
 } from "./cloudflare-services.mjs";
+import { deploymentOrder } from "./cloudflare-deploy-plan.mjs";
 import { loadTarget } from "./cloudflare-target.mjs";
+import {
+  isIgnoredDirectory,
+  isLocalOnly,
+} from "./configuration-boundaries.mjs";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const schema = JSON.parse(
@@ -26,6 +30,12 @@ const wranglerVersion = JSON.parse(
 const validateConfig = new Ajv({ allErrors: true, strict: false }).compile(
   schema,
 );
+const configurationBoundaryContract = JSON.parse(
+  readFileSync(
+    resolve(root, "config/configuration-boundaries.json"),
+    "utf8",
+  ),
+);
 const UNBOUNDED_RESPONSE_BUFFERING =
   /\bawait\s+(?:[A-Za-z_$][A-Za-z0-9_$]*?)?[Rr]esponse\.(?:json|text|arrayBuffer)\s*(?:<[^>\n]+>)?\s*\(/u;
 
@@ -34,9 +44,7 @@ test("every target Worker satisfies the production configuration policy", async 
   for (const targetName of targetNames()) {
     const { target } = await loadTarget(targetName);
     for (const environment of Object.keys(target.environments).sort()) {
-      for (const service of ALL_SERVICES.filter((candidate) =>
-        isServiceEnabled(target, candidate),
-      )) {
+      for (const service of deploymentOrder(target)) {
         execFileSync(
           process.execPath,
           [
@@ -254,20 +262,13 @@ function portableRuntimeFiles(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) {
+      const relativePath = relative(root, path);
       if (
-        [
-          ".dart_tool",
-          ".next",
-          ".open-next",
-          "build",
-          "coverage",
-          "dist",
-          "example",
-          "node_modules",
-          "runtime-tests",
-          "test",
-          "tests",
-        ].includes(entry.name)
+        isIgnoredDirectory(
+          relativePath,
+          entry.name,
+          configurationBoundaryContract,
+        ) || isLocalOnly(relativePath, configurationBoundaryContract)
       ) {
         continue;
       }
@@ -398,6 +399,8 @@ function assertCurrentCompatibilityDate(value, service) {
 
 function secretsFor(target, service) {
   if (service === "custom") return target.customWorker.secrets;
+  const managedWorker = managedWorkerDefinition(target, service);
+  if (managedWorker) return managedWorker.secrets;
   if (DOMAIN_SERVICE_REGISTRY[service]) {
     return DOMAIN_SERVICE_REGISTRY[service].secrets;
   }

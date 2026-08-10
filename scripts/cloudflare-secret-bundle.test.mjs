@@ -27,6 +27,7 @@ test("secret bundle plan expands shared members without values", async () => {
       { service: "api", name: "EMAIL_INTERNAL_TOKEN" },
       { service: "email", name: "EMAIL_INTERNAL_TOKEN" },
       { service: "identity", name: "EMAIL_INTERNAL_TOKEN" },
+      { service: "marketing", name: "EMAIL_INTERNAL_TOKEN" },
     ],
   );
 });
@@ -48,6 +49,7 @@ test("shared contract input assigns the exact same value to every Worker", async
     api: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
     email: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
     identity: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
+    marketing: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
   });
 });
 
@@ -63,7 +65,7 @@ test("keyring alternatives require one allowed binding for all members", async (
     contracts: {
       "billing-credential-keyring": {
         name: "STORE_CREDENTIALS_ENCRYPTION_KEYS",
-        value: "{\"v2\":\"key-material\"}",
+        value: '{"v2":"key-material"}',
       },
     },
   });
@@ -73,14 +75,15 @@ test("keyring alternatives require one allowed binding for all members", async (
     assignments.billing.STORE_CREDENTIALS_ENCRYPTION_KEYS,
   );
   assert.throws(
-    () => buildSecretAssignments(plan, {
-      contracts: {
-        "billing-credential-keyring": {
-          name: "UNDECLARED_KEY",
-          value: "test-value",
+    () =>
+      buildSecretAssignments(plan, {
+        contracts: {
+          "billing-credential-keyring": {
+            name: "UNDECLARED_KEY",
+            value: "test-value",
+          },
         },
-      },
-    }),
+      }),
     /allowed binding/u,
   );
 });
@@ -101,7 +104,10 @@ test("OAuth and external-peer contracts fail closed", async () => {
     environment: "production",
     contractIds: ["entitlement-webhook-secret"],
   });
-  assert.equal(webhook.blockers[0].id, "entitlement-webhook-secret.external-peers");
+  assert.equal(
+    webhook.blockers[0].id,
+    "entitlement-webhook-secret.external-peers",
+  );
   const confirmed = buildSecretBundlePlan({
     target,
     targetName: "vocostar",
@@ -111,6 +117,42 @@ test("OAuth and external-peer contracts fail closed", async () => {
   });
   assert.equal(confirmed.blockers.length, 0);
   assert.notEqual(confirmed.confirmation, webhook.confirmation);
+
+  const gateway = buildSecretBundlePlan({
+    target,
+    targetName: "vocostar",
+    environment: "production",
+    contractIds: ["managed-worker-gateway-callback-token"],
+  });
+  assert.equal(
+    gateway.blockers[0].id,
+    "managed-worker-gateway-callback-token.external-peers",
+  );
+  const gatewayConfirmed = buildSecretBundlePlan({
+    target,
+    targetName: "vocostar",
+    environment: "production",
+    contractIds: ["managed-worker-gateway-callback-token"],
+    externalPeersReady: true,
+  });
+  assert.deepEqual(gatewayConfirmed.blockers, []);
+  assert.deepEqual(
+    buildSecretAssignments(gatewayConfirmed, {
+      contracts: {
+        "managed-worker-gateway-callback-token": {
+          value: "coordinated-gateway-token",
+        },
+      },
+    }),
+    {
+      "managed-vocals-orchestrator": {
+        GATEWAY_INTERNAL_TOKEN: "coordinated-gateway-token",
+      },
+      "managed-medias-orchestrator": {
+        GATEWAY_INTERNAL_TOKEN: "coordinated-gateway-token",
+      },
+    },
+  );
 });
 
 test("bundle input is exact and Wrangler upload creates inactive versions", async () => {
@@ -122,12 +164,13 @@ test("bundle input is exact and Wrangler upload creates inactive versions", asyn
     contractIds: ["api-push-process-key"],
   });
   assert.throws(
-    () => buildSecretAssignments(plan, {
-      contracts: {
-        "api-push-process-key": { value: "test-value" },
-        extra: { value: "test-value" },
-      },
-    }),
+    () =>
+      buildSecretAssignments(plan, {
+        contracts: {
+          "api-push-process-key": { value: "test-value" },
+          extra: { value: "test-value" },
+        },
+      }),
     /exactly the planned contracts/u,
   );
   const tag = secretVersionTag(plan, "api");
@@ -141,20 +184,28 @@ test("bundle input is exact and Wrangler upload creates inactive versions", asyn
       tag,
     ),
     [
-      "wrangler", "versions", "secret", "bulk",
-      "--config", "/tmp/api.jsonc",
-      "--message", "OpenGrow coordinated secrets for vocostar/production/api",
-      "--tag", tag,
+      "wrangler",
+      "versions",
+      "secret",
+      "bulk",
+      "--config",
+      "/tmp/api.jsonc",
+      "--message",
+      "OpenGrow coordinated secrets for vocostar/production/api",
+      "--tag",
+      tag,
     ],
   );
   assert.deepEqual(
-    buildSecretUploadReceipt(plan, [{
-      service: "api",
-      worker: "opengrow-api",
-      names: ["PUSH_PROCESS_KEY"],
-      strategy: "inactive-version",
-      versionTag: tag,
-    }]),
+    buildSecretUploadReceipt(plan, [
+      {
+        service: "api",
+        worker: "opengrow-api",
+        names: ["PUSH_PROCESS_KEY"],
+        strategy: "inactive-version",
+        versionTag: tag,
+      },
+    ]),
     {
       schemaVersion: 1,
       mode: "inactive-secret-bundle-upload",
@@ -165,13 +216,15 @@ test("bundle input is exact and Wrangler upload creates inactive versions", asyn
       externalPeersReady: false,
       overlap: false,
       contracts: ["api-push-process-key"],
-      services: [{
-        service: "api",
-        worker: "opengrow-api",
-        names: ["PUSH_PROCESS_KEY"],
-        strategy: "inactive-version",
-        versionTag: tag,
-      }],
+      services: [
+        {
+          service: "api",
+          worker: "opengrow-api",
+          names: ["PUSH_PROCESS_KEY"],
+          strategy: "inactive-version",
+          versionTag: tag,
+        },
+      ],
       nextAction:
         "Promote only in a separately approved release window; inactive versions do not change traffic.",
     },
@@ -203,16 +256,18 @@ test("overlap assigns the old token only to accepting consumers", async () => {
       EMAIL_INTERNAL_TOKEN_PREVIOUS: "old-email-token",
     },
     identity: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
+    marketing: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
   });
   assert.throws(
-    () => buildSecretAssignments(plan, {
-      contracts: {
-        "email-internal-token": {
-          value: "same-token",
-          previousValue: "same-token",
+    () =>
+      buildSecretAssignments(plan, {
+        contracts: {
+          "email-internal-token": {
+            value: "same-token",
+            previousValue: "same-token",
+          },
         },
-      },
-    }),
+      }),
     /must differ/u,
   );
 });

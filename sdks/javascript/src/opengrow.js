@@ -25,11 +25,18 @@ class OpenGrow {
   /**
    * Starts the OpenGrow SDK by authenticating with the API.
    * Optionally takes a callback that is called upon successful authentication.
-   * @param {Function} [succesfullAuthenticatedCallback=null] - Callback to invoke on successful authentication.
+   * @param {Function} [successfulAuthenticatedCallback=null] - Callback to invoke on successful authentication.
+   * @param {Function} [authenticationErrorCallback=null] - Callback to invoke when authentication fails.
    */
-  start(succesfullAuthenticatedCallback = null) {
+  start(
+    successfulAuthenticatedCallback = null,
+    authenticationErrorCallback = null,
+  ) {
     // Start authentication process
-    this.manager.authenticate(succesfullAuthenticatedCallback);
+    this.manager.authenticate(
+      successfulAuthenticatedCallback,
+      authenticationErrorCallback,
+    );
   }
 
   /**
@@ -97,11 +104,12 @@ class OpenGrow {
   /**
    * Displays the messages list using the manager.
    * This method triggers the display of the messages list in the UI.
+   * @param {Function} [error] - Callback invoked if authentication is required.
    * @returns {void}
    */
-  showMessagesList() {
+  showMessagesList(error) {
     // Delegate message list display to the manager
-    this.manager.showMessagesList();
+    this.manager.showMessagesList(error);
   }
 
   /**

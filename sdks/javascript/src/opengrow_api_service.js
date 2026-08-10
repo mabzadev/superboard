@@ -128,7 +128,6 @@ class OpenGrowAPIService {
   messagesForAutomaticDisplay(response, error) {
     this.apiService.GET(
       OpenGrowAPIService.ENDPOINTS.NOTIFICATIONS_TO_DISPLAY_AUTOMATICALLY,
-      null,
       response,
       error
     );
@@ -137,7 +136,6 @@ class OpenGrowAPIService {
   numberOfUnreadMessages(response, error) {
     this.apiService.GET(
       OpenGrowAPIService.ENDPOINTS.NUMBER_OF_UNREAD_MESSAGES,
-      null,
       response,
       error
     );

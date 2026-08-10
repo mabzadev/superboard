@@ -15,7 +15,7 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   for (const name of ["mbza-development", "vocostar"]) {
     const { target } = await loadTarget(name);
     assert.equal("accountId" in target, false);
-    assert.equal(target.schemaVersion, 9);
+    assert.equal(target.schemaVersion, 11);
     assert.ok(Number.isSafeInteger(target.filePolicy.maxBytes));
     assert.ok(Number.isSafeInteger(target.filePolicy.downloadTicketTtlSeconds));
     assert.ok(target.filePolicy.allowedContentTypes.length > 0);
@@ -37,6 +37,7 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   }
   const { target: vocostar } = await loadTarget("vocostar");
   assert.equal(vocostar.environments.production.customD1.name, "vocostar-db");
+  assert.equal(vocostar.environments.production.customR2.name, "app-vocostar");
   assert.equal(vocostar.environments.production.publicRouting, "staged");
   assert.notEqual(
     vocostar.environments.production.dashboardCache.name,
@@ -45,6 +46,14 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   );
   assert.equal(vocostar.customWorker.serviceBindings.length, 3);
   assert.deepEqual(vocostar.customWorker.crons, ["*/1 * * * *"]);
+  assert.deepEqual(
+    vocostar.customWorker.managedWorkers.map(({ id }) => id),
+    ["vocals-orchestrator", "medias-orchestrator"],
+  );
+  assert.equal(
+    vocostar.customWorker.managedWorkers[0].workers.production,
+    "send-users-vocals-orchestrator",
+  );
   assert.equal(vocostar.features.messaging, false);
   assert.equal(vocostar.filePolicy.maxBytes, 52_428_800);
   assert.equal(vocostar.filePolicy.downloadTicketTtlSeconds, 1_800);

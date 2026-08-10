@@ -26,6 +26,8 @@ test("all-target selection finds every declared extension without application co
   assert.deepEqual(await selectedCustomWorkerPackages({ all: true }, {}), [
     "workers/custom/reference",
     "workers/custom/vocostar",
+    "workers/custom/vocostar/orchestrators/medias",
+    "workers/custom/vocostar/orchestrators/vocals",
   ]);
 });
 
@@ -36,7 +38,11 @@ test("target selection validates only that target custom Worker", async () => {
   );
   assert.deepEqual(
     await selectedCustomWorkerPackages({ target: "vocostar" }, {}),
-    ["workers/custom/vocostar"],
+    [
+      "workers/custom/vocostar",
+      "workers/custom/vocostar/orchestrators/medias",
+      "workers/custom/vocostar/orchestrators/vocals",
+    ],
   );
 });
 
@@ -50,6 +56,8 @@ test("custom Worker type generation is target and environment driven", async () 
       targetName: "mbza-development",
       environment: "development",
       packagePath: "workers/custom/reference",
+      managedServices: [],
+      managedPackages: {},
     }],
   );
   assert.deepEqual(
@@ -61,6 +69,16 @@ test("custom Worker type generation is target and environment driven", async () 
       targetName: "vocostar",
       environment: "production",
       packagePath: "workers/custom/vocostar",
+      managedServices: [
+        "managed-vocals-orchestrator",
+        "managed-medias-orchestrator",
+      ],
+      managedPackages: {
+        "managed-vocals-orchestrator":
+          "workers/custom/vocostar/orchestrators/vocals",
+        "managed-medias-orchestrator":
+          "workers/custom/vocostar/orchestrators/medias",
+      },
     }],
   );
 });

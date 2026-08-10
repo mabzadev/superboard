@@ -92,7 +92,7 @@ class OpenGrowPurchases {
   String _baseUrl = '';
   String _appVersion = '';
   String _buildNumber = '';
-  String _sdkVersion = '2.1.3';
+  String _sdkVersion = '2.1.4';
   String _storefront = '';
   String _campaign = '';
   String? _anonymousId;
@@ -113,7 +113,7 @@ class OpenGrowPurchases {
     OpenGrowIdentityTokenProvider? identityTokenProvider,
     String appVersion = '',
     String buildNumber = '',
-    String sdkVersion = '2.1.3',
+    String sdkVersion = '2.1.4',
     String storefront = '',
     String campaign = '',
   }) async {

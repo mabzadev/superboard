@@ -19,6 +19,7 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	FILES_DOMAIN: string;
 	MCP_DOMAIN: string;
 	PUBLIC_SURFACES_JSON: string;
+	PLATFORM_WORKERS_JSON: string;
 	CORS_ORIGIN: string;
 	CORS_ORIGINS_JSON: string;
 	APP_URL: string;

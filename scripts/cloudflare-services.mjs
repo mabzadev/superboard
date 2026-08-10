@@ -27,6 +27,7 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
     secrets: [
       "INTERNAL_API_TOKEN",
       "INTERNAL_API_TOKEN_PREVIOUS",
+      "EMAIL_INTERNAL_TOKEN",
       "SMTP_ENCRYPTION_KEY",
       "TRACKING_SIGNING_KEY",
     ],
@@ -40,6 +41,7 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
       maxRetries: 5,
     },
     crons: ["* * * * *"],
+    services: [{ binding: "EMAIL_SERVICE", service: "email" }],
   }),
   onboardings: domainService("ONBOARDINGS_MODULE", "onboardings"),
 });
@@ -143,6 +145,58 @@ export const ALL_SERVICES = Object.freeze([
   ...DOMAIN_SERVICES,
 ]);
 
+const MANAGED_WORKER_SERVICE_PREFIX = "managed-";
+
+export function managedWorkerService(component) {
+  const id = String(component?.id ?? "");
+  if (!/^[a-z][a-z0-9-]{1,21}$/u.test(id)) {
+    throw new Error(`Invalid managed Worker id: ${id || "<empty>"}`);
+  }
+  return `${MANAGED_WORKER_SERVICE_PREFIX}${id}`;
+}
+
+export function managedWorkerOperationalBinding(component) {
+  return managedWorkerService(component).replaceAll("-", "_").toUpperCase();
+}
+
+export function managedWorkerDefinitions(target) {
+  return target.customWorker?.managedWorkers ?? [];
+}
+
+export function managedWorkerDefinition(target, service) {
+  return (
+    managedWorkerDefinitions(target).find(
+      (component) => managedWorkerService(component) === service,
+    ) ?? null
+  );
+}
+
+export function managedWorkerServices(target) {
+  return managedWorkerDefinitions(target).map(managedWorkerService);
+}
+
+export function assertServiceForTarget(target, service) {
+  if (
+    !ALL_SERVICES.includes(service) &&
+    !managedWorkerDefinition(target, service)
+  ) {
+    throw new Error(
+      `--service must be a platform service or a managed Worker declared by ${target.target}`,
+    );
+  }
+}
+
+export function workerNamesForService(target, service) {
+  return (
+    managedWorkerDefinition(target, service)?.workers ??
+    target.workers?.[service]
+  );
+}
+
+export function workerNameForService(target, service, environment) {
+  return workerNamesForService(target, service)?.[environment] ?? null;
+}
+
 export const DOMAIN_SERVICE_BINDINGS = Object.freeze({
   ...Object.fromEntries(
     Object.entries(DOMAIN_SERVICE_REGISTRY).map(([service, definition]) => [
@@ -159,6 +213,7 @@ export function assertService(service) {
 }
 
 export function isServiceEnabled(target, service) {
+  if (managedWorkerDefinition(target, service)) return true;
   if (
     [
       "api",
@@ -200,6 +255,7 @@ function domainService(binding, resourceKey, options = {}) {
     queue: options.queue ? Object.freeze(options.queue) : null,
     crons: Object.freeze(options.crons ?? []),
     durableObjects: Object.freeze(options.durableObjects ?? []),
+    services: Object.freeze(options.services ?? []),
     durableObjectMigrations: Object.freeze(
       options.durableObjectMigrations ?? [],
     ),

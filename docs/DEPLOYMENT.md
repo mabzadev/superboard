@@ -43,8 +43,10 @@ workflows can create PRs but contain no approval or merge operation.
   private Service Binding and owns no persistence or secret.
 - App, Products, Paywalls, Dynamic Links, Marketing and Onboardings: reusable
   feature Workers enabled independently by each target.
-- Custom: at most one application-specific Worker behind the versioned custom
-  job protocol.
+- Custom: one application adapter behind the versioned custom job protocol,
+  plus zero or more target-declared managed Workers for application-specific
+  Workflows, Durable Objects and Containers. Their source, package, bindings,
+  image recipe, runtime variables and secret names are Git-managed.
 
 Billing and Support use separate execution boundaries. Support failures cannot
 grant, revoke, retry, or roll back an entitlement. Legacy Messaging is disabled
@@ -159,6 +161,21 @@ per-service migration phase. Production `--skip-backup` and
 `--skip-migrations` are rejected. Version upload (`--upload-only`) never changes
 D1.
 
+Identity has an additional protected cutover between migration convergence and
+Worker activation. The orchestrator executes a read-only remote D1 query proving
+that `0002_project_scope.sql` is applied and that users, providers, sessions and
+identity tokens contain zero rows with a missing `project_id`. It then creates a
+mode-`0600`, SHA-256-verified receipt bound to the target, environment,
+Cloudflare account, Identity database, migration and exact deployment revision.
+The Identity deploy validates the supplied audit receipt, but never trusts it as
+a substitute for live state: it repeats the remote query immediately before
+`wrangler deploy`, creates and validates a fresh receipt, and fails closed on a
+missing, stale or mismatched receipt. Real paths must remain outside Git and no
+receipt path may traverse a symlink. A non-zero result stops the rollout; it
+never triggers an inferred or automatic legacy backfill. See
+[Application users back office](./APPLICATION_USERS_BACKOFFICE.md) for the
+reviewed mapping procedure.
+
 A production recovery selecting an individual schema Worker remains possible,
 but it backs up and converges only that one service before deployment. A partial
 command that mixes multiple services around one or more D1 owners is rejected;
@@ -191,7 +208,8 @@ backup system required by the application's retention policy.
 1. Observability, Email, Files and Identity.
 2. Enabled domain Workers: App, Products, Paywalls, Dynamic Links, Support,
    Marketing and Onboardings.
-3. Billing and the optional application custom Worker.
+3. Billing, target-declared managed application Workers, then the optional
+   application adapter Worker.
 4. API gateway.
 5. MCP Worker.
 6. Dashboard.

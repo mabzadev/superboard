@@ -117,6 +117,10 @@ may select several Environments. Every matrix entry supplies its own target name
 Cloudflare environment, account ID and least-privilege API token, so the same
 validated Git commit can deploy several applications to different Cloudflare
 accounts without copying or editing the workflow.
+The target name is committed in the matrix and must exactly match the
+`OPENGROW_TARGET` variable of the selected GitHub Environment. This redundant
+selection is intentional: a mutable Environment variable cannot redirect an
+approved revision to another target or account boundary.
 
 Immediately before upload, the workflow regenerates and compares every
 Cloudflare binding type, reads only the configured Cloudflare secret names for

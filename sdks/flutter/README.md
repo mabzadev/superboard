@@ -76,24 +76,31 @@ The OpenGrow Flutter SDK provides deep linking, app links, universal links, link
 - iOS 13.0+
 - Android API 24+ (Android 7.0)
 
+<!-- opengrow-sdk-documentation:flutter:start -->
+
 ## Installation
 
-Add the dependency to your `pubspec.yaml`:
+Add the published Flutter package `opengrow_flutter`
+at the immutable release `sdk-flutter-v2.1.3`:
 
 ```yaml
-dependencies:
-  opengrow_flutter:
-    git:
-      url: git@github.com:mbzadev/opengrow-platform.git
-      ref: sdk-flutter-v2.1.3
-      path: sdks/flutter
+opengrow_flutter:
+  git:
+    url: https://github.com/mbzadev/opengrow-platform.git
+    ref: sdk-flutter-v2.1.3
+    path: sdks/flutter
 ```
 
-Then run:
+No repository read token is required. Runtime credentials must never be
+placed in the Git dependency or exported application source.
+
+Then resolve the immutable dependency:
 
 ```bash
 flutter pub get
 ```
+
+<!-- opengrow-sdk-documentation:flutter:end -->
 
 ## Platform Setup
 

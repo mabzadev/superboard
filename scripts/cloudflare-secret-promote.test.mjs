@@ -14,6 +14,7 @@ import {
   secretVersionTag,
 } from "./cloudflare-secret-bundle.mjs";
 import { loadTarget } from "./cloudflare-target.mjs";
+import { workerNameForService } from "./cloudflare-services.mjs";
 
 const uuid = (suffix) => `00000000-0000-4000-8000-${suffix.padStart(12, "0")}`;
 
@@ -25,12 +26,17 @@ async function fixture(contractIds) {
     environment: "production",
     contractIds,
   });
-  const services = [...new Set(bundlePlan.contracts.flatMap(({ members }) =>
-    members.map(({ service }) => service)
-  ))].map((service) => ({
+  const services = [
+    ...new Set(
+      bundlePlan.contracts.flatMap(({ members }) =>
+        members.map(({ service }) => service),
+      ),
+    ),
+  ].map((service) => ({
     service,
-    worker: target.workers[service].production,
-    names: bundlePlan.contracts.flatMap(({ members }) => members)
+    worker: workerNameForService(target, service, "production"),
+    names: bundlePlan.contracts
+      .flatMap(({ members }) => members)
       .filter((member) => member.service === service)
       .map((member) => member.name ?? member.oneOf[0]),
     strategy: "inactive-version",
@@ -53,7 +59,7 @@ test("promotion validates receipt and orders consumers before API", async () => 
   assert.equal(blocked.blockers[0].id, "shared-secret-non-atomic-cutover");
   assert.deepEqual(
     blocked.services.map(({ service }) => service),
-    ["email", "identity", "api"],
+    ["email", "identity", "marketing", "api"],
   );
   const approved = validateSecretUploadReceipt({
     target,
@@ -65,6 +71,28 @@ test("promotion validates receipt and orders consumers before API", async () => 
   assert.equal(approved.blockers.length, 0);
 });
 
+test("managed Worker receipts resolve their target-declared Worker name", async () => {
+  const { target, receipt } = await fixture([
+    "managed-vocals-orchestrator-modal-api-key",
+  ]);
+  const plan = validateSecretUploadReceipt({
+    target,
+    targetName: "vocostar",
+    environment: "production",
+    receipt,
+  });
+  assert.equal(plan.blockers.length, 0);
+  assert.deepEqual(
+    plan.services.map(({ service, worker }) => ({ service, worker })),
+    [
+      {
+        service: "managed-vocals-orchestrator",
+        worker: "send-users-vocals-orchestrator",
+      },
+    ],
+  );
+});
+
 test("overlap-capable shared token promotion needs no maintenance override", async () => {
   const { target } = await loadTarget("vocostar");
   const bundlePlan = buildSecretBundlePlan({
@@ -74,12 +102,17 @@ test("overlap-capable shared token promotion needs no maintenance override", asy
     contractIds: ["email-internal-token"],
     overlap: true,
   });
-  const services = [...new Set(bundlePlan.contracts.flatMap(({ members }) =>
-    members.map(({ service }) => service)
-  ))].map((service) => ({
+  const services = [
+    ...new Set(
+      bundlePlan.contracts.flatMap(({ members }) =>
+        members.map(({ service }) => service),
+      ),
+    ),
+  ].map((service) => ({
     service,
-    worker: target.workers[service].production,
-    names: bundlePlan.contracts.flatMap(({ members }) => members)
+    worker: workerNameForService(target, service, "production"),
+    names: bundlePlan.contracts
+      .flatMap(({ members }) => members)
       .filter((member) => member.service === service)
       .flatMap((member) => [
         member.name,
@@ -99,7 +132,7 @@ test("overlap-capable shared token promotion needs no maintenance override", asy
   assert.equal(promotion.blockers.length, 0);
   assert.deepEqual(
     promotion.services.map(({ service }) => service),
-    ["email", "identity", "api"],
+    ["email", "identity", "marketing", "api"],
   );
   assert.equal(
     overlapOrderBlockers(bundlePlan, [...promotion.services].reverse())[0].id,
@@ -118,31 +151,40 @@ test("promotion plan binds exact inactive and rollback versions", async () => {
   const service = structural.services[0];
   const inactiveId = uuid("1");
   const rollbackId = uuid("2");
-  const plan = attachPromotionRemoteState(structural, {
-    api: {
-      deployment: {
-        versions: [{ version_id: rollbackId, percentage: 100 }],
+  const plan = attachPromotionRemoteState(
+    structural,
+    {
+      api: {
+        deployment: {
+          versions: [{ version_id: rollbackId, percentage: 100 }],
+        },
+        versions: [
+          {
+            id: inactiveId,
+            annotations: { "workers/tag": service.versionTag },
+          },
+        ],
       },
-      versions: [{
-        id: inactiveId,
-        annotations: { "workers/tag": service.versionTag },
-      }],
     },
-  }, "4fec11873e7130ab0e44e795e3e3afd3");
+    "4fec11873e7130ab0e44e795e3e3afd3",
+  );
   assert.equal(plan.services[0].versionId, inactiveId);
   assert.equal(plan.services[0].rollbackVersionId, rollbackId);
   assert.equal(plan.confirmation, promotionConfirmation(plan));
-  assert.deepEqual(
-    promotionArgs(plan.services[0], inactiveId, "promotion"),
-    [
-      "wrangler", "versions", "deploy",
-      "--name", "opengrow-api",
-      "--version-id", inactiveId,
-      "--percentage", "100",
-      "--message", "promotion",
-      "--yes",
-    ],
-  );
+  assert.deepEqual(promotionArgs(plan.services[0], inactiveId, "promotion"), [
+    "wrangler",
+    "versions",
+    "deploy",
+    "--name",
+    "opengrow-api",
+    "--version-id",
+    inactiveId,
+    "--percentage",
+    "100",
+    "--message",
+    "promotion",
+    "--yes",
+  ]);
   const complete = buildPromotionCompleteReceipt(
     plan,
     plan.services,
@@ -159,23 +201,25 @@ test("promotion rejects tampered receipt and unsafe remote state", async () => {
   const tampered = structuredClone(receipt);
   tampered.services[0].worker = "wrong-worker";
   assert.throws(
-    () => validateSecretUploadReceipt({
-      target,
-      targetName: "vocostar",
-      environment: "production",
-      receipt: tampered,
-    }),
+    () =>
+      validateSecretUploadReceipt({
+        target,
+        targetName: "vocostar",
+        environment: "production",
+        receipt: tampered,
+      }),
     /Worker mismatch/u,
   );
   const unexpectedName = structuredClone(receipt);
   unexpectedName.services[0].names = ["UNEXPECTED_NAME"];
   assert.throws(
-    () => validateSecretUploadReceipt({
-      target,
-      targetName: "vocostar",
-      environment: "production",
-      receipt: unexpectedName,
-    }),
+    () =>
+      validateSecretUploadReceipt({
+        target,
+        targetName: "vocostar",
+        environment: "production",
+        receipt: unexpectedName,
+      }),
     /names are incomplete/u,
   );
   const structural = validateSecretUploadReceipt({
@@ -185,12 +229,19 @@ test("promotion rejects tampered receipt and unsafe remote state", async () => {
     receipt,
   });
   assert.throws(
-    () => attachPromotionRemoteState(structural, {
-      api: {
-        deployment: { versions: [{ version_id: uuid("2"), percentage: 50 }] },
-        versions: [],
-      },
-    }, "4fec11873e7130ab0e44e795e3e3afd3"),
+    () =>
+      attachPromotionRemoteState(
+        structural,
+        {
+          api: {
+            deployment: {
+              versions: [{ version_id: uuid("2"), percentage: 50 }],
+            },
+            versions: [],
+          },
+        },
+        "4fec11873e7130ab0e44e795e3e3afd3",
+      ),
     /exactly one 100%/u,
   );
 });

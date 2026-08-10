@@ -79,7 +79,9 @@ jobs:
       - name: Verify package, catalogue and immutable release version
         env:
           RELEASE_TAG: ${{ steps.tag.outputs.tag }}
-        run: node scripts/sdk-catalog.mjs check --candidate-release-tag "$RELEASE_TAG"
+        run: |
+          node scripts/sdk-catalog.mjs check --candidate-release-tag "$RELEASE_TAG"
+          node scripts/sdk-documentation.mjs check
 
   flutter:
     if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow' || needs.validate-tag.outputs.sdk == 'flutterflow-messaging'
@@ -172,7 +174,7 @@ jobs:
           node-version: 22
           registry-url: https://npm.pkg.github.com
           scope: "@mbzadev"
-      - run: npm ci && npm test && npm run build
+      - run: npm ci && npm run check
         if: needs.validate-tag.outputs.sdk == 'js'
         working-directory: sdks/javascript
       - run: corepack enable && yarn install --immutable && yarn typecheck && yarn test --runInBand && yarn prepare
@@ -272,6 +274,10 @@ jobs:
           node scripts/sdk-catalog.mjs check \
             --release-tag "$TAG" \
             --release-sha "$RELEASE_SHA"
+          node scripts/react-native-native-contract.mjs write
+          node scripts/sdk-documentation.mjs write
+          node scripts/react-native-native-contract.mjs check
+          node scripts/sdk-documentation.mjs check
       - name: Propose the published catalogue state through a protected PR
         run: |
           ensure_promotion_pr() {
@@ -293,7 +299,7 @@ jobs:
           }
           git fetch --no-tags origin \
             "refs/heads/$DEVELOPMENT_BRANCH:refs/remotes/origin/$DEVELOPMENT_BRANCH"
-          if git diff --quiet -- config/sdk-libraries.json; then
+          if git diff --quiet; then
             if git merge-base --is-ancestor HEAD "origin/$DEVELOPMENT_BRANCH"; then
               echo "The development branch already records $TAG."
               exit 0
@@ -303,7 +309,9 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add config/sdk-libraries.json
+          git add config/sdk-libraries.json \
+            sdks/react-native/plugin/native-contract.json \
+            sdks/*/README.md
           git commit -m "chore(sdk): publish $TAG"
           git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
           ensure_promotion_pr

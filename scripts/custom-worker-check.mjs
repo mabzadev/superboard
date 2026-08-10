@@ -10,12 +10,18 @@ import {
   root,
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
+import { managedWorkerService } from "./cloudflare-services.mjs";
 
 export function customWorkerPackagePaths(targets) {
   return [
     ...new Set(
       targets
-        .map((target) => target.customWorker?.packagePath)
+        .flatMap((target) => [
+          target.customWorker?.packagePath,
+          ...(target.customWorker?.managedWorkers ?? []).map(
+            ({ packagePath }) => packagePath,
+          ),
+        ])
         .filter(Boolean)
         .map((packagePath) => validatedPackagePath(packagePath)),
     ),
@@ -95,6 +101,15 @@ export async function selectedCustomWorkerTypeSelections(
             packagePath: validatedPackagePath(
               target.customWorker.packagePath,
             ),
+            managedServices: (target.customWorker.managedWorkers ?? []).map(
+              managedWorkerService,
+            ),
+            managedPackages: Object.fromEntries(
+              (target.customWorker.managedWorkers ?? []).map((worker) => [
+                managedWorkerService(worker),
+                validatedPackagePath(worker.packagePath),
+              ]),
+            ),
           };
         }),
     ).then((selections) =>
@@ -111,19 +126,34 @@ export async function selectedCustomWorkerTypeSelections(
       environment: args.environment ?? env.OPENGROW_ENVIRONMENT,
     }),
     packagePath: validatedPackagePath(target.customWorker.packagePath),
+    managedServices: (target.customWorker.managedWorkers ?? []).map(
+      managedWorkerService,
+    ),
+    managedPackages: Object.fromEntries(
+      (target.customWorker.managedWorkers ?? []).map((worker) => [
+        managedWorkerService(worker),
+        validatedPackagePath(worker.packagePath),
+      ]),
+    ),
   }];
 }
 
 export function uniqueCustomWorkerTypeSelections(selections) {
   const owners = new Map();
   for (const selection of selections) {
-    const existingOwner = owners.get(selection.packagePath);
-    if (existingOwner && existingOwner !== selection.targetName) {
-      throw new Error(
-        `Custom Worker package ${selection.packagePath} is owned by both ${existingOwner} and ${selection.targetName}; app-specific extension packages must have one target owner`,
-      );
+    const packages = [
+      selection.packagePath,
+      ...Object.values(selection.managedPackages ?? {}),
+    ];
+    for (const packagePath of packages) {
+      const existingOwner = owners.get(packagePath);
+      if (existingOwner && existingOwner !== selection.targetName) {
+        throw new Error(
+          `Custom Worker package ${packagePath} is owned by both ${existingOwner} and ${selection.targetName}; app-specific extension packages must have one target owner`,
+        );
+      }
+      owners.set(packagePath, selection.targetName);
     }
-    owners.set(selection.packagePath, selection.targetName);
   }
   return selections;
 }
@@ -167,6 +197,18 @@ async function main(argv = process.argv.slice(2)) {
       selection.environment,
       "--allow-unprovisioned",
     ]);
+    for (const service of selection.managedServices) {
+      executeCommand(process.execPath, [
+        resolve(root, "scripts", "cloudflare-types.mjs"),
+        "--service",
+        service,
+        "--target",
+        selection.targetName,
+        "--environment",
+        selection.environment,
+        "--allow-unprovisioned",
+      ]);
+    }
   }
   runCustomWorkerChecks(packagePaths);
   process.stdout.write(

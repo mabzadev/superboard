@@ -4,6 +4,9 @@ import OpenGrowContext from "./opengrow_context.js";
 import OpenGrowDeviceDetails from "./opengrow_device_details.js";
 import OpenGrowUIHelper from "./opengrow_ui_helper.js";
 
+const AUTHENTICATION_REQUIRED_MESSAGE =
+  "The OpenGrow SDK is not authenticated. Call start() and wait for its success callback before using this method.";
+
 /**
  * Manages interactions with the OpenGrow API and event handling.
  */
@@ -16,7 +19,12 @@ class OpenGrowManager {
    * @param {string} baseURL - Application-specific SDK origin.
    */
   constructor(APIKey, testEnvironment, linkHandlingCallback, baseURL) {
-    const parsedBaseURL = new URL(baseURL);
+    let parsedBaseURL;
+    try {
+      parsedBaseURL = new URL(baseURL);
+    } catch {
+      throw new TypeError("baseURL must be an absolute HTTP(S) URL");
+    }
     if (!/^https?:$/.test(parsedBaseURL.protocol) || !parsedBaseURL.hostname) {
       throw new TypeError("baseURL must be an absolute HTTP(S) URL");
     }
@@ -33,6 +41,9 @@ class OpenGrowManager {
     this.eventsManager = new OpenGrowEventsManager();
     // Authentication status
     this.authenticated = false;
+    // Monotonically identifies authentication attempts so a late response from
+    // an older attempt cannot reopen the SDK after a newer attempt failed.
+    this.authenticationAttempt = 0;
     // Flag to determine if identifiers need updating
     this.shouldUpdateIdentifiers = false;
     // Initialize UI helper for UI interactions
@@ -45,11 +56,15 @@ class OpenGrowManager {
 
   /**
    * Authenticates with the OpenGrow API.
-   * @param {Function} succesfullAuthenticatedCallback - Callback function invoked upon successful authentication.
+   * @param {Function} [successfulAuthenticatedCallback] - Callback function invoked upon successful authentication.
+   * @param {Function} [authenticationErrorCallback] - Callback function invoked when authentication fails.
    */
-  authenticate(succesfullAuthenticatedCallback) {
+  authenticate(successfulAuthenticatedCallback, authenticationErrorCallback) {
+    const authenticationAttempt = ++this.authenticationAttempt;
+    this.authenticated = false;
+
     // Get the current device details
-    let details = OpenGrowDeviceDetails.currentDetails();
+    const details = OpenGrowDeviceDetails.currentDetails();
 
     const self = this; // Preserve context for callbacks
     this.service.authenticateDevice(
@@ -59,10 +74,14 @@ class OpenGrowManager {
        * @param {Object} response - The authentication response.
        */
       (response) => {
+        if (authenticationAttempt !== self.authenticationAttempt) {
+          return;
+        }
+
         // Extract relevant data from response
-        let linksquaredID = response.linksquared;
-        let identifier = response.sdk_identifier;
-        let attributes = response.sdk_attributes;
+        const linksquaredID = response.linksquared;
+        const identifier = response.sdk_identifier;
+        const attributes = response.sdk_attributes;
 
         // Set OpenGrow ID cookie for future use
         OpenGrowContext.setLinksquaredIDCookie(linksquaredID);
@@ -77,8 +96,8 @@ class OpenGrowManager {
         self.authenticated = true;
 
         // Call the success callback if provided
-        if (succesfullAuthenticatedCallback) {
-          succesfullAuthenticatedCallback();
+        if (successfulAuthenticatedCallback) {
+          successfulAuthenticatedCallback();
         }
 
         // Handle data fetching and event flushing
@@ -91,8 +110,19 @@ class OpenGrowManager {
        * @param {Object} error - The authentication error.
        */
       (error) => {
-        console.log(error);
-        console.log("OpenGrow - wrong credentials, the SDK will NOT work!");
+        if (authenticationAttempt !== self.authenticationAttempt) {
+          return;
+        }
+
+        self.authenticated = false;
+        if (authenticationErrorCallback) {
+          authenticationErrorCallback(error);
+        } else {
+          console.error(
+            "OpenGrow authentication failed; authenticated API calls are disabled.",
+            error,
+          );
+        }
       }
     );
   }
@@ -153,9 +183,7 @@ class OpenGrowManager {
    * @param {Function} error - Error callback for creating the link.
    */
   createLink(title, subtitle, imageURL, data, success, error) {
-    // Check if authenticated before creating a link
-    if (!this.authenticated) {
-      error("The OpenGrow SDK is not yet initialized, try again later!");
+    if (!this.#requireAuthentication(error)) {
       return;
     }
 
@@ -185,8 +213,12 @@ class OpenGrowManager {
 
   /**
    * Displays the messages list using the UI helper.
+   * @param {Function} [error] - Error callback when the SDK is not authenticated.
    */
-  showMessagesList() {
+  showMessagesList(error) {
+    if (!this.#requireAuthentication(error)) {
+      return;
+    }
     this.uiHelper.showMessagesList();
   }
 
@@ -197,6 +229,9 @@ class OpenGrowManager {
    * @param {Function} error - Error callback for retrieving messages.
    */
   getMessages(page, response, error) {
+    if (!this.#requireAuthentication(error)) {
+      return;
+    }
     this.service.messagesForDevice(page, response, error);
   }
 
@@ -206,6 +241,9 @@ class OpenGrowManager {
    * @param {Function} error - Error callback for retrieving the count.
    */
   getNumberOfUnreadMessages(response, error) {
+    if (!this.#requireAuthentication(error)) {
+      return;
+    }
     this.service.numberOfUnreadMessages(response, error);
   }
 
@@ -224,10 +262,31 @@ class OpenGrowManager {
    * @param {Function} error - Error callback for marking the message.
    */
   markMessageAsRead(message, response, error) {
+    if (!this.#requireAuthentication(error)) {
+      return;
+    }
     this.service.markMessageAsViewed(message, response, error);
   }
 
   // MARK: Private
+
+  /**
+   * Prevents every authenticated public operation from reaching the network
+   * while authentication is pending or after it failed.
+   * @param {Function} error - Optional error callback supplied by the caller.
+   * @returns {boolean} Whether the operation may continue.
+   * @private
+   */
+  #requireAuthentication(error) {
+    if (this.authenticated) {
+      return true;
+    }
+
+    if (typeof error === "function") {
+      error(AUTHENTICATION_REQUIRED_MESSAGE);
+    }
+    return false;
+  }
 
   /**
    * Displays automatic messages by fetching them from the service.

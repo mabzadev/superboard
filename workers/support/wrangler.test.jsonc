@@ -11,8 +11,7 @@
     "DLQ_NAME": "support-test-events-dlq",
     "AUTH_GATEWAY_ISSUER": "https://identity.invalid",
     "AUTH_GATEWAY_AUDIENCE": "opengrow-test",
-    "AUTH_GATEWAY_JWKS_URL": "https://identity.invalid/.well-known/jwks.json",
-    "SUPPORT_WEBHOOK_ENCRYPTION_KEY": "support-test-webhook-encryption-key"
+    "AUTH_GATEWAY_JWKS_URL": "https://identity.invalid/.well-known/jwks.json"
   },
   "d1_databases": [{ "binding": "DB", "database_name": "support-test", "database_id": "00000000-0000-0000-0000-000000000011", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "ATTACHMENTS", "bucket_name": "support-test" }],

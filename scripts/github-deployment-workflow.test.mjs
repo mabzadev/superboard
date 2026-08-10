@@ -37,6 +37,12 @@ const flutterPodspec = await readFile(
   new URL("../sdks/flutter/ios/opengrow_flutter.podspec", import.meta.url),
   "utf8",
 );
+const javascriptManifest = JSON.parse(
+  await readFile(
+    new URL("../sdks/javascript/package.json", import.meta.url),
+    "utf8",
+  ),
+);
 
 async function readActionWorkflows(directory) {
   const names = (await readdir(directory)).filter(
@@ -88,6 +94,14 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
   assert.match(workflow, /actions: read/);
   assert.match(workflow, /dev\|main\) ;;/);
   assert.match(workflow, /vars\.OPENGROW_TARGET/);
+  assert.match(
+    workflow,
+    /OPENGROW_EXPECTED_TARGET: \$\{\{ matrix\.target \}\}/,
+  );
+  assert.match(
+    workflow,
+    /test "\$OPENGROW_TARGET" = "\$OPENGROW_EXPECTED_TARGET"/,
+  );
   assert.match(workflow, /scripts\/github-deployment-matrix\.mjs/);
   assert.match(workflow, /fromJSON\(needs\.plan\.outputs\.matrix\)/);
   assert.match(workflow, /environment: \$\{\{ matrix\.githubEnvironment \}\}/);
@@ -123,13 +137,21 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
   assert.match(workflow, /\.head_sha == \$sha/);
   assert.match(workflow, /\.conclusion == "success"/);
   assert.match(workflow, /git rev-parse FETCH_HEAD/);
-  assert.match(workflow, /npm run cloudflare:types:check/);
+  assert.match(
+    workflow,
+    /npm run cloudflare:types:check:target -- \\\n\s+--target "\$OPENGROW_TARGET" \\\n\s+--environment "\$OPENGROW_ENVIRONMENT"/u,
+  );
+  assert.doesNotMatch(workflow, /npm run cloudflare:types:check(?:\s|$)/u);
   assert.match(workflow, /npm run cloudflare:secrets:check/);
   assert.match(workflow, /npm run cloudflare:d1:key:check/);
   assert.match(workflow, /npm run custom:check/);
   assert.match(
     workflow,
     /backup-and-migrate-all-before-workers|cloudflare:deploy:all/,
+  );
+  assert.match(
+    workflow,
+    /Migrate, verify Identity project cutover receipt and deploy all enabled Workers/,
   );
   assert.match(workflow, /steps\.deploy-workers\.outcome != 'skipped'/);
   assert.match(workflow, /--require-batch-receipt/);
@@ -194,8 +216,9 @@ test("branch protection can require one stable aggregate CI check", () => {
 });
 
 test("CI validates every maintained SDK family and the Chatwoot migration path", () => {
+  assert.match(ciWorkflow, /npm run sdk:documentation:check/);
   assert.match(ciWorkflow, /node_sdks:/);
-  assert.match(ciWorkflow, /npm ci && npm test && npm run build/);
+  assert.match(ciWorkflow, /npm ci && npm run check/);
   assert.match(
     ciWorkflow,
     /Install repository tooling for the React Native contract[\s\S]*npm ci --ignore-scripts[\s\S]*npm run react-native:native-contract:check/,
@@ -215,6 +238,18 @@ test("CI validates every maintained SDK family and the Chatwoot migration path",
   assert.match(ciWorkflow, /NODE_SDKS_RESULT/);
   assert.match(ciWorkflow, /IOS_SDK_RESULT/);
   assert.match(ciWorkflow, /ANDROID_SDK_RESULT/);
+});
+
+test("JavaScript CI and releases execute the complete first-party package check", () => {
+  assert.equal(
+    javascriptManifest.scripts.test,
+    "node --test test/opengrow.test.js",
+  );
+  assert.match(javascriptManifest.scripts.check, /^npm test && npm run build/);
+  assert.match(javascriptManifest.scripts.check, /npm run test:package/);
+  assert.match(javascriptManifest.scripts.check, /npm run pack:check$/);
+  assert.match(ciWorkflow, /npm ci && npm run check/);
+  assert.match(releaseWorkflow, /npm ci && npm run check/);
 });
 
 test("production routing cannot bypass client convergence through workflow dispatch", () => {
@@ -261,15 +296,18 @@ test("immutable SDK publication revalidates native and React Native packages", (
     releaseWorkflow,
     /yarn typecheck && yarn test --runInBand && yarn prepare/,
   );
-  assert.match(releaseWorkflow, /npm ci && npm test && npm run build/);
+  assert.match(releaseWorkflow, /npm ci && npm run check/);
   assert.match(
     releaseWorkflow,
     /Install repository tooling for the React Native contract[\s\S]*npm ci --ignore-scripts[\s\S]*npm run react-native:native-contract:check/,
   );
   assert.match(releaseWorkflow, /npm run react-native:native-contract:check/);
   assert.equal(
-    (releaseWorkflow.match(/test "\$[A-Z_a-z]+" != "js" \|\| catalog_id="javascript"/gu) ?? [])
-      .length,
+    (
+      releaseWorkflow.match(
+        /test "\$[A-Z_a-z]+" != "js" \|\| catalog_id="javascript"/gu,
+      ) ?? []
+    ).length,
     2,
   );
   assert.match(releaseWorkflow, /:OpenGrow:testDebugUnitTest/);
@@ -288,6 +326,10 @@ test("immutable SDK publication revalidates native and React Native packages", (
   assert.match(
     releaseWorkflow,
     /sdk-catalog\.mjs promote[\s\S]*?--sha "\$RELEASE_SHA"[\s\S]*?--write/,
+  );
+  assert.match(
+    releaseWorkflow,
+    /sdk-catalog\.mjs promote[\s\S]*?react-native-native-contract\.mjs write[\s\S]*?sdk-documentation\.mjs write[\s\S]*?react-native-native-contract\.mjs check[\s\S]*?sdk-documentation\.mjs check/,
   );
   assert.match(releaseWorkflow, /--release-sha "\$RELEASE_SHA"/);
   assert.match(
@@ -345,6 +387,10 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
     prepareReleaseWorkflow,
     /sdk-catalog\.mjs check --candidate-release-tag/,
   );
+  assert.match(
+    prepareReleaseWorkflow,
+    /Verify complete SDK catalogue[\s\S]*?sdk-catalog\.mjs check[\s\S]*?sdk-documentation\.mjs check/,
+  );
   assert.match(prepareReleaseWorkflow, /permissions:\n  contents: read/);
   assert.match(
     prepareReleaseWorkflow,
@@ -371,6 +417,10 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(prepareReleaseWorkflow, /git ls-remote --exit-code --tags/);
   assert.match(releaseWorkflow, /name: SDK release gate/);
   assert.match(releaseWorkflow, /sdk-catalog\.mjs promote/);
+  assert.match(
+    releaseWorkflow,
+    /git add config\/sdk-libraries\.json[\s\S]*?sdks\/react-native\/plugin\/native-contract\.json[\s\S]*?sdks\/\*\/README\.md/,
+  );
   assert.match(releaseWorkflow, /permissions:\n  contents: read/);
   assert.match(releaseWorkflow, /pull-requests: write/);
   assert.match(releaseWorkflow, /gh pr create/);
@@ -392,6 +442,10 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(
     promoteReferenceSdkWorkflow,
     /for library in flutterflow flutterflow-support/,
+  );
+  assert.match(
+    promoteReferenceSdkWorkflow,
+    /Validate the complete SDK catalogue[\s\S]*?sdk-catalog\.mjs check[\s\S]*?sdk-documentation\.mjs check/,
   );
   assert.match(
     promoteReferenceSdkWorkflow,

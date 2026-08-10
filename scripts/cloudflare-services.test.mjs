@@ -9,6 +9,8 @@ import {
   DOMAIN_SERVICE_REGISTRY,
   PLATFORM_SERVICE_SECRETS,
   assertService,
+  managedWorkerOperationalBinding,
+  managedWorkerService,
 } from "./cloudflare-services.mjs";
 import {
   localMigrationFiles,
@@ -178,9 +180,13 @@ test("generated domain config is private and has no static project allowlist", (
   assert.equal(config.vars.QUEUE_NAME, "opengrow-marketing-delivery");
   assert.equal(config.vars.DLQ_NAME, "opengrow-marketing-delivery-dlq");
   assert.equal(config.vars.PUBLIC_API_URL, "https://api.vocostar.com");
+  assert.deepEqual(config.services, [
+    { binding: "EMAIL_SERVICE", service: "opengrow-email" },
+  ]);
   assert.deepEqual(DOMAIN_SERVICE_REGISTRY.marketing.secrets, [
     "INTERNAL_API_TOKEN",
     "INTERNAL_API_TOKEN_PREVIOUS",
+    "EMAIL_INTERNAL_TOKEN",
     "SMTP_ENCRYPTION_KEY",
     "TRACKING_SIGNING_KEY",
   ]);
@@ -357,9 +363,13 @@ test("generated Email and Marketing configs quarantine terminal queue failures",
   assert.equal(marketing.queues.consumers[1].queue, marketing.vars.DLQ_NAME);
   assert.equal(marketing.queues.consumers[1].dead_letter_queue, undefined);
   assert.deepEqual(marketing.secrets.required, [
+    "EMAIL_INTERNAL_TOKEN",
     "INTERNAL_API_TOKEN",
     "SMTP_ENCRYPTION_KEY",
     "TRACKING_SIGNING_KEY",
+  ]);
+  assert.deepEqual(marketing.services, [
+    { binding: "EMAIL_SERVICE", service: "opengrow-email" },
   ]);
 });
 
@@ -535,7 +545,7 @@ test("generated observability config attaches an Analytics Engine dataset and no
   ]);
 });
 
-test("staged production API stays private while exposing service bindings", () => {
+test("staged production API stays private while exposing service bindings", async () => {
   execFileSync(
     process.execPath,
     [
@@ -639,6 +649,30 @@ test("staged production API stays private while exposing service bindings", () =
     ),
   );
   const publicSurfaces = JSON.parse(mbza.vars.PUBLIC_SURFACES_JSON);
+  const workerCatalog = JSON.parse(mbza.vars.PLATFORM_WORKERS_JSON);
+  assert.deepEqual(
+    workerCatalog.workers.map(({ id }) => id),
+    ALL_SERVICES,
+  );
+  assert.deepEqual(
+    workerCatalog.workers.find(({ id }) => id === "api"),
+    {
+      id: "api",
+      workerName: "opengrow-api-dev",
+      enabled: true,
+      publicSurfaceIds: ["api", "sdk", "shortlinks"],
+    },
+  );
+  assert.deepEqual(
+    workerCatalog.workers.find(({ id }) => id === "messaging"),
+    {
+      id: "messaging",
+      workerName: null,
+      enabled: false,
+      publicSurfaceIds: [],
+    },
+  );
+  assert.deepEqual(workerCatalog.customDependencies, []);
   assert.deepEqual(JSON.parse(mbza.vars.CORS_ORIGINS_JSON), [
     "https://grow.mbza.dev",
     "https://reference.mbza.dev",
@@ -666,6 +700,44 @@ test("staged production API stays private while exposing service bindings", () =
         "Executable Flutter Web acceptance application for the common OpenGrow journeys",
     },
   );
+
+  const vocostarCatalog = JSON.parse(config.vars.PLATFORM_WORKERS_JSON);
+  const { target: vocostarTarget } = await loadTarget("vocostar");
+  const expectedManaged = vocostarTarget.customWorker.managedWorkers.map(
+    (component) => ({
+      id: managedWorkerService(component),
+      workerName: component.workers.production,
+      binding: managedWorkerOperationalBinding(component),
+    }),
+  );
+  assert.deepEqual(
+    vocostarCatalog.workers
+      .filter(({ managed }) => managed)
+      .map(({ id, workerName, managed }) => ({
+        id,
+        workerName,
+        binding: managed.binding,
+      })),
+    expectedManaged,
+  );
+  for (const component of expectedManaged) {
+    assert.deepEqual(
+      config.services.find(({ binding }) => binding === component.binding),
+      { binding: component.binding, service: component.workerName },
+    );
+  }
+  assert.deepEqual(vocostarCatalog.customDependencies, [
+    {
+      binding: "VOCALS_ORCHESTRATOR",
+      workerName: "send-users-vocals-orchestrator",
+    },
+    {
+      binding: "MEDIAS_ORCHESTRATOR",
+      workerName: "send-users-medias-orchestrator",
+    },
+    { binding: "FILES_SERVICE", workerName: "opengrow-files" },
+  ]);
+  assert.equal(JSON.stringify(vocostarCatalog).includes("TOKEN"), false);
 });
 
 test("parallel configuration generation publishes only complete atomic JSON", async () => {

@@ -27,6 +27,7 @@ export interface BillingEnv {
  */
 interface ApiSecretEnv {
   OPENGROW_TARGET?: string;
+  PLATFORM_WORKERS_JSON?: string;
   OPENGROW_RELEASE?: string;
   PUBLIC_ROUTING_MODE?: "active" | "staged";
   MODULE_INTERNAL_TOKEN?: string;

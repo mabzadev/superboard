@@ -1,10 +1,11 @@
 {
   "$schema": "../schemas/cloudflare-deployments.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "deployments": [
     {
       "id": "mbza-development",
       "branch": "dev",
+      "target": "mbza-development",
       "githubEnvironment": "development",
       "cloudflareEnvironment": "development",
       "referenceAcceptance": true
@@ -12,6 +13,7 @@
     {
       "id": "vocostar-production",
       "branch": "main",
+      "target": "vocostar",
       "githubEnvironment": "production",
       "cloudflareEnvironment": "production",
       "referenceAcceptance": false

@@ -355,7 +355,10 @@ async function dispatch(job: JobRow, env: Env): Promise<void> {
 export async function resolveDispatchPayload(
   job: Pick<JobRow, "source_file_id" | "user_id">,
   payload: Record<string, unknown>,
-  env: Pick<Env, "FILES_SERVICE" | "FILES_INTERNAL_TOKEN">,
+  env: Pick<
+    Env,
+    "FILES_SERVICE" | "FILES_INTERNAL_TOKEN" | "FILES_INPUT_ORIGIN"
+  >,
 ): Promise<Record<string, unknown>> {
   const audioFileId = payload.audio_file_id;
   const videoFileId = payload.video_file_id;
@@ -417,6 +420,14 @@ export async function resolveDispatchPayload(
   }
   if (url.protocol !== "https:" || url.username || url.password) {
     throw new Error("files_ticket_response_invalid");
+  }
+  if (
+    url.origin !== env.FILES_INPUT_ORIGIN ||
+    !url.pathname.startsWith("/v1/downloads/") ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("files_ticket_origin_invalid");
   }
   const resolved = { ...payload };
   delete resolved.audio_file_id;

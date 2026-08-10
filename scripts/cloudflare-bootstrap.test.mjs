@@ -18,8 +18,14 @@ test("bootstrap inventory is derived from enabled target features", async () => 
     new Set(resources.map(({ kind, name }) => `${kind}:${name}`)).size,
     resources.length,
   );
-  assert.equal(resources.some(({ key }) => key === "messagingD1"), false);
-  assert.equal(resources.some(({ key }) => key === "messagingR2"), false);
+  assert.equal(
+    resources.some(({ key }) => key === "messagingD1"),
+    false,
+  );
+  assert.equal(
+    resources.some(({ key }) => key === "messagingR2"),
+    false,
+  );
   assert.equal(
     resources.some(({ key }) => key === "moduleD1.marketing"),
     true,
@@ -27,6 +33,18 @@ test("bootstrap inventory is derived from enabled target features", async () => 
   assert.equal(
     resources.some(({ key }) => key === "moduleQueues.support.dlq"),
     true,
+  );
+});
+
+test("VocoStar bootstrap owns the legacy media bucket used by managed Workers", async () => {
+  const { target } = await loadTarget("vocostar");
+  const resources = desiredCloudflareResources(target, "production");
+  assert.ok(
+    resources.some(
+      ({ key, name }) =>
+        key === "customR2" &&
+        name === target.environments.production.customR2.name,
+    ),
   );
 });
 
@@ -41,8 +59,14 @@ test("remote resources with missing manifest ids are adopted without creation", 
     inventories: inventoriesFor(desired),
   });
   assert.equal(plan.blockers.length, 0);
-  assert.equal(plan.operations.filter(({ type }) => type === "create").length, 0);
-  assert.equal(plan.operations.filter(({ type }) => type === "adopt").length, 13);
+  assert.equal(
+    plan.operations.filter(({ type }) => type === "create").length,
+    0,
+  );
+  assert.equal(
+    plan.operations.filter(({ type }) => type === "adopt").length,
+    13,
+  );
   assert.equal(JSON.stringify(plan).includes("a".repeat(32)), false);
   assert.match(
     plan.confirmation,
@@ -127,7 +151,10 @@ test("remote inventory fetch follows page and R2 cursor pagination", async () =>
   const calls = [];
   const fetchImpl = async (input, init) => {
     const url = new URL(String(input));
-    calls.push({ url: url.toString(), authorization: init.headers.Authorization });
+    calls.push({
+      url: url.toString(),
+      authorization: init.headers.Authorization,
+    });
     if (url.pathname.endsWith("/d1/database")) {
       const page = Number(url.searchParams.get("page"));
       return Response.json({
@@ -170,7 +197,10 @@ test("remote inventory fetch follows page and R2 cursor pagination", async () =>
   assert.equal(inventories.r2.length, 2);
   assert.equal(inventories.queue.length, 1);
   assert.equal(calls.length, 6);
-  assert.equal(calls.every(({ authorization }) => authorization === "Bearer secret-token"), true);
+  assert.equal(
+    calls.every(({ authorization }) => authorization === "Bearer secret-token"),
+    true,
+  );
 });
 
 function inventoriesFor(resources) {

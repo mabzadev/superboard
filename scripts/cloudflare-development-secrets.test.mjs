@@ -77,6 +77,10 @@ test("generated assignments satisfy every private cross-service contract", async
     assignments.email.EMAIL_INTERNAL_TOKEN,
   );
   assert.equal(
+    assignments.api.EMAIL_INTERNAL_TOKEN,
+    assignments.marketing.EMAIL_INTERNAL_TOKEN,
+  );
+  assert.equal(
     assignments.identity.FILES_INTERNAL_TOKEN,
     assignments.files.FILES_INTERNAL_TOKEN,
   );

@@ -11,8 +11,9 @@ import {
   DOMAIN_SERVICES,
   DOMAIN_SERVICE_REGISTRY,
   PLATFORM_SERVICE_SECRETS,
-  assertService,
+  assertServiceForTarget,
   isOptionalSecretBinding,
+  managedWorkerDefinition,
 } from "./cloudflare-services.mjs";
 
 const args = parseArgs();
@@ -22,8 +23,11 @@ const { targetName, environment } = await targetSelectionFromArgs(
   process.env,
   { allowReference: true },
 );
-assertService(service);
+const { target } = await loadTarget(targetName);
+assertServiceForTarget(target, service);
+const managedWorker = managedWorkerDefinition(target, service);
 if (
+  !managedWorker &&
   ![
     ...DOMAIN_SERVICES,
     "billing",
@@ -36,11 +40,8 @@ if (
     "custom",
   ].includes(service)
 ) {
-  throw new Error(
-    "cloudflare-types does not generate API or Dashboard types",
-  );
+  throw new Error("cloudflare-types does not generate API or Dashboard types");
 }
-const { target } = await loadTarget(targetName);
 if (service === "custom" && !target.customWorker) {
   throw new Error(`${targetName} does not declare a custom Worker`);
 }
@@ -56,9 +57,11 @@ run(process.execPath, [
   ...(args["allow-unprovisioned"] ? ["--allow-unprovisioned"] : []),
 ]);
 
-const workerDirectory = service === "custom"
-  ? resolve(root, target.customWorker.packagePath)
-  : resolve(root, "workers", service);
+const workerDirectory = managedWorker
+  ? resolve(root, managedWorker.packagePath)
+  : service === "custom"
+    ? resolve(root, target.customWorker.packagePath)
+    : resolve(root, "workers", service);
 const outputPath = resolve(workerDirectory, "worker-configuration.d.ts");
 const configPath = resolve(
   root,
@@ -86,11 +89,13 @@ try {
     workerDirectory,
   );
 
-  const declaredSecrets = service === "custom"
-    ? [...target.customWorker.secrets, "CUSTOM_WORKER_TOKEN_PREVIOUS"]
-    : DOMAIN_SERVICES.includes(service)
-      ? DOMAIN_SERVICE_REGISTRY[service].secrets
-      : PLATFORM_SERVICE_SECRETS[service];
+  const declaredSecrets = managedWorker
+    ? managedWorker.secrets
+    : service === "custom"
+      ? [...target.customWorker.secrets, "CUSTOM_WORKER_TOKEN_PREVIOUS"]
+      : DOMAIN_SERVICES.includes(service)
+        ? DOMAIN_SERVICE_REGISTRY[service].secrets
+        : PLATFORM_SERVICE_SECRETS[service];
   const optionalSecrets = new Set(
     [
       ...declaredSecrets.filter(isOptionalSecretBinding),

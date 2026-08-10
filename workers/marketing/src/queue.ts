@@ -9,7 +9,7 @@ import {
   deadLetterPayload,
 } from "@opengrow/contracts/dead-letter";
 import { decryptJson } from "./secrets";
-import { sendSmtpMessage } from "./smtp";
+import { isEmailTransportInProgress, sendSmtpMessage } from "./email-service";
 import { parseStoredJson } from "./validation";
 import { instrumentHtml, unsubscribeUrl } from "./tracking";
 
@@ -150,12 +150,13 @@ export async function quarantineMarketingDeadLetter(
     .prepare(
       `
     INSERT OR IGNORE INTO marketing_dead_letters
-      (id,source_queue,message_id,job_type,payload_json,payload_sha256,payload_bytes,replayable,attempts)
-    VALUES (?,?,?,?,?,?,?,?,?)
+      (id,project_id,source_queue,message_id,job_type,payload_json,payload_sha256,payload_bytes,replayable,attempts)
+    VALUES (?,?,?,?,?,?,?,?,?,?)
   `,
     )
     .bind(
       id,
+      isMarketingQueueJob(message.body) ? message.body.projectId : null,
       sourceQueue,
       message.id,
       payload.jobType,
@@ -243,11 +244,19 @@ async function deliverOptin(
     profile.encrypted_config,
   );
   const confirmationUrl = `${env.PUBLIC_API_URL}/api/v1/marketing/opt-in/${job.token}`;
-  await sendSmtpMessage(publicConfig, secret, {
-    to: subscriber.email,
-    subject: "Confirm your subscription",
-    text: `Confirm your subscription: ${confirmationUrl}`,
-    html: `<p>Confirm your subscription:</p><p><a href="${confirmationUrl}">Confirm subscription</a></p>`,
+  await sendSmtpMessage(env, {
+    idempotencyKey: `marketing.optin:${job.projectId}:${job.outboxId}:${profile.id}`,
+    projectId: job.projectId,
+    referenceId: job.outboxId,
+    profileId: profile.id,
+    publicConfig,
+    secret,
+    message: {
+      to: subscriber.email,
+      subject: "Confirm your subscription",
+      text: `Confirm your subscription: ${confirmationUrl}`,
+      html: `<p>Confirm your subscription:</p><p><a href="${confirmationUrl}">Confirm subscription</a></p>`,
+    },
   });
   await env.DB.batch([
     env.DB.prepare(
@@ -479,19 +488,27 @@ async function deliverEmail(
       const personalizedHtml = campaign.content_html
         ? personalize(campaign.content_html, replacements)
         : null;
-      const result = await sendSmtpMessage(publicConfig, secret, {
-        to: delivery.recipient_email,
-        subject: personalize(campaign.subject, replacements),
-        html:
-          personalizedHtml && campaign.tracking_enabled
-            ? await instrumentHtml(env, trackingPayload, personalizedHtml)
-            : personalizedHtml,
-        text: `${campaign.content_text ? personalize(campaign.content_text, replacements) : ""}\n\nUnsubscribe: ${unsubscribe}`,
-        headers: {
-          "X-OpenGrow-Campaign": campaign.id,
-          "X-OpenGrow-Delivery": delivery.id,
-          "List-Unsubscribe": `<${unsubscribe}>`,
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      const result = await sendSmtpMessage(env, {
+        idempotencyKey: `marketing.campaign:${job.projectId}:${delivery.id}:${profile.id}`,
+        projectId: job.projectId,
+        referenceId: delivery.id,
+        profileId: profile.id,
+        publicConfig,
+        secret,
+        message: {
+          to: delivery.recipient_email,
+          subject: personalize(campaign.subject, replacements),
+          html:
+            personalizedHtml && campaign.tracking_enabled
+              ? await instrumentHtml(env, trackingPayload, personalizedHtml)
+              : personalizedHtml,
+          text: `${campaign.content_text ? personalize(campaign.content_text, replacements) : ""}\n\nUnsubscribe: ${unsubscribe}`,
+          headers: {
+            "X-OpenGrow-Campaign": campaign.id,
+            "X-OpenGrow-Delivery": delivery.id,
+            "List-Unsubscribe": `<${unsubscribe}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
         },
       });
       const now = new Date().toISOString();
@@ -540,6 +557,7 @@ async function deliverEmail(
       await finishCampaignIfComplete(env, job.projectId, campaign.id);
       return;
     } catch (error) {
+      if (isEmailTransportInProgress(error)) throw error;
       lastError = error;
       await env.DB.prepare(
         `

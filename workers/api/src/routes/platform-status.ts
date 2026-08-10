@@ -15,6 +15,10 @@ import {
   type CustomWorkerManifest,
   type CustomWorkerStats,
 } from "@opengrow/contracts/custom-worker";
+import {
+  EMAIL_SERVICE_DEAD_LETTERS_PATH,
+  EMAIL_SERVICE_OPERATIONS_PATH,
+} from "@opengrow/contracts/email";
 import { getAuthContext } from "../lib/auth";
 import { readJsonObjectLimited, readTextLimited } from "../lib/http-limits";
 import type { Env } from "../types";
@@ -28,88 +32,222 @@ const OBSERVABILITY_SUMMARY_MAX_BYTES = 512 * 1024;
 const CUSTOM_MANIFEST_MAX_BYTES = 64 * 1024;
 const CUSTOM_STATS_MAX_BYTES = 512 * 1024;
 const CUSTOM_PROXY_MAX_BYTES = 2 * 1024 * 1024;
+const EMAIL_OPERATIONS_MAX_BYTES = 1024 * 1024;
 const MAX_PUBLIC_SURFACE_MONITORS = 20;
 
-const SERVICES = [
-  [
+const WORKERS = [
+  worker(
+    "api",
+    "gateway",
+    null,
+    "self",
+    "/health",
+    "Authenticated OpenGrow gateway, orchestration and public SDK surface",
+    ["DB", "KV", "R2"],
+    ["EVENT_QUEUE", "PUSH_QUEUE", "MAINTENANCE_QUEUE"],
+    ["platformDeadLetters", "pushDeliveries", "accountErasures"],
+  ),
+  worker(
+    "dashboard",
+    "backoffice",
+    null,
+    "public",
+    "/",
+    "OpenGrow operator back office",
+    ["dashboard-cache"],
+    [],
+    [],
+  ),
+  worker(
     "billing",
+    "common",
     "BILLING",
+    "binding",
     "/internal/v1/health",
     "Purchases, entitlements, stores and billing jobs",
-  ],
-  [
+    ["central", "configuration", "application-files"],
+    ["BILLING_QUEUE"],
+    ["billingExports", "failedPurchases"],
+  ),
+  worker(
     "messaging",
+    "feature",
     "MESSAGING",
+    "binding",
     "/health",
     "Legacy Messaging runtime (disabled after Support convergence)",
-  ],
-  [
+    ["messaging"],
+    ["MESSAGING_QUEUE"],
+    ["messages"],
+  ),
+  worker(
     "email",
+    "common",
     "EMAIL_SERVICE",
+    "binding",
     "/health",
     "Transactional and marketing email delivery",
-  ],
-  [
+    ["email"],
+    ["EMAIL_QUEUE"],
+    ["messages", "deliveries", "deadLetters"],
+  ),
+  worker(
     "identity",
+    "common",
     "IDENTITY_SERVICE",
+    "binding",
     "/health",
     "Application users, email/password, Google/Apple federation and OpenGrow identity exchange",
-  ],
-  [
+    ["identity"],
+    [],
+    [],
+  ),
+  worker(
     "files",
+    "common",
     "FILES_SERVICE",
+    "binding",
     "/health",
     "Authenticated application file upload, metadata, download and deletion",
-  ],
-  [
+    ["file-metadata", "application-files"],
+    [],
+    [],
+  ),
+  worker(
+    "observability",
+    "operations",
+    null,
+    "binding",
+    OBSERVABILITY_SUMMARY_PATH,
+    "Cloudflare invocation, outcome, exception, CPU and wall-time telemetry",
+    ["Analytics Engine"],
+    [],
+    [],
+  ),
+  worker(
+    "mcp",
+    "operations",
+    null,
+    "public",
+    "/health",
+    "OAuth-protected infrastructure status and operator tools",
+    [],
+    [],
+    [],
+  ),
+  worker(
     "app",
+    "feature",
     "APP_MODULE",
+    "binding",
     "/internal/v1/health",
     "Customers, referrals and application configuration",
-  ],
-  [
+    ["app"],
+    [],
+    [],
+  ),
+  worker(
     "products",
+    "feature",
     "PRODUCTS_MODULE",
+    "binding",
     "/internal/v1/health",
     "Product catalogue, offerings and entitlements",
-  ],
-  [
+    ["products"],
+    [],
+    [],
+  ),
+  worker(
     "paywalls",
+    "feature",
     "PAYWALLS_MODULE",
+    "binding",
     "/internal/v1/health",
     "Paywall definitions, versions and analytics",
-  ],
-  [
+    ["paywalls"],
+    [],
+    [],
+  ),
+  worker(
     "dynamic-links",
+    "feature",
     "DYNAMIC_LINKS_MODULE",
+    "binding",
     "/internal/v1/health",
     "Short links, redirects and attribution",
-  ],
-  [
+    ["dynamic-links"],
+    [],
+    [],
+  ),
+  worker(
     "support",
+    "feature",
     "SUPPORT_MODULE",
+    "binding",
     "/internal/v1/health",
     "Unified inbox, contacts and support workflows",
-  ],
-  [
+    ["support", "support-attachments", "support-realtime"],
+    ["SUPPORT_QUEUE"],
+    ["webhooks", "deadLetters"],
+  ),
+  worker(
     "marketing",
+    "feature",
     "MARKETING_MODULE",
+    "binding",
     "/internal/v1/health",
     "Contacts, consent, templates and campaigns",
-  ],
-  [
+    ["marketing", "marketing-media"],
+    ["MARKETING_QUEUE"],
+    ["campaigns", "deliveries", "outbox", "deadLetters"],
+  ),
+  worker(
     "onboardings",
+    "feature",
     "ONBOARDINGS_MODULE",
+    "binding",
     "/internal/v1/health",
     "Onboarding flows and completion analytics",
-  ],
-  [
+    ["onboardings"],
+    [],
+    [],
+  ),
+  worker(
     "custom",
+    "application",
     "CUSTOM_WORKER",
+    "binding",
     "/health",
     "Application-specific jobs and integrations",
-  ],
+    ["custom"],
+    [],
+    ["custom"],
+  ),
 ] as const;
+
+function worker(
+  id: string,
+  kind: string,
+  binding: string | null,
+  healthMode: "self" | "binding" | "public",
+  healthPath: string,
+  description: string,
+  stores: string[],
+  queues: string[],
+  jobTypes: string[],
+) {
+  return {
+    id,
+    kind,
+    binding,
+    healthMode,
+    healthPath,
+    description,
+    stores,
+    queues,
+    jobTypes,
+  };
+}
 
 const API_CAPABILITIES = [
   {
@@ -177,6 +315,13 @@ const API_CAPABILITIES = [
     entrypoints: ["/api/v1/sdk/marketing/v1/preferences"],
   },
   {
+    id: "email-operations",
+    description:
+      "Body-free email delivery inspection and audited dead-letter replay or discard",
+    access: "Authenticated Dashboard owner or administrator",
+    entrypoints: ["/api/v1/platform/email/*"],
+  },
+  {
     id: "support",
     description:
       "Conversations, contacts, attachments, realtime orchestration and CSAT",
@@ -209,6 +354,7 @@ const API_CAPABILITIES = [
       "/health",
       "/api/v1/platform/status",
       "/api/v1/platform/account-erasures",
+      "/api/v1/platform/email/*",
     ],
   },
   {
@@ -324,8 +470,47 @@ platform.get("/status", async (c) => {
   });
 });
 
+platform.get("/email/operations", async (c) => {
+  const denial = await platformAdminDenial(
+    c.env,
+    c.req.header("Authorization"),
+  );
+  if (denial) return c.json({ error: denial.error }, denial.status);
+  return proxyEmail(
+    c.env,
+    `${EMAIL_SERVICE_OPERATIONS_PATH}${new URL(c.req.url).search}`,
+  );
+});
+
+platform.post("/email/dead-letters/:deadLetterId/replay", async (c) => {
+  const denial = await platformAdminDenial(
+    c.env,
+    c.req.header("Authorization"),
+  );
+  if (denial) return c.json({ error: denial.error }, denial.status);
+  return proxyEmail(
+    c.env,
+    `${EMAIL_SERVICE_DEAD_LETTERS_PATH}/${encodeURIComponent(c.req.param("deadLetterId"))}/replay`,
+    { method: "POST" },
+  );
+});
+
+platform.post("/email/dead-letters/:deadLetterId/discard", async (c) => {
+  const denial = await platformAdminDenial(
+    c.env,
+    c.req.header("Authorization"),
+  );
+  if (denial) return c.json({ error: denial.error }, denial.status);
+  return proxyEmail(
+    c.env,
+    `${EMAIL_SERVICE_DEAD_LETTERS_PATH}/${encodeURIComponent(c.req.param("deadLetterId"))}/discard`,
+    { method: "POST" },
+  );
+});
+
 export async function buildPlatformStatus(env: Env) {
   const started = Date.now();
+  const topology = workerTopology(env);
   const [
     serviceChecks,
     metrics,
@@ -335,11 +520,17 @@ export async function buildPlatformStatus(env: Env) {
     publicSurfaces,
     centralSchema,
   ] = await Promise.all([
-    Promise.all(
-      SERVICES.map(([id, binding, path, description]) =>
-        checkService(env, id, binding, path, description),
+    Promise.all([
+      ...WORKERS.filter(
+        (definition) =>
+          definition.binding !== null && definition.id !== "observability",
+      ).map((definition) =>
+        checkService(env, definition, topology.workers.get(definition.id)),
       ),
-    ),
+      ...[...topology.workers.values()]
+        .filter(isManagedWorkerTopologyEntry)
+        .map((definition) => checkManagedWorker(env, definition)),
+    ]),
     platformMetrics(env.DB),
     jobMetrics(env.DB),
     runtimeMetrics(env),
@@ -347,7 +538,6 @@ export async function buildPlatformStatus(env: Env) {
     publicSurfaceHealth(env.PUBLIC_SURFACES_JSON),
     inspectSqlSchemaHealth(env.DB, env.D1_EXPECTED_MIGRATION).catch(() => null),
   ]);
-  const services = [runtime.service, ...serviceChecks];
   const serviceJobs = serviceJobMetrics(serviceChecks);
   const dataStores = dataStoreInventory(
     env,
@@ -361,6 +551,17 @@ export async function buildPlatformStatus(env: Env) {
     ) && centralSchema?.status === "current"
       ? "ok"
       : "degraded";
+  const services = operationalServices({
+    env,
+    topology,
+    checks: serviceChecks,
+    runtime: runtime.service,
+    publicSurfaces,
+    apiStatus,
+    platformJobs,
+    serviceJobs,
+    custom,
+  });
   const unavailable =
     services.filter(
       (service) => service.status !== "ok" && service.status !== "disabled",
@@ -385,7 +586,8 @@ export async function buildPlatformStatus(env: Env) {
       : 0) +
     (securityStateDegraded(platformJobs.authCredentials, ["legacyPlaintext"])
       ? 1
-      : 0);
+      : 0) +
+    (topology.status === "ok" ? 0 : 1);
   return {
     status: unavailable === 0 ? "ok" : "degraded",
     environment: env.ENVIRONMENT,
@@ -395,6 +597,13 @@ export async function buildPlatformStatus(env: Env) {
       target: env.OPENGROW_TARGET || "unknown",
       release: env.OPENGROW_RELEASE || "unknown",
       publicRouting: env.PUBLIC_ROUTING_MODE || "unknown",
+    },
+    catalog: {
+      schemaVersion: 1,
+      status: topology.status,
+      target: env.OPENGROW_TARGET || "unknown",
+      environment: env.ENVIRONMENT,
+      ...(topology.error ? { error: topology.error } : {}),
     },
     endpoints: {
       api: `https://${env.API_DOMAIN}`,
@@ -616,16 +825,427 @@ platform.get("/custom/jobs/:jobId", async (c) => {
   );
 });
 
+type WorkerTopologyEntry = {
+  id: string;
+  workerName: string | null;
+  enabled: boolean;
+  publicSurfaceIds: string[];
+  managed?: {
+    binding: string;
+    description: string;
+    workflow: string;
+    workflowClass: string;
+    containers: Array<{ className: string; instanceType: string }>;
+    durableObjects: Array<{ className: string; storage: string }>;
+    stores: string[];
+  };
+};
+
+type WorkerTopology = {
+  status: "ok" | "misconfigured";
+  workers: Map<string, WorkerTopologyEntry>;
+  customDependencies: Array<{ binding: string; workerName: string }>;
+  error?: string;
+};
+
+function workerTopology(env: Env): WorkerTopology {
+  const failed = (error: string): WorkerTopology => ({
+    status: "misconfigured",
+    workers: new Map(),
+    customDependencies: [],
+    error,
+  });
+  if (!env.PLATFORM_WORKERS_JSON) {
+    return failed("PLATFORM_WORKERS_JSON is missing");
+  }
+  try {
+    const value: unknown = JSON.parse(env.PLATFORM_WORKERS_JSON);
+    if (
+      !record(value) ||
+      value.schemaVersion !== 1 ||
+      value.target !== env.OPENGROW_TARGET ||
+      value.environment !== env.ENVIRONMENT ||
+      !Array.isArray(value.workers) ||
+      !Array.isArray(value.customDependencies)
+    ) {
+      return failed(
+        "Worker catalog does not match this target and environment",
+      );
+    }
+    const commonIds = new Set(WORKERS.map(({ id }) => id));
+    const workers = new Map<string, WorkerTopologyEntry>();
+    for (const candidate of value.workers) {
+      if (!isWorkerTopologyEntry(candidate) || workers.has(candidate.id)) {
+        return failed("Worker catalog contains an invalid or duplicate entry");
+      }
+      const common = commonIds.has(candidate.id);
+      if (
+        (common && candidate.managed !== undefined) ||
+        (!common && !isManagedWorkerTopologyEntry(candidate))
+      ) {
+        return failed("Worker catalog contains an unknown Worker entry");
+      }
+      if (candidate.enabled && !candidate.workerName) {
+        return failed(`Enabled Worker ${candidate.id} has no deployment name`);
+      }
+      workers.set(candidate.id, candidate);
+    }
+    if (WORKERS.some(({ id }) => !workers.has(id))) {
+      return failed("Worker catalog is incomplete");
+    }
+    const customDependencies: Array<{ binding: string; workerName: string }> =
+      [];
+    for (const dependency of value.customDependencies) {
+      if (
+        !record(dependency) ||
+        typeof dependency.binding !== "string" ||
+        !/^[A-Z][A-Z0-9_]{0,63}$/u.test(dependency.binding) ||
+        typeof dependency.workerName !== "string" ||
+        !safeWorkerName(dependency.workerName)
+      ) {
+        return failed("Custom Worker dependency catalog is invalid");
+      }
+      customDependencies.push({
+        binding: dependency.binding,
+        workerName: dependency.workerName,
+      });
+    }
+    return { status: "ok", workers, customDependencies };
+  } catch {
+    return failed("PLATFORM_WORKERS_JSON is invalid JSON");
+  }
+}
+
+function isWorkerTopologyEntry(value: unknown): value is WorkerTopologyEntry {
+  return (
+    record(value) &&
+    typeof value.id === "string" &&
+    typeof value.enabled === "boolean" &&
+    (value.workerName === null ||
+      (typeof value.workerName === "string" &&
+        safeWorkerName(value.workerName))) &&
+    Array.isArray(value.publicSurfaceIds) &&
+    value.publicSurfaceIds.every(
+      (id) => typeof id === "string" && /^[a-z][a-z0-9-]{0,50}$/u.test(id),
+    ) &&
+    (value.managed === undefined || record(value.managed))
+  );
+}
+
+function isManagedWorkerTopologyEntry(
+  value: WorkerTopologyEntry,
+): value is WorkerTopologyEntry & {
+  managed: NonNullable<WorkerTopologyEntry["managed"]>;
+} {
+  const managed = value.managed;
+  return Boolean(
+    /^managed-[a-z][a-z0-9-]{1,21}$/u.test(value.id) &&
+    managed &&
+    /^[A-Z][A-Z0-9_]{0,63}$/u.test(managed.binding) &&
+    typeof managed.description === "string" &&
+    managed.description.length > 0 &&
+    managed.description.length <= 500 &&
+    safeWorkerName(managed.workflow) &&
+    /^[A-Z][A-Za-z0-9]+$/u.test(managed.workflowClass) &&
+    Array.isArray(managed.containers) &&
+    managed.containers.every(
+      (container) =>
+        record(container) &&
+        typeof container.className === "string" &&
+        /^[A-Z][A-Za-z0-9]+$/u.test(container.className) &&
+        typeof container.instanceType === "string" &&
+        /^[a-z0-9-]+$/u.test(container.instanceType),
+    ) &&
+    Array.isArray(managed.durableObjects) &&
+    managed.durableObjects.every(
+      (durableObject) =>
+        record(durableObject) &&
+        typeof durableObject.className === "string" &&
+        /^[A-Z][A-Za-z0-9]+$/u.test(durableObject.className) &&
+        ["sqlite", "legacy-kv"].includes(String(durableObject.storage)),
+    ) &&
+    Array.isArray(managed.stores) &&
+    managed.stores.every(
+      (store) =>
+        typeof store === "string" &&
+        /^[A-Za-z][A-Za-z0-9_-]{0,63}$/u.test(store),
+    ),
+  );
+}
+
+function safeWorkerName(value: string) {
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u.test(value);
+}
+
+function operationalServices(input: {
+  env: Env;
+  topology: WorkerTopology;
+  checks: ServiceCheck[];
+  runtime: {
+    id: string;
+    status: string;
+    description: string;
+    responseTimeMs: number | null;
+    detail?: unknown;
+    error?: string;
+  };
+  publicSurfaces: Awaited<ReturnType<typeof publicSurfaceHealth>>;
+  apiStatus: string;
+  platformJobs: Record<string, Record<string, number> | null>;
+  serviceJobs: ServiceJobMetrics;
+  custom: Awaited<ReturnType<typeof customOverview>>;
+}) {
+  const capabilityMap = new Map<string, (typeof API_CAPABILITIES)[number]>(
+    API_CAPABILITIES.map((capability) => [capability.id, capability]),
+  );
+  const commonServices = WORKERS.map((definition) => {
+    const configured = input.topology.workers.get(definition.id);
+    const enabled =
+      configured?.enabled ??
+      Boolean(definition.binding && input.env[definition.binding as keyof Env]);
+    const check = input.checks.find(({ id }) => id === definition.id);
+    const publicSurface = configured?.publicSurfaceIds
+      .map((id) => input.publicSurfaces.find((surface) => surface.id === id))
+      .find(Boolean);
+    let live:
+      | {
+          id: string;
+          status: string;
+          description: string;
+          responseTimeMs: number | null;
+          detail?: unknown;
+          error?: string;
+        }
+      | undefined = check;
+    if (definition.id === "api") {
+      live = {
+        id: "api",
+        status: input.apiStatus,
+        description: definition.description,
+        responseTimeMs: publicSurface?.responseTimeMs ?? null,
+      };
+    } else if (definition.id === "observability") {
+      live = input.runtime;
+    } else if (definition.healthMode === "public") {
+      live = publicSurface
+        ? {
+            id: definition.id,
+            status: publicSurface.status,
+            description: definition.description,
+            responseTimeMs: publicSurface.responseTimeMs,
+            ...(publicSurface.error ? { error: publicSurface.error } : {}),
+          }
+        : {
+            id: definition.id,
+            status: "misconfigured",
+            description: definition.description,
+            responseTimeMs: null,
+            error: "Public health monitor missing",
+          };
+    }
+    if (configured && !configured.enabled) {
+      live = {
+        id: definition.id,
+        status: "disabled",
+        description: definition.description,
+        responseTimeMs: null,
+      };
+    } else if (configured?.enabled && (!live || live.status === "disabled")) {
+      live = {
+        id: definition.id,
+        status: "misconfigured",
+        description: definition.description,
+        responseTimeMs: null,
+        error: "Required health binding is missing",
+      };
+    }
+    const capabilityIds = workerCapabilityIds(definition.id);
+    const routes = capabilityIds.flatMap(
+      (id) => capabilityMap.get(id)?.entrypoints ?? [],
+    );
+    return {
+      ...(live ?? {
+        id: definition.id,
+        status: enabled ? "misconfigured" : "disabled",
+        description: definition.description,
+        responseTimeMs: null,
+      }),
+      kind: definition.kind,
+      workerName: configured?.workerName ?? null,
+      enabled: configured?.enabled ?? enabled,
+      health: {
+        mode: definition.healthMode,
+        path: definition.healthPath,
+        url: publicSurface?.url ?? null,
+      },
+      capabilities: capabilityIds,
+      routes: routes.length
+        ? [...new Set(routes)]
+        : directWorkerRoutes(definition.id, definition.healthPath),
+      dependencies: {
+        services: workerServiceDependencies(definition.id),
+        stores: definition.stores,
+        queues: definition.queues,
+        externalWorkers:
+          definition.id === "custom" ? input.topology.customDependencies : [],
+      },
+      jobTypes: definition.jobTypes,
+      jobs: workerJobs(
+        definition.id,
+        input.platformJobs,
+        input.serviceJobs,
+        input.custom,
+      ),
+    };
+  });
+  const managedServices = [...input.topology.workers.values()]
+    .filter(isManagedWorkerTopologyEntry)
+    .map((definition) => {
+      const live = input.checks.find(({ id }) => id === definition.id) ?? {
+        id: definition.id,
+        status: "misconfigured",
+        description: definition.managed.description,
+        responseTimeMs: null,
+        error: "Required managed Worker binding is missing",
+      };
+      return {
+        ...live,
+        kind: "managed",
+        workerName: definition.workerName,
+        enabled: definition.enabled,
+        health: { mode: "binding", path: "/health", url: null },
+        capabilities: [
+          `workflow:${definition.managed.workflowClass}`,
+          ...definition.managed.containers.map(
+            ({ className }) => `container:${className}`,
+          ),
+          ...definition.managed.durableObjects.map(
+            ({ className }) => `durable-object:${className}`,
+          ),
+        ],
+        routes: ["POST /"],
+        dependencies: {
+          services: ["custom"],
+          stores: definition.managed.stores,
+          queues: [`workflow:${definition.managed.workflow}`],
+          externalWorkers: [],
+        },
+        jobTypes: [definition.id],
+        jobs: null,
+      };
+    });
+  return [...commonServices, ...managedServices];
+}
+
+function workerCapabilityIds(id: string): string[] {
+  const map: Record<string, string[]> = {
+    api: API_CAPABILITIES.map(({ id: capabilityId }) => capabilityId),
+    billing: ["billing"],
+    identity: ["identity"],
+    files: ["files"],
+    mcp: ["mcp"],
+    app: ["projects"],
+    products: ["billing"],
+    paywalls: ["billing"],
+    "dynamic-links": ["modules"],
+    support: ["support"],
+    marketing: ["marketing-consent"],
+    onboardings: ["modules"],
+    custom: ["custom-jobs"],
+    dashboard: ["platform", "libraries"],
+    observability: ["platform"],
+    messaging: ["support"],
+    email: ["notifications", "marketing-consent"],
+  };
+  return map[id] ?? [];
+}
+
+function directWorkerRoutes(id: string, healthPath: string) {
+  return id === "dashboard" ? ["/infrastructure"] : [healthPath];
+}
+
+function workerServiceDependencies(id: string): string[] {
+  const dependencies: Record<string, string[]> = {
+    api: [
+      "billing",
+      "email",
+      "identity",
+      "files",
+      "observability",
+      "app",
+      "products",
+      "paywalls",
+      "dynamic-links",
+      "support",
+      "marketing",
+      "onboardings",
+      "custom",
+    ],
+    dashboard: ["api"],
+    identity: ["email", "files"],
+    mcp: ["api"],
+    custom: ["files"],
+  };
+  return dependencies[id] ?? [];
+}
+
+function workerJobs(
+  id: string,
+  platformJobs: Record<string, Record<string, number> | null>,
+  serviceJobs: ServiceJobMetrics,
+  custom: Awaited<ReturnType<typeof customOverview>>,
+): Record<string, number> | null {
+  const flatten = (groups: string[]) => {
+    const output: Record<string, number> = {};
+    for (const group of groups) {
+      const values = platformJobs[group];
+      if (values === null) return null;
+      for (const [state, count] of Object.entries(values ?? {}))
+        output[`${group}.${state}`] = count;
+    }
+    return output;
+  };
+  if (id === "api")
+    return flatten([
+      "platformDeadLetters",
+      "pushDeliveries",
+      "accountErasures",
+    ]);
+  if (id === "billing") return flatten(["billingExports", "failedPurchases"]);
+  if (id === "email" || id === "marketing" || id === "support")
+    return serviceJobs[id];
+  if (id === "custom")
+    return custom.stats?.jobs ?? (custom.status === "disabled" ? {} : null);
+  if (id === "messaging") return null;
+  return {};
+}
+
 async function checkService(
   env: Env,
-  id: string,
-  bindingName: (typeof SERVICES)[number][1],
-  path: string,
-  description: string,
+  definition: (typeof WORKERS)[number],
+  configured: WorkerTopologyEntry | undefined,
 ) {
-  const binding = env[bindingName];
-  if (!binding)
+  const {
+    id,
+    binding: bindingName,
+    healthPath: path,
+    description,
+  } = definition;
+  if (configured && !configured.enabled)
     return { id, status: "disabled", description, responseTimeMs: null };
+  const binding = bindingName
+    ? (env[bindingName as keyof Env] as Fetcher | undefined)
+    : undefined;
+  if (!binding)
+    return {
+      id,
+      status: configured?.enabled ? "misconfigured" : "disabled",
+      description,
+      responseTimeMs: null,
+      ...(configured?.enabled
+        ? { error: "Required service binding is missing" }
+        : {}),
+    };
   const started = Date.now();
   try {
     const response = await binding.fetch(`https://${id}.internal${path}`, {
@@ -661,7 +1281,74 @@ async function checkService(
   }
 }
 
-type ServiceCheck = Awaited<ReturnType<typeof checkService>>;
+async function checkManagedWorker(
+  env: Env,
+  definition: WorkerTopologyEntry & {
+    managed: NonNullable<WorkerTopologyEntry["managed"]>;
+  },
+): Promise<ServiceCheck> {
+  const description = definition.managed.description;
+  if (!definition.enabled) {
+    return {
+      id: definition.id,
+      status: "disabled",
+      description,
+      responseTimeMs: null,
+    };
+  }
+  const binding = env[definition.managed.binding as keyof Env] as
+    | Fetcher
+    | undefined;
+  if (!binding) {
+    return {
+      id: definition.id,
+      status: "misconfigured",
+      description,
+      responseTimeMs: null,
+      error: "Required managed Worker binding is missing",
+    };
+  }
+  const started = Date.now();
+  try {
+    const response = await binding.fetch(
+      `https://${definition.id}.internal/health`,
+      {
+        method: "GET",
+        redirect: "manual",
+        signal: AbortSignal.timeout(3_000),
+      },
+    );
+    await response.body?.cancel().catch(() => undefined);
+    return {
+      id: definition.id,
+      status: response.status < 500 ? "ok" : "degraded",
+      description,
+      responseTimeMs: Date.now() - started,
+      detail: {
+        contract: "service-binding-reachability",
+        httpStatus: response.status,
+      },
+    };
+  } catch (error) {
+    return {
+      id: definition.id,
+      status: "unavailable",
+      description,
+      responseTimeMs: Date.now() - started,
+      error:
+        error instanceof Error ? error.message : "Managed Worker check failed",
+    };
+  }
+}
+
+type ServiceCheck = {
+  id: string;
+  status: string;
+  description: string;
+  responseTimeMs: number | null;
+  detail?: unknown;
+  error?: string;
+};
 
 function serviceJobMetrics(services: ServiceCheck[]) {
   const metrics = (id: string): Record<string, unknown> | null => {
@@ -685,10 +1372,18 @@ function serviceJobMetrics(services: ServiceCheck[]) {
       messagesQueued: ["messages", "queued"],
       messagesSending: ["messages", "sending"],
       messagesFailed: ["messages", "failed"],
+      messagesOutcomeUnknown: ["messages", "outcomeUnknown"],
       deliveriesQueued: ["deliveries", "queued"],
       deliveriesSending: ["deliveries", "sending"],
       deliveriesFailed: ["deliveries", "failed"],
+      deliveriesOutcomeUnknown: ["deliveries", "outcomeUnknown"],
+      delegatedTransportOutcomeUnknown: [
+        "delegatedTransport",
+        "outcomeUnknown",
+      ],
       deadLettersQuarantined: ["deadLetters", "quarantined"],
+      deadLettersReplayed: ["deadLetters", "replayed"],
+      deadLettersDiscarded: ["deadLetters", "discarded"],
     }),
     marketing: selectMetrics(marketing, {
       campaignsScheduled: ["content", "scheduled"],
@@ -1471,6 +2166,54 @@ async function proxyCustom(
   } catch {
     return Response.json(
       { error: "custom_worker_unavailable" },
+      { status: 503 },
+    );
+  }
+}
+
+async function proxyEmail(
+  env: Env,
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  if (!env.EMAIL_SERVICE)
+    return Response.json({ error: "email_service_disabled" }, { status: 404 });
+  if (!env.EMAIL_INTERNAL_TOKEN)
+    return Response.json(
+      { error: "email_service_misconfigured" },
+      { status: 503 },
+    );
+  try {
+    const response = await env.EMAIL_SERVICE.fetch(
+      `https://email.internal${path}`,
+      {
+        ...init,
+        headers: {
+          "x-internal-token": env.EMAIL_INTERNAL_TOKEN,
+          ...init.headers,
+        },
+        signal: init.signal ?? AbortSignal.timeout(5_000),
+      },
+    );
+    const body = await readTextLimited(
+      response,
+      EMAIL_OPERATIONS_MAX_BYTES,
+      "Email operations response is too large",
+    );
+    const bodyAllowed = ![101, 204, 205, 304].includes(response.status);
+    return new Response(bodyAllowed ? body : null, {
+      status: response.status,
+      headers: {
+        "content-type":
+          response.headers.get("content-type") ||
+          "application/json; charset=UTF-8",
+        "cache-control": "private, no-store",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  } catch {
+    return Response.json(
+      { error: "email_service_unavailable" },
       { status: 503 },
     );
   }

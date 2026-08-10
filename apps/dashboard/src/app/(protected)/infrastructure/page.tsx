@@ -12,10 +12,14 @@ import {
 import {
   getPlatformAccountErasures,
   getPlatformCustomJobs,
+  getPlatformEmailOperations,
   getPlatformStatus,
+  discardPlatformEmailDeadLetter,
+  replayPlatformEmailDeadLetter,
   retryPlatformCustomJob,
   type PlatformAccountErasure,
   type PlatformCustomJob,
+  type PlatformEmailOperations,
   type PlatformStatus,
   type RuntimeMetricRow,
 } from "@/api/platform/platformService";
@@ -37,7 +41,15 @@ export default function InfrastructurePage() {
   const [accountErasures, setAccountErasures] = useState<
     PlatformAccountErasure[]
   >([]);
+  const [emailOperations, setEmailOperations] =
+    useState<PlatformEmailOperations | null>(null);
+  const [emailOperationsError, setEmailOperationsError] = useState<
+    string | null
+  >(null);
   const [retryingJob, setRetryingJob] = useState<string | null>(null);
+  const [resolvingDeadLetter, setResolvingDeadLetter] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -47,14 +59,31 @@ export default function InfrastructurePage() {
       setStatus(next);
       const supportsJobInspection =
         next.custom.status === "ok" && next.custom.manifest != null;
-      const [nextCustomJobs, nextAccountErasures] = await Promise.all([
-        supportsJobInspection
-          ? getPlatformCustomJobs().then((page) => page.jobs)
-          : Promise.resolve([]),
-        getPlatformAccountErasures(),
-      ]);
+      const emailEnabled = next.services.some(
+        (service) => service.id === "email" && service.status !== "disabled"
+      );
+      const [nextCustomJobs, nextAccountErasures, nextEmailOperations] =
+        await Promise.all([
+          supportsJobInspection
+            ? getPlatformCustomJobs().then((page) => page.jobs)
+            : Promise.resolve([]),
+          getPlatformAccountErasures(),
+          emailEnabled
+            ? getPlatformEmailOperations()
+                .then((data) => ({ data, error: null }))
+                .catch((reason: unknown) => ({
+                  data: null,
+                  error:
+                    reason instanceof Error
+                      ? reason.message
+                      : "Email operations are unavailable",
+                }))
+            : Promise.resolve({ data: null, error: null }),
+        ]);
       setCustomJobs(nextCustomJobs);
       setAccountErasures(nextAccountErasures);
+      setEmailOperations(nextEmailOperations.data);
+      setEmailOperationsError(nextEmailOperations.error);
       setError(null);
     } catch (reason) {
       setError(
@@ -66,6 +95,30 @@ export default function InfrastructurePage() {
       setLoading(false);
     }
   }, []);
+
+  const resolveDeadLetter = useCallback(
+    async (deadLetterId: string, decision: "replay" | "discard") => {
+      setResolvingDeadLetter(deadLetterId);
+      try {
+        if (decision === "replay") {
+          await replayPlatformEmailDeadLetter(deadLetterId);
+        } else {
+          await discardPlatformEmailDeadLetter(deadLetterId);
+        }
+        setEmailOperations(await getPlatformEmailOperations());
+        setEmailOperationsError(null);
+      } catch (reason) {
+        setEmailOperationsError(
+          reason instanceof Error
+            ? reason.message
+            : "Unable to resolve email dead letter"
+        );
+      } finally {
+        setResolvingDeadLetter(null);
+      }
+    },
+    []
+  );
 
   const retryJob = useCallback(async (jobId: string) => {
     setRetryingJob(jobId);
@@ -116,6 +169,15 @@ export default function InfrastructurePage() {
 
       {status && (
         <>
+          {status.catalog?.status !== "ok" && (
+            <Alert variant="destructive">
+              <AlertTitle>Worker catalog misconfigured</AlertTitle>
+              <AlertDescription>
+                {status.catalog?.error ??
+                  "The target Worker inventory is unavailable."}
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="grid gap-4 md:grid-cols-4">
             <Metric
               title="Platform"
@@ -315,24 +377,77 @@ export default function InfrastructurePage() {
             <CardHeader>
               <CardTitle>Workers</CardTitle>
               <CardDescription>
-                Purpose, availability and service-binding latency.
+                Target-derived deployment names, responsibilities, health,
+                dependencies and persisted job state.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 lg:grid-cols-2">
               {status.services.map((service) => (
                 <div key={service.id} className="rounded-md border p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <strong>{service.id}</strong>
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <strong>{service.id}</strong>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {service.workerName ?? "No deployment name"} ·{" "}
+                        {service.kind ?? "legacy"}
+                      </p>
+                    </div>
                     <StatusBadge value={service.status} />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {service.description}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
+                    Health: {service.health?.mode ?? "legacy"}{" "}
+                    {service.health?.path ?? "unknown"} ·{" "}
                     {service.responseTimeMs == null
-                      ? "No runtime binding"
+                      ? "no response"
                       : `${service.responseTimeMs} ms`}
                   </p>
+                  <WorkerValues
+                    label="Capabilities"
+                    values={service.capabilities ?? []}
+                  />
+                  <WorkerValues
+                    label="Routes"
+                    values={service.routes ?? []}
+                    code
+                  />
+                  <WorkerValues
+                    label="Services"
+                    values={service.dependencies?.services ?? []}
+                  />
+                  <WorkerValues
+                    label="Stores"
+                    values={service.dependencies?.stores ?? []}
+                  />
+                  <WorkerValues
+                    label="Queues"
+                    values={service.dependencies?.queues ?? []}
+                  />
+                  {(service.dependencies?.externalWorkers ?? []).map(
+                    (dependency) => (
+                      <p
+                        key={dependency.binding}
+                        className="mt-1 text-xs text-muted-foreground"
+                      >
+                        External: {dependency.binding} → {dependency.workerName}
+                      </p>
+                    )
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Jobs:{" "}
+                    {service.jobs == null
+                      ? "unavailable"
+                      : Object.entries(service.jobs)
+                          .map(([name, value]) => `${name}: ${value}`)
+                          .join(" · ") || "none"}
+                  </p>
+                  {service.error && (
+                    <p className="mt-2 text-xs text-destructive">
+                      {service.error}
+                    </p>
+                  )}
                   {runtimeFor(status.runtime?.rows, service.id) && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       {runtimeFor(status.runtime?.rows, service.id)}
@@ -454,6 +569,252 @@ export default function InfrastructurePage() {
                     }
                   />
                 ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Email delivery operations</CardTitle>
+                <CardDescription>
+                  Body-free transactional, marketing and test email state from
+                  the target-scoped Email Worker.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {emailOperations?.queue && (
+                  <div className="mb-3 grid gap-2 rounded-md border p-3 text-xs sm:grid-cols-3">
+                    <Row
+                      name="Queue backlog"
+                      value={format(emailOperations.queue.backlogCount)}
+                    />
+                    <Row
+                      name="Backlog bytes"
+                      value={format(emailOperations.queue.backlogBytes)}
+                    />
+                    <Row
+                      name="Oldest queued"
+                      value={
+                        emailOperations.queue.oldestMessageAt
+                          ? new Date(
+                              emailOperations.queue.oldestMessageAt
+                            ).toLocaleString()
+                          : "—"
+                      }
+                    />
+                  </div>
+                )}
+                {emailOperations && !emailOperations.queue && (
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Cloudflare Queue metrics are unavailable for this target.
+                  </p>
+                )}
+                {emailOperationsError && (
+                  <p className="mb-3 text-sm text-destructive" role="alert">
+                    {emailOperationsError}
+                  </p>
+                )}
+                {!emailOperations ? (
+                  <p className="text-sm text-muted-foreground">
+                    Email operations are disabled or unavailable.
+                  </p>
+                ) : emailOperations.messages.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No email operation has been recorded.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b text-xs text-muted-foreground">
+                        <tr>
+                          <th className="py-2">Message</th>
+                          <th>Kind</th>
+                          <th>Status</th>
+                          <th>Recipients</th>
+                          <th>Attempts</th>
+                          <th>Last error</th>
+                          <th>Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emailOperations.messages.map((message) => (
+                          <tr
+                            key={message.id}
+                            className="border-b last:border-0"
+                          >
+                            <td className="max-w-48 py-2">
+                              <p className="truncate" title={message.subject}>
+                                {message.subject}
+                              </p>
+                              <p className="truncate font-mono text-xs text-muted-foreground">
+                                {message.id}
+                              </p>
+                            </td>
+                            <td>{message.kind}</td>
+                            <td>
+                              <StatusBadge value={message.status} />
+                            </td>
+                            <td>
+                              {message.recipientCount}
+                              {message.failedRecipients > 0
+                                ? ` · ${message.failedRecipients} failed`
+                                : ""}
+                            </td>
+                            <td>{message.attempts}</td>
+                            <td
+                              className="max-w-56 truncate text-xs text-destructive"
+                              title={message.lastError ?? undefined}
+                            >
+                              {message.lastError ?? "—"}
+                            </td>
+                            <td>
+                              {new Date(message.updatedAt).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {emailOperations && (
+                  <div className="mt-6 border-t pt-4">
+                    <h3 className="text-sm font-medium">
+                      Delegated SMTP transport
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Project-profile deliveries executed exclusively by the
+                      Email Worker. Unknown outcomes remain blocked for manual
+                      reconciliation and are never retried automatically.
+                    </p>
+                    {(emailOperations.transportDeliveries ?? []).length ===
+                    0 ? (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        No delegated SMTP delivery has been recorded.
+                      </p>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        {(emailOperations.transportDeliveries ?? []).map(
+                          (delivery) => (
+                            <div
+                              key={delivery.id}
+                              className="flex flex-wrap items-start justify-between gap-3 rounded-md border p-3 text-xs"
+                            >
+                              <div>
+                                <p className="font-mono">
+                                  {delivery.referenceId}
+                                </p>
+                                <p className="mt-1 text-muted-foreground">
+                                  {delivery.source} · project{" "}
+                                  {delivery.projectId}
+                                  {" · profile "}
+                                  {delivery.profileId} · {delivery.attempts}{" "}
+                                  attempts
+                                </p>
+                                {delivery.lastError && (
+                                  <p className="mt-1 text-destructive">
+                                    {delivery.lastError}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <StatusBadge value={delivery.status} />
+                                <p className="mt-1 text-muted-foreground">
+                                  {new Date(
+                                    delivery.updatedAt
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Email dead-letter quarantine</CardTitle>
+                <CardDescription>
+                  Audited terminal Queue failures. Only payloads retained
+                  without secret redaction can be replayed.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!emailOperations ? (
+                  <p className="text-sm text-muted-foreground">
+                    Email quarantine is disabled or unavailable.
+                  </p>
+                ) : emailOperations.deadLetters.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Email quarantine is empty.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {emailOperations.deadLetters.map((deadLetter) => (
+                      <div
+                        key={deadLetter.id}
+                        className="rounded-md border p-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-mono text-xs">
+                              {deadLetter.emailMessageId ?? deadLetter.id}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {deadLetter.jobType ?? "unknown job"} · attempts{" "}
+                              {deadLetter.attempts} · {deadLetter.sourceQueue}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {deadLetter.resolution ?? deadLetter.status} ·{" "}
+                              {new Date(
+                                deadLetter.resolvedAt ?? deadLetter.receivedAt
+                              ).toLocaleString()}
+                            </p>
+                          </div>
+                          {deadLetter.status === "quarantined" && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                aria-label={`Replay email dead letter ${deadLetter.id}`}
+                                disabled={
+                                  !deadLetter.replayable ||
+                                  resolvingDeadLetter === deadLetter.id
+                                }
+                                onClick={() =>
+                                  void resolveDeadLetter(
+                                    deadLetter.id,
+                                    "replay"
+                                  )
+                                }
+                              >
+                                Replay
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                aria-label={`Discard email dead letter ${deadLetter.id}`}
+                                disabled={resolvingDeadLetter === deadLetter.id}
+                                onClick={() =>
+                                  void resolveDeadLetter(
+                                    deadLetter.id,
+                                    "discard"
+                                  )
+                                }
+                              >
+                                Discard
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -753,6 +1114,33 @@ function Row({ name, value }: { name: string; value: string }) {
     <div className="flex justify-between gap-4 border-b py-2 text-sm last:border-0">
       <span className="capitalize">{name.replace(/([A-Z])/g, " $1")}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+function WorkerValues({
+  label,
+  values,
+  code = false,
+}: {
+  label: string;
+  values: string[];
+  code?: boolean;
+}) {
+  if (values.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+      <span>{label}:</span>
+      {values.map((value) =>
+        code ? (
+          <code key={value} className="rounded bg-muted px-1 py-0.5">
+            {value}
+          </code>
+        ) : (
+          <span key={value} className="rounded border px-1 py-0.5">
+            {value}
+          </span>
+        )
+      )}
     </div>
   );
 }

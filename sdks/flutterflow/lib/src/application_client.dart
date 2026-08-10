@@ -117,6 +117,7 @@ class OpenGrowApplicationClient {
   Future<Map<String, dynamic>> requestPasswordReset(String email) => _json(
     'POST',
     apiBaseUri.resolve('/auth/request-password-reset'),
+    headers: _sdkHeaders(),
     body: {'email': email},
   );
 
@@ -368,7 +369,12 @@ class OpenGrowApplicationClient {
     String path,
     Map<String, dynamic> body,
   ) async {
-    final result = await _json('POST', apiBaseUri.resolve(path), body: body);
+    final result = await _json(
+      'POST',
+      apiBaseUri.resolve(path),
+      headers: _sdkHeaders(),
+      body: body,
+    );
     final accessToken = result['access_token']?.toString() ?? '';
     if (accessToken.isEmpty) {
       throw const OpenGrowApplicationException(

@@ -2,6 +2,7 @@ export type IdentityEnv = Cloudflare.Env;
 
 export type IdentityUser = {
   id: string;
+  project_id: number;
   email: string | null;
   password_hash: string | null;
   name: string | null;

@@ -13,6 +13,7 @@ import {
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
 import { deploymentOrder } from "./cloudflare-deploy-plan.mjs";
+import { workerNameForService } from "./cloudflare-services.mjs";
 import {
   buildSecretBundlePlan,
   secretVersionTag,
@@ -59,28 +60,40 @@ export function validateSecretUploadReceipt({
   }
   const expectedServices = new Set(
     bundlePlan.contracts.flatMap(({ members }) =>
-      members.map(({ service }) => service)
+      members.map(({ service }) => service),
     ),
   );
-  const actualServices = new Set(receipt.services.map(({ service }) => service));
+  const actualServices = new Set(
+    receipt.services.map(({ service }) => service),
+  );
   if (
     actualServices.size !== receipt.services.length ||
     [...expectedServices].some((service) => !actualServices.has(service)) ||
     [...actualServices].some((service) => !expectedServices.has(service))
   ) {
-    throw new Error("Secret upload receipt Worker set is incomplete or duplicated");
+    throw new Error(
+      "Secret upload receipt Worker set is incomplete or duplicated",
+    );
   }
   const receiptByService = new Map();
   for (const entry of receipt.services) {
-    const expectedWorker = target.workers?.[entry.service]?.[environment];
+    const expectedWorker = workerNameForService(
+      target,
+      entry.service,
+      environment,
+    );
     if (!expectedWorker || entry.worker !== expectedWorker) {
-      throw new Error(`Secret upload receipt Worker mismatch for ${entry.service}`);
+      throw new Error(
+        `Secret upload receipt Worker mismatch for ${entry.service}`,
+      );
     }
     if (
       entry.strategy !== "inactive-version" ||
       entry.versionTag !== secretVersionTag(bundlePlan, entry.service)
     ) {
-      throw new Error(`Secret upload receipt version mismatch for ${entry.service}`);
+      throw new Error(
+        `Secret upload receipt version mismatch for ${entry.service}`,
+      );
     }
     if (
       !Array.isArray(entry.names) ||
@@ -88,10 +101,13 @@ export function validateSecretUploadReceipt({
       new Set(entry.names).size !== entry.names.length ||
       entry.names.some((name) => !/^[A-Z][A-Z0-9_]+$/.test(name))
     ) {
-      throw new Error(`Secret upload receipt names are invalid for ${entry.service}`);
+      throw new Error(
+        `Secret upload receipt names are invalid for ${entry.service}`,
+      );
     }
     const remainingNames = new Set(entry.names);
-    const expectedMembers = bundlePlan.contracts.flatMap(({ members }) => members)
+    const expectedMembers = bundlePlan.contracts
+      .flatMap(({ members }) => members)
       .filter((member) => member.service === entry.service);
     for (const member of expectedMembers) {
       if (member.name) {
@@ -101,7 +117,9 @@ export function validateSecretUploadReceipt({
           );
         }
       } else {
-        const selected = member.oneOf.filter((name) => remainingNames.has(name));
+        const selected = member.oneOf.filter((name) =>
+          remainingNames.has(name),
+        );
         if (selected.length !== 1) {
           throw new Error(
             `Secret upload receipt must select one allowed name for ${entry.service}`,
@@ -125,20 +143,26 @@ export function validateSecretUploadReceipt({
     receiptByService.set(entry.service, entry);
   }
   const sharedContracts = bundlePlan.contracts
-    .filter(({ sameValueRequired, members }) =>
-      sameValueRequired &&
-      new Set(members.map(({ service }) => service)).size > 1 &&
-      !(bundlePlan.overlap && members.some(({ previousName }) => previousName))
+    .filter(
+      ({ sameValueRequired, members }) =>
+        sameValueRequired &&
+        new Set(members.map(({ service }) => service)).size > 1 &&
+        !(
+          bundlePlan.overlap && members.some(({ previousName }) => previousName)
+        ),
     )
     .map(({ id }) => id);
-  const blockers = sharedContracts.length && !acceptSharedCutover
-    ? [{
-        id: "shared-secret-non-atomic-cutover",
-        contracts: sharedContracts,
-        action:
-          "Use an approved maintenance/bootstrap window and pass --accept-shared-cutover; Cloudflare cannot atomically promote different Workers.",
-      }]
-    : [];
+  const blockers =
+    sharedContracts.length && !acceptSharedCutover
+      ? [
+          {
+            id: "shared-secret-non-atomic-cutover",
+            contracts: sharedContracts,
+            action:
+              "Use an approved maintenance/bootstrap window and pass --accept-shared-cutover; Cloudflare cannot atomically promote different Workers.",
+          },
+        ]
+      : [];
   const services = deploymentOrder(target)
     .filter((service) => receiptByService.has(service))
     .map((service) => ({ ...receiptByService.get(service) }));
@@ -166,9 +190,13 @@ export function overlapOrderBlockers(bundlePlan, services) {
     services.map(({ service }, index) => [service, index]),
   );
   for (const contract of bundlePlan.contracts) {
-    const consumers = contract.members.filter(({ previousName }) => previousName);
+    const consumers = contract.members.filter(
+      ({ previousName }) => previousName,
+    );
     if (consumers.length === 0) continue;
-    const producers = contract.members.filter(({ previousName }) => !previousName);
+    const producers = contract.members.filter(
+      ({ previousName }) => !previousName,
+    );
     const latestConsumer = Math.max(
       ...consumers.map(({ service }) => serviceIndex.get(service) ?? Infinity),
     );
@@ -237,18 +265,20 @@ export function attachPromotionRemoteState(plan, remoteState, accountId) {
 
 export function promotionConfirmation(plan) {
   const digest = createHash("sha256")
-    .update(JSON.stringify({
-      schemaVersion: plan.schemaVersion,
-      target: plan.target,
-      environment: plan.environment,
-      bundleConfirmation: plan.bundleConfirmation,
-      contracts: plan.contracts,
-      overlap: plan.overlap,
-      acceptSharedCutover: plan.acceptSharedCutover,
-      cloudflareAccountFingerprint: plan.cloudflareAccountFingerprint,
-      services: plan.services,
-      blockers: plan.blockers,
-    }))
+    .update(
+      JSON.stringify({
+        schemaVersion: plan.schemaVersion,
+        target: plan.target,
+        environment: plan.environment,
+        bundleConfirmation: plan.bundleConfirmation,
+        contracts: plan.contracts,
+        overlap: plan.overlap,
+        acceptSharedCutover: plan.acceptSharedCutover,
+        cloudflareAccountFingerprint: plan.cloudflareAccountFingerprint,
+        services: plan.services,
+        blockers: plan.blockers,
+      }),
+    )
     .digest("hex")
     .slice(0, 12);
   return `CLOUDFLARE:SECRET-PROMOTE:${plan.target}:${plan.environment}:${digest}`;
@@ -276,9 +306,10 @@ export function buildPromotionCompleteReceipt(
   promoted,
   promotedAt = new Date(),
 ) {
-  const timestamp = promotedAt instanceof Date
-    ? promotedAt.toISOString()
-    : new Date(promotedAt).toISOString();
+  const timestamp =
+    promotedAt instanceof Date
+      ? promotedAt.toISOString()
+      : new Date(promotedAt).toISOString();
   return {
     schemaVersion: 1,
     mode: "secret-bundle-promotion-complete",
@@ -316,17 +347,32 @@ async function main() {
     acceptSharedCutover: Boolean(args["accept-shared-cutover"]),
   });
   const childEnv = cloudflareEnv(target);
-  const remoteState = Object.fromEntries(structuralPlan.services.map((service) => [
-    service.service,
-    {
-      deployment: runJson("npx", [
-        "wrangler", "deployments", "status", "--name", service.worker, "--json",
-      ], childEnv, `${service.worker} deployment status`),
-      versions: runJson("npx", [
-        "wrangler", "versions", "list", "--name", service.worker, "--json",
-      ], childEnv, `${service.worker} version list`),
-    },
-  ]));
+  const remoteState = Object.fromEntries(
+    structuralPlan.services.map((service) => [
+      service.service,
+      {
+        deployment: runJson(
+          "npx",
+          [
+            "wrangler",
+            "deployments",
+            "status",
+            "--name",
+            service.worker,
+            "--json",
+          ],
+          childEnv,
+          `${service.worker} deployment status`,
+        ),
+        versions: runJson(
+          "npx",
+          ["wrangler", "versions", "list", "--name", service.worker, "--json"],
+          childEnv,
+          `${service.worker} version list`,
+        ),
+      },
+    ]),
+  );
   const plan = attachPromotionRemoteState(
     structuralPlan,
     remoteState,
@@ -348,22 +394,32 @@ async function main() {
   const promoted = [];
   try {
     for (const service of plan.services) {
-      run("npx", promotionArgs(
-        service,
-        service.versionId,
-        `OpenGrow coordinated secret promotion ${plan.bundleConfirmation}`,
-      ), childEnv, `${service.worker} promotion`);
+      run(
+        "npx",
+        promotionArgs(
+          service,
+          service.versionId,
+          `OpenGrow coordinated secret promotion ${plan.bundleConfirmation}`,
+        ),
+        childEnv,
+        `${service.worker} promotion`,
+      );
       promoted.push(service);
     }
   } catch (error) {
     const rollbackFailures = [];
     for (const service of [...promoted].reverse()) {
       try {
-        run("npx", promotionArgs(
-          service,
-          service.rollbackVersionId,
-          `OpenGrow automatic rollback ${plan.bundleConfirmation}`,
-        ), childEnv, `${service.worker} rollback`);
+        run(
+          "npx",
+          promotionArgs(
+            service,
+            service.rollbackVersionId,
+            `OpenGrow automatic rollback ${plan.bundleConfirmation}`,
+          ),
+          childEnv,
+          `${service.worker} rollback`,
+        );
       } catch {
         rollbackFailures.push(service.worker);
       }
@@ -374,9 +430,12 @@ async function main() {
         { cause: error },
       );
     }
-    throw new Error("Secret promotion failed; every changed Worker was rolled back", {
-      cause: error,
-    });
+    throw new Error(
+      "Secret promotion failed; every changed Worker was rolled back",
+      {
+        cause: error,
+      },
+    );
   }
   process.stdout.write(
     `${JSON.stringify(buildPromotionCompleteReceipt(plan, promoted), null, 2)}\n`,
@@ -387,7 +446,9 @@ function readReceipt(receiptPath) {
   let source;
   if (receiptPath) {
     if (!isAbsolute(receiptPath)) {
-      throw new Error("--receipt must be an absolute path outside the checkout");
+      throw new Error(
+        "--receipt must be an absolute path outside the checkout",
+      );
     }
     const absolute = resolve(receiptPath);
     if (absolute === root || absolute.startsWith(`${root}/`)) {
@@ -396,7 +457,9 @@ function readReceipt(receiptPath) {
     source = readFileSync(absolute);
   } else {
     if (process.stdin.isTTY) {
-      throw new Error("Pipe the non-secret upload receipt on stdin or pass --receipt");
+      throw new Error(
+        "Pipe the non-secret upload receipt on stdin or pass --receipt",
+      );
     }
     source = readFileSync(0);
   }

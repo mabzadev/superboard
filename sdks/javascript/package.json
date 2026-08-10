@@ -1,16 +1,28 @@
 {
   "name": "@mbzadev/opengrow-js-sdk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "OpenGrow generates dynamic links, tracks attributions, and analyzes referrals, seamlessly directing users to your app or the app store for downloads.",
   "type": "module",
-  "main": "dist/opengrow.js",
+  "main": "./dist/opengrow.umd.cjs",
+  "module": "./dist/opengrow.js",
+  "browser": "./dist/opengrow.js",
+  "exports": {
+    ".": {
+      "import": "./dist/opengrow.js",
+      "require": "./dist/opengrow.umd.cjs",
+      "default": "./dist/opengrow.js"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
     "start": "webpack-dev-server --config webpack.config.cjs --open",
     "build": "webpack --config webpack.config.cjs",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/opengrow.test.js",
+    "test:package": "node --test test/package.test.js",
+    "pack:check": "npm pack --dry-run",
+    "check": "npm test && npm run build && npm run test:package && npm run pack:check"
   },
   "keywords": [
     "opengrow",

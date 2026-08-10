@@ -8,6 +8,7 @@
     "packageName": "OpenGrow",
     "repository": "https://github.com/mbzadev/opengrow-platform.git",
     "releaseRef": "sdk-ios-v1.0.2",
+    "podspecUrl": "https://raw.githubusercontent.com/mbzadev/opengrow-platform/sdk-ios-v1.0.2/sdks/ios/OpenGrow.podspec",
     "version": "1.0.2"
   }
 }

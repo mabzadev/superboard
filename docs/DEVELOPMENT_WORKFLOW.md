@@ -179,7 +179,9 @@ automatic deployment is desired, or let the confirmed reconciler create their
 non-secret structure. The current entries are `development` and `production`.
 In each environment:
 
-- variable `OPENGROW_TARGET`: target manifest name;
+- variable `OPENGROW_TARGET`: target manifest name; it must equal the `target`
+  field of that Environment's versioned deployment-matrix entry or the job
+  fails before any Cloudflare operation;
 - secret `CLOUDFLARE_ACCOUNT_ID`: account selected for that environment;
 - secret `CLOUDFLARE_API_TOKEN`: least-privilege deployment token for only that
   account; it must also be able to read the target zones, DNS records and Worker
@@ -208,7 +210,8 @@ do not copy the workflow or edit Worker source constants.
 `.github/workflows/deploy-cloudflare.yml` is the single automatic deployment
 authority. It starts only after a successful completed `CI` run on `dev` or
 `main`, checks out that exact SHA, resolves every declared Environment for the
-branch and rejects a superseded automatic revision. Each matrix job is isolated
+branch, proves that its mutable Environment target equals the reviewed matrix
+target and rejects a superseded automatic revision. Each matrix job is isolated
 by its Environment-scoped account and secrets.
 It validates the target and common extension services, runs platform
 typechecks/tests, then deploys every enabled Worker in dependency order:
@@ -504,16 +507,16 @@ requiert un administrateur de plateforme et conserve l'identité durable du
 job. La référence renvoie `job_not_cancellable` pour ses reçus synchrones déjà
 terminés, ce qui valide le comportement terminal sans simuler un traitement.
 
-| Service                | Required secret examples                                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
-| API                    | `JWT_SECRET`, `MODULE_INTERNAL_TOKEN`, `EMAIL_INTERNAL_TOKEN`, optional provider credentials               |
-| Dashboard              | `CLIENT_SECRET`                                                                                            |
-| Email                  | `EMAIL_INTERNAL_TOKEN`, `MAIL_PREVIEW_TOKEN`; SMTP host/user/password values for production                |
-| Identity               | `IDENTITY_KEYSET`, `EMAIL_INTERNAL_TOKEN`, `FILES_INTERNAL_TOKEN`                                          |
-| Files                  | `FILES_INTERNAL_TOKEN`, `FILES_DOWNLOAD_SIGNING_KEY` (JWKS is obtained through the configured gateway URL) |
-| Observability          | `OBSERVABILITY_INTERNAL_TOKEN`, analytics account/token when remote summaries are enabled                  |
-| Domain feature Workers | `INTERNAL_API_TOKEN` plus module-specific encryption/signing keys                                          |
-| Custom Worker          | `CUSTOM_WORKER_TOKEN` plus app-specific provider credentials                                               |
+| Service                | Required secret examples                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| API                    | `JWT_SECRET`, `MODULE_INTERNAL_TOKEN`, `EMAIL_INTERNAL_TOKEN`, optional provider credentials                      |
+| Dashboard              | `CLIENT_SECRET`                                                                                                   |
+| Email                  | `EMAIL_INTERNAL_TOKEN`, `MAIL_PREVIEW_TOKEN`; SMTP host/user/password values for production                       |
+| Identity               | `IDENTITY_KEYSET`, `EMAIL_INTERNAL_TOKEN`, `FILES_INTERNAL_TOKEN`                                                 |
+| Files                  | `FILES_INTERNAL_TOKEN`, `FILES_DOWNLOAD_SIGNING_KEY` (JWKS is obtained through the configured gateway URL)        |
+| Observability          | `OBSERVABILITY_INTERNAL_TOKEN`, analytics account/token when remote summaries are enabled                         |
+| Domain feature Workers | `INTERNAL_API_TOKEN` plus module-specific encryption/signing keys; Marketing also receives `EMAIL_INTERNAL_TOKEN` |
+| Custom Worker          | `CUSTOM_WORKER_TOKEN` plus app-specific provider credentials                                                      |
 
 Marketing SMTP credentials are encrypted with its target-scoped
 `SMTP_ENCRYPTION_KEY`. The DKIM selector is public project configuration; SPF,
@@ -522,7 +525,7 @@ its verification evidence. Production campaign delivery remains closed until
 the sender is rechecked successfully from `/marketing/settings`.
 
 The same random value is used for both ends of a private contract (for example,
-API `EMAIL_INTERNAL_TOKEN` and Email Worker `EMAIL_INTERNAL_TOKEN`) but uploaded
+API, Identity, Marketing and Email Worker `EMAIL_INTERNAL_TOKEN`) but uploaded
 independently to each Worker.
 
 Generate a new application identity signing key outside the repository. The

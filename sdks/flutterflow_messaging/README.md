@@ -2,7 +2,12 @@
 
 This library is independent from Purchases. It creates no token and maintains no account. `opengrowSupportInitializeAuthenticated` exchanges the existing application access token only through the configured authentication gateway, then uses the short-lived ES256 token for the canonical OpenGrow Support Worker. Configure `supportUrl` as `https://api.<app>/api/v1/support-client`; the application must never call Chatwoot directly.
 
-Add the public dependency with an immutable release reference:
+<!-- opengrow-sdk-documentation:flutterflow-support:start -->
+
+## Installation
+
+Add the published FlutterFlow Support package `opengrow_flutterflow_messaging`
+at the immutable release `sdk-flutterflow-messaging-v1.3.0`:
 
 ```yaml
 opengrow_flutterflow_messaging:
@@ -11,6 +16,17 @@ opengrow_flutterflow_messaging:
     ref: sdk-flutterflow-messaging-v1.3.0
     path: sdks/flutterflow_messaging
 ```
+
+No repository read token is required. Runtime credentials must never be
+placed in the Git dependency or exported application source.
+
+Then resolve the immutable dependency:
+
+```bash
+flutter pub get
+```
+
+<!-- opengrow-sdk-documentation:flutterflow-support:end -->
 
 Available FlutterFlow actions:
 

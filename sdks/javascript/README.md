@@ -14,21 +14,24 @@
 
 The OpenGrow SDK is a JavaScript module designed to integrate with the OpenGrow API, providing functionality for creating and managing links, handling user information, and managing authentication. This documentation covers the main methods and usage of the SDK.
 
+<!-- opengrow-sdk-documentation:javascript:start -->
+
 ## Installation
 
-To install the OpenGrow SDK, use the following command to add it as a dependency to your project:
+Install the published package `@mbzadev/opengrow-js-sdk` at the exact
+release `1.0.1`:
 
 ```bash
 npm install @mbzadev/opengrow-js-sdk@1.0.1
 ```
 
-This will add the OpenGrow SDK to your dependencies in package.json.
-
-After installation, you can include the SDK in your project:
+Then import the package by its catalogue-owned name:
 
 ```javascript
 import OpenGrow from "@mbzadev/opengrow-js-sdk";
 ```
+
+<!-- opengrow-sdk-documentation:javascript:end -->
 
 ## Documentation
 
@@ -63,16 +66,24 @@ const opengrow = new OpenGrow(
 
 ## Methods
 
-### start()
+### start(success, error)
 
 Initializes and starts the OpenGrow SDK by authenticating with the provided API key.
 
-- **succesfullAuthenticatedCallback** (Function, optional): Callback to invoke on successful authentication.
+- **success** (Function, optional): Called only after authentication succeeds.
+- **error** (Function, optional): Called when authentication fails. Network-backed SDK methods remain disabled until a later `start()` succeeds.
 
 #### Example
 
 ```javascript
-opengrow.start();
+opengrow.start(
+  () => {
+    console.log("OpenGrow authenticated");
+  },
+  (error) => {
+    console.error("OpenGrow authentication failed:", error);
+  },
+);
 ```
 
 ### createLink(title, subtitle, imageURL, data, success, error)
@@ -176,14 +187,16 @@ const isAuthenticated = opengrow.authenticated();
 console.log("Is authenticated:", isAuthenticated);
 ```
 
-### showMessagesList()
+### showMessagesList(error)
 
 Displays the messages list using the manager.
+
+- **error** (Function, optional): Called instead of opening the list when authentication has not succeeded.
 
 #### Example
 
 ```javascript
-opengrow.showMessagesList();
+opengrow.showMessagesList((error) => console.error(error));
 ```
 
 ### getMessages(page, response, error)
@@ -243,21 +256,22 @@ const opengrow = new OpenGrow(
   runtimeConfig.sdkOrigin,
 );
 
-opengrow.start();
-
-if (opengrow.authenticated()) {
-  opengrow.createLink(
-    "Sample Link",
-    "Subtitle",
-    "https://example.com/image.jpg",
-    { foo: "bar" },
-    (response) => console.log("Link created:", response),
-    (error) => console.error("Error:", error)
-  );
-}
-
 opengrow.setUserIdentifier("user-123");
 opengrow.setUserAttributes({ name: "John Doe", age: 30 });
+
+opengrow.start(
+  () => {
+    opengrow.createLink(
+      "Sample Link",
+      "Subtitle",
+      "https://example.com/image.jpg",
+      { foo: "bar" },
+      (response) => console.log("Link created:", response),
+      (error) => console.error("Error:", error),
+    );
+  },
+  (error) => console.error("Authentication failed:", error),
+);
 
 console.log("User ID:", opengrow.userIdentifier());
 console.log("User Attributes:", opengrow.userAttributes());

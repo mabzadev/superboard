@@ -2,6 +2,11 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { RequestBodyError } from "@opengrow/contracts/request-body";
 import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+import {
+  PROJECT_CONTEXT_HEADERS,
+  signProjectContext,
+  type InternalProjectContext,
+} from "@opengrow/contracts/project-context";
 import { Env } from "./types";
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
@@ -26,6 +31,7 @@ import purchasesProviderWebhooks from "./routes/purchases-provider-webhooks";
 import messagingAdminRoutes from "./routes/messaging-admin";
 import inboxAdminRoutes from "./routes/inbox-admin";
 import platformStatusRoutes from "./routes/platform-status";
+import applicationUsersAdminRoutes from "./routes/application-users-admin";
 import redirectRoute from "./routes/redirect";
 import { runMaintenance } from "./lib/maintenance";
 import { dispatchQueueJob } from "./lib/jobs";
@@ -47,6 +53,7 @@ import {
   proxyDomainSdkModule,
   proxyPublicMarketing,
   proxyPublicSupport,
+  resolveSdkProjectContext,
 } from "./lib/domain-modules";
 import { quarantinePlatformDeadLetter } from "./lib/platform-dead-letters";
 import { resumePendingAccountErasures } from "./lib/account-erasure";
@@ -282,9 +289,7 @@ app.all("*", async (c, next) => {
 // Routes for the custom domain and workers.dev.
 // =====================================
 app.route("/api/v1/auth", authRoutes);
-app.all("/auth", (c) =>
-  proxyPublicService(c.req.raw, c.env.IDENTITY_SERVICE, "/auth"),
-);
+app.all("/auth", (c) => proxyIdentityAuth(c.req.raw, c.env, "/auth"));
 app.all("/auth/*", (c) => {
   const url = new URL(c.req.url);
   if (c.req.method === "DELETE" && url.pathname === "/auth/me") {
@@ -301,11 +306,7 @@ app.all("/auth/*", (c) => {
       { "cache-control": "private, no-store" },
     );
   }
-  return proxyPublicService(
-    c.req.raw,
-    c.env.IDENTITY_SERVICE,
-    `${url.pathname}${url.search}`,
-  );
+  return proxyIdentityAuth(c.req.raw, c.env, `${url.pathname}${url.search}`);
 });
 app.all("/api/v1/app-files", (c) =>
   proxyFilesAlias(c.req.raw, c.env.FILES_SERVICE),
@@ -331,6 +332,7 @@ app.route("/api/v1/automation", automationRoutes);
 app.route("/api/v1/diagnostics", diagnosticsRoutes);
 app.route("/api/v1/admin", adminRoutes);
 app.route("/api/v1/platform", platformStatusRoutes);
+app.route("/api/v1/application-users/projects", applicationUsersAdminRoutes);
 app.all("/api/v1/marketing/tracking/:action/:token", (c) => {
   const action = c.req.param("action");
   if (!["open", "click", "unsubscribe"].includes(action)) return c.notFound();
@@ -465,6 +467,78 @@ async function proxyPublicService(
       { status: 503 },
     );
   }
+}
+
+async function proxyIdentityAuth(
+  request: Request,
+  env: Env,
+  path: string,
+): Promise<Response> {
+  const pathname = new URL(`https://identity.internal${path}`).pathname;
+  const projectRequired =
+    new Set([
+      "/auth/register",
+      "/auth/signin/password",
+      "/auth/anonymous",
+      "/auth/request-password-reset",
+    ]).has(pathname) || pathname.startsWith("/auth/signin/");
+  if (!projectRequired) {
+    return proxyPublicService(request, env.IDENTITY_SERVICE, path);
+  }
+  if (!env.IDENTITY_SERVICE || !env.MODULE_INTERNAL_TOKEN) {
+    return Response.json(
+      { error: { code: "identity_context_unavailable", retryable: true } },
+      { status: 503 },
+    );
+  }
+  const resolved = await resolveSdkProjectContext(env.DB, request);
+  if (!resolved.ok) {
+    return Response.json(
+      {
+        error: {
+          code: resolved.code,
+          message: resolved.message,
+          retryable: false,
+        },
+      },
+      { status: resolved.status },
+    );
+  }
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+  const context: InternalProjectContext = {
+    ...resolved.context,
+    actorId: 0,
+    role: "sdk",
+    requestId,
+    issuedAt: Math.floor(Date.now() / 1_000),
+    module: "identity",
+    method: request.method.toUpperCase(),
+    pathname,
+  };
+  const signature = await signProjectContext(
+    context,
+    env.MODULE_INTERNAL_TOKEN,
+  );
+  const headers = new Headers(request.headers);
+  headers.delete("authorization");
+  headers.set(PROJECT_CONTEXT_HEADERS.token, env.MODULE_INTERNAL_TOKEN);
+  headers.set(PROJECT_CONTEXT_HEADERS.projectId, String(context.projectId));
+  headers.set(PROJECT_CONTEXT_HEADERS.projectRef, context.projectRef);
+  headers.set(PROJECT_CONTEXT_HEADERS.instanceId, String(context.instanceId));
+  headers.set(PROJECT_CONTEXT_HEADERS.environment, context.environment);
+  headers.set(PROJECT_CONTEXT_HEADERS.actorId, "0");
+  headers.set(PROJECT_CONTEXT_HEADERS.role, context.role);
+  headers.set(PROJECT_CONTEXT_HEADERS.requestId, context.requestId);
+  headers.set(PROJECT_CONTEXT_HEADERS.issuedAt, String(context.issuedAt));
+  headers.set(PROJECT_CONTEXT_HEADERS.version, "1");
+  headers.set(PROJECT_CONTEXT_HEADERS.signature, signature);
+  const method = request.method.toUpperCase();
+  return env.IDENTITY_SERVICE.fetch(`https://identity.internal${path}`, {
+    method,
+    headers,
+    body: method === "GET" || method === "HEAD" ? null : request.body,
+    signal: AbortSignal.timeout(30_000),
+  });
 }
 
 async function proxyBillingAdmin(

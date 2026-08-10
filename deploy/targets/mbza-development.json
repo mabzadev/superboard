@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 9,
+  "schemaVersion": 11,
   "target": "mbza-development",
   "accountAlias": "mbza-development",
   "workersDevSubdomain": "mbza",

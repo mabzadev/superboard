@@ -1,5 +1,18 @@
-import { EMAIL_SERVICE_SEND_PATH } from "@opengrow/contracts/email";
-import type { EmailServiceReceipt } from "@opengrow/contracts/email";
+import {
+  EMAIL_SERVICE_DEAD_LETTERS_PATH,
+  EMAIL_SERVICE_OPERATIONS_PATH,
+  EMAIL_SERVICE_SEND_PATH,
+  EMAIL_SERVICE_SMTP_TRANSPORT_PATH,
+} from "@opengrow/contracts/email";
+import type {
+  EmailDeadLetterOperation,
+  EmailOperation,
+  EmailOperationsPage,
+  EmailServiceReceipt,
+  EmailSmtpTransportReceipt,
+  EmailSmtpTransportRequest,
+  EmailTransportOperation,
+} from "@opengrow/contracts/email";
 import {
   RequestBodyError,
   readJsonLimited,
@@ -13,10 +26,14 @@ import {
   matchesAnySecret,
 } from "@opengrow/contracts/secret";
 import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
-import { sendSmtpMessage } from "@opengrow/email-transport";
+import {
+  EmailTransportError,
+  sendSmtpMessage,
+} from "@opengrow/email-transport";
 import {
   EmailValidationError,
   parseEmailMessage,
+  parseEmailSmtpTransportRequest,
   secretsEqual,
 } from "./validation";
 
@@ -26,6 +43,30 @@ export default {
     if (request.method === "GET" && url.pathname === "/health")
       return health(env);
     if (request.method === "GET" && url.pathname === "/") return previewShell();
+    if (
+      request.method === "POST" &&
+      url.pathname === EMAIL_SERVICE_SMTP_TRANSPORT_PATH
+    ) {
+      return deliverDelegatedSmtp(request, env);
+    }
+    if (url.pathname.startsWith(EMAIL_SERVICE_OPERATIONS_PATH)) {
+      if (!(await internalAuthorized(request, env)))
+        return json({ error: "unauthorized" }, 401);
+      if (
+        request.method === "GET" &&
+        url.pathname === EMAIL_SERVICE_OPERATIONS_PATH
+      )
+        return listEmailOperations(env, url);
+      const decision = new RegExp(
+        `^${EMAIL_SERVICE_DEAD_LETTERS_PATH}/([a-f0-9-]{36})/(replay|discard)$`,
+      ).exec(url.pathname);
+      if (request.method === "POST" && decision) {
+        return decision[2] === "replay"
+          ? replayEmailDeadLetter(env, decision[1])
+          : discardEmailDeadLetter(env, decision[1]);
+      }
+      return json({ error: "not_found" }, 404);
+    }
     if (url.pathname.startsWith("/api/")) {
       if (!(await previewAuthorized(request, env)))
         return json({ error: "unauthorized" }, 401);
@@ -234,6 +275,230 @@ async function enqueueMessage(request: Request, env: Env): Promise<Response> {
   }
 }
 
+async function deliverDelegatedSmtp(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  if (!(await internalAuthorized(request, env)))
+    return json({ error: "unauthorized" }, 401);
+  let input: EmailSmtpTransportRequest;
+  try {
+    input = parseEmailSmtpTransportRequest(
+      await readJsonLimited(request, 600_000),
+      env.ENVIRONMENT,
+    );
+  } catch (error) {
+    if (error instanceof RequestBodyError)
+      return json({ error: error.code }, error.status);
+    if (error instanceof EmailValidationError)
+      return json({ error: error.code }, 422);
+    throw error;
+  }
+  const requestSha256 = await sha256(stableJson(input));
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const leaseExpiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+  const inserted = await env.DB.prepare(
+    `
+    INSERT OR IGNORE INTO email_transport_deliveries
+      (id, idempotency_key, request_sha256, source, project_id, reference_id, profile_id,
+       status, attempt_count, lease_expires_at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'sending', 1, ?, ?, ?)
+    RETURNING id
+  `,
+  )
+    .bind(
+      id,
+      input.idempotencyKey,
+      requestSha256,
+      input.source,
+      input.projectId,
+      input.referenceId,
+      input.profileId,
+      leaseExpiresAt,
+      now,
+      now,
+    )
+    .first<{ id: string }>();
+  let deliveryId = inserted?.id || id;
+  if (!inserted) {
+    const existing = await env.DB.prepare(
+      `
+      SELECT id, request_sha256, status, provider_message_id, provider_response,
+             lease_expires_at
+      FROM email_transport_deliveries WHERE idempotency_key = ?
+    `,
+    )
+      .bind(input.idempotencyKey)
+      .first<EmailTransportDeliveryRow>();
+    if (!existing) return json({ error: "email_transport_claim_failed" }, 503);
+    if (existing.request_sha256 !== requestSha256)
+      return json({ error: "idempotency_conflict" }, 409);
+    if (
+      existing.status === "sent" &&
+      existing.provider_message_id &&
+      existing.provider_response != null
+    ) {
+      return json(transportReceipt(existing, true), 200);
+    }
+    if (existing.status === "outcome_unknown") {
+      return json({ error: "email_transport_outcome_unknown" }, 409);
+    }
+    if (existing.status === "sending") {
+      if (existing.lease_expires_at && existing.lease_expires_at <= now) {
+        await env.DB.prepare(
+          `
+          UPDATE email_transport_deliveries
+          SET status = 'outcome_unknown', last_error = 'Transport lease expired without a durable provider outcome',
+              lease_expires_at = NULL, updated_at = ?
+          WHERE id = ? AND status = 'sending' AND lease_expires_at <= ?
+        `,
+        )
+          .bind(now, existing.id, now)
+          .run();
+        return json({ error: "email_transport_outcome_unknown" }, 409);
+      }
+      return json({ error: "email_transport_in_progress" }, 409);
+    }
+    const acquired = await env.DB.prepare(
+      `
+      UPDATE email_transport_deliveries
+      SET status = 'sending', attempt_count = attempt_count + 1, last_error = NULL,
+          lease_expires_at = ?, updated_at = ?
+      WHERE id = ? AND request_sha256 = ? AND status = 'failed'
+      RETURNING id
+    `,
+    )
+      .bind(leaseExpiresAt, now, existing.id, requestSha256)
+      .first<{ id: string }>();
+    if (!acquired) return json({ error: "email_transport_in_progress" }, 409);
+    deliveryId = acquired.id;
+  }
+  let result: { messageId: string; response: string };
+  try {
+    result = await sendSmtpMessage(input.publicConfig, input.secret, {
+      ...input.message,
+      messageId: await deterministicMessageId(
+        input.idempotencyKey,
+        input.publicConfig.from_email,
+      ),
+    });
+  } catch (error) {
+    const reason = (
+      error instanceof Error ? error.message : String(error)
+    ).slice(0, 4_000);
+    const outcomeUnknown =
+      error instanceof EmailTransportError &&
+      error.code === "smtp_outcome_unknown";
+    await env.DB.prepare(
+      `
+      UPDATE email_transport_deliveries
+      SET status = ?, last_error = ?, lease_expires_at = NULL, updated_at = ?
+      WHERE id = ? AND status = 'sending'
+    `,
+    )
+      .bind(
+        outcomeUnknown ? "outcome_unknown" : "failed",
+        reason,
+        new Date().toISOString(),
+        deliveryId,
+      )
+      .run();
+    console.error(
+      JSON.stringify({
+        event: outcomeUnknown
+          ? "email_transport_outcome_unknown"
+          : "email_transport_failed",
+        source: input.source,
+        project_id: input.projectId,
+        reference_id: input.referenceId,
+        profile_id: input.profileId,
+        error: error instanceof EmailTransportError ? error.code : reason,
+      }),
+    );
+    return error instanceof EmailTransportError
+      ? json(
+          {
+            error: error.code,
+            ...(error.details ? { details: error.details } : {}),
+          },
+          error.status,
+        )
+      : json({ error: "email_transport_failed" }, 503);
+  }
+
+  const sentAt = new Date().toISOString();
+  const providerResponse = result.response.slice(0, 4_000);
+  try {
+    const persisted = await env.DB.prepare(
+      `
+      UPDATE email_transport_deliveries
+      SET status = 'sent', provider_message_id = ?, provider_response = ?, last_error = NULL,
+          lease_expires_at = NULL, sent_at = ?, updated_at = ?
+      WHERE id = ? AND status = 'sending'
+    `,
+    )
+      .bind(result.messageId, providerResponse, sentAt, sentAt, deliveryId)
+      .run();
+    if (Number(persisted.meta.changes || 0) !== 1) {
+      throw new Error("Accepted SMTP receipt was not persisted");
+    }
+  } catch (error) {
+    const reason = (
+      error instanceof Error ? error.message : String(error)
+    ).slice(0, 4_000);
+    await env.DB.prepare(
+      `
+      UPDATE email_transport_deliveries
+      SET status = 'outcome_unknown', provider_message_id = ?, provider_response = ?,
+          last_error = ?, lease_expires_at = NULL, updated_at = ?
+      WHERE id = ? AND status = 'sending'
+    `,
+    )
+      .bind(
+        result.messageId,
+        providerResponse,
+        reason,
+        new Date().toISOString(),
+        deliveryId,
+      )
+      .run()
+      .catch(() => undefined);
+    console.error(
+      JSON.stringify({
+        event: "email_transport_persistence_outcome_unknown",
+        source: input.source,
+        project_id: input.projectId,
+        reference_id: input.referenceId,
+        profile_id: input.profileId,
+        provider_message_id: result.messageId,
+        error: reason,
+      }),
+    );
+    return json({ error: "email_transport_outcome_unknown" }, 503);
+  }
+  const receipt: EmailSmtpTransportReceipt = {
+    id: deliveryId,
+    status: "sent",
+    messageId: result.messageId,
+    response: providerResponse,
+  };
+  return json(receipt, 201);
+}
+
+function transportReceipt(
+  row: EmailTransportDeliveryRow,
+  replayed: boolean,
+): EmailSmtpTransportReceipt {
+  return {
+    id: row.id,
+    status: "sent",
+    messageId: String(row.provider_message_id),
+    response: String(row.provider_response),
+    ...(replayed ? { replayed: true } : {}),
+  };
+}
+
 async function deliverMessage(env: Env, messageId: string): Promise<void> {
   if (env.MAIL_TRANSPORT !== "smtp")
     throw new Error("SMTP delivery received by a non-SMTP target");
@@ -269,46 +534,86 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
       `
       UPDATE email_deliveries
       SET status = 'sending', attempt_count = attempt_count + 1, updated_at = ?
-      WHERE id = ? AND (
-        status IN ('queued', 'failed')
-        OR (status = 'sending' AND datetime(updated_at) <= datetime('now', '-15 minutes'))
-      )
+      WHERE id = ? AND status IN ('queued', 'failed')
       RETURNING attempt_count
     `,
     )
       .bind(now, delivery.id)
       .first<{ attempt_count: number }>();
     if (!acquired) continue;
+    let result: { messageId: string; response: string };
     try {
-      const result = await sendSmtpMessage(smtp.public, smtp.secret, {
+      result = await sendSmtpMessage(smtp.public, smtp.secret, {
         to: delivery.recipient,
         subject: message.subject,
         text: message.text_body,
         html: message.html_body,
         headers: safeJson(message.headers_json),
+        messageId: await deterministicMessageId(
+          `email.delivery:${message.id}:${delivery.id}`,
+          message.from_address,
+        ),
       });
-      await env.DB.prepare(
-        `
-        UPDATE email_deliveries
-        SET status = 'sent', provider_message_id = ?, provider_response = ?, last_error = NULL,
-            sent_at = ?, updated_at = ? WHERE id = ?
-      `,
-      )
-        .bind(result.messageId, result.response, now, now, delivery.id)
-        .run();
     } catch (error) {
       const reason = (
         error instanceof Error ? error.message : String(error)
       ).slice(0, 4_000);
+      const outcomeUnknown =
+        error instanceof EmailTransportError &&
+        error.code === "smtp_outcome_unknown";
       await env.DB.batch([
         env.DB.prepare(
-          `UPDATE email_deliveries SET status = 'failed', last_error = ?, updated_at = ? WHERE id = ?`,
-        ).bind(reason, now, delivery.id),
+          `UPDATE email_deliveries SET status = ?, last_error = ?, updated_at = ? WHERE id = ?`,
+        ).bind(
+          outcomeUnknown ? "sending" : "failed",
+          outcomeUnknown ? `outcome_unknown: ${reason}` : reason,
+          now,
+          delivery.id,
+        ),
         env.DB.prepare(
-          `UPDATE email_messages SET status = 'failed', last_error = ?, updated_at = ? WHERE id = ?`,
-        ).bind(reason, now, messageId),
+          `UPDATE email_messages SET status = ?, last_error = ?, updated_at = ? WHERE id = ?`,
+        ).bind(
+          outcomeUnknown ? "sending" : "failed",
+          outcomeUnknown ? `outcome_unknown: ${reason}` : reason,
+          now,
+          messageId,
+        ),
       ]);
       throw error;
+    }
+    try {
+      const persisted = await env.DB.prepare(
+        `
+        UPDATE email_deliveries
+        SET status = 'sent', provider_message_id = ?, provider_response = ?, last_error = NULL,
+            sent_at = ?, updated_at = ? WHERE id = ? AND status = 'sending'
+      `,
+      )
+        .bind(result.messageId, result.response, now, now, delivery.id)
+        .run();
+      if (Number(persisted.meta.changes || 0) !== 1) {
+        throw new Error("Accepted SMTP delivery receipt was not persisted");
+      }
+    } catch (error) {
+      const reason = `outcome_unknown: ${(error instanceof Error
+        ? error.message
+        : String(error)
+      ).slice(0, 3_900)}`;
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE email_deliveries SET provider_message_id = ?, provider_response = ?, last_error = ?, updated_at = ? WHERE id = ? AND status = 'sending'`,
+        ).bind(
+          result.messageId,
+          result.response.slice(0, 4_000),
+          reason,
+          now,
+          delivery.id,
+        ),
+        env.DB.prepare(
+          `UPDATE email_messages SET status = 'sending', last_error = ?, updated_at = ? WHERE id = ?`,
+        ).bind(reason, now, messageId),
+      ]).catch(() => []);
+      throw new Error("SMTP delivery outcome requires manual reconciliation");
     }
   }
   await markMessageSent(env.DB, messageId);
@@ -380,6 +685,30 @@ async function emailRequestSha256(
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function deterministicMessageId(
+  idempotencyKey: string,
+  fromAddress: string,
+): Promise<string> {
+  const digest = await sha256(`opengrow-email-transport:${idempotencyKey}`);
+  const domain =
+    fromAddress
+      .split("@")[1]
+      ?.toLowerCase()
+      .replace(/[^a-z0-9.-]/g, "")
+      .slice(0, 253) || "opengrow.local";
+  return `<opengrow-${digest.slice(0, 48)}@${domain}>`;
 }
 
 function stableJson(value: unknown): string {
@@ -466,13 +795,23 @@ export async function emailHealth(db: D1Database) {
       (SELECT COUNT(*) FROM email_messages WHERE status = 'sending') AS messages_sending,
       (SELECT COUNT(*) FROM email_messages WHERE status = 'sent') AS messages_sent,
       (SELECT COUNT(*) FROM email_messages WHERE status = 'failed') AS messages_failed,
+      (SELECT COUNT(*) FROM email_messages WHERE status = 'sending' AND last_error LIKE 'outcome_unknown:%') AS messages_outcome_unknown,
       (SELECT COUNT(*) FROM email_deliveries) AS deliveries_total,
       (SELECT COUNT(*) FROM email_deliveries WHERE status = 'queued') AS deliveries_queued,
       (SELECT COUNT(*) FROM email_deliveries WHERE status = 'sending') AS deliveries_sending,
       (SELECT COUNT(*) FROM email_deliveries WHERE status = 'sent') AS deliveries_sent,
       (SELECT COUNT(*) FROM email_deliveries WHERE status = 'failed') AS deliveries_failed,
+      (SELECT COUNT(*) FROM email_deliveries WHERE status = 'sending' AND last_error LIKE 'outcome_unknown:%') AS deliveries_outcome_unknown,
       (SELECT COALESCE(SUM(attempt_count), 0) FROM email_deliveries) AS delivery_attempts,
-      (SELECT COUNT(*) FROM email_dead_letters WHERE status = 'quarantined') AS dead_letters_quarantined
+      (SELECT COUNT(*) FROM email_dead_letters WHERE status = 'quarantined') AS dead_letters_quarantined,
+      (SELECT COUNT(*) FROM email_dead_letters WHERE resolution = 'replayed') AS dead_letters_replayed,
+      (SELECT COUNT(*) FROM email_dead_letters WHERE resolution = 'discarded') AS dead_letters_discarded,
+      (SELECT COUNT(*) FROM email_transport_deliveries) AS transport_total,
+      (SELECT COUNT(*) FROM email_transport_deliveries WHERE status = 'sending') AS transport_sending,
+      (SELECT COUNT(*) FROM email_transport_deliveries WHERE status = 'sent') AS transport_sent,
+      (SELECT COUNT(*) FROM email_transport_deliveries WHERE status = 'failed') AS transport_failed,
+      (SELECT COUNT(*) FROM email_transport_deliveries WHERE status = 'outcome_unknown') AS transport_outcome_unknown,
+      (SELECT COALESCE(SUM(attempt_count), 0) FROM email_transport_deliveries) AS transport_attempts
   `,
     )
     .first<Record<string, number | null>>();
@@ -489,6 +828,7 @@ export async function emailHealth(db: D1Database) {
       sending: value("messages_sending"),
       sent: value("messages_sent"),
       failed: value("messages_failed"),
+      outcomeUnknown: value("messages_outcome_unknown"),
     },
     deliveries: {
       total: value("deliveries_total"),
@@ -496,9 +836,22 @@ export async function emailHealth(db: D1Database) {
       sending: value("deliveries_sending"),
       sent: value("deliveries_sent"),
       failed: value("deliveries_failed"),
+      outcomeUnknown: value("deliveries_outcome_unknown"),
       attempts: value("delivery_attempts"),
     },
-    deadLetters: { quarantined: value("dead_letters_quarantined") },
+    deadLetters: {
+      quarantined: value("dead_letters_quarantined"),
+      replayed: value("dead_letters_replayed"),
+      discarded: value("dead_letters_discarded"),
+    },
+    delegatedTransport: {
+      total: value("transport_total"),
+      sending: value("transport_sending"),
+      sent: value("transport_sent"),
+      failed: value("transport_failed"),
+      outcomeUnknown: value("transport_outcome_unknown"),
+      attempts: value("transport_attempts"),
+    },
   };
 }
 
@@ -619,6 +972,292 @@ async function listMessages(env: Env, url: URL): Promise<Response> {
   return json({ messages: rows });
 }
 
+async function listEmailOperations(env: Env, url: URL): Promise<Response> {
+  const limit = boundedLimit(url.searchParams.get("limit"));
+  const status = enumQuery(url, "status", [
+    "captured",
+    "queued",
+    "sending",
+    "sent",
+    "failed",
+  ]);
+  const kind = enumQuery(url, "kind", ["transactional", "marketing", "test"]);
+  const [messageRows, transportRows, deadLetterRows, queue] = await Promise.all(
+    [
+      env.DB.prepare(
+        `
+      SELECT message.id, message.kind, message.project_id, message.template_key,
+             message.subject,
+             CASE WHEN message.status = 'sending' AND message.last_error LIKE 'outcome_unknown:%'
+               THEN 'outcome_unknown' ELSE message.status END AS status,
+             message.transport, message.last_error,
+             message.created_at, message.updated_at, message.sent_at,
+             COUNT(delivery.id) AS recipient_count,
+             COALESCE(SUM(CASE WHEN delivery.status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_recipients,
+             COALESCE(SUM(delivery.attempt_count), 0) AS attempts
+      FROM email_messages message
+      LEFT JOIN email_deliveries delivery ON delivery.message_id = message.id
+      WHERE (? IS NULL OR message.status = ?) AND (? IS NULL OR message.kind = ?)
+      GROUP BY message.id
+      ORDER BY message.created_at DESC, message.id DESC
+      LIMIT ?
+    `,
+      )
+        .bind(status, status, kind, kind, limit)
+        .all<EmailOperationRow>(),
+      env.DB.prepare(
+        `
+      SELECT id, source, project_id, reference_id, profile_id, status,
+             attempt_count, provider_message_id, last_error, created_at,
+             updated_at, sent_at
+      FROM email_transport_deliveries
+      ORDER BY updated_at DESC, id DESC
+      LIMIT ?
+    `,
+      )
+        .bind(limit)
+        .all<EmailTransportOperationRow>(),
+      env.DB.prepare(
+        `
+      SELECT id, source_queue, message_id, job_type, payload_json, replayable,
+             attempts, status, resolution, received_at, resolved_at
+      FROM email_dead_letters
+      ORDER BY received_at DESC, id DESC
+      LIMIT ?
+    `,
+      )
+        .bind(limit)
+        .all<EmailDeadLetterRow>(),
+      emailQueueMetrics(env.EMAIL_QUEUE),
+    ],
+  );
+  const response: EmailOperationsPage = {
+    generatedAt: new Date().toISOString(),
+    queue,
+    messages: messageRows.results.map(serializeEmailOperation),
+    transportDeliveries: transportRows.results.map(serializeEmailTransport),
+    deadLetters: deadLetterRows.results.map(serializeEmailDeadLetter),
+  };
+  return json(response);
+}
+
+async function emailQueueMetrics(
+  queue: Queue<EmailQueueJob>,
+): Promise<EmailOperationsPage["queue"]> {
+  try {
+    const metrics = await queue.metrics();
+    return {
+      backlogCount: Number(metrics.backlogCount || 0),
+      backlogBytes: Number(metrics.backlogBytes || 0),
+      oldestMessageAt: metrics.oldestMessageTimestamp?.toISOString() ?? null,
+    };
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "email_queue_metrics_unavailable",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return null;
+  }
+}
+
+async function replayEmailDeadLetter(env: Env, id: string): Promise<Response> {
+  if (env.MAIL_TRANSPORT !== "smtp") {
+    return json({ error: "smtp_transport_required" }, 409);
+  }
+  const row = await env.DB.prepare(
+    `
+    SELECT id, payload_json, replayable, status
+    FROM email_dead_letters WHERE id = ?
+  `,
+  )
+    .bind(id)
+    .first<ReplayableDeadLetterRow>();
+  if (!row) return json({ error: "dead_letter_not_found" }, 404);
+  if (row.status !== "quarantined")
+    return json({ error: "dead_letter_already_resolved" }, 409);
+  if (Number(row.replayable) !== 1)
+    return json({ error: "dead_letter_not_replayable" }, 409);
+  const job = parseEmailQueueJob(row.payload_json);
+  if (!job) return json({ error: "dead_letter_payload_invalid" }, 409);
+  const now = new Date().toISOString();
+  const claimed = await env.DB.prepare(
+    `
+    UPDATE email_dead_letters
+    SET status = 'discarded', resolution = 'replayed', resolved_at = ?
+    WHERE id = ? AND status = 'quarantined'
+    RETURNING id
+  `,
+  )
+    .bind(now, id)
+    .first<{ id: string }>();
+  if (!claimed) return json({ error: "dead_letter_already_resolved" }, 409);
+  try {
+    await env.EMAIL_QUEUE.send(job);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    try {
+      await env.DB.prepare(
+        `UPDATE email_dead_letters SET status = 'quarantined', resolution = NULL, resolved_at = NULL WHERE id = ? AND resolution = 'replayed'`,
+      )
+        .bind(id)
+        .run();
+    } catch (rollbackError) {
+      console.error(
+        JSON.stringify({
+          event: "email_dead_letter_replay_rollback_failed",
+          dead_letter_id: id,
+          email_message_id: job.messageId,
+          error:
+            rollbackError instanceof Error
+              ? rollbackError.message
+              : String(rollbackError),
+        }),
+      );
+    }
+    console.error(
+      JSON.stringify({
+        event: "email_dead_letter_replay_failed",
+        dead_letter_id: id,
+        email_message_id: job.messageId,
+        error: reason,
+      }),
+    );
+    return json({ error: "dead_letter_replay_failed" }, 503);
+  }
+  console.log(
+    JSON.stringify({
+      event: "email_dead_letter_replayed",
+      dead_letter_id: id,
+      email_message_id: job.messageId,
+    }),
+  );
+  return json({ id, status: "replayed", messageId: job.messageId }, 202);
+}
+
+async function discardEmailDeadLetter(env: Env, id: string): Promise<Response> {
+  const now = new Date().toISOString();
+  const row = await env.DB.prepare(
+    `
+    UPDATE email_dead_letters
+    SET status = 'discarded', resolution = 'discarded', resolved_at = ?
+    WHERE id = ? AND status = 'quarantined'
+    RETURNING id
+  `,
+  )
+    .bind(now, id)
+    .first<{ id: string }>();
+  if (!row) {
+    const existing = await env.DB.prepare(
+      `SELECT status FROM email_dead_letters WHERE id = ?`,
+    )
+      .bind(id)
+      .first<{ status: string }>();
+    return existing
+      ? json({ error: "dead_letter_already_resolved" }, 409)
+      : json({ error: "dead_letter_not_found" }, 404);
+  }
+  console.log(
+    JSON.stringify({
+      event: "email_dead_letter_discarded",
+      dead_letter_id: id,
+    }),
+  );
+  return json({ id, status: "discarded" });
+}
+
+function boundedLimit(raw: string | null): number {
+  const parsed = Number(raw || 50);
+  return Number.isSafeInteger(parsed) && parsed > 0
+    ? Math.min(100, parsed)
+    : 50;
+}
+
+function enumQuery<T extends string>(
+  url: URL,
+  name: string,
+  values: T[],
+): T | null {
+  const value = url.searchParams.get(name);
+  return value && values.includes(value as T) ? (value as T) : null;
+}
+
+function parseEmailQueueJob(payloadJson: string): EmailQueueJob | null {
+  try {
+    const value: unknown = JSON.parse(payloadJson);
+    return value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      (value as Record<string, unknown>).type === "email.deliver" &&
+      typeof (value as Record<string, unknown>).messageId === "string" &&
+      (value as Record<string, unknown>).messageId
+      ? {
+          type: "email.deliver",
+          messageId: String((value as Record<string, unknown>).messageId),
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function serializeEmailOperation(row: EmailOperationRow): EmailOperation {
+  return {
+    id: row.id,
+    kind: row.kind,
+    projectId: row.project_id,
+    templateKey: row.template_key,
+    subject: row.subject,
+    status: row.status,
+    transport: row.transport,
+    recipientCount: Number(row.recipient_count || 0),
+    failedRecipients: Number(row.failed_recipients || 0),
+    attempts: Number(row.attempts || 0),
+    lastError: row.last_error,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    sentAt: row.sent_at,
+  };
+}
+
+function serializeEmailDeadLetter(
+  row: EmailDeadLetterRow,
+): EmailDeadLetterOperation {
+  return {
+    id: row.id,
+    queueMessageId: row.message_id,
+    emailMessageId: parseEmailQueueJob(row.payload_json)?.messageId ?? null,
+    sourceQueue: row.source_queue,
+    jobType: row.job_type,
+    replayable: Number(row.replayable) === 1,
+    attempts: Number(row.attempts || 0),
+    status: row.status,
+    resolution: row.resolution,
+    receivedAt: row.received_at,
+    resolvedAt: row.resolved_at,
+  };
+}
+
+function serializeEmailTransport(
+  row: EmailTransportOperationRow,
+): EmailTransportOperation {
+  return {
+    id: row.id,
+    source: row.source,
+    projectId: Number(row.project_id),
+    referenceId: row.reference_id,
+    profileId: row.profile_id,
+    status: row.status,
+    attempts: Number(row.attempt_count || 0),
+    providerMessageId: row.provider_message_id,
+    lastError: row.last_error,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    sentAt: row.sent_at,
+  };
+}
+
 async function readMessage(env: Env, id: string): Promise<Response> {
   const message = await env.DB.prepare(
     `SELECT * FROM email_messages WHERE id = ?`,
@@ -722,6 +1361,63 @@ type StoredReceipt = {
   transport: EmailServiceReceipt["transport"];
   request_sha256: string;
 };
+type EmailOperationRow = {
+  id: string;
+  kind: EmailOperation["kind"];
+  project_id: number | null;
+  template_key: string | null;
+  subject: string;
+  status: EmailOperation["status"];
+  transport: EmailOperation["transport"];
+  recipient_count: number;
+  failed_recipients: number;
+  attempts: number;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+  sent_at: string | null;
+};
+type EmailDeadLetterRow = {
+  id: string;
+  source_queue: string;
+  message_id: string;
+  job_type: string | null;
+  payload_json: string;
+  replayable: number;
+  attempts: number;
+  status: EmailDeadLetterOperation["status"];
+  resolution: EmailDeadLetterOperation["resolution"];
+  received_at: string;
+  resolved_at: string | null;
+};
+
+type EmailTransportDeliveryRow = {
+  id: string;
+  request_sha256: string;
+  status: "sending" | "sent" | "failed" | "outcome_unknown";
+  provider_message_id: string | null;
+  provider_response: string | null;
+  lease_expires_at: string | null;
+};
+
+type EmailTransportOperationRow = {
+  id: string;
+  source: string;
+  project_id: number;
+  reference_id: string;
+  profile_id: string;
+  status: EmailTransportOperation["status"];
+  attempt_count: number;
+  provider_message_id: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+  sent_at: string | null;
+};
+type ReplayableDeadLetterRow = Pick<
+  EmailDeadLetterRow,
+  "id" | "payload_json" | "replayable" | "status"
+>;
 
 const PREVIEW_HTML = `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

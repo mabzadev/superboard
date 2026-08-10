@@ -275,25 +275,49 @@ const ERASURE_STEPS: readonly Step[] = Object.freeze([
   {
     id: "identity",
     enabled: (env) => Boolean(env.IDENTITY_SERVICE),
-    run: (env, operation, _project, userId, requestId) => {
+    run: async (env, operation, project, userId, requestId) => {
       if (!env.IDENTITY_SERVICE || !env.MODULE_INTERNAL_TOKEN) {
         throw new AccountErasureError(
           "identity_erasure_misconfigured",
           "identity",
         );
       }
-      return env.IDENTITY_SERVICE.fetch(
-        `https://identity.internal/internal/v1/users/${encodeURIComponent(userId)}`,
-        {
-          method: "DELETE",
-          headers: {
-            "x-internal-token": env.MODULE_INTERNAL_TOKEN,
-            "x-request-id": requestId,
-            "idempotency-key": erasureKey(operation.id, "identity"),
-          },
-          signal: AbortSignal.timeout(10_000),
-        },
+      const path = `/internal/v1/users/${encodeURIComponent(userId)}`;
+      const context: InternalProjectContext = {
+        module: "identity",
+        method: "DELETE",
+        pathname: path,
+        projectId: project.projectId,
+        projectRef: project.projectRef,
+        instanceId: project.instanceId,
+        environment: project.environment,
+        actorId: 0,
+        role: "application",
+        requestId,
+        issuedAt: Math.floor(Date.now() / 1_000),
+      };
+      const signature = await signProjectContext(
+        context,
+        env.MODULE_INTERNAL_TOKEN,
       );
+      return env.IDENTITY_SERVICE.fetch(`https://identity.internal${path}`, {
+        method: "DELETE",
+        headers: {
+          [PROJECT_CONTEXT_HEADERS.token]: env.MODULE_INTERNAL_TOKEN,
+          [PROJECT_CONTEXT_HEADERS.projectId]: String(context.projectId),
+          [PROJECT_CONTEXT_HEADERS.projectRef]: context.projectRef,
+          [PROJECT_CONTEXT_HEADERS.instanceId]: String(context.instanceId),
+          [PROJECT_CONTEXT_HEADERS.environment]: context.environment,
+          [PROJECT_CONTEXT_HEADERS.actorId]: "0",
+          [PROJECT_CONTEXT_HEADERS.role]: context.role,
+          [PROJECT_CONTEXT_HEADERS.requestId]: requestId,
+          [PROJECT_CONTEXT_HEADERS.issuedAt]: String(context.issuedAt),
+          [PROJECT_CONTEXT_HEADERS.version]: "1",
+          [PROJECT_CONTEXT_HEADERS.signature]: signature,
+          "idempotency-key": erasureKey(operation.id, "identity"),
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
     },
   },
 ]);

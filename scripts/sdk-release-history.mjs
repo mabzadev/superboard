@@ -79,10 +79,7 @@ export async function validateSdkReleaseHistory(history, catalogue) {
     const current = catalogue?.libraries?.find(
       (library) => library.id === failure.libraryId,
     );
-    if (
-      current?.releaseStatus === "released" &&
-      current.latestReleaseVersion === failure.version
-    ) {
+    if (current?.latestReleaseVersion === failure.version) {
       errors.push(`${label} conflicts with the current successful release`);
     }
   }

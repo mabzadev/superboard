@@ -1,4 +1,10 @@
 import { env, SELF } from "cloudflare:test";
+import {
+  PROJECT_CONTEXT_HEADERS,
+  signProjectContext,
+  type InternalProjectContext,
+} from "@opengrow/contracts/project-context";
+import { decodeJwt } from "jose";
 import { describe, expect, it } from "vitest";
 
 describe("Identity Worker with D1", () => {
@@ -10,10 +16,11 @@ describe("Identity Worker with D1", () => {
       status: "ok",
       schema: {
         status: "current",
-        expectedMigration: "0001_identity.sql",
-        latestMigration: "0001_identity.sql",
-        appliedMigrationCount: 1,
+        expectedMigration: "0002_project_scope.sql",
+        latestMigration: "0002_project_scope.sql",
+        appliedMigrationCount: 2,
       },
+      project_scope: { ready: true, unscoped_rows: 0 },
     });
   });
 
@@ -21,14 +28,15 @@ describe("Identity Worker with D1", () => {
     const created = await json<Session>(
       await SELF.fetch("https://identity.test/auth/anonymous", {
         method: "POST",
-        headers: {
+        headers: await projectHeaders("POST", "/auth/anonymous", {
           "content-type": "application/json",
           "cf-connecting-ip": "192.0.2.20",
-        },
+        }),
         body: JSON.stringify({ installation_id: "reference-installation-1" }),
       }),
     );
     expect(created.access_token).toBeTruthy();
+    expect(decodeJwt(created.access_token).pid).toBe(101);
     expect(created.refresh_token).toMatch(/^ogr_/);
     expect(created.user.anonymous).toBe(true);
 
@@ -66,14 +74,20 @@ describe("Identity Worker with D1", () => {
     const refreshed = await json<Session>(
       await SELF.fetch("https://identity.test/auth/refresh", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "cf-connecting-ip": "192.0.2.20",
-        },
+        headers: await projectHeaders(
+          "POST",
+          "/auth/refresh",
+          {
+            "content-type": "application/json",
+            "cf-connecting-ip": "192.0.2.20",
+          },
+          secondProject,
+        ),
         body: JSON.stringify({ refresh_token: created.refresh_token }),
       }),
     );
     expect(refreshed.refresh_token).not.toBe(created.refresh_token);
+    expect(decodeJwt(refreshed.access_token).pid).toBe(101);
 
     const replay = await SELF.fetch("https://identity.test/auth/refresh", {
       method: "POST",
@@ -105,10 +119,10 @@ describe("Identity Worker with D1", () => {
       "https://identity.test/auth/request-password-reset",
       {
         method: "POST",
-        headers: {
+        headers: await projectHeaders("POST", "/auth/request-password-reset", {
           "content-type": "application/json",
           "cf-connecting-ip": "192.0.2.21",
-        },
+        }),
         body: JSON.stringify({ email: "missing@example.test" }),
       },
     );
@@ -120,10 +134,10 @@ describe("Identity Worker with D1", () => {
     const created = await json<Session>(
       await SELF.fetch("https://identity.test/auth/anonymous", {
         method: "POST",
-        headers: {
+        headers: await projectHeaders("POST", "/auth/anonymous", {
           "content-type": "application/json",
           "cf-connecting-ip": "192.0.2.22",
-        },
+        }),
         body: JSON.stringify({ installation_id: "identity-erasure-runtime" }),
       }),
     );
@@ -144,12 +158,13 @@ describe("Identity Worker with D1", () => {
       error: { code: "account_erasure_route_required", retryable: false },
     });
 
-    const eraseRequest = () =>
+    const eraseRequest = async () =>
       SELF.fetch(`https://identity.test/internal/v1/users/${created.user.id}`, {
         method: "DELETE",
-        headers: {
-          "x-internal-token": "identity-runtime-internal-token",
-        },
+        headers: await projectHeaders(
+          "DELETE",
+          `/internal/v1/users/${created.user.id}`,
+        ),
       });
     const erased = await eraseRequest();
     expect(erased.status, await erased.clone().text()).toBe(200);
@@ -190,6 +205,215 @@ describe("Identity Worker with D1", () => {
     expect(identities.results[0]).toMatchObject({ total: 0 });
     expect(tokens.results[0]).toMatchObject({ total: 0 });
   });
+
+  it("exposes sanitized authentication state only through the internal admin contract", async () => {
+    const created = await json<Session>(
+      await SELF.fetch("https://identity.test/auth/anonymous", {
+        method: "POST",
+        headers: await projectHeaders("POST", "/auth/anonymous", {
+          "content-type": "application/json",
+          "cf-connecting-ip": "192.0.2.23",
+        }),
+        body: JSON.stringify({ installation_id: "identity-admin-runtime" }),
+      }),
+    );
+    const database = env as unknown as { DB: D1Database };
+    await database.DB.batch([
+      database.DB.prepare(
+        `UPDATE application_users
+         SET email=?, name=?, password_hash=?, is_anonymous=0,
+             email_verified_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+         WHERE project_id=? AND id=?`,
+      ).bind(
+        "identity-admin@example.test",
+        "Identity Admin Fixture",
+        "password-hash-must-never-leave-identity",
+        101,
+        created.user.id,
+      ),
+      database.DB.prepare(
+        `INSERT INTO application_identities
+           (id,project_id,user_id,provider,subject_hash,provider_email)
+         VALUES (?,?,?,"google",?,?)`,
+      ).bind(
+        crypto.randomUUID(),
+        101,
+        created.user.id,
+        "provider-subject-hash-must-never-leave-identity",
+        "identity-admin@example.test",
+      ),
+    ]);
+
+    const unauthorized = await SELF.fetch(
+      "https://identity.test/internal/v1/admin/users",
+    );
+    expect(unauthorized.status).toBe(401);
+
+    const listedResponse = await SELF.fetch(
+      "https://identity.test/internal/v1/admin/users?q=google&limit=10&offset=0",
+      {
+        headers: await projectHeaders("GET", "/internal/v1/admin/users"),
+      },
+    );
+    expect(listedResponse.status, await listedResponse.clone().text()).toBe(
+      200,
+    );
+    const listed = await listedResponse.json<{
+      data: Array<Record<string, unknown>>;
+      meta: { total: number; limit: number; offset: number; has_more: boolean };
+    }>();
+    expect(listed.data).toContainEqual(
+      expect.objectContaining({
+        id: created.user.id,
+        email: "identity-admin@example.test",
+        anonymous: false,
+        email_verified: true,
+        password_configured: true,
+        providers: ["anonymous", "google"],
+        auth_methods: ["password", "anonymous", "google"],
+        active_session_count: 1,
+      }),
+    );
+    expect(listed.meta).toMatchObject({ limit: 10, offset: 0 });
+
+    const detailResponse = await SELF.fetch(
+      `https://identity.test/internal/v1/admin/users/${created.user.id}`,
+      {
+        headers: await projectHeaders(
+          "GET",
+          `/internal/v1/admin/users/${created.user.id}`,
+        ),
+      },
+    );
+    expect(detailResponse.status, await detailResponse.clone().text()).toBe(
+      200,
+    );
+    const detailText = await detailResponse.text();
+    expect(detailText).not.toContain("password-hash-must-never-leave-identity");
+    expect(detailText).not.toContain(
+      "provider-subject-hash-must-never-leave-identity",
+    );
+    expect(detailText).not.toContain(created.refresh_token);
+    expect(JSON.parse(detailText)).toMatchObject({
+      data: {
+        id: created.user.id,
+        identities: [
+          { provider: "anonymous" },
+          {
+            provider: "google",
+            provider_email: "identity-admin@example.test",
+          },
+        ],
+        sessions: { total: 1, active: 1, revoked: 0, expired: 0 },
+      },
+    });
+
+    const invalidPagination = await SELF.fetch(
+      "https://identity.test/internal/v1/admin/users?limit=101",
+      {
+        headers: await projectHeaders("GET", "/internal/v1/admin/users"),
+      },
+    );
+    expect(invalidPagination.status).toBe(422);
+  });
+
+  it("isolates users, providers, sessions and details between projects", async () => {
+    const projectOne = await anonymous(
+      "shared-installation-identity-isolation",
+      "192.0.2.31",
+    );
+    const projectTwo = await anonymous(
+      "shared-installation-identity-isolation",
+      "192.0.2.32",
+      secondProject,
+    );
+    expect(projectOne.user.id).not.toBe(projectTwo.user.id);
+    expect(decodeJwt(projectOne.access_token).pid).toBe(101);
+    expect(decodeJwt(projectTwo.access_token).pid).toBe(202);
+
+    const projectOneList = await json<{ data: Array<{ id: string }> }>(
+      await SELF.fetch("https://identity.test/internal/v1/admin/users", {
+        headers: await projectHeaders("GET", "/internal/v1/admin/users"),
+      }),
+    );
+    expect(projectOneList.data.map(({ id }) => id)).toContain(
+      projectOne.user.id,
+    );
+    expect(projectOneList.data.map(({ id }) => id)).not.toContain(
+      projectTwo.user.id,
+    );
+
+    const crossProjectDetail = await SELF.fetch(
+      `https://identity.test/internal/v1/admin/users/${projectTwo.user.id}`,
+      {
+        headers: await projectHeaders(
+          "GET",
+          `/internal/v1/admin/users/${projectTwo.user.id}`,
+        ),
+      },
+    );
+    expect(crossProjectDetail.status).toBe(404);
+
+    const projectTwoDetail = await SELF.fetch(
+      `https://identity.test/internal/v1/admin/users/${projectTwo.user.id}`,
+      {
+        headers: await projectHeaders(
+          "GET",
+          `/internal/v1/admin/users/${projectTwo.user.id}`,
+          undefined,
+          secondProject,
+        ),
+      },
+    );
+    expect(projectTwoDetail.status).toBe(200);
+  });
+
+  it("fails closed while a migrated legacy identity remains unscoped", async () => {
+    const database = env as unknown as { DB: D1Database };
+    await database.DB.prepare(
+      "DROP TRIGGER application_users_project_required_insert",
+    ).run();
+    await database.DB.prepare(
+      "INSERT INTO application_users (id,is_anonymous) VALUES (?,1)",
+    )
+      .bind("legacy-unscoped-runtime-user")
+      .run();
+    try {
+      const admin = await SELF.fetch(
+        "https://identity.test/internal/v1/admin/users",
+        {
+          headers: await projectHeaders("GET", "/internal/v1/admin/users"),
+        },
+      );
+      expect(admin.status).toBe(503);
+      await expect(admin.json()).resolves.toMatchObject({
+        error: {
+          code: "identity_project_backfill_required",
+          retryable: true,
+        },
+      });
+
+      const health = await SELF.fetch("https://identity.test/health");
+      expect(health.status).toBe(503);
+      await expect(health.json()).resolves.toMatchObject({
+        status: "degraded",
+        reason: "identity_project_backfill_required",
+        project_scope: { ready: false, unscoped_rows: 1 },
+      });
+    } finally {
+      await database.DB.prepare(
+        "DELETE FROM application_users WHERE id=? AND project_id IS NULL",
+      )
+        .bind("legacy-unscoped-runtime-user")
+        .run();
+      await database.DB.prepare(
+        `CREATE TRIGGER application_users_project_required_insert
+         BEFORE INSERT ON application_users
+         WHEN NEW.project_id IS NULL OR NEW.project_id <= 0
+         BEGIN SELECT RAISE(ABORT, 'identity_project_required'); END`,
+      ).run();
+    }
+  });
 });
 
 type Session = {
@@ -201,4 +425,79 @@ type Session = {
 async function json<T>(response: Response): Promise<T> {
   expect(response.status, await response.clone().text()).toBeLessThan(300);
   return response.json<T>();
+}
+
+const secondProject = {
+  projectId: 202,
+  instanceId: 20,
+  projectRef: "20-test",
+} as const;
+
+type TestProject = {
+  projectId: number;
+  instanceId: number;
+  projectRef: string;
+};
+
+async function anonymous(
+  installationId: string,
+  ip: string,
+  project: TestProject = {
+    projectId: 101,
+    instanceId: 10,
+    projectRef: "10-test",
+  },
+): Promise<Session> {
+  return json<Session>(
+    await SELF.fetch("https://identity.test/auth/anonymous", {
+      method: "POST",
+      headers: await projectHeaders(
+        "POST",
+        "/auth/anonymous",
+        { "content-type": "application/json", "cf-connecting-ip": ip },
+        project,
+      ),
+      body: JSON.stringify({ installation_id: installationId }),
+    }),
+  );
+}
+
+async function projectHeaders(
+  method: string,
+  pathname: string,
+  initial?: HeadersInit,
+  project: TestProject = {
+    projectId: 101,
+    instanceId: 10,
+    projectRef: "10-test",
+  },
+): Promise<Headers> {
+  const requestId = crypto.randomUUID();
+  const context: InternalProjectContext = {
+    module: "identity",
+    method,
+    pathname,
+    ...project,
+    environment: "test",
+    actorId: 0,
+    role: "sdk",
+    requestId,
+    issuedAt: Math.floor(Date.now() / 1_000),
+  };
+  const headers = new Headers(initial);
+  headers.set(PROJECT_CONTEXT_HEADERS.token, "identity-runtime-internal-token");
+  headers.set(PROJECT_CONTEXT_HEADERS.projectId, String(context.projectId));
+  headers.set(PROJECT_CONTEXT_HEADERS.projectRef, context.projectRef);
+  headers.set(PROJECT_CONTEXT_HEADERS.instanceId, String(context.instanceId));
+  headers.set(PROJECT_CONTEXT_HEADERS.environment, context.environment);
+  headers.set(PROJECT_CONTEXT_HEADERS.actorId, "0");
+  headers.set(PROJECT_CONTEXT_HEADERS.role, context.role);
+  headers.set(PROJECT_CONTEXT_HEADERS.requestId, requestId);
+  headers.set(PROJECT_CONTEXT_HEADERS.issuedAt, String(context.issuedAt));
+  headers.set(PROJECT_CONTEXT_HEADERS.version, "1");
+  headers.set(
+    PROJECT_CONTEXT_HEADERS.signature,
+    await signProjectContext(context, "identity-runtime-internal-token"),
+  );
+  return headers;
 }

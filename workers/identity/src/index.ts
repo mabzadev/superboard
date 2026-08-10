@@ -4,11 +4,9 @@ import {
   EMAIL_SERVICE_SEND_PATH,
   type EmailServiceMessage,
 } from "@opengrow/contracts/email";
-import {
-  configuredSecrets,
-  matchesAnySecret,
-} from "@opengrow/contracts/secret";
+import { configuredSecrets } from "@opengrow/contracts/secret";
 import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+import { verifyInternalProjectContextRequest } from "@opengrow/contracts/project-context";
 import {
   RequestBodyError,
   readJsonObjectLimited,
@@ -25,14 +23,28 @@ import {
 } from "./crypto";
 import type { IdentityEnv, IdentityUser } from "./types";
 
-type Variables = { userId: string; sessionId: string };
+type Variables = { userId: string; sessionId: string; projectId: number };
 type IdentityContext = Context<{ Bindings: IdentityEnv; Variables: Variables }>;
 
 const app = new Hono<{ Bindings: IdentityEnv; Variables: Variables }>();
 
+type IdentityAdminUserRow = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  is_anonymous: number;
+  email_verified_at: string | null;
+  password_configured: number;
+  providers: string | null;
+  active_session_count: number;
+  last_session_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 app.get("/health", async (c) => {
   try {
-    const [users, sessions, schema] = await Promise.all([
+    const [users, sessions, schema, scope] = await Promise.all([
       c.env.DB.prepare(
         `
         SELECT COUNT(*) total,
@@ -48,16 +60,24 @@ app.get("/health", async (c) => {
       `,
       ).first<{ active: number }>(),
       inspectSqlSchemaHealth(c.env.DB, c.env.D1_EXPECTED_MIGRATION),
+      projectScopeState(c.env.DB),
     ]);
     publicJwks(c.env);
-    const current = schema.status === "current";
+    const current = schema.status === "current" && scope.ready;
     return response(
       {
         service: "identity",
         status: current ? "ok" : "degraded",
         environment: c.env.ENVIRONMENT,
         schema,
-        ...(current ? {} : { reason: "database_schema_not_current" }),
+        ...(current
+          ? {}
+          : {
+              reason: scope.ready
+                ? "database_schema_not_current"
+                : "identity_project_backfill_required",
+            }),
+        project_scope: scope,
         users: {
           total: Number(users?.total || 0),
           anonymous: Number(users?.anonymous || 0),
@@ -90,21 +110,96 @@ app.get(
     }),
 );
 
-app.delete("/internal/v1/users/:userId", async (c) => {
-  const authorized = await matchesAnySecret(
-    c.req.header("x-internal-token") || "",
-    configuredSecrets(
-      c.env.INTERNAL_API_TOKEN,
-      c.env.INTERNAL_API_TOKEN_PREVIOUS,
-    ),
+app.get("/internal/v1/admin/users", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const projectId = project.projectId;
+  const query = optionalQuery(c.req.query("q"), 200);
+  const limit = boundedInteger(c.req.query("limit"), 50, 1, 100, "limit");
+  const offset = boundedInteger(
+    c.req.query("offset"),
+    0,
+    0,
+    1_000_000,
+    "offset",
   );
-  if (!authorized) {
-    return error(
-      "internal_auth_invalid",
-      "Internal authentication failed",
-      401,
-    );
-  }
+  const filter = query
+    ? `AND (
+        lower(user.id) LIKE lower(?) ESCAPE '\\'
+        OR lower(COALESCE(user.email,'')) LIKE lower(?) ESCAPE '\\'
+        OR lower(COALESCE(user.name,'')) LIKE lower(?) ESCAPE '\\'
+        OR EXISTS (
+          SELECT 1 FROM application_identities matched_identity
+          WHERE matched_identity.project_id=user.project_id
+            AND matched_identity.user_id=user.id
+            AND lower(matched_identity.provider) LIKE lower(?) ESCAPE '\\'
+        )
+      )`
+    : "";
+  const parameters = query ? Array(4).fill(likePattern(query)) : [];
+  const [users, total] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+         user.id,
+         user.email,
+         user.name,
+         user.is_anonymous,
+         user.email_verified_at,
+         CASE WHEN user.password_hash IS NULL THEN 0 ELSE 1 END password_configured,
+         (
+           SELECT GROUP_CONCAT(provider, ',')
+           FROM (
+             SELECT DISTINCT identity.provider
+             FROM application_identities identity
+             WHERE identity.project_id=user.project_id
+               AND identity.user_id=user.id
+             ORDER BY identity.provider ASC
+           )
+         ) providers,
+         (
+           SELECT COUNT(*) FROM application_sessions session
+           WHERE session.project_id=user.project_id
+             AND session.user_id=user.id
+             AND session.revoked_at IS NULL
+             AND datetime(session.expires_at)>datetime('now')
+         ) active_session_count,
+         (
+           SELECT MAX(session.created_at) FROM application_sessions session
+           WHERE session.project_id=user.project_id
+             AND session.user_id=user.id
+         ) last_session_at,
+         user.created_at,
+         user.updated_at
+       FROM application_users user
+       WHERE user.project_id=? AND user.deleted_at IS NULL ${filter}
+       ORDER BY datetime(user.created_at) DESC, user.id DESC
+       LIMIT ? OFFSET ?`,
+    )
+      .bind(projectId, ...parameters, limit, offset)
+      .all<IdentityAdminUserRow>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) total
+       FROM application_users user
+       WHERE user.project_id=? AND user.deleted_at IS NULL ${filter}`,
+    )
+      .bind(projectId, ...parameters)
+      .first<{ total: number }>(),
+  ]);
+  return response({
+    data: users.results.map(adminUser),
+    meta: {
+      total: Number(total?.total || 0),
+      limit,
+      offset,
+      has_more: offset + users.results.length < Number(total?.total || 0),
+    },
+  });
+});
+
+app.get("/internal/v1/admin/users/:userId", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const projectId = project.projectId;
   const userId = internalUserId(c.req.param("userId"));
   if (!userId) {
     return error(
@@ -113,7 +208,114 @@ app.delete("/internal/v1/users/:userId", async (c) => {
       422,
     );
   }
-  if (!(await eraseIdentityUser(c.env, userId))) {
+  const [user, identities, sessions] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT
+         user.id,
+         user.email,
+         user.name,
+         user.is_anonymous,
+         user.email_verified_at,
+         CASE WHEN user.password_hash IS NULL THEN 0 ELSE 1 END password_configured,
+         (
+           SELECT GROUP_CONCAT(provider, ',')
+           FROM (
+             SELECT DISTINCT identity.provider
+             FROM application_identities identity
+             WHERE identity.project_id=user.project_id
+               AND identity.user_id=user.id
+             ORDER BY identity.provider ASC
+           )
+         ) providers,
+         (
+           SELECT COUNT(*) FROM application_sessions session
+           WHERE session.project_id=user.project_id
+             AND session.user_id=user.id
+             AND session.revoked_at IS NULL
+             AND datetime(session.expires_at)>datetime('now')
+         ) active_session_count,
+         (
+           SELECT MAX(session.created_at) FROM application_sessions session
+           WHERE session.project_id=user.project_id
+             AND session.user_id=user.id
+         ) last_session_at,
+         user.created_at,
+         user.updated_at
+       FROM application_users user
+       WHERE user.project_id=? AND user.id=? AND user.deleted_at IS NULL
+       LIMIT 1`,
+    )
+      .bind(projectId, userId)
+      .first<IdentityAdminUserRow>(),
+    c.env.DB.prepare(
+      `SELECT provider, provider_email, created_at linked_at
+       FROM application_identities
+       WHERE project_id=? AND user_id=?
+       ORDER BY provider ASC`,
+    )
+      .bind(projectId, userId)
+      .all<{
+        provider: string;
+        provider_email: string | null;
+        linked_at: string;
+      }>(),
+    c.env.DB.prepare(
+      `SELECT
+         COUNT(*) total,
+         SUM(CASE WHEN revoked_at IS NULL AND datetime(expires_at)>datetime('now') THEN 1 ELSE 0 END) active,
+         SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END) revoked,
+         SUM(CASE WHEN revoked_at IS NULL AND datetime(expires_at)<=datetime('now') THEN 1 ELSE 0 END) expired,
+         MAX(created_at) last_authenticated_at
+       FROM application_sessions
+       WHERE project_id=? AND user_id=?`,
+    )
+      .bind(projectId, userId)
+      .first<{
+        total: number;
+        active: number;
+        revoked: number;
+        expired: number;
+        last_authenticated_at: string | null;
+      }>(),
+  ]);
+  if (!user) {
+    return error(
+      "application_user_not_found",
+      "Application user was not found",
+      404,
+    );
+  }
+  return response({
+    data: {
+      ...adminUser(user),
+      identities: identities.results.map((identity) => ({
+        provider: identity.provider,
+        provider_email: identity.provider_email,
+        linked_at: identity.linked_at,
+      })),
+      sessions: {
+        total: Number(sessions?.total || 0),
+        active: Number(sessions?.active || 0),
+        revoked: Number(sessions?.revoked || 0),
+        expired: Number(sessions?.expired || 0),
+        last_authenticated_at: sessions?.last_authenticated_at || null,
+      },
+    },
+  });
+});
+
+app.delete("/internal/v1/users/:userId", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const userId = internalUserId(c.req.param("userId"));
+  if (!userId) {
+    return error(
+      "application_user_id_invalid",
+      "Application user identifier is invalid",
+      422,
+    );
+  }
+  if (!(await eraseIdentityUser(c.env, project.projectId, userId))) {
     return error(
       "account_files_cleanup_failed",
       "Account files could not be deleted",
@@ -125,18 +327,27 @@ app.delete("/internal/v1/users/:userId", async (c) => {
 });
 
 app.post("/auth/register", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const projectId = project.projectId;
   if (c.env.REGISTRATION_MODE !== "open")
     return error("registration_closed", "Registration is closed", 403);
   const body = await bodyObject(c.req.raw);
   const email = normalizedEmail(body.email);
   const password = passwordValue(body.password);
-  await enforceRateLimit(c.env.DB, c.req.raw, "register", email);
+  await enforceRateLimit(c.env.DB, c.req.raw, `p${projectId}:register`, email);
   const id = crypto.randomUUID();
   try {
     await c.env.DB.prepare(
-      "INSERT INTO application_users (id,email,password_hash,name,is_anonymous) VALUES (?,?,?,?,0)",
+      "INSERT INTO application_users (id,project_id,email,password_hash,name,is_anonymous) VALUES (?,?,?,?,?,0)",
     )
-      .bind(id, email, await hash(password, 12), optionalText(body.name, 120))
+      .bind(
+        id,
+        projectId,
+        email,
+        await hash(password, 12),
+        optionalText(body.name, 120),
+      )
       .run();
   } catch (cause) {
     if (String(cause).toLowerCase().includes("unique"))
@@ -149,6 +360,7 @@ app.post("/auth/register", async (c) => {
   }
   const mailDelivered = await issueEmailToken(
     c.env,
+    projectId,
     id,
     email,
     "verify_email",
@@ -164,8 +376,8 @@ app.post("/auth/register", async (c) => {
   });
   return response(
     {
-      ...(await createSession(c.env, id)),
-      user: await publicUser(c.env.DB, id),
+      ...(await createSession(c.env, projectId, id)),
+      user: await publicUser(c.env.DB, projectId, id),
       verification_email_accepted: mailDelivered,
     },
     201,
@@ -173,25 +385,31 @@ app.post("/auth/register", async (c) => {
 });
 
 app.post("/auth/signin/password", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const projectId = project.projectId;
   const body = await bodyObject(c.req.raw);
   const email = normalizedEmail(body.email);
   const password = typeof body.password === "string" ? body.password : "";
-  await enforceRateLimit(c.env.DB, c.req.raw, "password", email);
+  await enforceRateLimit(c.env.DB, c.req.raw, `p${projectId}:password`, email);
   const user = await c.env.DB.prepare(
-    "SELECT * FROM application_users WHERE email=? AND deleted_at IS NULL LIMIT 1",
+    "SELECT * FROM application_users WHERE project_id=? AND email=? AND deleted_at IS NULL LIMIT 1",
   )
-    .bind(email)
+    .bind(projectId, email)
     .first<IdentityUser>();
   if (!user?.password_hash || !(await compare(password, user.password_hash))) {
     return error("credentials_invalid", "Email or password is invalid", 401);
   }
   return response({
-    ...(await createSession(c.env, user.id)),
+    ...(await createSession(c.env, projectId, user.id)),
     user: exposeUser(user),
   });
 });
 
 app.post("/auth/anonymous", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const projectId = project.projectId;
   if (c.env.REGISTRATION_MODE !== "open")
     return error("registration_closed", "Registration is closed", 403);
   const body = await bodyObject(c.req.raw);
@@ -200,35 +418,46 @@ app.post("/auth/anonymous", async (c) => {
     "installation_id",
     255,
   );
-  await enforceRateLimit(c.env.DB, c.req.raw, "anonymous", installationId);
+  await enforceRateLimit(
+    c.env.DB,
+    c.req.raw,
+    `p${projectId}:anonymous`,
+    installationId,
+  );
   const subjectHash = await sha256(installationId);
   let user = await c.env.DB.prepare(
     `SELECT user.* FROM application_users user INNER JOIN application_identities identity ON identity.user_id=user.id
-     WHERE identity.provider='anonymous' AND identity.subject_hash=? AND user.deleted_at IS NULL LIMIT 1`,
+     WHERE identity.project_id=? AND user.project_id=?
+       AND identity.provider='anonymous' AND identity.subject_hash=? AND user.deleted_at IS NULL LIMIT 1`,
   )
-    .bind(subjectHash)
+    .bind(projectId, projectId, subjectHash)
     .first<IdentityUser>();
   if (!user) {
     const id = crypto.randomUUID();
     await c.env.DB.batch([
       c.env.DB.prepare(
-        "INSERT INTO application_users (id,is_anonymous) VALUES (?,1)",
-      ).bind(id),
+        "INSERT INTO application_users (id,project_id,is_anonymous) VALUES (?,?,1)",
+      ).bind(id, projectId),
       c.env.DB.prepare(
-        "INSERT INTO application_identities (id,user_id,provider,subject_hash) VALUES (?,?,'anonymous',?)",
-      ).bind(crypto.randomUUID(), id, subjectHash),
+        "INSERT INTO application_identities (id,project_id,user_id,provider,subject_hash) VALUES (?,?,?,'anonymous',?)",
+      ).bind(crypto.randomUUID(), projectId, id, subjectHash),
     ]);
-    user = await c.env.DB.prepare("SELECT * FROM application_users WHERE id=?")
-      .bind(id)
+    user = await c.env.DB.prepare(
+      "SELECT * FROM application_users WHERE project_id=? AND id=?",
+    )
+      .bind(projectId, id)
       .first<IdentityUser>();
   }
   return response({
-    ...(await createSession(c.env, user!.id)),
+    ...(await createSession(c.env, projectId, user!.id)),
     user: exposeUser(user!),
   });
 });
 
 app.post("/auth/signin/:provider", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const projectId = project.projectId;
   const provider = c.req.param("provider");
   if (provider !== "google" && provider !== "apple")
     return error("provider_invalid", "Provider is not supported", 404);
@@ -237,7 +466,7 @@ app.post("/auth/signin/:provider", async (c) => {
   await enforceRateLimit(
     c.env.DB,
     c.req.raw,
-    provider,
+    `p${projectId}:${provider}`,
     await sha256(token).then((value) => value.slice(0, 24)),
   );
   let claims;
@@ -253,9 +482,10 @@ app.post("/auth/signin/:provider", async (c) => {
   const subjectHash = await sha256(String(claims.sub));
   let user = await c.env.DB.prepare(
     `SELECT user.* FROM application_users user INNER JOIN application_identities identity ON identity.user_id=user.id
-     WHERE identity.provider=? AND identity.subject_hash=? AND user.deleted_at IS NULL LIMIT 1`,
+     WHERE identity.project_id=? AND user.project_id=?
+       AND identity.provider=? AND identity.subject_hash=? AND user.deleted_at IS NULL LIMIT 1`,
   )
-    .bind(provider, subjectHash)
+    .bind(projectId, projectId, provider, subjectHash)
     .first<IdentityUser>();
   if (!user) {
     if (c.env.REGISTRATION_MODE !== "open")
@@ -271,31 +501,40 @@ app.post("/auth/signin/:provider", async (c) => {
         422,
       );
     user = await c.env.DB.prepare(
-      "SELECT * FROM application_users WHERE email=? AND deleted_at IS NULL LIMIT 1",
+      "SELECT * FROM application_users WHERE project_id=? AND email=? AND deleted_at IS NULL LIMIT 1",
     )
-      .bind(email)
+      .bind(projectId, email)
       .first<IdentityUser>();
     const userId = user?.id ?? crypto.randomUUID();
     const statements = [];
     if (!user) {
       statements.push(
         c.env.DB.prepare(
-          "INSERT INTO application_users (id,email,name,is_anonymous,email_verified_at) VALUES (?,?,?,0,CURRENT_TIMESTAMP)",
-        ).bind(userId, email, optionalText(body.name, 120)),
+          "INSERT INTO application_users (id,project_id,email,name,is_anonymous,email_verified_at) VALUES (?,?,?,?,0,CURRENT_TIMESTAMP)",
+        ).bind(userId, projectId, email, optionalText(body.name, 120)),
       );
     }
     statements.push(
       c.env.DB.prepare(
-        "INSERT INTO application_identities (id,user_id,provider,subject_hash,provider_email) VALUES (?,?,?,?,?)",
-      ).bind(crypto.randomUUID(), userId, provider, subjectHash, email),
+        "INSERT INTO application_identities (id,project_id,user_id,provider,subject_hash,provider_email) VALUES (?,?,?,?,?,?)",
+      ).bind(
+        crypto.randomUUID(),
+        projectId,
+        userId,
+        provider,
+        subjectHash,
+        email,
+      ),
     );
     await c.env.DB.batch(statements);
-    user = await c.env.DB.prepare("SELECT * FROM application_users WHERE id=?")
-      .bind(userId)
+    user = await c.env.DB.prepare(
+      "SELECT * FROM application_users WHERE project_id=? AND id=?",
+    )
+      .bind(projectId, userId)
       .first<IdentityUser>();
   }
   return response({
-    ...(await createSession(c.env, user!.id)),
+    ...(await createSession(c.env, projectId, user!.id)),
     user: exposeUser(user!),
   });
 });
@@ -319,15 +558,15 @@ app.post("/auth/refresh", async (c) => {
   );
   const rotated = await c.env.DB.prepare(
     `UPDATE application_sessions SET refresh_token_hash=?,expires_at=?
-     WHERE refresh_token_hash=? AND revoked_at IS NULL AND datetime(expires_at)>datetime('now')
-     RETURNING id,user_id`,
+     WHERE project_id IS NOT NULL AND refresh_token_hash=? AND revoked_at IS NULL AND datetime(expires_at)>datetime('now')
+     RETURNING id,project_id,user_id`,
   )
     .bind(
       await sha256(nextToken),
       new Date(Date.now() + refreshTtl * 1000).toISOString(),
       tokenHash,
     )
-    .first<{ id: string; user_id: string }>();
+    .first<{ id: string; project_id: number; user_id: string }>();
   if (!rotated)
     return error(
       "refresh_token_invalid",
@@ -335,31 +574,44 @@ app.post("/auth/refresh", async (c) => {
       401,
     );
   return response(
-    await sessionResponse(c.env, rotated.user_id, rotated.id, nextToken),
+    await sessionResponse(
+      c.env,
+      rotated.project_id,
+      rotated.user_id,
+      rotated.id,
+      nextToken,
+    ),
   );
 });
 
 app.post("/auth/request-password-reset", async (c) => {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  const projectId = project.projectId;
   const body = await bodyObject(c.req.raw);
   const email = normalizedEmail(body.email);
-  await enforceRateLimit(c.env.DB, c.req.raw, "reset", email);
+  await enforceRateLimit(c.env.DB, c.req.raw, `p${projectId}:reset`, email);
   const user = await c.env.DB.prepare(
-    "SELECT id,email FROM application_users WHERE email=? AND deleted_at IS NULL LIMIT 1",
+    "SELECT id,email FROM application_users WHERE project_id=? AND email=? AND deleted_at IS NULL LIMIT 1",
   )
-    .bind(email)
+    .bind(projectId, email)
     .first<{ id: string; email: string }>();
   if (user)
-    await issueEmailToken(c.env, user.id, user.email, "reset_password").catch(
-      (cause) => {
-        console.error(
-          JSON.stringify({
-            event: "identity_reset_email_failed",
-            userId: user.id,
-            error: String(cause),
-          }),
-        );
-      },
-    );
+    await issueEmailToken(
+      c.env,
+      projectId,
+      user.id,
+      user.email,
+      "reset_password",
+    ).catch((cause) => {
+      console.error(
+        JSON.stringify({
+          event: "identity_reset_email_failed",
+          userId: user.id,
+          error: String(cause),
+        }),
+      );
+    });
   return response({ accepted: true }, 202);
 });
 
@@ -372,7 +624,7 @@ app.get("/auth/reset-password", async (c) => {
       422,
     );
   const row = await c.env.DB.prepare(
-    `SELECT id FROM application_identity_tokens WHERE token_hash=? AND purpose='reset_password' AND consumed_at IS NULL
+    `SELECT id FROM application_identity_tokens WHERE project_id IS NOT NULL AND token_hash=? AND purpose='reset_password' AND consumed_at IS NULL
      AND datetime(expires_at)>datetime('now') LIMIT 1`,
   )
     .bind(await sha256(token))
@@ -395,11 +647,11 @@ app.post("/auth/reset-password", async (c) => {
     );
   await c.env.DB.batch([
     c.env.DB.prepare(
-      "UPDATE application_users SET password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
-    ).bind(await hash(password, 12), row.user_id),
+      "UPDATE application_users SET password_hash=?,updated_at=CURRENT_TIMESTAMP WHERE project_id=? AND id=?",
+    ).bind(await hash(password, 12), row.project_id, row.user_id),
     c.env.DB.prepare(
-      "UPDATE application_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id=? AND revoked_at IS NULL",
-    ).bind(row.user_id),
+      "UPDATE application_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE project_id=? AND user_id=? AND revoked_at IS NULL",
+    ).bind(row.project_id, row.user_id),
   ]);
   return response({ changed: true });
 });
@@ -414,9 +666,9 @@ app.get("/auth/verify-email", async (c) => {
       422,
     );
   await c.env.DB.prepare(
-    "UPDATE application_users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?",
+    "UPDATE application_users SET email_verified_at=COALESCE(email_verified_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE project_id=? AND id=?",
   )
-    .bind(row.user_id)
+    .bind(row.project_id, row.user_id)
     .run();
   return response({ verified: true });
 });
@@ -426,14 +678,16 @@ async function authenticate(c: IdentityContext, next: Next) {
   if (!token) return error("unauthorized", "Authentication is required", 401);
   try {
     const claims = await verifyApplicationToken(c.env, token);
+    const projectId = Number(claims.pid);
     const active = await c.env.DB.prepare(
-      "SELECT id FROM application_sessions WHERE id=? AND user_id=? AND revoked_at IS NULL AND datetime(expires_at)>datetime('now')",
+      "SELECT id FROM application_sessions WHERE project_id=? AND id=? AND user_id=? AND revoked_at IS NULL AND datetime(expires_at)>datetime('now')",
     )
-      .bind(String(claims.sid), String(claims.sub))
+      .bind(projectId, String(claims.sid), String(claims.sub))
       .first();
     if (!active) return error("session_inactive", "Session is inactive", 401);
     c.set("userId", String(claims.sub));
     c.set("sessionId", String(claims.sid));
+    c.set("projectId", projectId);
     await next();
   } catch {
     return error("unauthorized", "Authentication is invalid or expired", 401);
@@ -455,7 +709,7 @@ app.post("/auth/link/:provider", async (c) => {
   await enforceRateLimit(
     c.env.DB,
     c.req.raw,
-    `link_${provider}`,
+    `p${c.get("projectId")}:link_${provider}`,
     await sha256(token).then((value) => value.slice(0, 24)),
   );
   let claims;
@@ -469,21 +723,23 @@ app.post("/auth/link/:provider", async (c) => {
     );
   }
   const userId = c.get("userId");
+  const projectId = c.get("projectId");
   const subjectHash = await sha256(String(claims.sub));
   const existing = await c.env.DB.prepare(
     `SELECT identity.user_id, user.deleted_at
      FROM application_identities identity
      INNER JOIN application_users user ON user.id=identity.user_id
-     WHERE identity.provider=? AND identity.subject_hash=? LIMIT 1`,
+     WHERE identity.project_id=? AND user.project_id=?
+       AND identity.provider=? AND identity.subject_hash=? LIMIT 1`,
   )
-    .bind(provider, subjectHash)
+    .bind(projectId, projectId, provider, subjectHash)
     .first<{ user_id: string; deleted_at: string | null }>();
   if (existing?.user_id === userId && existing.deleted_at === null) {
     return response({
       linked: true,
       idempotent: true,
       provider,
-      user: await publicUser(c.env.DB, userId),
+      user: await publicUser(c.env.DB, projectId, userId),
     });
   }
   if (existing && existing.deleted_at === null) {
@@ -501,9 +757,9 @@ app.post("/auth/link/:provider", async (c) => {
   const emailConflict =
     providerEmail && emailVerified
       ? await c.env.DB.prepare(
-          "SELECT id FROM application_users WHERE email=? AND id<>? AND deleted_at IS NULL LIMIT 1",
+          "SELECT id FROM application_users WHERE project_id=? AND email=? AND id<>? AND deleted_at IS NULL LIMIT 1",
         )
-          .bind(providerEmail, userId)
+          .bind(projectId, providerEmail, userId)
           .first()
       : null;
   const adoptableEmail =
@@ -512,8 +768,15 @@ app.post("/auth/link/:provider", async (c) => {
   try {
     await c.env.DB.batch([
       c.env.DB.prepare(
-        "INSERT INTO application_identities (id,user_id,provider,subject_hash,provider_email) VALUES (?,?,?,?,?)",
-      ).bind(crypto.randomUUID(), userId, provider, subjectHash, providerEmail),
+        "INSERT INTO application_identities (id,project_id,user_id,provider,subject_hash,provider_email) VALUES (?,?,?,?,?,?)",
+      ).bind(
+        crypto.randomUUID(),
+        projectId,
+        userId,
+        provider,
+        subjectHash,
+        providerEmail,
+      ),
       c.env.DB.prepare(
         `UPDATE application_users
          SET is_anonymous=0,
@@ -523,8 +786,8 @@ app.post("/auth/link/:provider", async (c) => {
                ELSE email_verified_at
              END,
              updated_at=CURRENT_TIMESTAMP
-         WHERE id=? AND deleted_at IS NULL`,
-      ).bind(adoptableEmail, adoptableEmail, userId),
+         WHERE project_id=? AND id=? AND deleted_at IS NULL`,
+      ).bind(adoptableEmail, adoptableEmail, projectId, userId),
     ]);
   } catch (cause) {
     if (String(cause).toLowerCase().includes("unique")) {
@@ -540,15 +803,15 @@ app.post("/auth/link/:provider", async (c) => {
     linked: true,
     idempotent: false,
     provider,
-    user: await publicUser(c.env.DB, userId),
+    user: await publicUser(c.env.DB, projectId, userId),
   });
 });
 
 app.get("/auth/me", async (c) => {
   const user = await c.env.DB.prepare(
-    "SELECT * FROM application_users WHERE id=? AND deleted_at IS NULL",
+    "SELECT * FROM application_users WHERE project_id=? AND id=? AND deleted_at IS NULL",
   )
-    .bind(c.get("userId"))
+    .bind(c.get("projectId"), c.get("userId"))
     .first<IdentityUser>();
   return user
     ? response({ user: exposeUser(user) })
@@ -558,11 +821,13 @@ app.get("/auth/me", async (c) => {
 app.patch("/auth/me", async (c) => {
   const body = await bodyObject(c.req.raw);
   await c.env.DB.prepare(
-    "UPDATE application_users SET name=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL",
+    "UPDATE application_users SET name=?,updated_at=CURRENT_TIMESTAMP WHERE project_id=? AND id=? AND deleted_at IS NULL",
   )
-    .bind(optionalText(body.name, 120), c.get("userId"))
+    .bind(optionalText(body.name, 120), c.get("projectId"), c.get("userId"))
     .run();
-  return response({ user: await publicUser(c.env.DB, c.get("userId")) });
+  return response({
+    user: await publicUser(c.env.DB, c.get("projectId"), c.get("userId")),
+  });
 });
 
 app.delete("/auth/me", () => {
@@ -575,8 +840,15 @@ app.delete("/auth/me", () => {
 
 async function eraseIdentityUser(
   env: IdentityEnv,
+  projectId: number,
   userId: string,
 ): Promise<boolean> {
+  const exists = await env.DB.prepare(
+    "SELECT id FROM application_users WHERE project_id=? AND id=? LIMIT 1",
+  )
+    .bind(projectId, userId)
+    .first();
+  if (!exists) return true;
   const files = await env.FILES_SERVICE.fetch(
     `https://files.internal/internal/v1/users/${encodeURIComponent(userId)}`,
     {
@@ -588,17 +860,17 @@ async function eraseIdentityUser(
   if (!files.ok) return false;
   await env.DB.batch([
     env.DB.prepare(
-      "UPDATE application_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id=? AND revoked_at IS NULL",
-    ).bind(userId),
+      "UPDATE application_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE project_id=? AND user_id=? AND revoked_at IS NULL",
+    ).bind(projectId, userId),
     env.DB.prepare(
-      "UPDATE application_users SET email=NULL,password_hash=NULL,name=NULL,deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?",
-    ).bind(userId),
-    env.DB.prepare("DELETE FROM application_identities WHERE user_id=?").bind(
-      userId,
-    ),
+      "UPDATE application_users SET email=NULL,password_hash=NULL,name=NULL,deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE project_id=? AND id=?",
+    ).bind(projectId, userId),
     env.DB.prepare(
-      "DELETE FROM application_identity_tokens WHERE user_id=?",
-    ).bind(userId),
+      "DELETE FROM application_identities WHERE project_id=? AND user_id=?",
+    ).bind(projectId, userId),
+    env.DB.prepare(
+      "DELETE FROM application_identity_tokens WHERE project_id=? AND user_id=?",
+    ).bind(projectId, userId),
   ]);
   return true;
 }
@@ -610,27 +882,153 @@ function internalUserId(value: string): string | null {
     : null;
 }
 
+async function internalProject(c: IdentityContext) {
+  const verified = await verifyInternalProjectContextRequest(
+    c.req.raw,
+    configuredSecrets(
+      c.env.INTERNAL_API_TOKEN,
+      c.env.INTERNAL_API_TOKEN_PREVIOUS,
+    ),
+    "identity",
+  );
+  if (!verified.ok) {
+    return error(
+      verified.code,
+      verified.message,
+      verified.code === "internal_auth_invalid" ? 401 : 403,
+    );
+  }
+  const readiness = await projectScopeReadiness(c.env.DB);
+  if (readiness) return readiness;
+  return verified.context;
+}
+
+async function projectScopeReadiness(db: D1Database): Promise<Response | null> {
+  const state = await projectScopeState(db);
+  if (state.ready) return null;
+  return error(
+    "identity_project_backfill_required",
+    "Identity project scoping is incomplete; backfill legacy rows before querying users",
+    503,
+    true,
+  );
+}
+
+async function projectScopeState(
+  db: D1Database,
+): Promise<{ ready: boolean; unscoped_rows: number | null }> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT
+          (SELECT COUNT(*) FROM application_users WHERE project_id IS NULL) +
+          (SELECT COUNT(*) FROM application_identities WHERE project_id IS NULL) +
+          (SELECT COUNT(*) FROM application_sessions WHERE project_id IS NULL) +
+          (SELECT COUNT(*) FROM application_identity_tokens WHERE project_id IS NULL)
+          AS unscoped`,
+      )
+      .first<{ unscoped: number }>();
+    const unscoped = Number(row?.unscoped || 0);
+    return { ready: unscoped === 0, unscoped_rows: unscoped };
+  } catch {
+    // A pre-0002 schema is also unsafe: do not silently fall back to global data.
+    return { ready: false, unscoped_rows: null };
+  }
+}
+
+function optionalQuery(value: string | undefined, maximum: number): string {
+  const query = value?.trim() || "";
+  if (query.length > maximum) {
+    throw new IdentityInputError(
+      "query_too_long",
+      `Query exceeds ${maximum} characters`,
+      422,
+    );
+  }
+  return query;
+}
+
+function boundedInteger(
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+  name: string,
+): number {
+  if (value === undefined || value === "") return fallback;
+  if (!/^\d+$/u.test(value)) {
+    throw new IdentityInputError(`${name}_invalid`, `${name} is invalid`, 422);
+  }
+  const result = Number(value);
+  if (!Number.isSafeInteger(result) || result < minimum || result > maximum) {
+    throw new IdentityInputError(`${name}_invalid`, `${name} is invalid`, 422);
+  }
+  return result;
+}
+
+function likePattern(value: string): string {
+  return `%${value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+}
+
+function adminUser(user: IdentityAdminUserRow) {
+  const providers = (user.providers || "")
+    .split(",")
+    .map((provider) => provider.trim())
+    .filter(Boolean);
+  const methods = [
+    ...(user.password_configured ? ["password"] : []),
+    ...providers,
+  ];
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    anonymous: user.is_anonymous === 1,
+    email_verified: Boolean(user.email_verified_at),
+    password_configured: user.password_configured === 1,
+    providers,
+    auth_methods: [...new Set(methods)],
+    active_session_count: Number(user.active_session_count || 0),
+    last_session_at: user.last_session_at,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+  };
+}
+
 app.post("/auth/logout", async (c) => {
   await c.env.DB.prepare(
-    "UPDATE application_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?",
+    "UPDATE application_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE project_id=? AND id=?",
   )
-    .bind(c.get("sessionId"))
+    .bind(c.get("projectId"), c.get("sessionId"))
     .run();
   return response({ logged_out: true });
 });
 
 app.post("/auth/opengrow-token", async (c) =>
-  response(await issueOpenGrowToken(c.env, c.get("userId"))),
+  response(
+    await issueOpenGrowToken(c.env, c.get("projectId"), c.get("userId")),
+  ),
 );
 
-async function createSession(env: IdentityEnv, userId: string) {
-  const session = await newSession(env, userId, null);
+async function createSession(
+  env: IdentityEnv,
+  projectId: number,
+  userId: string,
+) {
+  const session = await newSession(env, projectId, userId, null);
   await session.statement.run();
-  return sessionResponse(env, userId, session.id, session.refreshToken);
+  return sessionResponse(
+    env,
+    projectId,
+    userId,
+    session.id,
+    session.refreshToken,
+  );
 }
 
 async function newSession(
   env: IdentityEnv,
+  projectId: number,
   userId: string,
   rotatedFromId: string | null,
 ) {
@@ -647,19 +1045,27 @@ async function newSession(
     id,
     refreshToken,
     statement: env.DB.prepare(
-      "INSERT INTO application_sessions (id,user_id,refresh_token_hash,expires_at,rotated_from_id) VALUES (?,?,?,?,?)",
-    ).bind(id, userId, await sha256(refreshToken), expiresAt, rotatedFromId),
+      "INSERT INTO application_sessions (id,project_id,user_id,refresh_token_hash,expires_at,rotated_from_id) VALUES (?,?,?,?,?,?)",
+    ).bind(
+      id,
+      projectId,
+      userId,
+      await sha256(refreshToken),
+      expiresAt,
+      rotatedFromId,
+    ),
   };
 }
 
 async function sessionResponse(
   env: IdentityEnv,
+  projectId: number,
   userId: string,
   sessionId: string,
   refreshToken: string,
 ) {
   return {
-    access_token: await issueAccessToken(env, userId, sessionId),
+    access_token: await issueAccessToken(env, projectId, userId, sessionId),
     refresh_token: refreshToken,
     token_type: "Bearer",
     expires_in: ttl(env.ACCESS_TOKEN_TTL, 300, 3600, "ACCESS_TOKEN_TTL"),
@@ -669,6 +1075,7 @@ async function sessionResponse(
 
 async function issueEmailToken(
   env: IdentityEnv,
+  projectId: number,
   userId: string,
   email: string,
   purpose: "verify_email" | "reset_password",
@@ -679,9 +1086,9 @@ async function issueEmailToken(
   ).toISOString();
   const tokenHash = await sha256(token);
   await env.DB.prepare(
-    "INSERT INTO application_identity_tokens (id,user_id,purpose,token_hash,expires_at) VALUES (?,?,?,?,?)",
+    "INSERT INTO application_identity_tokens (id,project_id,user_id,purpose,token_hash,expires_at) VALUES (?,?,?,?,?,?)",
   )
-    .bind(crypto.randomUUID(), userId, purpose, tokenHash, expiresAt)
+    .bind(crypto.randomUUID(), projectId, userId, purpose, tokenHash, expiresAt)
     .run();
   const base = env.PUBLIC_API_URL.replace(/\/+$/, "");
   const path = purpose === "verify_email" ? "verify-email" : "reset-password";
@@ -718,15 +1125,15 @@ async function consumeIdentityToken(
   db: D1Database,
   token: string,
   purpose: "verify_email" | "reset_password",
-): Promise<{ id: string; user_id: string } | null> {
+): Promise<{ id: string; project_id: number; user_id: string } | null> {
   if (!token || token.length > 512) return null;
   const row = await db
     .prepare(
-      `SELECT id,user_id FROM application_identity_tokens WHERE token_hash=? AND purpose=? AND consumed_at IS NULL
+      `SELECT id,project_id,user_id FROM application_identity_tokens WHERE project_id IS NOT NULL AND token_hash=? AND purpose=? AND consumed_at IS NULL
      AND datetime(expires_at)>datetime('now') LIMIT 1`,
     )
     .bind(await sha256(token), purpose)
-    .first<{ id: string; user_id: string }>();
+    .first<{ id: string; project_id: number; user_id: string }>();
   if (!row) return null;
   const consumed = await db
     .prepare(
@@ -834,12 +1241,12 @@ function exposeUser(user: IdentityUser) {
     created_at: user.created_at,
   };
 }
-async function publicUser(db: D1Database, id: string) {
+async function publicUser(db: D1Database, projectId: number, id: string) {
   const user = await db
     .prepare(
-      "SELECT * FROM application_users WHERE id=? AND deleted_at IS NULL",
+      "SELECT * FROM application_users WHERE project_id=? AND id=? AND deleted_at IS NULL",
     )
-    .bind(id)
+    .bind(projectId, id)
     .first<IdentityUser>();
   return user ? exposeUser(user) : null;
 }

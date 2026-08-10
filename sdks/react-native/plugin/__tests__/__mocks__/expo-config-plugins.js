@@ -13,5 +13,6 @@ module.exports = {
   withAndroidManifest: passthrough,
   withMainApplication: passthrough,
   withMainActivity: passthrough,
+  withDangerousMod: passthrough,
   createRunOncePlugin: (fn) => fn,
 };

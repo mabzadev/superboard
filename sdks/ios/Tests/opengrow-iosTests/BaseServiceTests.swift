@@ -7,11 +7,9 @@ final class BaseServiceTests: XCTestCase {
         super.setUp()
         MockURLProtocol.reset()
         BaseService.urlProtocolClasses = [MockURLProtocol.self]
-        BaseService.retryDelayOverride = 0
     }
 
     override func tearDown() {
-        BaseService.retryDelayOverride = nil
         BaseService.urlProtocolClasses = []
         MockURLProtocol.reset()
         super.tearDown()
@@ -197,56 +195,94 @@ final class BaseServiceTests: XCTestCase {
     // MARK: - Retry tests
 
     func testNetworkConnectionLostQueuesAndRetriesOnFlush() {
-        let service = BaseService()
-        let url = URL(string: "https://example.com/fgretry")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-
-        var callCount = 0
-        MockURLProtocol.requestHandlers["/fgretry"] = { _ in
-            callCount += 1
-            if callCount == 1 {
-                throw URLError(.networkConnectionLost)
-            }
-            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let data = try JSONSerialization.data(withJSONObject: ["retried": true])
-            return (response, data)
-        }
-
-        let exp = expectation(description: "retry after network lost")
-        service.makeRequest(background: false, URLRequest: request) { success, json in
-            XCTAssertTrue(success, "Retried request should succeed")
-            XCTAssertEqual(json?["retried"] as? Bool, true)
-            exp.fulfill()
-        }
-        wait(for: [exp], timeout: 10)
-        XCTAssertEqual(callCount, 2, "Should have been called twice: initial + retry")
+        assertRetryableTransportError(.networkConnectionLost)
     }
 
     func testNotConnectedToInternetRetriesAndSucceeds() {
-        let service = BaseService()
-        let url = URL(string: "https://example.com/fgnoinet")!
+        assertRetryableTransportError(.notConnectedToInternet)
+    }
+
+    func testTimedOutRetriesAndSucceeds() {
+        assertRetryableTransportError(.timedOut)
+    }
+
+    func testRetryableTransportErrorStopsAfterMaximumRetryCount() {
+        let url = URL(string: "https://example.com/retry-limit")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
 
         var callCount = 0
-        MockURLProtocol.requestHandlers["/fgnoinet"] = { _ in
-            callCount += 1
-            if callCount == 1 {
-                throw URLError(.notConnectedToInternet)
+        var scheduledRetryCount = 0
+        let service = BaseService(
+            foregroundRequestExecutor: { _, completion in
+                callCount += 1
+                completion(nil, nil, URLError(.timedOut))
+                return nil
+            },
+            retryScheduler: { _, operation in
+                scheduledRetryCount += 1
+                operation()
             }
-            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let data = try JSONSerialization.data(withJSONObject: ["online": true])
-            return (response, data)
-        }
+        )
 
-        let exp = expectation(description: "retry after not connected")
+        let exp = expectation(description: "maximum retry count reached")
         service.makeRequest(background: false, URLRequest: request) { success, json in
-            XCTAssertTrue(success, "Retried request should succeed")
-            XCTAssertEqual(json?["online"] as? Bool, true)
+            XCTAssertFalse(success)
+            XCTAssertNil(json)
             exp.fulfill()
         }
-        wait(for: [exp], timeout: 10)
-        XCTAssertEqual(callCount, 2, "Should retry after notConnectedToInternet error")
+        wait(for: [exp], timeout: 1)
+
+        XCTAssertEqual(callCount, 6, "The initial request plus five retries must execute")
+        XCTAssertEqual(scheduledRetryCount, 5, "No retry may be scheduled after the fifth retry")
+    }
+
+    private func assertRetryableTransportError(
+        _ errorCode: URLError.Code,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let url = URL(string: "https://example.com/retry")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        var callCount = 0
+        var scheduledRetryCount = 0
+        let service = BaseService(
+            foregroundRequestExecutor: { _, completion in
+                callCount += 1
+                if callCount == 1 {
+                    completion(nil, nil, URLError(errorCode))
+                    return nil
+                }
+
+                let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!
+                let data = Data(#"{"retried":true}"#.utf8)
+                completion(data, response, nil)
+                return nil
+            },
+            retryScheduler: { delay, operation in
+                scheduledRetryCount += 1
+                XCTAssertGreaterThanOrEqual(delay, 2, file: file, line: line)
+                XCTAssertLessThanOrEqual(delay, 3, file: file, line: line)
+                operation()
+            }
+        )
+
+        let exp = expectation(description: "retry after \(errorCode.rawValue)")
+        service.makeRequest(background: false, URLRequest: request) { success, json in
+            XCTAssertTrue(success, "Retried request should succeed", file: file, line: line)
+            XCTAssertEqual(json?["retried"] as? Bool, true, file: file, line: line)
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 1)
+
+        XCTAssertEqual(callCount, 2, "The request must execute once and retry once", file: file, line: line)
+        XCTAssertEqual(scheduledRetryCount, 1, "Exactly one retry must be scheduled", file: file, line: line)
     }
 }

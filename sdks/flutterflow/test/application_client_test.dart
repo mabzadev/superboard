@@ -15,6 +15,9 @@ void main() {
       final client = OpenGrowApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
+        projectKey: 'project-key',
+        platform: 'ios',
+        identifier: 'com.example.app',
         httpClient: MockClient((request) async {
           requests.add(request);
           if (request.url.path == '/auth/signin/password') {
@@ -41,6 +44,9 @@ void main() {
         password: 'long-test-password',
       );
       expect(session['user_id'], 'user-1');
+      expect(requests[0].headers['project-key'], 'project-key');
+      expect(requests[0].headers['platform'], 'ios');
+      expect(requests[0].headers['identifier'], 'com.example.app');
       await client.profile();
       expect(requests[1].headers['authorization'], 'Bearer access-1');
     },
@@ -81,6 +87,9 @@ void main() {
       final client = OpenGrowApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
+        projectKey: 'project-key',
+        platform: 'ios',
+        identifier: 'com.example.app',
         applicationAccessToken: 'application-access',
         httpClient: MockClient((request) async {
           observed = request;
@@ -384,6 +393,9 @@ void main() {
       final client = OpenGrowApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
+        projectKey: 'project-key',
+        platform: 'ios',
+        identifier: 'com.example.app',
         httpClient: MockClient(
           (_) async => http.Response(
             jsonEncode({

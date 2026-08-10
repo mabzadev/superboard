@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "canonicalRepository": "https://github.com/mbzadev/opengrow-platform",
+  "legacyRepository": "https://github.com/lelordd/app-vocostar",
+  "legacyWorkingTreeCommit": "09d193dabbd3e779b6c84c2e8fed15e1ec6d1643",
+  "lastTrackedLegacyCommit": "49200a3cb945884d1867aef342f507bb868abcee",
+  "importedAt": "2026-08-10",
+  "components": [
+    {
+      "id": "medias-orchestrator",
+      "legacyTrackedPath": "Backend/Cloudflare/workers/send_users_medias",
+      "legacyWorkingPath": "cloudflare/workers/send_users_medias",
+      "legacySnapshot": {
+        "src/index.ts": "9fd0912b4ac39da4b3404f09d843a21fd3f62586653e79cd9e8039763d131057",
+        "container/main.py": "c86cc081f26c86399d73ed256bd6700386fbceb77c5882ddb3521fc9f3b2b0aa",
+        "container/Dockerfile": "3d09f41d9c2da091737175c3daa273aaea0f29bf0769945af667df207fc8a05f",
+        "container/requirements.txt": "090147e7eef980cdc056b48dbe426bd40263d123e7239e5ed29fd0ed0b0b121e"
+      }
+    },
+    {
+      "id": "vocals-orchestrator",
+      "legacyTrackedPath": "Backend/Cloudflare/workers/send_users_vocals",
+      "legacyWorkingPath": "cloudflare/workers/send_users_vocals",
+      "legacySnapshot": {
+        "src/index.ts": "2503dcdb5e28dc330e737587f9f702781e7cdd96f0dbf78e132c08e317051b69",
+        "container/main.py": "a10136a73373f40568c2a68ac9806eaa349cbceee254051cfcbb0fe0ed69a20f",
+        "container/Dockerfile": "5eafc1334bb23d3b24214b9ceb934b0b45fc36829105516ee4c54d73397cfbf3",
+        "container/requirements.txt": "d8b5fc0cd4072ef3c0a787a2de6b2d0517d7c21356f46e22e16b049cef4c942b"
+      }
+    }
+  ]
+}

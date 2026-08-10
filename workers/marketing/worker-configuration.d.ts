@@ -13,9 +13,11 @@ interface __BaseEnv_Env {
 	PUBLIC_API_URL: string;
 	QUEUE_NAME: string;
 	DLQ_NAME: string;
+	EMAIL_INTERNAL_TOKEN: string;
 	INTERNAL_API_TOKEN: string;
 	SMTP_ENCRYPTION_KEY: string;
 	TRACKING_SIGNING_KEY: string;
+	EMAIL_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -28,7 +30,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "PUBLIC_API_URL" | "QUEUE_NAME" | "DLQ_NAME" | "INTERNAL_API_TOKEN" | "SMTP_ENCRYPTION_KEY" | "TRACKING_SIGNING_KEY">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "PUBLIC_API_URL" | "QUEUE_NAME" | "DLQ_NAME" | "EMAIL_INTERNAL_TOKEN" | "INTERNAL_API_TOKEN" | "SMTP_ENCRYPTION_KEY" | "TRACKING_SIGNING_KEY">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.
@@ -36,6 +38,7 @@ declare namespace Cloudflare {
 	interface Env {
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	EMAIL_INTERNAL_TOKEN: string;
 	SMTP_ENCRYPTION_KEY: string;
 	TRACKING_SIGNING_KEY: string;
 	}
@@ -43,6 +46,7 @@ declare namespace Cloudflare {
 interface Env {
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	EMAIL_INTERNAL_TOKEN: string;
 	SMTP_ENCRYPTION_KEY: string;
 	TRACKING_SIGNING_KEY: string;
 }

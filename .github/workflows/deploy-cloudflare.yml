@@ -95,6 +95,7 @@ jobs:
       DEPLOY_BRANCH: ${{ needs.plan.outputs.branch }}
       DEPLOY_SHA: ${{ needs.plan.outputs.sha }}
       OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
+      OPENGROW_EXPECTED_TARGET: ${{ matrix.target }}
       OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
       OPENGROW_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -107,6 +108,8 @@ jobs:
             *) exit 64 ;;
           esac
           test -n "$DEPLOY_SHA"
+          test -n "$OPENGROW_EXPECTED_TARGET"
+          test "$OPENGROW_TARGET" = "$OPENGROW_EXPECTED_TARGET"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.DEPLOY_SHA }}
@@ -155,7 +158,9 @@ jobs:
           test -n "$OPENGROW_TARGET"
           npm run cloudflare:test:targets
           npm run cloudflare:test:services
-          npm run cloudflare:types:check
+          npm run cloudflare:types:check:target -- \
+            --target "$OPENGROW_TARGET" \
+            --environment "$OPENGROW_ENVIRONMENT"
           npm run cloudflare:deploy:all -- --plan
       - name: Validate custom Worker implementations
         if: steps.revision.outputs.deploy == 'true'
@@ -185,7 +190,7 @@ jobs:
       - name: Upload isolated production preflight versions
         if: steps.revision.outputs.deploy == 'true' && env.OPENGROW_ENVIRONMENT == 'production'
         run: npm run cloudflare:deploy:all -- --preflight --upload-only
-      - name: Deploy all enabled Workers
+      - name: Migrate, verify Identity project cutover receipt and deploy all enabled Workers
         id: deploy-workers
         if: steps.revision.outputs.deploy == 'true'
         run: |

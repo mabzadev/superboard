@@ -133,14 +133,49 @@ signé qui projette `premium` et `subscription` dans la table `users` de Vocosta
 | `api-auth-gateway`               | domaine attendu `api.vocostar.com`; aucune route custom dans `wrangler.jsonc` | API mobile, JWT, données app, crédits, création de jobs, JWKS OpenGrow, webhooks et WebSocket | D1 `vocostar-db`, DO `UserVocalsRoom` et `UserMediasRoom`, Service Bindings Pipeline/Data |
 | `intern-data-manager`            | URL `workers.dev` construite explicitement par le code                        | upload R2 direct et suppression D1/R2                                                         | D1 `vocostar-db`, R2 `app-vocostar`                                                       |
 | `intern-pipeline-dispatcher`     | annoncé interne, mais `workers_dev=false` absent                              | enrichit les jobs et les distribue aux orchestrateurs/notifications                           | D1, trois Service Bindings                                                                |
-| `send-users-medias-orchestrator` | annoncé interne, mais `workers_dev=false` absent                              | traitement vidéo/audio/texte, pools Standard/Premium                                          | D1, Workflow, 3 DO, 2 classes Container                                                   |
-| `send-users-vocals-orchestrator` | annoncé interne, mais `workers_dev=false` absent                              | clonage/TTS vocal                                                                             | D1, Workflow, 2 DO, 1 classe Container                                                    |
+| `send-users-medias-orchestrator` | privé (`workers_dev=false`, sans route), généré depuis la target              | traitement vidéo/audio/texte, pools Standard/Premium                                          | D1, Workflow, Dispatcher DO, 2 classes Container                                          |
+| `send-users-vocals-orchestrator` | privé (`workers_dev=false`, sans route), généré depuis la target              | clonage/TTS vocal                                                                             | D1, Workflow, Dispatcher DO, 1 classe Container                                           |
 | `send-app-notifications`         | annoncé interne, mais `workers_dev=false` absent                              | envoi Firebase Cloud Messaging v1 et audit du résultat                                        | D1, secret de compte de service FCM                                                       |
 | `intern-money-manager`           | route publique non déclarée dans le fichier local                             | compatibilité webhook RevenueCat et ajout de crédits legacy                                   | D1, secret `RC_WEBHOOK_SECRET`                                                            |
 
-L'absence de `workers_dev=false` et de contrôle d'authentification interne est
-importante : le fait qu'un Worker soit appelé par Service Binding ne le rend pas
-automatiquement privé si son URL `workers.dev` reste active.
+L'inventaire historique révélait l'absence de `workers_dev=false`. La
+configuration canonique corrige ce point : ces deux Workers n'ont ni URL
+`workers.dev`, ni preview URL, ni route publique. Ils restent joignables
+uniquement par les Service Bindings déclarés dans la target.
+
+Les deux orchestrateurs ne dépendent plus de fichiers Wrangler locaux non suivis.
+Leur code canonique est sous `workers/custom/vocostar/orchestrators`, leur
+provenance historique et les empreintes du snapshot importé sont conservées dans
+`PROVENANCE.json`, et `deploy/targets/vocostar.json` possède leurs noms par
+environnement, Workflow, Durable Objects, Containers, variables et noms de
+secrets. Le plan de déploiement les place avant l'adaptateur `custom`, dont les
+Service Bindings pointent exactement vers ces mêmes noms. Toute target incohérente
+est rejetée avant génération ou déploiement.
+
+Le contrat de transition distingue maintenant trois frontières qui ne sont pas
+interchangeables : les tickets d'entrée proviennent de `files.vocostar.com` et
+du bucket commun `opengrow`, les artefacts historiques restent dans
+`app-vocostar` sous `file.vocostar.com`, et les callbacks restent temporairement
+servis par `api-auth-gateway`. Les conteneurs téléchargent les tickets Files par
+HTTPS avec origine exacte, redirections interdites et plafond d'octets ; seules
+les URLs de sortie legacy sont converties en clés du bucket applicatif.
+
+Cette transition est volontairement **bloquée pour tout déploiement actif**.
+Le plan expose `runtime-bridge-unverified`, `files-input-routing-inactive` et
+`gateway-callback-owner-mismatch`. Les versions peuvent être générées et chargées
+sans trafic, mais la promotion ne devient possible qu'après activation vérifiée
+de Files, portage et test des quatre callbacks dans l'API OpenGrow, changement du
+propriétaire déclaré du gateway et revue explicite de `deploymentStatus`. Ainsi,
+aucune bascule de `api.vocostar.com` ou des orchestrateurs ne peut être déduite de
+la simple présence du code migré.
+
+Le bucket média historique est lui aussi une ressource applicative déclarée par
+la target (`customR2`) et inventoriée par le bootstrap. Les conteneurs reçoivent
+son nom à l'exécution ; ils ne peuvent donc ni basculer silencieusement vers le
+bucket de fichiers OpenGrow, ni embarquer un nom de bucket dans leur source.
+Les tailles de pools sont dérivées de `maxInstances` et les réservations de slot
+ont un bail borné déclaré dans la target : un arrêt brutal de Workflow ne peut
+donc pas bloquer définitivement une instance dans le Dispatcher.
 
 ## Fonctionnement du backend Vocostar
 
@@ -304,8 +339,11 @@ aucune application ne doit réimplémenter un second gestionnaire de session.
 
 ### Achats OpenGrow : architecture prévue et câblage réel
 
-Le package privé FlutterFlow embarqué pointe vers le SDK OpenGrow `sdk-flutterflow-v2.1.5`.
-Il sait charger les offerings, afficher le paywall distant, déclencher l'achat Store,
+L'export historique embarquait une ancienne révision privée du package
+FlutterFlow. La cible utilise exclusivement la référence immuable publiée dans
+`config/sdk-libraries.json`; aucun document d'architecture ne redéfinit sa
+version.
+Le package cible sait charger les offerings, afficher le paywall distant, déclencher l'achat Store,
 restaurer les achats, vérifier localement le `CustomerInfo` JWS et remonter les
 événements de paywall. iOS et Android contiennent la clé projet, `sdk.vocostar.com`,
 le scheme `vocostar` et `go.vocostar.com` pour les Universal/App Links.
@@ -694,9 +732,10 @@ promotion sûre dev/main et favorisent les déploiements sur la mauvaise cible.
 
 La base OpenGrow corrige cette classe de problème par les manifestes versionnés
 `deploy/targets/*`, les IDs de compte fournis uniquement par GitHub Environment et
-les configurations Wrangler générées. Les deux orchestrateurs VocoStar restent des
-dépendances de migration jusqu'à ce que leur configuration suive le même générateur
-ou qu'ils soient entièrement absorbés par le Worker custom.
+les configurations Wrangler générées. Les deux orchestrateurs VocoStar suivent
+désormais le même générateur et sont découverts depuis la target. Ils restent
+néanmoins des dépendances de migration tant que le runtime bridge fail-closed
+décrit plus haut n'est pas vérifié.
 
 ### Résolu le 9 août — paywall unique OpenGrow
 

@@ -13,6 +13,7 @@ import {
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
 import { secretCoordinationPlan } from "./cloudflare-secret-inventory.mjs";
+import { workerNameForService } from "./cloudflare-services.mjs";
 
 const MAX_SECRET_BYTES = 128 * 1024;
 
@@ -81,7 +82,7 @@ export function buildSecretBundlePlan({
       externalPeers: contract.externalPeers ?? [],
       members: contract.members.map((member) => ({
         ...member,
-        worker: target.workers?.[member.service]?.[environment] ?? null,
+        worker: workerNameForService(target, member.service, environment),
       })),
     })),
     blockers,
@@ -300,7 +301,7 @@ async function main() {
     });
     receipts.push({
       service,
-      worker: target.workers[service][environment],
+      worker: workerNameForService(target, service, environment),
       names: Object.keys(values).sort(),
       strategy: "inactive-version",
       versionTag: tag,

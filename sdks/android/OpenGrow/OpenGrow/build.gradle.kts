@@ -24,7 +24,7 @@ private val libraryArtifactId = if (project.hasProperty("artifactId")) {
 private val libraryVersion = if (project.hasProperty("libraryVersion")) {
     project.property("libraryVersion").toString()
 } else {
-    "1.0.2"
+    "1.0.3"
 }
 val NETWORK_LOGGING_VALUE = if (project.hasProperty("networkLogging")) {
     project.property("networkLogging").toString()
@@ -41,10 +41,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-        
-        // Default test server URL - will be overridden by MockWebServer in tests
-        // Tests should set this via OpenGrowTestRule which injects the mock server URL
-        buildConfigField(STRING, "TEST_SERVER_URL", "\"http://localhost:8080/\"")
     }
 
     buildTypes {

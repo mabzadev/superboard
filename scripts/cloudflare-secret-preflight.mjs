@@ -11,6 +11,7 @@ import {
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
 import { requiredSecretInventory } from "./cloudflare-secret-inventory.mjs";
+import { workerNameForService } from "./cloudflare-services.mjs";
 
 export function parseSecretNames(output) {
   const start = output.indexOf("[");
@@ -61,7 +62,7 @@ async function main() {
   const inspectionErrorsByService = {};
 
   for (const { service } of requirements) {
-    const workerName = target.workers?.[service]?.[environment];
+    const workerName = workerNameForService(target, service, environment);
     configuredByService[service] = [];
     if (!workerName) {
       inspectionErrorsByService[service] = `Worker name is not configured for ${service}/${environment}`;

@@ -9,6 +9,7 @@ export const DOMAIN_MODULE_NAMES = [
 ] as const;
 
 export type DomainModuleName = (typeof DOMAIN_MODULE_NAMES)[number];
+export type ProjectContextAudience = DomainModuleName | "identity";
 export type ProjectEnvironment = "production" | "test";
 
 export interface ProjectContext {
@@ -24,7 +25,7 @@ export interface ProjectContext {
 }
 
 export interface InternalProjectContext extends ProjectContext {
-  module: DomainModuleName;
+  module: ProjectContextAudience;
   method: string;
   pathname: string;
 }
@@ -61,7 +62,9 @@ const PROJECT_REF_PATTERN = /^(\d+)-(prod|test)$/;
 const ROLE_PATTERN = /^[a-z][a-z0-9_-]{0,63}$/i;
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 
-export function canonicalProjectContext(context: InternalProjectContext): string {
+export function canonicalProjectContext(
+  context: InternalProjectContext,
+): string {
   return [
     CONTEXT_PREFIX,
     context.module,
@@ -124,19 +127,25 @@ export async function verifyProjectContextSignature(
 export async function verifyInternalProjectContextRequest(
   request: Request,
   secret: SecretCandidates,
-  expectedModule: DomainModuleName,
+  expectedModule: ProjectContextAudience,
   options: { nowSeconds?: number; toleranceSeconds?: number } = {},
 ): Promise<ProjectContextVerification> {
-  const providedToken = request.headers.get(PROJECT_CONTEXT_HEADERS.token) || "";
-  const candidates = typeof secret === "string"
-    ? configuredSecrets(secret)
-    : configuredSecrets(...secret);
+  const providedToken =
+    request.headers.get(PROJECT_CONTEXT_HEADERS.token) || "";
+  const candidates =
+    typeof secret === "string"
+      ? configuredSecrets(secret)
+      : configuredSecrets(...secret);
   const matchingSecrets = (
-    await Promise.all(candidates.map(async (candidate) => ({
-      candidate,
-      matches: await constantTimeEqual(providedToken, candidate),
-    })))
-  ).filter(({ matches }) => matches).map(({ candidate }) => candidate);
+    await Promise.all(
+      candidates.map(async (candidate) => ({
+        candidate,
+        matches: await constantTimeEqual(providedToken, candidate),
+      })),
+    )
+  )
+    .filter(({ matches }) => matches)
+    .map(({ candidate }) => candidate);
   if (!providedToken || matchingSecrets.length !== 1) {
     return {
       ok: false,
@@ -144,7 +153,9 @@ export async function verifyInternalProjectContextRequest(
       message: "Internal authentication failed",
     };
   }
-  if (request.headers.get(PROJECT_CONTEXT_HEADERS.version) !== CONTEXT_VERSION) {
+  if (
+    request.headers.get(PROJECT_CONTEXT_HEADERS.version) !== CONTEXT_VERSION
+  ) {
     return invalidContext("Unsupported project context version");
   }
 
@@ -160,11 +171,14 @@ export async function verifyInternalProjectContextRequest(
   const issuedAt = positiveInteger(
     request.headers.get(PROJECT_CONTEXT_HEADERS.issuedAt),
   );
-  const projectRef = request.headers.get(PROJECT_CONTEXT_HEADERS.projectRef) || "";
+  const projectRef =
+    request.headers.get(PROJECT_CONTEXT_HEADERS.projectRef) || "";
   const environment = request.headers.get(PROJECT_CONTEXT_HEADERS.environment);
   const role = request.headers.get(PROJECT_CONTEXT_HEADERS.role) || "";
-  const requestId = request.headers.get(PROJECT_CONTEXT_HEADERS.requestId) || "";
-  const signature = request.headers.get(PROJECT_CONTEXT_HEADERS.signature) || "";
+  const requestId =
+    request.headers.get(PROJECT_CONTEXT_HEADERS.requestId) || "";
+  const signature =
+    request.headers.get(PROJECT_CONTEXT_HEADERS.signature) || "";
   const parsedRef = PROJECT_REF_PATTERN.exec(projectRef);
 
   if (

@@ -69,7 +69,7 @@ jobs:
       - name: Validate product copy
         run: node scripts/check-product-copy.mjs
       - name: Validate SDK and FlutterFlow catalogues
-        run: npm run sdk:catalog:check && npm run sdk:catalog:test && npm run flutterflow:source:test && npm run flutterflow-library:check && npm run flutterflow-applications:check
+        run: npm run sdk:catalog:check && npm run sdk:catalog:test && npm run sdk:documentation:check && npm run flutterflow:source:test && npm run flutterflow-library:check && npm run flutterflow-applications:check
       - name: Validate Cloudflare and GitHub control planes
         run: npm run migration:inventory && npm run migration:inventory:test && npm run cloudflare:test:targets && npm run cloudflare:test:services
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
@@ -199,7 +199,7 @@ jobs:
           node-version: 22
       - name: Validate JavaScript SDK
         if: needs.plan.outputs.javascript == 'true'
-        run: npm ci && npm test && npm run build
+        run: npm ci && npm run check
         working-directory: sdks/javascript
       - name: Enable Corepack for React Native
         if: needs.plan.outputs.react_native == 'true'

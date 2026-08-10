@@ -3,9 +3,27 @@ import { config } from "@/lib/config";
 
 export type PlatformServiceStatus = {
   id: string;
+  kind?: string;
+  workerName?: string | null;
+  enabled?: boolean;
   status: "ok" | "degraded" | "unavailable" | "disabled" | "misconfigured";
   description: string;
   responseTimeMs: number | null;
+  health?: {
+    mode: "self" | "binding" | "public";
+    path: string;
+    url: string | null;
+  };
+  capabilities?: string[];
+  routes?: string[];
+  dependencies?: {
+    services: string[];
+    stores: string[];
+    queues: string[];
+    externalWorkers: Array<{ binding: string; workerName: string }>;
+  };
+  jobTypes?: string[];
+  jobs?: Record<string, number> | null;
   detail?: unknown;
   error?: string;
 };
@@ -32,6 +50,13 @@ export type PlatformStatus = {
     target: string;
     release: string;
     publicRouting: "active" | "staged" | "unknown";
+  };
+  catalog?: {
+    schemaVersion: 1;
+    status: "ok" | "misconfigured";
+    target: string;
+    environment: string;
+    error?: string;
   };
   endpoints: Record<string, string | null>;
   api: {
@@ -168,6 +193,64 @@ export type PlatformAccountErasure = {
   completedAt: string | null;
 };
 
+export type PlatformEmailOperation = {
+  id: string;
+  kind: "transactional" | "marketing" | "test";
+  projectId: number | null;
+  templateKey: string | null;
+  subject: string;
+  status: "captured" | "queued" | "sending" | "sent" | "failed";
+  transport: "capture" | "smtp";
+  recipientCount: number;
+  failedRecipients: number;
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sentAt: string | null;
+};
+
+export type PlatformEmailDeadLetter = {
+  id: string;
+  queueMessageId: string;
+  emailMessageId: string | null;
+  sourceQueue: string;
+  jobType: string | null;
+  replayable: boolean;
+  attempts: number;
+  status: "quarantined" | "discarded";
+  resolution: "replayed" | "discarded" | null;
+  receivedAt: string;
+  resolvedAt: string | null;
+};
+
+export type PlatformEmailTransportOperation = {
+  id: string;
+  source: string;
+  projectId: number;
+  referenceId: string;
+  profileId: string;
+  status: "sending" | "sent" | "failed" | "outcome_unknown";
+  attempts: number;
+  providerMessageId: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sentAt: string | null;
+};
+
+export type PlatformEmailOperations = {
+  generatedAt: string;
+  queue: {
+    backlogCount: number;
+    backlogBytes: number;
+    oldestMessageAt: string | null;
+  } | null;
+  messages: PlatformEmailOperation[];
+  transportDeliveries: PlatformEmailTransportOperation[];
+  deadLetters: PlatformEmailDeadLetter[];
+};
+
 export type PlatformLibrary = {
   id: string;
   displayName: string;
@@ -271,6 +354,42 @@ export async function getPlatformAccountErasures(
     | { data: PlatformAccountErasure[] }
     | PlatformAccountErasure[];
   return Array.isArray(body) ? body : body.data;
+}
+
+export async function getPlatformEmailOperations(
+  query = "limit=50"
+): Promise<PlatformEmailOperations> {
+  const response = await GET(
+    `${config.apiPath}/platform/email/operations?${query}`,
+    { timeout: 10_000, maxRetries: 1 }
+  );
+  return response.data as PlatformEmailOperations;
+}
+
+export async function replayPlatformEmailDeadLetter(
+  deadLetterId: string
+): Promise<{ id: string; status: "replayed"; messageId: string }> {
+  const response = await POST(
+    `${config.apiPath}/platform/email/dead-letters/${encodeURIComponent(deadLetterId)}/replay`,
+    {},
+    { retry: false, timeout: 15_000 }
+  );
+  return response.data as {
+    id: string;
+    status: "replayed";
+    messageId: string;
+  };
+}
+
+export async function discardPlatformEmailDeadLetter(
+  deadLetterId: string
+): Promise<{ id: string; status: "discarded" }> {
+  const response = await POST(
+    `${config.apiPath}/platform/email/dead-letters/${encodeURIComponent(deadLetterId)}/discard`,
+    {},
+    { retry: false, timeout: 15_000 }
+  );
+  return response.data as { id: string; status: "discarded" };
 }
 
 export async function retryPlatformCustomJob(

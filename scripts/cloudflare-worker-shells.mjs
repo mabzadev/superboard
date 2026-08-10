@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { cloudflareClient } from "./cloudflare-bootstrap.mjs";
 import { deploymentOrder } from "./cloudflare-deploy-plan.mjs";
+import { workerNameForService } from "./cloudflare-services.mjs";
 import {
   cloudflareAccountId,
   cloudflareEnv,
@@ -27,7 +28,7 @@ export function buildWorkerShellPlan({
 }) {
   const existing = new Set(existingWorkerNames.map((name) => String(name)));
   const workers = deploymentOrder(target).map((service) => {
-    const name = String(target.workers?.[service]?.[environment] ?? "");
+    const name = String(workerNameForService(target, service, environment) ?? "");
     if (!WORKER_NAME.test(name)) {
       throw new Error(`Invalid Worker name for ${service}/${environment}`);
     }

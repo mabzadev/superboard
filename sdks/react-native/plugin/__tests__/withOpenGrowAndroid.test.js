@@ -56,17 +56,45 @@ describe('withOpenGrowAndroid - app dependency', () => {
     expect(result).toContain(
       "implementation 'io.opengrow:opengrow-android-sdk:1.0.2'"
     );
-    expect(result).toContain(
-      '// @mbzadev/opengrow-react-native-sdk:dep'
-    );
+    expect(result).toContain('// @mbzadev/opengrow-react-native-sdk:dep');
   });
 
-  it('treats the legacy marker as already configured', () => {
+  it('migrates the legacy marker and retired coordinate', () => {
     const legacy = SAMPLE_APP_BUILD_GRADLE.replace(
       'implementation "com.facebook.react:react-android"',
       "implementation 'io.opengrow:OpenGrow:1.1.1' // @mbzadev/opengrow-react-native:dep"
     );
-    expect(addOpenGrowAppDependency(legacy)).toBe(legacy);
+    const result = addOpenGrowAppDependency(legacy);
+    expect(result).toContain(
+      "implementation 'io.opengrow:opengrow-android-sdk:1.0.2' // @mbzadev/opengrow-react-native-sdk:dep"
+    );
+    expect(result).not.toContain('io.opengrow:OpenGrow:1.1.1');
+    expect(addOpenGrowAppDependency(result)).toBe(result);
+  });
+
+  it('migrates the retired lowercase coordinate without a marker', () => {
+    const legacy = SAMPLE_APP_BUILD_GRADLE.replace(
+      'implementation "com.facebook.react:react-android"',
+      'implementation("io.opengrow:opengrow-android:1.0.0")'
+    );
+    const result = addOpenGrowAppDependency(legacy);
+    expect(result).toContain(
+      "implementation 'io.opengrow:opengrow-android-sdk:1.0.2'"
+    );
+    expect(result).not.toContain('io.opengrow:opengrow-android:1.0.0');
+  });
+
+  it('collapses duplicate legacy and current dependencies', () => {
+    const duplicate = SAMPLE_APP_BUILD_GRADLE.replace(
+      'implementation "com.facebook.react:react-android"',
+      `implementation 'io.opengrow:OpenGrow:1.1.1'
+  implementation 'io.opengrow:opengrow-android-sdk:1.0.2'`
+    );
+    const result = addOpenGrowAppDependency(duplicate);
+    expect(
+      (result.match(/io\.opengrow:opengrow-android-sdk:1\.0\.2/g) || []).length
+    ).toBe(1);
+    expect(result).not.toContain('io.opengrow:OpenGrow:1.1.1');
   });
 
   it('is idempotent with the current marker', () => {
@@ -78,7 +106,9 @@ describe('withOpenGrowAndroid - app dependency', () => {
 describe('withOpenGrowAndroid - MainApplication transforms', () => {
   describe('addOpenGrowImportToMainApplication', () => {
     it('adds OpenGrow import after last import', () => {
-      const result = addOpenGrowImportToMainApplication(SAMPLE_MAIN_APPLICATION);
+      const result = addOpenGrowImportToMainApplication(
+        SAMPLE_MAIN_APPLICATION
+      );
       expect(result).toContain('import io.opengrow.OpenGrow');
       const opengrowIndex = result.indexOf('import io.opengrow.OpenGrow');
       const soloaderIndex = result.indexOf(
@@ -90,7 +120,8 @@ describe('withOpenGrowAndroid - MainApplication transforms', () => {
     it('does not duplicate import', () => {
       const first = addOpenGrowImportToMainApplication(SAMPLE_MAIN_APPLICATION);
       const second = addOpenGrowImportToMainApplication(first);
-      const count = (second.match(/import io\.opengrow\.OpenGrow/g) || []).length;
+      const count = (second.match(/import io\.opengrow\.OpenGrow/g) || [])
+        .length;
       expect(count).toBe(1);
     });
   });
@@ -160,7 +191,8 @@ describe('withOpenGrowAndroid - MainActivity transforms', () => {
     it('does not duplicate import', () => {
       const first = addOpenGrowImportToMainActivity(SAMPLE_MAIN_ACTIVITY);
       const second = addOpenGrowImportToMainActivity(first);
-      const count = (second.match(/import io\.opengrow\.OpenGrow/g) || []).length;
+      const count = (second.match(/import io\.opengrow\.OpenGrow/g) || [])
+        .length;
       expect(count).toBe(1);
     });
   });

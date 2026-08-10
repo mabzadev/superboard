@@ -11,7 +11,8 @@ import {
   DOMAIN_SERVICES,
   DOMAIN_SERVICE_REGISTRY,
   PLATFORM_SERVICE_SECRETS,
-  assertService,
+  assertServiceForTarget,
+  managedWorkerDefinition,
 } from "./cloudflare-services.mjs";
 import { secretCoordinationPlan } from "./cloudflare-secret-inventory.mjs";
 
@@ -77,7 +78,7 @@ export function buildLegacySecretReplacement({
 }
 
 function assertDeclaredSecret(target, service, secretName) {
-  assertService(service);
+  assertServiceForTarget(target, service);
   if (!/^[A-Z][A-Z0-9_]+$/.test(secretName ?? "")) {
     throw new Error("--name must be an uppercase secret name");
   }
@@ -107,6 +108,13 @@ function assertDeclaredSecret(target, service, secretName) {
     throw new Error(
       `${secretName} is not declared for custom; expected one of ` +
         (target.customWorker?.secrets ?? []).join(", "),
+    );
+  }
+  const managed = managedWorkerDefinition(target, service);
+  if (managed && !managed.secrets.includes(secretName)) {
+    throw new Error(
+      `${secretName} is not declared for ${service}; expected one of ` +
+        managed.secrets.join(", "),
     );
   }
 }

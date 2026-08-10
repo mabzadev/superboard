@@ -39,7 +39,9 @@ jobs:
       - name: Install repository tooling for the SDK catalogue
         run: npm ci --ignore-scripts
       - name: Validate the complete SDK catalogue
-        run: node scripts/sdk-catalog.mjs check
+        run: |
+          node scripts/sdk-catalog.mjs check
+          node scripts/sdk-documentation.mjs check
       - name: Resolve whether the complete FlutterFlow SDK set is published
         id: sdk-set
         run: |

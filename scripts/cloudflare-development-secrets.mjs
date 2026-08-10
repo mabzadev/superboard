@@ -176,6 +176,7 @@ export async function generateDevelopmentSecretAssignments({
     },
     marketing: {
       INTERNAL_API_TOKEN: moduleToken,
+      EMAIL_INTERNAL_TOKEN: emailToken,
       SMTP_ENCRYPTION_KEY: token(),
       TRACKING_SIGNING_KEY: token(),
     },

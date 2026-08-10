@@ -49,6 +49,25 @@ test("deployment matrix matches its public schema and standalone validator", asy
   assert.equal(validateDeploymentConfiguration(configuration), true);
 });
 
+test("legacy deployment matrices without a versioned target lock are rejected", () => {
+  assert.throws(
+    () =>
+      validateDeploymentConfiguration({
+        schemaVersion: 1,
+        deployments: [
+          {
+            id: "legacy-development",
+            branch: "dev",
+            githubEnvironment: "development",
+            cloudflareEnvironment: "development",
+            referenceAcceptance: true,
+          },
+        ],
+      }),
+    /Invalid Cloudflare deployment matrix root/u,
+  );
+});
+
 test("deployment matrix selects GitHub Environments without embedding accounts", async () => {
   const configuration = await loadDeploymentMatrix();
   const development = selectDeployments(configuration, "dev");
@@ -56,6 +75,7 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
   assert.deepEqual(development.matrix.include, [
     {
       id: "mbza-development",
+      target: "mbza-development",
       githubEnvironment: "development",
       cloudflareEnvironment: "development",
     },
@@ -64,6 +84,7 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
   assert.deepEqual(production.matrix.include, [
     {
       id: "vocostar-production",
+      target: "vocostar",
       githubEnvironment: "production",
       cloudflareEnvironment: "production",
     },
@@ -86,11 +107,12 @@ test("every deployment is backed by a target-selecting GitHub Environment", asyn
 
 test("production environments require deployment and encrypted-backup credentials", () => {
   const configuration = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     deployments: [
       {
         id: "example-production",
         branch: "main",
+        target: "example",
         githubEnvironment: "production-example",
         cloudflareEnvironment: "production",
         referenceAcceptance: false,
@@ -115,16 +137,53 @@ test("production environments require deployment and encrypted-backup credential
   );
 });
 
+test("a GitHub Environment cannot redirect a deployment to another target", () => {
+  const configuration = {
+    schemaVersion: 2,
+    deployments: [
+      {
+        id: "example-production",
+        branch: "main",
+        target: "expected-application",
+        githubEnvironment: "production-example",
+        cloudflareEnvironment: "production",
+        referenceAcceptance: false,
+      },
+    ],
+  };
+  assert.throws(
+    () =>
+      validateControlPlaneCoverage(configuration, {
+        repositories: {
+          platform: {
+            environments: {
+              "production-example": {
+                variables: { OPENGROW_TARGET: "another-application" },
+                secrets: [
+                  "CLOUDFLARE_ACCOUNT_ID",
+                  "CLOUDFLARE_API_TOKEN",
+                  "OPENGROW_BACKUP_ENCRYPTION_KEY",
+                ],
+              },
+            },
+          },
+        },
+      }),
+    /must equal the versioned deployment target expected-application/u,
+  );
+});
+
 test("a branch cannot select two reference acceptance environments", () => {
   assert.throws(
     () =>
       selectDeployments(
         {
-          schemaVersion: 1,
+          schemaVersion: 2,
           deployments: [
             {
               id: "one",
               branch: "dev",
+              target: "one",
               githubEnvironment: "development-one",
               cloudflareEnvironment: "development",
               referenceAcceptance: true,
@@ -132,6 +191,7 @@ test("a branch cannot select two reference acceptance environments", () => {
             {
               id: "two",
               branch: "dev",
+              target: "two",
               githubEnvironment: "development-two",
               cloudflareEnvironment: "development",
               referenceAcceptance: true,
@@ -148,11 +208,12 @@ test("branch and Cloudflare environment cannot cross development and production"
   assert.throws(
     () =>
       validateDeploymentConfiguration({
-        schemaVersion: 1,
+        schemaVersion: 2,
         deployments: [
           {
             id: "unsafe",
             branch: "dev",
+            target: "unsafe",
             githubEnvironment: "unsafe-production",
             cloudflareEnvironment: "production",
             referenceAcceptance: false,

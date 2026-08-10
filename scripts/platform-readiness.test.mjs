@@ -80,13 +80,39 @@ test("SDK readiness keeps unreleased source versions visible", () => {
   );
 });
 
-function githubSdkFixture({ refs = {}, tags = {}, releases = [] } = {}) {
+function githubSdkFixture({
+  refs = {},
+  tags = {},
+  releases = [],
+  packages = {},
+} = {}) {
   const releaseSet = new Set(releases);
   return (args) => {
     const endpoint = args[1];
     const refMarker = "/git/ref/tags/";
     const tagMarker = "/git/tags/";
     const releaseMarker = "/releases/tags/";
+    const packageMatch = endpoint.match(
+      /(?:^|\/)(?:users|orgs)\/[^/]+\/packages\/([^/]+)\/([^/?]+)(\/versions\?per_page=100)?$/u,
+    );
+    if (packageMatch) {
+      const [, packageType, encodedName, versionsPath] = packageMatch;
+      const descriptor =
+        packages[`${packageType}/${decodeURIComponent(encodedName)}`];
+      if (!descriptor) return { ok: false, notFound: true };
+      return versionsPath
+        ? {
+            ok: true,
+            data: descriptor.versions.map((name) => ({ name })),
+          }
+        : {
+            ok: true,
+            data: {
+              visibility: descriptor.visibility,
+              repository: { full_name: descriptor.repository },
+            },
+          };
+    }
     if (endpoint.includes(refMarker)) {
       const reference = decodeURIComponent(endpoint.split(refMarker)[1]);
       const object = refs[reference];
@@ -187,6 +213,89 @@ test("remote SDK readiness peels lightweight, annotated and SwiftPM tags", () =>
   assert.equal(aliasMismatch.ready, false);
   assert.ok(
     aliasMismatch.publications[1].blockers.includes("package-ref-sha-mismatch"),
+  );
+});
+
+test("package-backed SDK readiness verifies public ownership and exact versions", () => {
+  const androidSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const jsSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const catalogue = {
+    libraries: [
+      {
+        id: "android",
+        packageName: "io.opengrow:opengrow-android-sdk",
+        sourceVersion: "1.0.2",
+        latestReleaseVersion: "1.0.2",
+        releaseRef: "sdk-android-v1.0.2",
+        releaseStatus: "released",
+        releaseSha: androidSha,
+      },
+      {
+        id: "javascript",
+        packageName: "@mbzadev/opengrow-js-sdk",
+        sourceVersion: "1.0.2",
+        latestReleaseVersion: "1.0.1",
+        releaseRef: "sdk-js-v1.0.1",
+        releaseStatus: "pending-release",
+        releaseSha: jsSha,
+      },
+    ],
+  };
+  const fixture = {
+    refs: {
+      "sdk-android-v1.0.2": { type: "commit", sha: androidSha },
+      "sdk-js-v1.0.1": { type: "commit", sha: jsSha },
+    },
+    releases: ["sdk-android-v1.0.2", "sdk-js-v1.0.1"],
+    packages: {
+      "maven/io.opengrow.opengrow-android-sdk": {
+        visibility: "public",
+        repository: "mbzadev/opengrow-platform",
+        versions: ["1.0.2"],
+      },
+      "npm/opengrow-js-sdk": {
+        visibility: "public",
+        repository: "mbzadev/opengrow-platform",
+        versions: ["1.0.1"],
+      },
+    },
+  };
+  const ready = inspectSdkRemoteState(
+    catalogue,
+    "mbzadev/opengrow-platform",
+    githubSdkFixture(fixture),
+  );
+  assert.equal(ready.ready, true);
+  assert.equal(ready.publications[0].packageArtifact.visibility, "public");
+  assert.equal(ready.publications[1].candidateReady, true);
+  assert.equal(ready.publications[1].baseline.ready, true);
+
+  const occupiedCandidate = structuredClone(fixture);
+  occupiedCandidate.packages["npm/opengrow-js-sdk"].versions.push("1.0.2");
+  const occupied = inspectSdkRemoteState(
+    catalogue,
+    "mbzadev/opengrow-platform",
+    githubSdkFixture(occupiedCandidate),
+  );
+  assert.equal(occupied.ready, false);
+  assert.ok(
+    occupied.publications[1].blockers.includes(
+      "candidate-package-version-exists",
+    ),
+  );
+
+  const wrongOwner = structuredClone(fixture);
+  wrongOwner.packages["maven/io.opengrow.opengrow-android-sdk"].repository =
+    "mbzadev/opengrow";
+  const mismatched = inspectSdkRemoteState(
+    catalogue,
+    "mbzadev/opengrow-platform",
+    githubSdkFixture(wrongOwner),
+  );
+  assert.ok(
+    mismatched.publications[0].blockers.includes(
+      "package-artifact-repository-mismatch",
+    ),
   );
 });
 

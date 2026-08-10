@@ -1,0 +1,30 @@
+import groovy.json.JsonSlurper
+
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'react-native-android-contract'
+
+def repositoryRoot = file('../../..')
+def nativeContract = new JsonSlurper().parse(
+    new File(repositoryRoot, 'sdks/react-native/plugin/native-contract.json')
+)
+
+dependencyResolutionManagement {
+    versionCatalogs {
+        create('openGrowAndroidLibs') {
+            from(files(new File(repositoryRoot, 'sdks/android/OpenGrow/gradle/libs.versions.toml')))
+        }
+    }
+}
+
+includeBuild(new File(repositoryRoot, 'sdks/android/OpenGrow')) {
+    dependencySubstitution {
+        substitute module(nativeContract.android.packageName) using project(':OpenGrow')
+    }
+}

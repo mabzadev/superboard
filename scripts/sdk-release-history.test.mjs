@@ -91,13 +91,13 @@ test("release history cannot classify the current successful release as failed",
   const catalogue = await loadSdkCatalog();
   const history = await loadSdkReleaseHistory();
   const conflict = structuredClone(history);
+  const ios = catalogue.libraries.find((library) => library.id === "ios");
   conflict.immutableFailures[0] = {
     ...conflict.immutableFailures[0],
-    version: "1.0.2",
-    releaseTag: "sdk-ios-v1.0.2",
-    packageRefs: ["1.0.2"],
-    releaseSha: catalogue.libraries.find((library) => library.id === "ios")
-      .releaseSha,
+    version: ios.latestReleaseVersion,
+    releaseTag: `sdk-ios-v${ios.latestReleaseVersion}`,
+    packageRefs: [ios.latestReleaseVersion],
+    releaseSha: ios.releaseSha,
   };
   const result = await validateSdkReleaseHistory(conflict, catalogue);
   assert.ok(

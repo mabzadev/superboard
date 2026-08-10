@@ -113,6 +113,19 @@ export type DeliveryOutboxItem = {
   last_error?: string | null;
   created_at: string;
 };
+export type MarketingDeadLetter = {
+  id: string;
+  source_queue: string;
+  queue_message_id: string;
+  job_type: string | null;
+  resource_id: string | null;
+  replayable: boolean;
+  attempts: number;
+  status: "quarantined" | "discarded";
+  resolution: "replayed" | "discarded" | null;
+  received_at: string;
+  resolved_at: string | null;
+};
 export type SubscriberExport = {
   subscriber: EmailSubscriber;
   memberships: Array<Record<string, unknown>>;
@@ -443,6 +456,27 @@ export async function getDeliveryOutbox(projectRef: string) {
 export async function retryDeliveryOutbox(projectRef: string, id: string) {
   return data<{ queued: boolean }>(
     await POST(path(projectRef, `/settings/delivery-outbox/${id}/retry`), {})
+  );
+}
+export async function getMarketingDeadLetters(projectRef: string) {
+  return data<MarketingDeadLetter[]>(
+    await GET(path(projectRef, "/settings/dead-letters"))
+  );
+}
+export async function replayMarketingDeadLetter(
+  projectRef: string,
+  id: string
+) {
+  return data<{ id: string; status: "replayed"; job_type: string }>(
+    await POST(path(projectRef, `/settings/dead-letters/${id}/replay`), {})
+  );
+}
+export async function discardMarketingDeadLetter(
+  projectRef: string,
+  id: string
+) {
+  return data<{ id: string; status: "discarded" }>(
+    await POST(path(projectRef, `/settings/dead-letters/${id}/discard`), {})
   );
 }
 export async function getMarketingAudit(projectRef: string) {

@@ -19,6 +19,10 @@ import {
   writeMigrationBatchReceipt,
 } from "./cloudflare-migration-batch.mjs";
 import { sha256File } from "./cloudflare-d1-backup.mjs";
+import {
+  resolveDeploymentRevision,
+  verifyIdentityProjectCutover,
+} from "./cloudflare-identity-cutover.mjs";
 
 const args = parseArgs();
 if (args["skip-backup"]) {
@@ -46,8 +50,18 @@ if (args.plan) {
   console.log(JSON.stringify(plan, null, 2));
   process.exit(0);
 }
+const targetCloudflareEnv = cloudflareEnv(target);
+
+if (plan.blockers.length > 0) {
+  throw new Error(
+    `Refusing active deployment: ${plan.blockers
+      .map(({ id, action }) => `${id}: ${action}`)
+      .join(" | ")}`,
+  );
+}
 
 let migrationBatchReceipt = null;
+let identityCutoverReceipt = null;
 if (plan.migrationStrategy === "backup-and-migrate-all-before-workers") {
   const backupDirectory =
     args["backup-directory"] ?? process.env.OPENGROW_BACKUP_DIRECTORY;
@@ -72,7 +86,7 @@ if (plan.migrationStrategy === "backup-and-migrate-all-before-workers") {
     environment,
     serviceSelector: "all",
     backupDirectory,
-    env: cloudflareEnv(target),
+    env: targetCloudflareEnv,
     now,
   });
   const receipt = buildMigrationBatchReceipt({
@@ -91,6 +105,20 @@ if (plan.migrationStrategy === "backup-and-migrate-all-before-workers") {
     sha256: await sha256File(receiptPath),
   };
   console.log(`Verified complete D1 migration batch: ${receiptPath}`);
+  if (services.includes("identity")) {
+    identityCutoverReceipt = await verifyIdentityProjectCutover({
+      target,
+      targetName,
+      environment,
+      accountId: targetCloudflareEnv.CLOUDFLARE_ACCOUNT_ID,
+      revision: resolveDeploymentRevision(targetCloudflareEnv),
+      receiptDirectory: backupDirectory,
+      env: targetCloudflareEnv,
+    });
+    console.log(
+      `Verified Identity project cutover: ${identityCutoverReceipt.path}`,
+    );
+  }
 }
 
 for (const service of services) {
@@ -113,6 +141,14 @@ for (const service of services) {
           migrationBatchReceipt.path,
           "--migration-batch-sha256",
           migrationBatchReceipt.sha256,
+        ]
+      : []),
+    ...(identityCutoverReceipt && service === "identity"
+      ? [
+          "--identity-cutover-receipt",
+          identityCutoverReceipt.path,
+          "--identity-cutover-sha256",
+          identityCutoverReceipt.sha256,
         ]
       : []),
     ...(args["backup-directory"]

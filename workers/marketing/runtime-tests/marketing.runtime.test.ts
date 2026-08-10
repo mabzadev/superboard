@@ -547,16 +547,80 @@ describe("Marketing in the Workers runtime", () => {
     await expect(
       env.DB.prepare(
         `
-      SELECT source_queue, message_id, job_type, replayable, status FROM marketing_dead_letters
+      SELECT id, project_id, source_queue, message_id, job_type, replayable, status FROM marketing_dead_letters
       WHERE message_id = 'marketing-dead-letter-1'
     `,
       ).first(),
     ).resolves.toMatchObject({
+      project_id: 12,
       source_queue: "marketing-test-delivery-dlq",
       message_id: "marketing-dead-letter-1",
       job_type: "marketing.campaign.dispatch",
       replayable: 1,
       status: "quarantined",
+    });
+    const stored = await env.DB.prepare(
+      "SELECT id FROM marketing_dead_letters WHERE message_id = 'marketing-dead-letter-1'",
+    ).first<{ id: string }>();
+    const listed = await SELF.fetch(
+      await signedRequest("/internal/v1/settings/dead-letters", 12),
+    );
+    expect(listed.status).toBe(200);
+    await expect(listed.json()).resolves.toMatchObject({
+      data: [
+        {
+          id: stored?.id,
+          job_type: "marketing.campaign.dispatch",
+          replayable: true,
+          status: "quarantined",
+        },
+      ],
+    });
+    const replayed = await SELF.fetch(
+      await signedRequest(
+        `/internal/v1/settings/dead-letters/${stored?.id}/replay`,
+        12,
+        "POST",
+        {},
+        "marketing-dead-letter-replay",
+      ),
+    );
+    expect(replayed.status).toBe(202);
+    await expect(
+      env.DB.prepare(
+        "SELECT status, resolution, resolved_at FROM marketing_dead_letters WHERE id = ?",
+      )
+        .bind(stored?.id)
+        .first(),
+    ).resolves.toMatchObject({
+      status: "discarded",
+      resolution: "replayed",
+    });
+
+    const discardId = crypto.randomUUID();
+    await env.DB.prepare(
+      `
+      INSERT INTO marketing_dead_letters
+        (id, project_id, source_queue, message_id, job_type, payload_json, payload_sha256,
+         payload_bytes, replayable, attempts)
+      VALUES (?, 12, 'marketing-test-delivery-dlq', 'discard-message',
+        'marketing.campaign.dispatch', '{}', 'hash', 2, 0, 6)
+    `,
+    )
+      .bind(discardId)
+      .run();
+    const discarded = await SELF.fetch(
+      await signedRequest(
+        `/internal/v1/settings/dead-letters/${discardId}/discard`,
+        12,
+        "POST",
+        {},
+        "marketing-dead-letter-discard",
+      ),
+    );
+    expect(discarded.status).toBe(200);
+    await expect(discarded.json()).resolves.toMatchObject({
+      data: { id: discardId, status: "discarded" },
     });
   });
 

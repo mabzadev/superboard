@@ -211,9 +211,11 @@ La responsabilité est volontairement séparée :
 2. Email transporte les messages transactionnels et de test : journal
    idempotent, capture, file, verrou de livraison, tentatives, SMTP, retry, DLQ
    et reçu fournisseur.
-3. Marketing transporte ses campagnes avec la même bibliothèque SMTP commune,
-   tout en gardant ses profils, quotas, bascule, consentements et événements par
-   projet. Une application sans Marketing ne déploie donc aucun état newsletter.
+3. Marketing garde ses profils, quotas, bascule, consentements et événements par
+   projet, puis délègue le message final personnalisé au Worker Email par liaison
+   privée. Email est l'unique autorité qui ouvre une connexion SMTP et conserve
+   un reçu idempotent sans persister le secret ou le corps délégué. Une
+   application sans Marketing ne déploie donc aucun état newsletter.
 4. API/Identity émettent les emails transactionnels par liaison privée :
    vérification, récupération de mot de passe, invitation et export.
 5. En développement, `transport=capture`; aucun email transactionnel de test ne part chez un
@@ -226,6 +228,9 @@ La responsabilité est volontairement séparée :
 8. Toute relance transactionnelle avec la même clé et le même contenu récupère
    le reçu existant; une réutilisation de clé avec un contenu différent est
    refusée et un verrou D1 empêche deux consommateurs d'expédier le même destinataire.
+9. Le back-office Marketing expose les éléments de DLQ par projet sans leur
+   payload; replay et discard sont idempotents, audités et un échec Queue remet
+   l'élément en quarantaine.
 
 Les notifications push suivent la même règle : orchestration commune et
 identifiants APNs/FCM propres à chaque application. Ces identifiants sont
@@ -366,11 +371,13 @@ obtenues via l'API Analytics avec un jeton en lecture seule; elles ne doivent pa
 | `main`                    | une ou plusieurs productions | manifests des applications | déploiements automatiques multi-comptes    |
 
 `config/cloudflare-deployments.json` sélectionne, pour chaque branche, tous les
-GitHub Environments à déployer. Chaque Environment fournit `OPENGROW_TARGET`,
-`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` et, en production, la clé de
-chiffrement des sauvegardes. Un nouveau compte Cloudflare nécessite un nouveau
-manifeste, une entrée de matrice et des secrets d'environnement, jamais une
-copie du workflow ni une modification des constantes du code.
+GitHub Environments à déployer et fixe la cible attendue pour chacun. Chaque
+Environment fournit `OPENGROW_TARGET`, qui doit être strictement identique à
+cette cible versionnée, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` et, en
+production, la clé de chiffrement des sauvegardes. Une divergence bloque le job
+avant toute commande Cloudflare. Un nouveau compte Cloudflare nécessite un
+nouveau manifeste, une entrée de matrice et des secrets d'environnement, jamais
+une copie du workflow ni une modification des constantes du code.
 
 La CI des pull requests effectue les typechecks, tests et dry-runs de tous les
 Workers communs, modules et implémentations custom. Le workflow de déploiement

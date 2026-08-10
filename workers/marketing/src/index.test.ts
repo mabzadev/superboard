@@ -5,13 +5,12 @@ import {
 } from "@opengrow/contracts/project-context";
 import worker, { serializeSubscriber } from "./index";
 import { encryptJson, decryptJson } from "./secrets";
-import { buildMessage } from "./smtp";
-import type { Env, SmtpPublicConfig } from "./types";
+import type { Env } from "./types";
 
 const env = {
   INTERNAL_API_TOKEN: "internal-secret",
   ENVIRONMENT: "test",
-  D1_EXPECTED_MIGRATION: "0009_application_preferences.sql",
+  D1_EXPECTED_MIGRATION: "0010_marketing_dead_letter_operations.sql",
 } as Env;
 const healthEnv = {
   ...env,
@@ -22,9 +21,9 @@ const healthEnv = {
           ? { opengrow_health_check: 1 }
           : query.includes("d1_migrations")
             ? {
-                applied_migration_count: 9,
+                applied_migration_count: 10,
                 expected_migration_applied: 1,
-                latest_migration: "0009_application_preferences.sql",
+                latest_migration: "0010_marketing_dead_letter_operations.sql",
               }
             : {
                 subscribers_total: 20,
@@ -97,9 +96,9 @@ describe("marketing worker", () => {
         },
         schema: {
           status: "current",
-          expectedMigration: "0009_application_preferences.sql",
-          latestMigration: "0009_application_preferences.sql",
-          appliedMigrationCount: 9,
+          expectedMigration: "0010_marketing_dead_letter_operations.sql",
+          latestMigration: "0010_marketing_dead_letter_operations.sql",
+          appliedMigrationCount: 10,
         },
       },
     });
@@ -203,25 +202,5 @@ describe("marketing worker", () => {
     expect(JSON.stringify(serialized)).not.toMatch(
       /project_id|optin_token|attributes_json|list_ids_json|encrypted_payload/,
     );
-  });
-
-  it("builds injection-safe multipart messages", () => {
-    const config: SmtpPublicConfig = {
-      host: "smtp.example.com",
-      port: 587,
-      security: "starttls",
-      username: "mailer",
-      from_email: "hello@example.com",
-      from_name: "OpenGrow\r\nBcc: attacker@example.com",
-      reply_to: null,
-    };
-    const message = buildMessage(config, {
-      to: "customer@example.com",
-      subject: "Welcome",
-      html: "<b>Hello</b>",
-      text: "Hello",
-    });
-    expect(message.raw).toContain("multipart/alternative");
-    expect(message.raw).not.toContain("\r\nBcc: attacker@example.com");
   });
 });

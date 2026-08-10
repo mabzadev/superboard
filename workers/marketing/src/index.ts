@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { inspectSqlDatabaseAndSchemaHealth } from "@opengrow/contracts/health";
 import { verifyInternalProjectContext, failure } from "./auth";
 import { decryptJson, encryptJson, sha256 } from "./secrets";
-import { sendSmtpMessage } from "./smtp";
+import { sendSmtpMessage } from "./email-service";
 import type {
   Env,
   MarketingQueueJob,
@@ -23,7 +23,7 @@ import {
   stringArray,
   text,
 } from "./validation";
-import { handleMarketingQueue } from "./queue";
+import { handleMarketingQueue, isMarketingQueueJob } from "./queue";
 import { verifyTrackingToken } from "./tracking";
 import { verifyEmailAuthentication } from "./email-authentication";
 
@@ -103,6 +103,8 @@ export async function marketingHealth(db: D1Database) {
       (SELECT COUNT(*) FROM marketing_outbox WHERE status = 'pending') AS outbox_pending,
       (SELECT COUNT(*) FROM marketing_outbox WHERE status = 'dead_letter') AS outbox_dead_letter,
       (SELECT COUNT(*) FROM marketing_dead_letters WHERE status = 'quarantined') AS dead_letters_quarantined,
+      (SELECT COUNT(*) FROM marketing_dead_letters WHERE resolution = 'replayed') AS dead_letters_replayed,
+      (SELECT COUNT(*) FROM marketing_dead_letters WHERE resolution = 'discarded') AS dead_letters_discarded,
       (SELECT COUNT(*) FROM smtp_profiles WHERE enabled = 1) AS smtp_profiles_enabled,
       (SELECT COUNT(*) FROM smtp_profiles WHERE enabled = 1 AND authentication_status = 'verified') AS smtp_profiles_verified,
       (SELECT COUNT(*) FROM smtp_profiles WHERE enabled = 1 AND authentication_status != 'verified') AS smtp_profiles_unverified,
@@ -154,7 +156,11 @@ export async function marketingHealth(db: D1Database) {
         value("smtp_profiles_enabled") > 0 &&
         value("smtp_profiles_unverified") === 0,
     },
-    deadLetters: { quarantined: value("dead_letters_quarantined") },
+    deadLetters: {
+      quarantined: value("dead_letters_quarantined"),
+      replayed: value("dead_letters_replayed"),
+      discarded: value("dead_letters_discarded"),
+    },
   };
 }
 
@@ -1580,11 +1586,19 @@ app.post("/internal/v1/campaigns/:campaignId/test", async (c) => {
     c.env.SMTP_ENCRYPTION_KEY,
     String(profile.encrypted_config),
   );
-  const result = await sendSmtpMessage(publicConfig, secret, {
-    to: email(body.recipient, "recipient"),
-    subject: `[Test] ${current.subject}`,
-    html: current.content_html ? String(current.content_html) : null,
-    text: current.content_text ? String(current.content_text) : null,
+  const result = await sendSmtpMessage(c.env, {
+    idempotencyKey: `marketing.campaign-test:${projectId}:${c.get("project").requestId}:${profile.id}`,
+    projectId,
+    referenceId: String(current.id),
+    profileId: String(profile.id),
+    publicConfig,
+    secret,
+    message: {
+      to: email(body.recipient, "recipient"),
+      subject: `[Test] ${current.subject}`,
+      html: current.content_html ? String(current.content_html) : null,
+      text: current.content_text ? String(current.content_text) : null,
+    },
   });
   return c.json({ data: { ok: true, message_id: result.messageId } });
 });
@@ -1766,6 +1780,156 @@ app.delete("/internal/v1/settings/provider-webhooks/:endpointId", async (c) => {
   return c.json({ data: { deleted: true } });
 });
 
+app.get("/internal/v1/settings/dead-letters", async (c) => {
+  const projectId = c.get("project").projectId;
+  const rows = await c.env.DB.prepare(
+    `
+    SELECT id, source_queue, message_id, job_type, replayable, attempts, status,
+           resolution, received_at, resolved_at,
+           COALESCE(
+             json_extract(payload_json, '$.deliveryId'),
+             json_extract(payload_json, '$.campaignId'),
+             json_extract(payload_json, '$.outboxId')
+           ) AS resource_id
+    FROM marketing_dead_letters
+    WHERE project_id = ?
+    ORDER BY received_at DESC, id DESC
+    LIMIT 100
+  `,
+  )
+    .bind(projectId)
+    .all<Record<string, unknown>>();
+  return c.json({
+    data: rows.results.map((row) => ({
+      id: String(row.id),
+      source_queue: String(row.source_queue),
+      queue_message_id: String(row.message_id),
+      job_type: row.job_type == null ? null : String(row.job_type),
+      resource_id: row.resource_id == null ? null : String(row.resource_id),
+      replayable: Number(row.replayable) === 1,
+      attempts: Number(row.attempts || 0),
+      status: String(row.status),
+      resolution: row.resolution == null ? null : String(row.resolution),
+      received_at: String(row.received_at),
+      resolved_at: row.resolved_at == null ? null : String(row.resolved_at),
+    })),
+  });
+});
+
+app.post(
+  "/internal/v1/settings/dead-letters/:deadLetterId/replay",
+  async (c) => {
+    const projectId = c.get("project").projectId;
+    const id = c.req.param("deadLetterId");
+    const row = await c.env.DB.prepare(
+      `
+    SELECT id, payload_json, replayable, status
+    FROM marketing_dead_letters WHERE id = ? AND project_id = ?
+  `,
+    )
+      .bind(id, projectId)
+      .first<{
+        id: string;
+        payload_json: string;
+        replayable: number;
+        status: string;
+      }>();
+    if (!row)
+      throw failure("dead_letter_not_found", "Dead letter not found", 404);
+    if (row.status !== "quarantined")
+      throw failure(
+        "dead_letter_already_resolved",
+        "Dead letter is already resolved",
+        409,
+      );
+    if (Number(row.replayable) !== 1)
+      throw failure(
+        "dead_letter_not_replayable",
+        "Dead letter contains a redacted or invalid payload",
+        409,
+      );
+    const job = parseMarketingDeadLetterJob(row.payload_json, projectId);
+    if (!job)
+      throw failure(
+        "dead_letter_payload_invalid",
+        "Dead letter payload is invalid",
+        409,
+      );
+    const now = new Date().toISOString();
+    const claimed = await c.env.DB.prepare(
+      `
+    UPDATE marketing_dead_letters
+    SET status = 'discarded', resolution = 'replayed', resolved_at = ?
+    WHERE id = ? AND project_id = ? AND status = 'quarantined'
+    RETURNING id
+  `,
+    )
+      .bind(now, id, projectId)
+      .first<{ id: string }>();
+    if (!claimed)
+      throw failure(
+        "dead_letter_already_resolved",
+        "Dead letter is already resolved",
+        409,
+      );
+    try {
+      await c.env.MARKETING_QUEUE.send(job);
+    } catch (error) {
+      await c.env.DB.prepare(
+        `
+      UPDATE marketing_dead_letters
+      SET status = 'quarantined', resolution = NULL, resolved_at = NULL
+      WHERE id = ? AND project_id = ? AND resolution = 'replayed'
+    `,
+      )
+        .bind(id, projectId)
+        .run();
+      console.error(
+        JSON.stringify({
+          event: "marketing_dead_letter_replay_failed",
+          dead_letter_id: id,
+          project_id: projectId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      throw failure(
+        "dead_letter_replay_failed",
+        "Dead letter could not be queued",
+        503,
+      );
+    }
+    return c.json(
+      { data: { id, status: "replayed", job_type: job.type } },
+      202,
+    );
+  },
+);
+
+app.post(
+  "/internal/v1/settings/dead-letters/:deadLetterId/discard",
+  async (c) => {
+    const projectId = c.get("project").projectId;
+    const id = c.req.param("deadLetterId");
+    const resolved = await c.env.DB.prepare(
+      `
+    UPDATE marketing_dead_letters
+    SET status = 'discarded', resolution = 'discarded', resolved_at = ?
+    WHERE id = ? AND project_id = ? AND status = 'quarantined'
+    RETURNING id
+  `,
+    )
+      .bind(new Date().toISOString(), id, projectId)
+      .first<{ id: string }>();
+    if (!resolved)
+      throw failure(
+        "dead_letter_not_found_or_resolved",
+        "Dead letter was not found or is already resolved",
+        404,
+      );
+    return c.json({ data: { id, status: "discarded" } });
+  },
+);
+
 app.post("/internal/v1/settings/smtp/test", async (c) => {
   const projectId = c.get("project").projectId;
   const body = await readJsonObject(c.req.raw);
@@ -1783,11 +1947,19 @@ app.post("/internal/v1/settings/smtp/test", async (c) => {
     String(profile.encrypted_config),
   );
   try {
-    const result = await sendSmtpMessage(publicConfig, secret, {
-      to: email(body.recipient || publicConfig.from_email, "recipient"),
-      subject: "OpenGrow SMTP connection test",
-      html: null,
-      text: "Your OpenGrow SMTP profile is working.",
+    const result = await sendSmtpMessage(c.env, {
+      idempotencyKey: `marketing.smtp-test:${projectId}:${c.get("project").requestId}:${profile.id}`,
+      projectId,
+      referenceId: String(profile.id),
+      profileId: String(profile.id),
+      publicConfig,
+      secret,
+      message: {
+        to: email(body.recipient || publicConfig.from_email, "recipient"),
+        subject: "OpenGrow SMTP connection test",
+        html: null,
+        text: "Your OpenGrow SMTP profile is working.",
+      },
     });
     await c.env.DB.prepare(
       `UPDATE smtp_profiles SET last_tested_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), last_test_status = 'success' WHERE id = ? AND project_id = ?`,
@@ -2913,6 +3085,20 @@ export async function dispatchOptinOutbox(
       }),
     );
     return false;
+  }
+}
+
+function parseMarketingDeadLetterJob(
+  payloadJson: string,
+  projectId: number,
+): MarketingQueueJob | null {
+  try {
+    const parsed: unknown = JSON.parse(payloadJson);
+    return isMarketingQueueJob(parsed) && parsed.projectId === projectId
+      ? parsed
+      : null;
+  } catch {
+    return null;
   }
 }
 

@@ -15,12 +15,28 @@ export function nativeContractFromCatalog(catalog) {
   if (!android || !ios) {
     throw new Error("Android and iOS SDK entries are required");
   }
-  if (
-    android.releaseStatus !== "released" ||
-    ios.releaseStatus !== "released"
-  ) {
-    throw new Error("React Native native dependencies must be released");
+  // A pending source version does not invalidate the latest immutable native
+  // release. React Native must keep consuming latestReleaseVersion until the
+  // corresponding native promotion PR records the new release.
+  for (const library of [android, ios]) {
+    if (!library.latestReleaseVersion || !library.releaseSha) {
+      throw new Error(
+        "React Native native dependencies require an immutable published baseline",
+      );
+    }
   }
+  const iosReleaseRef = `sdk-ios-v${ios.latestReleaseVersion}`;
+  const repository = new URL(catalog.repository);
+  if (repository.hostname !== "github.com") {
+    throw new Error(
+      "React Native iOS podspec generation requires a GitHub repository",
+    );
+  }
+  const repositoryPath = repository.pathname
+    .replace(/^\//, "")
+    .replace(/\.git$/, "");
+  const podspecUrl = `https://raw.githubusercontent.com/${repositoryPath}/${iosReleaseRef}/${ios.versionSource}`;
+
   return {
     schemaVersion: 1,
     android: {
@@ -30,7 +46,8 @@ export function nativeContractFromCatalog(catalog) {
     ios: {
       packageName: ios.packageName,
       repository: `${catalog.repository}.git`,
-      releaseRef: `sdk-ios-v${ios.latestReleaseVersion}`,
+      releaseRef: iosReleaseRef,
+      podspecUrl,
       version: ios.latestReleaseVersion,
     },
   };

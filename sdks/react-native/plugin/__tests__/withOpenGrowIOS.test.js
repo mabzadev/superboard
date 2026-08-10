@@ -3,7 +3,15 @@ const {
   addOpenGrowConfiguration,
   addOpenGrowUniversalLinkHandler,
   addOpenGrowURLHandler,
+  addOpenGrowPodDependency,
 } = require('../withOpenGrowIOS');
+
+const SAMPLE_PODFILE = `platform :ios, min_ios_version_supported
+
+target 'MyApp' do
+  config = use_native_modules!
+end
+`;
 
 const SAMPLE_APP_DELEGATE = `import UIKit
 import React
@@ -128,8 +136,9 @@ describe('withOpenGrowIOS - AppDelegate transforms', () => {
     it('does not duplicate handler', () => {
       const first = addOpenGrowUniversalLinkHandler(SAMPLE_APP_DELEGATE);
       const second = addOpenGrowUniversalLinkHandler(first);
-      const count = (second.match(/OpenGrow\.handleAppDelegate\(continue:/g) || [])
-        .length;
+      const count = (
+        second.match(/OpenGrow\.handleAppDelegate\(continue:/g) || []
+      ).length;
       expect(count).toBe(1);
     });
   });
@@ -169,7 +178,9 @@ describe('withOpenGrowIOS - AppDelegate transforms', () => {
       // Verify ordering: import -> configure -> handlers
       const importIdx = result.indexOf('import OpenGrow');
       const configIdx = result.indexOf('OpenGrow.configure');
-      const continueIdx = result.indexOf('OpenGrow.handleAppDelegate(continue:');
+      const continueIdx = result.indexOf(
+        'OpenGrow.handleAppDelegate(continue:'
+      );
       const openIdx = result.indexOf('OpenGrow.handleAppDelegate(open:');
 
       expect(importIdx).toBeLessThan(configIdx);
@@ -194,5 +205,29 @@ describe('withOpenGrowIOS - AppDelegate transforms', () => {
       const second = applyAll(first);
       expect(first).toBe(second);
     });
+  });
+});
+
+describe('withOpenGrowIOS - immutable native pod dependency', () => {
+  it('injects the catalog SDK tag before React Native autolinking', () => {
+    const result = addOpenGrowPodDependency(SAMPLE_PODFILE);
+    expect(result).toContain(
+      "pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/opengrow-platform/sdk-ios-v1.0.2/sdks/ios/OpenGrow.podspec'"
+    );
+    expect(result.indexOf("pod 'OpenGrow'")).toBeLessThan(
+      result.indexOf('use_native_modules!')
+    );
+  });
+
+  it('replaces an implicit Trunk pod and remains idempotent', () => {
+    const legacy = SAMPLE_PODFILE.replace(
+      'config = use_native_modules!',
+      "pod 'OpenGrow', '~> 1.0'\n  config = use_native_modules!"
+    );
+    const first = addOpenGrowPodDependency(legacy);
+    const second = addOpenGrowPodDependency(first);
+    expect(first).toBe(second);
+    expect(first).not.toContain("pod 'OpenGrow', '~> 1.0'");
+    expect((first.match(/pod 'OpenGrow'/g) || []).length).toBe(1);
   });
 });

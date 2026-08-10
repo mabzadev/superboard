@@ -5,6 +5,7 @@ import { loadTarget } from "./cloudflare-target.mjs";
 import {
   buildDeploymentExecutionPlan,
   deploymentOrder,
+  runtimeBridgeDeploymentBlockers,
 } from "./cloudflare-deploy-plan.mjs";
 
 test("full production deployment backs up and migrates every D1 before Workers", async () => {
@@ -17,12 +18,29 @@ test("full production deployment backs up and migrates every D1 before Workers",
   assert.equal(plan.migrationStrategy, "backup-and-migrate-all-before-workers");
   assert.deepEqual(
     plan.phases.map(({ id }) => id),
-    ["d1-batch", "workers"],
+    ["d1-batch", "identity-cutover", "workers"],
   );
+  assert.equal(plan.identityCutover, true);
   assert.equal(plan.services.at(-1), "dashboard");
   assert.ok(plan.schemaServices.includes("api"));
   assert.ok(plan.schemaServices.includes("custom"));
+  assert.deepEqual(
+    plan.services.filter((service) => service.startsWith("managed-")),
+    ["managed-vocals-orchestrator", "managed-medias-orchestrator"],
+  );
+  assert.ok(
+    plan.services.indexOf("managed-medias-orchestrator") <
+      plan.services.indexOf("custom"),
+  );
   assert.deepEqual(plan.services, deploymentOrder(target));
+  assert.deepEqual(
+    plan.blockers.map(({ id }) => id),
+    [
+      "runtime-bridge-unverified",
+      "files-input-routing-inactive",
+      "gateway-callback-owner-mismatch",
+    ],
+  );
 });
 
 test("production preflight uploads isolated versions without migrations", async () => {
@@ -35,6 +53,43 @@ test("production preflight uploads isolated versions without migrations", async 
   });
   assert.equal(plan.migrationStrategy, "none");
   assert.equal(plan.phases[0].id, "worker-versions");
+  assert.deepEqual(plan.blockers, []);
+});
+
+test("runtime bridge deployment opens only after routing, callback ownership, and review converge", async () => {
+  const original = (await loadTarget("vocostar")).target;
+  const target = structuredClone(original);
+  const services = ["managed-vocals-orchestrator", "custom"];
+  assert.equal(
+    runtimeBridgeDeploymentBlockers({
+      target,
+      environment: "production",
+      services,
+    }).length,
+    3,
+  );
+
+  target.environments.production.publicRouting = "active";
+  target.customWorker.runtimeBridge.deploymentStatus = "verified";
+  target.customWorker.runtimeBridge.gatewayWorker =
+    target.workers.api.production;
+  assert.deepEqual(
+    runtimeBridgeDeploymentBlockers({
+      target,
+      environment: "production",
+      services,
+    }),
+    [],
+  );
+  assert.deepEqual(
+    runtimeBridgeDeploymentBlockers({
+      target: original,
+      environment: "production",
+      services,
+      uploadOnly: true,
+    }),
+    [],
+  );
 });
 
 test("development and partial recovery preserve per-service convergence", async () => {
@@ -44,6 +99,7 @@ test("development and partial recovery preserve per-service convergence", async 
     environment: "development",
   });
   assert.equal(development.migrationStrategy, "per-service-before-worker");
+  assert.equal(development.identityCutover, true);
   const recovery = buildDeploymentExecutionPlan({
     target,
     environment: "production",
@@ -95,13 +151,23 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
     "utf8",
   );
   const batchIndex = deployAll.indexOf("await applyD1Convergence");
+  const blockerIndex = deployAll.indexOf("if (plan.blockers.length > 0)");
   const receiptIndex = deployAll.indexOf("await writeMigrationBatchReceipt");
   const workerLoopIndex = deployAll.indexOf("for (const service of services)");
+  assert.ok(blockerIndex > 0 && blockerIndex < batchIndex);
   assert.ok(batchIndex > 0 && batchIndex < receiptIndex);
   assert.ok(receiptIndex < workerLoopIndex);
   assert.match(deployAll, /--migration-batch-receipt/u);
   assert.match(deployAll, /--migration-batch-sha256/u);
+  assert.match(deployAll, /await verifyIdentityProjectCutover/u);
+  assert.match(deployAll, /--identity-cutover-receipt/u);
+  assert.match(deployAll, /--identity-cutover-sha256/u);
   assert.match(deployService, /await readMigrationBatchReceipt/u);
+  assert.ok(
+    deployService.indexOf("runtimeBridgeDeploymentBlockers") <
+      deployService.indexOf("cloudflare-config.mjs"),
+  );
+  assert.match(deployService, /await enforceIdentityProjectCutover/u);
   assert.match(deployService, /!migrationsConvergedByBatch/u);
   assert.match(
     deployService,
