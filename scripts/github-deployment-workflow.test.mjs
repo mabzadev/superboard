@@ -195,7 +195,8 @@ test("branch protection can require one stable aggregate CI check", () => {
 
 test("CI validates every maintained SDK family and the Chatwoot migration path", () => {
   assert.match(ciWorkflow, /node_sdks:/);
-  assert.match(ciWorkflow, /npm ci && npm run build/);
+  assert.match(ciWorkflow, /npm ci && npm test && npm run build/);
+  assert.match(ciWorkflow, /npm run react-native:native-contract:check/);
   assert.match(
     ciWorkflow,
     /yarn typecheck && yarn test --runInBand && yarn prepare/,
@@ -253,6 +254,8 @@ test("immutable SDK publication revalidates native and React Native packages", (
     releaseWorkflow,
     /yarn typecheck && yarn test --runInBand && yarn prepare/,
   );
+  assert.match(releaseWorkflow, /npm ci && npm test && npm run build/);
+  assert.match(releaseWorkflow, /npm run react-native:native-contract:check/);
   assert.match(releaseWorkflow, /:OpenGrow:testDebugUnitTest/);
   assert.match(
     releaseWorkflow,

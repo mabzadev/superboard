@@ -25,6 +25,32 @@ function stageAndroidCoordinateMigration(catalog) {
   return android;
 }
 
+function stageNpmCoordinateMigration(catalog, id) {
+  const migration = {
+    javascript: {
+      packageName: "@mbzadev/opengrow-js",
+      candidatePackageName: "@mbzadev/opengrow-js-sdk",
+      releaseRef: "sdk-js-v1.0.0",
+    },
+    "react-native": {
+      packageName: "@mbzadev/opengrow-react-native",
+      candidatePackageName: "@mbzadev/opengrow-react-native-sdk",
+      releaseRef: "sdk-react-native-v1.0.0",
+    },
+  }[id];
+  const library = catalog.libraries.find((item) => item.id === id);
+  Object.assign(library, {
+    packageName: migration.packageName,
+    latestReleaseVersion: "1.0.0",
+    releaseRef: migration.releaseRef,
+    releaseStatus: "pending-release",
+    install: `npm install ${migration.packageName}@1.0.0`,
+    candidatePackageName: migration.candidatePackageName,
+    candidateInstall: `npm install ${migration.candidatePackageName}@1.0.1`,
+  });
+  return library;
+}
+
 test("SDK catalogue matches every package source and FlutterFlow public symbol", async () => {
   const catalog = await loadSdkCatalog();
   const result = await validateSdkCatalog(catalog);
@@ -158,13 +184,54 @@ test("a candidate package coordinate is complete, pending and collision-free", a
 
   android.candidateInstall =
     'implementation("io.opengrow:opengrow-android-sdk:1.0.2")';
-  android.candidatePackageName = "@mbzadev/opengrow-js";
-  android.candidateInstall =
-    'implementation("@mbzadev/opengrow-js:1.0.2")';
+  const releasedPackageName = catalog.libraries.find(
+    (item) => item.id === "javascript",
+  ).packageName;
+  android.candidatePackageName = releasedPackageName;
+  android.candidateInstall = `implementation("${releasedPackageName}:1.0.2")`;
   result = await validateSdkCatalog(catalog);
   assert.ok(
     result.errors.includes(
-      "candidate package @mbzadev/opengrow-js duplicates a released packageName",
+      `candidate package ${releasedPackageName} duplicates a released packageName`,
+    ),
+  );
+});
+
+test("npm promotions atomically migrate collision-free package names", async () => {
+  for (const [id, packageName, tag] of [
+    ["javascript", "@mbzadev/opengrow-js-sdk", "sdk-js-v1.0.1"],
+    [
+      "react-native",
+      "@mbzadev/opengrow-react-native-sdk",
+      "sdk-react-native-v1.0.1",
+    ],
+  ]) {
+    const catalog = await loadSdkCatalog();
+    stageNpmCoordinateMigration(catalog, id);
+    const promoted = promoteSdkRelease(catalog, id, "1.0.1");
+    const library = promoted.libraries.find((item) => item.id === id);
+
+    assert.equal(library.packageName, packageName);
+    assert.equal(library.install, `npm install ${packageName}@1.0.1`);
+    assert.equal(library.latestReleaseVersion, "1.0.1");
+    assert.equal(library.releaseRef, tag);
+    assert.equal(library.releaseStatus, "released");
+    assert.equal(Object.hasOwn(library, "candidatePackageName"), false);
+    assert.equal(Object.hasOwn(library, "candidateInstall"), false);
+  }
+});
+
+test("npm catalogue validation binds the candidate to package.json name", async () => {
+  const catalog = await loadSdkCatalog();
+  const javascript = stageNpmCoordinateMigration(catalog, "javascript");
+  javascript.candidatePackageName = "@mbzadev/unrelated-package";
+  javascript.candidateInstall =
+    "npm install @mbzadev/unrelated-package@1.0.1";
+
+  const result = await validateSdkCatalog(catalog);
+  assert.ok(
+    result.errors.includes(
+      "libraries.javascript.source package name is @mbzadev/opengrow-js-sdk, expected @mbzadev/unrelated-package",
     ),
   );
 });

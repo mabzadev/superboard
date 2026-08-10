@@ -199,11 +199,14 @@ jobs:
           node-version: 22
       - name: Validate JavaScript SDK
         if: needs.plan.outputs.javascript == 'true'
-        run: npm ci && npm run build
+        run: npm ci && npm test && npm run build
         working-directory: sdks/javascript
       - name: Enable Corepack for React Native
         if: needs.plan.outputs.react_native == 'true'
         run: corepack enable
+      - name: Validate React Native native dependency contract
+        if: needs.plan.outputs.react_native == 'true'
+        run: npm run react-native:native-contract:check
       - name: Install React Native dependencies
         if: needs.plan.outputs.react_native == 'true'
         run: yarn install --immutable

@@ -10,7 +10,7 @@ module.exports = {
     library: "OpenGrow",
     libraryTarget: "umd",
     globalObject: "this",
-    publicPath: "/dist/", // Required for webpack-dev-server
+    publicPath: "/dist/",
   },
   devServer: {
     static: {

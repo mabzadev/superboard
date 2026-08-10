@@ -165,12 +165,14 @@ jobs:
           node-version: 22
           registry-url: https://npm.pkg.github.com
           scope: "@mbzadev"
-      - run: npm ci && npm run build
+      - run: npm ci && npm test && npm run build
         if: needs.validate-tag.outputs.sdk == 'js'
         working-directory: sdks/javascript
       - run: corepack enable && yarn install --immutable && yarn typecheck && yarn test --runInBand && yarn prepare
         if: needs.validate-tag.outputs.sdk == 'react-native'
         working-directory: sdks/react-native
+      - run: npm run react-native:native-contract:check
+        if: needs.validate-tag.outputs.sdk == 'react-native'
       - run: npm version ${{ needs.validate-tag.outputs.version }} --no-git-tag-version --allow-same-version && npm publish
         working-directory: sdks/${{ needs.validate-tag.outputs.sdk == 'js' && 'javascript' || 'react-native' }}
         env:

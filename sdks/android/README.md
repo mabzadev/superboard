@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-private-4F46E5?style=flat-square" alt="GitHub Packages"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-public-4F46E5?style=flat-square" alt="GitHub Packages"/></a>
   <a href="#"><img src="https://img.shields.io/badge/API-21%2B-4F46E5?style=flat-square" alt="API 21+"/></a>
   <a href="#"><img src="https://img.shields.io/badge/kotlin-1.9%2B-4F46E5?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>

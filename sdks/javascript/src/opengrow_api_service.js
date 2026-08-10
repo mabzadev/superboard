@@ -1,6 +1,6 @@
 // Import the helper class for making API requests
-import OpenGrowAPIServiceHelper from "./opengrow_api_service_helper";
-import OpenGrowContext from "./opengrow_context";
+import OpenGrowAPIServiceHelper from "./opengrow_api_service_helper.js";
+import OpenGrowContext from "./opengrow_context.js";
 
 // Define the OpenGrow API service class
 class OpenGrowAPIService {

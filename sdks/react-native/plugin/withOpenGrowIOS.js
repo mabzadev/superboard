@@ -4,6 +4,7 @@ const {
   withEntitlementsPlist,
   withAppDelegate,
 } = require('expo/config-plugins');
+const pkg = require('../package.json');
 
 function withOpenGrowURLScheme(config, { scheme }) {
   return withInfoPlist(config, (config) => {
@@ -195,7 +196,7 @@ function withOpenGrowAppDelegate(config, props) {
   return withAppDelegate(config, (config) => {
     if (config.modResults.language !== 'swift') {
       throw new Error(
-        '@mbzadev/opengrow-react-native config plugin requires a Swift AppDelegate. ' +
+        `${pkg.name} config plugin requires a Swift AppDelegate. ` +
           'Objective-C AppDelegate is not supported.'
       );
     }

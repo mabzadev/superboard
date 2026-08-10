@@ -24,9 +24,9 @@ and never fork this code.
 | `sdks/flutter`      | `opengrow_flutter`                                              |
 | `sdks/flutterflow`  | `opengrow_flutterflow` actions and paywall                      |
 | `sdks/ios`          | OpenGrow iOS SDK implementation                                 |
-| `sdks/android`      | `io.opengrow:opengrow-android`                                  |
-| `sdks/javascript`   | `@mbzadev/opengrow-js`                                          |
-| `sdks/react-native` | `@mbzadev/opengrow-react-native`                                |
+| `sdks/android`      | `io.opengrow:opengrow-android-sdk`                              |
+| `sdks/javascript`   | `@mbzadev/opengrow-js-sdk`                                      |
+| `sdks/react-native` | `@mbzadev/opengrow-react-native-sdk`                            |
 | `packages/shared`   | Shared utilities                                                |
 | `deploy/targets`    | Non-secret target manifests and schema                          |
 

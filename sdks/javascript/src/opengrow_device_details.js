@@ -36,7 +36,7 @@ class OpenGrowDeviceDetails {
   static getValue(name) {
     if (this.isElectron()) {
       return localStorage.getItem(name); // Use local storage in Electron
-    } else {
+    } else if (typeof document !== "undefined") {
       const cookies = document.cookie.split(";"); // Split cookies into an array
       for (let cookie of cookies) {
         const [key, value] = cookie.trim().split("="); // Split each cookie into name and value
@@ -46,6 +46,7 @@ class OpenGrowDeviceDetails {
       }
       return null; // Return null if the item is not found
     }
+    return null;
   }
 
   /**
@@ -99,9 +100,7 @@ class OpenGrowDeviceDetails {
     const OpenGrowValue = url.searchParams.get("OpenGrow");
 
     // Decode the parameter value, if it exists
-    const decodedOpenGrowValue = OpenGrowValue
-      ? decodeURIComponent(OpenGrowValue)
-      : null;
+    const decodedOpenGrowValue = OpenGrowValue;
 
     if (decodedOpenGrowValue != null) {
       this.setValue("OpenGrow_path", decodedOpenGrowValue);

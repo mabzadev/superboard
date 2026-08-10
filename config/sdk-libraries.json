@@ -89,6 +89,7 @@
       "displayName": "OpenGrow JavaScript",
       "ecosystem": "npm",
       "packageName": "@mbzadev/opengrow-js",
+      "candidatePackageName": "@mbzadev/opengrow-js-sdk",
       "sourcePath": "sdks/javascript",
       "license": "MIT",
       "licensePath": "sdks/javascript/LICENSE",
@@ -97,13 +98,16 @@
       "latestReleaseVersion": "1.0.0",
       "releaseRef": "sdk-js-v1.0.0",
       "releaseStatus": "pending-release",
-      "install": "npm install @mbzadev/opengrow-js@1.0.0"
+      "notes": "The 1.0.1 release moves to a collision-free package name owned by opengrow-platform; the legacy 1.0.0 package remains linked to mbzadev/opengrow.",
+      "install": "npm install @mbzadev/opengrow-js@1.0.0",
+      "candidateInstall": "npm install @mbzadev/opengrow-js-sdk@1.0.1"
     },
     {
       "id": "react-native",
       "displayName": "OpenGrow React Native",
       "ecosystem": "npm",
       "packageName": "@mbzadev/opengrow-react-native",
+      "candidatePackageName": "@mbzadev/opengrow-react-native-sdk",
       "sourcePath": "sdks/react-native",
       "license": "MIT",
       "licensePath": "sdks/react-native/LICENSE",
@@ -112,7 +116,9 @@
       "latestReleaseVersion": "1.0.0",
       "releaseRef": "sdk-react-native-v1.0.0",
       "releaseStatus": "pending-release",
-      "install": "npm install @mbzadev/opengrow-react-native@1.0.0"
+      "notes": "The 1.0.1 release moves to a collision-free package name owned by opengrow-platform; the legacy 1.0.0 package remains linked to mbzadev/opengrow.",
+      "install": "npm install @mbzadev/opengrow-react-native@1.0.0",
+      "candidateInstall": "npm install @mbzadev/opengrow-react-native-sdk@1.0.1"
     }
   ]
 }

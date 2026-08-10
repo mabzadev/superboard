@@ -1,5 +1,5 @@
 // Import the OpenGrowDeviceDetails module
-import OpenGrowDeviceDetails from "./opengrow_device_details";
+import OpenGrowDeviceDetails from "./opengrow_device_details.js";
 
 // Define the OpenGrowContext class
 class OpenGrowContext {

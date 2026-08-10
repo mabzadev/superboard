@@ -129,6 +129,16 @@ export async function validateSdkCatalog(catalog, options = {}) {
         errors.push(
           `${prefix}.sourceVersion is ${library.sourceVersion}, source declares ${observed}`,
         );
+      if (library.ecosystem === "npm" && versionPath.endsWith("package.json")) {
+        const manifest = JSON.parse(await readFile(versionPath, "utf8"));
+        const expectedPackageName =
+          library.candidatePackageName ?? library.packageName;
+        if (manifest.name !== expectedPackageName) {
+          errors.push(
+            `${prefix}.source package name is ${String(manifest.name)}, expected ${expectedPackageName}`,
+          );
+        }
+      }
     }
     if (library.surfaceManifest) {
       const manifestPath = protectedRepoPath(

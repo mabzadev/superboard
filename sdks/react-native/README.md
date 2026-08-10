@@ -43,10 +43,10 @@ The OpenGrow React Native SDK provides deep linking, universal links, app links,
 
 ```bash
 # Using npm
-npm install @mbzadev/opengrow-react-native
+npm install @mbzadev/opengrow-react-native-sdk@1.0.1
 
 # Using yarn
-yarn add @mbzadev/opengrow-react-native
+yarn add @mbzadev/opengrow-react-native-sdk@1.0.1
 ```
 
 ### Android dependency
@@ -55,13 +55,22 @@ Add the OpenGrow Android SDK to `android/app/build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'io.opengrow:OpenGrow:1.1.1'
+    implementation 'io.opengrow:opengrow-android-sdk:1.0.2'
 }
 ```
 
 ### iOS dependency
 
-The iOS SDK is added automatically via CocoaPods when you run `pod install`.
+The React Native pod depends on `OpenGrow` 1.x. Until the native pod is
+published to CocoaPods Trunk, declare the reviewed podspec from the immutable
+Git tag in your application's `ios/Podfile`, then run `pod install`:
+
+```ruby
+pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/opengrow-platform/sdk-ios-v1.0.2/sdks/ios/OpenGrow.podspec'
+```
+
+The tag and version are generated from the repository's native dependency
+contract; no branch or moving revision is accepted.
 
 ## Expo Integration
 
@@ -70,7 +79,7 @@ If you're using Expo with a development build, the config plugin automates all n
 ```json
 {
   "plugins": [
-    ["@mbzadev/opengrow-react-native", {
+    ["@mbzadev/opengrow-react-native-sdk", {
       "apiKey": "your-api-key",
       "scheme": "your_app_scheme",
       "useTestEnvironment": false,
@@ -198,7 +207,7 @@ func application(_ app: UIApplication, open url: URL, options: [UIApplication.Op
 ### Handle deep links
 
 ```typescript
-import OpenGrow from '@mbzadev/opengrow-react-native';
+import OpenGrow from '@mbzadev/opengrow-react-native-sdk';
 
 const listener = OpenGrow.onDeeplinkReceived((response) => {
     console.log('Link:', response.link);

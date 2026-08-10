@@ -67,10 +67,10 @@ const NativeModule = TurboModuleRegistry.get<Spec>('OpenGrowWrapper');
 if (!NativeModule) {
   log(
     'info',
-    'Turbo module - Native module @mbzadev/opengrow-react-native is not linked properly.'
+    'Turbo module - Native module @mbzadev/opengrow-react-native-sdk is not linked properly.'
   );
   throw new Error(
-    'Native module @mbzadev/opengrow-react-native is not linked properly.'
+    'Native module @mbzadev/opengrow-react-native-sdk is not linked properly.'
   );
 }
 

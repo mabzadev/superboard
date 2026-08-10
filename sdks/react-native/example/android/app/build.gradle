@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
@@ -109,6 +111,7 @@ android {
 }
 
 dependencies {
+    def openGrowNativeContract = new JsonSlurper().parse(rootProject.file("../../plugin/native-contract.json"))
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
@@ -118,7 +121,7 @@ dependencies {
         implementation jscFlavor
     }
 
-    implementation 'io.opengrow:opengrow-android:1.0.0'
+    implementation "${openGrowNativeContract.android.packageName}:${openGrowNativeContract.android.version}"
 }
 
 repositories {

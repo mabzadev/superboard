@@ -204,13 +204,14 @@ function stepCode(
       );
   }
   if (platform === "web") {
+    const javascriptLibrary = library("javascript");
     if (step === 1)
-      return code("bash", "Terminal", library("javascript").install);
+      return code("bash", "Terminal", javascriptLibrary.install);
     if (step === 2)
       return code(
         "typescript",
         "opengrow.ts",
-        `import OpenGrow from "@mbzadev/opengrow-js";\n\nconst openGrow = new OpenGrow(\n  "${accessKey}",\n  false,\n  (data) => console.info("OpenGrow link", data),\n  "${config.sdkUrl}",\n);\nopenGrow.start();`
+        `import OpenGrow from "${javascriptLibrary.packageName}";\n\nconst openGrow = new OpenGrow(\n  "${accessKey}",\n  false,\n  (data) => console.info("OpenGrow link", data),\n  "${config.sdkUrl}",\n);\nopenGrow.start();`
       );
   }
   return null;

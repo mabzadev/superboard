@@ -19,7 +19,7 @@ The OpenGrow SDK is a JavaScript module designed to integrate with the OpenGrow 
 To install the OpenGrow SDK, use the following command to add it as a dependency to your project:
 
 ```bash
-npm install opengrow --save
+npm install @mbzadev/opengrow-js-sdk@1.0.1
 ```
 
 This will add the OpenGrow SDK to your dependencies in package.json.
@@ -27,7 +27,7 @@ This will add the OpenGrow SDK to your dependencies in package.json.
 After installation, you can include the SDK in your project:
 
 ```javascript
-import OpenGrow from "OpenGrow";
+import OpenGrow from "@mbzadev/opengrow-js-sdk";
 ```
 
 ## Documentation
@@ -231,7 +231,7 @@ opengrow.getNumberOfUnreadMessages(
 ## Usage Example
 
 ```javascript
-import OpenGrow from "@mbzadev/opengrow-js";
+import OpenGrow from "@mbzadev/opengrow-js-sdk";
 
 const runtimeConfig = window.__OPENGROW_CONFIG__;
 const opengrow = new OpenGrow(

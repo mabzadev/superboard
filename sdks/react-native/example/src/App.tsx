@@ -7,7 +7,7 @@ import {
   Button,
   Clipboard,
 } from 'react-native';
-import OpenGrow from '@mbzadev/opengrow-react-native';
+import OpenGrow from '@mbzadev/opengrow-react-native-sdk';
 import { useEffect, useState } from 'react';
 
 OpenGrow.setIdentifier('React native id');

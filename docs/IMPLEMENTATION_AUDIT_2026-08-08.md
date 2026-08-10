@@ -31,9 +31,10 @@ The two configured GitHub repositories exist publicly under the authenticated
 `main` are protected, the declared GitHub Environments and non-secret variables
 are reconciled, and all repository settings match the versioned control-plane
 manifest. Protected CI has published Flutter `2.1.3`, FlutterFlow `2.2.4`,
-Support `1.3.0` and iOS `1.0.2`; `opengrow-reference/dev` now pins the two
-FlutterFlow packages to their immutable released tags. The remaining GitHub
-gates are encrypted Environment secrets and the Android, JavaScript and React
+Support `1.3.0`, iOS `1.0.2` and Android `1.0.2`;
+`opengrow-reference/dev` now pins the two FlutterFlow packages to their
+immutable released tags. The remaining GitHub gates are encrypted Environment
+secrets and the JavaScript and React
 Native `1.0.1` package publications. No VocoStar production migration, DNS
 cutover, Chatwoot removal or legacy resource deletion was performed.
 
@@ -206,17 +207,18 @@ baseline narrative below:
 - Remote reconciliation reports no structural operation and no blocker. Its
   only remaining manual items are encrypted Environment secrets; secret values
   are neither requested nor returned by the audit.
-- Flutter `2.1.3`, FlutterFlow `2.2.4`, Support `1.3.0` and iOS `1.0.2` have
-  immutable tags and public GitHub releases. The canonical catalogue marks all
-  four released, and remote publication readiness verifies their tags, releases
-  and package refs.
+- Flutter `2.1.3`, FlutterFlow `2.2.4`, Support `1.3.0`, iOS `1.0.2` and
+  Android `1.0.2` have immutable tags and public GitHub releases. The canonical
+  catalogue marks all five released, and remote publication readiness verifies
+  their tags, releases and package refs.
 - The protected reference promotion passed its native pull-request gate and
   pins FlutterFlow to `sdk-flutterflow-v2.2.4` and Support to
   `sdk-flutterflow-messaging-v1.3.0` in `reference.project.json`, `pubspec.yaml`
   and the FlutterFlow dependency snippet.
-- Android, JavaScript and React Native `1.0.1` remain pending. Their legacy
-  GitHub Packages are still associated with `mbzadev/opengrow`; publication
-  from `opengrow-platform` requires the explicit package Actions-access change.
+- Android `1.0.2` is published under the collision-free public coordinate
+  `io.opengrow:opengrow-android-sdk`. JavaScript and React Native `1.0.1`
+  remain pending under new collision-free candidate package names; their legacy
+  `1.0.0` packages remain associated with `mbzadev/opengrow` for compatibility.
 - Remote FlutterFlow synchronization remains gated by `FF_API_KEY`; VocoStar
   client convergence remains gated by a fresh reviewed export and its project
   credential. Neither gate is represented as completed.
@@ -593,11 +595,12 @@ data, Chatwoot service or legacy resource was deleted.
    GitHub, attach `https://reference.mbza.dev` only after the DNS gate, register
    the reference application/project and validate all sixteen journeys,
    infrastructure health, Support realtime/attachments and captured emails.
-7. FlutterFlow `2.2.4`, Support `1.3.0`, Flutter `2.1.3` and iOS `1.0.2`
+7. FlutterFlow `2.2.4`, Support `1.3.0`, Flutter `2.1.3`, iOS `1.0.2` and
+   Android `1.0.2`
    are published and the reference is pinned to the immutable FlutterFlow tag
    pair. Supply `FF_API_KEY` to synchronize the reviewed Git-owned `OpenGrow`
-   library, and finish Android/JavaScript/React Native `1.0.1` publication after
-   granting the platform repository the required GitHub Packages access.
+   library, and finish the JavaScript/React Native `1.0.1` publications under
+   their collision-free package names.
 8. VocoStar's exact nine resources and six private Worker shells are now
    provisioned and remotely verified. Supply the missing API/Billing and common
    service production secrets through the encrypted secret channel. Back up

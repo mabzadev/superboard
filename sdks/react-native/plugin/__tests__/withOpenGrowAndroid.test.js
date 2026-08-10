@@ -5,6 +5,7 @@ const {
   addOpenGrowIntentImport,
   addOpenGrowOnStart,
   addOpenGrowOnNewIntent,
+  addOpenGrowAppDependency,
 } = require('../withOpenGrowAndroid');
 
 const SAMPLE_MAIN_APPLICATION = `package com.myapp
@@ -40,6 +41,39 @@ class MainActivity : ReactActivity() {
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 }`;
+
+const SAMPLE_APP_BUILD_GRADLE = `android {
+  namespace "com.example"
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+}`;
+
+describe('withOpenGrowAndroid - app dependency', () => {
+  it('injects the released Android SDK coordinate with the new marker', () => {
+    const result = addOpenGrowAppDependency(SAMPLE_APP_BUILD_GRADLE);
+    expect(result).toContain(
+      "implementation 'io.opengrow:opengrow-android-sdk:1.0.2'"
+    );
+    expect(result).toContain(
+      '// @mbzadev/opengrow-react-native-sdk:dep'
+    );
+  });
+
+  it('treats the legacy marker as already configured', () => {
+    const legacy = SAMPLE_APP_BUILD_GRADLE.replace(
+      'implementation "com.facebook.react:react-android"',
+      "implementation 'io.opengrow:OpenGrow:1.1.1' // @mbzadev/opengrow-react-native:dep"
+    );
+    expect(addOpenGrowAppDependency(legacy)).toBe(legacy);
+  });
+
+  it('is idempotent with the current marker', () => {
+    const first = addOpenGrowAppDependency(SAMPLE_APP_BUILD_GRADLE);
+    expect(addOpenGrowAppDependency(first)).toBe(first);
+  });
+});
 
 describe('withOpenGrowAndroid - MainApplication transforms', () => {
   describe('addOpenGrowImportToMainApplication', () => {

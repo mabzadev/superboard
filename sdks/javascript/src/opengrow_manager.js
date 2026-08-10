@@ -69,8 +69,8 @@ class OpenGrowManager {
 
         // Update context attributes only if identifiers are not being updated
         if (!self.shouldUpdateIdentifiers) {
-          OpenGrowContext.USER_ATTRIBUTES = identifier;
-          OpenGrowContext.USER_IDENTIFIER = attributes;
+          OpenGrowContext.USER_IDENTIFIER = identifier;
+          OpenGrowContext.USER_ATTRIBUTES = attributes;
         }
 
         // Mark as authenticated
@@ -156,6 +156,7 @@ class OpenGrowManager {
     // Check if authenticated before creating a link
     if (!this.authenticated) {
       error("The OpenGrow SDK is not yet initialized, try again later!");
+      return;
     }
 
     this.service.createLink(
