@@ -31,9 +31,9 @@
     "opengrow_flutterflow": {
       "path": "sdks/flutterflow",
       "developmentRef": "dev",
-      "sourceVersion": "2.2.4",
-      "releaseVersion": "2.2.4",
-      "releaseRef": "sdk-flutterflow-v2.2.4"
+      "sourceVersion": "2.2.5",
+      "releaseVersion": "2.2.5",
+      "releaseRef": "sdk-flutterflow-v2.2.5"
     },
     "opengrow_flutterflow_messaging": {
       "path": "sdks/flutterflow_messaging",
