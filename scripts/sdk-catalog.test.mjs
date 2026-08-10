@@ -10,6 +10,21 @@ import {
   validateSdkCatalog,
 } from "./sdk-catalog.mjs";
 
+function stageAndroidCoordinateMigration(catalog) {
+  const android = catalog.libraries.find((item) => item.id === "android");
+  Object.assign(android, {
+    packageName: "io.opengrow:opengrow-android",
+    latestReleaseVersion: "1.0.0",
+    releaseRef: "sdk-android-v1.0.0",
+    releaseStatus: "pending-release",
+    install: 'implementation("io.opengrow:opengrow-android:1.0.0")',
+    candidatePackageName: "io.opengrow:opengrow-android-sdk",
+    candidateInstall:
+      'implementation("io.opengrow:opengrow-android-sdk:1.0.2")',
+  });
+  return android;
+}
+
 test("SDK catalogue matches every package source and FlutterFlow public symbol", async () => {
   const catalog = await loadSdkCatalog();
   const result = await validateSdkCatalog(catalog);
@@ -106,6 +121,7 @@ test("an SDK promotion atomically derives released metadata and install refs", a
 
 test("an SDK promotion atomically migrates a collision-free package coordinate", async () => {
   const catalog = await loadSdkCatalog();
+  stageAndroidCoordinateMigration(catalog);
   const promoted = promoteSdkRelease(catalog, "android", "1.0.2");
   const library = promoted.libraries.find((item) => item.id === "android");
 
@@ -131,7 +147,7 @@ test("an SDK promotion atomically migrates a collision-free package coordinate",
 
 test("a candidate package coordinate is complete, pending and collision-free", async () => {
   const catalog = await loadSdkCatalog();
-  const android = catalog.libraries.find((item) => item.id === "android");
+  const android = stageAndroidCoordinateMigration(catalog);
   delete android.candidateInstall;
   let result = await validateSdkCatalog(catalog);
   assert.ok(
