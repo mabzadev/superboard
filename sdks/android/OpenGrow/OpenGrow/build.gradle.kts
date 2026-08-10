@@ -24,7 +24,7 @@ private val libraryArtifactId = if (project.hasProperty("artifactId")) {
 private val libraryVersion = if (project.hasProperty("libraryVersion")) {
     project.property("libraryVersion").toString()
 } else {
-    "1.0.0"
+    "1.0.1"
 }
 val NETWORK_LOGGING_VALUE = if (project.hasProperty("networkLogging")) {
     project.property("networkLogging").toString()

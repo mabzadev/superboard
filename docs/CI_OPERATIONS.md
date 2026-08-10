@@ -41,6 +41,19 @@ the complete FlutterFlow/Support set is merged into `dev`, a separate workflow
 verifies all tags and GitHub releases before dispatching one protected PR to
 `opengrow-reference`.
 
+Release concurrency is isolated by immutable tag. Publishing several different
+SDKs therefore cannot cancel queued releases, while a repeated event for the
+same tag cannot overtake its own publication. During a repository bootstrap,
+create at most three tags per Git push because GitHub does not emit tag events
+for larger batches; the normal preparation workflow creates one reviewed tag at
+a time and is not affected by this platform limit.
+
+Moving the canonical source repository never authorizes reusing a published
+package version for changed bytes. The catalogue keeps the historical release
+reference installable while the changed source is marked `pending-release` with
+the next semantic version. This applies equally to SwiftPM tags, Maven
+coordinates and npm packages, even when the former repository remains public.
+
 Both repositories keep the default `GITHUB_TOKEN` permission at read-only.
 Their declared workflow policy enables GitHub Actions to create PRs only so the
 two promotion workflows can request `contents: write` and

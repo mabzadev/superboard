@@ -95,6 +95,18 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
     workflow,
     /OPENGROW_ENVIRONMENT: \$\{\{ matrix\.cloudflareEnvironment \}\}/,
   );
+  assert.match(
+    workflow,
+    /OPENGROW_REFERENCE_ROOT: \$\{\{ github\.workspace \}\}\/\.ci-reference-contract/,
+  );
+  assert.match(
+    workflow,
+    /Resolve reference contract source[\s\S]*?node \.github\/scripts\/ci-reference-contract\.mjs/,
+  );
+  assert.match(
+    workflow,
+    /Check out reference contract[\s\S]*?repository: \$\{\{ steps\.reference-contract\.outputs\.repository \}\}[\s\S]*?ref: \$\{\{ steps\.reference-contract\.outputs\.ref \}\}[\s\S]*?path: \.ci-reference-contract/,
+  );
   assert.match(workflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
   assert.match(workflow, /secrets\.CLOUDFLARE_API_TOKEN/);
   assert.match(workflow, /persist-credentials: false/);
@@ -216,6 +228,11 @@ test("production routing cannot bypass client convergence through workflow dispa
 
 test("immutable SDK publication revalidates native and React Native packages", () => {
   assert.match(releaseWorkflow, /^name: Release OpenGrow SDK$/m);
+  assert.match(
+    releaseWorkflow,
+    /group: sdk-release-publication-\$\{\{ github\.ref_name \}\}/,
+  );
+  assert.doesNotMatch(releaseWorkflow, /group: sdk-release-publication\s*$/m);
   assert.match(releaseWorkflow, /Build and test the tagged iOS SDK/);
   assert.match(releaseWorkflow, /\.\/scripts\/run_tests\.sh/);
   assert.match(
@@ -232,6 +249,10 @@ test("immutable SDK publication revalidates native and React Native packages", (
   assert.doesNotMatch(androidBuild, /GithubPackagesPrivate/);
   assert.doesNotMatch(flutterPodspec, /Private Flutter SDK/);
   assert.match(releaseWorkflow, /sdk-catalog\.mjs check --release-tag/);
+  assert.match(
+    releaseWorkflow,
+    /propose-catalogue:[\s\S]*?if: \$\{\{ needs\.validate-tag\.result == 'success' && needs\.release-gate\.result == 'success' \}\}/,
+  );
 });
 
 test("SDK publication proposes protected catalogue and reference promotions", () => {

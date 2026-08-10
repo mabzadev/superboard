@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = 'OpenGrow'
-  s.version      = '1.0.0'
+  s.version      = '1.0.1'
   s.summary      = 'OpenGrow is a powerful SDK that enables deep linking and universal linking within your iOS applications.'
   s.homepage     = 'https://github.com/mbzadev/opengrow-platform'
   s.license      = { :type => 'MIT', :file => 'LICENSE' }

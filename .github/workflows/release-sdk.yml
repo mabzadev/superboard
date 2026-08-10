@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: sdk-release-publication
+  group: sdk-release-publication-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -171,6 +171,7 @@ jobs:
 
   propose-catalogue:
     needs: [validate-tag, release-gate]
+    if: ${{ needs.validate-tag.result == 'success' && needs.release-gate.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: sdk-release

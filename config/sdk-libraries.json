@@ -62,10 +62,10 @@
       "license": "MIT",
       "licensePath": "sdks/ios/LICENSE",
       "versionSource": "sdks/ios/OpenGrow.podspec",
-      "sourceVersion": "1.0.0",
+      "sourceVersion": "1.0.1",
       "latestReleaseVersion": "1.0.0",
       "releaseRef": "1.0.0",
-      "releaseStatus": "released",
+      "releaseStatus": "pending-release",
       "install": ".package(url: \"https://github.com/mbzadev/opengrow-platform.git\", exact: \"1.0.0\")"
     },
     {
@@ -77,10 +77,10 @@
       "license": "MIT",
       "licensePath": "sdks/android/LICENSE",
       "versionSource": "sdks/android/OpenGrow/OpenGrow/build.gradle.kts",
-      "sourceVersion": "1.0.0",
+      "sourceVersion": "1.0.1",
       "latestReleaseVersion": "1.0.0",
       "releaseRef": "sdk-android-v1.0.0",
-      "releaseStatus": "released",
+      "releaseStatus": "pending-release",
       "install": "implementation(\"io.opengrow:opengrow-android:1.0.0\")"
     },
     {
@@ -92,10 +92,10 @@
       "license": "MIT",
       "licensePath": "sdks/javascript/LICENSE",
       "versionSource": "sdks/javascript/package.json",
-      "sourceVersion": "1.0.0",
+      "sourceVersion": "1.0.1",
       "latestReleaseVersion": "1.0.0",
       "releaseRef": "sdk-js-v1.0.0",
-      "releaseStatus": "released",
+      "releaseStatus": "pending-release",
       "install": "npm install @mbzadev/opengrow-js@1.0.0"
     },
     {
@@ -107,10 +107,10 @@
       "license": "MIT",
       "licensePath": "sdks/react-native/LICENSE",
       "versionSource": "sdks/react-native/package.json",
-      "sourceVersion": "1.0.0",
+      "sourceVersion": "1.0.1",
       "latestReleaseVersion": "1.0.0",
       "releaseRef": "sdk-react-native-v1.0.0",
-      "releaseStatus": "released",
+      "releaseStatus": "pending-release",
       "install": "npm install @mbzadev/opengrow-react-native@1.0.0"
     }
   ]

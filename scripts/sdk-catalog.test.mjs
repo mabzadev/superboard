@@ -6,7 +6,6 @@ import {
   promoteSdkRelease,
   releaseCandidateRefFor,
   releaseCandidateTagFor,
-  releaseRefFor,
   releaseTagFor,
   validateSdkCatalog,
 } from "./sdk-catalog.mjs";
@@ -19,7 +18,19 @@ test("SDK catalogue matches every package source and FlutterFlow public symbol",
   assert.equal(catalog.schemaVersion, 2);
   assert.ok(catalog.libraries.every((library) => library.license === "MIT"));
   assert.equal(releaseTagFor(catalog, "flutter"), "sdk-flutter-v2.1.3");
-  assert.equal(releaseRefFor(catalog, "ios"), "1.0.0");
+  assert.equal(releaseCandidateRefFor(catalog, "ios"), "1.0.1");
+  assert.equal(
+    releaseCandidateTagFor(catalog, "android"),
+    "sdk-android-v1.0.1",
+  );
+  assert.equal(
+    releaseCandidateTagFor(catalog, "javascript"),
+    "sdk-js-v1.0.1",
+  );
+  assert.equal(
+    releaseCandidateTagFor(catalog, "react-native"),
+    "sdk-react-native-v1.0.1",
+  );
   assert.equal(
     releaseCandidateTagFor(catalog, "flutterflow"),
     "sdk-flutterflow-v2.2.4",
