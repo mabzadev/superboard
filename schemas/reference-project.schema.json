@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://opengrow.dev/schemas/reference-project.schema.json",
+  "title": "OpenGrow reference application project",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "name",
+    "platformRepository",
+    "referenceRepository",
+    "environment",
+    "target",
+    "sdkApplication",
+    "deployment",
+    "endpoints",
+    "libraries"
+  ],
+  "properties": {
+    "$schema": { "const": "schemas/reference-project.schema.json" },
+    "schemaVersion": { "const": 2 },
+    "name": { "type": "string", "minLength": 1 },
+    "platformRepository": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[^/]+/[^/]+$"
+    },
+    "referenceRepository": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[^/]+/[^/]+$"
+    },
+    "environment": { "const": "development" },
+    "target": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+    "sdkApplication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "identifier", "projectEnvironment"],
+      "properties": {
+        "platform": { "enum": ["ios", "android", "web"] },
+        "identifier": { "type": "string", "pattern": "^[a-z0-9.-]+$" },
+        "projectEnvironment": { "enum": ["test", "production"] }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "environment", "workerName", "compatibilityDate"],
+      "properties": {
+        "branch": { "const": "dev" },
+        "environment": { "const": "development" },
+        "workerName": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$"
+        },
+        "compatibilityDate": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "referenceWeb",
+        "dashboard",
+        "api",
+        "sdk",
+        "shortLinks",
+        "files",
+        "mailPreview",
+        "support"
+      ],
+      "properties": {
+        "referenceWeb": { "$ref": "#/definitions/httpsUrl" },
+        "dashboard": { "$ref": "#/definitions/httpsUrl" },
+        "api": { "$ref": "#/definitions/httpsUrl" },
+        "sdk": { "$ref": "#/definitions/httpsUrl" },
+        "shortLinks": { "$ref": "#/definitions/httpsUrl" },
+        "files": { "$ref": "#/definitions/httpsUrl" },
+        "mailPreview": { "$ref": "#/definitions/httpsUrl" },
+        "support": { "$ref": "#/definitions/httpsUrl" }
+      }
+    },
+    "libraries": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "developmentRef",
+          "sourceVersion",
+          "releaseVersion",
+          "releaseRef"
+        ],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "developmentRef": { "type": "string", "minLength": 1 },
+          "sourceVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "releaseVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "releaseRef": {
+            "type": "string",
+            "pattern": "^sdk-[a-z0-9-]+-v[0-9]+\\.[0-9]+\\.[0-9]+$"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "httpsUrl": {
+      "type": "string",
+      "pattern": "^https://[^\\s]+$"
+    }
+  }
+}

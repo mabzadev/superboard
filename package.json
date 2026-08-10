@@ -1,0 +1,32 @@
+{
+  "name": "opengrow-reference",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mbzadev/opengrow-reference.git"
+  },
+  "scripts": {
+    "config:test": "node --test scripts/reference-config.test.mjs scripts/reference-sdk-promotion.test.mjs",
+    "sdk:promote": "node scripts/reference-sdk-promotion.mjs",
+    "secrets:scan": "gitleaks dir . --no-banner --redact",
+    "cloudflare:config": "node scripts/reference-cloudflare.mjs --config-only",
+    "cloudflare:dry-run": "npm run flutter:web && node scripts/reference-cloudflare.mjs --dry-run",
+    "cloudflare:dry-run:private": "npm run flutter:web && node scripts/reference-cloudflare.mjs --dry-run --no-routes",
+    "cloudflare:deploy": "npm run flutter:web && node scripts/reference-cloudflare.mjs",
+    "cloudflare:deploy:private": "npm run flutter:web && node scripts/reference-cloudflare.mjs --no-routes",
+    "cloudflare:deploy:built": "node scripts/reference-cloudflare.mjs",
+    "flutter:analyze": "flutter analyze",
+    "flutter:test": "flutter test",
+    "flutter:web": "node scripts/reference-flutter-build.mjs",
+    "flutter:web:live": "node scripts/reference-flutter-build.mjs --live",
+    "test": "npm run config:test && npm run flutter:analyze && npm run flutter:test",
+    "check": "npm test && npm run flutter:web && npm run cloudflare:config"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "wrangler": "4.120.0"
+  }
+}

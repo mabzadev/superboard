@@ -1,0 +1,353 @@
+name: Reference validation
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  repository_dispatch:
+    types: [platform-dev-updated, sdk-release-set-published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reference-${{ github.workflow }}-${{ github.event_name == 'repository_dispatch' && 'development' || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  security:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+
+  promote-sdk:
+    needs: security
+    if: ${{ github.event_name == 'repository_dispatch' && github.event.action == 'sdk-release-set-published' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Resolve validated project-owned CI metadata
+        id: metadata
+        run: node scripts/reference-ci-metadata.mjs >> "$GITHUB_OUTPUT"
+      - name: Validate the immutable SDK set payload
+        env:
+          CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: |
+          test "$DEFAULT_BRANCH" = "$DEPLOYMENT_BRANCH"
+          [[ "$CATALOGUE_SHA" =~ ^[0-9a-f]{40}$ ]]
+      - name: Create the isolated reference promotion branch
+        id: branch
+        env:
+          CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
+        run: |
+          branch="automation/flutterflow-sdk-set-${CATALOGUE_SHA:0:12}"
+          if git fetch --no-tags origin "refs/heads/$branch"; then
+            git checkout -B "$branch" FETCH_HEAD
+          else
+            git checkout -b "$branch"
+          fi
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.metadata.outputs.platform_repository }}
+          ref: ${{ github.event.client_payload.catalogue_sha }}
+          path: vendor/opengrow-platform
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the official development catalogue and complete SDK set
+        working-directory: vendor/opengrow-platform
+        env:
+          CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$CATALOGUE_SHA"
+          git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
+          git merge-base --is-ancestor "$CATALOGUE_SHA" FETCH_HEAD
+          node scripts/sdk-catalog.mjs check
+          for library in flutterflow flutterflow-support; do
+            tag="$(node scripts/sdk-catalog.mjs release-tag --library "$library")"
+            git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
+            git merge-base --is-ancestor "refs/tags/$tag^{}" "$CATALOGUE_SHA"
+            gh api "repos/${{ steps.metadata.outputs.platform_repository }}/releases/tags/$tag" >/dev/null
+          done
+      - name: Update the complete Git-owned SDK set
+        run: >-
+          node scripts/reference-sdk-promotion.mjs
+          --catalog vendor/opengrow-platform/config/sdk-libraries.json
+          --library all
+      - name: Revalidate the complete reference contract
+        run: npm run config:test
+      - name: Propose the immutable SDK set through a protected PR
+        env:
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+          PROMOTION_BRANCH: ${{ steps.branch.outputs.name }}
+        run: |
+          ensure_promotion_pr() {
+            existing="$(gh pr list --state open --base "$DEPLOYMENT_BRANCH" --head "$PROMOTION_BRANCH" --json url --jq '.[0].url // empty')"
+            if test -n "$existing"; then
+              echo "Reference SDK promotion PR already exists: $existing"
+              return 0
+            fi
+            closed="$(gh pr list --state closed --base "$DEPLOYMENT_BRANCH" --head "$PROMOTION_BRANCH" --json number,mergedAt --jq 'map(select(.mergedAt == null))[0].number // empty')"
+            if test -n "$closed"; then
+              gh pr reopen "$closed"
+              return 0
+            fi
+            gh pr create \
+              --base "$DEPLOYMENT_BRANCH" \
+              --head "$PROMOTION_BRANCH" \
+              --title "chore(sdk): promote the published FlutterFlow SDK set" \
+              --body "Pins the complete FlutterFlow and Support SDK set after verifying each official tag, GitHub release and catalogue entry."
+          }
+          unexpected="$(git diff --name-only -- . ':!reference.project.json' ':!pubspec.yaml' ':!flutterflow/dependency-snippet.yaml')"
+          test -z "$unexpected"
+          git fetch --no-tags origin \
+            "refs/heads/$DEPLOYMENT_BRANCH:refs/remotes/origin/$DEPLOYMENT_BRANCH"
+          if git diff --quiet -- reference.project.json pubspec.yaml flutterflow/dependency-snippet.yaml; then
+            if git merge-base --is-ancestor HEAD "origin/$DEPLOYMENT_BRANCH"; then
+              echo "The development branch already consumes the complete published SDK set."
+              exit 0
+            fi
+            ensure_promotion_pr
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reference.project.json pubspec.yaml flutterflow/dependency-snippet.yaml
+          git commit -m "chore(sdk): promote the published FlutterFlow SDK set"
+          git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
+          ensure_promotion_pr
+
+  contract:
+    needs: [security, promote-sdk]
+    if: >-
+      always() &&
+      needs.security.result == 'success' &&
+      (needs.promote-sdk.result == 'success' || needs.promote-sdk.result == 'skipped') &&
+      !(github.event_name == 'repository_dispatch' && github.event.action == 'sdk-release-set-published')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      platform_repository: ${{ steps.metadata.outputs.platform_repository }}
+      deployment_branch: ${{ steps.metadata.outputs.deployment_branch }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.repository.default_branch || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run config:test
+      - name: Resolve validated project-owned CI metadata
+        id: metadata
+        run: node scripts/reference-ci-metadata.mjs >> "$GITHUB_OUTPUT"
+      - name: Require every fully published dependency tag to exist
+        env:
+          PLATFORM_REPOSITORY: ${{ steps.metadata.outputs.platform_repository }}
+        run: |
+          node - <<'NODE' |
+          const project = require('./reference.project.json');
+          for (const library of Object.values(project.libraries)) {
+            if (library.sourceVersion === library.releaseVersion) console.log(library.releaseRef);
+          }
+          NODE
+          while IFS= read -r release_ref; do
+            git ls-remote --exit-code --tags \
+              "https://github.com/$PLATFORM_REPOSITORY.git" \
+              "refs/tags/$release_ref" >/dev/null
+          done
+      - name: Require repository dispatch to use the declared development branch
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: test "$DEFAULT_BRANCH" = "$DEPLOYMENT_BRANCH"
+
+  flutter:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      platform_sha: ${{ steps.platform-revision.outputs.sha }}
+      reference_sha: ${{ steps.reference-revision.outputs.sha }}
+    env:
+      OPENGROW_PLATFORM_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.platform_sha || ((github.ref_name == 'main' || github.base_ref == 'main') && 'main' || needs.contract.outputs.deployment_branch) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && needs.contract.outputs.deployment_branch || github.ref }}
+          persist-credentials: false
+      - name: Record tested reference revision
+        id: reference-revision
+        run: |
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Validate dispatched platform revision
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        run: '[[ "$OPENGROW_PLATFORM_REF" =~ ^[0-9a-f]{40}$ ]]'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ needs.contract.outputs.platform_repository }}
+          ref: ${{ env.OPENGROW_PLATFORM_REF }}
+          path: vendor/opengrow-platform
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require dispatched platform revision to belong to official dev
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        working-directory: vendor/opengrow-platform
+        env:
+          DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$OPENGROW_PLATFORM_REF"
+          git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
+          git merge-base --is-ancestor "$OPENGROW_PLATFORM_REF" FETCH_HEAD
+      - name: Record tested platform revision
+        id: platform-revision
+        working-directory: vendor/opengrow-platform
+        run: |
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          cache: true
+      - run: dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"
+      - run: flutter pub get
+      - run: npm ci
+      - run: npm test
+      - run: npm run flutter:web
+
+  validation-gate:
+    name: Reference gate
+    if: >-
+      always() &&
+      !(github.event_name == 'repository_dispatch' &&
+      github.event.action == 'sdk-release-set-published')
+    needs: [security, contract, flutter]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SECURITY_RESULT: ${{ needs.security.result }}
+      CONTRACT_RESULT: ${{ needs.contract.result }}
+      FLUTTER_RESULT: ${{ needs.flutter.result }}
+    steps:
+      - name: Require reference validation to pass
+        run: |
+          test "$SECURITY_RESULT" = "success"
+          test "$CONTRACT_RESULT" = "success"
+          test "$FLUTTER_RESULT" = "success"
+
+  build-development:
+    if: ${{ (github.event_name == 'push' && github.ref_name == needs.contract.outputs.deployment_branch) || github.event_name == 'repository_dispatch' }}
+    needs: [contract, validation-gate, flutter]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: development
+    env:
+      OPENGROW_PLATFORM_REVISION: ${{ needs.flutter.outputs.platform_sha }}
+      OPENGROW_REFERENCE_REVISION: ${{ needs.flutter.outputs.reference_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.flutter.outputs.reference_sha }}
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ needs.contract.outputs.platform_repository }}
+          ref: ${{ needs.flutter.outputs.platform_sha }}
+          path: vendor/opengrow-platform
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          cache: true
+      - name: Require exact tested revisions and reference project identity
+        env:
+          OPENGROW_PROJECT_KEY: ${{ secrets.OPENGROW_PROJECT_KEY }}
+          OPENGROW_PROJECT_ID: ${{ secrets.OPENGROW_PROJECT_ID }}
+        run: |
+          [[ "$OPENGROW_PLATFORM_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$OPENGROW_REFERENCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          test -n "$OPENGROW_PROJECT_KEY"
+          [[ "$OPENGROW_PROJECT_ID" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$OPENGROW_REFERENCE_REVISION"
+          test "$(git -C vendor/opengrow-platform rev-parse HEAD)" = "$OPENGROW_PLATFORM_REVISION"
+      - run: dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"
+      - run: flutter pub get
+      - run: npm ci
+      - name: Build live MBZA acceptance artifact
+        env:
+          OPENGROW_PROJECT_KEY: ${{ secrets.OPENGROW_PROJECT_KEY }}
+          OPENGROW_PROJECT_ID: ${{ secrets.OPENGROW_PROJECT_ID }}
+        run: npm run flutter:web:live
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: reference-web-${{ github.run_id }}
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-development:
+    if: ${{ (github.event_name == 'push' && github.ref_name == needs.contract.outputs.deployment_branch) || github.event_name == 'repository_dispatch' }}
+    needs: [contract, validation-gate, flutter, build-development]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.flutter.outputs.reference_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate deployment credentials
+        run: |
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: reference-web-${{ github.run_id }}
+          path: build/web
+      - run: npm run cloudflare:deploy:built

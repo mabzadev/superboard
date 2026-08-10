@@ -1,0 +1,15 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.wrangler/
+.wrangler-reference.generated.jsonc
+pubspec.lock
+pubspec_overrides.yaml

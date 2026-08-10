@@ -1,0 +1,12 @@
+{
+  "name": "OpenGrow Reference",
+  "short_name": "OpenGrow",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f7f7fb",
+  "theme_color": "#5667e8",
+  "description": "Executable OpenGrow Flutter and FlutterFlow reference application.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": []
+}
