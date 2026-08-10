@@ -19,10 +19,10 @@ The OpenGrow SDK is a JavaScript module designed to integrate with the OpenGrow 
 ## Installation
 
 Install the published package `@mbzadev/opengrow-js-sdk` at the exact
-release `1.0.1`:
+release `1.0.2`:
 
 ```bash
-npm install @mbzadev/opengrow-js-sdk@1.0.1
+npm install @mbzadev/opengrow-js-sdk@1.0.2
 ```
 
 Then import the package by its catalogue-owned name:
