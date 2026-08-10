@@ -38,7 +38,7 @@ jobs:
             *) exit 64 ;;
           esac
           test -n "$DEPLOY_SHA"
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.DEPLOY_SHA }}
           fetch-depth: 1
@@ -106,7 +106,7 @@ jobs:
             *) exit 64 ;;
           esac
           test -n "$DEPLOY_SHA"
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.DEPLOY_SHA }}
           fetch-depth: 1
@@ -129,7 +129,7 @@ jobs:
             echo "deploy=false" >> "$GITHUB_OUTPUT"
             echo "Revision $DEPLOY_SHA was superseded on $DEPLOY_BRANCH; deployment skipped."
           fi
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         if: steps.revision.outputs.deploy == 'true'
         with:
           node-version: 22
@@ -198,7 +198,7 @@ jobs:
           fi
       - name: Retain production D1 migration backups
         if: ${{ always() && env.OPENGROW_ENVIRONMENT == 'production' && steps.encrypt-backups.outcome == 'success' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: opengrow-d1-backups-${{ matrix.id }}-${{ github.run_id }}
           path: |
@@ -208,7 +208,7 @@ jobs:
           retention-days: 30
       - name: Retain any recoverable encrypted backup after encryption failure
         if: ${{ always() && env.OPENGROW_ENVIRONMENT == 'production' && steps.encrypt-backups.outcome == 'failure' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: opengrow-d1-recovery-${{ matrix.id }}-${{ github.run_id }}
           path: |

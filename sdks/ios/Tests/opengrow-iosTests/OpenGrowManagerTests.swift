@@ -40,13 +40,23 @@ final class OpenGrowManagerTests: XCTestCase {
     /// Creates a standard OpenGrowManager with catch-all mock handlers.
     private func makeManager(delegate: OpenGrowDelegate? = nil) -> OpenGrowManager {
         setupDefaultHandlers()
-        return OpenGrowManager(apiKey: "test-key", useTestEnvironment: true, delegate: delegate)
+        return OpenGrowManager(
+            apiKey: "test-key",
+            useTestEnvironment: true,
+            baseURL: "https://api.example.test",
+            delegate: delegate
+        )
     }
 
     /// Creates a TestableOpenGrowManager (URI scheme check bypassed) with catch-all mock handlers.
     private func makeTestableManager(delegate: OpenGrowDelegate? = nil) -> TestableOpenGrowManager {
         setupDefaultHandlers()
-        return TestableOpenGrowManager(apiKey: "test-key", useTestEnvironment: true, delegate: delegate)
+        return TestableOpenGrowManager(
+            apiKey: "test-key",
+            useTestEnvironment: true,
+            baseURL: "https://api.example.test",
+            delegate: delegate
+        )
     }
 
     private func setupDefaultHandlers() {

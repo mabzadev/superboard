@@ -72,6 +72,12 @@ test("every external GitHub Action is pinned to an immutable commit", () => {
   }
 });
 
+test("pull request secret scanning receives only the read-scoped workflow token", () => {
+  assert.match(ciWorkflow, /gitleaks\/gitleaks-action@[0-9a-f]{40}/u);
+  assert.match(ciWorkflow, /GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/u);
+  assert.match(ciWorkflow, /permissions:\n  contents: read/u);
+});
+
 test("Cloudflare deployment is restricted, preflighted and target-driven", () => {
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /workflows: \[CI\]/);

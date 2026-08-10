@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { resolve4, resolve6 } from "node:dns/promises";
-import { access } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { access, readFile, readdir } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   environmentFromArgs,
@@ -256,7 +256,7 @@ export async function scanLegacyClient(value) {
     },
   );
   if (![0, 1].includes(result.status)) {
-    throw new Error("Unable to inspect the legacy client source");
+    return scanLegacyClientWithoutRipgrep(clientRoot);
   }
   return String(result.stdout || "")
     .split(/\r?\n/u)
@@ -264,6 +264,44 @@ export async function scanLegacyClient(value) {
     .map((path) => relative(clientRoot, path))
     .sort()
     .slice(0, 500);
+}
+
+const ignoredClientDirectories = new Set([
+  ".git",
+  ".flutterflow",
+  ".ffai_staging",
+  "build",
+  ".dart_tool",
+  "node_modules",
+  "references",
+  "test",
+]);
+const legacyClientPattern =
+  /chatwoot|openchat|sup\.vocostar\.com|SupportChatWidget|supportInit|supportFetchMessages|supportSendMessage/iu;
+
+export async function scanLegacyClientWithoutRipgrep(clientRoot) {
+  const matches = [];
+
+  async function walk(directory) {
+    const entries = (await readdir(directory, { withFileTypes: true })).sort(
+      (left, right) => left.name.localeCompare(right.name),
+    );
+    for (const entry of entries) {
+      if (matches.length >= 500 || entry.isSymbolicLink()) continue;
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!ignoredClientDirectories.has(entry.name)) await walk(path);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.endsWith(".dart")) continue;
+      if (legacyClientPattern.test(await readFile(path, "utf8"))) {
+        matches.push(relative(clientRoot, path));
+      }
+    }
+  }
+
+  await walk(clientRoot);
+  return matches.sort();
 }
 
 const entrypoint = process.argv[1]

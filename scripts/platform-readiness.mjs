@@ -568,7 +568,7 @@ function migrationReadiness(plan) {
 
 export async function buildReadiness({
   remote = false,
-  referenceRoot = null,
+  referenceRoot = process.env.OPENGROW_REFERENCE_ROOT || null,
   clientSources = {},
   env = process.env,
 } = {}) {
@@ -592,14 +592,10 @@ export async function buildReadiness({
   };
   const referenceRepositoryName =
     controlPlane.repositories.reference.nameWithOwner.split("/").at(-1);
-  const referenceCandidates = [
-    resolve(root, `../${referenceRepositoryName}`),
-    resolve(root, "../grow-reference"),
-  ];
-  const resolvedReferenceRoot =
-    referenceRoot ||
-    referenceCandidates.find((candidate) => existsSync(candidate)) ||
-    referenceCandidates[0];
+  const resolvedReferenceRoot = resolveReferenceRepositoryRoot({
+    referenceRoot,
+    referenceRepositoryName,
+  });
   const targetNames = [
     ...new Set(deploymentMatrix.entries.map((entry) => entry.target)),
   ];
@@ -969,13 +965,35 @@ export async function buildReadiness({
   };
 }
 
+export function resolveReferenceRepositoryRoot({
+  referenceRoot = null,
+  referenceRepositoryName,
+  platformRoot = root,
+}) {
+  if (referenceRoot !== null && referenceRoot !== undefined) {
+    const configuredRoot = String(referenceRoot).trim();
+    if (!configuredRoot || !isAbsolute(configuredRoot)) {
+      throw new Error(
+        "OpenGrow reference root must be a non-empty absolute path",
+      );
+    }
+    return resolve(configuredRoot);
+  }
+
+  const candidates = [
+    resolve(platformRoot, `../${referenceRepositoryName}`),
+    resolve(platformRoot, "../grow-reference"),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) || candidates[0];
+}
+
 async function main() {
   const args = parseArgs();
   const report = await buildReadiness({
     remote: Boolean(args.remote),
     clientSources: parseClientSources(args["client-sources"]),
     referenceRoot: args["reference-root"]
-      ? resolve(String(args["reference-root"]))
+      ? String(args["reference-root"])
       : undefined,
   });
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

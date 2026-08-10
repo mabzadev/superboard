@@ -17,11 +17,31 @@ import {
   parseGitState,
   referenceReadiness,
   requiredResourceIds,
+  resolveReferenceRepositoryRoot,
   sdkReadiness,
   targetReadiness,
 } from "./platform-readiness.mjs";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
+
+test("reference workspace accepts an explicit absolute CI path", () => {
+  assert.equal(
+    resolveReferenceRepositoryRoot({
+      referenceRoot: "/runner/work/contracts/opengrow-reference",
+      referenceRepositoryName: "opengrow-reference",
+      platformRoot: "/runner/work/platform",
+    }),
+    "/runner/work/contracts/opengrow-reference",
+  );
+  assert.throws(
+    () =>
+      resolveReferenceRepositoryRoot({
+        referenceRoot: "contracts/opengrow-reference",
+        referenceRepositoryName: "opengrow-reference",
+      }),
+    /absolute path/u,
+  );
+});
 
 test("target readiness distinguishes unresolved fixtures from provisioned targets", async () => {
   const { target: mbzaSource } = await loadTarget("mbza-development");

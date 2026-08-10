@@ -7,6 +7,7 @@ import {
   chatwootCredentialInventory,
   evaluateChatwootReadiness,
   scanLegacyClient,
+  scanLegacyClientWithoutRipgrep,
 } from "./opengrow-chatwoot-readiness.mjs";
 
 test("Chatwoot readiness reports environment names without values", () => {
@@ -96,9 +97,9 @@ test("Chatwoot readiness scans generated Flutter code even when Git ignores it",
     "const legacySupport = 'https://sup.vocostar.com';\n",
   );
 
-  assert.deepEqual(await scanLegacyClient(root), [
-    "generated_code/lib/custom_code/actions/support_init.dart",
-  ]);
+  const expected = ["generated_code/lib/custom_code/actions/support_init.dart"];
+  assert.deepEqual(await scanLegacyClient(root), expected);
+  assert.deepEqual(await scanLegacyClientWithoutRipgrep(root), expected);
 });
 
 test("Chatwoot readiness rejects malformed account and attachment configuration", () => {

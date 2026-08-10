@@ -42,6 +42,10 @@ open class BaseService: NSObject {
     /// Serial queue protecting cachedCompletions from concurrent access
     private let completionsQueue = DispatchQueue(label: "com.opengrow.completionsQueue")
 
+    /// Dedicated scheduler for retries so system background-queue throttling cannot
+    /// defer network recovery beyond the configured backoff window.
+    private let retryQueue = DispatchQueue(label: "io.opengrow.sdk.retry", qos: .utility)
+
     /// Maximum number of retries per request before giving up
     private static let maxRetryCount = 5
 
@@ -114,7 +118,7 @@ open class BaseService: NSObject {
                     }
 
                     let delay = self.retryDelay(for: retryCount)
-                    DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + delay) {
+                    self.retryQueue.asyncAfter(deadline: .now() + delay) {
                         self.makeRequest(background: background, URLRequest: URLRequest, retryCount: retryCount + 1, completion: completion)
                     }
 
@@ -137,7 +141,7 @@ open class BaseService: NSObject {
 
                     let retryAfter = (http.value(forHTTPHeaderField: "Retry-After") as NSString?)?.doubleValue
                     let delay = retryAfter ?? self.retryDelay(for: retryCount)
-                    DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + delay) {
+                    self.retryQueue.asyncAfter(deadline: .now() + delay) {
                         self.makeRequest(background: background, URLRequest: URLRequest, retryCount: retryCount + 1, completion: completion)
                     }
                     return
@@ -200,4 +204,3 @@ extension BaseService: URLSessionDownloadDelegate {
         completion?(false, nil)
     }
 }
-

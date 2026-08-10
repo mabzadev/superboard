@@ -38,7 +38,7 @@ jobs:
       tag: ${{ steps.release.outputs.tag }}
       release_ref: ${{ steps.release.outputs.release_ref }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
@@ -104,7 +104,7 @@ jobs:
       TAG: ${{ needs.validate.outputs.tag }}
       RELEASE_REF: ${{ needs.validate.outputs.release_ref }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.validate.outputs.source_sha }}
           fetch-depth: 0

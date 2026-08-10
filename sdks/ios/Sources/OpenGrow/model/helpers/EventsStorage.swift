@@ -38,7 +38,7 @@ class EventsStorage: EventsStorageProtocol {
     }()
 
     /// A serial dispatch queue for managing access to shared resources.
-    private let serialQueue = DispatchQueue(label: "com.opengrow-events-queue", qos: .background)
+    private let serialQueue = DispatchQueue(label: "com.opengrow-events-queue", qos: .utility)
 
     // MARK: - Public Methods
 
@@ -65,9 +65,7 @@ class EventsStorage: EventsStorageProtocol {
 
             self.dataCache.writeSync(array: existingEvents, forKey: Constants.cachedEvents)
 
-            DispatchQueue.global(qos: .background).async {
-                completion()
-            }
+            completion()
         }
     }
 
@@ -87,9 +85,7 @@ class EventsStorage: EventsStorageProtocol {
 
             self.dataCache.writeSync(array: existingEvents, forKey: Constants.cachedEvents)
 
-            DispatchQueue.global(qos: .background).async {
-                completion()
-            }
+            completion()
         }
     }
 
@@ -104,9 +100,7 @@ class EventsStorage: EventsStorageProtocol {
                 self.dataCache.writeSync(array: readEvents, forKey: Constants.cachedEvents)
             }
 
-            DispatchQueue.global(qos: .background).async {
-                completion()
-            }
+            completion()
         }
     }
 
@@ -120,16 +114,14 @@ class EventsStorage: EventsStorageProtocol {
     func transformEvents(_ transform: @escaping (Event) -> Event, completion: @escaping OpenGrowEmptyClosure) {
         serialQueue.async {
             guard let events = self.dataCache.readArray(forKey: Constants.cachedEvents) as? [Event] else {
-                DispatchQueue.global(qos: .background).async { completion() }
+                completion()
                 return
             }
 
             let transformed = events.map(transform)
             self.dataCache.writeSync(array: transformed, forKey: Constants.cachedEvents)
 
-            DispatchQueue.global(qos: .background).async {
-                completion()
-            }
+            completion()
         }
     }
 
@@ -140,9 +132,7 @@ class EventsStorage: EventsStorageProtocol {
         serialQueue.async {
             let readEvents = self.dataCache.readArray(forKey: Constants.cachedEvents) as? [Event]
 
-            DispatchQueue.global().async {
-                completion(readEvents)
-            }
+            completion(readEvents)
         }
     }
 
