@@ -15,12 +15,12 @@ dependencies:
   opengrow_flutterflow:
     git:
       url: https://github.com/mbzadev/opengrow-platform.git
-      ref: dev
+      ref: sdk-flutterflow-v2.2.4
       path: sdks/flutterflow
   opengrow_flutterflow_messaging:
     git:
       url: https://github.com/mbzadev/opengrow-platform.git
-      ref: dev
+      ref: sdk-flutterflow-messaging-v1.3.0
       path: sdks/flutterflow_messaging
   url_launcher: ">=6.3.1 <7.0.0"
 
