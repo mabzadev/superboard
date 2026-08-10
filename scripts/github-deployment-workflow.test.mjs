@@ -297,6 +297,50 @@ test("immutable SDK publication revalidates native and React Native packages", (
 });
 
 test("SDK publication proposes protected catalogue and reference promotions", () => {
+  assert.equal(
+    (
+      prepareReleaseWorkflow.match(
+        /Install repository tooling for the SDK catalogue/gu,
+      ) ?? []
+    ).length,
+    2,
+  );
+  assert.match(
+    prepareReleaseWorkflow,
+    /Install repository tooling for the SDK catalogue[\s\S]*?npm ci --ignore-scripts[\s\S]*?Verify complete SDK catalogue/,
+  );
+  assert.match(
+    prepareReleaseWorkflow,
+    /Install repository tooling for the SDK catalogue[\s\S]*?npm ci --ignore-scripts[\s\S]*?Revalidate the reviewed source and unused immutable refs/,
+  );
+  assert.equal(
+    (
+      releaseWorkflow.match(
+        /Install repository tooling for the SDK catalogue/gu,
+      ) ?? []
+    ).length,
+    2,
+  );
+  assert.match(
+    releaseWorkflow,
+    /validate-tag:[\s\S]*?Install repository tooling for the SDK catalogue[\s\S]*?npm ci --ignore-scripts[\s\S]*?sdk-catalog\.mjs candidate-ref/,
+  );
+  assert.match(
+    releaseWorkflow,
+    /propose-catalogue:[\s\S]*?Install repository tooling for the SDK catalogue[\s\S]*?npm ci --ignore-scripts[\s\S]*?sdk-catalog\.mjs promote/,
+  );
+  assert.equal(
+    (
+      promoteReferenceSdkWorkflow.match(
+        /Install repository tooling for the SDK catalogue/gu,
+      ) ?? []
+    ).length,
+    1,
+  );
+  assert.match(
+    promoteReferenceSdkWorkflow,
+    /Install repository tooling for the SDK catalogue[\s\S]*?npm ci --ignore-scripts[\s\S]*?Validate the complete SDK catalogue/,
+  );
   assert.match(
     prepareReleaseWorkflow,
     /sdk-catalog\.mjs check --candidate-release-tag/,

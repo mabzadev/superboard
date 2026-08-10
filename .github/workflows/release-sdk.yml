@@ -42,6 +42,12 @@ jobs:
           ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository tooling for the SDK catalogue
+        run: npm ci --ignore-scripts
       - id: tag
         shell: bash
         env:
@@ -238,6 +244,12 @@ jobs:
         with:
           ref: ${{ needs.validate-tag.outputs.development_branch }}
           fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository tooling for the SDK catalogue
+        run: npm ci --ignore-scripts
       - name: Create the isolated catalogue promotion branch
         run: |
           if git fetch --no-tags origin "refs/heads/$PROMOTION_BRANCH"; then

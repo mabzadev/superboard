@@ -42,6 +42,12 @@ jobs:
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository tooling for the SDK catalogue
+        run: npm ci --ignore-scripts
       - name: Verify complete SDK catalogue
         run: node scripts/sdk-catalog.mjs check
       - name: Require the exact official development head
@@ -109,6 +115,12 @@ jobs:
         with:
           ref: ${{ needs.validate.outputs.source_sha }}
           fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository tooling for the SDK catalogue
+        run: npm ci --ignore-scripts
       - name: Revalidate the reviewed source and unused immutable refs
         run: |
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]

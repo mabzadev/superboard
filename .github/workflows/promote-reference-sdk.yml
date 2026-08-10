@@ -32,6 +32,12 @@ jobs:
           ref: dev
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository tooling for the SDK catalogue
+        run: npm ci --ignore-scripts
       - name: Validate the complete SDK catalogue
         run: node scripts/sdk-catalog.mjs check
       - name: Resolve whether the complete FlutterFlow SDK set is published
