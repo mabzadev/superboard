@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grow_reference/src/config/reference_config.dart';
+import 'package:superboard_reference/src/config/reference_config.dart';
 
 void main() {
   const valid = ReferenceConfig(

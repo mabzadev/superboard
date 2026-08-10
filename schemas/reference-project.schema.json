@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://opengrow.dev/schemas/reference-project.schema.json",
-  "title": "OpenGrow reference application project",
+  "title": "SuperBoard reference application project",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -73,7 +73,7 @@
       ],
       "properties": {
         "referenceWeb": { "const": "https://reference.mbza.dev" },
-        "dashboard": { "const": "https://grow.mbza.dev" },
+        "dashboard": { "const": "https://board.mbza.dev" },
         "api": { "const": "https://api.mbza.dev" },
         "sdk": { "const": "https://sdk.mbza.dev" },
         "shortLinks": { "const": "https://in.mbza.dev" },

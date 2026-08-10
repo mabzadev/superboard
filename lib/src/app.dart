@@ -18,7 +18,7 @@ class GrowReferenceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'OpenGrow Reference',
+      title: 'SuperBoard Reference',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

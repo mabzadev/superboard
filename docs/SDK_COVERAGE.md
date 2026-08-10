@@ -1,7 +1,7 @@
 # Seven-SDK reference contract
 
 `config/sdk-coverage.json` is the reviewed, versioned coverage manifest for the
-complete public OpenGrow SDK set. It is deliberately separate from
+complete public SuperBoard SDK set. It is deliberately separate from
 `reference.project.json`: the latter describes the two libraries imported
 directly by the FlutterFlow application, while the coverage manifest describes
 every SDK release that belongs to the reusable platform baseline.
@@ -36,7 +36,7 @@ Run the same gates locally or in CI:
 npm run sdk:coverage:check
 npm run sdk:coverage:verify
 npm run sdk:coverage:catalog -- \
-  --catalog /path/to/opengrow-platform/config/sdk-libraries.json
+  --catalog /path/to/superboard-platform/config/sdk-libraries.json
 flutter pub get --enforce-lockfile
 git diff --exit-code -- pubspec.lock
 ```

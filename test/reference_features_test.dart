@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grow_reference/src/model/reference_feature.dart';
+import 'package:superboard_reference/src/model/reference_feature.dart';
 
 void main() {
   test(

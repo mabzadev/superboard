@@ -92,7 +92,7 @@ async function run() {
   const temporaryDirectory = path.join(root, ".dart_tool");
   const temporaryPath = path.join(
     temporaryDirectory,
-    `opengrow-reference-build-${process.pid}.json`,
+    `superboard-reference-build-${process.pid}.json`,
   );
   await mkdir(temporaryDirectory, { recursive: true });
   await writeFile(temporaryPath, `${JSON.stringify(defines, null, 2)}\n`, {

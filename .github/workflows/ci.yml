@@ -126,11 +126,11 @@ jobs:
         with:
           repository: ${{ steps.metadata.outputs.platform_repository }}
           ref: ${{ github.event.client_payload.catalogue_sha }}
-          path: vendor/opengrow-platform
+          path: vendor/superboard-platform
           fetch-depth: 0
           persist-credentials: false
       - name: Verify the official development catalogue and complete SDK set
-        working-directory: vendor/opengrow-platform
+        working-directory: vendor/superboard-platform
         env:
           CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
           DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
@@ -148,7 +148,7 @@ jobs:
       - name: Update the complete Git-owned SDK set
         run: >-
           node scripts/reference-sdk-promotion.mjs
-          --catalog vendor/opengrow-platform/config/sdk-libraries.json
+          --catalog vendor/superboard-platform/config/sdk-libraries.json
           --library all
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
@@ -306,12 +306,12 @@ jobs:
         with:
           repository: ${{ needs.contract.outputs.platform_repository }}
           ref: ${{ steps.platform-ref.outputs.ref }}
-          path: vendor/opengrow-platform
+          path: vendor/superboard-platform
           fetch-depth: 0
           persist-credentials: false
       - name: Require a bridge to use the official Platform development head
         if: ${{ needs.contract.outputs.history_bridge_validated == 'true' }}
-        working-directory: vendor/opengrow-platform
+        working-directory: vendor/superboard-platform
         env:
           DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
         run: |
@@ -319,7 +319,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
       - name: Require dispatched platform revision to belong to official dev
         if: ${{ github.event_name == 'repository_dispatch' }}
-        working-directory: vendor/opengrow-platform
+        working-directory: vendor/superboard-platform
         env:
           DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
           OPENGROW_PLATFORM_REF: ${{ steps.platform-ref.outputs.ref }}
@@ -329,7 +329,7 @@ jobs:
           git merge-base --is-ancestor "$OPENGROW_PLATFORM_REF" FETCH_HEAD
       - name: Record tested platform revision
         id: platform-revision
-        working-directory: vendor/opengrow-platform
+        working-directory: vendor/superboard-platform
         run: |
           sha="$(git rev-parse HEAD)"
           [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
@@ -337,7 +337,7 @@ jobs:
       - name: Match all seven SDKs to the checked-out official catalogue
         run: >-
           npm run sdk:coverage:catalog --
-          --catalog vendor/opengrow-platform/config/sdk-libraries.json
+          --catalog vendor/superboard-platform/config/sdk-libraries.json
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
@@ -348,7 +348,7 @@ jobs:
           node scripts/reference-sdk-lock.mjs verify-remote
           flutter pub get --enforce-lockfile
           git diff --exit-code -- pubspec.lock
-      - run: dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"
+      - run: dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/superboard-platform"
       - run: flutter pub get
       - name: Restore the reviewed lockfile after local override resolution
         run: git restore --source=HEAD --worktree -- pubspec.lock
@@ -402,7 +402,7 @@ jobs:
         with:
           repository: ${{ needs.contract.outputs.platform_repository }}
           ref: ${{ needs.flutter.outputs.platform_sha }}
-          path: vendor/opengrow-platform
+          path: vendor/superboard-platform
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -423,8 +423,8 @@ jobs:
           test -n "$OPENGROW_PROJECT_KEY"
           [[ "$OPENGROW_PROJECT_ID" =~ ^[1-9][0-9]*$ ]]
           test "$(git rev-parse HEAD)" = "$OPENGROW_REFERENCE_REVISION"
-          test "$(git -C vendor/opengrow-platform rev-parse HEAD)" = "$OPENGROW_PLATFORM_REVISION"
-      - run: dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"
+          test "$(git -C vendor/superboard-platform rev-parse HEAD)" = "$OPENGROW_PLATFORM_REVISION"
+      - run: dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/superboard-platform"
       - run: flutter pub get
       - run: npm ci
       - name: Build live MBZA acceptance artifact

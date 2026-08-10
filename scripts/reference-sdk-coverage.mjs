@@ -281,7 +281,7 @@ async function defaultReleaseExists(repository, releaseTag) {
     {
       method: "HEAD",
       redirect: "follow",
-      headers: { "user-agent": "opengrow-reference-sdk-coverage" },
+      headers: { "user-agent": "superboard-reference-sdk-coverage" },
     },
   );
   if (!response.ok) {

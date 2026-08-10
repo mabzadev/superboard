@@ -2,14 +2,14 @@
 
 ## Purpose
 
-The reference project proves that a new application can consume OpenGrow with
+The reference project proves that a new application can consume SuperBoard with
 configuration only. It must stay generic: no VocoStar bundle ID, API origin,
 project key, product identifier, paywall ID, SMTP credential or Chatwoot URL is
 allowed in shared code.
 
 ## Required pages
 
-1. **Bootstrap** — initializes app state and `OpenGrowBootstrap` with endpoint
+1. **Bootstrap** — initializes app state and `SuperBoardBootstrap` with endpoint
    values from environment configuration.
 2. **Sign in** — email/password plus Google and Apple sign-in.
 3. **Create account** — registration/allowlist behavior and email verification.
@@ -18,12 +18,12 @@ allowed in shared code.
 6. **Profile** — user identity, attributes, sign-out and account deletion.
 7. **Notifications** — push permission, token registration and inbox state.
 8. **Files** — upload, progress, listing, download and deletion through common
-   OpenGrow contracts.
+   SuperBoard contracts.
 9. **Products** — offerings, entitlements, purchase, restore and customer info.
 10. **Paywall** — remote placement resolution and tracked paywall events.
 11. **Dynamic links** — generate, open and inspect attribution/deep-link data.
 12. **Support inbox** — conversations, messages, attachments, realtime, typing,
-    read receipts and CSAT using OpenGrow Support, never Chatwoot directly.
+    read receipts and CSAT using SuperBoard Support, never Chatwoot directly.
 13. **Marketing consent** — newsletter opt-in/out and subscription preferences.
 14. **Onboarding** — remote flow resolution, progression and completion.
 15. **Custom extension** — authenticated create/list/detail cycle for a durable
@@ -48,28 +48,28 @@ allowed in shared code.
 | `applicationRefreshToken` | string      | secure storage     | rotating application session            |
 | `opengrowIdentityToken`   | string      | memory/refreshable | short-lived token exchange              |
 | `currentUserId`           | string      | session            | authenticated profile                   |
-| `lastDeepLinkJson`        | JSON string | memory             | OpenGrow callback                       |
+| `lastDeepLinkJson`        | JSON string | memory             | SuperBoard callback                       |
 | `lastPurchaseResultJson`  | JSON string | memory             | verified purchase callback              |
 | `lastCustomerInfoJson`    | JSON string | memory             | verified customer info                  |
 | `lastSupportEventJson`    | JSON string | memory             | realtime Support callback               |
 | `lastCustomJobJson`       | JSON string | memory             | project/owner-scoped custom job receipt |
 | `lastIntegrationError`    | string      | memory             | sanitized SDK error                     |
 
-Endpoints are required action/widget parameters. The OpenGrow Flutter and
+Endpoints are required action/widget parameters. The SuperBoard Flutter and
 FlutterFlow libraries intentionally provide no VocoStar or mbza fallback URL.
 
 ## Data ownership
 
 - FlutterFlow holds UI/session state only.
-- OpenGrow API owns identities, projects and notification/file orchestration.
+- SuperBoard API owns identities, projects and notification/file orchestration.
 - feature Workers own their module data.
-- email/marketing/support data is visible through OpenGrow interfaces.
+- email/marketing/support data is visible through SuperBoard interfaces.
 - application-specific conversion/media jobs are reached through the custom
   Worker contract, never hardcoded Worker URLs.
 
 ## Import procedure
 
-1. Create the FlutterFlow project named **OpenGrow Reference**.
+1. Create the FlutterFlow project named **SuperBoard Reference**.
 2. Configure the two public Git dependencies from
    `flutterflow/dependency-snippet.yaml`.
 3. Add environment variables matching `reference.project.json`.

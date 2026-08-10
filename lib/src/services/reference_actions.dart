@@ -705,7 +705,7 @@ class LiveReferenceActions implements ReferenceActions {
             'title': input['title']?.toString() ?? 'OpenGrow reference',
             'data': input['data'] is Map
                 ? input['data']
-                : {'source': 'opengrow-reference'},
+                : {'source': 'superboard-reference'},
           },
         });
         return _LiveExecution('opengrowGenerateLinkJson', {

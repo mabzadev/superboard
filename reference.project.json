@@ -1,9 +1,9 @@
 {
   "$schema": "schemas/reference-project.schema.json",
   "schemaVersion": 3,
-  "name": "OpenGrow Reference",
-  "platformRepository": "https://github.com/mbzadev/opengrow-platform",
-  "referenceRepository": "https://github.com/mbzadev/opengrow-reference",
+  "name": "SuperBoard Reference",
+  "platformRepository": "https://github.com/mbzadev/superboard-platform",
+  "referenceRepository": "https://github.com/mbzadev/superboard-reference",
   "environment": "development",
   "target": "mbza-development",
   "sdkApplication": {
@@ -19,7 +19,7 @@
   },
   "endpoints": {
     "referenceWeb": "https://reference.mbza.dev",
-    "dashboard": "https://grow.mbza.dev",
+    "dashboard": "https://board.mbza.dev",
     "api": "https://api.mbza.dev",
     "sdk": "https://sdk.mbza.dev",
     "shortLinks": "https://in.mbza.dev",

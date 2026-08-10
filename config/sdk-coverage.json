@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/sdk-coverage.schema.json",
   "schemaVersion": 1,
-  "platformRepository": "https://github.com/mbzadev/opengrow-platform",
+  "platformRepository": "https://github.com/mbzadev/superboard-platform",
   "libraries": [
     {
       "id": "flutter",

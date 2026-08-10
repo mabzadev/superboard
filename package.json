@@ -1,15 +1,16 @@
 {
-  "name": "opengrow-reference",
+  "name": "superboard-reference",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mbzadev/opengrow-reference.git"
+    "url": "https://github.com/mbzadev/superboard-reference.git"
   },
   "scripts": {
-    "config:test": "node --test scripts/reference-config.test.mjs scripts/reference-deployment-gate.test.mjs scripts/reference-history-bridge.test.mjs scripts/reference-platform-ref.test.mjs scripts/reference-sdk-coverage.test.mjs scripts/reference-sdk-lock.test.mjs scripts/reference-sdk-promotion.test.mjs",
+    "brand:check": "node scripts/reference-brand.mjs && node --test scripts/reference-brand.test.mjs",
+    "config:test": "node --test scripts/reference-brand.test.mjs scripts/reference-config.test.mjs scripts/reference-deployment-gate.test.mjs scripts/reference-history-bridge.test.mjs scripts/reference-platform-ref.test.mjs scripts/reference-sdk-coverage.test.mjs scripts/reference-sdk-lock.test.mjs scripts/reference-sdk-promotion.test.mjs",
     "sdk:coverage:check": "node scripts/reference-sdk-coverage.mjs check",
     "sdk:coverage:verify": "node scripts/reference-sdk-coverage.mjs verify-remote",
     "sdk:coverage:catalog": "node scripts/reference-sdk-coverage.mjs verify-catalog",
@@ -28,7 +29,7 @@
     "flutter:web": "node scripts/reference-flutter-build.mjs",
     "flutter:web:live": "node scripts/reference-flutter-build.mjs --live",
     "test": "npm run config:test && npm run flutter:analyze && npm run flutter:test",
-    "check": "npm test && npm run flutter:web && npm run cloudflare:config"
+    "check": "npm run brand:check && npm test && npm run flutter:web && npm run cloudflare:config"
   },
   "devDependencies": {
     "ajv": "8.20.0",

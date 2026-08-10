@@ -57,7 +57,7 @@ class _ReferenceShellState extends State<ReferenceShell> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('OpenGrow Reference'),
+            const Text('SuperBoard Reference'),
             Text(
               widget.state.configuration.revisionSummary,
               style: Theme.of(context).textTheme.labelSmall,
@@ -456,7 +456,7 @@ class _ReferenceFeaturePageState extends State<ReferenceFeaturePage> {
                         attributes: attributes,
                         fallbackTitle: 'No active onboarding',
                         fallbackBody:
-                            'Publish an onboarding version for this placement in OpenGrow.',
+                            'Publish an onboarding version for this placement in SuperBoard.',
                         onCompleted: () => widget.state.record('onboarding', {
                           'event': 'completed',
                           'placement': resolvedPlacement,
@@ -548,7 +548,7 @@ Map<String, Object?> _defaultInput(ReferenceFeatureId id) => switch (id) {
     'file_id': '',
     'filename': 'reference.txt',
     'content_type': 'text/plain',
-    'text': 'OpenGrow reference',
+    'text': 'SuperBoard reference',
   },
   ReferenceFeatureId.products => {
     'operation': 'inspect',
@@ -560,15 +560,15 @@ Map<String, Object?> _defaultInput(ReferenceFeatureId id) => switch (id) {
     'package_identifier': '',
   },
   ReferenceFeatureId.dynamicLinks => {
-    'title': 'OpenGrow reference',
-    'data': {'source': 'opengrow-reference'},
+    'title': 'SuperBoard reference',
+    'data': {'source': 'superboard-reference'},
   },
   ReferenceFeatureId.support => {
     'operation': 'list',
     'client_conversation_id': 'reference-manual-1',
     'conversation_id': '',
     'client_message_id': 'reference-message-manual-1',
-    'body': 'Bonjour depuis OpenGrow Reference',
+    'body': 'Bonjour depuis SuperBoard Reference',
   },
   ReferenceFeatureId.marketingConsent => {
     'operation': 'load',
@@ -583,7 +583,7 @@ Map<String, Object?> _defaultInput(ReferenceFeatureId id) => switch (id) {
     'attributes': <String, Object?>{},
   },
   ReferenceFeatureId.customExtension => {
-    'payload': {'message': 'OpenGrow reference'},
+    'payload': {'message': 'SuperBoard reference'},
     'idempotency_key': 'reference-echo-manual-1',
   },
   _ => const {},

@@ -1,6 +1,6 @@
 export const referenceEndpointContract = Object.freeze({
   referenceWeb: "https://reference.mbza.dev",
-  dashboard: "https://grow.mbza.dev",
+  dashboard: "https://board.mbza.dev",
   api: "https://api.mbza.dev",
   sdk: "https://sdk.mbza.dev",
   shortLinks: "https://in.mbza.dev",

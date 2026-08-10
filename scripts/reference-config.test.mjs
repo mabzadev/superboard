@@ -100,7 +100,7 @@ test("the project schema pins every MBZA endpoint to its exact public URL", () =
 test("endpoint contracts reject HTTP, credentials, query, fragment and paths", () => {
   const unsafeEndpoints = [
     ["referenceWeb", "http://reference.mbza.dev"],
-    ["dashboard", "https://operator:secret@grow.mbza.dev"],
+    ["dashboard", "https://operator:secret@board.mbza.dev"],
     ["api", "https://api.mbza.dev?debug=true"],
     ["sdk", "https://sdk.mbza.dev#unreviewed"],
     ["shortLinks", "https://in.mbza.dev/redirect"],
@@ -169,17 +169,17 @@ test("coordinated project and development drift still fails closed", () => {
   );
 });
 
-test("libraries come from opengrow-platform and custom code is not copied", async () => {
+test("libraries come from superboard-platform and custom code is not copied", async () => {
   assert.equal(
     project.platformRepository,
-    "https://github.com/mbzadev/opengrow-platform",
+    "https://github.com/mbzadev/superboard-platform",
   );
   assert.equal(catalog.policy, "reference-only-no-copied-implementation");
   assert.equal(catalog.schemaVersion, 3);
   assert.equal(catalog.sourceManifestVersion, 1);
   assert.match(
     catalog.source,
-    /opengrow-platform\/blob\/dev\/config\/flutterflow-custom-code\.json$/,
+    /superboard-platform\/blob\/dev\/config\/flutterflow-custom-code\.json$/,
   );
   assert.equal(catalog.widgets, undefined);
   assert.equal(catalog.actions, undefined);
@@ -557,7 +557,7 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
     workflow,
     /repository: \$\{\{ needs\.contract\.outputs\.platform_repository \}\}/,
   );
-  assert.doesNotMatch(workflow, /repository:\s*mbzadev\/opengrow-platform/);
+  assert.doesNotMatch(workflow, /repository:\s*mbzadev\/superboard-platform/);
   assert.ok((workflow.match(/persist-credentials: false/g) ?? []).length >= 6);
   assert.doesNotMatch(workflow, /environment: production/);
   assert.match(workflow, /validation-gate:/);
@@ -659,7 +659,7 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
       "Verify locked immutable SDK tags before local overrides",
     ) <
       workflow.indexOf(
-        'dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"',
+        'dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/superboard-platform"',
       ),
   );
 });
@@ -683,7 +683,7 @@ test("reference changes require the declared owner review", () => {
 
 test("GitHub CI metadata is derived from the strict project manifest", () => {
   assert.deepEqual(buildReferenceCiMetadata(project), {
-    platform_repository: "mbzadev/opengrow-platform",
+    platform_repository: "mbzadev/superboard-platform",
     deployment_branch: "dev",
   });
   assert.equal(

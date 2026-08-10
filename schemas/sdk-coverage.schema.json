@@ -14,7 +14,7 @@
     "$schema": { "const": "../schemas/sdk-coverage.schema.json" },
     "schemaVersion": { "const": 1 },
     "platformRepository": {
-      "const": "https://github.com/mbzadev/opengrow-platform"
+      "const": "https://github.com/mbzadev/superboard-platform"
     },
     "libraries": {
       "type": "array",

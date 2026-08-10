@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grow_reference/src/app.dart';
-import 'package:grow_reference/src/config/reference_config.dart';
-import 'package:grow_reference/src/model/reference_feature.dart';
-import 'package:grow_reference/src/pages/reference_shell.dart';
-import 'package:grow_reference/src/services/reference_actions.dart';
-import 'package:grow_reference/src/state/reference_state.dart';
+import 'package:superboard_reference/src/app.dart';
+import 'package:superboard_reference/src/config/reference_config.dart';
+import 'package:superboard_reference/src/model/reference_feature.dart';
+import 'package:superboard_reference/src/pages/reference_shell.dart';
+import 'package:superboard_reference/src/services/reference_actions.dart';
+import 'package:superboard_reference/src/state/reference_state.dart';
 
 void main() {
   testWidgets('reference app exposes all journeys and runs in safe demo mode', (
@@ -35,7 +35,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('OpenGrow Reference'), findsOneWidget);
+    expect(find.text('SuperBoard Reference'), findsOneWidget);
     expect(find.text('platform local · reference local'), findsOneWidget);
     expect(find.text('Bootstrap'), findsWidgets);
     expect(find.text('Safe demo mode'), findsOneWidget);

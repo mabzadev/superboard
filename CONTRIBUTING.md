@@ -1,6 +1,6 @@
-# Contributing to OpenGrow Reference
+# Contributing to SuperBoard Reference
 
-The `dev` branch tracks the OpenGrow platform `dev` branch and publishes the
+The `dev` branch tracks the SuperBoard platform `dev` branch and publishes the
 MBZA acceptance application. `main` represents the reviewed reference release
 and must pin immutable platform SDK tags. Both branches require the aggregate
 `Reference gate` and an approving CODEOWNERS review. A platform-triggered
@@ -18,7 +18,7 @@ flutter test
 
 The reference repository contains screens, acceptance journeys and UI glue
 only. Reusable widgets, custom actions, authentication, files, purchases,
-Marketing and Support behavior belong in `opengrow-platform`. Never copy the
+Marketing and Support behavior belong in `superboard-platform`. Never copy the
 network protocol or SDK implementation into this application.
 
 Keep public endpoints in `reference.project.json` and

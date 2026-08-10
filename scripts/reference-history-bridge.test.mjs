@@ -18,8 +18,8 @@ const { auditBranch, bridgeBranch } = expectedHistoryBridgeNames({
 
 const validEvidence = {
   eventName: "pull_request",
-  repository: "mbzadev/opengrow-reference",
-  headRepository: "mbzadev/opengrow-reference",
+  repository: "mbzadev/superboard-reference",
+  headRepository: "mbzadev/superboard-reference",
   baseRef: "main",
   headRef: bridgeBranch,
   baseSha,

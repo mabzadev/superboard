@@ -1,4 +1,4 @@
-# OpenGrow Reference acceptance runbook
+# SuperBoard Reference acceptance runbook
 
 This runbook is the executable acceptance contract for the sixteen reference
 journeys. Run it on `https://reference.mbza.dev` only after the development
@@ -6,14 +6,14 @@ platform revision and reference build revision shown by CI are identical to the
 revisions under review.
 
 The reference application contains UI and orchestration only. Every network or
-business operation below is implemented by the public OpenGrow FlutterFlow
-packages from `opengrow-platform`; the application does not reproduce API
+business operation below is implemented by the public SuperBoard FlutterFlow
+packages from `superboard-platform`; the application does not reproduce API
 paths, private Worker tokens, signatures, retry rules or business policy.
 
 ## Safety preconditions
 
 1. Use the `mbza-development` target and a test project.
-2. Confirm `/infrastructure` on `https://grow.mbza.dev` reports the API,
+2. Confirm `/infrastructure` on `https://board.mbza.dev` reports the API,
    Identity, Files and each enabled feature Worker as healthy.
 3. Build with `OPENGROW_LIVE_MODE=true`, a positive test project ID, the
    registered Web identifier, and the SDK access key supplied through the
@@ -48,11 +48,11 @@ policy.
 |   7 | Notifications     | `operation=register` + native `push_token`; `inspect`; `display`                                                                                                                                       | push registration, unread count and display actions                                                                               | device registration appears in Infrastructure, unread state is coherent, APNs/FCM delivery is tested on native devices                                                                                                                   |
 |   8 | Files             | `operation=upload` + `filename`, `content_type`, and `text` or `bytes_base64`; then `list`, `download` + `file_id`, `delete` + `file_id`                                                               | four application Files actions                                                                                                    | ownership, MIME/size policy, list visibility, exact downloaded byte count and deletion are proven; the UI includes base64 only below the 64 KiB proof ceiling                                                                            |
 |   9 | Products          | `operation=inspect`, optional `placement`; `operation=restore`                                                                                                                                         | offerings, customer info, last verified customer info and restore                                                                 | server catalogue and signed/verified entitlement state agree; restore returns updated customer state                                                                                                                                     |
-|  10 | Paywall           | `operation=inspect`, `placement`; optional `operation=purchase`, `package_identifier`, `offering_identifier`; click **Render live widget**                                                             | purchase configuration/actions and the real `OpenGrowPaywall` widget                                                              | placement fallback, rendered version, purchase/restore/close/unavailable callbacks and latest verified purchase result are visible                                                                                                       |
+|  10 | Paywall           | `operation=inspect`, `placement`; optional `operation=purchase`, `package_identifier`, `offering_identifier`; click **Render live widget**                                                             | purchase configuration/actions and the real `SuperBoardPaywall` widget                                                              | placement fallback, rendered version, purchase/restore/close/unavailable callbacks and latest verified purchase result are visible                                                                                                       |
 |  11 | Dynamic links     | generate with `title` and `data`; inspect callback with `operation=last`                                                                                                                               | generate-link and last-deep-link actions                                                                                          | returned short URL uses `https://in.mbza.dev`; opening it exercises redirect and attribution without an embedded API hostname                                                                                                            |
-|  12 | Support inbox     | `configuration`, `list`, `open`, `update`, `messages`, `send`, `upload_attachment`, `download_attachment`, `send_attachment`, `mark_read`, `typing`, `connect`, `disconnect`, `realtime_event`, `csat` | authenticated OpenGrow Support actions only                                                                                       | conversation lifecycle, idempotent client IDs, attachment bytes, realtime, read/typing state and CSAT succeed; no Chatwoot action or URL is used                                                                                         |
+|  12 | Support inbox     | `configuration`, `list`, `open`, `update`, `messages`, `send`, `upload_attachment`, `download_attachment`, `send_attachment`, `mark_read`, `typing`, `connect`, `disconnect`, `realtime_event`, `csat` | authenticated SuperBoard Support actions only                                                                                       | conversation lifecycle, idempotent client IDs, attachment bytes, realtime, read/typing state and CSAT succeed; no Chatwoot action or URL is used                                                                                         |
 |  13 | Marketing consent | `operation=load`; update with `operation=update`, boolean `consented`, object `attributes`, public `list_ids`, stable `idempotency_key`                                                                | `opengrowApplicationMarketingPreferencesJson` and `opengrowApplicationUpdateMarketingConsentJson`                                 | only the verified Identity email is used; only public lists are exposed; replay is idempotent; opt-out is recorded; complaint/hard-bounce/privacy suppressions cannot be weakened or re-subscribed by the app                            |
-|  14 | Onboarding        | `placement`, optional `locale` and `attributes`; click **Render live widget**                                                                                                                          | real `OpenGrowOnboarding` widget                                                                                                  | version/targeting resolves; progress, completed/skipped/closed/unavailable callbacks are recorded; unpublished or rolled-back content uses the fallback                                                                                  |
+|  14 | Onboarding        | `placement`, optional `locale` and `attributes`; click **Render live widget**                                                                                                                          | real `SuperBoardOnboarding` widget                                                                                                  | version/targeting resolves; progress, completed/skipped/closed/unavailable callbacks are recorded; unpublished or rolled-back content uses the fallback                                                                                  |
 |  15 | Custom extension  | object `payload`, stable `idempotency_key`; after all rows, `operation=acceptance` plus the sixteen evidence entries                                                                                   | create, list, detail and cancellation actions for `reference.echo` or `reference.acceptance`                                      | one public SDK call path proves application JWT exchange, project/subject scoping, durable D1 state and the expected terminal `job_not_cancellable`; the final receipt is bound to both displayed Git SHAs and visible in Infrastructure |
 |  16 | Diagnostics       | `{}`                                                                                                                                                                                                   | bounded public API health request plus sanitized local diagnostics                                                                | environment, endpoint set, SDK registration fields and recoverable error are visible; secrets and bearer values are absent                                                                                                               |
 
@@ -75,7 +75,7 @@ binary attachments; the example uses text for readability.
   "operation": "send",
   "conversation_id": "<conversation-id>",
   "client_message_id": "reference-<run>-message-1",
-  "body": "Bonjour depuis OpenGrow Reference",
+  "body": "Bonjour depuis SuperBoard Reference",
   "metadata": { "acceptance_run": "<run>" }
 }
 ```
@@ -86,7 +86,7 @@ binary attachments; the example uses text for readability.
   "conversation_id": "<conversation-id>",
   "filename": "proof.txt",
   "content_type": "text/plain",
-  "text": "OpenGrow Support acceptance"
+  "text": "SuperBoard Support acceptance"
 }
 ```
 
@@ -115,7 +115,7 @@ the application.
 
 ## Automated proof before browser acceptance
 
-Run from `opengrow-platform`:
+Run from `superboard-platform`:
 
 ```bash
 npm --prefix workers/api run typecheck
