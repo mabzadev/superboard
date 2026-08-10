@@ -46,12 +46,12 @@
       "licensePath": "sdks/flutterflow_messaging/LICENSE",
       "versionSource": "sdks/flutterflow_messaging/pubspec.yaml",
       "sourceVersion": "1.3.0",
-      "latestReleaseVersion": "1.1.1",
-      "releaseRef": "sdk-flutterflow-messaging-v1.1.1",
-      "releaseStatus": "pending-release",
+      "latestReleaseVersion": "1.3.0",
+      "releaseRef": "sdk-flutterflow-messaging-v1.3.0",
+      "releaseStatus": "released",
       "surfaceManifest": "config/flutterflow-custom-code.json",
       "notes": "The package name is retained only for source compatibility; new integrations use the opengrowSupport* API surface.",
-      "install": "opengrow_flutterflow_messaging:\n  git:\n    url: https://github.com/mbzadev/opengrow-platform.git\n    ref: sdk-flutterflow-messaging-v1.1.1\n    path: sdks/flutterflow_messaging"
+      "install": "opengrow_flutterflow_messaging:\n  git:\n    url: https://github.com/mbzadev/opengrow-platform.git\n    ref: sdk-flutterflow-messaging-v1.3.0\n    path: sdks/flutterflow_messaging"
     },
     {
       "id": "ios",
