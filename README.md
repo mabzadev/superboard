@@ -45,6 +45,12 @@ npm run check
 flutter run -d chrome --dart-define-from-file=config/development.json
 ```
 
+`pubspec.lock` is versioned because this repository is an application. It pins
+each released Git dependency to the commit behind its immutable SDK tag. The
+local override changes the working-copy lock resolution to paths while it is in
+use; never commit that local resolution. Remove `pubspec_overrides.yaml` and run
+`flutter pub get` again before proposing a dependency update.
+
 `config/development.json` contains public `mbza.dev` endpoints only. Live mode
 requires an OpenGrow client project key and ID supplied by a separate ignored
 config or CI environment. The client key is necessarily embedded in the Web
@@ -62,7 +68,9 @@ dependency on `dev` is therefore a bootstrap/development-only fallback. After a
 FlutterFlow or Support SDK release succeeds, the platform dispatches the exact
 release SHA, promoted catalogue SHA, version and immutable tag. This repository
 verifies the official tags, GitHub releases and catalogue before opening one
-protected PR that updates both Git dependencies together. A deployable
+protected PR that updates both Git dependencies and `pubspec.lock` together.
+Before creating local platform overrides, CI also proves that each remote tag
+still resolves to the exact commit recorded in the lockfile. A deployable
 promotion can therefore never point at an absent or mutable SDK ref, and the
 automation never bypasses branch review.
 

@@ -377,6 +377,16 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /pull-requests: write/);
   assert.match(workflow, /reference-sdk-promotion\.mjs/);
   assert.match(workflow, /--library all/);
+  assert.match(workflow, /Regenerate the application lockfile from immutable SDK tags/);
+  assert.match(workflow, /':!pubspec\.lock'/);
+  assert.match(
+    workflow,
+    /git diff --quiet -- reference\.project\.json pubspec\.yaml pubspec\.lock flutterflow\/dependency-snippet\.yaml/,
+  );
+  assert.match(
+    workflow,
+    /git add reference\.project\.json pubspec\.yaml pubspec\.lock flutterflow\/dependency-snippet\.yaml/,
+  );
   assert.match(workflow, /refs\/tags\/\$tag\^\{\}/);
   assert.match(workflow, /git merge-base --is-ancestor/);
   assert.match(workflow, /gh pr create/);
@@ -388,6 +398,27 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   );
   assert.match(workflow, /Require every fully published dependency tag/);
   assert.match(workflow, /git ls-remote --exit-code --tags/);
+  assert.match(workflow, /Verify locked immutable SDK tags before local overrides/);
+  assert.match(workflow, /reference-sdk-lock\.mjs verify-remote/);
+  assert.match(workflow, /flutter pub get --enforce-lockfile/);
+  assert.match(workflow, /OPENGROW_FLUTTER_VERSION: "3\.44\.9"/);
+  assert.equal(
+    (workflow.match(/flutter-version: \$\{\{ env\.OPENGROW_FLUTTER_VERSION \}\}/gu) ?? [])
+      .length,
+    3,
+  );
+  assert.match(
+    workflow,
+    /Restore the reviewed lockfile after local override resolution/,
+  );
+  assert.match(
+    workflow,
+    /git restore --source=HEAD --worktree -- pubspec\.lock/,
+  );
+  assert.ok(
+    workflow.indexOf("Verify locked immutable SDK tags before local overrides") <
+      workflow.indexOf('dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"'),
+  );
 });
 
 function pubspecDependencyRef(source, packageName) {
@@ -404,6 +435,7 @@ test("reference changes require the declared owner review", () => {
   assert.match(codeowners, /^\/\.github\/workflows\/ @mbzadev$/mu);
   assert.match(codeowners, /^\/reference\.project\.json @mbzadev$/mu);
   assert.match(codeowners, /^\/pubspec\.yaml @mbzadev$/mu);
+  assert.match(codeowners, /^\/pubspec\.lock @mbzadev$/mu);
 });
 
 test("GitHub CI metadata is derived from the strict project manifest", () => {

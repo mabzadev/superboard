@@ -11,6 +11,9 @@ on:
 permissions:
   contents: read
 
+env:
+  OPENGROW_FLUTTER_VERSION: "3.44.9"
+
 concurrency:
   group: reference-${{ github.workflow }}-${{ github.event_name == 'repository_dispatch' && 'development' || github.ref }}
   cancel-in-progress: false
@@ -42,7 +45,7 @@ jobs:
     needs: security
     if: ${{ github.event_name == 'repository_dispatch' && github.event.action == 'sdk-release-set-published' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       actions: write
       contents: write
@@ -110,6 +113,13 @@ jobs:
           node scripts/reference-sdk-promotion.mjs
           --catalog vendor/opengrow-platform/config/sdk-libraries.json
           --library all
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.OPENGROW_FLUTTER_VERSION }}
+          cache: true
+      - name: Regenerate the application lockfile from immutable SDK tags
+        run: flutter pub get
       - name: Revalidate the complete reference contract
         run: npm run config:test
       - name: Propose the immutable SDK set through a protected PR
@@ -140,11 +150,11 @@ jobs:
             # explicitly so the promotion PR can never bypass its required gate.
             gh workflow run ci.yml --ref "$PROMOTION_BRANCH"
           }
-          unexpected="$(git diff --name-only -- . ':!reference.project.json' ':!pubspec.yaml' ':!flutterflow/dependency-snippet.yaml')"
+          unexpected="$(git diff --name-only -- . ':!reference.project.json' ':!pubspec.yaml' ':!pubspec.lock' ':!flutterflow/dependency-snippet.yaml')"
           test -z "$unexpected"
           git fetch --no-tags origin \
             "refs/heads/$DEPLOYMENT_BRANCH:refs/remotes/origin/$DEPLOYMENT_BRANCH"
-          if git diff --quiet -- reference.project.json pubspec.yaml flutterflow/dependency-snippet.yaml; then
+          if git diff --quiet -- reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml; then
             if git merge-base --is-ancestor HEAD "origin/$DEPLOYMENT_BRANCH"; then
               echo "The development branch already consumes the complete published SDK set."
               exit 0
@@ -155,7 +165,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reference.project.json pubspec.yaml flutterflow/dependency-snippet.yaml
+          git add reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml
           git commit -m "chore(sdk): promote the published FlutterFlow SDK set"
           git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
           ensure_promotion_pr
@@ -263,9 +273,17 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
+          flutter-version: ${{ env.OPENGROW_FLUTTER_VERSION }}
           cache: true
+      - name: Verify locked immutable SDK tags before local overrides
+        run: |
+          node scripts/reference-sdk-lock.mjs verify-remote
+          flutter pub get --enforce-lockfile
+          git diff --exit-code -- pubspec.lock
       - run: dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"
       - run: flutter pub get
+      - name: Restore the reviewed lockfile after local override resolution
+        run: git restore --source=HEAD --worktree -- pubspec.lock
       - run: npm ci
       - run: npm test
       - run: npm run flutter:web
@@ -317,6 +335,7 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
+          flutter-version: ${{ env.OPENGROW_FLUTTER_VERSION }}
           cache: true
       - name: Require exact tested revisions and reference project identity
         env:

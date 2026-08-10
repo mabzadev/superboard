@@ -25,4 +25,7 @@ Keep public endpoints in `reference.project.json` and
 `config/development.json` synchronized. Never commit a project key, secret,
 access token, user export, generated build or machine-specific dependency path.
 Use `dart tool/use_local_platform.dart` to create the ignored local override
-when testing both repositories together.
+when testing both repositories together. `pubspec.lock` is intentionally
+versioned for this application; after local override testing, remove
+`pubspec_overrides.yaml` and regenerate the lockfile from the immutable Git
+dependencies before committing.
