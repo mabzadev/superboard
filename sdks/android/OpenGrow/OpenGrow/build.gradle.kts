@@ -19,12 +19,12 @@ private val libraryGroupId = "io.opengrow"
 private val libraryArtifactId = if (project.hasProperty("artifactId")) {
     project.property("artifactId").toString()
 } else {
-    "opengrow-android"
+    "opengrow-android-sdk"
 }
 private val libraryVersion = if (project.hasProperty("libraryVersion")) {
     project.property("libraryVersion").toString()
 } else {
-    "1.0.1"
+    "1.0.2"
 }
 val NETWORK_LOGGING_VALUE = if (project.hasProperty("networkLogging")) {
     project.property("networkLogging").toString()

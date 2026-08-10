@@ -21,7 +21,7 @@ test("SDK catalogue matches every package source and FlutterFlow public symbol",
   assert.equal(releaseCandidateRefFor(catalog, "ios"), "1.0.2");
   assert.equal(
     releaseCandidateTagFor(catalog, "android"),
-    "sdk-android-v1.0.1",
+    "sdk-android-v1.0.2",
   );
   assert.equal(
     releaseCandidateTagFor(catalog, "javascript"),
@@ -101,6 +101,55 @@ test("an SDK promotion atomically derives released metadata and install refs", a
       (item) => item.id === "flutterflow",
     ).releaseStatus,
     "released",
+  );
+});
+
+test("an SDK promotion atomically migrates a collision-free package coordinate", async () => {
+  const catalog = await loadSdkCatalog();
+  const promoted = promoteSdkRelease(catalog, "android", "1.0.2");
+  const library = promoted.libraries.find((item) => item.id === "android");
+
+  assert.equal(library.packageName, "io.opengrow:opengrow-android-sdk");
+  assert.equal(
+    library.install,
+    'implementation("io.opengrow:opengrow-android-sdk:1.0.2")',
+  );
+  assert.equal(library.latestReleaseVersion, "1.0.2");
+  assert.equal(library.releaseRef, "sdk-android-v1.0.2");
+  assert.equal(library.releaseStatus, "released");
+  assert.equal(Object.hasOwn(library, "candidatePackageName"), false);
+  assert.equal(Object.hasOwn(library, "candidateInstall"), false);
+  assert.equal(
+    (
+      await validateSdkCatalog(promoted, {
+        releaseTag: "sdk-android-v1.0.2",
+      })
+    ).ok,
+    true,
+  );
+});
+
+test("a candidate package coordinate is complete, pending and collision-free", async () => {
+  const catalog = await loadSdkCatalog();
+  const android = catalog.libraries.find((item) => item.id === "android");
+  delete android.candidateInstall;
+  let result = await validateSdkCatalog(catalog);
+  assert.ok(
+    result.errors.includes(
+      "libraries.android.candidatePackageName and candidateInstall must be declared together",
+    ),
+  );
+
+  android.candidateInstall =
+    'implementation("io.opengrow:opengrow-android-sdk:1.0.2")';
+  android.candidatePackageName = "@mbzadev/opengrow-js";
+  android.candidateInstall =
+    'implementation("@mbzadev/opengrow-js:1.0.2")';
+  result = await validateSdkCatalog(catalog);
+  assert.ok(
+    result.errors.includes(
+      "candidate package @mbzadev/opengrow-js duplicates a released packageName",
+    ),
   );
 });
 

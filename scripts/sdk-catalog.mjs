@@ -28,6 +28,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
     errors.push("libraries must be a non-empty array");
   const ids = new Set();
   const packages = new Set();
+  const candidatePackages = new Set();
   for (const library of catalog?.libraries ?? []) {
     const prefix = `libraries.${String(library?.id ?? "unknown")}`;
     if (!/^[a-z0-9-]+$/.test(library?.id ?? ""))
@@ -37,6 +38,41 @@ export async function validateSdkCatalog(catalog, options = {}) {
     if (!library.packageName || packages.has(library.packageName))
       errors.push(`${prefix}.packageName is missing or duplicated`);
     packages.add(library.packageName);
+    const hasCandidatePackage = Object.hasOwn(
+      library,
+      "candidatePackageName",
+    );
+    const hasCandidateInstall = Object.hasOwn(library, "candidateInstall");
+    if (hasCandidatePackage !== hasCandidateInstall) {
+      errors.push(
+        `${prefix}.candidatePackageName and candidateInstall must be declared together`,
+      );
+    }
+    if (hasCandidatePackage) {
+      if (library.releaseStatus !== "pending-release") {
+        errors.push(
+          `${prefix}.candidate package migration requires a pending release`,
+        );
+      }
+      if (
+        !library.candidatePackageName ||
+        library.candidatePackageName === library.packageName ||
+        candidatePackages.has(library.candidatePackageName)
+      ) {
+        errors.push(`${prefix}.candidatePackageName is invalid or duplicated`);
+      }
+      candidatePackages.add(library.candidatePackageName);
+      if (
+        !String(library.candidateInstall ?? "").includes(
+          library.candidatePackageName,
+        ) ||
+        !String(library.candidateInstall ?? "").includes(library.sourceVersion)
+      ) {
+        errors.push(
+          `${prefix}.candidateInstall must pin candidatePackageName at sourceVersion`,
+        );
+      }
+    }
     for (const key of ["sourceVersion", "latestReleaseVersion"]) {
       if (!semver.test(library[key] ?? ""))
         errors.push(`${prefix}.${key} is not SemVer`);
@@ -102,6 +138,13 @@ export async function validateSdkCatalog(catalog, options = {}) {
       );
       if (manifestPath && !(await exists(manifestPath)))
         errors.push(`${prefix}.surfaceManifest does not exist`);
+    }
+  }
+  for (const candidatePackage of candidatePackages) {
+    if (packages.has(candidatePackage)) {
+      errors.push(
+        `candidate package ${candidatePackage} duplicates a released packageName`,
+      );
     }
   }
   if (Object.keys(tagPrefixes).some((id) => !ids.has(id)))
@@ -407,7 +450,14 @@ export function promoteSdkRelease(catalog, id, version) {
   target.latestReleaseVersion = version;
   target.releaseRef = id === "ios" ? version : `${tagPrefixes[id]}${version}`;
   target.releaseStatus = "released";
-  target.install = target.install.replaceAll(previousVersion, version);
+  if (target.candidatePackageName && target.candidateInstall) {
+    target.packageName = target.candidatePackageName;
+    target.install = target.candidateInstall;
+    delete target.candidatePackageName;
+    delete target.candidateInstall;
+  } else {
+    target.install = target.install.replaceAll(previousVersion, version);
+  }
   return promoted;
 }
 

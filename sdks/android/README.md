@@ -53,7 +53,7 @@ Add the OpenGrow dependency to your app-level `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation("io.opengrow:opengrow-android:1.0.0")
+    implementation("io.opengrow:opengrow-android-sdk:1.0.2")
 }
 ```
 
