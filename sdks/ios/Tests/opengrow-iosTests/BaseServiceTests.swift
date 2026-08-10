@@ -7,9 +7,11 @@ final class BaseServiceTests: XCTestCase {
         super.setUp()
         MockURLProtocol.reset()
         BaseService.urlProtocolClasses = [MockURLProtocol.self]
+        BaseService.retryDelayOverride = 0
     }
 
     override func tearDown() {
+        BaseService.retryDelayOverride = nil
         BaseService.urlProtocolClasses = []
         MockURLProtocol.reset()
         super.tearDown()

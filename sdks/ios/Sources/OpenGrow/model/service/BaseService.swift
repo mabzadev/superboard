@@ -42,9 +42,14 @@ open class BaseService: NSObject {
     /// Serial queue protecting cachedCompletions from concurrent access
     private let completionsQueue = DispatchQueue(label: "com.opengrow.completionsQueue")
 
-    /// Dedicated scheduler for retries so system background-queue throttling cannot
-    /// defer network recovery beyond the configured backoff window.
-    private let retryQueue = DispatchQueue(label: "io.opengrow.sdk.retry", qos: .utility)
+    /// Dedicated scheduler for retries. Network recovery is user-visible work, so
+    /// avoid utility QoS: it can be deferred for tens of seconds while the process
+    /// is busy and make a short exponential backoff miss its intended window.
+    private let retryQueue = DispatchQueue(label: "io.opengrow.sdk.retry", qos: .userInitiated)
+
+    /// Deterministic test hook. Production always leaves this nil and therefore
+    /// uses exponential backoff with jitter.
+    static var retryDelayOverride: Double?
 
     /// Maximum number of retries per request before giving up
     private static let maxRetryCount = 5
@@ -92,6 +97,7 @@ open class BaseService: NSObject {
     /// Per-request exponential backoff with jitter: base delay 2, 4, 8, 16, 32s (capped at 60)
     /// plus random jitter of 0–1s to prevent thundering herd on network recovery.
     private func retryDelay(for retryCount: Int) -> Double {
+        if let override = Self.retryDelayOverride { return override }
         let base = min(2.0 * pow(2.0, Double(retryCount)), 60.0)
         let jitter = Double.random(in: 0...1.0)
         return base + jitter

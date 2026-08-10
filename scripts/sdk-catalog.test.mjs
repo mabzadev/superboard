@@ -52,6 +52,16 @@ test("release validation rejects source drift and an unpublished source version"
     "9.9.9";
   assert.equal((await validateSdkCatalog(drifted)).ok, false);
   const pending = structuredClone(catalog);
+  const pendingFlutterFlow = pending.libraries.find(
+    (item) => item.id === "flutterflow",
+  );
+  pendingFlutterFlow.latestReleaseVersion = "2.1.6";
+  pendingFlutterFlow.releaseRef = "sdk-flutterflow-v2.1.6";
+  pendingFlutterFlow.releaseStatus = "pending-release";
+  pendingFlutterFlow.install = pendingFlutterFlow.install.replaceAll(
+    "sdk-flutterflow-v2.2.4",
+    "sdk-flutterflow-v2.1.6",
+  );
   assert.throws(
     () => releaseTagFor(pending, "flutterflow"),
     /not marked ready/,
