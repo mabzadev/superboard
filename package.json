@@ -9,7 +9,10 @@
     "url": "https://github.com/mbzadev/opengrow-reference.git"
   },
   "scripts": {
-    "config:test": "node --test scripts/reference-config.test.mjs scripts/reference-deployment-gate.test.mjs scripts/reference-sdk-lock.test.mjs scripts/reference-sdk-promotion.test.mjs",
+    "config:test": "node --test scripts/reference-config.test.mjs scripts/reference-deployment-gate.test.mjs scripts/reference-sdk-coverage.test.mjs scripts/reference-sdk-lock.test.mjs scripts/reference-sdk-promotion.test.mjs",
+    "sdk:coverage:check": "node scripts/reference-sdk-coverage.mjs check",
+    "sdk:coverage:verify": "node scripts/reference-sdk-coverage.mjs verify-remote",
+    "sdk:coverage:catalog": "node scripts/reference-sdk-coverage.mjs verify-catalog",
     "sdk:lock:check": "node scripts/reference-sdk-lock.mjs check",
     "sdk:lock:verify": "node scripts/reference-sdk-lock.mjs verify-remote",
     "sdk:promote": "node scripts/reference-sdk-promotion.mjs",

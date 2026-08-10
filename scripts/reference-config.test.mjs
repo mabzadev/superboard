@@ -538,14 +538,15 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /reference-sdk-promotion\.mjs/);
   assert.match(workflow, /--library all/);
   assert.match(workflow, /Regenerate the application lockfile from immutable SDK tags/);
+  assert.match(workflow, /':!config\/sdk-coverage\.json'/);
   assert.match(workflow, /':!pubspec\.lock'/);
   assert.match(
     workflow,
-    /git diff --quiet -- reference\.project\.json pubspec\.yaml pubspec\.lock flutterflow\/dependency-snippet\.yaml/,
+    /git diff --quiet -- reference\.project\.json pubspec\.yaml pubspec\.lock flutterflow\/dependency-snippet\.yaml config\/sdk-coverage\.json/,
   );
   assert.match(
     workflow,
-    /git add reference\.project\.json pubspec\.yaml pubspec\.lock flutterflow\/dependency-snippet\.yaml/,
+    /git add reference\.project\.json pubspec\.yaml pubspec\.lock flutterflow\/dependency-snippet\.yaml config\/sdk-coverage\.json/,
   );
   assert.match(workflow, /refs\/tags\/\$tag\^\{\}/);
   assert.match(workflow, /git merge-base --is-ancestor/);
@@ -556,8 +557,12 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
     workflow.indexOf("Verify the official development catalogue") <
       workflow.indexOf("Propose the immutable SDK set"),
   );
-  assert.match(workflow, /Require every fully published dependency tag/);
-  assert.match(workflow, /git ls-remote --exit-code --tags/);
+  assert.match(
+    workflow,
+    /Verify all seven immutable SDK tags and public GitHub Releases/,
+  );
+  assert.match(workflow, /npm run sdk:coverage:verify/);
+  assert.match(workflow, /npm run sdk:coverage:catalog/);
   assert.match(workflow, /Verify locked immutable SDK tags before local overrides/);
   assert.match(workflow, /reference-sdk-lock\.mjs verify-remote/);
   assert.match(workflow, /flutter pub get --enforce-lockfile/);

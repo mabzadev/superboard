@@ -79,6 +79,7 @@ FlutterFlow libraries intentionally provide no VocoStar or mbza fallback URL.
    export any generated UI changes into this repository.
 6. Run `npm run check` in CI; it includes configuration tests, Flutter analysis,
    widget/unit tests, and a Web release build.
-7. Validate the candidate on `mbza.dev` at the exact platform SHA. The SDK
-   release workflow then pins the verified immutable tags automatically before
-   promotion to VocoStar or another application.
+7. Run the seven-SDK gates in [SDK_COVERAGE.md](./SDK_COVERAGE.md), then validate
+   the candidate on `mbza.dev` at the exact platform SHA. The SDK release
+   workflow pins the verified immutable tags and catalogue commits
+   automatically before promotion to VocoStar or another application.

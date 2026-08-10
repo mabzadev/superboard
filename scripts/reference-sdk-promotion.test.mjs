@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   promoteReferenceSdk,
   promoteReferenceSdkSet,
+  promoteSdkCoverageManifest,
   replaceGitDependencyRef,
 } from "./reference-sdk-promotion.mjs";
 
@@ -15,6 +16,9 @@ const pubspec = await readFile(new URL("pubspec.yaml", root), "utf8");
 const dependencySnippet = await readFile(
   new URL("flutterflow/dependency-snippet.yaml", root),
   "utf8",
+);
+const coverageManifest = JSON.parse(
+  await readFile(new URL("config/sdk-coverage.json", root), "utf8"),
 );
 
 function catalogue(overrides = {}) {
@@ -39,6 +43,22 @@ function catalogue(overrides = {}) {
         releaseStatus: "released",
       },
     ],
+  };
+}
+
+function completeCatalogue() {
+  return {
+    repository: project.platformRepository,
+    libraries: coverageManifest.libraries.map((library) => ({
+      id: library.id,
+      packageName: library.packageName,
+      sourcePath: library.sourcePath,
+      sourceVersion: library.version,
+      latestReleaseVersion: library.version,
+      releaseStatus: "released",
+      releaseRef: library.releaseRef,
+      releaseSha: library.releaseSha,
+    })),
   };
 }
 
@@ -82,6 +102,66 @@ test("the SDK set promotion pins FlutterFlow and Support together", () => {
   );
   assert.match(result.pubspec, /ref: sdk-flutterflow-messaging-v1\.3\.0/u);
   assert.doesNotMatch(result.pubspec, /ref: dev/u);
+});
+
+test("complete promotion updates the seven-SDK manifest and Flutter override", () => {
+  const nextCatalogue = completeCatalogue();
+  const flutter = nextCatalogue.libraries.find(({ id }) => id === "flutter");
+  Object.assign(flutter, {
+    sourceVersion: "2.1.5",
+    latestReleaseVersion: "2.1.5",
+    releaseRef: "sdk-flutter-v2.1.5",
+    releaseSha: "f".repeat(40),
+  });
+  const result = promoteSdkCoverageManifest({
+    coverageManifest,
+    catalogue: nextCatalogue,
+    pubspec,
+  });
+  assert.equal(result.coverageManifest.libraries.length, 7);
+  assert.deepEqual(
+    result.coverageManifest.libraries.find(({ id }) => id === "flutter"),
+    {
+      id: "flutter",
+      packageName: "opengrow_flutter",
+      sourcePath: "sdks/flutter",
+      version: "2.1.5",
+      releaseRef: "sdk-flutter-v2.1.5",
+      releaseTag: "sdk-flutter-v2.1.5",
+      releaseSha: "f".repeat(40),
+      coverageMode: "dart-transitive-override",
+    },
+  );
+  assert.match(
+    result.pubspec,
+    /dependency_overrides:[\s\S]*opengrow_flutter:[\s\S]*ref: sdk-flutter-v2\.1\.5/u,
+  );
+});
+
+test("complete promotion rejects an incomplete or pending release set", () => {
+  const incomplete = completeCatalogue();
+  incomplete.libraries.pop();
+  assert.throws(
+    () =>
+      promoteSdkCoverageManifest({
+        coverageManifest,
+        catalogue: incomplete,
+        pubspec,
+      }),
+    /complete seven-SDK set/u,
+  );
+  const pending = completeCatalogue();
+  pending.libraries.find(({ id }) => id === "javascript").releaseStatus =
+    "pending-release";
+  assert.throws(
+    () =>
+      promoteSdkCoverageManifest({
+        coverageManifest,
+        catalogue: pending,
+        pubspec,
+      }),
+    /javascript is not a fully published/u,
+  );
 });
 
 test("promotion rejects pending metadata and non-canonical release refs", () => {

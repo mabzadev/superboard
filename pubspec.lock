@@ -385,14 +385,14 @@ packages:
     source: hosted
     version: "9.5.0"
   opengrow_flutter:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       path: "sdks/flutter"
-      ref: b90e7e0ede12cf6321a7a8d104baf1fd8f564867
-      resolved-ref: b90e7e0ede12cf6321a7a8d104baf1fd8f564867
+      ref: "sdk-flutter-v2.1.4"
+      resolved-ref: "1cddb333ff3330fd6ffa507d780821121bd7273a"
       url: "https://github.com/mbzadev/opengrow-platform.git"
     source: git
-    version: "2.1.3"
+    version: "2.1.4"
   opengrow_flutterflow:
     dependency: "direct main"
     description:

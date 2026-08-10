@@ -78,7 +78,7 @@ jobs:
         env:
           CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
         run: |
-          branch="automation/flutterflow-sdk-set-${CATALOGUE_SHA:0:12}"
+          branch="automation/sdk-set-${CATALOGUE_SHA:0:12}"
           if git fetch --no-tags origin "refs/heads/$branch"; then
             git checkout -B "$branch" FETCH_HEAD
           else
@@ -141,8 +141,8 @@ jobs:
             gh pr create \
               --base "$DEPLOYMENT_BRANCH" \
               --head "$PROMOTION_BRANCH" \
-              --title "chore(sdk): promote the published FlutterFlow SDK set" \
-              --body "Pins the complete FlutterFlow and Support SDK set after verifying each official tag, GitHub release and catalogue entry."
+              --title "chore(sdk): promote the published seven-SDK set" \
+              --body "Pins the complete seven-SDK manifest and Dart dependencies after verifying every official tag, GitHub Release and catalogue entry."
           }
           validate_promotion_branch() {
             # Branches and pull requests created by GITHUB_TOKEN do not trigger
@@ -150,11 +150,11 @@ jobs:
             # explicitly so the promotion PR can never bypass its required gate.
             gh workflow run ci.yml --ref "$PROMOTION_BRANCH"
           }
-          unexpected="$(git diff --name-only -- . ':!reference.project.json' ':!pubspec.yaml' ':!pubspec.lock' ':!flutterflow/dependency-snippet.yaml')"
+          unexpected="$(git diff --name-only -- . ':!reference.project.json' ':!pubspec.yaml' ':!pubspec.lock' ':!flutterflow/dependency-snippet.yaml' ':!config/sdk-coverage.json')"
           test -z "$unexpected"
           git fetch --no-tags origin \
             "refs/heads/$DEPLOYMENT_BRANCH:refs/remotes/origin/$DEPLOYMENT_BRANCH"
-          if git diff --quiet -- reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml; then
+          if git diff --quiet -- reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml config/sdk-coverage.json; then
             if git merge-base --is-ancestor HEAD "origin/$DEPLOYMENT_BRANCH"; then
               echo "The development branch already consumes the complete published SDK set."
               exit 0
@@ -165,8 +165,8 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml
-          git commit -m "chore(sdk): promote the published FlutterFlow SDK set"
+          git add reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml config/sdk-coverage.json
+          git commit -m "chore(sdk): promote the published seven-SDK set"
           git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
           ensure_promotion_pr
           validate_promotion_branch
@@ -207,21 +207,8 @@ jobs:
           OPENGROW_GITHUB_EVENT_ACTION: ${{ github.event.action }}
           OPENGROW_GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: node scripts/reference-deployment-gate.mjs >> "$GITHUB_OUTPUT"
-      - name: Require every fully published dependency tag to exist
-        env:
-          PLATFORM_REPOSITORY: ${{ steps.metadata.outputs.platform_repository }}
-        run: |
-          node - <<'NODE' |
-          const project = require('./reference.project.json');
-          for (const library of Object.values(project.libraries)) {
-            if (library.sourceVersion === library.releaseVersion) console.log(library.releaseRef);
-          }
-          NODE
-          while IFS= read -r release_ref; do
-            git ls-remote --exit-code --tags \
-              "https://github.com/$PLATFORM_REPOSITORY.git" \
-              "refs/tags/$release_ref" >/dev/null
-          done
+      - name: Verify all seven immutable SDK tags and public GitHub Releases
+        run: npm run sdk:coverage:verify
       - name: Require repository dispatch to use the declared development branch
         if: ${{ github.event_name == 'repository_dispatch' }}
         env:
@@ -280,6 +267,10 @@ jobs:
           sha="$(git rev-parse HEAD)"
           [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Match all seven SDKs to the checked-out official catalogue
+        run: >-
+          npm run sdk:coverage:catalog --
+          --catalog vendor/opengrow-platform/config/sdk-libraries.json
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable

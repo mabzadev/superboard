@@ -47,6 +47,11 @@ export function parseLockedGitDependencies(lockSource) {
       current.source = parseScalar(sourceRow[1]);
       continue;
     }
+    const versionRow = line.match(/^    version:\s*(.+?)\s*$/u);
+    if (versionRow) {
+      current.version = parseScalar(versionRow[1]);
+      continue;
+    }
     const descriptionRow = line.match(
       /^      (path|ref|resolved-ref|url):\s*(.+?)\s*$/u,
     );

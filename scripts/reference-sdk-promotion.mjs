@@ -2,6 +2,10 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  sdkContracts,
+  validateSdkCoverage,
+} from "./reference-sdk-coverage.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -120,6 +124,7 @@ export function promoteReferenceSdkSet({
   catalogue,
   pubspec,
   dependencySnippet,
+  coverageManifest,
 }) {
   let state = { project, pubspec, dependencySnippet };
   const promotions = [];
@@ -136,7 +141,87 @@ export function promoteReferenceSdkSet({
     };
     promotions.push(result.promotion);
   }
-  return { ...state, promotions };
+  if (!coverageManifest) return { ...state, promotions };
+  const coverage = promoteSdkCoverageManifest({
+    coverageManifest,
+    catalogue,
+    pubspec: state.pubspec,
+  });
+  return {
+    ...state,
+    pubspec: coverage.pubspec,
+    coverageManifest: coverage.coverageManifest,
+    promotions,
+  };
+}
+
+export function promoteSdkCoverageManifest({
+  coverageManifest,
+  catalogue,
+  pubspec,
+}) {
+  validateSdkCoverage(coverageManifest);
+  if (
+    String(catalogue?.repository || "").replace(/\.git$/u, "") !==
+    String(coverageManifest.platformRepository || "").replace(/\.git$/u, "")
+  ) {
+    throw new Error("The SDK catalogue does not belong to the coverage manifest");
+  }
+  const catalogued = new Map(
+    (catalogue.libraries ?? []).map((library) => [library.id, library]),
+  );
+  if (
+    !Array.isArray(catalogue.libraries) ||
+    catalogue.libraries.length !== Object.keys(sdkContracts).length ||
+    catalogued.size !== Object.keys(sdkContracts).length
+  ) {
+    throw new Error("The SDK catalogue must contain the complete seven-SDK set");
+  }
+  const promoted = structuredClone(coverageManifest);
+  for (const library of promoted.libraries) {
+    const source = catalogued.get(library.id);
+    const contract = sdkContracts[library.id];
+    if (!source) throw new Error(`${library.id} is missing from the SDK catalogue`);
+    if (
+      source.releaseStatus !== "released" ||
+      source.sourceVersion !== source.latestReleaseVersion
+    ) {
+      throw new Error(`${library.id} is not a fully published SDK release`);
+    }
+    if (
+      source.packageName !== contract.packageName ||
+      source.sourcePath !== contract.sourcePath
+    ) {
+      throw new Error(`${library.id} has an invalid SDK catalogue identity`);
+    }
+    const releaseTag = `${contract.releasePrefix}${source.sourceVersion}`;
+    const releaseRef = library.id === "ios" ? source.sourceVersion : releaseTag;
+    if (source.releaseRef !== releaseRef) {
+      throw new Error(`${library.id} release ref must be ${releaseRef}`);
+    }
+    if (!/^[0-9a-f]{40}$/u.test(source.releaseSha ?? "")) {
+      throw new Error(`${library.id} release SHA must be a full commit SHA`);
+    }
+    Object.assign(library, {
+      packageName: contract.packageName,
+      sourcePath: contract.sourcePath,
+      version: source.sourceVersion,
+      releaseRef,
+      releaseTag,
+      releaseSha: source.releaseSha,
+      coverageMode: contract.coverageMode,
+    });
+  }
+  validateSdkCoverage(promoted);
+  const flutter = promoted.libraries.find(({ id }) => id === "flutter");
+  return {
+    coverageManifest: promoted,
+    pubspec: replaceGitDependencyRef(
+      pubspec,
+      flutter.packageName,
+      flutter.releaseRef,
+    ),
+  };
 }
 
 function parseArguments(values) {
@@ -169,13 +254,21 @@ async function run() {
       "flutterflow",
       "dependency-snippet.yaml",
     ),
+    coverageManifest: path.join(root, "config/sdk-coverage.json"),
     catalogue: path.resolve(args.catalog),
   };
-  const [projectSource, pubspec, dependencySnippet, catalogueSource] =
+  const [
+    projectSource,
+    pubspec,
+    dependencySnippet,
+    coverageManifestSource,
+    catalogueSource,
+  ] =
     await Promise.all([
       readFile(paths.project, "utf8"),
       readFile(paths.pubspec, "utf8"),
       readFile(paths.dependencySnippet, "utf8"),
+      readFile(paths.coverageManifest, "utf8"),
       readFile(paths.catalogue, "utf8"),
     ]);
   const input = {
@@ -183,6 +276,7 @@ async function run() {
     catalogue: JSON.parse(catalogueSource),
     pubspec,
     dependencySnippet,
+    coverageManifest: JSON.parse(coverageManifestSource),
   };
   const result =
     args.library === "all"
@@ -192,16 +286,21 @@ async function run() {
     project: `${JSON.stringify(result.project, null, 2)}\n`,
     pubspec: result.pubspec,
     dependencySnippet: result.dependencySnippet,
+    coverageManifest: result.coverageManifest
+      ? `${JSON.stringify(result.coverageManifest, null, 2)}\n`
+      : coverageManifestSource,
   };
   const changed =
     next.project !== projectSource ||
     next.pubspec !== pubspec ||
-    next.dependencySnippet !== dependencySnippet;
+    next.dependencySnippet !== dependencySnippet ||
+    next.coverageManifest !== coverageManifestSource;
   if (changed) {
     await Promise.all([
       writeFile(paths.project, next.project),
       writeFile(paths.pubspec, next.pubspec),
       writeFile(paths.dependencySnippet, next.dependencySnippet),
+      writeFile(paths.coverageManifest, next.coverageManifest),
     ]);
   }
   process.stdout.write(

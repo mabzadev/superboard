@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://opengrow.dev/schemas/sdk-coverage.schema.json",
+  "title": "OpenGrow reference SDK coverage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "platformRepository",
+    "libraries"
+  ],
+  "properties": {
+    "$schema": { "const": "../schemas/sdk-coverage.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "platformRepository": {
+      "const": "https://github.com/mbzadev/opengrow-platform"
+    },
+    "libraries": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "packageName",
+          "sourcePath",
+          "version",
+          "releaseRef",
+          "releaseTag",
+          "releaseSha",
+          "coverageMode"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "flutter",
+              "flutterflow",
+              "flutterflow-support",
+              "ios",
+              "android",
+              "javascript",
+              "react-native"
+            ]
+          },
+          "packageName": { "type": "string", "minLength": 1 },
+          "sourcePath": {
+            "type": "string",
+            "pattern": "^sdks/[A-Za-z0-9_./-]+$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "releaseRef": {
+            "type": "string",
+            "pattern": "^(sdk-[a-z0-9-]+-v)?[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "releaseTag": {
+            "type": "string",
+            "pattern": "^sdk-[a-z0-9-]+-v[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "releaseSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "coverageMode": {
+            "enum": [
+              "dart-direct",
+              "dart-transitive-override",
+              "release-contract"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
