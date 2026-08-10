@@ -299,6 +299,18 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.doesNotMatch(workflow, /gh pr (?:merge|review)/);
   assert.match(workflow, /name: Secret scan/);
   assert.match(workflow, /gitleaks\/gitleaks-action@[0-9a-f]{40}/);
+  assert.match(
+    workflow,
+    /if: \$\{\{ github\.event_name != 'repository_dispatch' \}\}/,
+  );
+  assert.match(
+    workflow,
+    /name: Verify dispatch starts from the protected default branch head/,
+  );
+  assert.match(
+    workflow,
+    /test "\$\(git rev-parse HEAD\)" = "\$\(git rev-parse FETCH_HEAD\)"/,
+  );
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
   assert.match(workflow, /SECURITY_RESULT/);
   assert.match(

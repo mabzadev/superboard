@@ -25,7 +25,16 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify dispatch starts from the protected default branch head
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          test -n "$DEFAULT_BRANCH"
+          git fetch --no-tags origin "refs/heads/$DEFAULT_BRANCH"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        if: ${{ github.event_name != 'repository_dispatch' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
