@@ -203,7 +203,8 @@ baseline narrative below:
 - `mbzadev/opengrow-platform` and `mbzadev/opengrow-reference` are public MIT
   repositories with `dev` as the default branch and protected `dev`/`main`
   branches. Repository settings, workflow permissions, CODEOWNERS, aggregate
-  checks, Environments and non-secret variables match control-plane schema 5.
+  checks, Environments, non-secret variables, security updates and release
+  protection match control-plane schema 6.
 - Remote reconciliation reports no structural operation and no blocker. Its
   only remaining manual items are encrypted Environment secrets; secret values
   are neither requested nor returned by the audit.

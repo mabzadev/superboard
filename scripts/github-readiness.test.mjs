@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  inspectReleaseProtection,
   inspectRepository,
   loadGitHubControlPlane,
   readinessPlan,
   remoteBranchHistoryState,
   validateEnvironmentProtections,
+  tagRulesetMatches,
 } from "./github-readiness.mjs";
 
 const repositoryApiPrefix =
@@ -31,6 +33,17 @@ function workflowPermissions() {
   };
 }
 
+function securityPolicy() {
+  return {
+    vulnerabilityAlerts: true,
+    dependabotSecurityUpdates: true,
+  };
+}
+
+function releaseProtection() {
+  return { immutableReleases: true };
+}
+
 function repositoryPayload(name, overrides = {}) {
   return {
     full_name: name,
@@ -52,7 +65,7 @@ function repositoryPayload(name, overrides = {}) {
 test("GitHub control-plane manifest is strict and contains names, never secret values", async () => {
   const manifest = await loadGitHubControlPlane();
   const serialized = JSON.stringify(manifest);
-  assert.equal(manifest.schemaVersion, 6);
+  assert.equal(manifest.schemaVersion, 7);
   assert.deepEqual(manifest.owner, { login: "mbzadev", type: "user" });
   assert.equal(
     manifest.repositories.platform.nameWithOwner,
@@ -63,6 +76,18 @@ test("GitHub control-plane manifest is strict and contains names, never secret v
   assert.deepEqual(
     manifest.repositories.platform.workflowPermissions,
     workflowPermissions(),
+  );
+  assert.deepEqual(
+    manifest.repositories.platform.security,
+    securityPolicy(),
+  );
+  assert.equal(
+    manifest.repositories.platform.releaseProtection.immutableReleases,
+    true,
+  );
+  assert.deepEqual(
+    manifest.repositories.platform.releaseProtection.tagRuleset.rules,
+    ["update", "deletion"],
   );
   assert.equal(
     manifest.repositories.reference.nameWithOwner,
@@ -118,6 +143,11 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
     "OpenGrow multi-application back-office, Cloudflare Workers platform and reusable SDK libraries",
   );
   assert.deepEqual(plan.repositories.platform.settings, settings());
+  assert.deepEqual(plan.repositories.platform.security, securityPolicy());
+  assert.equal(
+    plan.repositories.platform.releaseProtection.immutableReleases,
+    true,
+  );
   const development = plan.repositories.platform.environments.find(
     ({ name }) => name === "development",
   );
@@ -225,6 +255,8 @@ test("remote GitHub inspection requires branches, protection, variables and secr
     description: "OpenGrow test repository",
     settings: settings(),
     workflowPermissions: workflowPermissions(),
+    security: securityPolicy(),
+    releaseProtection: releaseProtection(),
     visibility: "public",
     defaultBranch: "dev",
     repositorySecrets: ["READ_TOKEN"],
@@ -261,6 +293,16 @@ test("remote GitHub inspection requires branches, protection, variables and secr
         can_approve_pull_request_reviews: true,
       },
     ],
+    ["api repos/mbzadev/ready/vulnerability-alerts", {}],
+    [
+      "api repos/mbzadev/ready/automated-security-fixes",
+      { enabled: true, paused: false },
+    ],
+    [
+      "api repos/mbzadev/ready/immutable-releases",
+      { enabled: true, enforced_by_owner: false },
+    ],
+    ["api repos/mbzadev/ready/releases?per_page=100", []],
     [
       "api repos/mbzadev/ready/branches/dev",
       { name: "dev", commit: { sha: "d".repeat(40) } },
@@ -349,6 +391,8 @@ test("remote GitHub inspection requires branches, protection, variables and secr
   });
   assert.equal(state.settingsMatch, true);
   assert.equal(state.workflowPermissionsMatch, true);
+  assert.equal(state.security.ready, true);
+  assert.equal(state.releaseProtection.ready, true);
   assert.equal(JSON.stringify(state).includes("mbza-development"), false);
   assert.equal(state.environments[0].variables[0].configured, true);
   assert.equal(state.environments[0].variables[0].exists, true);
@@ -357,6 +401,17 @@ test("remote GitHub inspection requires branches, protection, variables and secr
     state.branches.every((branch) => branch.protectionMatches),
     true,
   );
+
+  payloads.delete("api repos/mbzadev/ready/vulnerability-alerts");
+  payloads.set("api repos/mbzadev/ready/automated-security-fixes", {
+    enabled: true,
+    paused: true,
+  });
+  const insecure = inspectRepository(repository, run);
+  assert.equal(insecure.ready, false);
+  assert.equal(insecure.security.ready, false);
+  assert.equal(insecure.security.vulnerabilityAlerts.enabled, false);
+  assert.equal(insecure.security.dependabotSecurityUpdates.paused, true);
 });
 
 test("remote GitHub inspection compares Environment reviewers, timers, bypass and branch-tag policies", () => {
@@ -369,6 +424,8 @@ test("remote GitHub inspection compares Environment reviewers, timers, bypass an
     description: "OpenGrow test repository",
     settings: settings(),
     workflowPermissions: workflowPermissions(),
+    security: securityPolicy(),
+    releaseProtection: releaseProtection(),
     visibility: "public",
     defaultBranch: "dev",
     repositorySecrets: [],
@@ -405,6 +462,13 @@ test("remote GitHub inspection compares Environment reviewers, timers, bypass an
         can_approve_pull_request_reviews: true,
       },
     ],
+    ["api repos/mbzadev/protected/vulnerability-alerts", {}],
+    [
+      "api repos/mbzadev/protected/automated-security-fixes",
+      { enabled: true, paused: false },
+    ],
+    ["api repos/mbzadev/protected/immutable-releases", { enabled: true }],
+    ["api repos/mbzadev/protected/releases?per_page=100", []],
     [
       "api repos/mbzadev/protected/environments",
       { environments: [{ name: "production" }] },
@@ -507,6 +571,8 @@ test("pending external Environment protection is explicit and cannot report read
     description: "OpenGrow test repository",
     settings: settings(),
     workflowPermissions: workflowPermissions(),
+    security: securityPolicy(),
+    releaseProtection: releaseProtection(),
     visibility: "public",
     defaultBranch: "dev",
     repositorySecrets: [],
@@ -540,6 +606,13 @@ test("pending external Environment protection is explicit and cannot report read
         can_approve_pull_request_reviews: true,
       },
     ],
+    ["api repos/mbzadev/pending/vulnerability-alerts", {}],
+    [
+      "api repos/mbzadev/pending/automated-security-fixes",
+      { enabled: true, paused: false },
+    ],
+    ["api repos/mbzadev/pending/immutable-releases", { enabled: true }],
+    ["api repos/mbzadev/pending/releases?per_page=100", []],
     [
       "api repos/mbzadev/pending/environments",
       { environments: [{ name: "production" }] },
@@ -599,12 +672,82 @@ test("remote branch history fails closed when GitHub cannot produce a main/dev m
   });
 });
 
+test("release readiness compensates asset-free legacy releases only with the exact no-bypass tag ruleset", () => {
+  const expected = {
+    name: "OpenGrow immutable SDK tags",
+    enforcement: "active",
+    include: ["refs/tags/sdk-flutter-v*"],
+    rules: ["update", "deletion"],
+  };
+  const repository = {
+    nameWithOwner: "mbzadev/release-ready",
+    releaseProtection: {
+      immutableReleases: true,
+      tagRuleset: expected,
+    },
+  };
+  const payloads = new Map([
+    [
+      "api repos/mbzadev/release-ready/immutable-releases",
+      { enabled: true, enforced_by_owner: false },
+    ],
+    [
+      "api repos/mbzadev/release-ready/rulesets?targets=tag&per_page=100",
+      [{ id: 42, name: expected.name, target: "tag" }],
+    ],
+    [
+      "api repos/mbzadev/release-ready/rulesets/42",
+      {
+        id: 42,
+        name: expected.name,
+        target: "tag",
+        enforcement: "active",
+        bypass_actors: [],
+        conditions: {
+          ref_name: { include: expected.include, exclude: [] },
+        },
+        rules: [{ type: "update" }, { type: "deletion" }],
+      },
+    ],
+    [
+      "api repos/mbzadev/release-ready/releases?per_page=100",
+      [
+        {
+          id: 99,
+          tag_name: "sdk-flutter-v2.1.4",
+          draft: false,
+          immutable: false,
+          assets: [],
+        },
+      ],
+    ],
+  ]);
+  const run = (args) => {
+    const payload = payloads.get(args.join(" "));
+    return payload === undefined
+      ? { ok: false, stdout: "" }
+      : { ok: true, stdout: JSON.stringify(payload) };
+  };
+  const state = inspectReleaseProtection(repository, run);
+  assert.equal(state.ready, true);
+  assert.equal(state.mutableReleaseCompensationReady, true);
+  assert.deepEqual(state.mutablePublishedReleases, [
+    { id: 99, tagName: "sdk-flutter-v2.1.4", assetCount: 0 },
+  ]);
+
+  const bypassed = structuredClone(state.tagRuleset.actual);
+  bypassed.bypassActors = [{ actor_id: 1, actor_type: "RepositoryRole" }];
+  assert.equal(tagRulesetMatches(expected, bypassed), false);
+});
+
 test("remote GitHub inspection rejects a superficially matching but weak branch rule", () => {
   const repository = {
     nameWithOwner: "mbzadev/weak",
     description: "OpenGrow test repository",
     settings: settings(),
     workflowPermissions: workflowPermissions(),
+    security: securityPolicy(),
+    releaseProtection: releaseProtection(),
     visibility: "public",
     defaultBranch: "dev",
     repositorySecrets: [],
@@ -630,6 +773,13 @@ test("remote GitHub inspection rejects a superficially matching but weak branch 
         can_approve_pull_request_reviews: true,
       },
     ],
+    ["api repos/mbzadev/weak/vulnerability-alerts", {}],
+    [
+      "api repos/mbzadev/weak/automated-security-fixes",
+      { enabled: true, paused: false },
+    ],
+    ["api repos/mbzadev/weak/immutable-releases", { enabled: true }],
+    ["api repos/mbzadev/weak/releases?per_page=100", []],
     ["api repos/mbzadev/weak/branches/dev", { name: "dev" }],
     [
       "api repos/mbzadev/weak/branches/dev/protection",
@@ -662,6 +812,8 @@ test("remote GitHub inspection rejects repository settings drift", () => {
     description: "OpenGrow test repository",
     settings: settings(),
     workflowPermissions: workflowPermissions(),
+    security: securityPolicy(),
+    releaseProtection: releaseProtection(),
     visibility: "public",
     defaultBranch: "dev",
     repositorySecrets: [],
@@ -680,6 +832,13 @@ test("remote GitHub inspection rejects repository settings drift", () => {
         can_approve_pull_request_reviews: true,
       },
     ],
+    ["api repos/mbzadev/drifted/vulnerability-alerts", {}],
+    [
+      "api repos/mbzadev/drifted/automated-security-fixes",
+      { enabled: true, paused: false },
+    ],
+    ["api repos/mbzadev/drifted/immutable-releases", { enabled: true }],
+    ["api repos/mbzadev/drifted/releases?per_page=100", []],
     ["api repos/mbzadev/drifted/environments", { environments: [] }],
   ]);
   const state = inspectRepository(repository, (args) => {

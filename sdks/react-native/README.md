@@ -43,20 +43,74 @@ The OpenGrow React Native SDK provides deep linking, universal links, app links,
 
 ## Installation
 
-```bash
-# npm
-npm install @mbzadev/opengrow-react-native-sdk@1.0.2
+### GitHub Packages registry
 
-# yarn
-yarn add @mbzadev/opengrow-react-native-sdk@1.0.2
+Registry: `https://npm.pkg.github.com`.
+
+The GitHub npm package record is public metadata. This does not make the
+registry anonymously installable: unauthenticated downloads are unsupported
+and return `401 Unauthorized`.
+
+Provide a GitHub token with `read:packages` only through
+`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+developer shell or CI secret store; never commit the token to Git or write its
+value into a package-manager configuration file.
+
+Add this environment-variable placeholder to the project `.npmrc`. The
+placeholder is safe to version; its resolved secret value is not:
+
+```ini
+@mbzadev:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${OPENGROW_GITHUB_PACKAGES_TOKEN}
 ```
 
-### Android dependency
+Install only after the secret environment variable is present:
 
-Add the released native Android SDK to `android/app/build.gradle`:
+```bash
+test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+  && npm install @mbzadev/opengrow-react-native-sdk@1.0.2
+```
 
-```kotlin
+### Android GitHub Packages registry
+
+The React Native package also consumes the released Android SDK from its
+authenticated Maven registry. Add this contract to the React Native
+project `android/settings.gradle`:
+
+```groovy
+def openGrowPackagesUser = System.getenv("OPENGROW_GITHUB_PACKAGES_USER")
+def openGrowPackagesToken = System.getenv("OPENGROW_GITHUB_PACKAGES_TOKEN")
+if (!openGrowPackagesUser || !openGrowPackagesToken) {
+    throw new GradleException("OPENGROW_GITHUB_PACKAGES_USER and OPENGROW_GITHUB_PACKAGES_TOKEN are required")
+}
+
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            name = "OpenGrowGitHubPackages"
+            url = uri("https://maven.pkg.github.com/mbzadev/opengrow-platform")
+            credentials {
+                username = openGrowPackagesUser
+                password = openGrowPackagesToken
+            }
+        }
+    }
+}
+```
+
+Then keep the exact native dependency in `android/app/build.gradle`
+(the OpenGrow config plugin inserts the same coordinate):
+
+```groovy
 implementation("io.opengrow:opengrow-android-sdk:1.0.3")
+```
+
+Before the Android build, require both Maven credentials:
+
+```bash
+test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
+  && test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+  && cd android && ./gradlew assemble
 ```
 
 ### iOS dependency

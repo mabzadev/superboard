@@ -143,6 +143,46 @@ export default function LibrariesPageContent() {
                         {library.notes}
                       </p>
                     )}
+                    {library.distribution && (
+                      <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary">Public metadata</Badge>
+                          <Badge variant="outline">
+                            Authentication required
+                          </Badge>
+                          <Badge variant="outline">
+                            Anonymous install unavailable
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground">
+                          The package record is public, but the registry rejects
+                          unauthenticated downloads. Configure{" "}
+                          <code>
+                            {
+                              library.distribution.authentication
+                                .tokenEnvironmentVariable
+                            }
+                          </code>
+                          {library.distribution.authentication
+                            .usernameEnvironmentVariable && (
+                            <>
+                              {" "}
+                              and{" "}
+                              <code>
+                                {
+                                  library.distribution.authentication
+                                    .usernameEnvironmentVariable
+                                }
+                              </code>
+                            </>
+                          )}{" "}
+                          before using the dependency command.
+                        </p>
+                        <p className="break-all font-mono text-muted-foreground">
+                          {library.distribution.registry}
+                        </p>
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-3 text-sm">
                       <a
                         className="inline-flex items-center gap-1 text-primary"
@@ -194,8 +234,16 @@ export default function LibrariesPageContent() {
                     </div>
                     <details>
                       <summary className="cursor-pointer text-sm font-medium">
-                        Installation
+                        {library.distribution
+                          ? "Authenticated dependency command"
+                          : "Installation"}
                       </summary>
+                      {library.distribution && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          This command alone is insufficient; configure the
+                          authenticated registry shown above first.
+                        </p>
+                      )}
                       <div className="mt-2 flex items-start gap-2">
                         <pre className="min-w-0 flex-1 overflow-auto rounded bg-muted p-3 text-xs">
                           {library.install}
@@ -205,7 +253,12 @@ export default function LibrariesPageContent() {
                           variant="outline"
                           aria-label={`Copy ${library.displayName} installation`}
                           onClick={() =>
-                            void copy(library.install, "Installation")
+                            void copy(
+                              library.install,
+                              library.distribution
+                                ? "Dependency command"
+                                : "Installation"
+                            )
                           }
                         >
                           <Copy className="size-4" />

@@ -10,7 +10,7 @@ import {
 
 function manifest() {
   return {
-    schemaVersion: 5,
+    schemaVersion: 7,
     owner: {
       login: "mbzadev",
       type: "user",
@@ -75,7 +75,7 @@ test("bootstrap plans only unavailable declared repositories", () => {
       },
     ],
   );
-  assert.match(plan.confirmation, /^GITHUB:BOOTSTRAP:5:[a-f0-9]{12}$/u);
+  assert.match(plan.confirmation, /^GITHUB:BOOTSTRAP:7:[a-f0-9]{12}$/u);
   assert.equal(plan.confirmation, githubBootstrapConfirmation(plan));
   assert.match(plan.repositories[0].warning, /HTTP 404/u);
 });
@@ -207,7 +207,7 @@ test("bootstrap refuses mutation without its plan-specific confirmation", () => 
           return { ok: true };
         },
       }),
-    /pass --confirm GITHUB:BOOTSTRAP:5:/u,
+    /pass --confirm GITHUB:BOOTSTRAP:7:/u,
   );
   assert.equal(calls, 0);
 });

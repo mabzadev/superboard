@@ -267,6 +267,17 @@ export type PlatformLibrary = {
   surfaceManifest?: string;
   notes?: string;
   install: string;
+  distribution?: {
+    registryKind: "github-packages-npm" | "github-packages-maven";
+    registry: string;
+    publicMetadata: boolean;
+    anonymousInstallable: boolean;
+    authentication: {
+      required: boolean;
+      tokenEnvironmentVariable: string;
+      usernameEnvironmentVariable?: string;
+    };
+  };
 };
 
 export type PlatformLibraryCatalog = {

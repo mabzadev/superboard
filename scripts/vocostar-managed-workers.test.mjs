@@ -14,6 +14,20 @@ import { loadTarget } from "./cloudflare-target.mjs";
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const provenancePath = "workers/custom/vocostar/orchestrators/PROVENANCE.json";
 
+function numericVersionAtLeast(actual, minimum) {
+  const actualParts = actual.split(".").map(Number);
+  const minimumParts = minimum.split(".").map(Number);
+  for (
+    let index = 0;
+    index < Math.max(actualParts.length, minimumParts.length);
+    index += 1
+  ) {
+    const difference = (actualParts[index] ?? 0) - (minimumParts[index] ?? 0);
+    if (difference !== 0) return difference > 0;
+  }
+  return true;
+}
+
 test("VocoStar orchestrators have a complete Git provenance contract", async () => {
   const provenance = JSON.parse(
     readFileSync(resolve(root, provenancePath), "utf8"),
@@ -71,6 +85,41 @@ test("managed orchestrators are deployed before their adapter", async () => {
     const service = managedWorkerService(component);
     assert.ok(order.includes(service));
     assert.ok(order.indexOf(service) < order.indexOf("custom"));
+  }
+});
+
+test("VocoStar vocal container pins patched Python dependencies", () => {
+  const requirements = readFileSync(
+    resolve(
+      root,
+      "workers/custom/vocostar/orchestrators/vocals/container/requirements.txt",
+    ),
+    "utf8",
+  );
+  const pins = new Map(
+    requirements
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const match = line.match(/^([a-z0-9-]+)==([0-9]+(?:\.[0-9]+)+)$/u);
+        assert.ok(
+          match,
+          `Python dependency must use an exact numeric pin: ${line}`,
+        );
+        return [match[1], match[2]];
+      }),
+  );
+
+  for (const [dependency, minimum] of [
+    ["flask", "3.1.3"],
+    ["requests", "2.33.0"],
+  ]) {
+    const version = pins.get(dependency);
+    assert.ok(version, `${dependency} must remain explicitly pinned`);
+    assert.ok(
+      numericVersionAtLeast(version, minimum),
+      `${dependency} ${version} is below the patched floor ${minimum}`,
+    );
   }
 });
 

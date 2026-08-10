@@ -194,7 +194,7 @@ jobs:
       - run: npm ci && npm run check
         if: needs.validate-tag.outputs.sdk == 'js'
         working-directory: sdks/javascript
-      - run: corepack enable && yarn install --immutable && yarn typecheck && yarn test --runInBand && yarn prepare
+      - run: corepack enable && yarn install --immutable && yarn check
         if: needs.validate-tag.outputs.sdk == 'react-native'
         working-directory: sdks/react-native
       - name: Install repository tooling for the React Native contract

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
+import { nonNodeSecurityAuditContract } from "./non-node-security-audit.mjs";
 
 const workflow = await readFile(
   new URL("../.github/workflows/deploy-cloudflare.yml", import.meta.url),
@@ -42,6 +43,9 @@ const javascriptManifest = JSON.parse(
     new URL("../sdks/javascript/package.json", import.meta.url),
     "utf8",
   ),
+);
+const rootManifest = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
 );
 
 function workflowSection(source, startMarker, endMarker) {
@@ -271,7 +275,7 @@ test("branch protection can require one stable aggregate CI check", () => {
   assert.match(ciWorkflow, /if: \$\{\{ always\(\) \}\}/);
   assert.match(
     ciWorkflow,
-    /needs: \[plan, workers, dashboard, flutter, node_sdks, ios_sdk, android_sdk\]/,
+    /needs: \[plan, non_node_security, workers, dashboard, flutter, node_sdks, ios_sdk, android_sdk\]/,
   );
   assert.match(ciWorkflow, /success\|skipped/);
   assert.match(ciWorkflow, /Validate Cloudflare and GitHub control planes/);
@@ -287,6 +291,59 @@ test("branch protection can require one stable aggregate CI check", () => {
   assert.match(ciWorkflow, /npm run cloudflare:types:check/);
 });
 
+test("required CI executes pinned Python and Ruby dependency audits", () => {
+  const auditJob = workflowSection(
+    ciWorkflow,
+    "\n  non_node_security:",
+    "\n  workers:",
+  );
+  assert.equal(
+    rootManifest.scripts["security:audit:non-node"],
+    "node scripts/non-node-security-audit.mjs",
+  );
+  assert.deepEqual(nonNodeSecurityAuditContract, {
+    python: {
+      runtimeVersion: "3.13.7",
+      tool: "pip-audit",
+      toolVersion: "2.10.1",
+      requirements:
+        "workers/custom/vocostar/orchestrators/vocals/container/requirements.txt",
+    },
+    ruby: {
+      runtimeVersion: "3.4.9",
+      bundlerVersion: "2.7.2",
+      tool: "bundler-audit",
+      toolVersion: "0.9.3",
+      lockfile: "sdks/react-native/example/Gemfile.lock",
+    },
+  });
+  assert.match(auditJob, /OPENGROW_PIP_AUDIT_VERSION: "2\.10\.1"/u);
+  assert.match(auditJob, /OPENGROW_BUNDLER_VERSION: "2\.7\.2"/u);
+  assert.match(auditJob, /OPENGROW_BUNDLER_AUDIT_VERSION: "0\.9\.3"/u);
+  assert.match(auditJob, /actions\/setup-python@[0-9a-f]{40}/u);
+  assert.match(auditJob, /python-version: "3\.13\.7"/u);
+  assert.match(auditJob, /ruby\/setup-ruby@[0-9a-f]{40}/u);
+  assert.match(auditJob, /ruby-version: "3\.4\.9"/u);
+  assert.match(
+    auditJob,
+    /python3 -m pip install --disable-pip-version-check "pip-audit==\$OPENGROW_PIP_AUDIT_VERSION"/u,
+  );
+  assert.match(
+    auditJob,
+    /gem install bundler --version "\$OPENGROW_BUNDLER_VERSION" --no-document/u,
+  );
+  assert.match(
+    auditJob,
+    /gem install bundler-audit --version "\$OPENGROW_BUNDLER_AUDIT_VERSION" --no-document/u,
+  );
+  assert.match(auditJob, /npm run security:audit:non-node/u);
+  assert.match(
+    ciWorkflow,
+    /NON_NODE_SECURITY_RESULT: \$\{\{ needs\.non_node_security\.result \}\}/u,
+  );
+  assert.match(ciWorkflow, /test "\$NON_NODE_SECURITY_RESULT" = "success"/u);
+});
+
 test("CI validates every maintained SDK family and the Chatwoot migration path", () => {
   assert.match(ciWorkflow, /npm run sdk:documentation:check/);
   assert.match(ciWorkflow, /node_sdks:/);
@@ -296,10 +353,7 @@ test("CI validates every maintained SDK family and the Chatwoot migration path",
     /Install repository tooling for the React Native contract[\s\S]*npm ci --ignore-scripts[\s\S]*npm run react-native:native-contract:check/,
   );
   assert.match(ciWorkflow, /npm run react-native:native-contract:check/);
-  assert.match(
-    ciWorkflow,
-    /yarn typecheck && yarn test --runInBand && yarn prepare/,
-  );
+  assert.match(ciWorkflow, /run: yarn check/);
   assert.match(ciWorkflow, /ios_sdk:/);
   assert.match(ciWorkflow, /\.\/scripts\/run_tests\.sh/);
   assert.match(ciWorkflow, /android_sdk:/);
@@ -390,7 +444,7 @@ test("immutable SDK publication revalidates native and React Native packages", (
   assert.match(releaseWorkflow, /\.\/scripts\/run_tests\.sh/);
   assert.match(
     releaseWorkflow,
-    /yarn typecheck && yarn test --runInBand && yarn prepare/,
+    /corepack enable && yarn install --immutable && yarn check/,
   );
   assert.match(releaseWorkflow, /npm ci && npm run check/);
   assert.match(

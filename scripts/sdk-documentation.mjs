@@ -102,6 +102,169 @@ function repositoryGitUrl(repository) {
   return `${String(repository).replace(/\.git$/u, "")}.git`;
 }
 
+function registryDistribution(library, expectedKind) {
+  const distribution = library?.distribution;
+  if (
+    !distribution ||
+    distribution.registryKind !== expectedKind ||
+    !distribution.registry ||
+    distribution.publicMetadata !== true ||
+    distribution.anonymousInstallable !== false ||
+    distribution.authentication?.required !== true ||
+    !distribution.authentication?.tokenEnvironmentVariable
+  ) {
+    throw new Error(
+      `SDK catalogue library ${library?.id} has an incomplete ${expectedKind} distribution contract`,
+    );
+  }
+  return distribution;
+}
+
+function registryDisclosure(distribution, registryLabel) {
+  return [
+    `Registry: \`${distribution.registry}\`.`,
+    "",
+    `The GitHub ${registryLabel} record is public metadata. This does not make the`,
+    "registry anonymously installable: unauthenticated downloads are unsupported",
+    "and return `401 Unauthorized`.",
+    "",
+    "Provide a GitHub token with `read:packages` only through",
+    `\`${distribution.authentication.tokenEnvironmentVariable}\`. Keep its value in the`,
+    "developer shell or CI secret store; never commit the token to Git or write its",
+    "value into a package-manager configuration file.",
+  ];
+}
+
+function npmRegistryInstallation(library) {
+  const distribution = registryDistribution(library, "github-packages-npm");
+  const scope = /^(@[^/]+)\//u.exec(library.packageName)?.[1];
+  if (!scope) {
+    throw new Error(
+      `SDK catalogue library ${library.id} must use a scoped npm package`,
+    );
+  }
+  const registry = new URL(distribution.registry);
+  const tokenEnvironmentVariable =
+    distribution.authentication.tokenEnvironmentVariable;
+  const npmrc = [
+    `${scope}:registry=${distribution.registry}`,
+    `//${registry.host}/:_authToken=\${${tokenEnvironmentVariable}}`,
+  ].join("\n");
+
+  return [
+    "### GitHub Packages registry",
+    "",
+    ...registryDisclosure(distribution, "npm package"),
+    "",
+    "Add this environment-variable placeholder to the project `.npmrc`. The",
+    "placeholder is safe to version; its resolved secret value is not:",
+    "",
+    fenced("ini", npmrc),
+    "",
+    "Install only after the secret environment variable is present:",
+    "",
+    fenced(
+      "bash",
+      [`test -n "\${${tokenEnvironmentVariable}:-}"`, library.install].join(
+        " \\\n  && ",
+      ),
+    ),
+  ];
+}
+
+function androidRegistrySettingsKotlin(library) {
+  const distribution = registryDistribution(library, "github-packages-maven");
+  const authentication = distribution.authentication;
+  const usernameEnvironmentVariable =
+    authentication.usernameEnvironmentVariable;
+  if (!usernameEnvironmentVariable) {
+    throw new Error(
+      `SDK catalogue library ${library.id} is missing its Maven username environment variable`,
+    );
+  }
+  const tokenEnvironmentVariable = authentication.tokenEnvironmentVariable;
+  return [
+    `val openGrowPackagesUser = providers.environmentVariable("${usernameEnvironmentVariable}").orNull`,
+    `    ?: error("${usernameEnvironmentVariable} is required")`,
+    `val openGrowPackagesToken = providers.environmentVariable("${tokenEnvironmentVariable}").orNull`,
+    `    ?: error("${tokenEnvironmentVariable} is required")`,
+    "",
+    "dependencyResolutionManagement {",
+    "    repositories {",
+    "        maven {",
+    '            name = "OpenGrowGitHubPackages"',
+    `            url = uri("${distribution.registry}")`,
+    "            credentials {",
+    "                username = openGrowPackagesUser",
+    "                password = openGrowPackagesToken",
+    "            }",
+    "        }",
+    "    }",
+    "}",
+  ].join("\n");
+}
+
+function androidRegistrySettingsGroovy(library) {
+  const distribution = registryDistribution(library, "github-packages-maven");
+  const authentication = distribution.authentication;
+  const usernameEnvironmentVariable =
+    authentication.usernameEnvironmentVariable;
+  if (!usernameEnvironmentVariable) {
+    throw new Error(
+      `SDK catalogue library ${library.id} is missing its Maven username environment variable`,
+    );
+  }
+  const tokenEnvironmentVariable = authentication.tokenEnvironmentVariable;
+  return [
+    `def openGrowPackagesUser = System.getenv("${usernameEnvironmentVariable}")`,
+    `def openGrowPackagesToken = System.getenv("${tokenEnvironmentVariable}")`,
+    "if (!openGrowPackagesUser || !openGrowPackagesToken) {",
+    `    throw new GradleException("${usernameEnvironmentVariable} and ${tokenEnvironmentVariable} are required")`,
+    "}",
+    "",
+    "dependencyResolutionManagement {",
+    "    repositories {",
+    "        maven {",
+    '            name = "OpenGrowGitHubPackages"',
+    `            url = uri("${distribution.registry}")`,
+    "            credentials {",
+    "                username = openGrowPackagesUser",
+    "                password = openGrowPackagesToken",
+    "            }",
+    "        }",
+    "    }",
+    "}",
+  ].join("\n");
+}
+
+function androidRegistryDisclosure(library) {
+  const distribution = registryDistribution(library, "github-packages-maven");
+  const authentication = distribution.authentication;
+  return [
+    ...registryDisclosure(distribution, "Maven package"),
+    "",
+    `Set \`${authentication.usernameEnvironmentVariable}\` to the GitHub user that`,
+    "owns the token. Add the authenticated registry to `settings.gradle.kts`:",
+    "",
+    fenced("kotlin", androidRegistrySettingsKotlin(library)),
+    "",
+    "Then add the exact dependency to the application module:",
+    "",
+    fenced("kotlin", library.install),
+    "",
+    "Resolve or build only after both secret inputs are present:",
+    "",
+    fenced(
+      "bash",
+      [
+        `test -n "\${${authentication.usernameEnvironmentVariable}:-}"`,
+        `test -n "\${${authentication.tokenEnvironmentVariable}:-}"`,
+        "./gradlew assemble",
+      ].join(" \\\n  && "),
+    ),
+  ];
+}
+
 export function renderSdkDocumentationSections(catalog) {
   const libraries = libraryMap(catalog);
   const flutter = published(libraries, "flutter");
@@ -145,23 +308,14 @@ export function renderSdkDocumentationSections(catalog) {
     ],
     [
       "android",
-      [
-        "## Installation",
-        "",
-        "Add the published OpenGrow dependency to the application module:",
-        "",
-        fenced("kotlin", android.install),
-      ].join("\n"),
+      ["## Installation", "", ...androidRegistryDisclosure(android)].join("\n"),
     ],
     [
       "javascript",
       [
         "## Installation",
         "",
-        `Install the published package \`${javascript.packageName}\` at the exact`,
-        `release \`${javascript.latestReleaseVersion}\`:`,
-        "",
-        fenced("bash", javascript.install),
+        ...npmRegistryInstallation(javascript),
         "",
         "Then import the package by its catalogue-owned name:",
         "",
@@ -176,22 +330,31 @@ export function renderSdkDocumentationSections(catalog) {
       [
         "## Installation",
         "",
+        ...npmRegistryInstallation(reactNative),
+        "",
+        "### Android GitHub Packages registry",
+        "",
+        "The React Native package also consumes the released Android SDK from its",
+        "authenticated Maven registry. Add this contract to the React Native",
+        "project `android/settings.gradle`:",
+        "",
+        fenced("groovy", androidRegistrySettingsGroovy(android)),
+        "",
+        "Then keep the exact native dependency in `android/app/build.gradle`",
+        "(the OpenGrow config plugin inserts the same coordinate):",
+        "",
+        fenced("groovy", android.install),
+        "",
+        "Before the Android build, require both Maven credentials:",
+        "",
         fenced(
           "bash",
           [
-            "# npm",
-            reactNative.install,
-            "",
-            "# yarn",
-            `yarn add ${reactNative.packageName}@${reactNative.latestReleaseVersion}`,
-          ].join("\n"),
+            `test -n "\${${android.distribution.authentication.usernameEnvironmentVariable}:-}"`,
+            `test -n "\${${android.distribution.authentication.tokenEnvironmentVariable}:-}"`,
+            "cd android && ./gradlew assemble",
+          ].join(" \\\n  && "),
         ),
-        "",
-        "### Android dependency",
-        "",
-        "Add the released native Android SDK to `android/app/build.gradle`:",
-        "",
-        fenced("kotlin", android.install),
         "",
         "### iOS dependency",
         "",
@@ -339,6 +502,18 @@ function semanticErrors(catalog, documents) {
     errors.push(
       "docs/VOCOSTAR_CLOUDFLARE_ARCHITECTURE.md: architecture must reference the SDK catalogue instead of duplicating a FlutterFlow version",
     );
+  }
+  for (const [path, source] of documents) {
+    if (/\b(?:ghp_|github_pat_)[A-Za-z0-9_]+\b/u.test(source)) {
+      errors.push(
+        `${path}: package registry credentials must not be hardcoded`,
+      );
+    }
+    if (/\/:_authToken=(?!\$\{[A-Z][A-Z0-9_]*\})[^\s]+/u.test(source)) {
+      errors.push(
+        `${path}: npm authentication must use an environment-variable placeholder`,
+      );
+    }
   }
   return errors;
 }

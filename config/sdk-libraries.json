@@ -1,6 +1,6 @@
 {
   "$schema": "./sdk-libraries.schema.json",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "repository": "https://github.com/mbzadev/opengrow-platform",
   "developmentBranch": "dev",
   "releasePolicy": "immutable-tag",
@@ -87,7 +87,18 @@
       "releaseStatus": "released",
       "releaseSha": "21549c99fbe65668e0488f0f5ea2fc62219b53c4",
       "notes": "The 1.0.2 release moves to a collision-free package coordinate owned by opengrow-platform; the legacy 1.0.0 coordinate remains available from mbzadev/opengrow.",
-      "install": "implementation(\"io.opengrow:opengrow-android-sdk:1.0.3\")"
+      "install": "implementation(\"io.opengrow:opengrow-android-sdk:1.0.3\")",
+      "distribution": {
+        "registryKind": "github-packages-maven",
+        "registry": "https://maven.pkg.github.com/mbzadev/opengrow-platform",
+        "publicMetadata": true,
+        "anonymousInstallable": false,
+        "authentication": {
+          "required": true,
+          "usernameEnvironmentVariable": "OPENGROW_GITHUB_PACKAGES_USER",
+          "tokenEnvironmentVariable": "OPENGROW_GITHUB_PACKAGES_TOKEN"
+        }
+      }
     },
     {
       "id": "javascript",
@@ -104,7 +115,17 @@
       "releaseStatus": "released",
       "releaseSha": "cd27c193c471cf1b22f72a61f38acdd62f7a1e99",
       "notes": "The 1.0.1 release moves to a collision-free package name owned by opengrow-platform; the legacy 1.0.0 package remains linked to mbzadev/opengrow.",
-      "install": "npm install @mbzadev/opengrow-js-sdk@1.0.2"
+      "install": "npm install @mbzadev/opengrow-js-sdk@1.0.2",
+      "distribution": {
+        "registryKind": "github-packages-npm",
+        "registry": "https://npm.pkg.github.com",
+        "publicMetadata": true,
+        "anonymousInstallable": false,
+        "authentication": {
+          "required": true,
+          "tokenEnvironmentVariable": "OPENGROW_GITHUB_PACKAGES_TOKEN"
+        }
+      }
     },
     {
       "id": "react-native",
@@ -121,7 +142,17 @@
       "releaseStatus": "released",
       "releaseSha": "969bacf6f5c52d205ffe6da18cb4c47d85dfbaeb",
       "notes": "The 1.0.1 release moves to a collision-free package name owned by opengrow-platform; the legacy 1.0.0 package remains linked to mbzadev/opengrow.",
-      "install": "npm install @mbzadev/opengrow-react-native-sdk@1.0.2"
+      "install": "npm install @mbzadev/opengrow-react-native-sdk@1.0.2",
+      "distribution": {
+        "registryKind": "github-packages-npm",
+        "registry": "https://npm.pkg.github.com",
+        "publicMetadata": true,
+        "anonymousInstallable": false,
+        "authentication": {
+          "required": true,
+          "tokenEnvironmentVariable": "OPENGROW_GITHUB_PACKAGES_TOKEN"
+        }
+      }
     }
   ]
 }

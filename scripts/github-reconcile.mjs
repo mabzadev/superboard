@@ -70,7 +70,9 @@ export function buildGitHubReconcilePlan(manifest, inspections) {
         !Array.isArray(state.branches) ||
         !Array.isArray(state.environments) ||
         typeof state.settingsMatch !== "boolean" ||
-        typeof state.workflowPermissionsMatch !== "boolean"
+        typeof state.workflowPermissionsMatch !== "boolean" ||
+        typeof state.security?.ready !== "boolean" ||
+        typeof state.releaseProtection?.ready !== "boolean"
       ) {
         blockers.push({
           type: "remote-state",
@@ -97,6 +99,56 @@ export function buildGitHubReconcilePlan(manifest, inspections) {
       }
       if (!state.workflowPermissionsMatch) {
         operations.push({ type: "set-workflow-permissions" });
+      }
+      if (!state.security.vulnerabilityAlerts.enabled) {
+        operations.push({ type: "enable-vulnerability-alerts" });
+      }
+      if (state.security.dependabotSecurityUpdates.paused === true) {
+        blockers.push({
+          type: "dependabot-security-updates-paused",
+          message:
+            "Dependabot security updates are enabled but paused. Resolve the repository security-update queue and verify GitHub reports paused=false before reconciliation.",
+        });
+      } else if (!state.security.dependabotSecurityUpdates.enabled) {
+        operations.push({ type: "enable-dependabot-security-updates" });
+      }
+      if (!state.releaseProtection.immutableReleases.enabled) {
+        operations.push({ type: "enable-immutable-releases" });
+      }
+      if (repository.releaseProtection.tagRuleset) {
+        if (state.releaseProtection.tagRuleset.status === "missing") {
+          operations.push({ type: "create-tag-ruleset" });
+        } else if (!state.releaseProtection.tagRuleset.ready) {
+          blockers.push({
+            type: "tag-ruleset-drift",
+            message:
+              "Review the existing same-name ruleset manually; reconciliation never weakens or replaces tag protection.",
+          });
+        }
+      }
+      if (!state.releaseProtection.releaseInventoryReadable) {
+        blockers.push({
+          type: "release-inventory-inaccessible",
+          message:
+            "GitHub releases could not be inspected; no release-protection mutation is safe.",
+        });
+      }
+      const unsafeMutableReleases = (
+        state.releaseProtection.mutablePublishedReleases || []
+      ).filter(
+        ({ tagName, assetCount }) =>
+          assetCount > 0 ||
+          !repository.releaseProtection.tagRuleset?.include.some((pattern) =>
+            releaseTagMatches(pattern, tagName),
+          ),
+      );
+      if (unsafeMutableReleases.length > 0) {
+        blockers.push({
+          type: "uncompensated-mutable-releases",
+          releases: unsafeMutableReleases,
+          message:
+            "Existing mutable releases with assets or uncovered tags require an explicit non-destructive migration decision.",
+        });
       }
 
       const branches = new Map(
@@ -353,6 +405,40 @@ export function mutationRequest(repository, operation) {
         can_approve_pull_request_reviews:
           repository.workflowPermissions.canApprovePullRequestReviews,
       });
+    case "enable-vulnerability-alerts":
+      return githubJsonRequest("PUT", `${base}/vulnerability-alerts`, {});
+    case "enable-dependabot-security-updates":
+      return githubJsonRequest("PUT", `${base}/automated-security-fixes`, {});
+    case "enable-immutable-releases":
+      return githubJsonRequest("PUT", `${base}/immutable-releases`, {});
+    case "create-tag-ruleset": {
+      const ruleset = repository.releaseProtection.tagRuleset;
+      if (!ruleset) {
+        throw new Error(
+          `No tag ruleset is declared for ${repository.nameWithOwner}`,
+        );
+      }
+      return githubJsonRequest("POST", `${base}/rulesets`, {
+        name: ruleset.name,
+        target: "tag",
+        enforcement: ruleset.enforcement,
+        bypass_actors: [],
+        conditions: {
+          ref_name: {
+            include: ruleset.include,
+            exclude: [],
+          },
+        },
+        rules: ruleset.rules.map((type) =>
+          type === "update"
+            ? {
+                type,
+                parameters: { update_allows_fetch_and_merge: false },
+              }
+            : { type },
+        ),
+      });
+    }
     case "put-branch-protection":
       return githubJsonRequest(
         "PUT",
@@ -439,6 +525,13 @@ export function mutationRequest(repository, operation) {
         `Unsupported GitHub reconciliation operation: ${operation.type}`,
       );
   }
+}
+
+function releaseTagMatches(pattern, tagName) {
+  const escaped = String(pattern).replace(/[|\\{}()[\]^$+?.]/gu, "\\$&");
+  return new RegExp(`^${escaped.replaceAll("*", ".*")}$`, "u").test(
+    `refs/tags/${tagName || ""}`,
+  );
 }
 
 function optionValue(name) {

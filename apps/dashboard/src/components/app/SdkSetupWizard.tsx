@@ -141,6 +141,79 @@ function library(id: "ios" | "android" | "javascript") {
   return value;
 }
 
+function registryLibrary(id: "android" | "javascript") {
+  const value = library(id);
+  if (!("distribution" in value) || !value.distribution) {
+    throw new Error(`SDK catalogue entry ${id} has no distribution contract`);
+  }
+  return value;
+}
+
+export function sdkInstallCode(platform: "android" | "web"): CodeBlockData[] {
+  if (platform === "web") {
+    const javascript = registryLibrary("javascript");
+    const distribution = javascript.distribution;
+    const tokenEnvironmentVariable =
+      distribution.authentication.tokenEnvironmentVariable;
+    const scope = javascript.packageName.split("/")[0];
+    const registryHost = new URL(distribution.registry).host;
+    return [
+      ...code(
+        "ini",
+        ".npmrc",
+        `${scope}:registry=${distribution.registry}\n//${registryHost}/:_authToken=\${${tokenEnvironmentVariable}}`
+      ),
+      ...code(
+        "bash",
+        "Terminal",
+        `test -n "\${${tokenEnvironmentVariable}:-}" \\\n  && ${javascript.install}`
+      ),
+    ];
+  }
+
+  const android = registryLibrary("android");
+  const distribution = android.distribution;
+  const authentication = distribution.authentication;
+  if (!authentication.usernameEnvironmentVariable) {
+    throw new Error("Android distribution requires a GitHub username variable");
+  }
+  const usernameEnvironmentVariable =
+    authentication.usernameEnvironmentVariable;
+  const tokenEnvironmentVariable = authentication.tokenEnvironmentVariable;
+  const settings = [
+    `val openGrowPackagesUser = providers.environmentVariable("${usernameEnvironmentVariable}").orNull`,
+    `    ?: error("${usernameEnvironmentVariable} is required")`,
+    `val openGrowPackagesToken = providers.environmentVariable("${tokenEnvironmentVariable}").orNull`,
+    `    ?: error("${tokenEnvironmentVariable} is required")`,
+    "",
+    "dependencyResolutionManagement {",
+    "    repositories {",
+    "        maven {",
+    '            name = "OpenGrowGitHubPackages"',
+    `            url = uri("${distribution.registry}")`,
+    "            credentials {",
+    "                username = openGrowPackagesUser",
+    "                password = openGrowPackagesToken",
+    "            }",
+    "        }",
+    "    }",
+    "}",
+  ].join("\n");
+  return [
+    ...code("kotlin", "settings.gradle.kts", settings),
+    ...code("kotlin", "build.gradle.kts", android.install),
+    ...code(
+      "bash",
+      "Terminal",
+      [
+        `test -n "\${${usernameEnvironmentVariable}:-}"`,
+        `test -n "\${${tokenEnvironmentVariable}:-}"`,
+        "./gradlew assemble",
+      ].join(" \\\n  && ")
+    ),
+  ];
+}
+
 function stepCode(
   platform: SdkPlatform,
   step: number,
@@ -182,8 +255,7 @@ function stepCode(
         "AndroidManifest.xml",
         `<intent-filter android:autoVerify="true">\n  <action android:name="android.intent.action.VIEW" />\n  <category android:name="android.intent.category.BROWSABLE" />\n  <data android:scheme="https" android:host="${new URL(config.shortlinkUrl).hostname}" />\n</intent-filter>`
       );
-    if (step === 2)
-      return code("kotlin", "build.gradle.kts", library("android").install);
+    if (step === 2) return sdkInstallCode("android");
     if (step === 3)
       return code(
         "kotlin",
@@ -205,8 +277,7 @@ function stepCode(
   }
   if (platform === "web") {
     const javascriptLibrary = library("javascript");
-    if (step === 1)
-      return code("bash", "Terminal", javascriptLibrary.install);
+    if (step === 1) return sdkInstallCode("web");
     if (step === 2)
       return code(
         "typescript",

@@ -94,7 +94,7 @@ test("SDK catalogue matches every package source and FlutterFlow public symbol",
   const result = await validateSdkCatalog(catalog);
   assert.deepEqual(result.errors, []);
   assert.equal(result.libraries, 7);
-  assert.equal(catalog.schemaVersion, 2);
+  assert.equal(catalog.schemaVersion, 3);
   assert.ok(catalog.libraries.every((library) => library.license === "MIT"));
   assert.deepEqual(catalog.libraries.map((library) => library.id).sort(), [
     "android",
@@ -136,6 +136,75 @@ test("SDK catalogue matches every package source and FlutterFlow public symbol",
       library.id === "ios" ? library.sourceVersion : candidateTag,
     );
   }
+
+  for (const id of ["android", "javascript", "react-native"]) {
+    const library = catalog.libraries.find((item) => item.id === id);
+    assert.equal(library.distribution.publicMetadata, true);
+    assert.equal(library.distribution.anonymousInstallable, false);
+    assert.equal(library.distribution.authentication.required, true);
+    assert.equal(
+      library.distribution.authentication.tokenEnvironmentVariable,
+      "OPENGROW_GITHUB_PACKAGES_TOKEN",
+    );
+  }
+});
+
+test("registry SDK distribution metadata is honest and secret-free", async () => {
+  const catalog = await loadSdkCatalog();
+  const missing = structuredClone(catalog);
+  delete missing.libraries.find(
+    (library) => library.id === "javascript",
+  ).distribution;
+  let result = await validateSdkCatalog(missing);
+  assert.ok(
+    result.errors.includes("libraries.javascript.distribution is required"),
+  );
+
+  const anonymous = structuredClone(catalog);
+  anonymous.libraries.find(
+    (library) => library.id === "react-native",
+  ).distribution.anonymousInstallable = true;
+  result = await validateSdkCatalog(anonymous);
+  assert.ok(
+    result.errors.includes(
+      "libraries.react-native.distribution.anonymousInstallable must be false",
+    ),
+  );
+
+  const privateMetadata = structuredClone(catalog);
+  privateMetadata.libraries.find(
+    (library) => library.id === "android",
+  ).distribution.publicMetadata = false;
+  result = await validateSdkCatalog(privateMetadata);
+  assert.ok(
+    result.errors.includes(
+      "libraries.android.distribution.publicMetadata must be true",
+    ),
+  );
+
+  const hardcodedCredential = structuredClone(catalog);
+  hardcodedCredential.libraries.find(
+    (library) => library.id === "javascript",
+  ).distribution.authentication.token = "github_pat_forbidden";
+  result = await validateSdkCatalog(hardcodedCredential);
+  assert.ok(
+    result.errors.some(
+      (error) =>
+        error.includes("/distribution/authentication") &&
+        error.includes("additional properties"),
+    ),
+  );
+
+  const wrongRegistry = structuredClone(catalog);
+  wrongRegistry.libraries.find(
+    (library) => library.id === "android",
+  ).distribution.registry = "https://repo1.maven.org/maven2";
+  result = await validateSdkCatalog(wrongRegistry);
+  assert.ok(
+    result.errors.includes(
+      "libraries.android.distribution.registry must be https://maven.pkg.github.com/mbzadev/opengrow-platform",
+    ),
+  );
 });
 
 test("release validation rejects source drift and an unpublished source version", async () => {

@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-public-4F46E5?style=flat-square" alt="GitHub Packages"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-auth%20required-4F46E5?style=flat-square" alt="GitHub Packages authentication required"/></a>
   <a href="#"><img src="https://img.shields.io/badge/API-21%2B-4F46E5?style=flat-square" alt="API 21+"/></a>
   <a href="#"><img src="https://img.shields.io/badge/kotlin-1.9%2B-4F46E5?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
@@ -49,10 +49,52 @@ The OpenGrow Android SDK provides deep linking, app links, link generation, in-a
 
 ## Installation
 
-Add the published OpenGrow dependency to the application module:
+Registry: `https://maven.pkg.github.com/mbzadev/opengrow-platform`.
+
+The GitHub Maven package record is public metadata. This does not make the
+registry anonymously installable: unauthenticated downloads are unsupported
+and return `401 Unauthorized`.
+
+Provide a GitHub token with `read:packages` only through
+`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+developer shell or CI secret store; never commit the token to Git or write its
+value into a package-manager configuration file.
+
+Set `OPENGROW_GITHUB_PACKAGES_USER` to the GitHub user that
+owns the token. Add the authenticated registry to `settings.gradle.kts`:
+
+```kotlin
+val openGrowPackagesUser = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_USER").orNull
+    ?: error("OPENGROW_GITHUB_PACKAGES_USER is required")
+val openGrowPackagesToken = providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_TOKEN").orNull
+    ?: error("OPENGROW_GITHUB_PACKAGES_TOKEN is required")
+
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            name = "OpenGrowGitHubPackages"
+            url = uri("https://maven.pkg.github.com/mbzadev/opengrow-platform")
+            credentials {
+                username = openGrowPackagesUser
+                password = openGrowPackagesToken
+            }
+        }
+    }
+}
+```
+
+Then add the exact dependency to the application module:
 
 ```kotlin
 implementation("io.opengrow:opengrow-android-sdk:1.0.3")
+```
+
+Resolve or build only after both secret inputs are present:
+
+```bash
+test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
+  && test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+  && ./gradlew assemble
 ```
 
 <!-- opengrow-sdk-documentation:android:end -->

@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/github-control-plane.schema.json",
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "owner": {
     "login": "mbzadev",
     "type": "user"
@@ -24,6 +24,28 @@
       "workflowPermissions": {
         "default": "read",
         "canApprovePullRequestReviews": true
+      },
+      "security": {
+        "vulnerabilityAlerts": true,
+        "dependabotSecurityUpdates": true
+      },
+      "releaseProtection": {
+        "immutableReleases": true,
+        "tagRuleset": {
+          "name": "OpenGrow immutable SDK tags",
+          "enforcement": "active",
+          "include": [
+            "refs/tags/sdk-flutter-v*",
+            "refs/tags/sdk-flutterflow-v*",
+            "refs/tags/sdk-flutterflow-messaging-v*",
+            "refs/tags/sdk-ios-v*",
+            "refs/tags/sdk-android-v*",
+            "refs/tags/sdk-js-v*",
+            "refs/tags/sdk-react-native-v*",
+            "refs/tags/*.*.*"
+          ],
+          "rules": ["update", "deletion"]
+        }
       },
       "repositorySecrets": [],
       "branches": {
@@ -147,6 +169,13 @@
       "workflowPermissions": {
         "default": "read",
         "canApprovePullRequestReviews": true
+      },
+      "security": {
+        "vulnerabilityAlerts": true,
+        "dependabotSecurityUpdates": true
+      },
+      "releaseProtection": {
+        "immutableReleases": true
       },
       "repositorySecrets": [],
       "branches": {

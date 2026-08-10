@@ -9,7 +9,7 @@ import {
 
 function manifest() {
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     repositories: {
       platform: {
         nameWithOwner: "mbzadev/opengrow-platform",
@@ -29,6 +29,19 @@ function manifest() {
         workflowPermissions: {
           default: "read",
           canApprovePullRequestReviews: true,
+        },
+        security: {
+          vulnerabilityAlerts: true,
+          dependabotSecurityUpdates: true,
+        },
+        releaseProtection: {
+          immutableReleases: true,
+          tagRuleset: {
+            name: "OpenGrow immutable SDK tags",
+            enforcement: "active",
+            include: ["refs/tags/sdk-*-v*"],
+            rules: ["update", "deletion"],
+          },
         },
         branches: {
           dev: {
@@ -53,6 +66,24 @@ function manifest() {
         repositorySecrets: ["READ_TOKEN"],
       },
     },
+  };
+}
+
+function secureState() {
+  return {
+    ready: true,
+    vulnerabilityAlerts: { enabled: true },
+    dependabotSecurityUpdates: { enabled: true, paused: false },
+  };
+}
+
+function releaseState() {
+  return {
+    ready: true,
+    immutableReleases: { enabled: true },
+    tagRuleset: { ready: true, status: "active" },
+    releaseInventoryReadable: true,
+    mutablePublishedReleases: [],
   };
 }
 
@@ -82,6 +113,8 @@ test("reconciliation plans structure but leaves every secret value manual", () =
       visibility: "public",
       settingsMatch: true,
       workflowPermissionsMatch: true,
+      security: secureState(),
+      releaseProtection: releaseState(),
       defaultBranch: "main",
       branches: [
         { name: "dev", exists: true, protectionMatches: false },
@@ -125,6 +158,8 @@ test("reconciliation converges declarative repository settings", () => {
       visibility: "public",
       settingsMatch: false,
       workflowPermissionsMatch: true,
+      security: secureState(),
+      releaseProtection: releaseState(),
       defaultBranch: "dev",
       branches: [
         { name: "dev", exists: true, protectionMatches: true },
@@ -181,6 +216,8 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
       visibility: "public",
       settingsMatch: true,
       workflowPermissionsMatch: false,
+      security: secureState(),
+      releaseProtection: releaseState(),
       defaultBranch: "dev",
       branches: [
         { name: "dev", exists: true, protectionMatches: true },
@@ -215,6 +252,166 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
     default_workflow_permissions: "read",
     can_approve_pull_request_reviews: true,
   });
+});
+
+test("reconciliation plans security and future immutable-release hardening without moving tags", () => {
+  const configuration = manifest();
+  const state = {
+    nameWithOwner: "mbzadev/opengrow-platform",
+    status: "incomplete",
+    ready: false,
+    visibility: "public",
+    settingsMatch: true,
+    workflowPermissionsMatch: true,
+    defaultBranch: "dev",
+    security: {
+      ready: false,
+      vulnerabilityAlerts: { enabled: false },
+      dependabotSecurityUpdates: { enabled: false, paused: false },
+    },
+    releaseProtection: {
+      ready: false,
+      immutableReleases: { enabled: false },
+      tagRuleset: { ready: false, status: "missing" },
+      releaseInventoryReadable: true,
+      mutablePublishedReleases: [
+        { id: 42, tagName: "sdk-flutter-v2.1.4", assetCount: 0 },
+      ],
+    },
+    branches: [
+      { name: "dev", exists: true, protectionMatches: true },
+      { name: "main", exists: true, protectionMatches: true },
+    ],
+    environments: [
+      {
+        name: "development",
+        exists: true,
+        variables: [
+          { name: "OPENGROW_TARGET", exists: true, configured: true },
+        ],
+        secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+      },
+    ],
+    repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+  };
+  const plan = buildGitHubReconcilePlan(configuration, [state]);
+  assert.match(plan.confirmation, /^GITHUB:RECONCILE:7:[a-f0-9]{12}$/u);
+  assert.deepEqual(
+    plan.repositories[0].operations.map(({ type }) => type),
+    [
+      "enable-vulnerability-alerts",
+      "enable-dependabot-security-updates",
+      "enable-immutable-releases",
+      "create-tag-ruleset",
+    ],
+  );
+  assert.deepEqual(plan.repositories[0].blockers, []);
+
+  const rulesetRequest = mutationRequest(configuration.repositories.platform, {
+    type: "create-tag-ruleset",
+  });
+  assert.equal(rulesetRequest.args.includes("--method"), true);
+  assert.equal(rulesetRequest.args.includes("POST"), true);
+  assert.equal(
+    rulesetRequest.args.includes("repos/mbzadev/opengrow-platform/rulesets"),
+    true,
+  );
+  assert.deepEqual(rulesetRequest.body.bypass_actors, []);
+  assert.deepEqual(
+    rulesetRequest.body.rules.map(({ type }) => type),
+    ["update", "deletion"],
+  );
+  assert.equal(JSON.stringify(rulesetRequest).includes("refs/tags/"), true);
+  assert.equal(JSON.stringify(rulesetRequest).includes("git/refs"), false);
+  assert.equal(JSON.stringify(rulesetRequest).includes("releases/42"), false);
+});
+
+test("reconciliation fails closed when Dependabot security updates are paused", () => {
+  const configuration = manifest();
+  const plan = buildGitHubReconcilePlan(configuration, [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: true,
+      workflowPermissionsMatch: true,
+      defaultBranch: "dev",
+      security: {
+        ready: false,
+        vulnerabilityAlerts: { enabled: true },
+        dependabotSecurityUpdates: { enabled: true, paused: true },
+      },
+      releaseProtection: releaseState(),
+      branches: [
+        { name: "dev", exists: true, protectionMatches: true },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: true },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+    },
+  ]);
+
+  assert.deepEqual(
+    plan.repositories[0].blockers.map(({ type }) => type),
+    ["dependabot-security-updates-paused"],
+  );
+  assert.deepEqual(plan.repositories[0].operations, []);
+  assert.equal(plan.ready, false);
+});
+
+test("reconciliation fails closed on drifted tag rules or legacy mutable assets", () => {
+  const configuration = manifest();
+  const plan = buildGitHubReconcilePlan(configuration, [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: true,
+      workflowPermissionsMatch: true,
+      defaultBranch: "dev",
+      security: secureState(),
+      releaseProtection: {
+        ready: false,
+        immutableReleases: { enabled: true },
+        tagRuleset: { ready: false, status: "drifted" },
+        releaseInventoryReadable: true,
+        mutablePublishedReleases: [
+          { id: 42, tagName: "sdk-flutter-v2.1.4", assetCount: 1 },
+        ],
+      },
+      branches: [
+        { name: "dev", exists: true, protectionMatches: true },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: true },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+    },
+  ]);
+  assert.deepEqual(
+    plan.repositories[0].blockers.map(({ type }) => type),
+    ["tag-ruleset-drift", "uncompensated-mutable-releases"],
+  );
+  assert.equal(plan.repositories[0].operations.length, 0);
 });
 
 test("reconciliation refuses every mutation without its exact confirmation", () => {
@@ -337,6 +534,8 @@ test("pending external Environment hardening is reported but never planned as a 
       visibility: "public",
       settingsMatch: true,
       workflowPermissionsMatch: true,
+      security: secureState(),
+      releaseProtection: releaseState(),
       defaultBranch: "dev",
       branches: [
         { name: "dev", exists: true, protectionMatches: true },
@@ -405,6 +604,8 @@ test("enforced Environment hardening plans reviewers, timer and missing branch-t
       visibility: "public",
       settingsMatch: true,
       workflowPermissionsMatch: true,
+      security: secureState(),
+      releaseProtection: releaseState(),
       defaultBranch: "dev",
       branches: [
         { name: "dev", exists: true, protectionMatches: true },
@@ -532,6 +733,8 @@ test("enforcement is structurally blocked when declared reviewers lack verified 
       visibility: "public",
       settingsMatch: true,
       workflowPermissionsMatch: true,
+      security: secureState(),
+      releaseProtection: releaseState(),
       defaultBranch: "dev",
       branches: [
         { name: "dev", exists: true, protectionMatches: true },

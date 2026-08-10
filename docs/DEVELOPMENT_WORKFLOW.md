@@ -156,14 +156,52 @@ npm run github:reconcile -- \
   --apply --confirm "GITHUB:RECONCILE:<schema>:<plan-digest>"
 ```
 
-The control-plane schema is version 3. Version 3 declares the GitHub owner type
-and permits an exact public or private visibility per repository. An
-incompatible manifest change must increment that version, automatically
+The control-plane schema is version 7. Version 6 introduced the versioned
+GitHub Environment protection intent; version 7 adds vulnerability alerts,
+Dependabot security updates, future immutable releases and the Platform SDK tag
+ruleset without weakening those Environment protections. An incompatible
+manifest change must increment that version, automatically
 invalidating confirmations issued for an older repository contract. The digest
 also covers every endpoint and non-secret
 JSON mutation body, so description, merge-policy, protection or Environment
 drift invalidates a previously generated confirmation even within one schema
 version.
+
+Security and release integrity are code-first controls. Remote readiness is red
+unless both repositories have vulnerability alerts and unpaused Dependabot
+security updates enabled. It also requires repository release immutability for
+future publications. The Platform additionally requires the exact active
+`OpenGrow immutable SDK tags` tag ruleset, with no bypass actor, covering every
+declared SDK and semantic-version tag and denying tag update and deletion. Tag
+creation remains allowed, so the reviewed release workflow can continue to
+publish a new version.
+
+An `enabled` but `paused` Dependabot state is a reconciliation blocker, not an
+enabled state. Resolve the outstanding security-update queue and require a
+fresh remote inspection to report `paused=false`; the reconciler never hides
+that condition behind an otherwise empty mutation plan.
+
+`npm run github:reconcile` may only enable these controls or create the missing
+exact tag ruleset after its code contract has been merged and its confirmation
+digest has been independently reviewed. It never moves or deletes a tag, edits
+or deletes a release, replaces a drifted same-name ruleset, or disables a
+security control. A drifted ruleset is a manual blocker. GitHub applies release
+immutability only to future releases, so readiness inventories older mutable
+releases. An older release is compensated only when it has no attached assets
+and its tag is covered by the exact no-bypass update/deletion ruleset; any
+mutable legacy asset remains a hard blocker rather than being deleted or
+republished automatically. See GitHub's documentation for
+[immutable releases](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/establish-provenance-and-integrity/prevent-release-changes)
+and [tag rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository).
+
+The required `CI gate` also depends on `Non-Node dependency security`. That job
+uses Python `3.13.7` with `pip-audit 2.10.1` against the VocoStar vocals
+container requirements, and Ruby `3.4.9` with Bundler `2.7.2` and
+`bundler-audit 0.9.3` against the committed React Native example
+`Gemfile.lock`. CI pins both runtime versions, the audit orchestrator rejects a
+tool-version mismatch before either scan, and the aggregate gate accepts this
+job only when it returns `success`. Developers with those exact tools installed
+can reproduce both scans with `npm run security:audit:non-node`.
 
 The reconciler requires the stable aggregate check, one approval, stale-review
 dismissal, administrator enforcement, linear history, resolved conversations,

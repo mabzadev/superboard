@@ -19,7 +19,7 @@ describe("LibrariesPageContent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getPlatformLibraries.mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       repository: "https://github.com/mbzadev/opengrow-platform",
       developmentBranch: "dev",
       releasePolicy: "immutable-tag",
@@ -38,6 +38,31 @@ describe("LibrariesPageContent", () => {
           releaseRef: "sdk-flutterflow-v2.2.4",
           releaseStatus: "pending-release",
           install: "opengrow_flutterflow: immutable",
+        },
+        {
+          id: "javascript",
+          displayName: "OpenGrow JavaScript",
+          ecosystem: "npm",
+          packageName: "@mbzadev/opengrow-js-sdk",
+          sourcePath: "sdks/javascript",
+          license: "MIT",
+          licensePath: "sdks/javascript/LICENSE",
+          versionSource: "sdks/javascript/package.json",
+          sourceVersion: "1.0.2",
+          latestReleaseVersion: "1.0.2",
+          releaseRef: "sdk-js-v1.0.2",
+          releaseStatus: "released",
+          install: "npm install @mbzadev/opengrow-js-sdk@1.0.2",
+          distribution: {
+            registryKind: "github-packages-npm",
+            registry: "https://npm.pkg.github.com",
+            publicMetadata: true,
+            anonymousInstallable: false,
+            authentication: {
+              required: true,
+              tokenEnvironmentVariable: "OPENGROW_GITHUB_PACKAGES_TOKEN",
+            },
+          },
         },
       ],
       customCode: {
@@ -91,13 +116,25 @@ describe("LibrariesPageContent", () => {
     render(<LibrariesPageContent />);
 
     expect(await screen.findByText("OpenGrow FlutterFlow")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "MIT license" })).toHaveAttribute(
+    const licenseLink = screen
+      .getAllByRole("link", { name: "MIT license" })
+      .find(
+        (link) =>
+          link.getAttribute("href") ===
+          "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/LICENSE"
+      );
+    expect(licenseLink).toHaveAttribute(
       "href",
       "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/LICENSE"
     );
-    expect(
-      screen.getByRole("link", { name: /Version authority/i })
-    ).toHaveAttribute(
+    const versionLink = screen
+      .getAllByRole("link", { name: /Version authority/i })
+      .find(
+        (link) =>
+          link.getAttribute("href") ===
+          "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
+      );
+    expect(versionLink).toHaveAttribute(
       "href",
       "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
     );
@@ -122,5 +159,23 @@ describe("LibrariesPageContent", () => {
       "href",
       "https://github.com/mbzadev/opengrow-platform/actions/workflows/sync-flutterflow-library.yml"
     );
+  });
+
+  it("does not present public package metadata as anonymous installation", async () => {
+    render(<LibrariesPageContent />);
+
+    expect(await screen.findByText("OpenGrow JavaScript")).toBeInTheDocument();
+    expect(screen.getByText("Public metadata")).toBeInTheDocument();
+    expect(screen.getByText("Authentication required")).toBeInTheDocument();
+    expect(
+      screen.getByText("Anonymous install unavailable")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("OPENGROW_GITHUB_PACKAGES_TOKEN")
+    ).toBeInTheDocument();
+    expect(screen.getByText("https://npm.pkg.github.com")).toBeInTheDocument();
+    expect(
+      screen.getByText("Authenticated dependency command")
+    ).toBeInTheDocument();
   });
 });

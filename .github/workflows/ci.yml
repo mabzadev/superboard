@@ -76,6 +76,36 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  non_node_security:
+    name: Non-Node dependency security
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OPENGROW_PIP_AUDIT_VERSION: "2.10.1"
+      OPENGROW_BUNDLER_VERSION: "2.7.2"
+      OPENGROW_BUNDLER_AUDIT_VERSION: "0.9.3"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13.7"
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          ruby-version: "3.4.9"
+      - name: Install pinned security audit tools
+        run: |
+          python3 -m pip install --disable-pip-version-check "pip-audit==$OPENGROW_PIP_AUDIT_VERSION"
+          gem install bundler --version "$OPENGROW_BUNDLER_VERSION" --no-document
+          gem install bundler-audit --version "$OPENGROW_BUNDLER_AUDIT_VERSION" --no-document
+      - name: Audit committed Python and Ruby dependency inputs
+        run: npm run security:audit:non-node
+
   workers:
     name: Affected Workers
     needs: plan
@@ -216,7 +246,7 @@ jobs:
         working-directory: sdks/react-native
       - name: Typecheck, test and package React Native SDK
         if: needs.plan.outputs.react_native == 'true'
-        run: yarn typecheck && yarn test --runInBand && yarn prepare
+        run: yarn check
         working-directory: sdks/react-native
 
   ios_sdk:
@@ -257,11 +287,12 @@ jobs:
   validation-gate:
     name: CI gate
     if: ${{ always() }}
-    needs: [plan, workers, dashboard, flutter, node_sdks, ios_sdk, android_sdk]
+    needs: [plan, non_node_security, workers, dashboard, flutter, node_sdks, ios_sdk, android_sdk]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       PLAN_RESULT: ${{ needs.plan.result }}
+      NON_NODE_SECURITY_RESULT: ${{ needs.non_node_security.result }}
       WORKERS_RESULT: ${{ needs.workers.result }}
       DASHBOARD_RESULT: ${{ needs.dashboard.result }}
       FLUTTER_RESULT: ${{ needs.flutter.result }}
@@ -272,6 +303,7 @@ jobs:
       - name: Require every selected validation to pass
         run: |
           test "$PLAN_RESULT" = "success"
+          test "$NON_NODE_SECURITY_RESULT" = "success"
           for result in "$WORKERS_RESULT" "$DASHBOARD_RESULT" "$FLUTTER_RESULT" "$NODE_SDKS_RESULT" "$IOS_SDK_RESULT" "$ANDROID_SDK_RESULT"; do
             case "$result" in
               success|skipped) ;;

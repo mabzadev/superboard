@@ -18,11 +18,32 @@ The OpenGrow SDK is a JavaScript module designed to integrate with the OpenGrow 
 
 ## Installation
 
-Install the published package `@mbzadev/opengrow-js-sdk` at the exact
-release `1.0.2`:
+### GitHub Packages registry
+
+Registry: `https://npm.pkg.github.com`.
+
+The GitHub npm package record is public metadata. This does not make the
+registry anonymously installable: unauthenticated downloads are unsupported
+and return `401 Unauthorized`.
+
+Provide a GitHub token with `read:packages` only through
+`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+developer shell or CI secret store; never commit the token to Git or write its
+value into a package-manager configuration file.
+
+Add this environment-variable placeholder to the project `.npmrc`. The
+placeholder is safe to version; its resolved secret value is not:
+
+```ini
+@mbzadev:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${OPENGROW_GITHUB_PACKAGES_TOKEN}
+```
+
+Install only after the secret environment variable is present:
 
 ```bash
-npm install @mbzadev/opengrow-js-sdk@1.0.2
+test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+  && npm install @mbzadev/opengrow-js-sdk@1.0.2
 ```
 
 Then import the package by its catalogue-owned name:

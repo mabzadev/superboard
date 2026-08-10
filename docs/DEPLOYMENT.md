@@ -20,6 +20,13 @@ the reviewed `dev` history, then use `npm run github:reconcile` for repository
 settings, branch protection and Environment structure. None of these planning
 commands publishes the local worktree or handles secret values.
 
+The same confirmed reconciliation governs vulnerability alerts, Dependabot
+security updates, future immutable releases and the Platform SDK tag ruleset.
+It is intentionally additive: no operation updates or deletes an existing tag
+or release. Review and merge the versioned control-plane contract before
+applying it; a same-name ruleset with different conditions is reported as a
+blocker and is never overwritten automatically.
+
 After `dev` exists, unrelated `main` and `dev` histories are a production
 blocker even when the original `main` audit ref is present. Generate the exact
 procedure with `npm run github:history:bridge:plan` and follow

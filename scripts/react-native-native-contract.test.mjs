@@ -7,6 +7,25 @@ import {
   validateNativeContract,
 } from "./react-native-native-contract.mjs";
 
+function numericVersionAtLeast(actual, minimum) {
+  const actualParts = actual.split(".").map(Number);
+  const minimumParts = minimum.split(".").map(Number);
+  for (
+    let index = 0;
+    index < Math.max(actualParts.length, minimumParts.length);
+    index += 1
+  ) {
+    const difference = (actualParts[index] ?? 0) - (minimumParts[index] ?? 0);
+    if (difference !== 0) return difference > 0;
+  }
+  return true;
+}
+
+function lockedGemVersion(lock, gem) {
+  const escaped = gem.replaceAll("-", "\\-");
+  return lock.match(new RegExp(`^    ${escaped} \\(([^)]+)\\)$`, "m"))?.[1];
+}
+
 test("React Native native contract is derived from published SDK baselines", async () => {
   const catalog = await loadSdkCatalog();
   const contract = nativeContractFromCatalog(catalog);
@@ -109,4 +128,44 @@ test("React Native iOS consumers use the immutable catalog podspec", async () =>
     new RegExp(contract.ios.releaseRef.replaceAll(".", "\\.")),
   );
   assert.match(readme, /does not claim a CocoaPods Trunk release/i);
+});
+
+test("React Native example locks a supported Ruby and patched build gems", async () => {
+  const [gemfile, lock, rootRuby, iosRuby] = await Promise.all(
+    [
+      "../sdks/react-native/example/Gemfile",
+      "../sdks/react-native/example/Gemfile.lock",
+      "../sdks/react-native/.ruby-version",
+      "../sdks/react-native/example/ios/.ruby-version",
+    ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
+  );
+  const rubyVersion = rootRuby.trim();
+
+  assert.equal(iosRuby.trim(), rubyVersion);
+  assert.ok(
+    numericVersionAtLeast(rubyVersion, "3.4.0"),
+    `Ruby ${rubyVersion} is below the supported build baseline 3.4.0`,
+  );
+  assert.match(gemfile, /^ruby ">= 3\.4\.0", "< 4\.0"$/m);
+  for (const [gem, minimum] of [
+    ["activesupport", "7.2.3.1"],
+    ["addressable", "2.9.0"],
+    ["concurrent-ruby", "1.3.7"],
+    ["rexml", "3.4.2"],
+  ]) {
+    const version = lockedGemVersion(lock, gem);
+    assert.ok(version, `${gem} must remain in Gemfile.lock`);
+    assert.ok(
+      numericVersionAtLeast(version, minimum),
+      `${gem} ${version} is below the patched floor ${minimum}`,
+    );
+    assert.match(
+      gemfile,
+      new RegExp(
+        `^gem ['"]${gem}['"], ['"]${minimum.replaceAll(".", "\\.")}['"]$`,
+        "m",
+      ),
+      `${gem} must keep its patched floor explicit in Gemfile`,
+    );
+  }
 });

@@ -13,6 +13,15 @@ const catalogPath = resolve(root, "config/sdk-libraries.json");
 const catalogSchemaPath = resolve(root, "config/sdk-libraries.schema.json");
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
 const commitSha = /^[0-9a-f]{40}$/;
+const githubPackagesTokenEnvironmentVariable =
+  "OPENGROW_GITHUB_PACKAGES_TOKEN";
+const githubPackagesUserEnvironmentVariable =
+  "OPENGROW_GITHUB_PACKAGES_USER";
+const registryDistributionIds = new Set([
+  "android",
+  "javascript",
+  "react-native",
+]);
 const tagPrefixes = Object.freeze({
   flutter: "sdk-flutter-v",
   flutterflow: "sdk-flutterflow-v",
@@ -31,7 +40,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
   const errors = await sdkCatalogSchemaErrors(catalog);
   const releaseHistory =
     options.releaseHistory ?? (await loadSdkReleaseHistory());
-  if (catalog?.schemaVersion !== 2) errors.push("schemaVersion must be 2");
+  if (catalog?.schemaVersion !== 3) errors.push("schemaVersion must be 3");
   if (catalog?.releasePolicy !== "immutable-tag")
     errors.push("releasePolicy must be immutable-tag");
   if (!Array.isArray(catalog?.libraries) || catalog.libraries.length === 0)
@@ -114,6 +123,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
     }
     if (!String(library.install ?? "").includes(library.latestReleaseVersion))
       errors.push(`${prefix}.install must pin latestReleaseVersion`);
+    validateDistributionContract(catalog, library, prefix, errors);
     const sourcePath = protectedRepoPath(
       library.sourcePath,
       `${prefix}.sourcePath`,
@@ -204,6 +214,99 @@ export async function validateSdkCatalog(catalog, options = {}) {
     errors,
     libraries: catalog?.libraries?.length ?? 0,
   };
+}
+
+function validateDistributionContract(catalog, library, prefix, errors) {
+  const distribution = library?.distribution;
+  if (!registryDistributionIds.has(library?.id)) {
+    if (distribution !== undefined) {
+      errors.push(
+        `${prefix}.distribution is only supported for registry-distributed SDKs`,
+      );
+    }
+    return;
+  }
+  if (!distribution || typeof distribution !== "object") {
+    errors.push(`${prefix}.distribution is required`);
+    return;
+  }
+
+  const isNpm = new Set(["javascript", "react-native"]).has(library.id);
+  const expectedKind = isNpm
+    ? "github-packages-npm"
+    : "github-packages-maven";
+  const expectedRegistry = isNpm
+    ? "https://npm.pkg.github.com"
+    : githubMavenRegistry(catalog?.repository);
+  const expectedInstall = isNpm
+    ? `npm install ${library.packageName}@${library.latestReleaseVersion}`
+    : `implementation("${library.packageName}:${library.latestReleaseVersion}")`;
+
+  if (distribution.registryKind !== expectedKind) {
+    errors.push(`${prefix}.distribution.registryKind must be ${expectedKind}`);
+  }
+  if (distribution.registry !== expectedRegistry) {
+    errors.push(`${prefix}.distribution.registry must be ${expectedRegistry}`);
+  }
+  if (distribution.publicMetadata !== true) {
+    errors.push(`${prefix}.distribution.publicMetadata must be true`);
+  }
+  if (distribution.anonymousInstallable !== false) {
+    errors.push(`${prefix}.distribution.anonymousInstallable must be false`);
+  }
+  if (distribution.authentication?.required !== true) {
+    errors.push(`${prefix}.distribution.authentication.required must be true`);
+  }
+  if (
+    distribution.authentication?.tokenEnvironmentVariable !==
+    githubPackagesTokenEnvironmentVariable
+  ) {
+    errors.push(
+      `${prefix}.distribution.authentication.tokenEnvironmentVariable must be ${githubPackagesTokenEnvironmentVariable}`,
+    );
+  }
+  if (isNpm) {
+    if (
+      Object.hasOwn(
+        distribution.authentication ?? {},
+        "usernameEnvironmentVariable",
+      )
+    ) {
+      errors.push(
+        `${prefix}.distribution.authentication.usernameEnvironmentVariable is not used by npm`,
+      );
+    }
+  } else if (
+    distribution.authentication?.usernameEnvironmentVariable !==
+    githubPackagesUserEnvironmentVariable
+  ) {
+    errors.push(
+      `${prefix}.distribution.authentication.usernameEnvironmentVariable must be ${githubPackagesUserEnvironmentVariable}`,
+    );
+  }
+  if (library.install !== expectedInstall) {
+    errors.push(`${prefix}.install must be ${expectedInstall}`);
+  }
+}
+
+function githubMavenRegistry(repository) {
+  try {
+    const url = new URL(repository);
+    const repositoryPath = url.pathname
+      .replace(/^\//u, "")
+      .replace(/\.git$/u, "")
+      .replace(/\/$/u, "");
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "github.com" ||
+      repositoryPath.split("/").length !== 2
+    ) {
+      return "the GitHub Packages Maven URL derived from repository";
+    }
+    return `https://maven.pkg.github.com/${repositoryPath}`;
+  } catch {
+    return "the GitHub Packages Maven URL derived from repository";
+  }
 }
 
 let catalogSchemaValidator;

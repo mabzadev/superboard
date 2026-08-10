@@ -1,5 +1,15 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import test from "node:test";
 import { loadSdkCatalog } from "./sdk-catalog.mjs";
 import {
@@ -115,6 +125,152 @@ test("all package coordinates and versions are derived state-independently", asy
   );
   assert.match(sections.get("react-native"), /sdk-ios-v6\.5\.4/u);
   assert.match(sections.get("ios"), /exact: "6\.5\.4"/u);
+});
+
+test("registry documentation separates public metadata from authenticated installation", async () => {
+  const catalog = await loadSdkCatalog();
+  const sections = renderSdkDocumentationSections(catalog);
+  const javascript = sections.get("javascript");
+  const reactNative = sections.get("react-native");
+  const android = sections.get("android");
+
+  for (const source of [javascript, reactNative, android]) {
+    assert.match(source, /record is public metadata/u);
+    assert.match(
+      source,
+      /does not make the[\s\S]*registry anonymously installable/u,
+    );
+    assert.match(source, /401 Unauthorized/u);
+    assert.match(source, /read:packages/u);
+    assert.match(source, /OPENGROW_GITHUB_PACKAGES_TOKEN/u);
+    assert.doesNotMatch(source, /\b(?:ghp_|github_pat_)[A-Za-z0-9_]+\b/u);
+  }
+
+  for (const source of [javascript, reactNative]) {
+    assert.match(source, /@mbzadev:registry=https:\/\/npm\.pkg\.github\.com/u);
+    assert.match(
+      source,
+      /\/\/npm\.pkg\.github\.com\/:_authToken=\$\{OPENGROW_GITHUB_PACKAGES_TOKEN\}/u,
+    );
+    assert.ok(
+      source.indexOf("OPENGROW_GITHUB_PACKAGES_TOKEN") <
+        source.indexOf("npm install"),
+    );
+  }
+
+  for (const source of [android, reactNative]) {
+    assert.match(
+      source,
+      /https:\/\/maven\.pkg\.github\.com\/mbzadev\/opengrow-platform/u,
+    );
+    assert.match(source, /OPENGROW_GITHUB_PACKAGES_USER/u);
+    assert.match(source, /OPENGROW_GITHUB_PACKAGES_TOKEN/u);
+    assert.ok(
+      source.indexOf("OPENGROW_GITHUB_PACKAGES_USER") <
+        source.indexOf("io.opengrow:opengrow-android-sdk:1.0.3"),
+    );
+  }
+
+  assert.match(javascript, /npm install @mbzadev\/opengrow-js-sdk@1\.0\.2/u);
+  assert.match(
+    reactNative,
+    /npm install @mbzadev\/opengrow-react-native-sdk@1\.0\.2/u,
+  );
+  assert.match(android, /\.\/gradlew assemble/u);
+  assert.match(reactNative, /cd android && \.\/gradlew assemble/u);
+  assert.match(
+    javascript,
+    /test -n "\$\{OPENGROW_GITHUB_PACKAGES_TOKEN:-\}" \\\n  && npm install/u,
+  );
+  for (const source of [android, reactNative]) {
+    assert.match(
+      source,
+      /test -n "\$\{OPENGROW_GITHUB_PACKAGES_USER:-\}" \\\n  && test -n "\$\{OPENGROW_GITHUB_PACKAGES_TOKEN:-\}" \\\n  && /u,
+    );
+  }
+});
+
+test("registry shell preflights stop npm and Gradle when credentials are absent", async () => {
+  const sections = renderSdkDocumentationSections(await loadSdkCatalog());
+  const javascript = sections.get("javascript");
+  const android = sections.get("android");
+  const javascriptPreflight = [
+    ...javascript.matchAll(/```bash\n([\s\S]*?)\n```/gu),
+  ]
+    .map(([, source]) => source)
+    .find((source) => source.includes("npm install"));
+  const androidPreflight = [...android.matchAll(/```bash\n([\s\S]*?)\n```/gu)]
+    .map(([, source]) => source)
+    .find((source) => source.includes("./gradlew assemble"));
+  assert.ok(javascriptPreflight);
+  assert.ok(androidPreflight);
+
+  const directory = mkdtempSync(resolve(tmpdir(), "opengrow-sdk-preflight-"));
+  const marker = resolve(directory, "invoked");
+  const fakeNpm = resolve(directory, "npm");
+  const fakeGradle = resolve(directory, "gradlew");
+  writeFileSync(fakeNpm, '#!/bin/sh\ntouch "$OPENGROW_PREFLIGHT_MARKER"\n');
+  writeFileSync(fakeGradle, '#!/bin/sh\ntouch "$OPENGROW_PREFLIGHT_MARKER"\n');
+  chmodSync(fakeNpm, 0o755);
+  chmodSync(fakeGradle, 0o755);
+  const cleanEnvironment = { ...process.env };
+  delete cleanEnvironment.OPENGROW_GITHUB_PACKAGES_USER;
+  delete cleanEnvironment.OPENGROW_GITHUB_PACKAGES_TOKEN;
+  cleanEnvironment.OPENGROW_PREFLIGHT_MARKER = marker;
+  cleanEnvironment.PATH = `${directory}:${cleanEnvironment.PATH}`;
+
+  try {
+    const npmResult = spawnSync("bash", ["-c", javascriptPreflight], {
+      cwd: directory,
+      env: cleanEnvironment,
+    });
+    assert.notEqual(npmResult.status, 0);
+    assert.equal(existsSync(marker), false);
+
+    const userOnlyResult = spawnSync("bash", ["-c", androidPreflight], {
+      cwd: directory,
+      env: {
+        ...cleanEnvironment,
+        OPENGROW_GITHUB_PACKAGES_USER: "developer",
+      },
+    });
+    assert.notEqual(userOnlyResult.status, 0);
+    assert.equal(existsSync(marker), false);
+
+    const authenticatedResult = spawnSync("bash", ["-c", androidPreflight], {
+      cwd: directory,
+      env: {
+        ...cleanEnvironment,
+        OPENGROW_GITHUB_PACKAGES_USER: "developer",
+        OPENGROW_GITHUB_PACKAGES_TOKEN: "test-token",
+      },
+    });
+    assert.equal(authenticatedResult.status, 0);
+    assert.equal(existsSync(marker), true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("documentation rejects hardcoded registry credentials", async () => {
+  const catalog = await loadSdkCatalog();
+  const documents = await currentDocuments();
+  const javascriptPath = "sdks/javascript/README.md";
+  documents.set(
+    javascriptPath,
+    `${documents.get(javascriptPath)}\n//npm.pkg.github.com/:_authToken=github_pat_forbidden\n`,
+  );
+  const result = validateSdkDocumentation(catalog, documents);
+
+  assert.equal(result.ok, false);
+  assert.match(
+    result.errors.join("\n"),
+    /package registry credentials must not be hardcoded/u,
+  );
+  assert.match(
+    result.errors.join("\n"),
+    /npm authentication must use an environment-variable placeholder/u,
+  );
 });
 
 test("iOS documentation rejects an unsupported CocoaPods Trunk promise", async () => {

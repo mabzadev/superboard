@@ -87,6 +87,8 @@ export function readinessPlan(manifest) {
           description: repository.description,
           settings: repository.settings,
           workflowPermissions: repository.workflowPermissions,
+          security: repository.security,
+          releaseProtection: repository.releaseProtection,
           visibility: repository.visibility,
           defaultBranch: repository.defaultBranch,
           branches: Object.entries(repository.branches).map(
@@ -169,6 +171,44 @@ export function inspectRepository(repository, run = runGh) {
     workflowPermissions.default === repository.workflowPermissions.default &&
     workflowPermissions.canApprovePullRequestReviews ===
       repository.workflowPermissions.canApprovePullRequestReviews;
+  const vulnerabilityAlertsResult = run([
+    "api",
+    `repos/${repository.nameWithOwner}/vulnerability-alerts`,
+  ]);
+  const dependabotSecurityUpdatesResult = run([
+    "api",
+    `repos/${repository.nameWithOwner}/automated-security-fixes`,
+  ]);
+  const dependabotSecurityUpdatesPayload = resultJson(
+    dependabotSecurityUpdatesResult,
+  );
+  const security = {
+    vulnerabilityAlerts: {
+      required: repository.security.vulnerabilityAlerts,
+      enabled: vulnerabilityAlertsResult.ok,
+    },
+    dependabotSecurityUpdates: {
+      required: repository.security.dependabotSecurityUpdates,
+      enabled:
+        dependabotSecurityUpdatesResult.ok &&
+        (dependabotSecurityUpdatesPayload === null ||
+          dependabotSecurityUpdatesPayload.enabled === true),
+      paused:
+        dependabotSecurityUpdatesPayload?.paused === true
+          ? true
+          : dependabotSecurityUpdatesPayload?.paused === false
+            ? false
+            : null,
+    },
+  };
+  security.ready =
+    security.vulnerabilityAlerts.enabled ===
+      security.vulnerabilityAlerts.required &&
+    security.dependabotSecurityUpdates.enabled ===
+      security.dependabotSecurityUpdates.required &&
+    (!security.dependabotSecurityUpdates.required ||
+      security.dependabotSecurityUpdates.paused !== true);
+  const releaseProtection = inspectReleaseProtection(repository, run);
 
   const branches = Object.entries(repository.branches).map(
     ([name, expected]) => {
@@ -353,6 +393,8 @@ export function inspectRepository(repository, run = runGh) {
     details.default_branch === repository.defaultBranch &&
     settingsMatch &&
     workflowPermissionsMatch &&
+    security.ready &&
+    releaseProtection.ready &&
     branches.every((branch) => branch.exists && branch.protectionMatches) &&
     branchHistory.ready &&
     environments.every((environment) => environment.ready) &&
@@ -368,6 +410,8 @@ export function inspectRepository(repository, run = runGh) {
     settingsMatch,
     workflowPermissions,
     workflowPermissionsMatch,
+    security,
+    releaseProtection,
     branches,
     branchHistory,
     environments,
@@ -553,6 +597,116 @@ export function remoteBranchHistoryState({
     mergeBase: mergeBaseValid ? mergeBase : null,
   };
 }
+export function inspectReleaseProtection(repository, run = runGh) {
+  const base = `repos/${repository.nameWithOwner}`;
+  const immutableResult = run(["api", `${base}/immutable-releases`]);
+  const immutablePayload = resultJson(immutableResult);
+  const immutableReleases = {
+    required: repository.releaseProtection.immutableReleases,
+    enabled:
+      immutableResult.ok &&
+      (immutablePayload === null || immutablePayload.enabled === true),
+    enforcedByOwner: immutablePayload?.enforced_by_owner === true,
+  };
+
+  const expectedRuleset = repository.releaseProtection.tagRuleset || null;
+  let tagRuleset = { required: false, ready: true, status: "not-required" };
+  if (expectedRuleset) {
+    const rulesetsPayload = resultJson(
+      run(["api", `${base}/rulesets?targets=tag&per_page=100`]),
+    );
+    const candidate = Array.isArray(rulesetsPayload)
+      ? rulesetsPayload.find(
+          (ruleset) =>
+            ruleset.name === expectedRuleset.name && ruleset.target === "tag",
+        )
+      : null;
+    const detail = candidate?.id
+      ? resultJson(run(["api", `${base}/rulesets/${candidate.id}`]))
+      : null;
+    const actual = detail
+      ? {
+          id: detail.id,
+          name: detail.name,
+          target: detail.target,
+          enforcement: detail.enforcement,
+          bypassActors: detail.bypass_actors || [],
+          include: detail.conditions?.ref_name?.include || [],
+          exclude: detail.conditions?.ref_name?.exclude || [],
+          rules: (detail.rules || []).map(({ type }) => type),
+        }
+      : null;
+    const ready = Boolean(actual) && tagRulesetMatches(expectedRuleset, actual);
+    tagRuleset = {
+      required: true,
+      ready,
+      status: ready ? "active" : actual ? "drifted" : "missing",
+      expected: expectedRuleset,
+      actual,
+    };
+  }
+
+  const releasesResult = run(["api", `${base}/releases?per_page=100`]);
+  const releasesPayload = resultJson(releasesResult);
+  const releaseInventoryReadable =
+    releasesResult.ok && Array.isArray(releasesPayload);
+  const mutablePublishedReleases = releaseInventoryReadable
+    ? releasesPayload
+        .filter((release) => release.draft !== true && release.immutable !== true)
+        .map((release) => ({
+          id: release.id || null,
+          tagName: release.tag_name || null,
+          assetCount: Array.isArray(release.assets) ? release.assets.length : 0,
+        }))
+    : null;
+  const mutableReleaseCompensationReady =
+    releaseInventoryReadable &&
+    mutablePublishedReleases.every(
+      ({ tagName, assetCount }) =>
+        assetCount === 0 &&
+        expectedRuleset !== null &&
+        tagRuleset.ready &&
+        expectedRuleset.include.some((pattern) =>
+          refPatternMatches(pattern, `refs/tags/${tagName || ""}`),
+        ),
+    );
+  const ready =
+    immutableReleases.enabled === immutableReleases.required &&
+    tagRuleset.ready &&
+    releaseInventoryReadable &&
+    mutableReleaseCompensationReady;
+  return {
+    ready,
+    immutableReleases,
+    tagRuleset,
+    releaseInventoryReadable,
+    mutablePublishedReleases,
+    mutableReleaseCompensationReady,
+    note:
+      "Immutable releases affect only future publications. Existing mutable releases are accepted only when they contain no assets and an exact active no-bypass tag ruleset blocks tag update and deletion.",
+  };
+}
+
+export function tagRulesetMatches(expected, actual) {
+  const same = (left, right) =>
+    JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+  return (
+    actual.name === expected.name &&
+    actual.target === "tag" &&
+    actual.enforcement === expected.enforcement &&
+    Array.isArray(actual.bypassActors) &&
+    actual.bypassActors.length === 0 &&
+    same(actual.include || [], expected.include) &&
+    (actual.exclude || []).length === 0 &&
+    same(actual.rules || [], expected.rules)
+  );
+}
+
+function refPatternMatches(pattern, ref) {
+  const escaped = String(pattern).replace(/[|\\{}()[\]^$+?.]/gu, "\\$&");
+  return new RegExp(`^${escaped.replaceAll("*", ".*")}$`, "u").test(ref);
+}
+
 function resultJson(result) {
   if (!result?.ok) return null;
   try {
