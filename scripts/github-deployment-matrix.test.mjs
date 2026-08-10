@@ -122,6 +122,15 @@ test("development uses one Cloudflare Workers Builds controller while production
   assert.deepEqual(production.automaticDeployment, {
     authority: "github-actions",
   });
+
+  const packageConfiguration = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  assert.match(
+    packageConfiguration.scripts["billing:test:runtime"],
+    /^SUPERBOARD_TARGET= SUPERBOARD_ENVIRONMENT= OPENGROW_TARGET= OPENGROW_ENVIRONMENT= /u,
+    "reference-only billing tests must not inherit an operational Workers Builds target",
+  );
   assert.deepEqual(
     selectDeployments(configuration, "main", {
       authority: "github-actions",

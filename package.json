@@ -28,7 +28,7 @@
     "worker:typecheck": "cd workers/api && npx tsc --noEmit",
     "billing:typecheck": "cd workers/billing && npx tsc --noEmit && npx tsc --noEmit -p tsconfig.runtime.json",
     "billing:test:unit": "npx vitest run --config workers/billing/vitest.config.ts",
-    "billing:test:runtime": "node scripts/cloudflare-config.mjs --service billing --reference --allow-unprovisioned && npx vitest run --config workers/billing/vitest.runtime.config.ts",
+    "billing:test:runtime": "SUPERBOARD_TARGET= SUPERBOARD_ENVIRONMENT= OPENGROW_TARGET= OPENGROW_ENVIRONMENT= node scripts/cloudflare-config.mjs --service billing --reference --allow-unprovisioned && npx vitest run --config workers/billing/vitest.runtime.config.ts",
     "billing:test:config": "node --test scripts/cloudflare-billing-config.test.mjs scripts/cloudflare-billing-consumer.test.mjs scripts/cloudflare-billing-preflight.test.mjs",
     "billing:test": "npm run billing:test:unit && npm run billing:test:runtime && npm run billing:test:config",
     "cloudflare:config:billing": "node scripts/cloudflare-billing-config.mjs",
