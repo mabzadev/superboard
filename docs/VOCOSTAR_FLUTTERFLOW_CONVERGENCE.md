@@ -3,29 +3,47 @@
 Ce document est l'inventaire de migration exhaustif du dernier projet
 FlutterFlow VocoStar disponible localement. Il complète l'architecture
 Cloudflare historique et transforme chaque élément du client en décision
-explicite : **commun OpenGrow**, **adaptateur d'application** ou **métier custom
-VocoStar**.
+explicite : **commun OpenGrow**, **configurable par application**, **métier
+custom VocoStar** ou **à supprimer**. Le manifeste strict
+`config/flutterflow-inventories/vocostar.json` porte la liste machine complète;
+ce document en est la lecture opérationnelle.
+
+## Trois états à ne pas confondre
+
+| État                    | Autorité                                                     | Signification                                                                                          |
+| ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| **AS-IS revu**          | dernier SDK typé et export runtime du 9 août                 | inventaire réellement présent : 23 pages, 17 composants, 34 champs App State et 30 custom actions      |
+| **Historique supprimé** | commits FlutterFlow antérieurs et gates d'absence            | éléments déjà absents du dernier export, notamment `userLoginRevenueCat` et `userSubscriptionActivate` |
+| **TO-BE DSL**           | `tools/flutterflow-applications/vocostar/dsl/migration.dart` | transformations versionnées et testées, mais **pas encore appliquées** à l'export revu                 |
+
+Une transformation présente dans le DSL n'est jamais décrite ci-dessous comme
+déployée. Son état reste `versioned-not-applied-to-reviewed-export` jusqu'à une
+exécution GitHub autorisée, suivie d'un nouvel export authentifié.
 
 ## Source analysée et fraîcheur
 
-| Élément                 | Valeur constatée                               |
-| ----------------------- | ---------------------------------------------- |
-| Projet FlutterFlow      | `VocoStar`                                     |
-| Identifiant FlutterFlow | `vocal-transform-z2j7dp`                       |
-| Export local            | `/Users/appmonster/Workspace/app-vocostar-ff`  |
-| Dernière exécution      | 9 août 2026 à 22:47:59 UTC                     |
-| Commit FlutterFlow      | `RllpTDAzXqy5vRMb1dk4`                         |
-| Message                 | `Configure media realtime from API target`     |
-| Résultat                | succès, poussé, export non simulé              |
-| Diagnostics             | 20 avertissements, aucune erreur de validation |
+| Élément                   | Valeur constatée                               |
+| ------------------------- | ---------------------------------------------- |
+| Projet FlutterFlow        | `VocoStar`                                     |
+| Identifiant FlutterFlow   | `vocal-transform-z2j7dp`                       |
+| Export local              | `/Users/appmonster/Workspace/app-vocostar-ff`  |
+| Dernière exécution        | 9 août 2026 à 22:47:59 UTC                     |
+| Commit FlutterFlow        | `RllpTDAzXqy5vRMb1dk4`                         |
+| Message                   | `Configure media realtime from API target`     |
+| Résultat de l'export revu | succès, poussé, export non simulé              |
+| Reçu local courant        | remplacé le 10 août par un dry-run réussi      |
+| Vérification actuelle     | bloquée : `reviewed-export-receipt-replaced`   |
+| Diagnostics               | 20 avertissements, aucune erreur de validation |
 
 Ce dépôt n'importe pas le code VocoStar dans la base commune. Il en conserve le
 contrat de migration; les capacités réutilisables sont implémentées dans
 `opengrow-platform` et exercées par `opengrow-reference`.
 
-La fraîcheur de cette analyse et son contrat de convergence sont maintenant
-matérialisés dans `config/flutterflow-sources/vocostar.json`, validé par
-`schemas/flutterflow-source-snapshot.schema.json`. Le vérificateur générique
+La fraîcheur de cette analyse et son contrat de convergence sont matérialisés
+dans `config/flutterflow-sources/vocostar.json`, tandis que l'inventaire nommé,
+sa classification et ses liens phase/gate sont dans
+`config/flutterflow-inventories/vocostar.json`, validé par
+`schemas/flutterflow-client-inventory.schema.json`. Le vérificateur générique
 compare le projet, le commit, les dates, les empreintes des trois métadonnées
 FlutterFlow, les 48 fichiers SDK générés référencés, les inventaires et les
 diagnostics. Il inspecte ensuite l'export runtime ignoré par Git pour prouver
@@ -38,6 +56,8 @@ npm run flutterflow:source:verify:vocostar -- \
 
 OPENGROW_CLIENT_SOURCE_VOCOSTAR=/chemin/vers/le/dernier/export-vocostar \
   npm run flutterflow:source:verify:vocostar
+
+npm run flutterflow:inventory:vocostar
 ```
 
 La forme par variable est dérivée de `application: vocostar` dans le manifeste;
@@ -45,23 +65,21 @@ aucun chemin de poste n'est enregistré dans les scripts ou la configuration.
 
 Le contrôle distingue `snapshotVerified` de `convergence.ready`. Il échoue dès
 qu'un export ou un fichier généré diffère du snapshot revu, mais aussi quand le
-snapshot est authentique et que la migration reste incomplète. Sur l'export du
-9 août, `snapshotVerified=true` et `ready=false` : six contrôles sont verts
-(`notifications-authority-wired`, `client-entitlement-activation-removed`,
-`direct-revenuecat-login-removed`, `billing-authority-wired`,
-`flutterflow-validation-errors-cleared` et
-`direct-vocostar-websocket-origin-removed`) et vingt-et-une des vingt-sept gates de
-convergence restent rouges. Une
-documentation ancienne ou un export simplement frais ne peuvent donc plus être
-présentés comme une migration terminée.
+snapshot est authentique et que la migration reste incomplète. La vérification
+complète actuelle s'arrête avant l'évaluation de convergence : un dry-run local
+du 10 août a remplacé `.flutterflow/last_run.json`, donc le dépôt ne prétend plus
+`snapshotVerified=true`. Le contrat contient **35 gates**; leur résultat ne sera
+republié qu'après un nouvel export revu. Une documentation ancienne, un dry-run
+réussi ou un export simplement frais ne peuvent pas être présentés comme une
+migration appliquée.
 
 ### Plan de migration exécutable
 
 Le contrat distinct
 `config/flutterflow-migrations/vocostar.json`, validé par
-`schemas/flutterflow-migration-plan.schema.json`, transforme ces vingt-sept
+`schemas/flutterflow-migration-plan.schema.json`, transforme ces trente-cinq
 gates en sept phases dépendantes et dix lots de travail. Chaque gate du snapshot
-doit être affectée exactement une fois. Les trente-quatre symboles de remplacement
+doit être affectée exactement une fois. Les trente-six symboles de remplacement
 distincts doivent tous exister dans `config/flutterflow-custom-code.json`; un
 nom inventé, une gate dupliquée/non couverte, une phase inconnue ou une
 dépendance vers une phase ultérieure fait échouer le plan.
@@ -85,7 +103,7 @@ les critères d'acceptation. Il ne lit aucun fichier d'environnement. Le rapport
 global `platform:readiness` incorpore la même structure; le plan et le readiness
 ne peuvent donc plus diverger silencieusement.
 
-| Phase                   | Lots actuellement bloqués            |
+| Phase                   | Lots du TO-BE non encore certifiés   |
 | ----------------------- | ------------------------------------ |
 | `identity-runtime`      | `identity-session`, `runtime-policy` |
 | `files-notifications`   | `files`                              |
@@ -95,7 +113,7 @@ ne peuvent donc plus diverger silencieusement.
 | `support`               | `support`                            |
 | `quality`               | `flutterflow-quality`                |
 
-La base commune corrige maintenant le principal verrou de la première phase :
+La base commune fournit le remplacement du principal verrou de la première phase :
 le SDK FlutterFlow `2.2.4` possède une session Identity chiffrée, isolée par
 cible/projet/environnement, restaurée et renouvelée automatiquement. La
 référence MBZA a supprimé son ancien stockage de tokens et teste cette seule
@@ -105,12 +123,12 @@ le retrait idempotent des champs persistés `authAccessToken`,
 `authRefreshToken` et `authExpiresIn`, conserve seulement un pont access-token
 en mémoire et laisse le refresh token au stockage chiffré du SDK. Le 10 août
 2026, ses trois tests et sa compilation à blanc contre le projet réel
-`vocal-transform-z2j7dp` réussissent sans erreur de validation. VocoStar reste
-rouge dans le snapshot publié jusqu'à la publication des tags Git immuables,
-la synchronisation de la bibliothèque, l'exécution GitHub autorisée du DSL et
-un nouvel export source authentifié.
+`vocal-transform-z2j7dp` réussissent sans erreur de validation. Cela prouve que
+le TO-BE compile, pas qu'il est appliqué. VocoStar reste non certifié jusqu'à la
+synchronisation de la bibliothèque, l'exécution GitHub autorisée du DSL et un
+nouvel export source authentifié.
 
-### Migration FlutterFlow versionnée et testée
+### TO-BE : migration FlutterFlow versionnée et testée, non appliquée
 
 Le workflow d'application exécute désormais, dans cet ordre : validation des
 manifeste, vérification des tags immuables, initialisation du projet existant,
@@ -118,7 +136,8 @@ manifeste, vérification des tags immuables, initialisation du projet existant,
 ni identifiant de projet, ni clé API, ni identifiant de bibliothèque : ces trois
 valeurs viennent exclusivement du GitHub Environment protégé.
 
-La migration concrète couvre déjà :
+Le DSL cible code les transformations suivantes; le dernier export AS-IS ne les
+contient pas encore :
 
 - bootstrap de la session chiffrée et pont Custom Auth non persistant;
 - restauration/rotation de session, anonyme, Google, Apple et liaison de
@@ -136,8 +155,12 @@ La migration concrète couvre déjà :
 - normalisation des placeholders de headers et conservation des variables de
   query réellement utilisées par les action graphs.
 
-La validation distante reste strictement non mutante tant que les tags SDK ne
-sont pas disponibles et que le workflow de synchronisation n'est pas lancé.
+Le DSL ne couvre pas encore l'intégralité de la convergence : retrait complet
+de l'ancien état Billing/paywall, consentement Marketing, liste/détail des jobs
+et ticket temps réel, Files download/delete, audit des gardes de routes, assets,
+signature release et dérives de noms de structs restent des lots explicites.
+La validation distante reste strictement non mutante tant que le workflow de
+synchronisation puis d'application n'est pas autorisé.
 
 ## Inventaire complet
 
@@ -213,7 +236,7 @@ appels communs passent par la bibliothèque OpenGrow; seuls les catalogues de
 voix et jobs de conversion traversent les routes versionnées du custom VocoStar
 derrière l'API OpenGrow.
 
-### Inventaire initial des 31 custom actions et adaptateur ajouté
+### AS-IS : les 30 custom actions présentes
 
 | Action existante            | Destination cible          | Décision                                                                                                                |
 | --------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -238,17 +261,21 @@ derrière l'API OpenGrow.
 | `userGetMe`                 | Identity                   | Remplacer par l'action profil commune.                                                                                  |
 | `userHasMedias`             | custom VocoStar            | Devient une propriété dérivée de la liste de jobs/médias custom.                                                        |
 | `userHasVocals`             | custom VocoStar            | Devient une propriété dérivée de la liste de voix custom.                                                               |
-| `userLoginRevenueCat`       | Billing                    | Supprimer. Aucun login RevenueCat direct ne doit rester dans le client.                                                 |
 | `userMediaCleanLocal`       | adaptateur client          | Conserver uniquement pour les fichiers temporaires locaux.                                                              |
 | `userMediaConverter`        | custom VocoStar            | Création de job via le contrat custom versionné.                                                                        |
 | `userMediaIndex`            | custom VocoStar            | Liste/état via le contrat custom.                                                                                       |
 | `userMediaRemove`           | Files + custom VocoStar    | Suppression orchestrée des métadonnées custom et objets Files.                                                          |
 | `userMediaUpload`           | Files                      | Remplacer par l'upload commun avec progression et limites configurées.                                                  |
 | `userRefreshAuth`           | Identity                   | Remplacer par le refresh commun et rotation de session.                                                                 |
-| `userSubscriptionActivate`  | Billing                    | Supprimer la projection client; l'entitlement vérifié est l'autorité.                                                   |
 | `userUpdateMe`              | Identity                   | Remplacer par la mise à jour de profil commune.                                                                         |
 | `wsSubscribe`               | custom VocoStar/temps réel | Le client s'abonne à une URL/ticket émis par l'API; aucun hostname codé en dur.                                         |
 | `wsUnsubscribe`             | custom VocoStar/temps réel | Fermeture du canal custom communément instrumentée.                                                                     |
+
+### Historique supprimé : deux actions absentes de l'AS-IS
+
+`userLoginRevenueCat` et `userSubscriptionActivate` ne font plus partie des 30
+custom actions du dernier export. Elles restent dans les gates comme preuve de
+retrait historique et ne doivent pas être comptées dans l'inventaire courant.
 
 Le remplacement concret des deux créations de jobs est désormais fixé :
 
@@ -406,7 +433,7 @@ Medias` par les quatre actions custom-job communes, puis valider voix,
    mêmes versions immuables à la cible VocoStar via `main` et son Environment
    GitHub protégé.
 
-La migration Git gérée ajoute maintenant une autorité unique pour la
+Le TO-BE de la migration Git ajoute une autorité unique pour la
 déconnexion et la suppression de compte. Tous les graphes qui appelaient
 directement l’endpoint FlutterFlow `auth Logout` sont réécrits vers
 `opengrowLogoutSession`; le nettoyage `type=user` appelle
@@ -417,10 +444,13 @@ références. Les nettoyages temporaires de média/voix restent spécifiques à
 VocoStar. Le contrat serveur durable est détaillé dans
 [ACCOUNT_LIFECYCLE.md](./ACCOUNT_LIFECYCLE.md).
 
-Cette convergence est validée localement par 35 contrôles de source. La mutation
-du projet FlutterFlow distant reste volontairement bloquée jusqu’à la création
-et la revue du tag immuable `sdk-flutterflow-v2.2.5` (ainsi que du tag Support
-requis), puis doit suivre `flutterflow ai test` avant `flutterflow ai run`.
+Le contrat de convergence contient 35 contrôles de source et le manifeste
+d'inventaire prouve séparément les dix comptes AS-IS. La convergence complète
+n'est actuellement pas certifiée, car le reçu de l'export revu a été remplacé
+par un dry-run. Toute mutation du projet FlutterFlow distant reste bloquée
+jusqu’à la création et la revue du tag immuable `sdk-flutterflow-v2.2.5` (ainsi
+que du tag Support requis), puis doit suivre `flutterflow ai test`,
+`flutterflow ai run`, un nouvel export et la revue de ce nouveau reçu.
 
 ## Critères de parité avant VocoStar production
 
