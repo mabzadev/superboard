@@ -56,6 +56,10 @@ proves its dereferenced commit belongs to official `dev`, and passes that exact
 tag and SHA to every test, package, release and catalogue-promotion step. A
 catalogue PR created by automation is validated through an explicit CI dispatch
 on its protected promotion branch for the same reason.
+The catalogue-promotion job also uses an explicit `always()` guard: each SDK
+release deliberately skips every non-selected package job, and GitHub would
+otherwise suppress the downstream promotion despite the successful aggregate
+release gate.
 
 Moving the canonical source repository never authorizes reusing a published
 package version for changed bytes. The catalogue keeps the historical release

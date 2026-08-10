@@ -18,7 +18,7 @@ test("SDK catalogue matches every package source and FlutterFlow public symbol",
   assert.equal(catalog.schemaVersion, 2);
   assert.ok(catalog.libraries.every((library) => library.license === "MIT"));
   assert.equal(releaseTagFor(catalog, "flutter"), "sdk-flutter-v2.1.3");
-  assert.equal(releaseCandidateRefFor(catalog, "ios"), "1.0.1");
+  assert.equal(releaseCandidateRefFor(catalog, "ios"), "1.0.2");
   assert.equal(
     releaseCandidateTagFor(catalog, "android"),
     "sdk-android-v1.0.1",

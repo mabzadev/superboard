@@ -62,7 +62,7 @@
       "license": "MIT",
       "licensePath": "sdks/ios/LICENSE",
       "versionSource": "sdks/ios/OpenGrow.podspec",
-      "sourceVersion": "1.0.1",
+      "sourceVersion": "1.0.2",
       "latestReleaseVersion": "1.0.0",
       "releaseRef": "1.0.0",
       "releaseStatus": "pending-release",

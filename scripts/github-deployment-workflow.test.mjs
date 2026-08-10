@@ -265,7 +265,7 @@ test("immutable SDK publication revalidates native and React Native packages", (
   assert.match(releaseWorkflow, /sdk-catalog\.mjs check --release-tag/);
   assert.match(
     releaseWorkflow,
-    /propose-catalogue:[\s\S]*?if: \$\{\{ needs\.validate-tag\.result == 'success' && needs\.release-gate\.result == 'success' \}\}/,
+    /propose-catalogue:[\s\S]*?if: \$\{\{ always\(\) && needs\.validate-tag\.result == 'success' && needs\.release-gate\.result == 'success' \}\}/,
   );
 });
 

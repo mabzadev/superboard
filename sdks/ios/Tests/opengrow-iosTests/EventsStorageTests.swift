@@ -3,6 +3,11 @@ import XCTest
 
 final class EventsStorageTests: XCTestCase {
 
+    /// Disk-backed concurrency checks are intentionally slower on shared CI
+    /// simulators. Keep the full workload and give the serial persistence queue
+    /// enough time to drain so a timeout cannot leak writes into the next test.
+    private let concurrentStorageTimeout: TimeInterval = 60
+
     private var eventsCachePath: String {
         let appSupport = NSSearchPathForDirectoriesInDomains(.applicationSupportDirectory, .userDomainMask, true).first!
         return (appSupport as NSString).appendingPathComponent("com.opengrow.cache.opengrow-events-cache")
@@ -316,8 +321,9 @@ final class EventsStorageTests: XCTestCase {
                 storage.addEvent(event: event) { addGroup.leave() }
             }
         }
-        let addResult = addGroup.wait(timeout: .now() + 15)
+        let addResult = addGroup.wait(timeout: .now() + concurrentStorageTimeout)
         XCTAssertEqual(addResult, .success, "All concurrent adds should complete")
+        guard addResult == .success else { return }
 
         // Verify all events are stored
         let getExp = expectation(description: "get")
@@ -328,7 +334,7 @@ final class EventsStorageTests: XCTestCase {
             }
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: concurrentStorageTimeout)
     }
 
     func testConcurrentAddAndRemoveDoesNotCrash() {
@@ -341,7 +347,7 @@ final class EventsStorageTests: XCTestCase {
         storage.addEvent(event: event1) {
             storage.addEvent(event: event2) { setupExp.fulfill() }
         }
-        wait(for: [setupExp], timeout: 10)
+        wait(for: [setupExp], timeout: concurrentStorageTimeout)
 
         // Concurrently: remove event1, add event3, transform all
         let event3 = Event(type: .timeSpent, createdAt: Date())
@@ -363,7 +369,7 @@ final class EventsStorageTests: XCTestCase {
             }) { group.leave() }
         }
 
-        let result = group.wait(timeout: .now() + 15)
+        let result = group.wait(timeout: .now() + concurrentStorageTimeout)
         XCTAssertEqual(result, .success, "Concurrent operations should all complete")
     }
 

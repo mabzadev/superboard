@@ -207,7 +207,11 @@ jobs:
 
   propose-catalogue:
     needs: [validate-tag, release-gate]
-    if: ${{ needs.validate-tag.result == 'success' && needs.release-gate.result == 'success' }}
+    # `release-gate` intentionally depends on every package job, most of which
+    # are skipped for a single-library publication. Without always(), GitHub's
+    # implicit success condition suppresses this downstream promotion even
+    # after the explicit gate succeeds.
+    if: ${{ always() && needs.validate-tag.result == 'success' && needs.release-gate.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: sdk-release
