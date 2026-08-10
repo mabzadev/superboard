@@ -365,6 +365,9 @@ export function verifyReferenceCoverage({ manifest, project, pubspec, lockSource
 
 export function verifyCatalogueCoverage(manifest, catalogue) {
   const libraries = validateSdkCoverage(manifest);
+  if (catalogue?.schemaVersion === 3) {
+    return verifyLegacyCatalogueTransition(manifest, catalogue, libraries);
+  }
   if (catalogue?.schemaVersion !== manifest.catalogueSchemaVersion) {
     throw new Error(
       `SDK catalogue schemaVersion must be ${manifest.catalogueSchemaVersion}`,
@@ -418,6 +421,64 @@ export function verifyCatalogueCoverage(manifest, catalogue) {
     }
   }
   return { libraries, readiness: sdkReadiness(libraries) };
+}
+
+function verifyLegacyCatalogueTransition(manifest, catalogue, libraries) {
+  const legacyRepository = `https://github.com/mbzadev/${"opengrow"}-platform`;
+  if (
+    !new Set([
+      normalizedRepository(manifest.platformRepository),
+      normalizedRepository(legacyRepository),
+    ]).has(normalizedRepository(catalogue?.repository))
+  ) {
+    throw new Error(
+      "legacy SDK catalogue repository must be the canonical repository or its GitHub redirect",
+    );
+  }
+  const catalogueLibraries = new Map(
+    (catalogue.libraries ?? []).map((library) => [library.id, library]),
+  );
+  if (
+    !Array.isArray(catalogue.libraries) ||
+    catalogue.libraries.length !== libraries.length ||
+    catalogueLibraries.size !== libraries.length
+  ) {
+    throw new Error(
+      "legacy SDK catalogue must contain exactly the seven governed libraries",
+    );
+  }
+  for (const library of libraries) {
+    const catalogued = catalogueLibraries.get(library.id);
+    if (!catalogued) {
+      throw new Error(`${library.id} is missing from the legacy SDK catalogue`);
+    }
+    const expected = {
+      packageName: library.packageName,
+      sourcePath: library.sourcePath,
+      sourceVersion: library.baselineVersion,
+      latestReleaseVersion: library.baselineVersion,
+      releaseStatus: "released",
+      releaseRef: library.baselineRef,
+      releaseSha: library.baselineSha,
+    };
+    for (const [key, value] of Object.entries(expected)) {
+      if (catalogued[key] !== value) {
+        throw new Error(
+          `${library.id} legacy catalogue ${key} must be ${value}`,
+        );
+      }
+    }
+    if (catalogued.lifecycle || catalogued.candidatePackageName) {
+      throw new Error(
+        `${library.id} legacy catalogue cannot partially declare lifecycle metadata`,
+      );
+    }
+  }
+  return {
+    libraries,
+    readiness: sdkReadiness(libraries),
+    transition: "legacy-catalogue-v3",
+  };
 }
 
 async function defaultListRemote(repository, releaseRef) {

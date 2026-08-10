@@ -47,6 +47,23 @@ function catalogueFixture() {
   };
 }
 
+function legacyCatalogueFixture() {
+  return {
+    schemaVersion: 3,
+    repository: `https://github.com/mbzadev/${"opengrow"}-platform`,
+    libraries: manifest.libraries.map((library) => ({
+      id: library.id,
+      packageName: library.packageName,
+      sourcePath: library.sourcePath,
+      sourceVersion: library.baselineVersion,
+      latestReleaseVersion: library.baselineVersion,
+      releaseStatus: "released",
+      releaseRef: library.baselineRef,
+      releaseSha: library.baselineSha,
+    })),
+  };
+}
+
 function remoteTagOutput(ref, sha) {
   return `${"a".repeat(40)}\trefs/tags/${ref}\n${sha}\trefs/tags/${ref}^{}\n`;
 }
@@ -135,6 +152,26 @@ test("the exact Platform catalogue v4 matches baselines and exposes both v3 cand
   assert.throws(
     () => verifyCatalogueCoverage(manifest, stale),
     /android catalogue lifecycle must be internal/u,
+  );
+});
+
+test("the pre-migration Platform v3 catalogue is accepted only as an exact immutable baseline", () => {
+  const result = verifyCatalogueCoverage(manifest, legacyCatalogueFixture());
+  assert.equal(result.transition, "legacy-catalogue-v3");
+  assert.equal(result.readiness.promotionReady, false);
+
+  const stale = legacyCatalogueFixture();
+  stale.libraries.find(({ id }) => id === "flutter").sourceVersion = "3.0.0";
+  assert.throws(
+    () => verifyCatalogueCoverage(manifest, stale),
+    /flutter legacy catalogue sourceVersion must be 2\.1\.4/u,
+  );
+
+  const partial = legacyCatalogueFixture();
+  partial.libraries.find(({ id }) => id === "flutterflow").lifecycle = "active";
+  assert.throws(
+    () => verifyCatalogueCoverage(manifest, partial),
+    /cannot partially declare lifecycle metadata/u,
   );
 });
 
