@@ -81,13 +81,13 @@ The OpenGrow Flutter SDK provides deep linking, app links, universal links, link
 ## Installation
 
 Add the published Flutter package `opengrow_flutter`
-at the immutable release `sdk-flutter-v2.1.3`:
+at the immutable release `sdk-flutter-v2.1.4`:
 
 ```yaml
 opengrow_flutter:
   git:
     url: https://github.com/mbzadev/opengrow-platform.git
-    ref: sdk-flutter-v2.1.3
+    ref: sdk-flutter-v2.1.4
     path: sdks/flutter
 ```
 
