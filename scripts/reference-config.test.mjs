@@ -349,6 +349,7 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
     /DEFAULT_BRANCH: \$\{\{ github\.event\.repository\.default_branch \}\}/,
   );
   assert.match(workflow, /promote-sdk:/);
+  assert.match(workflow, /actions: write/);
   assert.match(workflow, /contents: write/);
   assert.match(workflow, /pull-requests: write/);
   assert.match(workflow, /reference-sdk-promotion\.mjs/);
@@ -356,6 +357,7 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /refs\/tags\/\$tag\^\{\}/);
   assert.match(workflow, /git merge-base --is-ancestor/);
   assert.match(workflow, /gh pr create/);
+  assert.match(workflow, /gh workflow run ci\.yml --ref "\$PROMOTION_BRANCH"/);
   assert.doesNotMatch(workflow, /gh pr (?:merge|review)/);
   assert.ok(
     workflow.indexOf("Verify the official development catalogue") <
