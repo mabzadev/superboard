@@ -1,10 +1,10 @@
-name: Deploy SuperBoard to Cloudflare
+name: Deploy SuperBoard production to Cloudflare
 
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [dev, main]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -25,7 +25,6 @@ jobs:
       branch: ${{ steps.selection.outputs.branch }}
       sha: ${{ steps.selection.outputs.sha }}
       matrix: ${{ steps.selection.outputs.matrix }}
-      reference_environment: ${{ steps.selection.outputs.reference_environment }}
       deploy: ${{ steps.revision.outputs.deploy }}
     env:
       DEPLOY_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
@@ -34,7 +33,7 @@ jobs:
       - name: Restrict deployments to successful long-lived branch revisions
         run: |
           case "$DEPLOY_BRANCH" in
-            dev|main) ;;
+            main) ;;
             *) exit 64 ;;
           esac
           test -n "$DEPLOY_SHA"
@@ -75,11 +74,11 @@ jobs:
         id: selection
         run: |
           node scripts/github-deployment-matrix.mjs \
-            --branch "$DEPLOY_BRANCH" > "$RUNNER_TEMP/opengrow-deployments.json"
+            --branch "$DEPLOY_BRANCH" \
+            --authority github-actions > "$RUNNER_TEMP/opengrow-deployments.json"
           echo "branch=$DEPLOY_BRANCH" >> "$GITHUB_OUTPUT"
           echo "sha=$DEPLOY_SHA" >> "$GITHUB_OUTPUT"
           echo "matrix=$(jq -c '.matrix' "$RUNNER_TEMP/opengrow-deployments.json")" >> "$GITHUB_OUTPUT"
-          echo "reference_environment=$(jq -r '.referenceEnvironment' "$RUNNER_TEMP/opengrow-deployments.json")" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: plan
@@ -100,13 +99,15 @@ jobs:
         env:
           SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
           SUPERBOARD_EXPECTED_TARGET: ${{ matrix.target }}
+          SUPERBOARD_DEPLOYMENT_AUTHORITY: ${{ matrix.deploymentAuthority }}
         run: |
           case "$DEPLOY_BRANCH" in
-            dev|main) ;;
+            main) ;;
             *) exit 64 ;;
           esac
           test -n "$DEPLOY_SHA"
           test -n "$SUPERBOARD_EXPECTED_TARGET"
+          test "$SUPERBOARD_DEPLOYMENT_AUTHORITY" = "github-actions"
           test "$SUPERBOARD_TARGET" = "$SUPERBOARD_EXPECTED_TARGET"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -263,29 +264,3 @@ jobs:
             ${{ runner.temp }}/superboard-d1-backups/encrypted-backups.index.json
           if-no-files-found: warn
           retention-days: 30
-
-  trigger-reference-acceptance:
-    if: ${{ needs.plan.outputs.deploy == 'true' && needs.deploy.result == 'success' && needs.plan.outputs.branch == 'dev' && needs.plan.outputs.reference_environment != '' }}
-    needs: [plan, deploy]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    environment: ${{ needs.plan.outputs.reference_environment }}
-    env:
-      DEPLOY_SHA: ${{ needs.plan.outputs.sha }}
-      GH_TOKEN: ${{ secrets.SUPERBOARD_REFERENCE_DISPATCH_TOKEN || secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
-      SUPERBOARD_REFERENCE_REPOSITORY: ${{ vars.SUPERBOARD_REFERENCE_REPOSITORY || vars.OPENGROW_REFERENCE_REPOSITORY }}
-    steps:
-      - name: Validate cross-repository dispatch configuration
-        run: |
-          test -n "$GH_TOKEN"
-          test -n "$SUPERBOARD_REFERENCE_REPOSITORY"
-          test -n "$DEPLOY_SHA"
-          case "$SUPERBOARD_REFERENCE_REPOSITORY" in
-            */*) ;;
-            *) exit 64 ;;
-          esac
-      - name: Trigger exact reference acceptance build
-        run: |
-          gh api --method POST "repos/$SUPERBOARD_REFERENCE_REPOSITORY/dispatches" \
-            --raw-field event_type=platform-dev-updated \
-            --raw-field "client_payload[platform_sha]=$DEPLOY_SHA"

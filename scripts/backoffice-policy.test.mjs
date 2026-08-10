@@ -9,21 +9,25 @@ const read = (path) => readFileSync(join(root, path), "utf8");
 
 function sourceFiles(directory) {
   const paths = [];
-  for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
+  for (const entry of readdirSync(join(root, directory), {
+    withFileTypes: true,
+  })) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
       if (
-        !entry.name.startsWith(".")
-        && !["__tests__", "build", "coverage", "dist", "node_modules"].includes(entry.name)
+        !entry.name.startsWith(".") &&
+        !["__tests__", "build", "coverage", "dist", "node_modules"].includes(
+          entry.name,
+        )
       ) {
         paths.push(...sourceFiles(path));
       }
     } else if (
-      (
-        !/\.(?:test|spec)\./u.test(entry.name)
-        && /\.(?:ts|tsx|js|mjs|cjs|json|md|dart|swift|kt|java)$/u.test(entry.name)
-      )
-      || entry.name === ".env.example"
+      (!/\.(?:test|spec)\./u.test(entry.name) &&
+        /\.(?:ts|tsx|js|mjs|cjs|json|md|dart|swift|kt|java)$/u.test(
+          entry.name,
+        )) ||
+      entry.name === ".env.example"
     ) {
       paths.push(path);
     }
@@ -39,8 +43,15 @@ test("deployment targets have no OpenGrow edition or usage plan", () => {
 
   assert.ok(targets.length > 0);
   for (const target of targets) {
-    assert.equal("accessMode" in target, false, `${target.target} declares accessMode`);
-    assert.equal(target.features?.billing === true || target.features?.billing === false, true);
+    assert.equal(
+      "accessMode" in target,
+      false,
+      `${target.target} declares accessMode`,
+    );
+    assert.equal(
+      target.features?.billing === true || target.features?.billing === false,
+      true,
+    );
   }
 
   const schema = read("deploy/targets/schema.json");
@@ -64,15 +75,45 @@ test("public repository workflow never requires a platform read token", () => {
 
   for (const path of paths) {
     const source = read(path);
-    assert.equal(source.includes("OPENGROW_PLATFORM_READ_TOKEN"), false, `${path} declares a stale repository read token`);
-    assert.equal(/checkout the private\s+platform source/iu.test(source), false, `${path} still describes the platform repository as private`);
+    assert.equal(
+      source.includes("OPENGROW_PLATFORM_READ_TOKEN"),
+      false,
+      `${path} declares a stale repository read token`,
+    );
+    assert.equal(
+      /checkout the private\s+platform source/iu.test(source),
+      false,
+      `${path} still describes the platform repository as private`,
+    );
   }
 });
 
-test("GitHub Actions is the only automatic Cloudflare deployment authority", () => {
-  assert.equal(existsSync(join(root, "scripts/cloudflare-connect-builds.mjs")), false);
-  assert.equal("cloudflare:connect-builds" in JSON.parse(read("package.json")).scripts, false);
-  assert.match(read("docs/CLOUDFLARE.md"), /single deployment authority/u);
+test("each target has one explicit automatic Cloudflare deployment authority", () => {
+  assert.equal(
+    existsSync(join(root, "scripts/cloudflare-connect-builds.mjs")),
+    false,
+  );
+  assert.equal(
+    "cloudflare:connect-builds" in JSON.parse(read("package.json")).scripts,
+    false,
+  );
+  const deploymentMatrix = JSON.parse(
+    read("config/cloudflare-deployments.json"),
+  );
+  const authorities = Object.fromEntries(
+    deploymentMatrix.deployments.map(({ id, automaticDeployment }) => [
+      id,
+      automaticDeployment.authority,
+    ]),
+  );
+  assert.deepEqual(authorities, {
+    "mbza-development": "cloudflare-workers-builds",
+    "vocostar-production": "github-actions",
+  });
+  assert.match(
+    read("docs/CLOUDFLARE.md"),
+    /one automatic deployment authority per target/u,
+  );
 });
 
 test("runtime and dashboard do not expose legacy OpenGrow SaaS controls", () => {
@@ -105,7 +146,11 @@ test("runtime and dashboard do not expose legacy OpenGrow SaaS controls", () => 
   for (const path of runtimeFiles) {
     const source = read(path);
     for (const token of forbidden) {
-      assert.equal(source.includes(token), false, `${path} still contains ${token}`);
+      assert.equal(
+        source.includes(token),
+        false,
+        `${path} still contains ${token}`,
+      );
     }
   }
 
@@ -116,7 +161,11 @@ test("runtime and dashboard do not expose legacy OpenGrow SaaS controls", () => 
     "apps/dashboard/src/api/payments/paymentsService.ts",
     "apps/dashboard/src/lib/edition.ts",
   ]) {
-    assert.equal(existsSync(join(root, removedPath)), false, `${removedPath} still exists`);
+    assert.equal(
+      existsSync(join(root, removedPath)),
+      false,
+      `${removedPath} still exists`,
+    );
   }
 });
 
@@ -125,14 +174,22 @@ test("store purchases remain an application capability", () => {
   const purchases = read("workers/api/src/routes/purchases-sdk.ts");
   const target = JSON.parse(read("deploy/targets/mbza-development.json"));
 
-  assert.match(deployment, /configured === true \|\| Number\(configured\) === 1/);
-  assert.match(purchases, /isPurchasesEnabled\(c\.env, project\.purchases_enabled\)/);
+  assert.match(
+    deployment,
+    /configured === true \|\| Number\(configured\) === 1/,
+  );
+  assert.match(
+    purchases,
+    /isPurchasesEnabled\(c\.env, project\.purchases_enabled\)/,
+  );
   assert.equal(target.features.billing, true);
 });
 
 test("copyable SDK setup uses target-owned public origins", () => {
   const setup = read("apps/dashboard/src/components/app/SdkSetupWizard.tsx");
-  const preview = read("apps/dashboard/src/components/dynamic_links/social-preview/SocialPreviewPageContent.tsx");
+  const preview = read(
+    "apps/dashboard/src/components/dynamic_links/social-preview/SocialPreviewPageContent.tsx",
+  );
 
   assert.equal(setup.includes("sdk.example.com"), false);
   assert.equal(setup.includes("links.example.com"), false);
@@ -144,40 +201,60 @@ test("copyable SDK setup uses target-owned public origins", () => {
 test("optional Dashboard analytics has no hardcoded collector origin", () => {
   const analytics = read("apps/dashboard/src/analytics/posthog.ts");
   assert.match(analytics, /process\.env\.NEXT_PUBLIC_POSTHOG_HOST/u);
-  assert.equal(/POSTHOG_HOST\s*=\s*[^;]*(?:posthog\.com|https?:\/\/)/u.test(analytics), false);
-  assert.match(read("apps/dashboard/.env.example"), /NEXT_PUBLIC_POSTHOG_HOST=/u);
+  assert.equal(
+    /POSTHOG_HOST\s*=\s*[^;]*(?:posthog\.com|https?:\/\/)/u.test(analytics),
+    false,
+  );
+  assert.match(
+    read("apps/dashboard/.env.example"),
+    /NEXT_PUBLIC_POSTHOG_HOST=/u,
+  );
 });
 
 test("reusable platform source and examples contain no application hostname or embedded project key", () => {
-  const reusableFiles = [...new Set([
-    ...sourceFiles("workers"),
-    ...sourceFiles("apps/dashboard/src"),
-    ...sourceFiles("apps/mcp/src"),
-    ...sourceFiles("packages"),
-    ...sourceFiles("sdks/flutter/lib"),
-    ...sourceFiles("sdks/flutterflow/lib"),
-    ...sourceFiles("sdks/ios/Sources"),
-    ...sourceFiles("sdks/android/OpenGrow/OpenGrow/src/main"),
-    ...sourceFiles("sdks/javascript/src"),
-    ...sourceFiles("sdks/react-native/src"),
-    ...sourceFiles("sdks/react-native/example/src"),
-    "package.json",
-    "apps/dashboard/package.json",
-    "apps/dashboard/public/robots.txt",
-    "sdks/android/README.md",
-    "sdks/flutter/README.md",
-    "sdks/ios/README.md",
-    "sdks/javascript/README.md",
-    "sdks/react-native/README.md",
-    "sdks/javascript/public/index.html",
-    "workers/email/README.md",
-  ])];
+  const reusableFiles = [
+    ...new Set([
+      ...sourceFiles("workers"),
+      ...sourceFiles("apps/dashboard/src"),
+      ...sourceFiles("apps/mcp/src"),
+      ...sourceFiles("packages"),
+      ...sourceFiles("sdks/flutter/lib"),
+      ...sourceFiles("sdks/flutterflow/lib"),
+      ...sourceFiles("sdks/ios/Sources"),
+      ...sourceFiles("sdks/android/OpenGrow/OpenGrow/src/main"),
+      ...sourceFiles("sdks/javascript/src"),
+      ...sourceFiles("sdks/react-native/src"),
+      ...sourceFiles("sdks/react-native/example/src"),
+      "package.json",
+      "apps/dashboard/package.json",
+      "apps/dashboard/public/robots.txt",
+      "sdks/android/README.md",
+      "sdks/flutter/README.md",
+      "sdks/ios/README.md",
+      "sdks/javascript/README.md",
+      "sdks/react-native/README.md",
+      "sdks/javascript/public/index.html",
+      "workers/email/README.md",
+    ]),
+  ];
 
   for (const path of reusableFiles) {
     const source = read(path);
-    assert.equal(/(?:mbza\.dev|vocostar\.com)/u.test(source), false, `${path} embeds an application hostname`);
-    assert.equal(/opengrowt_[a-f0-9]{32,}/iu.test(source), false, `${path} embeds a project key`);
-    assert.equal(/opengrow\.io/iu.test(source), false, `${path} embeds a legacy OpenGrow SaaS origin`);
+    assert.equal(
+      /(?:mbza\.dev|vocostar\.com)/u.test(source),
+      false,
+      `${path} embeds an application hostname`,
+    );
+    assert.equal(
+      /opengrowt_[a-f0-9]{32,}/iu.test(source),
+      false,
+      `${path} embeds a project key`,
+    );
+    assert.equal(
+      /opengrow\.io/iu.test(source),
+      false,
+      `${path} embeds a legacy OpenGrow SaaS origin`,
+    );
   }
 });
 
@@ -196,7 +273,10 @@ test("back-office health includes transactional, newsletter and delivery-job sta
   assert.match(platform, /serviceJobMetrics\(serviceChecks\)/u);
   assert.match(platform, /campaignsScheduled/u);
   assert.match(platform, /deliveriesFailed/u);
-  assert.match(read("apps/dashboard/src/app/(protected)/infrastructure/page.tsx"), /Background jobs/u);
+  assert.match(
+    read("apps/dashboard/src/app/(protected)/infrastructure/page.tsx"),
+    /Background jobs/u,
+  );
 });
 
 test("MCP is a target-configured back-office adapter with no legacy SaaS gate", () => {
@@ -222,7 +302,11 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
   for (const path of paths) {
     const source = read(path);
     for (const token of forbidden) {
-      assert.equal(token.test(source), false, `${path} still contains ${token}`);
+      assert.equal(
+        token.test(source),
+        false,
+        `${path} still contains ${token}`,
+      );
     }
   }
   assert.match(read("apps/mcp/plugin/.mcp.json"), /\$\{SUPERBOARD_MCP_URL\}/u);
@@ -230,15 +314,32 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
   assert.match(apiClient, /env\.SUPERBOARD_API_URL/u);
   assert.match(apiClient, /normalizeApiBaseUrl\(env\.OPENGROW_API_URL/u);
   assert.match(read("workers/mcp/src/index.ts"), /env\.API_SERVICE\.fetch/u);
-  assert.match(read("scripts/cloudflare-config.mjs"), /PUBLIC_MCP_URL: publicMcpUrl\(target\)/u);
-  assert.match(read("scripts/dashboard-cloudflare.mjs"), /NEXT_PUBLIC_MCP_URL: publicMcpUrl\(target\)/u);
+  assert.match(
+    read("scripts/cloudflare-config.mjs"),
+    /PUBLIC_MCP_URL: publicMcpUrl\(target\)/u,
+  );
+  assert.match(
+    read("scripts/dashboard-cloudflare.mjs"),
+    /NEXT_PUBLIC_MCP_URL: publicMcpUrl\(target\)/u,
+  );
   const oauth = read("workers/api/src/routes/mcp-oauth.ts");
   assert.match(oauth, /MCP consent URL is not configured/u);
   assert.equal(oauth.includes("originFor(c)"), false);
-  for (const targetPath of ["deploy/targets/mbza-development.json", "deploy/targets/vocostar.json"]) {
+  for (const targetPath of [
+    "deploy/targets/mbza-development.json",
+    "deploy/targets/vocostar.json",
+  ]) {
     const target = JSON.parse(read(targetPath));
-    assert.equal(typeof target.domains.mcp, "string", `${targetPath} needs an MCP domain`);
-    assert.equal(typeof target.workers.mcp, "object", `${targetPath} needs an MCP Worker`);
+    assert.equal(
+      typeof target.domains.mcp,
+      "string",
+      `${targetPath} needs an MCP domain`,
+    );
+    assert.equal(
+      typeof target.workers.mcp,
+      "object",
+      `${targetPath} needs an MCP Worker`,
+    );
   }
 });
 

@@ -29,20 +29,38 @@ Observability and MCP. MCP is a stateless public Worker at the target's
 through its private `API_SERVICE` binding. It has no D1, KV, R2, Queue or Worker
 secret of its own.
 
-## GitHub deployment connection
+## Automatic deployment authority
 
-`.github/workflows/deploy-cloudflare.yml` connects all enabled Workers to GitHub
-as one ordered release. `dev` deploys the development target; `main` deploys the
-production target. GitHub Environments hold the target/account selection and
-least-privilege token. The versioned deployment matrix also declares the exact
-target expected from each Environment, and the job fails before checkout or any
-Cloudflare command when `SUPERBOARD_TARGET` differs. Worker source contains no
-account-specific constant.
+`config/cloudflare-deployments.json` enforces one automatic deployment authority per target:
 
-Do not enable a second automatic Cloudflare Workers Builds deployment for the
-same Workers: two deployment authorities can race migrations, routes and Queue
-consumers. The reference architecture intentionally ships no Workers Builds
-connector: GitHub Actions is the single deployment authority for every target.
+- `mbza-development` is deployed from `dev` by Cloudflare Workers Builds. Only
+  the target's Dashboard Worker is connected to `mbzadev/superboard-platform`.
+  Its build command installs dependencies and runs the target, service,
+  typecheck, application and Custom Worker gates before its versioned
+  `cloudflare:deploy:all` deploy command can run. Non-production branch builds
+  are disabled.
+  That one controller deploys every enabled Worker in dependency order; do not
+  connect the other Workers independently, because concurrent controllers can
+  race migrations, routes and Queue consumers.
+- `vocostar-production` is deployed from `main` by
+  `.github/workflows/deploy-cloudflare.yml`, after the successful aggregate CI
+  gate. Its protected GitHub Environment supplies the production account,
+  least-privilege token and D1 backup encryption key.
+
+Cloudflare generates and retains the Workers Builds token. The selected MBZA
+account ID is a non-secret `CLOUDFLARE_ACCOUNT_ID` build variable in Cloudflare,
+not a GitHub secret and not a value committed to the repository. Consequently,
+the platform `development` GitHub Environment contains no Cloudflare deployment
+credential. The exact source-owned Workers Builds contract is:
+
+```text
+repository: mbzadev/superboard-platform
+production branch: dev
+build command: npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check
+deploy command: npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"
+build variables: CLOUDFLARE_ACCOUNT_ID, SUPERBOARD_TARGET=mbza-development, SUPERBOARD_ENVIRONMENT=development
+non-production branch builds: disabled
+```
 
 ## Private back-office registration
 

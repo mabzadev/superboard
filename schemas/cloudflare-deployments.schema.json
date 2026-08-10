@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opengrow.local/schemas/cloudflare-deployments.schema.json",
-  "title": "OpenGrow Cloudflare deployment matrix",
+  "title": "SuperBoard Cloudflare deployment matrix",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "deployments"],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "deployments": {
       "type": "array",
       "minItems": 1,
@@ -20,6 +20,7 @@
           "target",
           "githubEnvironment",
           "cloudflareEnvironment",
+          "automaticDeployment",
           "referenceAcceptance"
         ],
         "properties": {
@@ -38,6 +39,50 @@
           },
           "cloudflareEnvironment": {
             "enum": ["development", "production"]
+          },
+          "automaticDeployment": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "authority",
+                  "controllerService",
+                  "buildCommand",
+                  "deployCommand",
+                  "buildVariables",
+                  "nonProductionBranchBuilds"
+                ],
+                "properties": {
+                  "authority": { "const": "cloudflare-workers-builds" },
+                  "controllerService": { "const": "dashboard" },
+                  "buildCommand": {
+                    "const": "npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check"
+                  },
+                  "deployCommand": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 255
+                  },
+                  "buildVariables": {
+                    "const": [
+                      "CLOUDFLARE_ACCOUNT_ID",
+                      "SUPERBOARD_ENVIRONMENT",
+                      "SUPERBOARD_TARGET"
+                    ]
+                  },
+                  "nonProductionBranchBuilds": { "const": false }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["authority"],
+                "properties": {
+                  "authority": { "const": "github-actions" }
+                }
+              }
+            ]
           },
           "referenceAcceptance": { "type": "boolean" }
         }

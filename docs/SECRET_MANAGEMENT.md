@@ -157,8 +157,12 @@ secrets de déploiement sont attachés aux GitHub Environments, pas au dépôt :
   plusieurs Environments et donc plusieurs comptes/applications ;
 - `SUPERBOARD_TARGET` est une variable d'Environment qui doit être strictement
   égale à la cible versionnée dans l'entrée de matrice correspondante ;
-- `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` et la clé de chiffrement des
-  sauvegardes D1 sont des secrets d'Environment ;
+- pour `mbza-development`, Cloudflare Workers Builds gère son token de build et
+  reçoit `CLOUDFLARE_ACCOUNT_ID` comme variable non secrète dans Cloudflare ; le
+  GitHub Environment `development` ne requiert aucun secret Cloudflare ;
+- pour la production GitHub Actions, `CLOUDFLARE_ACCOUNT_ID`,
+  `CLOUDFLARE_API_TOKEN` et la clé de chiffrement des sauvegardes D1 restent des
+  secrets du GitHub Environment `production` ;
 - le workflow commun découvre tous les Workers activés dans le manifest, vérifie
   leurs noms de secrets, sauvegarde les D1, applique les migrations et les
   déploie dans l'ordre de dépendance.

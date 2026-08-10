@@ -87,13 +87,13 @@ les contrats FlutterFlow.
 
 Les valeurs suivantes ne sont jamais stockées dans un target :
 
-| Valeur | Source à l’exécution |
-| --- | --- |
-| ID de compte Cloudflare | `CLOUDFLARE_ACCOUNT_ID_<ACCOUNT_ALIAS>` puis fallback CI `CLOUDFLARE_ACCOUNT_ID` |
-| Token Cloudflare | `CLOUDFLARE_API_TOKEN` dans le GitHub Environment sélectionné |
-| Identité projet SDK | `SUPERBOARD_PROJECT_ID` et `SUPERBOARD_PROJECT_KEY` |
-| Secrets Workers communs | registres de `scripts/cloudflare-services.mjs`, valeurs dans Cloudflare Secrets |
-| Secrets Custom Worker | noms dans `customWorker.secrets`, valeurs dans Cloudflare Secrets |
+| Valeur                  | Source à l’exécution                                                                                                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ID de compte Cloudflare | `CLOUDFLARE_ACCOUNT_ID_<ACCOUNT_ALIAS>` puis `CLOUDFLARE_ACCOUNT_ID` dans l'environnement du contrôleur sélectionné (Workers Builds en développement, GitHub Actions en production) |
+| Token Cloudflare        | token de build géré par Cloudflare en développement ; `CLOUDFLARE_API_TOKEN` dans le GitHub Environment de production                                                               |
+| Identité projet SDK     | `SUPERBOARD_PROJECT_ID` et `SUPERBOARD_PROJECT_KEY`                                                                                                                                 |
+| Secrets Workers communs | registres de `scripts/cloudflare-services.mjs`, valeurs dans Cloudflare Secrets                                                                                                     |
+| Secrets Custom Worker   | noms dans `customWorker.secrets`, valeurs dans Cloudflare Secrets                                                                                                                   |
 
 Un nom de secret peut être public. Sa valeur ne peut apparaître ni sous
 `customWorker.vars`, ni sous `vars` d’un fichier Wrangler. Les runtime tests

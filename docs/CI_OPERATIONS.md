@@ -157,13 +157,13 @@ FlutterFlow manifest or generated Dart source.
 
 ## Cloudflare deployment
 
-The dedicated deployment workflow reads
-`config/cloudflare-deployments.json`. `dev` currently selects the protected
-`development` GitHub Environment and `main` selects `production`, but a branch
-may select several Environments. Every matrix entry supplies its own target name,
-Cloudflare environment, account ID and least-privilege API token, so the same
-validated Git commit can deploy several applications to different Cloudflare
-accounts without copying or editing the workflow.
+The versioned deployment contract is
+`config/cloudflare-deployments.json`. `dev` selects `mbza-development` and
+declares Cloudflare Workers Builds as its authority; `main` selects
+`vocostar-production` and declares GitHub Actions. The production workflow asks
+the matrix selector only for `github-actions` entries, and is triggered only for
+`main`, so it can neither require a development API token nor duplicate a native
+MBZA deployment.
 The target name is committed in the matrix and must exactly match the
 `SUPERBOARD_TARGET` variable of the selected GitHub Environment. This redundant
 selection is intentional: a mutable Environment variable cannot redirect an
@@ -180,8 +180,8 @@ npm run cloudflare:secrets:check -- \
   --target <target> --environment <environment>
 ```
 
-The workflow is the only automatic deployment authority. It provisions nothing
-implicitly: resource creation remains an explicit bootstrap operation whose
+Each target has exactly one automatic deployment authority. The production
+workflow provisions nothing implicitly: resource creation remains an explicit bootstrap operation whose
 resolved non-secret IDs are reviewed in the target manifest. On deployment it
 applies tracked D1 migrations, deploys every enabled Worker in dependency order,
 and publishes the dashboard last. A production rollout exports every enabled D1

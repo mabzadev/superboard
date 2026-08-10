@@ -21,7 +21,7 @@ export function validateDeploymentConfiguration(configuration) {
     !configuration ||
     typeof configuration !== "object" ||
     Array.isArray(configuration) ||
-    configuration.schemaVersion !== 2 ||
+    configuration.schemaVersion !== 3 ||
     !Array.isArray(configuration.deployments) ||
     configuration.deployments.length === 0
   ) {
@@ -42,6 +42,7 @@ export function validateDeploymentConfiguration(configuration) {
   const safeName = /^[a-z][a-z0-9-]{1,62}$/u;
   const targetName = /^[a-z][a-z0-9-]{1,30}$/u;
   const expectedKeys = [
+    "automaticDeployment",
     "branch",
     "cloudflareEnvironment",
     "githubEnvironment",
@@ -83,6 +84,43 @@ export function validateDeploymentConfiguration(configuration) {
         `${deployment.branch} must deploy only ${expectedEnvironment}`,
       );
     }
+    const authority = deployment.automaticDeployment?.authority;
+    if (
+      !new Set(["cloudflare-workers-builds", "github-actions"]).has(authority)
+    ) {
+      throw new Error("Cloudflare deployment authority is invalid");
+    }
+    if (authority === "cloudflare-workers-builds") {
+      const expectedBuildCommand =
+        "npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check";
+      const expectedDeployCommand =
+        'npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"';
+      const expectedBuildVariables = [
+        "CLOUDFLARE_ACCOUNT_ID",
+        "SUPERBOARD_ENVIRONMENT",
+        "SUPERBOARD_TARGET",
+      ];
+      if (
+        deployment.branch !== "dev" ||
+        deployment.cloudflareEnvironment !== "development" ||
+        deployment.automaticDeployment.controllerService !== "dashboard" ||
+        deployment.automaticDeployment.buildCommand !== expectedBuildCommand ||
+        deployment.automaticDeployment.deployCommand !==
+          expectedDeployCommand ||
+        JSON.stringify(deployment.automaticDeployment.buildVariables) !==
+          JSON.stringify(expectedBuildVariables) ||
+        deployment.automaticDeployment.nonProductionBranchBuilds !== false ||
+        Object.keys(deployment.automaticDeployment).length !== 6
+      ) {
+        throw new Error(
+          "Cloudflare Workers Builds must be the single dashboard-controlled development authority",
+        );
+      }
+    } else if (Object.keys(deployment.automaticDeployment).length !== 1) {
+      throw new Error(
+        "GitHub Actions deployment authority contains unsupported settings",
+      );
+    }
     if (typeof deployment.referenceAcceptance !== "boolean") {
       throw new Error("referenceAcceptance must be boolean");
     }
@@ -93,15 +131,31 @@ export function validateDeploymentConfiguration(configuration) {
   return true;
 }
 
-export function selectDeployments(configuration, branch) {
+export function selectDeployments(configuration, branch, { authority } = {}) {
   if (!new Set(["dev", "main"]).has(branch)) {
     throw new Error("Deployment branch must be dev or main");
   }
-  const deployments = configuration.deployments.filter(
+  if (
+    authority != null &&
+    !new Set(["cloudflare-workers-builds", "github-actions"]).has(authority)
+  ) {
+    throw new Error("Deployment authority is invalid");
+  }
+  const branchDeployments = configuration.deployments.filter(
     (deployment) => deployment.branch === branch,
   );
-  if (deployments.length === 0) {
+  if (branchDeployments.length === 0) {
     throw new Error(`No Cloudflare deployment is declared for ${branch}`);
+  }
+  const deployments = authority
+    ? branchDeployments.filter(
+        (deployment) => deployment.automaticDeployment.authority === authority,
+      )
+    : branchDeployments;
+  if (deployments.length === 0) {
+    throw new Error(
+      `No ${authority} Cloudflare deployment is declared for ${branch}`,
+    );
   }
   const reference = deployments.filter(
     (deployment) => deployment.referenceAcceptance,
@@ -118,6 +172,7 @@ export function selectDeployments(configuration, branch) {
       include: deployments.map((deployment) => ({
         id: deployment.id,
         target: deployment.target,
+        deploymentAuthority: deployment.automaticDeployment.authority,
         githubEnvironment: deployment.githubEnvironment,
         cloudflareEnvironment: deployment.cloudflareEnvironment,
       })),
@@ -162,9 +217,25 @@ export function validateControlPlaneCoverage(configuration, controlPlane) {
         `${deployment.githubEnvironment} SUPERBOARD_TARGET must equal the versioned deployment target ${deployment.target}`,
       );
     }
-    for (const name of ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]) {
-      if (!environment.secrets?.includes(name)) {
-        throw new Error(`${deployment.githubEnvironment} must declare ${name}`);
+    const cloudflareCredentialNames = [
+      "CLOUDFLARE_ACCOUNT_ID",
+      "CLOUDFLARE_API_TOKEN",
+    ];
+    if (deployment.automaticDeployment.authority === "github-actions") {
+      for (const name of cloudflareCredentialNames) {
+        if (!environment.secrets?.includes(name)) {
+          throw new Error(
+            `${deployment.githubEnvironment} must declare ${name}`,
+          );
+        }
+      }
+    } else {
+      for (const name of cloudflareCredentialNames) {
+        if (environment.secrets?.includes(name)) {
+          throw new Error(
+            `${deployment.githubEnvironment} must not declare ${name}; Cloudflare Workers Builds owns development deployment credentials`,
+          );
+        }
       }
     }
     if (
@@ -220,7 +291,9 @@ async function main() {
   );
   validateControlPlaneCoverage(configuration, controlPlane);
   process.stdout.write(
-    `${JSON.stringify(selectDeployments(configuration, branch))}\n`,
+    `${JSON.stringify(
+      selectDeployments(configuration, branch, { authority: args.authority }),
+    )}\n`,
   );
 }
 

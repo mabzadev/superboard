@@ -226,7 +226,7 @@ as a manual prerequisite and cannot apply reviewer, timer or branch/tag rules.
 After the current publication sequence, add the required second trusted human,
 change the reviewed intent to `enforced`, apply the exact confirmed plan with no
 pending jobs, then disable administrator bypass in the GitHub Environment UI.
-In each environment:
+For the production GitHub Actions environment:
 
 - variable `SUPERBOARD_TARGET`: target manifest name; it must equal the `target`
   field of that Environment's versioned deployment-matrix entry or the job
@@ -239,10 +239,6 @@ In each environment:
   read-only Account Analytics token enables advanced runtime summaries. It is
   not required to deploy or run SuperBoard in development, and the deployment
   token is never reused as a runtime secret.
-- development variable `SUPERBOARD_REFERENCE_REPOSITORY`: canonical owner/name of
-  the reference repository;
-- development secret `SUPERBOARD_REFERENCE_DISPATCH_TOKEN`: fine-grained token
-  permitted only to create repository dispatch events in that repository;
 - production secret `SUPERBOARD_BACKUP_ENCRYPTION_KEY`: base64 encoding of 32
   random bytes, retained independently for D1 recovery.
 
@@ -260,12 +256,18 @@ while VocoStar remains the selected production migration target. Other
 applications add one matrix entry, target manifest and GitHub Environment. They
 do not copy the workflow or edit Worker source constants.
 
-`.github/workflows/deploy-cloudflare.yml` is the single automatic deployment
-authority. It starts only after a successful completed `CI` run on `dev` or
-`main`, checks out that exact SHA, resolves every declared Environment for the
-branch, proves that its mutable Environment target equals the reviewed matrix
-target and rejects a superseded automatic revision. Each matrix job is isolated
-by its Environment-scoped account and secrets.
+Cloudflare Workers Builds is the automatic deployment authority for
+`mbza-development` on `dev`. The Dashboard Worker is the sole connected
+controller, non-production branch builds are disabled, Cloudflare manages the
+build token, and the non-secret account ID is supplied in the Cloudflare build
+environment. No `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` is required in
+the platform `development` GitHub Environment.
+
+`.github/workflows/deploy-cloudflare.yml` remains the automatic deployment
+authority for VocoStar production only. It starts after successful `CI` on
+`main`, checks out that exact SHA, selects only `github-actions` matrix entries,
+proves that the mutable Environment target equals the reviewed matrix target
+and rejects a superseded revision.
 It validates the target and common extension services, runs platform
 typechecks/tests, then deploys every enabled Worker in dependency order:
 observability/email/files/identity, domain modules, billing/custom, API and

@@ -857,21 +857,26 @@ test("current offline report is fail-closed and contains actionable blockers", a
     legacySingleBindingMutation: "disabled",
   });
   assert.deepEqual(
-    report.deploymentMatrix.entries.map(({ id, branch, target }) => ({
-      id,
-      branch,
-      target,
-    })),
+    report.deploymentMatrix.entries.map(
+      ({ id, branch, target, deploymentAuthority }) => ({
+        id,
+        branch,
+        target,
+        deploymentAuthority,
+      }),
+    ),
     [
       {
         id: "mbza-development",
         branch: "dev",
         target: "mbza-development",
+        deploymentAuthority: "cloudflare-workers-builds",
       },
       {
         id: "vocostar-production",
         branch: "main",
         target: "vocostar",
+        deploymentAuthority: "github-actions",
       },
     ],
   );

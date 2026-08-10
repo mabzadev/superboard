@@ -148,15 +148,8 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
   const development = plan.repositories.platform.environments.find(
     ({ name }) => name === "development",
   );
-  assert.deepEqual(development.variables, [
-    "SUPERBOARD_REFERENCE_REPOSITORY",
-    "SUPERBOARD_TARGET",
-  ]);
-  assert.deepEqual(development.secrets, [
-    "CLOUDFLARE_ACCOUNT_ID",
-    "CLOUDFLARE_API_TOKEN",
-    "SUPERBOARD_REFERENCE_DISPATCH_TOKEN",
-  ]);
+  assert.deepEqual(development.variables, ["SUPERBOARD_TARGET"]);
+  assert.deepEqual(development.secrets, []);
   const flutterFlowLibrary = plan.repositories.platform.environments.find(
     ({ name }) => name === "flutterflow-library",
   );

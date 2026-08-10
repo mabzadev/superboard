@@ -65,14 +65,9 @@
       "environments": {
         "development": {
           "variables": {
-            "SUPERBOARD_TARGET": "mbza-development",
-            "SUPERBOARD_REFERENCE_REPOSITORY": "mbzadev/superboard-reference"
+            "SUPERBOARD_TARGET": "mbza-development"
           },
-          "secrets": [
-            "CLOUDFLARE_ACCOUNT_ID",
-            "CLOUDFLARE_API_TOKEN",
-            "SUPERBOARD_REFERENCE_DISPATCH_TOKEN"
-          ],
+          "secrets": [],
           "protection": {
             "enforcement": "pending-external",
             "pendingReason": "Activate after the current publication sequence is complete and no development deployment is pending.",

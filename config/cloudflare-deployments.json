@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/cloudflare-deployments.schema.json",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "deployments": [
     {
       "id": "mbza-development",
@@ -8,6 +8,18 @@
       "target": "mbza-development",
       "githubEnvironment": "development",
       "cloudflareEnvironment": "development",
+      "automaticDeployment": {
+        "authority": "cloudflare-workers-builds",
+        "controllerService": "dashboard",
+        "buildCommand": "npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check",
+        "deployCommand": "npm run cloudflare:deploy:all -- --target \"$SUPERBOARD_TARGET\" --environment \"$SUPERBOARD_ENVIRONMENT\"",
+        "buildVariables": [
+          "CLOUDFLARE_ACCOUNT_ID",
+          "SUPERBOARD_ENVIRONMENT",
+          "SUPERBOARD_TARGET"
+        ],
+        "nonProductionBranchBuilds": false
+      },
       "referenceAcceptance": true
     },
     {
@@ -16,6 +28,9 @@
       "target": "vocostar",
       "githubEnvironment": "production",
       "cloudflareEnvironment": "production",
+      "automaticDeployment": {
+        "authority": "github-actions"
+      },
       "referenceAcceptance": false
     }
   ]

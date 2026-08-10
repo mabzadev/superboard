@@ -923,6 +923,7 @@ export async function buildReadiness({
       branch: deployment.branch,
       githubEnvironment: deployment.githubEnvironment,
       cloudflareEnvironment: deployment.cloudflareEnvironment,
+      deploymentAuthority: deployment.automaticDeployment.authority,
       target:
         controlPlane.repositories.platform.environments[
           deployment.githubEnvironment

@@ -76,6 +76,7 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
     {
       id: "mbza-development",
       target: "mbza-development",
+      deploymentAuthority: "cloudflare-workers-builds",
       githubEnvironment: "development",
       cloudflareEnvironment: "development",
     },
@@ -85,6 +86,7 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
     {
       id: "vocostar-production",
       target: "vocostar",
+      deploymentAuthority: "github-actions",
       githubEnvironment: "production",
       cloudflareEnvironment: "production",
     },
@@ -92,6 +94,45 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
   assert.equal(production.referenceEnvironment, "");
   assert.equal(JSON.stringify(configuration).includes("4fec1187"), false);
   assert.equal(JSON.stringify(configuration).includes("8706f1b6"), false);
+});
+
+test("development uses one Cloudflare Workers Builds controller while production remains on GitHub Actions", async () => {
+  const configuration = await loadDeploymentMatrix();
+  const development = configuration.deployments.find(
+    ({ id }) => id === "mbza-development",
+  );
+  const production = configuration.deployments.find(
+    ({ id }) => id === "vocostar-production",
+  );
+
+  assert.deepEqual(development.automaticDeployment, {
+    authority: "cloudflare-workers-builds",
+    controllerService: "dashboard",
+    buildCommand:
+      "npm ci && npm run cloudflare:test:targets && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check",
+    deployCommand:
+      'npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"',
+    buildVariables: [
+      "CLOUDFLARE_ACCOUNT_ID",
+      "SUPERBOARD_ENVIRONMENT",
+      "SUPERBOARD_TARGET",
+    ],
+    nonProductionBranchBuilds: false,
+  });
+  assert.deepEqual(production.automaticDeployment, {
+    authority: "github-actions",
+  });
+  assert.deepEqual(
+    selectDeployments(configuration, "main", {
+      authority: "github-actions",
+    }).matrix.include.map(({ id }) => id),
+    ["vocostar-production"],
+  );
+  assert.throws(
+    () =>
+      selectDeployments(configuration, "dev", { authority: "github-actions" }),
+    /No github-actions Cloudflare deployment/u,
+  );
 });
 
 test("every deployment is backed by a target-selecting GitHub Environment", async () => {
@@ -107,7 +148,7 @@ test("every deployment is backed by a target-selecting GitHub Environment", asyn
 
 test("production environments require deployment and encrypted-backup credentials", () => {
   const configuration = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     deployments: [
       {
         id: "example-production",
@@ -115,6 +156,7 @@ test("production environments require deployment and encrypted-backup credential
         target: "example",
         githubEnvironment: "production-example",
         cloudflareEnvironment: "production",
+        automaticDeployment: { authority: "github-actions" },
         referenceAcceptance: false,
       },
     ],
@@ -139,7 +181,7 @@ test("production environments require deployment and encrypted-backup credential
 
 test("a GitHub Environment cannot redirect a deployment to another target", () => {
   const configuration = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     deployments: [
       {
         id: "example-production",
@@ -147,6 +189,7 @@ test("a GitHub Environment cannot redirect a deployment to another target", () =
         target: "expected-application",
         githubEnvironment: "production-example",
         cloudflareEnvironment: "production",
+        automaticDeployment: { authority: "github-actions" },
         referenceAcceptance: false,
       },
     ],
@@ -178,7 +221,7 @@ test("a branch cannot select two reference acceptance environments", () => {
     () =>
       selectDeployments(
         {
-          schemaVersion: 2,
+          schemaVersion: 3,
           deployments: [
             {
               id: "one",
@@ -186,6 +229,9 @@ test("a branch cannot select two reference acceptance environments", () => {
               target: "one",
               githubEnvironment: "development-one",
               cloudflareEnvironment: "development",
+              automaticDeployment: {
+                authority: "cloudflare-workers-builds",
+              },
               referenceAcceptance: true,
             },
             {
@@ -194,6 +240,9 @@ test("a branch cannot select two reference acceptance environments", () => {
               target: "two",
               githubEnvironment: "development-two",
               cloudflareEnvironment: "development",
+              automaticDeployment: {
+                authority: "cloudflare-workers-builds",
+              },
               referenceAcceptance: true,
             },
           ],
@@ -208,7 +257,7 @@ test("branch and Cloudflare environment cannot cross development and production"
   assert.throws(
     () =>
       validateDeploymentConfiguration({
-        schemaVersion: 2,
+        schemaVersion: 3,
         deployments: [
           {
             id: "unsafe",
@@ -216,6 +265,7 @@ test("branch and Cloudflare environment cannot cross development and production"
             target: "unsafe",
             githubEnvironment: "unsafe-production",
             cloudflareEnvironment: "production",
+            automaticDeployment: { authority: "github-actions" },
             referenceAcceptance: false,
           },
         ],

@@ -96,15 +96,17 @@ test("pull request secret scanning receives only the read-scoped workflow token"
   assert.match(ciWorkflow, /permissions:\n  contents: read/u);
 });
 
-test("Cloudflare deployment is restricted, preflighted and target-driven", () => {
+test("production Cloudflare deployment is restricted, preflighted and target-driven", () => {
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /workflows: \[CI\]/);
   assert.match(workflow, /types: \[completed\]/);
-  assert.match(workflow, /branches: \[dev, main\]/);
+  assert.match(workflow, /branches: \[main\]/);
+  assert.doesNotMatch(workflow, /branches: \[dev, main\]/);
   assert.equal(/\n  push:/u.test(workflow), false);
   assert.match(workflow, /workflow_run\.conclusion == 'success'/);
   assert.match(workflow, /actions: read/);
-  assert.match(workflow, /dev\|main\) ;;/);
+  assert.doesNotMatch(workflow, /dev\|main\) ;;/);
+  assert.match(workflow, /--authority github-actions/);
   assert.match(workflow, /vars\.SUPERBOARD_TARGET/);
   assert.match(
     workflow,
@@ -113,6 +115,10 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
   assert.match(
     workflow,
     /test "\$SUPERBOARD_TARGET" = "\$SUPERBOARD_EXPECTED_TARGET"/,
+  );
+  assert.match(
+    workflow,
+    /test "\$SUPERBOARD_DEPLOYMENT_AUTHORITY" = "github-actions"/,
   );
   assert.match(workflow, /scripts\/github-deployment-matrix\.mjs/);
   assert.match(workflow, /fromJSON\(needs\.plan\.outputs\.matrix\)/);
@@ -258,15 +264,14 @@ test("deployment validation cannot inherit operational Cloudflare context", () =
   }
 });
 
-test("development dispatches the exact deployed revision to the reference repository", () => {
-  assert.match(workflow, /needs\.plan\.outputs\.branch == 'dev'/);
-  assert.match(workflow, /needs\.plan\.outputs\.deploy == 'true'/);
-  assert.match(workflow, /needs\.deploy\.result == 'success'/);
-  assert.match(workflow, /vars\.SUPERBOARD_REFERENCE_REPOSITORY/);
-  assert.match(workflow, /secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN/);
-  assert.match(workflow, /event_type=platform-dev-updated/);
-  assert.match(workflow, /DEPLOY_SHA: \$\{\{ needs\.plan\.outputs\.sha \}\}/);
-  assert.match(workflow, /client_payload\[platform_sha\]=\$DEPLOY_SHA/);
+test("development deployment is absent from GitHub Actions", () => {
+  assert.doesNotMatch(workflow, /trigger-reference-acceptance/u);
+  assert.doesNotMatch(workflow, /event_type=platform-dev-updated/u);
+  assert.doesNotMatch(
+    workflow,
+    /secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN/u,
+  );
+  assert.doesNotMatch(workflow, /environment: development/u);
 });
 
 test("branch protection can require one stable aggregate CI check", () => {
@@ -520,7 +525,10 @@ test("Flutter SDK release gates compile both native wrappers without a named sim
   assert.match(prepareAndroid, /flutter build apk --debug/u);
   assert.match(prepareIos, /runs-on: macos-latest/u);
   assert.match(prepareIos, /pod install --project-directory=ios --deployment/u);
-  assert.match(prepareIos, /pod ipc spec sdks\/flutter\/ios\/superboard_flutter\.podspec/u);
+  assert.match(
+    prepareIos,
+    /pod ipc spec sdks\/flutter\/ios\/superboard_flutter\.podspec/u,
+  );
   assert.match(
     prepareIos,
     /-project sdks\/flutter\/example\/ios\/Pods\/Pods\.xcodeproj/u,
@@ -595,8 +603,14 @@ test("FlutterFlow v3 tag and publication are bound to the published Flutter v3 s
       section,
       /git fetch --no-tags origin "refs\/tags\/\$flutter_tag:refs\/tags\/\$flutter_tag"/u,
     );
-    assert.match(section, /flutter_sha="\$\(git rev-list -n 1 "\$flutter_tag"\)"/u);
-    assert.match(section, new RegExp(`test "\\$flutter_sha" = "\\$${expectedSha}"`, "u"));
+    assert.match(
+      section,
+      /flutter_sha="\$\(git rev-list -n 1 "\$flutter_tag"\)"/u,
+    );
+    assert.match(
+      section,
+      new RegExp(`test "\\$flutter_sha" = "\\$${expectedSha}"`, "u"),
+    );
     assert.match(
       section,
       new RegExp(
