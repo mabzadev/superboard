@@ -48,6 +48,15 @@ create at most three tags per Git push because GitHub does not emit tag events
 for larger batches; the normal preparation workflow creates one reviewed tag at
 a time and is not affected by this platform limit.
 
+The preparation workflow explicitly dispatches the publication workflow after
+creating the tag. GitHub deliberately suppresses ordinary push-triggered
+workflows for refs created with `GITHUB_TOKEN`; `workflow_dispatch` is the
+supported non-recursive exception. Publication checks out the requested tag,
+proves its dereferenced commit belongs to official `dev`, and passes that exact
+tag and SHA to every test, package, release and catalogue-promotion step. A
+catalogue PR created by automation is validated through an explicit CI dispatch
+on its protected promotion branch for the same reason.
+
 Moving the canonical source repository never authorizes reusing a published
 package version for changed bytes. The catalogue keeps the historical release
 reference installable while the changed source is marked `pending-release` with

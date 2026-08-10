@@ -97,6 +97,7 @@ jobs:
     timeout-minutes: 10
     environment: sdk-release
     permissions:
+      actions: write
       contents: write
     env:
       SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
@@ -134,3 +135,7 @@ jobs:
           else
             git push origin "refs/tags/$TAG"
           fi
+      - name: Dispatch publication for the reviewed immutable tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run release-sdk.yml --ref "$DEVELOPMENT_BRANCH" --field "release_tag=$TAG"

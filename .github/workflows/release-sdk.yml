@@ -10,12 +10,18 @@ on:
       - sdk-android-v*
       - sdk-js-v*
       - sdk-react-native-v*
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing immutable SDK tag created by the protected preparation workflow
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: sdk-release-publication-${{ github.ref_name }}
+  group: sdk-release-publication-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -28,14 +34,20 @@ jobs:
       path: ${{ steps.tag.outputs.path }}
       development_branch: ${{ steps.tag.outputs.development_branch }}
       release_ref: ${{ steps.tag.outputs.release_ref }}
+      release_sha: ${{ steps.tag.outputs.release_sha }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
+          persist-credentials: false
       - id: tag
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          tag="${GITHUB_REF_NAME}"
+          tag="$RELEASE_TAG"
           sdk="${tag#sdk-}"
           sdk="${sdk%-v*}"
           version="${tag##*-v}"
@@ -45,14 +57,22 @@ jobs:
           catalog_id="$sdk"
           test "$sdk" != "flutterflow-messaging" || catalog_id="flutterflow-support"
           development_branch="$(node -p 'require("./config/sdk-libraries.json").developmentBranch')"
+          release_sha="$(git rev-parse HEAD)"
+          test "$(git rev-parse "refs/tags/$tag^{}")" = "$release_sha"
+          git fetch --no-tags origin "refs/heads/$development_branch"
+          git merge-base --is-ancestor "$release_sha" FETCH_HEAD
           release_ref="$(node scripts/sdk-catalog.mjs candidate-ref --library "$catalog_id")"
           echo "sdk=$sdk" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "path=$path" >> "$GITHUB_OUTPUT"
           echo "development_branch=$development_branch" >> "$GITHUB_OUTPUT"
           echo "release_ref=$release_ref" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Verify package, catalogue and immutable release version
-        run: node scripts/sdk-catalog.mjs check --candidate-release-tag "$GITHUB_REF_NAME"
+        env:
+          RELEASE_TAG: ${{ steps.tag.outputs.tag }}
+        run: node scripts/sdk-catalog.mjs check --candidate-release-tag "$RELEASE_TAG"
 
   flutter:
     if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow' || needs.validate-tag.outputs.sdk == 'flutterflow-messaging'
@@ -63,6 +83,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate-tag.outputs.tag }}
+          persist-credentials: false
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
@@ -71,6 +94,7 @@ jobs:
         working-directory: sdks/${{ needs.validate-tag.outputs.path }}
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
+          tag_name: ${{ needs.validate-tag.outputs.tag }}
           generate_release_notes: true
           prerelease: ${{ contains(needs.validate-tag.outputs.version, '-') }}
 
@@ -83,11 +107,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate-tag.outputs.tag }}
+          persist-credentials: false
       - name: Build and test the tagged iOS SDK
         run: ./scripts/run_tests.sh
         working-directory: sdks/ios
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
+          tag_name: ${{ needs.validate-tag.outputs.tag }}
           generate_release_notes: true
 
   android:
@@ -100,6 +128,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate-tag.outputs.tag }}
+          persist-credentials: false
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
@@ -113,6 +144,7 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
+          tag_name: ${{ needs.validate-tag.outputs.tag }}
           generate_release_notes: true
 
   npm:
@@ -125,6 +157,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate-tag.outputs.tag }}
+          persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -142,6 +177,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
+          tag_name: ${{ needs.validate-tag.outputs.tag }}
           generate_release_notes: true
 
   release-gate:
@@ -176,15 +212,17 @@ jobs:
     timeout-minutes: 10
     environment: sdk-release
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     env:
       SDK: ${{ needs.validate-tag.outputs.sdk }}
       VERSION: ${{ needs.validate-tag.outputs.version }}
+      TAG: ${{ needs.validate-tag.outputs.tag }}
       DEVELOPMENT_BRANCH: ${{ needs.validate-tag.outputs.development_branch }}
-      RELEASE_SHA: ${{ github.sha }}
+      RELEASE_SHA: ${{ needs.validate-tag.outputs.release_sha }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PROMOTION_BRANCH: automation/catalogue-${{ github.ref_name }}
+      PROMOTION_BRANCH: automation/catalogue-${{ needs.validate-tag.outputs.tag }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -207,7 +245,7 @@ jobs:
             --library "$catalog_id" \
             --version "$VERSION" \
             --write
-          node scripts/sdk-catalog.mjs check --release-tag "$GITHUB_REF_NAME"
+          node scripts/sdk-catalog.mjs check --release-tag "$TAG"
       - name: Propose the published catalogue state through a protected PR
         run: |
           ensure_promotion_pr() {
@@ -224,14 +262,14 @@ jobs:
             gh pr create \
               --base "$DEVELOPMENT_BRANCH" \
               --head "$PROMOTION_BRANCH" \
-              --title "chore(sdk): publish $GITHUB_REF_NAME" \
-              --body "Promotes the successfully tested immutable SDK tag $GITHUB_REF_NAME into the canonical catalogue."
+              --title "chore(sdk): publish $TAG" \
+              --body "Promotes the successfully tested immutable SDK tag $TAG into the canonical catalogue."
           }
           git fetch --no-tags origin \
             "refs/heads/$DEVELOPMENT_BRANCH:refs/remotes/origin/$DEVELOPMENT_BRANCH"
           if git diff --quiet -- config/sdk-libraries.json; then
             if git merge-base --is-ancestor HEAD "origin/$DEVELOPMENT_BRANCH"; then
-              echo "The development branch already records $GITHUB_REF_NAME."
+              echo "The development branch already records $TAG."
               exit 0
             fi
             ensure_promotion_pr
@@ -240,6 +278,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add config/sdk-libraries.json
-          git commit -m "chore(sdk): publish $GITHUB_REF_NAME"
+          git commit -m "chore(sdk): publish $TAG"
           git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
           ensure_promotion_pr
+      - name: Trigger validation for the protected promotion branch
+        run: |
+          if git ls-remote --exit-code --heads origin "refs/heads/$PROMOTION_BRANCH" >/dev/null 2>&1; then
+            gh workflow run ci.yml --ref "$PROMOTION_BRANCH"
+          else
+            echo "No catalogue promotion branch is required for $TAG."
+          fi

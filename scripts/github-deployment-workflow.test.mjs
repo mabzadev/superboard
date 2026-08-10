@@ -228,11 +228,25 @@ test("production routing cannot bypass client convergence through workflow dispa
 
 test("immutable SDK publication revalidates native and React Native packages", () => {
   assert.match(releaseWorkflow, /^name: Release OpenGrow SDK$/m);
+  assert.match(releaseWorkflow, /workflow_dispatch:[\s\S]*?release_tag:/);
   assert.match(
     releaseWorkflow,
-    /group: sdk-release-publication-\$\{\{ github\.ref_name \}\}/,
+    /group: sdk-release-publication-\$\{\{ inputs\.release_tag \|\| github\.ref_name \}\}/,
   );
   assert.doesNotMatch(releaseWorkflow, /group: sdk-release-publication\s*$/m);
+  assert.match(
+    releaseWorkflow,
+    /ref: \$\{\{ inputs\.release_tag \|\| github\.ref \}\}/,
+  );
+  assert.match(
+    releaseWorkflow,
+    /git merge-base --is-ancestor "\$release_sha" FETCH_HEAD/,
+  );
+  assert.equal(
+    (releaseWorkflow.match(/tag_name: \$\{\{ needs\.validate-tag\.outputs\.tag \}\}/gu) || [])
+      .length,
+    4,
+  );
   assert.match(releaseWorkflow, /Build and test the tagged iOS SDK/);
   assert.match(releaseWorkflow, /\.\/scripts\/run_tests\.sh/);
   assert.match(
@@ -263,7 +277,19 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(prepareReleaseWorkflow, /permissions:\n  contents: read/);
   assert.match(
     prepareReleaseWorkflow,
-    /tag:[\s\S]*?permissions:\n      contents: write/,
+    /tag:[\s\S]*?permissions:\n      actions: write\n      contents: write/,
+  );
+  assert.match(
+    prepareReleaseWorkflow,
+    /gh workflow run release-sdk\.yml --ref "\$DEVELOPMENT_BRANCH" --field "release_tag=\$TAG"/,
+  );
+  assert.match(
+    releaseWorkflow,
+    /propose-catalogue:[\s\S]*?permissions:\n      actions: write\n      contents: write\n      pull-requests: write/,
+  );
+  assert.match(
+    releaseWorkflow,
+    /gh workflow run ci\.yml --ref "\$PROMOTION_BRANCH"/,
   );
   assert.match(prepareReleaseWorkflow, /needs: validate/);
   assert.match(
@@ -275,10 +301,6 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(releaseWorkflow, /name: SDK release gate/);
   assert.match(releaseWorkflow, /sdk-catalog\.mjs promote/);
   assert.match(releaseWorkflow, /permissions:\n  contents: read/);
-  assert.match(
-    releaseWorkflow,
-    /propose-catalogue:[\s\S]*?permissions:\n      contents: write\n      pull-requests: write/,
-  );
   assert.match(releaseWorkflow, /pull-requests: write/);
   assert.match(releaseWorkflow, /gh pr create/);
   assert.match(releaseWorkflow, /gh pr reopen/);
