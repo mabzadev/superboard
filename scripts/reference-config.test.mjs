@@ -10,6 +10,14 @@ import {
   buildReferenceCiMetadata,
   githubRepositorySlug,
 } from "./reference-ci-metadata.mjs";
+import {
+  assertCoordinatedReferenceConfig,
+  assertDevelopmentDartDefineContract,
+  assertReferenceEndpointContract,
+  developmentDartDefineContract,
+  developmentDartDefineKeys,
+  referenceEndpointContract,
+} from "./reference-config-contract.mjs";
 import { buildFlutterDefines } from "./reference-flutter-build.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -74,16 +82,48 @@ test("reference project matches its strict versioned schema", () => {
   assert.equal(validate(project), true, JSON.stringify(validate.errors));
 });
 
-test("development endpoints are complete and short links use in.mbza.dev", () => {
+test("the project schema pins every MBZA endpoint to its exact public URL", () => {
+  assert.equal(project.schemaVersion, 3);
   assert.equal(project.target, "mbza-development");
-  assert.equal(project.endpoints.referenceWeb, "https://reference.mbza.dev");
-  assert.equal(project.endpoints.api, "https://api.mbza.dev");
-  assert.equal(project.endpoints.shortLinks, "https://in.mbza.dev");
-  assert.equal(project.endpoints.mailPreview, "https://mail.mbza.dev");
-  assert.notEqual(project.endpoints.api, project.endpoints.shortLinks);
+  assert.deepEqual(project.endpoints, referenceEndpointContract);
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(projectSchema.properties.endpoints.properties).map(
+        ([key, value]) => [key, value.const],
+      ),
+    ),
+    referenceEndpointContract,
+  );
+  assertReferenceEndpointContract(project.endpoints);
+});
+
+test("endpoint contracts reject HTTP, credentials, query, fragment and paths", () => {
+  const unsafeEndpoints = [
+    ["referenceWeb", "http://reference.mbza.dev"],
+    ["dashboard", "https://operator:secret@grow.mbza.dev"],
+    ["api", "https://api.mbza.dev?debug=true"],
+    ["sdk", "https://sdk.mbza.dev#unreviewed"],
+    ["shortLinks", "https://in.mbza.dev/redirect"],
+    ["files", "https://files.mbza.dev/upload"],
+    ["mailPreview", "https://mail.mbza.dev/inbox"],
+    ["support", "https://api.mbza.dev"],
+    ["support", "https://api.mbza.dev/api/v1/support-admin"],
+    ["support", "https://api.mbza.dev/api/v1/support-client?debug=true"],
+  ];
+  for (const [key, value] of unsafeEndpoints) {
+    const drifted = structuredClone(project);
+    drifted.endpoints[key] = value;
+    const validate = new Ajv({ allErrors: true }).compile(projectSchema);
+    assert.equal(validate(drifted), false, `${key} accepted ${value}`);
+    assert.throws(
+      () => assertReferenceEndpointContract(drifted.endpoints),
+      new RegExp(`endpoints\\.${key} must be`, "u"),
+    );
+  }
 });
 
 test("every runtime endpoint is derived from the same reference project manifest", () => {
+  assertCoordinatedReferenceConfig(project, development);
   assert.deepEqual(
     {
       api: development.OPENGROW_API_URL,
@@ -101,6 +141,31 @@ test("every runtime endpoint is derived from the same reference project manifest
       files: project.endpoints.files,
       mailPreview: project.endpoints.mailPreview,
     },
+  );
+});
+
+test("coordinated project and development drift still fails closed", () => {
+  const driftedProject = structuredClone(project);
+  const driftedDevelopment = structuredClone(development);
+  driftedProject.endpoints.api = "https://api-next.mbza.dev";
+  driftedProject.endpoints.support =
+    "https://api-next.mbza.dev/api/v1/support-client";
+  driftedDevelopment.OPENGROW_API_URL = driftedProject.endpoints.api;
+  driftedDevelopment.OPENGROW_SUPPORT_URL = driftedProject.endpoints.support;
+
+  assert.equal(
+    driftedDevelopment.OPENGROW_API_URL,
+    driftedProject.endpoints.api,
+  );
+  assert.equal(
+    driftedDevelopment.OPENGROW_SUPPORT_URL,
+    driftedProject.endpoints.support,
+  );
+  const validate = new Ajv({ allErrors: true }).compile(projectSchema);
+  assert.equal(validate(driftedProject), false);
+  assert.throws(
+    () => assertCoordinatedReferenceConfig(driftedProject, driftedDevelopment),
+    /endpoints\.api must be "https:\/\/api\.mbza\.dev"/u,
   );
 });
 
@@ -166,6 +231,12 @@ test("libraries come from opengrow-platform and custom code is not copied", asyn
 });
 
 test("the executable development profile has public endpoints but no credential", () => {
+  assert.deepEqual(development, developmentDartDefineContract);
+  assert.deepEqual(
+    Object.keys(development).sort(),
+    [...developmentDartDefineKeys].sort(),
+  );
+  assertDevelopmentDartDefineContract(development);
   assert.equal(development.OPENGROW_SHORT_LINKS_URL, "https://in.mbza.dev");
   assert.equal(
     development.OPENGROW_SUPPORT_URL,
@@ -192,17 +263,61 @@ test("the executable development profile has public endpoints but no credential"
   );
 });
 
+test("development Dart defines use a strict, complete key allowlist", () => {
+  for (const key of developmentDartDefineKeys) {
+    const incomplete = structuredClone(development);
+    delete incomplete[key];
+    assert.throws(
+      () => assertDevelopmentDartDefineContract(incomplete),
+      new RegExp(`missing: ${key}`, "u"),
+    );
+  }
+
+  assert.throws(
+    () =>
+      assertDevelopmentDartDefineContract({
+        ...development,
+        OPENGROW_API_TOKEN: "must-never-be-a-Dart-define",
+      }),
+    /unexpected: OPENGROW_API_TOKEN/u,
+  );
+  assert.throws(
+    () =>
+      assertDevelopmentDartDefineContract({
+        ...development,
+        OPENGROW_PROJECT_ID: 0,
+      }),
+    /OPENGROW_PROJECT_ID must be a string/u,
+  );
+  assert.throws(
+    () =>
+      assertDevelopmentDartDefineContract({
+        ...development,
+        OPENGROW_FILES_URL: "https://files.mbza.dev/private",
+      }),
+    /OPENGROW_FILES_URL must be "https:\/\/files\.mbza\.dev"/u,
+  );
+});
+
 test("live Flutter builds require project identity and exact tested revisions", () => {
   const environment = {
     OPENGROW_PROJECT_KEY: "reference-public-sdk-key",
     OPENGROW_PROJECT_ID: "42",
     OPENGROW_PLATFORM_REVISION: "a".repeat(40),
     OPENGROW_REFERENCE_REVISION: "b".repeat(40),
+    OPENGROW_API_URL: "https://attacker.example",
+    OPENGROW_UNREVIEWED_DEFINE: "must-not-ship",
   };
   const defines = buildFlutterDefines(development, environment, { live: true });
+  assert.deepEqual(
+    Object.keys(defines).sort(),
+    [...developmentDartDefineKeys].sort(),
+  );
   assert.equal(defines.OPENGROW_LIVE_MODE, "true");
   assert.equal(defines.OPENGROW_PROJECT_KEY, environment.OPENGROW_PROJECT_KEY);
   assert.equal(defines.OPENGROW_PROJECT_ID, "42");
+  assert.equal(defines.OPENGROW_API_URL, referenceEndpointContract.api);
+  assert.equal(defines.OPENGROW_UNREVIEWED_DEFINE, undefined);
   assert.equal(
     defines.OPENGROW_PLATFORM_REVISION,
     environment.OPENGROW_PLATFORM_REVISION,
@@ -228,7 +343,7 @@ test("live Flutter builds require project identity and exact tested revisions", 
 
 test("demo Flutter builds discard credentials and mark unproven revisions local", () => {
   const defines = buildFlutterDefines(
-    { ...development, OPENGROW_PROJECT_KEY: "must-not-ship" },
+    development,
     { OPENGROW_PROJECT_KEY: "also-must-not-ship" },
   );
   assert.equal(defines.OPENGROW_LIVE_MODE, "false");
@@ -236,6 +351,18 @@ test("demo Flutter builds discard credentials and mark unproven revisions local"
   assert.equal(defines.OPENGROW_PROJECT_ID, "0");
   assert.equal(defines.OPENGROW_PLATFORM_REVISION, "local");
   assert.equal(defines.OPENGROW_REFERENCE_REVISION, "local");
+  assert.deepEqual(
+    Object.keys(defines).sort(),
+    [...developmentDartDefineKeys].sort(),
+  );
+  assert.throws(
+    () =>
+      buildFlutterDefines({
+        ...development,
+        OPENGROW_PROJECT_KEY: "must-not-ship",
+      }),
+    /OPENGROW_PROJECT_KEY must be ""/u,
+  );
 });
 
 test("reference deployment is restricted to the development branch and custom domain", () => {
@@ -292,7 +419,7 @@ test("reference deployment rejects a branch or hostname that escapes the manifes
           referenceWeb: "https://elsewhere.example/path",
         },
       }),
-    /HTTPS origin/,
+    /endpoints\.referenceWeb must be "https:\/\/reference\.mbza\.dev"/u,
   );
 });
 
@@ -309,6 +436,10 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   );
   assert.doesNotMatch(workflow, /gh pr (?:merge|review)/);
   assert.match(workflow, /name: Secret scan/);
+  assert.match(
+    workflow,
+    /name: Validate exact MBZA endpoints and the Dart-define allowlist/,
+  );
   assert.match(workflow, /gitleaks\/gitleaks-action@[0-9a-f]{40}/);
   assert.match(
     workflow,

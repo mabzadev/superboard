@@ -72,9 +72,9 @@ class ReferenceConfig {
     }
     if (target.trim().isEmpty) errors.add('OPENGROW_TARGET is required.');
     for (final entry in endpoints.entries) {
-      final uri = Uri.tryParse(entry.value);
-      if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
-        errors.add('${entry.key} must be an absolute HTTPS URL.');
+      final expected = _endpointContract[entry.key];
+      if (entry.value != expected) {
+        errors.add('${entry.key} must be $expected.');
       }
     }
     if (liveMode && projectKey.trim().isEmpty) {
@@ -129,6 +129,15 @@ class ReferenceConfig {
 }
 
 final _gitRevision = RegExp(r'^[0-9a-f]{40}$');
+
+const _endpointContract = <String, String>{
+  'API': 'https://api.mbza.dev',
+  'SDK': 'https://sdk.mbza.dev',
+  'Support': 'https://api.mbza.dev/api/v1/support-client',
+  'Short links': 'https://in.mbza.dev',
+  'Files': 'https://files.mbza.dev',
+  'Mail preview': 'https://mail.mbza.dev',
+};
 
 String _shortRevision(String value) =>
     _gitRevision.hasMatch(value) ? value.substring(0, 12) : value;

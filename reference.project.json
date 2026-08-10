@@ -1,6 +1,6 @@
 {
   "$schema": "schemas/reference-project.schema.json",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "OpenGrow Reference",
   "platformRepository": "https://github.com/mbzadev/opengrow-platform",
   "referenceRepository": "https://github.com/mbzadev/opengrow-reference",

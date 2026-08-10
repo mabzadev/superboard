@@ -3,6 +3,7 @@ import { access, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import Ajv from "ajv";
+import { assertReferenceEndpointContract } from "./reference-config-contract.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(root, "reference.project.json");
@@ -33,6 +34,7 @@ function requireHttpsOrigin(value, field) {
 }
 
 export function buildReferenceWorkerConfig(project, { includeRoutes = true } = {}) {
+  assertReferenceEndpointContract(project?.endpoints);
   if (project?.environment !== "development" || project?.target !== "mbza-development") {
     throw new Error("The reference deployment must target mbza-development.");
   }

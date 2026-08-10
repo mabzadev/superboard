@@ -193,7 +193,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run config:test
+      - name: Validate exact MBZA endpoints and the Dart-define allowlist
+        run: npm run config:test
       - name: Resolve validated project-owned CI metadata
         id: metadata
         run: node scripts/reference-ci-metadata.mjs >> "$GITHUB_OUTPUT"

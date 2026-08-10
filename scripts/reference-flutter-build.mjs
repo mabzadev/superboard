@@ -2,6 +2,10 @@ import { spawnSync } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  assertCoordinatedReferenceConfig,
+  assertDevelopmentDartDefineContract,
+} from "./reference-config-contract.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const revisionPattern = /^[0-9a-f]{40}$/;
@@ -11,9 +15,7 @@ export function buildFlutterDefines(
   environment = {},
   { live = false } = {},
 ) {
-  if (!base || typeof base !== "object" || Array.isArray(base)) {
-    throw new Error("The reference Flutter configuration must be an object.");
-  }
+  assertDevelopmentDartDefineContract(base);
   const defines = Object.fromEntries(
     Object.entries(base).map(([name, value]) => [name, String(value ?? "")]),
   );
@@ -79,9 +81,13 @@ async function run() {
     throw new Error("Usage: node scripts/reference-flutter-build.mjs [--live]");
   }
   const live = arguments_.includes("--live");
-  const base = JSON.parse(
-    await readFile(path.join(root, "config", "development.json"), "utf8"),
-  );
+  const [baseSource, projectSource] = await Promise.all([
+    readFile(path.join(root, "config", "development.json"), "utf8"),
+    readFile(path.join(root, "reference.project.json"), "utf8"),
+  ]);
+  const base = JSON.parse(baseSource);
+  const project = JSON.parse(projectSource);
+  assertCoordinatedReferenceConfig(project, base);
   const defines = buildFlutterDefines(base, process.env, { live });
   const temporaryDirectory = path.join(root, ".dart_tool");
   const temporaryPath = path.join(

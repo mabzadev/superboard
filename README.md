@@ -61,6 +61,15 @@ registered in the OpenGrow back office. Server secrets and user tokens never
 belong in this file. GitHub CI checks out the public platform repository without
 a repository read token.
 
+The MBZA development endpoint contract is closed: `reference.mbza.dev`,
+`grow.mbza.dev`, `api.mbza.dev`, `sdk.mbza.dev`, `in.mbza.dev`,
+`files.mbza.dev`, `mail.mbza.dev`, and the single Support path
+`api.mbza.dev/api/v1/support-client`. The project schema, build tooling and
+runtime validation reject HTTP, embedded URL credentials, query strings,
+fragments and every other path. `config/development.json` is also a strict
+allowlist of reviewed Dart defines; adding a key or changing an endpoint fails
+CI even if `reference.project.json` is changed at the same time.
+
 Reference CI follows the same promotion boundary as the platform: pushes and
 pull requests targeting `dev` validate against `opengrow-platform/dev`; `main`
 validates against an exact `opengrow-platform` revision. The checked-in Git
