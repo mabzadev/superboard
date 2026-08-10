@@ -204,6 +204,9 @@ jobs:
       - name: Enable Corepack for React Native
         if: needs.plan.outputs.react_native == 'true'
         run: corepack enable
+      - name: Install repository tooling for the React Native contract
+        if: needs.plan.outputs.react_native == 'true'
+        run: npm ci --ignore-scripts
       - name: Validate React Native native dependency contract
         if: needs.plan.outputs.react_native == 'true'
         run: npm run react-native:native-contract:check

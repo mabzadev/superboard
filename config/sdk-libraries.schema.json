@@ -21,6 +21,23 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": { "releaseStatus": { "const": "released" } },
+              "required": ["releaseStatus"]
+            },
+            "then": {
+              "properties": {
+                "releaseSha": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$"
+                }
+              },
+              "required": ["releaseSha"]
+            }
+          }
+        ],
         "required": [
           "id",
           "displayName",
@@ -56,6 +73,10 @@
           },
           "releaseRef": { "type": "string", "minLength": 1 },
           "releaseStatus": { "enum": ["released", "pending-release"] },
+          "releaseSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
           "surfaceManifest": { "type": "string" },
           "notes": { "type": "string" },
           "install": { "type": "string", "minLength": 1 },

@@ -196,6 +196,10 @@ test("branch protection can require one stable aggregate CI check", () => {
 test("CI validates every maintained SDK family and the Chatwoot migration path", () => {
   assert.match(ciWorkflow, /node_sdks:/);
   assert.match(ciWorkflow, /npm ci && npm test && npm run build/);
+  assert.match(
+    ciWorkflow,
+    /Install repository tooling for the React Native contract[\s\S]*npm ci --ignore-scripts[\s\S]*npm run react-native:native-contract:check/,
+  );
   assert.match(ciWorkflow, /npm run react-native:native-contract:check/);
   assert.match(
     ciWorkflow,
@@ -244,8 +248,11 @@ test("immutable SDK publication revalidates native and React Native packages", (
     /git merge-base --is-ancestor "\$release_sha" FETCH_HEAD/,
   );
   assert.equal(
-    (releaseWorkflow.match(/tag_name: \$\{\{ needs\.validate-tag\.outputs\.tag \}\}/gu) || [])
-      .length,
+    (
+      releaseWorkflow.match(
+        /tag_name: \$\{\{ needs\.validate-tag\.outputs\.tag \}\}/gu,
+      ) || []
+    ).length,
     4,
   );
   assert.match(releaseWorkflow, /Build and test the tagged iOS SDK/);
@@ -255,6 +262,10 @@ test("immutable SDK publication revalidates native and React Native packages", (
     /yarn typecheck && yarn test --runInBand && yarn prepare/,
   );
   assert.match(releaseWorkflow, /npm ci && npm test && npm run build/);
+  assert.match(
+    releaseWorkflow,
+    /Install repository tooling for the React Native contract[\s\S]*npm ci --ignore-scripts[\s\S]*npm run react-native:native-contract:check/,
+  );
   assert.match(releaseWorkflow, /npm run react-native:native-contract:check/);
   assert.equal(
     (releaseWorkflow.match(/test "\$[A-Z_a-z]+" != "js" \|\| catalog_id="javascript"/gu) ?? [])
@@ -270,7 +281,15 @@ test("immutable SDK publication revalidates native and React Native packages", (
   assert.match(androidBuild, /name = "GithubPackages"/);
   assert.doesNotMatch(androidBuild, /GithubPackagesPrivate/);
   assert.doesNotMatch(flutterPodspec, /Private Flutter SDK/);
-  assert.match(releaseWorkflow, /sdk-catalog\.mjs check --release-tag/);
+  assert.match(
+    releaseWorkflow,
+    /sdk-catalog\.mjs check[\s\S]*?--release-tag "\$TAG"/,
+  );
+  assert.match(
+    releaseWorkflow,
+    /sdk-catalog\.mjs promote[\s\S]*?--sha "\$RELEASE_SHA"[\s\S]*?--write/,
+  );
+  assert.match(releaseWorkflow, /--release-sha "\$RELEASE_SHA"/);
   assert.match(
     releaseWorkflow,
     /propose-catalogue:[\s\S]*?if: \$\{\{ always\(\) && needs\.validate-tag\.result == 'success' && needs\.release-gate\.result == 'success' \}\}/,

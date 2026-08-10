@@ -10,6 +10,8 @@ import {
   validateSdkCatalog,
 } from "./sdk-catalog.mjs";
 
+const candidateSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
 function stageAndroidCoordinateMigration(catalog) {
   const android = catalog.libraries.find((item) => item.id === "android");
   Object.assign(android, {
@@ -58,16 +60,29 @@ test("SDK catalogue matches every package source and FlutterFlow public symbol",
   assert.equal(result.libraries, 7);
   assert.equal(catalog.schemaVersion, 2);
   assert.ok(catalog.libraries.every((library) => library.license === "MIT"));
+  assert.deepEqual(
+    Object.fromEntries(
+      catalog.libraries
+        .filter((library) => library.releaseStatus === "released")
+        .map((library) => [library.id, library.releaseSha]),
+    ),
+    {
+      flutter: "d4416b9f71477acaf0e8684b0dd80fb28df9d79e",
+      flutterflow: "e896f8ea91a140419471b02301f0bde48d8d6b13",
+      "flutterflow-support": "e896f8ea91a140419471b02301f0bde48d8d6b13",
+      ios: "809a6a9b5c7a639fe9283ad35f2554a487745b0f",
+      android: "e01acba82e4de94a98a36bf63992c1f1f137dd31",
+      javascript: "fbb6e325eff514e6e8566fa5af8602f14f4cdbd6",
+      "react-native": "8f5bcee1a14a1e454d43da391295e9c12d806f30",
+    },
+  );
   assert.equal(releaseTagFor(catalog, "flutter"), "sdk-flutter-v2.1.3");
   assert.equal(releaseCandidateRefFor(catalog, "ios"), "1.0.2");
   assert.equal(
     releaseCandidateTagFor(catalog, "android"),
     "sdk-android-v1.0.2",
   );
-  assert.equal(
-    releaseCandidateTagFor(catalog, "javascript"),
-    "sdk-js-v1.0.1",
-  );
+  assert.equal(releaseCandidateTagFor(catalog, "javascript"), "sdk-js-v1.0.1");
   assert.equal(
     releaseCandidateTagFor(catalog, "react-native"),
     "sdk-react-native-v1.0.1",
@@ -122,7 +137,15 @@ test("release validation rejects source drift and an unpublished source version"
 
 test("an SDK promotion atomically derives released metadata and install refs", async () => {
   const catalog = await loadSdkCatalog();
-  const promoted = promoteSdkRelease(catalog, "flutterflow", "2.2.4");
+  const releaseSha = catalog.libraries.find(
+    (item) => item.id === "flutterflow",
+  ).releaseSha;
+  const promoted = promoteSdkRelease(
+    catalog,
+    "flutterflow",
+    "2.2.4",
+    releaseSha,
+  );
   const library = promoted.libraries.find((item) => item.id === "flutterflow");
 
   assert.equal(library.latestReleaseVersion, "2.2.4");
@@ -133,22 +156,30 @@ test("an SDK promotion atomically derives released metadata and install refs", a
     (
       await validateSdkCatalog(promoted, {
         releaseTag: "sdk-flutterflow-v2.2.4",
+        releaseSha,
       })
     ).ok,
     true,
   );
   assert.equal(
-    promoteSdkRelease(promoted, "flutterflow", "2.2.4").libraries.find(
-      (item) => item.id === "flutterflow",
-    ).releaseStatus,
+    promoteSdkRelease(
+      promoted,
+      "flutterflow",
+      "2.2.4",
+      releaseSha,
+    ).libraries.find((item) => item.id === "flutterflow").releaseStatus,
     "released",
+  );
+  assert.throws(
+    () => promoteSdkRelease(promoted, "flutterflow", "2.2.4", candidateSha),
+    /already published from/u,
   );
 });
 
 test("an SDK promotion atomically migrates a collision-free package coordinate", async () => {
   const catalog = await loadSdkCatalog();
   stageAndroidCoordinateMigration(catalog);
-  const promoted = promoteSdkRelease(catalog, "android", "1.0.2");
+  const promoted = promoteSdkRelease(catalog, "android", "1.0.2", candidateSha);
   const library = promoted.libraries.find((item) => item.id === "android");
 
   assert.equal(library.packageName, "io.opengrow:opengrow-android-sdk");
@@ -159,12 +190,14 @@ test("an SDK promotion atomically migrates a collision-free package coordinate",
   assert.equal(library.latestReleaseVersion, "1.0.2");
   assert.equal(library.releaseRef, "sdk-android-v1.0.2");
   assert.equal(library.releaseStatus, "released");
+  assert.equal(library.releaseSha, candidateSha);
   assert.equal(Object.hasOwn(library, "candidatePackageName"), false);
   assert.equal(Object.hasOwn(library, "candidateInstall"), false);
   assert.equal(
     (
       await validateSdkCatalog(promoted, {
         releaseTag: "sdk-android-v1.0.2",
+        releaseSha: candidateSha,
       })
     ).ok,
     true,
@@ -208,7 +241,7 @@ test("npm promotions atomically migrate collision-free package names", async () 
   ]) {
     const catalog = await loadSdkCatalog();
     stageNpmCoordinateMigration(catalog, id);
-    const promoted = promoteSdkRelease(catalog, id, "1.0.1");
+    const promoted = promoteSdkRelease(catalog, id, "1.0.1", candidateSha);
     const library = promoted.libraries.find((item) => item.id === id);
 
     assert.equal(library.packageName, packageName);
@@ -216,6 +249,7 @@ test("npm promotions atomically migrate collision-free package names", async () 
     assert.equal(library.latestReleaseVersion, "1.0.1");
     assert.equal(library.releaseRef, tag);
     assert.equal(library.releaseStatus, "released");
+    assert.equal(library.releaseSha, candidateSha);
     assert.equal(Object.hasOwn(library, "candidatePackageName"), false);
     assert.equal(Object.hasOwn(library, "candidateInstall"), false);
   }
@@ -225,8 +259,7 @@ test("npm catalogue validation binds the candidate to package.json name", async 
   const catalog = await loadSdkCatalog();
   const javascript = stageNpmCoordinateMigration(catalog, "javascript");
   javascript.candidatePackageName = "@mbzadev/unrelated-package";
-  javascript.candidateInstall =
-    "npm install @mbzadev/unrelated-package@1.0.1";
+  javascript.candidateInstall = "npm install @mbzadev/unrelated-package@1.0.1";
 
   const result = await validateSdkCatalog(catalog);
   assert.ok(
@@ -276,5 +309,66 @@ test("SDK catalogue rejects a missing or non-MIT package licence", async () => {
   );
   assert.ok(
     result.errors.includes("libraries.flutterflow.licensePath does not exist"),
+  );
+});
+
+test("released SDKs require exact immutable commit identities", async () => {
+  const catalog = await loadSdkCatalog();
+  const schemaDrift = structuredClone(catalog);
+  schemaDrift.unexpected = true;
+  let result = await validateSdkCatalog(schemaDrift);
+  assert.ok(
+    result.errors.some((error) => error.includes("additional properties")),
+  );
+
+  const missing = structuredClone(catalog);
+  delete missing.libraries.find((library) => library.id === "flutter")
+    .releaseSha;
+  result = await validateSdkCatalog(missing);
+  assert.ok(
+    result.errors.includes(
+      "libraries.flutter.releaseSha must identify the released commit",
+    ),
+  );
+
+  const invalid = structuredClone(catalog);
+  invalid.libraries.find((library) => library.id === "ios").releaseSha = "ABC";
+  result = await validateSdkCatalog(invalid);
+  assert.ok(
+    result.errors.includes(
+      "libraries.ios.releaseSha must identify the released commit",
+    ),
+  );
+
+  result = await validateSdkCatalog(catalog, {
+    releaseTag: "sdk-ios-v1.0.2",
+    releaseSha: candidateSha,
+  });
+  assert.ok(result.errors.some((error) => error.includes("catalogue records")));
+  assert.throws(
+    () => promoteSdkRelease(catalog, "javascript", "1.0.1"),
+    /Invalid SDK release SHA/u,
+  );
+});
+
+test("catalogue candidate validation blocks a burned immutable version", async () => {
+  const catalog = await loadSdkCatalog();
+  const ios = catalog.libraries.find((library) => library.id === "ios");
+  Object.assign(ios, {
+    sourceVersion: "1.0.1",
+    latestReleaseVersion: "1.0.0",
+    releaseRef: "1.0.0",
+    releaseStatus: "pending-release",
+    install:
+      '.package(url: "https://github.com/mbzadev/opengrow-platform.git", exact: "1.0.0")',
+  });
+  delete ios.releaseSha;
+  const result = await validateSdkCatalog(catalog, {
+    releaseCandidateTag: "sdk-ios-v1.0.1",
+  });
+  assert.ok(
+    result.errors.some((error) =>
+      error.includes("bump the SDK version before publishing"),
+    ),
   );
 });

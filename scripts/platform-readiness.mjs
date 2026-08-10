@@ -28,6 +28,10 @@ import { buildFlutterFlowMigrationPlan } from "./flutterflow-migration-plan.mjs"
 import { validateFlutterFlowLibraryContract } from "./flutterflow-library-contract.mjs";
 import { validateFlutterFlowApplicationWorkspaces } from "./flutterflow-application-dsl.mjs";
 import { releaseCandidateTagFor, releaseTagFor } from "./sdk-catalog.mjs";
+import {
+  canonicalReleaseTag,
+  immutableFailureFor,
+} from "./sdk-release-history.mjs";
 
 const uuidPattern =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu;
@@ -125,45 +129,233 @@ export function inspectSdkRemoteState(
   catalogue,
   repository,
   run = runGitHubRead,
+  releaseHistory = { immutableFailures: [] },
 ) {
   const publications = (catalogue.libraries || []).map((library) => {
     const pending = library.releaseStatus !== "released";
     const tag = pending
       ? releaseCandidateTagFor(catalogue, library.id)
       : releaseTagFor(catalogue, library.id);
-    const tagExists = run([
-      "api",
-      `repos/${repository}/git/ref/tags/${encodeURIComponent(tag)}`,
-    ]).ok;
-    const releaseExists = run([
-      "api",
-      `repos/${repository}/releases/tags/${encodeURIComponent(tag)}`,
-    ]).ok;
-    const packageRefExists =
-      pending || library.releaseRef === tag
-        ? tagExists
-        : run([
-            "api",
-            `repos/${repository}/git/ref/tags/${encodeURIComponent(library.releaseRef)}`,
-          ]).ok;
+    const packageRef = pending
+      ? library.id === "ios"
+        ? library.sourceVersion
+        : tag
+      : library.releaseRef;
+    const tagState = inspectGitHubTag(repository, tag, run);
+    const packageRefState =
+      packageRef === tag
+        ? tagState
+        : inspectGitHubTag(repository, packageRef, run);
+    const releaseExists = githubReleaseExists(repository, tag, run);
+    const failedCandidate = pending
+      ? immutableFailureFor(releaseHistory, library.id, library.sourceVersion)
+      : null;
+    const candidateReady = pending
+      ? failedCandidate === null &&
+        !tagState.exists &&
+        !packageRefState.exists &&
+        !releaseExists
+      : null;
+    const baseline = pending
+      ? inspectPublishedBaseline(library, repository, run)
+      : null;
+    const blockers = [];
+    if (pending) {
+      if (failedCandidate) blockers.push("failed-immutable-version");
+      else {
+        if (tagState.exists) blockers.push("candidate-tag-exists");
+        if (packageRefState.exists && packageRef !== tag)
+          blockers.push("candidate-package-ref-exists");
+        if (releaseExists) blockers.push("candidate-release-exists");
+      }
+      blockers.push(...baseline.blockers);
+    } else {
+      if (!tagState.exists) blockers.push("release-tag-missing");
+      else if (tagState.sha !== library.releaseSha)
+        blockers.push("release-tag-sha-mismatch");
+      if (!packageRefState.exists) blockers.push("package-ref-missing");
+      else if (packageRefState.sha !== library.releaseSha)
+        blockers.push("package-ref-sha-mismatch");
+      if (!releaseExists) blockers.push("github-release-missing");
+    }
     return {
       id: library.id,
       status: library.releaseStatus,
       tag,
-      tagExists,
+      expectedSha: pending ? null : library.releaseSha,
+      tagExists: tagState.exists,
+      tagSha: tagState.sha,
+      tagObjectType: tagState.objectType,
       releaseExists,
-      packageRef: pending ? null : library.releaseRef,
-      packageRefExists: pending ? null : packageRefExists,
-      ready: pending
-        ? !tagExists && !releaseExists
-        : tagExists && releaseExists && packageRefExists,
+      packageRef,
+      packageRefExists: packageRefState.exists,
+      packageRefSha: packageRefState.sha,
+      candidateReady,
+      failedCandidate: failedCandidate
+        ? {
+            releaseTag: failedCandidate.releaseTag,
+            workflowRunId: failedCandidate.workflowRunId,
+          }
+        : null,
+      baseline,
+      blockers,
+      ready: pending ? candidateReady && baseline.ready : blockers.length === 0,
+    };
+  });
+  const failedReleases = releaseHistoryRemoteState(
+    releaseHistory,
+    repository,
+    run,
+  );
+  return {
+    inspected: true,
+    ready:
+      publications.every((publication) => publication.ready) &&
+      failedReleases.ready,
+    publications,
+    failedReleases,
+  };
+}
+
+export function inspectGitHubTag(repository, reference, run = runGitHubRead) {
+  const seen = new Set();
+  const initial = run([
+    "api",
+    `repos/${repository}/git/ref/tags/${encodeURIComponent(reference)}`,
+  ]);
+  if (!initial.ok) {
+    return {
+      ref: reference,
+      exists: false,
+      sha: null,
+      objectType: null,
+      valid: initial.notFound === true,
+    };
+  }
+  let object = responseData(initial)?.object;
+  const objectType = object?.type ?? null;
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (!object || !/^[0-9a-f]{40}$/u.test(object.sha ?? "")) {
+      return {
+        ref: reference,
+        exists: true,
+        sha: null,
+        objectType,
+        valid: false,
+      };
+    }
+    if (object.type === "commit") {
+      return {
+        ref: reference,
+        exists: true,
+        sha: object.sha,
+        objectType,
+        valid: true,
+      };
+    }
+    if (object.type !== "tag" || seen.has(object.sha)) break;
+    seen.add(object.sha);
+    const tag = run(["api", `repos/${repository}/git/tags/${object.sha}`]);
+    if (!tag.ok) break;
+    object = responseData(tag)?.object;
+  }
+  return {
+    ref: reference,
+    exists: true,
+    sha: null,
+    objectType,
+    valid: false,
+  };
+}
+
+function inspectPublishedBaseline(library, repository, run) {
+  const tag = canonicalReleaseTag(library.id, library.latestReleaseVersion);
+  const tagState = inspectGitHubTag(repository, tag, run);
+  const packageRefState =
+    library.releaseRef === tag
+      ? tagState
+      : inspectGitHubTag(repository, library.releaseRef, run);
+  const releaseExists = githubReleaseExists(repository, tag, run);
+  const blockers = [];
+  if (!library.releaseSha) blockers.push("baseline-release-sha-unrecorded");
+  if (!tagState.exists) blockers.push("baseline-release-tag-missing");
+  else if (library.releaseSha && tagState.sha !== library.releaseSha)
+    blockers.push("baseline-release-tag-sha-mismatch");
+  if (!packageRefState.exists) blockers.push("baseline-package-ref-missing");
+  else if (library.releaseSha && packageRefState.sha !== library.releaseSha)
+    blockers.push("baseline-package-ref-sha-mismatch");
+  if (!releaseExists) blockers.push("baseline-github-release-missing");
+  return {
+    tag,
+    expectedSha: library.releaseSha ?? null,
+    tagExists: tagState.exists,
+    tagSha: tagState.sha,
+    packageRef: library.releaseRef,
+    packageRefExists: packageRefState.exists,
+    packageRefSha: packageRefState.sha,
+    releaseExists,
+    blockers,
+    ready: blockers.length === 0,
+  };
+}
+
+function releaseHistoryRemoteState(history, repository, run) {
+  const failures = (history?.immutableFailures ?? []).map((failure) => {
+    const refs = [failure.releaseTag, ...failure.packageRefs].map(
+      (reference) => {
+        const state = inspectGitHubTag(repository, reference, run);
+        return {
+          ref: reference,
+          exists: state.exists,
+          sha: state.sha,
+          ready: state.exists && state.sha === failure.releaseSha,
+        };
+      },
+    );
+    const releaseExists = githubReleaseExists(
+      repository,
+      failure.releaseTag,
+      run,
+    );
+    const blockers = [];
+    for (const reference of refs) {
+      if (!reference.exists)
+        blockers.push(`failed-ref-missing:${reference.ref}`);
+      else if (reference.sha !== failure.releaseSha)
+        blockers.push(`failed-ref-sha-mismatch:${reference.ref}`);
+    }
+    if (releaseExists) blockers.push("failed-release-has-github-release");
+    return {
+      libraryId: failure.libraryId,
+      version: failure.version,
+      releaseTag: failure.releaseTag,
+      expectedSha: failure.releaseSha,
+      refs,
+      releaseExists,
+      blockers,
+      ready: blockers.length === 0,
     };
   });
   return {
-    inspected: true,
-    ready: publications.every((publication) => publication.ready),
-    publications,
+    ready: failures.every((failure) => failure.ready),
+    failures,
   };
+}
+
+function githubReleaseExists(repository, tag, run) {
+  return run([
+    "api",
+    `repos/${repository}/releases/tags/${encodeURIComponent(tag)}`,
+  ]).ok;
+}
+
+function responseData(result) {
+  if (result?.data && typeof result.data === "object") return result.data;
+  try {
+    return JSON.parse(result?.stdout ?? "");
+  } catch {
+    return null;
+  }
 }
 
 export function sdkReadiness(catalogue, remoteState = null) {
@@ -194,7 +386,11 @@ function runGitHubRead(args) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-  return { ok: result.status === 0 };
+  return {
+    ok: result.status === 0,
+    notFound: result.status === 1 && /HTTP 404|Not Found/iu.test(result.stderr),
+    stdout: result.stdout,
+  };
 }
 
 export function referenceReadiness(
@@ -614,10 +810,15 @@ export async function buildReadiness({
   const catalogue = JSON.parse(
     await readFile(resolve(root, "config/sdk-libraries.json"), "utf8"),
   );
+  const sdkReleaseHistory = JSON.parse(
+    await readFile(resolve(root, "config/sdk-release-history.json"), "utf8"),
+  );
   const sdkRemote = remote
     ? inspectSdkRemoteState(
         catalogue,
         controlPlane.repositories.platform.nameWithOwner,
+        runGitHubRead,
+        sdkReleaseHistory,
       )
     : null;
   const sdk = sdkReadiness(catalogue, sdkRemote);

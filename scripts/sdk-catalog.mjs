@@ -1,10 +1,18 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import Ajv2020 from "ajv/dist/2020.js";
+import {
+  assertSdkReleaseCandidateNotFailed,
+  loadSdkReleaseHistory,
+  validateSdkReleaseHistory,
+} from "./sdk-release-history.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const catalogPath = resolve(root, "config/sdk-libraries.json");
+const catalogSchemaPath = resolve(root, "config/sdk-libraries.schema.json");
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
+const commitSha = /^[0-9a-f]{40}$/;
 const tagPrefixes = Object.freeze({
   flutter: "sdk-flutter-v",
   flutterflow: "sdk-flutterflow-v",
@@ -20,7 +28,9 @@ export async function loadSdkCatalog(path = catalogPath) {
 }
 
 export async function validateSdkCatalog(catalog, options = {}) {
-  const errors = [];
+  const errors = await sdkCatalogSchemaErrors(catalog);
+  const releaseHistory =
+    options.releaseHistory ?? (await loadSdkReleaseHistory());
   if (catalog?.schemaVersion !== 2) errors.push("schemaVersion must be 2");
   if (catalog?.releasePolicy !== "immutable-tag")
     errors.push("releasePolicy must be immutable-tag");
@@ -38,10 +48,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
     if (!library.packageName || packages.has(library.packageName))
       errors.push(`${prefix}.packageName is missing or duplicated`);
     packages.add(library.packageName);
-    const hasCandidatePackage = Object.hasOwn(
-      library,
-      "candidatePackageName",
-    );
+    const hasCandidatePackage = Object.hasOwn(library, "candidatePackageName");
     const hasCandidateInstall = Object.hasOwn(library, "candidateInstall");
     if (hasCandidatePackage !== hasCandidateInstall) {
       errors.push(
@@ -83,6 +90,17 @@ export async function validateSdkCatalog(catalog, options = {}) {
         : "pending-release";
     if (library.releaseStatus !== expectedStatus)
       errors.push(`${prefix}.releaseStatus must be ${expectedStatus}`);
+    if (
+      library.releaseStatus === "released" &&
+      !commitSha.test(library.releaseSha ?? "")
+    ) {
+      errors.push(`${prefix}.releaseSha must identify the released commit`);
+    } else if (
+      Object.hasOwn(library, "releaseSha") &&
+      !commitSha.test(library.releaseSha ?? "")
+    ) {
+      errors.push(`${prefix}.releaseSha must be a lowercase 40-character SHA`);
+    }
     if (!library.releaseRef || /^(?:dev|main)$/.test(library.releaseRef))
       errors.push(`${prefix}.releaseRef must be immutable`);
     const canonicalTag = tagPrefixes[library.id]
@@ -159,20 +177,58 @@ export async function validateSdkCatalog(catalog, options = {}) {
   }
   if (Object.keys(tagPrefixes).some((id) => !ids.has(id)))
     errors.push("catalogue is missing one or more supported release libraries");
+  const historyResult = await validateSdkReleaseHistory(
+    releaseHistory,
+    catalog,
+  );
+  errors.push(...historyResult.errors);
   await validateFlutterFlowSurface(
     catalog,
     errors,
     options.flutterFlowManifest,
   );
   if (options.releaseTag)
-    validateReleaseTag(catalog, options.releaseTag, errors);
+    validateReleaseTag(catalog, options.releaseTag, options.releaseSha, errors);
+  else if (options.releaseSha) {
+    errors.push("releaseSha validation requires a releaseTag");
+  }
   if (options.releaseCandidateTag)
-    validateReleaseCandidateTag(catalog, options.releaseCandidateTag, errors);
+    validateReleaseCandidateTag(
+      catalog,
+      releaseHistory,
+      options.releaseCandidateTag,
+      errors,
+    );
   return {
     ok: errors.length === 0,
     errors,
     libraries: catalog?.libraries?.length ?? 0,
   };
+}
+
+let catalogSchemaValidator;
+
+async function sdkCatalogSchemaErrors(catalog) {
+  if (!catalogSchemaValidator) {
+    const schema = JSON.parse(await readFile(catalogSchemaPath, "utf8"));
+    catalogSchemaValidator = new Ajv2020({
+      allErrors: true,
+      strict: true,
+      formats: {
+        uri: (value) => {
+          try {
+            return Boolean(new URL(value));
+          } catch {
+            return false;
+          }
+        },
+      },
+    }).compile(schema);
+  }
+  if (catalogSchemaValidator(catalog)) return [];
+  return (catalogSchemaValidator.errors ?? []).map(
+    (error) => `catalogue${error.instancePath || "/"} ${error.message}`,
+  );
 }
 
 function releaseTagEntry(catalog, tag, errors) {
@@ -197,7 +253,7 @@ function releaseTagEntry(catalog, tag, errors) {
   return { id, library, version };
 }
 
-function validateReleaseTag(catalog, tag, errors) {
+function validateReleaseTag(catalog, tag, expectedSha, errors) {
   const entry = releaseTagEntry(catalog, tag, errors);
   if (!entry) return;
   const { library, version } = entry;
@@ -212,12 +268,26 @@ function validateReleaseTag(catalog, tag, errors) {
     errors.push(
       `${tag} requires latestReleaseVersion ${version} and releaseStatus released`,
     );
+  if (expectedSha !== undefined) {
+    if (!commitSha.test(expectedSha)) {
+      errors.push(`${tag} expected release SHA is invalid`);
+    } else if (library.releaseSha !== expectedSha) {
+      errors.push(
+        `${tag} resolves to ${expectedSha}, catalogue records ${String(library.releaseSha)}`,
+      );
+    }
+  }
 }
 
-function validateReleaseCandidateTag(catalog, tag, errors) {
+function validateReleaseCandidateTag(catalog, history, tag, errors) {
   const entry = releaseTagEntry(catalog, tag, errors);
   if (!entry) return;
   const { library, version } = entry;
+  try {
+    assertSdkReleaseCandidateNotFailed(history, entry.id, version);
+  } catch (error) {
+    errors.push(error.message);
+  }
   if (library.sourceVersion !== version) {
     errors.push(
       `${tag} does not match source version ${library.sourceVersion}`,
@@ -434,12 +504,14 @@ export function releaseCandidateRefFor(catalog, id) {
     : `${tagPrefixes[id]}${library.sourceVersion}`;
 }
 
-export function promoteSdkRelease(catalog, id, version) {
+export function promoteSdkRelease(catalog, id, version, releaseSha) {
   const library = catalog.libraries.find((item) => item.id === id);
   if (!library || !tagPrefixes[id])
     throw new Error(`Unknown SDK library: ${id}`);
   if (!semver.test(version ?? ""))
     throw new Error(`Invalid SDK release version: ${version}`);
+  if (!commitSha.test(releaseSha ?? ""))
+    throw new Error(`Invalid SDK release SHA: ${String(releaseSha)}`);
   if (library.sourceVersion !== version) {
     throw new Error(
       `${id} source version ${library.sourceVersion} does not match ${version}`,
@@ -449,6 +521,11 @@ export function promoteSdkRelease(catalog, id, version) {
     library.releaseStatus === "released" &&
     library.latestReleaseVersion === version
   ) {
+    if (library.releaseSha !== releaseSha) {
+      throw new Error(
+        `${id}@${version} is already published from ${String(library.releaseSha)}, not ${releaseSha}`,
+      );
+    }
     return structuredClone(catalog);
   }
   if (library.releaseStatus !== "pending-release") {
@@ -460,6 +537,7 @@ export function promoteSdkRelease(catalog, id, version) {
   target.latestReleaseVersion = version;
   target.releaseRef = id === "ios" ? version : `${tagPrefixes[id]}${version}`;
   target.releaseStatus = "released";
+  target.releaseSha = releaseSha;
   if (target.candidatePackageName && target.candidateInstall) {
     target.packageName = target.candidatePackageName;
     target.install = target.candidateInstall;
@@ -490,17 +568,37 @@ async function main() {
     return;
   }
   if (command === "candidate-tag") {
-    console.log(releaseCandidateTagFor(catalog, args.library));
+    const tag = releaseCandidateTagFor(catalog, args.library);
+    const library = catalog.libraries.find((item) => item.id === args.library);
+    assertSdkReleaseCandidateNotFailed(
+      await loadSdkReleaseHistory(),
+      args.library,
+      library.sourceVersion,
+    );
+    console.log(tag);
     return;
   }
   if (command === "candidate-ref") {
-    console.log(releaseCandidateRefFor(catalog, args.library));
+    const reference = releaseCandidateRefFor(catalog, args.library);
+    const library = catalog.libraries.find((item) => item.id === args.library);
+    assertSdkReleaseCandidateNotFailed(
+      await loadSdkReleaseHistory(),
+      args.library,
+      library.sourceVersion,
+    );
+    console.log(reference);
     return;
   }
   if (command === "promote") {
-    const promoted = promoteSdkRelease(catalog, args.library, args.version);
+    const promoted = promoteSdkRelease(
+      catalog,
+      args.library,
+      args.version,
+      args.sha,
+    );
     const result = await validateSdkCatalog(promoted, {
       releaseTag: releaseTagFor(promoted, args.library),
+      releaseSha: args.sha,
     });
     if (!result.ok) {
       throw new Error(result.errors.join("\n"));
@@ -514,10 +612,11 @@ async function main() {
   }
   if (command !== "check")
     throw new Error(
-      "Usage: sdk-catalog.mjs check [--release-tag <tag> | --candidate-release-tag <tag>] | candidate-tag --library <id> | candidate-ref --library <id> | release-tag --library <id> | release-ref --library <id> | promote --library <id> --version <version> [--write]",
+      "Usage: sdk-catalog.mjs check [--release-tag <tag> --release-sha <sha> | --candidate-release-tag <tag>] | candidate-tag --library <id> | candidate-ref --library <id> | release-tag --library <id> | release-ref --library <id> | promote --library <id> --version <version> --sha <sha> [--write]",
     );
   const result = await validateSdkCatalog(catalog, {
     releaseTag: args["release-tag"],
+    releaseSha: args["release-sha"],
     releaseCandidateTag: args["candidate-release-tag"],
   });
   if (!result.ok) {

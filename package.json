@@ -155,7 +155,7 @@
     "secrets:scan": "npm run secrets:scan:history && npm run secrets:scan:workspace",
     "copy:check": "node scripts/check-product-copy.mjs",
     "sdk:catalog:check": "node scripts/sdk-catalog.mjs check",
-    "sdk:catalog:test": "node --test scripts/sdk-catalog.test.mjs",
+    "sdk:catalog:test": "node --test scripts/sdk-catalog.test.mjs scripts/sdk-release-history.test.mjs",
     "typecheck": "npm run worker:typecheck && npm run billing:typecheck && npm run email:typecheck && npm run identity:typecheck && npm run files:typecheck && npm run observability:typecheck && npm run mcp:typecheck && npm run modules:typecheck && npm run dashboard:typecheck",
     "test": "npm run contracts:test && npm run dashboard:test && npm run worker:test && npm run billing:test && npm run email:test && npm run identity:test && npm run files:test && npm run observability:test && npm run mcp:test && npm run modules:test",
     "contracts:test": "npx vitest run packages/contracts/src",

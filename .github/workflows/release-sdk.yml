@@ -172,6 +172,9 @@ jobs:
       - run: corepack enable && yarn install --immutable && yarn typecheck && yarn test --runInBand && yarn prepare
         if: needs.validate-tag.outputs.sdk == 'react-native'
         working-directory: sdks/react-native
+      - name: Install repository tooling for the React Native contract
+        if: needs.validate-tag.outputs.sdk == 'react-native'
+        run: npm ci --ignore-scripts
       - run: npm run react-native:native-contract:check
         if: needs.validate-tag.outputs.sdk == 'react-native'
       - run: npm version ${{ needs.validate-tag.outputs.version }} --no-git-tag-version --allow-same-version && npm publish
@@ -252,8 +255,11 @@ jobs:
           node scripts/sdk-catalog.mjs promote \
             --library "$catalog_id" \
             --version "$VERSION" \
+            --sha "$RELEASE_SHA" \
             --write
-          node scripts/sdk-catalog.mjs check --release-tag "$TAG"
+          node scripts/sdk-catalog.mjs check \
+            --release-tag "$TAG" \
+            --release-sha "$RELEASE_SHA"
       - name: Propose the published catalogue state through a protected PR
         run: |
           ensure_promotion_pr() {

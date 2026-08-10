@@ -12,6 +12,7 @@ import {
   classifySnapshotVerificationError,
   clientSourceEnvironmentName,
   credentialReadiness,
+  inspectGitHubTag,
   inspectSdkRemoteState,
   parseClientSources,
   parseGitState,
@@ -79,7 +80,42 @@ test("SDK readiness keeps unreleased source versions visible", () => {
   );
 });
 
-test("remote SDK readiness requires tags, package refs and GitHub releases", () => {
+function githubSdkFixture({ refs = {}, tags = {}, releases = [] } = {}) {
+  const releaseSet = new Set(releases);
+  return (args) => {
+    const endpoint = args[1];
+    const refMarker = "/git/ref/tags/";
+    const tagMarker = "/git/tags/";
+    const releaseMarker = "/releases/tags/";
+    if (endpoint.includes(refMarker)) {
+      const reference = decodeURIComponent(endpoint.split(refMarker)[1]);
+      const object = refs[reference];
+      return object
+        ? { ok: true, data: { object } }
+        : { ok: false, notFound: true };
+    }
+    if (endpoint.includes(tagMarker)) {
+      const sha = endpoint.split(tagMarker)[1];
+      const object = tags[sha];
+      return object
+        ? { ok: true, data: { object } }
+        : { ok: false, notFound: true };
+    }
+    if (endpoint.includes(releaseMarker)) {
+      const reference = decodeURIComponent(endpoint.split(releaseMarker)[1]);
+      return releaseSet.has(reference)
+        ? { ok: true, data: { tag_name: reference } }
+        : { ok: false, notFound: true };
+    }
+    throw new Error(`Unexpected GitHub fixture endpoint: ${endpoint}`);
+  };
+}
+
+test("remote SDK readiness peels lightweight, annotated and SwiftPM tags", () => {
+  const flutterSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const iosSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const canonicalTagObject = "cccccccccccccccccccccccccccccccccccccccc";
+  const aliasTagObject = "dddddddddddddddddddddddddddddddddddddddd";
   const catalogue = {
     libraries: [
       {
@@ -88,6 +124,7 @@ test("remote SDK readiness requires tags, package refs and GitHub releases", () 
         latestReleaseVersion: "2.1.3",
         releaseRef: "sdk-flutter-v2.1.3",
         releaseStatus: "released",
+        releaseSha: flutterSha,
       },
       {
         id: "ios",
@@ -95,24 +132,23 @@ test("remote SDK readiness requires tags, package refs and GitHub releases", () 
         latestReleaseVersion: "1.0.0",
         releaseRef: "1.0.0",
         releaseStatus: "released",
-      },
-      {
-        id: "flutterflow",
-        sourceVersion: "2.2.4",
-        latestReleaseVersion: "2.1.6",
-        releaseRef: "sdk-flutterflow-v2.1.6",
-        releaseStatus: "pending-release",
+        releaseSha: iosSha,
       },
     ],
   };
-  const present = new Set(["sdk-flutter-v2.1.3", "sdk-ios-v1.0.0", "1.0.0"]);
-  const run = (args) => {
-    const value = decodeURIComponent(args.at(-1).split("/").at(-1));
-    const isRelease = args.at(-1).includes("/releases/tags/");
-    return {
-      ok: present.has(value) && (!isRelease || value !== "1.0.0"),
-    };
+  const fixture = {
+    refs: {
+      "sdk-flutter-v2.1.3": { type: "commit", sha: flutterSha },
+      "sdk-ios-v1.0.0": { type: "tag", sha: canonicalTagObject },
+      "1.0.0": { type: "tag", sha: aliasTagObject },
+    },
+    tags: {
+      [canonicalTagObject]: { type: "commit", sha: iosSha },
+      [aliasTagObject]: { type: "commit", sha: iosSha },
+    },
+    releases: ["sdk-flutter-v2.1.3", "sdk-ios-v1.0.0"],
   };
+  const run = githubSdkFixture(fixture);
   const remote = inspectSdkRemoteState(
     catalogue,
     "mbzadev/opengrow-platform",
@@ -120,17 +156,193 @@ test("remote SDK readiness requires tags, package refs and GitHub releases", () 
   );
   assert.equal(remote.ready, true);
   assert.equal(remote.publications[1].packageRefExists, true);
-  assert.equal(remote.publications[2].tagExists, false);
-  assert.equal(sdkReadiness(catalogue, remote).ready, false);
+  assert.equal(remote.publications[1].tagSha, iosSha);
+  assert.equal(remote.publications[1].packageRefSha, iosSha);
+  assert.equal(sdkReadiness(catalogue, remote).ready, true);
+  assert.deepEqual(
+    inspectGitHubTag("mbzadev/opengrow-platform", "sdk-flutter-v2.1.3", run),
+    {
+      ref: "sdk-flutter-v2.1.3",
+      exists: true,
+      sha: flutterSha,
+      objectType: "commit",
+      valid: true,
+    },
+  );
 
-  present.delete("sdk-flutter-v2.1.3");
-  const incomplete = inspectSdkRemoteState(
+  const aliasMismatch = inspectSdkRemoteState(
+    catalogue,
+    "mbzadev/opengrow-platform",
+    githubSdkFixture({
+      ...fixture,
+      tags: {
+        ...fixture.tags,
+        [aliasTagObject]: {
+          type: "commit",
+          sha: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        },
+      },
+    }),
+  );
+  assert.equal(aliasMismatch.ready, false);
+  assert.ok(
+    aliasMismatch.publications[1].blockers.includes("package-ref-sha-mismatch"),
+  );
+});
+
+test("pending SDK readiness checks both the baseline and unused candidate", () => {
+  const baselineSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const catalogue = {
+    libraries: [
+      {
+        id: "flutterflow",
+        sourceVersion: "2.2.4",
+        latestReleaseVersion: "2.1.6",
+        releaseRef: "sdk-flutterflow-v2.1.6",
+        releaseStatus: "pending-release",
+        releaseSha: baselineSha,
+      },
+    ],
+  };
+  const run = githubSdkFixture({
+    refs: {
+      "sdk-flutterflow-v2.1.6": { type: "commit", sha: baselineSha },
+    },
+    releases: ["sdk-flutterflow-v2.1.6"],
+  });
+  const remote = inspectSdkRemoteState(
     catalogue,
     "mbzadev/opengrow-platform",
     run,
   );
-  assert.equal(incomplete.ready, false);
-  assert.equal(incomplete.publications[0].releaseExists, false);
+  assert.equal(remote.ready, true);
+  assert.equal(remote.publications[0].candidateReady, true);
+  assert.equal(remote.publications[0].baseline.ready, true);
+  assert.equal(sdkReadiness(catalogue, remote).ready, false);
+
+  const missingBaseline = inspectSdkRemoteState(
+    catalogue,
+    "mbzadev/opengrow-platform",
+    githubSdkFixture(),
+  );
+  assert.equal(missingBaseline.ready, false);
+  assert.ok(
+    missingBaseline.publications[0].blockers.includes(
+      "baseline-release-tag-missing",
+    ),
+  );
+});
+
+test("remote SDK readiness verifies every immutable failed ref and no release", () => {
+  const failedSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const canonicalObject = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const aliasObject = "cccccccccccccccccccccccccccccccccccccccc";
+  const history = {
+    immutableFailures: [
+      {
+        libraryId: "ios",
+        version: "1.0.1",
+        releaseTag: "sdk-ios-v1.0.1",
+        packageRefs: ["1.0.1"],
+        releaseSha: failedSha,
+        workflowRunId: 1,
+      },
+    ],
+  };
+  const fixture = {
+    refs: {
+      "sdk-ios-v1.0.1": { type: "tag", sha: canonicalObject },
+      "1.0.1": { type: "tag", sha: aliasObject },
+    },
+    tags: {
+      [canonicalObject]: { type: "commit", sha: failedSha },
+      [aliasObject]: { type: "commit", sha: failedSha },
+    },
+  };
+  const remote = inspectSdkRemoteState(
+    { libraries: [] },
+    "mbzadev/opengrow-platform",
+    githubSdkFixture(fixture),
+    history,
+  );
+  assert.equal(remote.ready, true);
+  assert.equal(remote.failedReleases.failures[0].refs.length, 2);
+
+  const unexpectedRelease = inspectSdkRemoteState(
+    { libraries: [] },
+    "mbzadev/opengrow-platform",
+    githubSdkFixture({
+      ...fixture,
+      releases: ["sdk-ios-v1.0.1"],
+    }),
+    history,
+  );
+  assert.equal(unexpectedRelease.ready, false);
+  assert.ok(
+    unexpectedRelease.failedReleases.failures[0].blockers.includes(
+      "failed-release-has-github-release",
+    ),
+  );
+});
+
+test("remote readiness distinguishes a recorded failure from an unknown occupied tag", () => {
+  const baselineSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const failedSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const catalogue = {
+    libraries: [
+      {
+        id: "ios",
+        sourceVersion: "1.0.1",
+        latestReleaseVersion: "1.0.0",
+        releaseRef: "1.0.0",
+        releaseStatus: "pending-release",
+        releaseSha: baselineSha,
+      },
+    ],
+  };
+  const refs = {
+    "sdk-ios-v1.0.0": { type: "commit", sha: baselineSha },
+    "1.0.0": { type: "commit", sha: baselineSha },
+    "sdk-ios-v1.0.1": { type: "commit", sha: failedSha },
+    "1.0.1": { type: "commit", sha: failedSha },
+  };
+  const history = {
+    immutableFailures: [
+      {
+        libraryId: "ios",
+        version: "1.0.1",
+        releaseTag: "sdk-ios-v1.0.1",
+        packageRefs: ["1.0.1"],
+        releaseSha: failedSha,
+        workflowRunId: 123,
+      },
+    ],
+  };
+  const recorded = inspectSdkRemoteState(
+    catalogue,
+    "mbzadev/opengrow-platform",
+    githubSdkFixture({ refs, releases: ["sdk-ios-v1.0.0"] }),
+    history,
+  );
+  assert.equal(recorded.publications[0].candidateReady, false);
+  assert.deepEqual(recorded.publications[0].failedCandidate, {
+    releaseTag: "sdk-ios-v1.0.1",
+    workflowRunId: 123,
+  });
+  assert.ok(
+    recorded.publications[0].blockers.includes("failed-immutable-version"),
+  );
+
+  const unknown = inspectSdkRemoteState(
+    catalogue,
+    "mbzadev/opengrow-platform",
+    githubSdkFixture({ refs, releases: ["sdk-ios-v1.0.0"] }),
+  );
+  assert.equal(unknown.publications[0].failedCandidate, null);
+  assert.ok(unknown.publications[0].blockers.includes("candidate-tag-exists"));
+  assert.ok(
+    unknown.publications[0].blockers.includes("candidate-package-ref-exists"),
+  );
 });
 
 test("governance schema accepts repositories owned by another GitHub account", async () => {
