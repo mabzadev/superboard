@@ -10,13 +10,13 @@ import {
   parseCustomWorkerScope,
   type CustomWorkerJob,
   type CustomWorkerManifest,
-} from "@opengrow/contracts/custom-worker";
+} from "@superboard/contracts/custom-worker";
 import {
   RequestBodyError,
   readJsonLimited,
-} from "@opengrow/contracts/request-body";
-import { configuredSecrets } from "@opengrow/contracts/secret";
-import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+} from "@superboard/contracts/request-body";
+import { configuredSecrets } from "@superboard/contracts/secret";
+import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import {
   cancelReferenceJob,
   createReferenceJob,
@@ -215,7 +215,7 @@ function manifest(env: Env): CustomWorkerManifest {
     appKey: env.APP_KEY,
     service: "custom-reference",
     version: "1.2.0",
-    description: "Reference app-specific extension for OpenGrow",
+    description: "Reference app-specific extension for SuperBoard",
     capabilities: capabilities.filter((capability) =>
       enabled.has(capability.id),
     ),

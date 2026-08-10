@@ -537,11 +537,11 @@ test("generated observability config attaches an Analytics Engine dataset and no
       "utf8",
     ),
   );
-  assert.equal(config.name, "opengrow-observability-dev");
+  assert.equal(config.name, "superboard-observability-dev");
   assert.equal(config.workers_dev, false);
   assert.equal(config.tail_consumers, undefined);
   assert.deepEqual(config.analytics_engine_datasets, [
-    { binding: "ANALYTICS", dataset: "opengrow_mbza_development" },
+    { binding: "ANALYTICS", dataset: "superboard_mbza_development" },
   ]);
 });
 
@@ -637,7 +637,15 @@ test("staged production API stays private while exposing service bindings", asyn
       "development",
       "--allow-unprovisioned",
     ],
-    { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+    {
+      cwd: new URL("..", import.meta.url),
+      stdio: "pipe",
+      env: {
+        ...process.env,
+        SUPERBOARD_RELEASE: "superboard-test-release",
+        OPENGROW_RELEASE: "legacy-test-release",
+      },
+    },
   );
   const mbza = JSON.parse(
     readFileSync(
@@ -650,6 +658,7 @@ test("staged production API stays private while exposing service bindings", asyn
   );
   const publicSurfaces = JSON.parse(mbza.vars.PUBLIC_SURFACES_JSON);
   const workerCatalog = JSON.parse(mbza.vars.PLATFORM_WORKERS_JSON);
+  assert.equal(mbza.vars.OPENGROW_RELEASE, "superboard-test-release");
   assert.deepEqual(
     workerCatalog.workers.map(({ id }) => id),
     ALL_SERVICES,
@@ -658,7 +667,7 @@ test("staged production API stays private while exposing service bindings", asyn
     workerCatalog.workers.find(({ id }) => id === "api"),
     {
       id: "api",
-      workerName: "opengrow-api-dev",
+      workerName: "superboard-api-dev",
       enabled: true,
       publicSurfaceIds: ["api", "sdk", "shortlinks"],
     },
@@ -674,7 +683,7 @@ test("staged production API stays private while exposing service bindings", asyn
   );
   assert.deepEqual(workerCatalog.customDependencies, []);
   assert.deepEqual(JSON.parse(mbza.vars.CORS_ORIGINS_JSON), [
-    "https://grow.mbza.dev",
+    "https://board.mbza.dev",
     "https://reference.mbza.dev",
   ]);
   assert.deepEqual(
@@ -697,7 +706,7 @@ test("staged production API stays private while exposing service bindings", asyn
       url: "https://reference.mbza.dev",
       healthUrl: "https://reference.mbza.dev/",
       description:
-        "Executable Flutter Web acceptance application for the common OpenGrow journeys",
+        "Executable Flutter Web acceptance application for the common SuperBoard journeys",
     },
   );
 
@@ -800,20 +809,20 @@ test("generated MCP config is public only on its target domain and uses a privat
       "utf8",
     ),
   );
-  assert.equal(config.name, "opengrow-mcp-dev");
+  assert.equal(config.name, "superboard-mcp-dev");
   assert.equal(config.main, "../../workers/mcp/src/index.ts");
   assert.equal(config.workers_dev, false);
   assert.equal(config.vars.PUBLIC_API_URL, "https://api.mbza.dev");
   assert.equal(config.vars.PUBLIC_MCP_URL, "https://mcp.mbza.dev");
   assert.equal(config.vars.MCP_DOMAIN, "mcp.mbza.dev");
   assert.deepEqual(config.services, [
-    { binding: "API_SERVICE", service: "opengrow-api-dev" },
+    { binding: "API_SERVICE", service: "superboard-api-dev" },
   ]);
   assert.deepEqual(config.routes, [
     { pattern: "mcp.mbza.dev", custom_domain: true },
   ]);
   assert.deepEqual(config.tail_consumers, [
-    { service: "opengrow-observability-dev" },
+    { service: "superboard-observability-dev" },
   ]);
 });
 
@@ -860,7 +869,7 @@ test("generated identity and files configs are private and parameterized", () =>
   assert.equal(identity.vars.GOOGLE_AUDIENCES_JSON, "[]");
   assert.equal(
     identity.d1_databases[0].database_name,
-    "opengrow-dev-identity-db",
+    "superboard-dev-identity-db",
   );
   assert.deepEqual(
     identity.services.map(({ binding }) => binding),
@@ -873,8 +882,8 @@ test("generated identity and files configs are private and parameterized", () =>
   );
   assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://files.mbza.dev");
   assert.equal(files.vars.DOWNLOAD_TICKET_TTL_SECONDS, "600");
-  assert.equal(files.d1_databases[0].database_name, "opengrow-dev-files-db");
-  assert.equal(files.r2_buckets[0].bucket_name, "opengrow-dev-files");
+  assert.equal(files.d1_databases[0].database_name, "superboard-dev-files-db");
+  assert.equal(files.r2_buckets[0].bucket_name, "superboard-dev-files");
 });
 
 test("generated VocoStar custom config declares all legacy bridges through the target", () => {
@@ -973,7 +982,7 @@ test("generated reference custom config owns its durable D1 job store", () => {
   assert.deepEqual(config.d1_databases, [
     {
       binding: "REFERENCE_DB",
-      database_name: "opengrow-dev-custom-reference-db",
+      database_name: "superboard-dev-custom-reference-db",
       database_id: target.environments.development.customD1.id,
       migrations_dir: "../../workers/custom/reference/migrations",
       migrations_table: "d1_migrations",

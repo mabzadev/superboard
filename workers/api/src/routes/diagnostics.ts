@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono';
 import { Env } from '../types';
 import { timingSafeEqual } from '../lib/secrets';
-import { readJsonObjectLimited } from '@opengrow/contracts/request-body';
+import { readJsonObjectLimited } from '@superboard/contracts/request-body';
 
 const diagnostics = new Hono<{ Bindings: Env }>();
 

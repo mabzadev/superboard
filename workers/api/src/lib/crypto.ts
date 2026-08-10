@@ -1,21 +1,28 @@
-import { SignJWT, jwtVerify } from 'jose';
-import * as bcrypt from 'bcryptjs';
-import { Env } from '../types';
-import { constantTimeEqual } from '@opengrow/contracts/secret';
+import { SignJWT, jwtVerify } from "jose";
+import * as bcrypt from "bcryptjs";
+import { Env } from "../types";
+import { constantTimeEqual } from "@superboard/contracts/secret";
 
-const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-export async function signToken(payload: Record<string, unknown>, env: Env, expiresIn = '30d'): Promise<string> {
+export async function signToken(
+  payload: Record<string, unknown>,
+  env: Env,
+  expiresIn = "30d",
+): Promise<string> {
   const secret = new TextEncoder().encode(env.JWT_SECRET);
   return new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: "HS256" })
     .setJti(crypto.randomUUID())
     .setIssuedAt()
     .setExpirationTime(expiresIn)
     .sign(secret);
 }
 
-export async function verifyToken(token: string, env: Env): Promise<Record<string, unknown> | null> {
+export async function verifyToken(
+  token: string,
+  env: Env,
+): Promise<Record<string, unknown> | null> {
   try {
     const secret = new TextEncoder().encode(env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
@@ -28,40 +35,64 @@ export async function verifyToken(token: string, env: Env): Promise<Record<strin
 export function generateApiKey(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function generateShortCode(length = 6): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const chars =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map(b => chars[b % chars.length]).join('');
+  return Array.from(bytes)
+    .map((b) => chars[b % chars.length])
+    .join("");
 }
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
 
-async function verifyPbkdf2Password(password: string, stored: string): Promise<boolean> {
-  const [saltHex, storedHash] = stored.split(':');
+async function verifyPbkdf2Password(
+  password: string,
+  stored: string,
+): Promise<boolean> {
+  const [saltHex, storedHash] = stored.split(":");
   if (!saltHex || !storedHash || !/^[0-9a-f]+$/i.test(saltHex)) return false;
   const saltBytes = saltHex.match(/.{2}/g);
   if (!saltBytes) return false;
 
   const encoder = new TextEncoder();
-  const salt = new Uint8Array(saltBytes.map(b => parseInt(b, 16)));
-  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
-  const derived = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, 256
+  const salt = new Uint8Array(saltBytes.map((b) => parseInt(b, 16)));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
   );
-  const hashHex = Array.from(new Uint8Array(derived)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const derived = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    256,
+  );
+  const hashHex = Array.from(new Uint8Array(derived))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return constantTimeEqual(hashHex, storedHash);
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  stored: string,
+): Promise<boolean> {
   if (!stored) return false;
-  if (stored.startsWith('$2a$') || stored.startsWith('$2b$') || stored.startsWith('$2y$')) {
+  if (
+    stored.startsWith("$2a$") ||
+    stored.startsWith("$2b$") ||
+    stored.startsWith("$2y$")
+  ) {
     return bcrypt.compare(password, stored);
   }
   return verifyPbkdf2Password(password, stored).catch(() => false);
@@ -73,20 +104,28 @@ export function generateOtpSecret(length = 20): string {
   return base32Encode(bytes);
 }
 
-export function buildOtpAuthUri(email: string, secret: string, issuer = 'OpenGrow'): string {
+export function buildOtpAuthUri(
+  email: string,
+  secret: string,
+  issuer = "SuperBoard",
+): string {
   const label = `${issuer}:${email}`;
   const params = new URLSearchParams({
     secret,
     issuer,
-    algorithm: 'SHA1',
-    digits: '6',
-    period: '30',
+    algorithm: "SHA1",
+    digits: "6",
+    period: "30",
   });
   return `otpauth://totp/${encodeURIComponent(label)}?${params.toString()}`;
 }
 
-export async function verifyTotpCode(code: string, secret: string, window = 1): Promise<boolean> {
-  const normalizedCode = String(code || '').replace(/\s/g, '');
+export async function verifyTotpCode(
+  code: string,
+  secret: string,
+  window = 1,
+): Promise<boolean> {
+  const normalizedCode = String(code || "").replace(/\s/g, "");
   if (!/^\d{6}$/.test(normalizedCode) || !secret) return false;
 
   const keyBytes = base32Decode(secret);
@@ -101,7 +140,7 @@ export async function verifyTotpCode(code: string, secret: string, window = 1): 
 function base32Encode(bytes: Uint8Array): string {
   let bits = 0;
   let value = 0;
-  let output = '';
+  let output = "";
 
   for (const byte of bytes) {
     value = (value << 8) | byte;
@@ -117,14 +156,14 @@ function base32Encode(bytes: Uint8Array): string {
 }
 
 function base32Decode(input: string): Uint8Array {
-  const clean = input.toUpperCase().replace(/=+$/g, '').replace(/\s/g, '');
+  const clean = input.toUpperCase().replace(/=+$/g, "").replace(/\s/g, "");
   const bytes: number[] = [];
   let bits = 0;
   let value = 0;
 
   for (const char of clean) {
     const index = BASE32_ALPHABET.indexOf(char);
-    if (index === -1) throw new Error('Invalid Base32 secret');
+    if (index === -1) throw new Error("Invalid Base32 secret");
     value = (value << 5) | index;
     bits += 5;
     if (bits >= 8) {
@@ -141,8 +180,16 @@ async function hotp(keyBytes: Uint8Array, counter: number): Promise<string> {
   const view = new DataView(counterBytes);
   view.setUint32(4, counter);
 
-  const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
-  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, counterBytes));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, counterBytes),
+  );
   const offset = signature[signature.length - 1] & 0xf;
   const binary =
     ((signature[offset] & 0x7f) << 24) |
@@ -150,5 +197,5 @@ async function hotp(keyBytes: Uint8Array, counter: number): Promise<string> {
     ((signature[offset + 2] & 0xff) << 8) |
     (signature[offset + 3] & 0xff);
 
-  return String(binary % 1000000).padStart(6, '0');
+  return String(binary % 1000000).padStart(6, "0");
 }

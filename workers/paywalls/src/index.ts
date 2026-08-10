@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { inspectSqlDatabaseAndSchemaHealth } from "@opengrow/contracts/health";
+import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import {
   parseEvents,
   parseExperience,

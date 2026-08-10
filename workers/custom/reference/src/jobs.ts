@@ -4,7 +4,7 @@ import type {
   CustomWorkerJobReceipt,
   CustomWorkerScope,
   CustomWorkerStats,
-} from "@opengrow/contracts/custom-worker";
+} from "@superboard/contracts/custom-worker";
 
 type ReferenceJobRow = {
   id: string;

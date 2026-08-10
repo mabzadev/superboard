@@ -114,7 +114,9 @@ export function cloudflareClient({ accountId, token, fetchImpl = fetch }) {
 async function readJsonLimited(response, maxBytes) {
   const announced = Number(response.headers.get("content-length") ?? 0);
   if (announced > maxBytes) {
-    throw new Error("Cloudflare API response exceeded the configured byte limit");
+    throw new Error(
+      "Cloudflare API response exceeded the configured byte limit",
+    );
   }
   if (!response.body) return {};
   const reader = response.body.getReader();
@@ -156,11 +158,25 @@ function offlineReport(target, environment) {
     remoteInspected: false,
     ready: false,
     resources: desiredCloudflareResources(target, environment).map(
-      ({ key, kind, label, name, manifestId }) => ({
+      ({
         key,
         kind,
         label,
         name,
+        logicalName,
+        physicalName,
+        previousNames,
+        migrationStrategy,
+        manifestId,
+      }) => ({
+        key,
+        kind,
+        label,
+        name,
+        logicalName,
+        physicalName,
+        previousNames,
+        migrationStrategy,
         manifestIdConfigured: Boolean(manifestId),
         state: "not-inspected",
       }),

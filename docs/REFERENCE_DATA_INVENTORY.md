@@ -1,7 +1,7 @@
-# OpenGrow reference data and FlutterFlow inventory
+# SuperBoard reference data and FlutterFlow inventory
 
-This inventory is the implementation map for `opengrow-platform` and
-`opengrow-reference`. It distinguishes the reusable baseline from the legacy data
+This inventory is the implementation map for `superboard-platform` and
+`superboard-reference`. It distinguishes the reusable baseline from the legacy data
 that still has to be migrated out of the central VocoStar database.
 
 ## Reference FlutterFlow pages
@@ -31,36 +31,40 @@ FlutterFlow project. It does not copy VocoStar pages and has no direct Chatwoot
 client.
 
 Its deployment contract is the strict, versioned
-`opengrow-reference/reference.project.json` manifest. It binds the `dev` branch to
+`superboard-reference/reference.project.json` manifest. It binds the `dev` branch to
 the GitHub `development` Environment, the assets-only Worker
-`opengrow-reference-app-dev` and `https://reference.mbza.dev`. Account ID and API
+`superboard-reference-app-dev` and `https://reference.mbza.dev`. Account ID and API
 token remain GitHub Environment secrets and are intentionally absent from the
 manifest. The generated Wrangler file is ignored.
 
 ### Complete reference build configuration
 
-| Dart define                    | Example on MBZA                                  | Secret?                                       |
-| ------------------------------ | ------------------------------------------------ | --------------------------------------------- |
-| `OPENGROW_ENVIRONMENT`         | `development`                                    | no                                            |
-| `OPENGROW_TARGET`              | `mbza-development`                               | no                                            |
-| `OPENGROW_API_URL`             | `https://api.mbza.dev`                           | no                                            |
-| `OPENGROW_SDK_URL`             | `https://sdk.mbza.dev`                           | no                                            |
-| `OPENGROW_SUPPORT_URL`         | `https://api.mbza.dev/api/v1/support-client`     | no                                            |
-| `OPENGROW_SHORT_LINKS_URL`     | `https://in.mbza.dev`                            | no                                            |
-| `OPENGROW_FILES_URL`           | `https://files.mbza.dev`                         | no                                            |
-| `OPENGROW_MAIL_PREVIEW_URL`    | `https://mail.mbza.dev`                          | no                                            |
-| `OPENGROW_PROJECT_ID`          | provisioned test project numeric ID              | no                                            |
-| `OPENGROW_PROJECT_KEY`         | provisioned SDK access key                       | yes; CI/FlutterFlow secret                    |
-| `OPENGROW_SDK_PLATFORM`        | `web`                                            | no                                            |
-| `OPENGROW_SDK_IDENTIFIER`      | `reference.mbza.dev`                             | no; must match the registered SDK application |
-| `OPENGROW_PROJECT_ENVIRONMENT` | `test`                                           | no                                            |
-| `OPENGROW_LIVE_MODE`           | `false` by default, `true` for integration tests | no                                            |
+| Dart define                       | Example on MBZA                                  | Secret?                                       |
+| --------------------------------- | ------------------------------------------------ | --------------------------------------------- |
+| `SUPERBOARD_ENVIRONMENT`          | `development`                                    | no                                            |
+| `SUPERBOARD_TARGET`               | `mbza-development`                               | no                                            |
+| `SUPERBOARD_API_URL`              | `https://api.mbza.dev`                           | no                                            |
+| `SUPERBOARD_SDK_URL`              | `https://sdk.mbza.dev`                           | no                                            |
+| `SUPERBOARD_SUPPORT_URL`          | `https://api.mbza.dev/api/v1/support-client`     | no                                            |
+| `SUPERBOARD_SHORT_LINKS_URL`      | `https://in.mbza.dev`                            | no                                            |
+| `SUPERBOARD_FILES_URL`            | `https://files.mbza.dev`                         | no                                            |
+| `SUPERBOARD_MAIL_PREVIEW_URL`     | `https://mail.mbza.dev`                          | no                                            |
+| `SUPERBOARD_PROJECT_ID`           | provisioned test project numeric ID              | no                                            |
+| `SUPERBOARD_PROJECT_KEY`          | provisioned SDK access key                       | yes; CI/FlutterFlow secret                    |
+| `SUPERBOARD_SDK_PLATFORM`         | `web`                                            | no                                            |
+| `SUPERBOARD_SDK_IDENTIFIER`       | `reference.mbza.dev`                             | no; must match the registered SDK application |
+| `SUPERBOARD_PROJECT_ENVIRONMENT`  | `test`                                           | no                                            |
+| `SUPERBOARD_LIVE_MODE`            | `false` by default, `true` for integration tests | no                                            |
+
+The reference resolves these canonical `SUPERBOARD_*` values first. Matching
+`OPENGROW_*` Dart defines remain temporary migration fallbacks only; they are
+not the configuration to copy into a new project.
 
 All endpoint values are validated as absolute HTTPS URLs. Demo mode exercises
 contracts without remote writes; live mode refuses to start without both a
 project key and a positive project ID.
 
-## Grow back-office pages
+## SuperBoard back-office pages
 
 The dashboard route catalogue is the operator-facing surface of the baseline:
 
@@ -89,72 +93,75 @@ visible without direct D1 access.
 
 ## Reusable FlutterFlow custom code
 
-Widgets supplied by the OpenGrow library:
+Widgets supplied by the SuperBoard library:
 
-- `OpenGrowBootstrap`
-- `OpenGrowPaywall`
-- `OpenGrowOnboarding`
-- `OpenGrowRestorePurchasesButton`
-- `OpenGrowCustomerCenter`
+- `SuperBoardBootstrap`
+- `SuperBoardPaywall`
+- `SuperBoardOnboarding`
+- `SuperBoardRestorePurchasesButton`
+- `SuperBoardCustomerCenter`
 
-Actions supplied by the OpenGrow libraries:
+Actions supplied by the SuperBoard libraries:
 
-- identity: `opengrowInitialize`, `opengrowInitializeAuto`,
-  `opengrowInitializeAuthenticated`, `opengrowIdentify`,
-  `opengrowSetUserAttributesJson`, `opengrowSetPushToken`;
-- application identity: `opengrowApplicationInitialize`,
-  `opengrowApplicationRestoreSessionJson`,
-  `opengrowApplicationCurrentSessionJson`, registration,
+- identity: `superboardInitialize`, `superboardInitializeAuto`,
+  `superboardInitializeAuthenticated`, `superboardIdentify`,
+  `superboardSetUserAttributesJson`, `superboardSetPushToken`;
+- application identity: `superboardApplicationInitialize`,
+  `superboardApplicationRestoreSessionJson`,
+  `superboardApplicationCurrentSessionJson`, registration,
   password/provider/anonymous sign-in, secure refresh rotation, password reset,
   profile, logout, account deletion and disposal actions declared in
   `config/flutterflow-custom-code.json`. The SDK is the only encrypted token
   store; the reference application intentionally owns no second token store;
-- marketing preferences: `opengrowApplicationMarketingPreferencesJson` and
-  `opengrowApplicationUpdateMarketingConsentJson`; the API derives the verified
-  subscriber identity and calls Marketing through a signed private binding;
+- marketing preferences: `superboardApplicationMarketingPreferencesJson` and
+  `superboardApplicationUpdateMarketingConsentJson`; the API derives the
+  verified subscriber identity and calls Marketing through a signed private
+  binding;
 - files: list, upload, download and delete actions declared in the same
   canonical manifest;
-- custom jobs: `opengrowApplicationCreateCustomJobJson`,
-  `opengrowApplicationListCustomJobsJson` and
-  `opengrowApplicationGetCustomJobJson`, plus owner-scoped
-  `opengrowApplicationCancelCustomJobJson`; the SDK exchanges the application
+- custom jobs: `superboardApplicationCreateCustomJobJson`,
+  `superboardApplicationListCustomJobsJson` and
+  `superboardApplicationGetCustomJobJson`, plus owner-scoped
+  `superboardApplicationCancelCustomJobJson`; the SDK exchanges the application
   session for a short-lived identity token and never exposes the private
-  `CUSTOM_WORKER_TOKEN`. Failed-job retry remains an administrator-only Grow
-  operation;
-- purchases: `opengrowPurchaseLogin`, `opengrowPurchaseLogout`,
-  `opengrowPurchase`, `opengrowRestore`, `opengrowSync`,
-  `opengrowHasEntitlement`, `opengrowGetOfferings`,
-  `opengrowGetCustomerInfoJson`, `opengrowGetVirtualCurrenciesJson`,
-  `opengrowGetPurchaseConfigurationJson`, `opengrowGetCustomerCenterJson`,
-  `opengrowGetLastPurchaseResultJson`,
-  `opengrowGetLastVerifiedCustomerInfoJson`, `opengrowGetEntitlements`,
-  `opengrowOpenSubscriptionManagement`, `opengrowRecordCertificationResultJson`;
-- links/events: `opengrowGenerateLinkJson`, `opengrowGetLastDeepLinkJson`,
-  `opengrowRecordCustomerEvent`, `opengrowRecordCustomerEventsJson`;
-- support: `opengrowSupportInitializeAuthenticated`,
-  `opengrowSupportOpenConversation`, `opengrowSupportGetConfigurationJson`,
-  `opengrowSupportListConversationsJson`, `opengrowSupportMessagesJson`,
-  `opengrowSupportSend`, `opengrowSupportSendAdvanced`,
-  `opengrowSupportUploadAttachmentJson`,
-  `opengrowSupportDownloadAttachment`, `opengrowSupportSendAttachment`,
-  `opengrowSupportConnectRealtime`, `opengrowSupportDisconnectRealtime`,
-  `opengrowSupportMarkRead`, `opengrowSupportSetTyping`,
-  `opengrowSupportSubmitCsatJson`,
-  `opengrowSupportGetLastRealtimeEventJson`, `opengrowSupportDispose`.
+  `CUSTOM_WORKER_TOKEN`. Failed-job retry remains an administrator-only
+  SuperBoard operation;
+- purchases: `superboardPurchaseLogin`, `superboardPurchaseLogout`,
+  `superboardPurchase`, `superboardRestore`, `superboardSync`,
+  `superboardHasEntitlement`, `superboardGetOfferings`,
+  `superboardGetCustomerInfoJson`, `superboardGetVirtualCurrenciesJson`,
+  `superboardGetPurchaseConfigurationJson`, `superboardGetCustomerCenterJson`,
+  `superboardGetLastPurchaseResultJson`,
+  `superboardGetLastVerifiedCustomerInfoJson`, `superboardGetEntitlements`,
+  `superboardOpenSubscriptionManagement`, `superboardRecordCertificationResultJson`;
+- links/events: `superboardGenerateLinkJson`, `superboardGetLastDeepLinkJson`,
+  `superboardRecordCustomerEvent`, `superboardRecordCustomerEventsJson`;
+- support: `superboardSupportInitializeAuthenticated`,
+  `superboardSupportOpenConversation`, `superboardSupportGetConfigurationJson`,
+  `superboardSupportListConversationsJson`, `superboardSupportMessagesJson`,
+  `superboardSupportSend`, `superboardSupportSendAdvanced`,
+  `superboardSupportUploadAttachmentJson`,
+  `superboardSupportDownloadAttachment`, `superboardSupportSendAttachment`,
+  `superboardSupportConnectRealtime`, `superboardSupportDisconnectRealtime`,
+  `superboardSupportMarkRead`, `superboardSupportSetTyping`,
+  `superboardSupportSubmitCsatJson`,
+  `superboardSupportGetLastRealtimeEventJson`, `superboardSupportDispose`.
 
 Les quatre flux publics sont également inventoriés : résultat d'achat,
 CustomerInfo vérifié, événement Support et alias Messaging. Le manifeste couvre
-au total 5 widgets, 89 actions, 4 flux et les 16 fichiers Dart qui les portent.
+au total 5 widgets, 93 actions, 4 flux et les 18 fichiers Dart qui les portent.
 Le Dashboard relie chaque fichier à la branche Git de développement; la CI
 refuse tout symbole public ou fichier source absent du manifeste, ainsi que tout
 nom déclaré qui n'est plus exporté.
 
-The old `opengrowMessaging*`, `opengrowGetUnreadMessageCount` and
-`opengrowDisplayMessages` names remain visible as temporary compatibility
-aliases in the package; new FlutterFlow work uses only `opengrowSupport*`.
+Deprecated `opengrowSupport*` and `opengrowMessaging*` aliases remain available
+only for migrations declared by the v3 compatibility surface.
+`opengrowGetUnreadMessageCount` and `opengrowDisplayMessages` are confined to
+the published v2 rollback coordinate; new FlutterFlow work uses only
+`superboardSupport*` and the canonical `superboard*` actions.
 
 App-specific FlutterFlow custom code is allowed only as a thin UI adapter. A
-network protocol, business rule or reusable widget belongs in `opengrow-platform`.
+network protocol, business rule or reusable widget belongs in `superboard-platform`.
 
 ## Reference application state
 
@@ -172,7 +179,7 @@ network protocol, business rule or reusable widget belongs in `opengrow-platform
 | `liveMode`                 | build                    | demo/live acceptance mode                              |
 | `shortLinksBaseUrl`        | build                    | target manifest                                        |
 | `filesBaseUrl`             | build                    | target manifest                                        |
-| `projectKey`               | secure configuration     | OpenGrow project                                       |
+| `projectKey`               | secure configuration     | SuperBoard project                                     |
 | `applicationAccessToken`   | secure storage           | auth gateway                                           |
 | `applicationRefreshToken`  | encrypted device storage | application identity                                   |
 | `currentUserId`            | session                  | authenticated profile                                  |
@@ -194,7 +201,7 @@ application-state value.
 
 | Binding/store                         | Role                                                                                                                                                                                                                                                            |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| central API D1                        | OpenGrow operators, projects, OAuth, notifications, compatibility data and billing ledger during migration                                                                                                                                                      |
+| central API D1                        | SuperBoard operators, projects, OAuth, notifications, compatibility data and billing ledger during migration                                                                                                                                                    |
 | API KV                                | ephemeral configuration, cache and coordination                                                                                                                                                                                                                 |
 | common files R2                       | controlled application uploads/downloads                                                                                                                                                                                                                        |
 | dashboard cache R2                    | OpenNext incremental cache                                                                                                                                                                                                                                      |

@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:opengrow_flutter/opengrow.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
 
 import 'actions.dart';
 import 'customer_events.dart';
@@ -14,8 +14,8 @@ import 'experience_client.dart';
 /// Native collection starts from the generated Info.plist/AndroidManifest.xml.
 /// This widget initializes verified purchases and forwards every deep link as a
 /// JSON string suitable for a FlutterFlow callback.
-class OpenGrowBootstrap extends StatefulWidget {
-  const OpenGrowBootstrap({
+class SuperBoardBootstrap extends StatefulWidget {
+  const SuperBoardBootstrap({
     super.key,
     required this.projectKey,
     required this.sdkBaseUrl,
@@ -26,7 +26,7 @@ class OpenGrowBootstrap extends StatefulWidget {
     this.identityToken = '',
     this.appVersion = '',
     this.buildNumber = '',
-    this.purchasesSdkVersion = '2.1.3',
+    this.purchasesSdkVersion = '3.0.0',
     this.initializePurchases = false,
     this.onInitialized,
     this.onDeepLinkJson,
@@ -49,54 +49,54 @@ class OpenGrowBootstrap extends StatefulWidget {
   final String purchasesSdkVersion;
 
   /// Set to false when the host app initializes Purchases after its own
-  /// authentication flow with [opengrowInitializeAuthenticated].
+  /// authentication flow with [superboardInitializeAuthenticated].
   final bool initializePurchases;
   final Future<void> Function()? onInitialized;
   final Future<void> Function(String value)? onDeepLinkJson;
   final Future<void> Function(String value)? onPurchaseResultJson;
   final Future<void> Function(String value)? onVerifiedCustomerInfoJson;
   final Future<void> Function(String message)? onError;
-  final Stream<OpenGrowPurchaseResult>? purchaseResultStream;
-  final Stream<OpenGrowCustomerInfo>? customerInfoStream;
+  final Stream<SuperBoardPurchaseResult>? purchaseResultStream;
+  final Stream<SuperBoardCustomerInfo>? customerInfoStream;
 
   @override
-  State<OpenGrowBootstrap> createState() => _OpenGrowBootstrapState();
+  State<SuperBoardBootstrap> createState() => _SuperBoardBootstrapState();
 }
 
-class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
+class _SuperBoardBootstrapState extends State<SuperBoardBootstrap> {
   StreamSubscription<DeeplinkDetails>? _deepLinkSubscription;
-  StreamSubscription<OpenGrowPurchaseResult>? _purchaseResultSubscription;
-  StreamSubscription<OpenGrowCustomerInfo>? _customerInfoSubscription;
+  StreamSubscription<SuperBoardPurchaseResult>? _purchaseResultSubscription;
+  StreamSubscription<SuperBoardCustomerInfo>? _customerInfoSubscription;
 
   @override
   void initState() {
     super.initState();
-    _deepLinkSubscription = OpenGrow().onDeeplinkReceived.listen(
+    _deepLinkSubscription = SuperBoard().onDeeplinkReceived.listen(
       (details) async {
         final value = jsonEncode(details.toMap());
-        OpenGrowFlutterFlowState.lastDeepLinkJson = value;
+        SuperBoardFlutterFlowState.lastDeepLinkJson = value;
         await widget.onDeepLinkJson?.call(value);
       },
       onError: (Object error) async {
         final value = error.toString();
-        OpenGrowFlutterFlowState.lastError = value;
+        SuperBoardFlutterFlowState.lastError = value;
         await widget.onError?.call(value);
       },
     );
     _purchaseResultSubscription =
         (widget.purchaseResultStream ??
-                OpenGrowPurchases.instance.purchaseResultStream)
+                SuperBoardPurchases.instance.purchaseResultStream)
             .listen((result) async {
               final value = jsonEncode(result.toJson());
-              OpenGrowFlutterFlowState.lastPurchaseResultJson = value;
+              SuperBoardFlutterFlowState.lastPurchaseResultJson = value;
               await widget.onPurchaseResultJson?.call(value);
             }, onError: _forwardError);
     _customerInfoSubscription =
         (widget.customerInfoStream ??
-                OpenGrowPurchases.instance.customerInfoStream)
+                SuperBoardPurchases.instance.customerInfoStream)
             .listen((info) async {
               final value = jsonEncode(info.toJson());
-              OpenGrowFlutterFlowState.lastVerifiedCustomerInfoJson = value;
+              SuperBoardFlutterFlowState.lastVerifiedCustomerInfoJson = value;
               await widget.onVerifiedCustomerInfoJson?.call(value);
             }, onError: _forwardError);
     _initialize();
@@ -104,20 +104,20 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
 
   Future<void> _forwardError(Object error) async {
     final value = error.toString();
-    OpenGrowFlutterFlowState.lastError = value;
+    SuperBoardFlutterFlowState.lastError = value;
     await widget.onError?.call(value);
   }
 
   Future<void> _initialize() async {
     try {
-      final platformIdentifier = await OpenGrow().getPlatformIdentifier();
+      final platformIdentifier = await SuperBoard().getPlatformIdentifier();
       final platform = switch (defaultTargetPlatform) {
         TargetPlatform.iOS => 'ios',
         TargetPlatform.android => 'android',
         _ => 'web',
       };
-      OpenGrowExperienceSdk.configure(
-        OpenGrowExperienceClient(
+      SuperBoardExperienceSdk.configure(
+        SuperBoardExperienceClient(
           projectKey: widget.projectKey,
           platform: platform,
           identifier: platformIdentifier,
@@ -125,8 +125,8 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
           baseUrl: widget.experienceApiBaseUrl,
         ),
       );
-      OpenGrowCustomerEventsSdk.configure(
-        OpenGrowCustomerEventsClient(
+      SuperBoardCustomerEventsSdk.configure(
+        SuperBoardCustomerEventsClient(
           projectKey: widget.projectKey,
           platform: platform,
           identifier: platformIdentifier,
@@ -135,7 +135,7 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
         ),
       );
       if (widget.initializePurchases) {
-        await opengrowInitializeAuto(
+        await superboardInitializeAuto(
           projectKey: widget.projectKey,
           sdkBaseUrl: widget.sdkBaseUrl,
           identityToken: widget.identityToken,
@@ -147,7 +147,7 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
       await widget.onInitialized?.call();
     } catch (error) {
       final value = error.toString();
-      OpenGrowFlutterFlowState.lastError = value;
+      SuperBoardFlutterFlowState.lastError = value;
       await widget.onError?.call(value);
     }
   }

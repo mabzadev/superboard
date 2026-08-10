@@ -8,20 +8,20 @@ import {
 
 test("derives stable environment names and validates inspected page keys", () => {
   assert.equal(
-    flutterFlowLibraryPageEnvironmentName("OpenGrowOnboardingPage"),
-    "FF_LIBRARY_OPEN_GROW_ONBOARDING_PAGE_KEY",
+    flutterFlowLibraryPageEnvironmentName("SuperBoardOnboardingPage"),
+    "FF_LIBRARY_SUPERBOARD_ONBOARDING_PAGE_KEY",
   );
   assert.deepEqual(
-    resolveFlutterFlowLibraryPage("OpenGrowOnboardingPage", {
+    resolveFlutterFlowLibraryPage("SuperBoardOnboardingPage", {
       kind: "page",
-      name: "OpenGrowOnboardingPage",
+      name: "SuperBoardOnboardingPage",
       key: "Scaffold_onboarding123",
       root: { key: "Scaffold_onboarding123" },
     }),
     {
-      name: "OpenGrowOnboardingPage",
+      name: "SuperBoardOnboardingPage",
       key: "Scaffold_onboarding123",
-      environment: "FF_LIBRARY_OPEN_GROW_ONBOARDING_PAGE_KEY",
+      environment: "FF_LIBRARY_SUPERBOARD_ONBOARDING_PAGE_KEY",
     },
   );
 });
@@ -29,27 +29,27 @@ test("derives stable environment names and validates inspected page keys", () =>
 test("rejects stale names, invalid keys and contradictory snapshots", () => {
   assert.throws(
     () =>
-      resolveFlutterFlowLibraryPage("OpenGrowOnboardingPage", {
+      resolveFlutterFlowLibraryPage("SuperBoardOnboardingPage", {
         kind: "page",
-        name: "OpenGrowPaywallPage",
+        name: "SuperBoardPaywallPage",
         key: "Scaffold_paywall",
       }),
-    /identifies page:OpenGrowPaywallPage/u,
+    /identifies page:SuperBoardPaywallPage/u,
   );
   assert.throws(
     () =>
-      resolveFlutterFlowLibraryPage("OpenGrowOnboardingPage", {
+      resolveFlutterFlowLibraryPage("SuperBoardOnboardingPage", {
         kind: "page",
-        name: "OpenGrowOnboardingPage",
+        name: "SuperBoardOnboardingPage",
         key: "bad key",
       }),
     /no valid immutable/u,
   );
   assert.throws(
     () =>
-      resolveFlutterFlowLibraryPage("OpenGrowOnboardingPage", {
+      resolveFlutterFlowLibraryPage("SuperBoardOnboardingPage", {
         kind: "page",
-        name: "OpenGrowOnboardingPage",
+        name: "SuperBoardOnboardingPage",
         key: "Scaffold_one",
         root: { key: "Scaffold_two" },
       }),

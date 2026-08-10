@@ -19,18 +19,15 @@ test("package scripts make reference and target validation modes unambiguous", (
 });
 
 test("reference type generation is explicit and rejects operational context", async () => {
-  assert.deepEqual(
-    await cloudflareTypesMode({ reference: true }, {}),
-    {
-      targetName: "mbza-development",
-      environment: "development",
-      reference: true,
-      mode: "reference",
-      generatorArgs: ["--reference"],
-      customSelectionArgs: { all: true },
-      customSelectionEnv: {},
-    },
-  );
+  assert.deepEqual(await cloudflareTypesMode({ reference: true }, {}), {
+    targetName: "mbza-development",
+    environment: "development",
+    reference: true,
+    mode: "reference",
+    generatorArgs: ["--reference"],
+    customSelectionArgs: { all: true },
+    customSelectionEnv: {},
+  });
   await assert.rejects(
     cloudflareTypesMode(
       { reference: true },
@@ -91,12 +88,7 @@ test("target type generation propagates one exact target and environment", async
       environment: "production",
       reference: false,
       mode: "target",
-      generatorArgs: [
-        "--target",
-        "vocostar",
-        "--environment",
-        "production",
-      ],
+      generatorArgs: ["--target", "vocostar", "--environment", "production"],
       customSelectionArgs: {
         target: "vocostar",
         environment: "production",
@@ -104,4 +96,19 @@ test("target type generation propagates one exact target and environment", async
       customSelectionEnv: env,
     },
   );
+});
+
+test("target type generation prefers canonical SuperBoard selection variables", async () => {
+  const env = {
+    SUPERBOARD_TARGET: "vocostar",
+    OPENGROW_TARGET: "mbza-development",
+    SUPERBOARD_ENVIRONMENT: "production",
+    OPENGROW_ENVIRONMENT: "development",
+  };
+  const mode = await cloudflareTypesMode(
+    { target: "vocostar", environment: "production" },
+    env,
+  );
+  assert.equal(mode.targetName, "vocostar");
+  assert.equal(mode.environment, "production");
 });

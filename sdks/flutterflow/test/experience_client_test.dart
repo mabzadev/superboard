@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 Map<String, dynamic> resolvedJson({String kind = 'paywall'}) => {
   'data': {
@@ -28,7 +28,7 @@ void main() {
   test('resolves with PROJECT-KEY headers and serves the TTL cache', () async {
     var calls = 0;
     late http.Request request;
-    final client = OpenGrowExperienceClient(
+    final client = SuperBoardExperienceClient(
       projectKey: 'test_project_key',
       platform: 'ios',
       identifier: 'com.example.app',
@@ -58,7 +58,7 @@ void main() {
     () async {
       var calls = 0;
       var now = DateTime.utc(2026, 1, 1);
-      final client = OpenGrowExperienceClient(
+      final client = SuperBoardExperienceClient(
         projectKey: 'key',
         platform: 'android',
         identifier: 'com.example.app',
@@ -84,7 +84,7 @@ void main() {
     'partitions cache by targeting context with stable attribute ordering',
     () async {
       var calls = 0;
-      final client = OpenGrowExperienceClient(
+      final client = SuperBoardExperienceClient(
         projectKey: 'key',
         platform: 'ios',
         identifier: 'com.example.app',
@@ -115,7 +115,7 @@ void main() {
 
   test('treats no active version as a cacheable empty result', () async {
     var calls = 0;
-    final client = OpenGrowExperienceClient(
+    final client = SuperBoardExperienceClient(
       projectKey: 'key',
       platform: 'web',
       identifier: 'example.com',
@@ -132,7 +132,7 @@ void main() {
 
   test('sends events once with a stable idempotency key', () async {
     final requests = <http.Request>[];
-    final client = OpenGrowExperienceClient(
+    final client = SuperBoardExperienceClient(
       projectKey: 'key',
       platform: 'ios',
       identifier: 'com.example.app',
@@ -142,11 +142,11 @@ void main() {
         return http.Response('{"data":{"accepted":1}}', 202);
       }),
     );
-    final resolved = OpenGrowResolvedExperience.fromJson(
-      OpenGrowExperienceKind.paywall,
+    final resolved = SuperBoardResolvedExperience.fromJson(
+      SuperBoardExperienceKind.paywall,
       (resolvedJson()['data'] as Map).cast<String, dynamic>(),
     );
-    final event = OpenGrowExperienceEvent(
+    final event = SuperBoardExperienceEvent(
       id: 'event_stable_1',
       type: 'impression',
       resolved: resolved,
@@ -162,7 +162,7 @@ void main() {
 
   test('retries transient telemetry with the same idempotency key', () async {
     final keys = <String?>[];
-    final client = OpenGrowExperienceClient(
+    final client = SuperBoardExperienceClient(
       projectKey: 'key',
       platform: 'android',
       identifier: 'com.example.app',
@@ -174,11 +174,11 @@ void main() {
             : http.Response('{"data":{"accepted":1}}', 202);
       }),
     );
-    final resolved = OpenGrowResolvedExperience.fromJson(
-      OpenGrowExperienceKind.paywall,
+    final resolved = SuperBoardResolvedExperience.fromJson(
+      SuperBoardExperienceKind.paywall,
       (resolvedJson()['data'] as Map).cast<String, dynamic>(),
     );
-    final event = OpenGrowExperienceEvent(
+    final event = SuperBoardExperienceEvent(
       id: 'event_retry_1',
       type: 'view',
       resolved: resolved,

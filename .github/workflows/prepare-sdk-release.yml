@@ -1,4 +1,4 @@
-name: Prepare immutable SDK release
+name: Prepare immutable SuperBoard SDK release
 
 on:
   workflow_dispatch:
@@ -10,11 +10,6 @@ on:
         options:
           - flutter
           - flutterflow
-          - flutterflow-support
-          - ios
-          - android
-          - javascript
-          - react-native
       source_ref:
         description: Exact reviewed head of the catalogue development branch
         required: true
@@ -82,25 +77,140 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "release_ref=$release_ref" >> "$GITHUB_OUTPUT"
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
-        if: ${{ inputs.library == 'flutter' || inputs.library == 'flutterflow' || inputs.library == 'flutterflow-support' }}
         with:
           channel: stable
           cache: true
       - name: Validate the candidate Dart package before creating its tag
-        if: ${{ inputs.library == 'flutter' || inputs.library == 'flutterflow' || inputs.library == 'flutterflow-support' }}
         env:
           LIBRARY: ${{ inputs.library }}
         run: |
           case "$LIBRARY" in
             flutter) package_path="sdks/flutter" ;;
             flutterflow) package_path="sdks/flutterflow" ;;
-            flutterflow-support) package_path="sdks/flutterflow_messaging" ;;
             *) exit 64 ;;
           esac
           (cd "$package_path" && flutter pub get && flutter analyze && flutter test)
 
-  tag:
+      - name: Bind FlutterFlow to the published Flutter v3 source
+        if: inputs.library == 'flutterflow'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          flutter_tag="$(node scripts/sdk-catalog.mjs candidate-ref --library flutter)"
+          [[ "$flutter_tag" =~ ^sdk-flutter-v3\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
+          git fetch --no-tags origin "refs/tags/$flutter_tag:refs/tags/$flutter_tag"
+          flutter_sha="$(git rev-list -n 1 "$flutter_tag")"
+          test "$flutter_sha" = "$SOURCE_SHA"
+          test "$(git rev-parse "$flutter_tag:sdks/flutter")" = "$(git rev-parse "$SOURCE_SHA:sdks/flutter")"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$flutter_tag" --jq .tag_name)" = "$flutter_tag"
+
+  flutter-android-native:
+    name: Build Flutter Android example before tagging
+    if: inputs.library == 'flutter'
     needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          cache: true
+      - name: Compile the Android wrapper through the consumer example
+        working-directory: sdks/flutter/example
+        run: |
+          flutter pub get
+          flutter build apk --debug
+
+  flutter-ios-native:
+    name: Build Flutter iOS example on macOS before tagging
+    if: inputs.library == 'flutter'
+    needs: validate
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve the example and its locked CocoaPods graph
+        working-directory: sdks/flutter/example
+        run: |
+          flutter pub get
+          pod install --project-directory=ios --deployment
+      - name: Verify embedded Flutter iOS sources
+        run: node --test scripts/flutter-ios-embedded-sources.test.mjs
+      - name: Validate the public CocoaPods identity
+        run: |
+          pod ipc spec sdks/flutter/ios/superboard_flutter.podspec > "$RUNNER_TEMP/superboard_flutter.podspec.json"
+          ruby -rjson -ryaml -e '
+            spec = JSON.parse(File.read(ARGV.fetch(0)))
+            package = YAML.safe_load(File.read(ARGV.fetch(1)), aliases: false)
+            abort "unexpected pod name" unless spec.fetch("name") == "superboard_flutter"
+            abort "pod/pub version mismatch" unless spec.fetch("version") == package.fetch("version")
+          ' "$RUNNER_TEMP/superboard_flutter.podspec.json" sdks/flutter/pubspec.yaml
+      - name: Compile the iOS pod target without requiring a simulator runtime
+        run: |
+          xcode_overrides=()
+          destinations="$(xcodebuild \
+            -workspace sdks/flutter/example/ios/Runner.xcworkspace \
+            -scheme Runner \
+            -showdestinations 2>&1)"
+          if ! grep -q 'platform:iOS Simulator' <<< "$destinations"; then
+            echo "No simulator destination is installed; compiling Swift while CocoaPods validates the XIB graph."
+            xcode_overrides=('EXCLUDED_SOURCE_FILE_NAMES=*.xib')
+          fi
+          xcodebuild \
+            -project sdks/flutter/example/ios/Pods/Pods.xcodeproj \
+            -target superboard_flutter \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            "${xcode_overrides[@]}" \
+            build
+
+  native-candidate-gate:
+    name: Flutter native candidate gate
+    if: ${{ always() }}
+    needs: [validate, flutter-android-native, flutter-ios-native]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      LIBRARY: ${{ inputs.library }}
+      VALIDATE_RESULT: ${{ needs.validate.result }}
+      ANDROID_RESULT: ${{ needs.flutter-android-native.result }}
+      IOS_RESULT: ${{ needs.flutter-ios-native.result }}
+    steps:
+      - name: Fail closed on the selected native validation contract
+        run: |
+          test "$VALIDATE_RESULT" = "success"
+          case "$LIBRARY" in
+            flutter)
+              test "$ANDROID_RESULT" = "success"
+              test "$IOS_RESULT" = "success"
+              ;;
+            flutterflow)
+              test "$ANDROID_RESULT" = "skipped"
+              test "$IOS_RESULT" = "skipped"
+              ;;
+            *) exit 64 ;;
+          esac
+
+  tag:
+    needs: [validate, native-candidate-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: sdk-release
@@ -112,6 +222,7 @@ jobs:
       DEVELOPMENT_BRANCH: ${{ needs.validate.outputs.development_branch }}
       TAG: ${{ needs.validate.outputs.tag }}
       RELEASE_REF: ${{ needs.validate.outputs.release_ref }}
+      LIBRARY: ${{ inputs.library }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -124,6 +235,8 @@ jobs:
       - name: Install repository tooling for the SDK catalogue
         run: npm ci --ignore-scripts
       - name: Revalidate the reviewed source and unused immutable refs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
@@ -137,6 +250,15 @@ jobs:
           if test "$RELEASE_REF" != "$TAG" && git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_REF" >/dev/null 2>&1; then
             echo "Package reference already exists: $RELEASE_REF" >&2
             exit 1
+          fi
+          if test "$LIBRARY" = "flutterflow"; then
+            flutter_tag="$(node scripts/sdk-catalog.mjs candidate-ref --library flutter)"
+            [[ "$flutter_tag" =~ ^sdk-flutter-v3\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
+            git fetch --no-tags origin "refs/tags/$flutter_tag:refs/tags/$flutter_tag"
+            flutter_sha="$(git rev-list -n 1 "$flutter_tag")"
+            test "$flutter_sha" = "$SOURCE_SHA"
+            test "$(git rev-parse "$flutter_tag:sdks/flutter")" = "$(git rev-parse "$SOURCE_SHA:sdks/flutter")"
+            test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$flutter_tag" --jq .tag_name)" = "$flutter_tag"
           fi
       - name: Create reviewed SDK tag
         run: |

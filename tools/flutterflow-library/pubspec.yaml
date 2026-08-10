@@ -1,5 +1,5 @@
-name: opengrow_flutterflow_library
-description: Git-owned FlutterFlow AI DSL for the OpenGrow reusable library.
+name: superboard_flutterflow_library
+description: Git-owned FlutterFlow AI DSL for the SuperBoard reusable library.
 version: 1.0.0
 publish_to: none
 

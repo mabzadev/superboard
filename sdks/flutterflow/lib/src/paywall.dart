@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:opengrow_flutter/opengrow.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
 
 import 'experience_client.dart';
 
-class OpenGrowPaywall extends StatefulWidget {
-  const OpenGrowPaywall({
+class SuperBoardPaywall extends StatefulWidget {
+  const SuperBoardPaywall({
     super.key,
     this.width,
     this.height,
@@ -48,25 +48,25 @@ class OpenGrowPaywall extends StatefulWidget {
   final VoidCallback? onClosed;
   final VoidCallback? onUnavailable;
   final bool renderFallbackOnUnavailable;
-  final OpenGrowExperienceClient? experienceClient;
+  final SuperBoardExperienceClient? experienceClient;
 
   @override
-  State<OpenGrowPaywall> createState() => _OpenGrowPaywallState();
+  State<SuperBoardPaywall> createState() => _SuperBoardPaywallState();
 }
 
-class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
+class _SuperBoardPaywallState extends State<SuperBoardPaywall> {
   final String _sessionId =
       '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${Random.secure().nextInt(0x7fffffff).toRadixString(36)}';
-  OpenGrowResolvedExperience? _resolved;
-  OpenGrowOffering? _offering;
-  OpenGrowPackage? _selected;
+  SuperBoardResolvedExperience? _resolved;
+  SuperBoardOffering? _offering;
+  SuperBoardPackage? _selected;
   String? _error;
   bool _busy = false;
   bool _closedTracked = false;
   bool _loaded = false;
 
-  OpenGrowExperienceClient get _client =>
-      widget.experienceClient ?? OpenGrowExperienceSdk.client;
+  SuperBoardExperienceClient get _client =>
+      widget.experienceClient ?? SuperBoardExperienceSdk.client;
 
   Map<String, dynamic> _eventMetadata([
     Map<String, dynamic> extra = const {},
@@ -89,10 +89,10 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
           country: widget.country,
           attributes: widget.attributes,
         ),
-        OpenGrowPurchases.instance.getOfferings(placement: widget.placement),
+        SuperBoardPurchases.instance.getOfferings(placement: widget.placement),
       ]);
-      final resolved = results[0] as OpenGrowResolvedExperience?;
-      final offerings = results[1] as OpenGrowOfferings;
+      final resolved = results[0] as SuperBoardResolvedExperience?;
+      final offerings = results[1] as SuperBoardOfferings;
       final configuredOffering = resolved?.definition['metadata'] is Map
           ? (resolved!.definition['metadata'] as Map)['offering_identifier']
                 ?.toString()
@@ -139,7 +139,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
     final resolved = _resolved;
     if (resolved == null) return;
     await _client.track(
-      OpenGrowExperienceEvent(
+      SuperBoardExperienceEvent(
         type: type,
         resolved: resolved,
         platform: _client.platform,
@@ -150,7 +150,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
     );
   }
 
-  void _selectPackage(OpenGrowPackage package) {
+  void _selectPackage(SuperBoardPackage package) {
     setState(() => _selected = package);
     unawaited(
       _track(
@@ -168,27 +168,27 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
     if (package == null || _busy) return;
     setState(() => _busy = true);
     await _track('checkout', extra: {'package_identifier': package.identifier});
-    final result = await OpenGrowPurchases.instance.purchasePackage(package);
+    final result = await SuperBoardPurchases.instance.purchasePackage(package);
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _error = result.outcome == OpenGrowPurchaseOutcome.failed
+      _error = result.outcome == SuperBoardPurchaseOutcome.failed
           ? result.error
           : null;
     });
     final type = switch (result.outcome) {
-      OpenGrowPurchaseOutcome.purchased => 'purchase',
-      OpenGrowPurchaseOutcome.cancelled => 'cancel',
-      OpenGrowPurchaseOutcome.failed => 'error',
-      OpenGrowPurchaseOutcome.pending => 'checkout',
+      SuperBoardPurchaseOutcome.purchased => 'purchase',
+      SuperBoardPurchaseOutcome.cancelled => 'cancel',
+      SuperBoardPurchaseOutcome.failed => 'error',
+      SuperBoardPurchaseOutcome.pending => 'checkout',
     };
     unawaited(
       _track(
         type,
-        revenueMicros: result.outcome == OpenGrowPurchaseOutcome.purchased
+        revenueMicros: result.outcome == SuperBoardPurchaseOutcome.purchased
             ? ((package.product.rawPrice ?? 0) * 1000000).round()
             : 0,
-        currency: result.outcome == OpenGrowPurchaseOutcome.purchased
+        currency: result.outcome == SuperBoardPurchaseOutcome.purchased
             ? package.product.currencyCode
             : null,
         extra: {
@@ -197,7 +197,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
         },
       ),
     );
-    if (result.outcome == OpenGrowPurchaseOutcome.purchased) {
+    if (result.outcome == SuperBoardPurchaseOutcome.purchased) {
       widget.onPurchased?.call();
     }
   }
@@ -207,7 +207,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
     setState(() => _busy = true);
     await _track('cta', extra: {'action': 'restore_started'});
     try {
-      await OpenGrowPurchases.instance.restorePurchases();
+      await SuperBoardPurchases.instance.restorePurchases();
       unawaited(_track('restore'));
       widget.onRestored?.call();
     } catch (error) {
@@ -291,7 +291,7 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
 
   Widget _packageList() => Column(
     children: [
-      for (final package in _offering?.packages ?? const <OpenGrowPackage>[])
+      for (final package in _offering?.packages ?? const <SuperBoardPackage>[])
         Card(
           color: identical(_selected, package)
               ? _accentColor.withValues(alpha: 0.12)
@@ -445,8 +445,8 @@ class _OpenGrowPaywallState extends State<OpenGrowPaywall> {
   }
 }
 
-class OpenGrowRestorePurchasesButton extends StatelessWidget {
-  const OpenGrowRestorePurchasesButton({
+class SuperBoardRestorePurchasesButton extends StatelessWidget {
+  const SuperBoardRestorePurchasesButton({
     super.key,
     this.label = 'Restore purchases',
     this.onRestored,
@@ -458,7 +458,7 @@ class OpenGrowRestorePurchasesButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: () async {
-        await OpenGrowPurchases.instance.restorePurchases();
+        await SuperBoardPurchases.instance.restorePurchases();
         onRestored?.call();
       },
       child: Text(label),
@@ -466,8 +466,8 @@ class OpenGrowRestorePurchasesButton extends StatelessWidget {
   }
 }
 
-class OpenGrowCustomerCenter extends StatelessWidget {
-  const OpenGrowCustomerCenter({
+class SuperBoardCustomerCenter extends StatelessWidget {
+  const SuperBoardCustomerCenter({
     super.key,
     this.width,
     this.height,
@@ -485,8 +485,8 @@ class OpenGrowCustomerCenter extends StatelessWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: FutureBuilder<OpenGrowCustomerInfo>(
-        future: OpenGrowPurchases.instance.getCustomerInfo(),
+      child: FutureBuilder<SuperBoardCustomerInfo>(
+        future: SuperBoardPurchases.instance.getCustomerInfo(),
         builder: (context, snapshot) {
           if (!snapshot.hasData && snapshot.error == null) {
             return const Center(child: CircularProgressIndicator());
@@ -526,7 +526,7 @@ class OpenGrowCustomerCenter extends StatelessWidget {
                     trailing: Text('${entry.value}'),
                   ),
               ],
-              OpenGrowRestorePurchasesButton(onRestored: onRestored),
+              SuperBoardRestorePurchasesButton(onRestored: onRestored),
             ],
           );
         },

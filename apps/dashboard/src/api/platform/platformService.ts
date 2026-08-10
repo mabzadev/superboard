@@ -253,6 +253,7 @@ export type PlatformEmailOperations = {
 
 export type PlatformLibrary = {
   id: string;
+  lifecycle: "active" | "internal" | "archived";
   displayName: string;
   ecosystem: string;
   packageName: string;
@@ -264,6 +265,9 @@ export type PlatformLibrary = {
   latestReleaseVersion: string;
   releaseRef: string;
   releaseStatus: "released" | "pending-release";
+  releaseSha: string;
+  candidatePackageName?: string;
+  candidateInstall?: string;
   surfaceManifest?: string;
   notes?: string;
   install: string;
@@ -301,7 +305,7 @@ export type PlatformLibraryCatalog = {
 
 export type PlatformFlutterFlowLibrary = {
   schemaVersion: number;
-  owner: "opengrow-platform";
+  owner: "superboard-platform";
   displayName: string;
   source: {
     path: string;

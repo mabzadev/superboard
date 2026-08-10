@@ -45,7 +45,7 @@ export async function ensureDefaultOAuthApplication(
 
   const created = await db.prepare(`
     INSERT INTO oauth_applications (name, uid, secret, redirect_uri, scopes)
-    VALUES ('OpenGrow Dashboard', ?, ?, 'urn:ietf:wg:oauth:2.0:oob', 'read write')
+    VALUES ('SuperBoard Dashboard', ?, ?, 'urn:ietf:wg:oauth:2.0:oob', 'read write')
     RETURNING id
   `).bind(clientId, await tokenDigest(crypto.randomUUID())).first<{ id: number }>();
   if (!created) throw new Error('Unable to create OAuth application');

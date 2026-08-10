@@ -196,7 +196,14 @@ export function flutterFlowSourceEnvironmentName(application) {
   if (!normalized) {
     throw new Error("FlutterFlow application cannot resolve a source variable");
   }
-  return `OPENGROW_CLIENT_SOURCE_${normalized}`;
+  return `SUPERBOARD_CLIENT_SOURCE_${normalized}`;
+}
+
+export function legacyFlutterFlowSourceEnvironmentName(application) {
+  return flutterFlowSourceEnvironmentName(application).replace(
+    /^SUPERBOARD_/u,
+    "OPENGROW_",
+  );
 }
 
 export function resolveFlutterFlowSourcePath({
@@ -214,9 +221,15 @@ export function resolveFlutterFlowSourcePath({
     );
   }
   const environmentName = flutterFlowSourceEnvironmentName(application);
-  const sourcePath = String(env[environmentName] || "").trim();
+  const legacyEnvironmentName =
+    legacyFlutterFlowSourceEnvironmentName(application);
+  const sourcePath = String(
+    env[environmentName] || env[legacyEnvironmentName] || "",
+  ).trim();
   if (!sourcePath) {
-    throw new Error(`--source or ${environmentName} is required`);
+    throw new Error(
+      `--source or ${environmentName} is required (${legacyEnvironmentName} remains a migration alias)`,
+    );
   }
   return sourcePath;
 }

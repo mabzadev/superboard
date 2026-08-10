@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
-const cli = resolve(repositoryRoot, "scripts/opengrow-module-cutover.mjs");
+const cli = resolve(repositoryRoot, "scripts/superboard-module-cutover.mjs");
 const targetArgs = ["--target", "vocostar", "--environment", "production"];
 
 test("backup-receipt hashes every required local export and attaches evidence to the window", () => {

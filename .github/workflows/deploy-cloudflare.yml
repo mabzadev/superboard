@@ -1,4 +1,4 @@
-name: Deploy OpenGrow to Cloudflare
+name: Deploy SuperBoard to Cloudflare
 
 on:
   workflow_run:
@@ -94,20 +94,20 @@ jobs:
     env:
       DEPLOY_BRANCH: ${{ needs.plan.outputs.branch }}
       DEPLOY_SHA: ${{ needs.plan.outputs.sha }}
-      OPENGROW_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
+      SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
     steps:
       - name: Restrict deployments to successful long-lived branch revisions
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_EXPECTED_TARGET: ${{ matrix.target }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_EXPECTED_TARGET: ${{ matrix.target }}
         run: |
           case "$DEPLOY_BRANCH" in
             dev|main) ;;
             *) exit 64 ;;
           esac
           test -n "$DEPLOY_SHA"
-          test -n "$OPENGROW_EXPECTED_TARGET"
-          test "$OPENGROW_TARGET" = "$OPENGROW_EXPECTED_TARGET"
+          test -n "$SUPERBOARD_EXPECTED_TARGET"
+          test "$SUPERBOARD_TARGET" = "$SUPERBOARD_EXPECTED_TARGET"
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.DEPLOY_SHA }}
@@ -153,21 +153,21 @@ jobs:
       - name: Validate target, generated bindings and deployment order
         if: steps.revision.outputs.deploy == 'true'
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
         run: |
-          test -n "$OPENGROW_TARGET"
+          test -n "$SUPERBOARD_TARGET"
           npm run cloudflare:test:targets
           npm run cloudflare:test:services
           npm run cloudflare:types:check:target -- \
-            --target "$OPENGROW_TARGET" \
-            --environment "$OPENGROW_ENVIRONMENT"
+            --target "$SUPERBOARD_TARGET" \
+            --environment "$SUPERBOARD_ENVIRONMENT"
           npm run cloudflare:deploy:all -- --plan
       - name: Validate custom Worker implementations
         if: steps.revision.outputs.deploy == 'true'
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
         run: npm run custom:check
       - name: Validate platform code
         if: steps.revision.outputs.deploy == 'true'
@@ -175,31 +175,31 @@ jobs:
       - name: Enforce staged or receipt-bound public routing
         if: steps.revision.outputs.deploy == 'true'
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:routing:check
       - name: Verify public domain ownership without mutation
         if: steps.revision.outputs.deploy == 'true'
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:domains:plan -- --strict
       - name: Verify required Cloudflare secret names without exposing values
         if: steps.revision.outputs.deploy == 'true'
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:secrets:check
       - name: Validate the production backup encryption key before mutation
         if: steps.revision.outputs.deploy == 'true' && matrix.cloudflareEnvironment == 'production'
         env:
-          OPENGROW_BACKUP_ENCRYPTION_KEY: ${{ secrets.OPENGROW_BACKUP_ENCRYPTION_KEY }}
+          SUPERBOARD_BACKUP_ENCRYPTION_KEY: ${{ secrets.SUPERBOARD_BACKUP_ENCRYPTION_KEY || secrets.OPENGROW_BACKUP_ENCRYPTION_KEY }}
         run: npm run cloudflare:d1:key:check
       - name: Recheck automatic revision immediately before deployment
         if: steps.revision.outputs.deploy == 'true' && github.event_name == 'workflow_run'
@@ -209,8 +209,8 @@ jobs:
       - name: Upload isolated production preflight versions
         if: steps.revision.outputs.deploy == 'true' && matrix.cloudflareEnvironment == 'production'
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run cloudflare:deploy:all -- --preflight --upload-only
@@ -218,13 +218,13 @@ jobs:
         id: deploy-workers
         if: steps.revision.outputs.deploy == 'true'
         env:
-          OPENGROW_TARGET: ${{ vars.OPENGROW_TARGET }}
-          OPENGROW_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
+          SUPERBOARD_TARGET: ${{ vars.SUPERBOARD_TARGET || vars.OPENGROW_TARGET }}
+          SUPERBOARD_ENVIRONMENT: ${{ matrix.cloudflareEnvironment }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          if [ "$OPENGROW_ENVIRONMENT" = "production" ]; then
-            npm run cloudflare:deploy:all -- --backup-directory "$RUNNER_TEMP/opengrow-d1-backups"
+          if [ "$SUPERBOARD_ENVIRONMENT" = "production" ]; then
+            npm run cloudflare:deploy:all -- --backup-directory "$RUNNER_TEMP/superboard-d1-backups"
           else
             npm run cloudflare:deploy:all
           fi
@@ -232,35 +232,35 @@ jobs:
         id: encrypt-backups
         if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.deploy-workers.outcome != 'skipped' }}
         env:
-          OPENGROW_BACKUP_ENCRYPTION_KEY: ${{ secrets.OPENGROW_BACKUP_ENCRYPTION_KEY }}
+          SUPERBOARD_BACKUP_ENCRYPTION_KEY: ${{ secrets.SUPERBOARD_BACKUP_ENCRYPTION_KEY || secrets.OPENGROW_BACKUP_ENCRYPTION_KEY }}
           DEPLOY_WORKERS_OUTCOME: ${{ steps.deploy-workers.outcome }}
         run: |
           if [ "$DEPLOY_WORKERS_OUTCOME" = "success" ]; then
             npm run cloudflare:d1:encrypt -- \
-              --directory "$RUNNER_TEMP/opengrow-d1-backups" \
+              --directory "$RUNNER_TEMP/superboard-d1-backups" \
               --require-batch-receipt
           else
             npm run cloudflare:d1:encrypt -- \
-              --directory "$RUNNER_TEMP/opengrow-d1-backups"
+              --directory "$RUNNER_TEMP/superboard-d1-backups"
           fi
       - name: Retain production D1 migration backups
         if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.encrypt-backups.outcome == 'success' }}
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
-          name: opengrow-d1-backups-${{ matrix.id }}-${{ github.run_id }}
+          name: superboard-d1-backups-${{ matrix.id }}-${{ github.run_id }}
           path: |
-            ${{ runner.temp }}/opengrow-d1-backups/**/*.enc
-            ${{ runner.temp }}/opengrow-d1-backups/encrypted-backups.index.json
+            ${{ runner.temp }}/superboard-d1-backups/**/*.enc
+            ${{ runner.temp }}/superboard-d1-backups/encrypted-backups.index.json
           if-no-files-found: error
           retention-days: 30
       - name: Retain any recoverable encrypted backup after encryption failure
         if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.encrypt-backups.outcome == 'failure' }}
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
-          name: opengrow-d1-recovery-${{ matrix.id }}-${{ github.run_id }}
+          name: superboard-d1-recovery-${{ matrix.id }}-${{ github.run_id }}
           path: |
-            ${{ runner.temp }}/opengrow-d1-backups/**/*.enc
-            ${{ runner.temp }}/opengrow-d1-backups/encrypted-backups.index.json
+            ${{ runner.temp }}/superboard-d1-backups/**/*.enc
+            ${{ runner.temp }}/superboard-d1-backups/encrypted-backups.index.json
           if-no-files-found: warn
           retention-days: 30
 
@@ -272,20 +272,20 @@ jobs:
     environment: ${{ needs.plan.outputs.reference_environment }}
     env:
       DEPLOY_SHA: ${{ needs.plan.outputs.sha }}
-      GH_TOKEN: ${{ secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
-      OPENGROW_REFERENCE_REPOSITORY: ${{ vars.OPENGROW_REFERENCE_REPOSITORY }}
+      GH_TOKEN: ${{ secrets.SUPERBOARD_REFERENCE_DISPATCH_TOKEN || secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
+      SUPERBOARD_REFERENCE_REPOSITORY: ${{ vars.SUPERBOARD_REFERENCE_REPOSITORY || vars.OPENGROW_REFERENCE_REPOSITORY }}
     steps:
       - name: Validate cross-repository dispatch configuration
         run: |
           test -n "$GH_TOKEN"
-          test -n "$OPENGROW_REFERENCE_REPOSITORY"
+          test -n "$SUPERBOARD_REFERENCE_REPOSITORY"
           test -n "$DEPLOY_SHA"
-          case "$OPENGROW_REFERENCE_REPOSITORY" in
+          case "$SUPERBOARD_REFERENCE_REPOSITORY" in
             */*) ;;
             *) exit 64 ;;
           esac
       - name: Trigger exact reference acceptance build
         run: |
-          gh api --method POST "repos/$OPENGROW_REFERENCE_REPOSITORY/dispatches" \
+          gh api --method POST "repos/$SUPERBOARD_REFERENCE_REPOSITORY/dispatches" \
             --raw-field event_type=platform-dev-updated \
             --raw-field "client_payload[platform_sha]=$DEPLOY_SHA"

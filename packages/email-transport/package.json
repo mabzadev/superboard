@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/email-transport",
+  "name": "@superboard/email-transport",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",

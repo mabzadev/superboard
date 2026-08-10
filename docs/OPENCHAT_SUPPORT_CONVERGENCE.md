@@ -1,10 +1,10 @@
-# Convergence OpenChat vers OpenGrow Support
+# Convergence OpenChat vers SuperBoard Support
 
 ## Décision
 
 OpenChat n'est pas un second socle à maintenir. C'est une source de migration
 temporaire et une référence fonctionnelle pour les comportements Chatwoot.
-OpenGrow Support reste l'autorité commune pour le support de toutes les
+SuperBoard Support reste l'autorité commune pour le support de toutes les
 applications. VocoStar ne conserve à terme qu'une configuration Support, un
 identifiant de projet et ses choix de fonctionnalités.
 
@@ -89,7 +89,7 @@ route Chatwoot existe.
 
 ## Doublons et autorité finale
 
-| Domaine fonctionnel | OpenChat actuel | OpenGrow cible | Décision |
+| Domaine fonctionnel | OpenChat actuel | SuperBoard cible | Décision |
 | --- | --- | --- | --- |
 | Authentification agent | sessions, Google, SAML, MFA dans OpenChat | Identity + accès opérateur Grow | supprimer le doublon OpenChat |
 | Identité utilisateur mobile | contact/token Chatwoot | Identity + application JWT | Identity est l'autorité |
@@ -120,16 +120,16 @@ flowchart LR
   app --> q1["Queues webhook et e-mail"]
   app --> rt["Worker openchat-realtime"]
   q1 --> jobs["Worker openchat-jobs"]
-  app -. double .-> identity["OpenGrow Identity"]
-  app -. double .-> support["OpenGrow Support"]
-  app -. double .-> email["OpenGrow Email"]
+  app -. double .-> identity["SuperBoard Identity"]
+  app -. double .-> support["SuperBoard Support"]
+  app -. double .-> email["SuperBoard Email"]
 ```
 
 ## Architecture cible
 
 ```mermaid
 flowchart LR
-  clients["Applications et bibliothèque FlutterFlow"] --> api["API OpenGrow"]
+  clients["Applications et bibliothèque FlutterFlow"] --> api["API SuperBoard"]
   operators["Opérateurs"] --> grow["Grow back-office"]
   api --> identity["Identity commun"]
   api --> support["Support commun"]
@@ -150,7 +150,7 @@ VocoStar. S'il faut plus tard connecter un canal support propre à une seule
 application, l'adaptateur fournisseur vit dans ce Worker custom et publie le
 contrat Support commun ; il ne recrée ni contacts, ni conversations, ni inbox.
 
-## Écart de préparation OpenGrow Support
+## Écart de préparation SuperBoard Support
 
 Le Worker `opengrow-support` existe déjà dans le compte VocoStar. Sa version
 active utilise encore les ressources de compatibilité Messaging :
@@ -189,7 +189,7 @@ d'alimenter le stockage Messaging que l'architecture veut précisément supprime
 
 ### Phase 1 — préparer Support en développement MBZA
 
-1. utiliser `opengrow-platform/dev` comme unique source ;
+1. utiliser `superboard-platform/dev` comme unique source ;
 2. déployer les Workers privés contre les ressources MBZA development ;
 3. exécuter l'export OpenChat avec un token Chatwoot en lecture seule ;
 4. transformer contacts, conversations, messages, labels et pièces jointes ;
@@ -228,7 +228,7 @@ d'alimenter le stockage Messaging que l'architecture veut précisément supprime
 3. refaire un export final ;
 4. appliquer l'import reprenable ;
 5. basculer le client vers `api.vocostar.com/api/v1/support-client` ;
-6. rouvrir uniquement OpenGrow Support ;
+6. rouvrir uniquement SuperBoard Support ;
 7. maintenir OpenChat privé et en lecture seule pendant la rétention.
 
 ### Phase 5 — retrait
@@ -250,7 +250,7 @@ Après réconciliation, acceptation, restauration prouvée et fin de rétention 
 La convergence n'est terminée que lorsque toutes les conditions suivantes sont
 vraies :
 
-- OpenGrow Support utilise ses propres D1/R2/Queue/DLQ ;
+- SuperBoard Support utilise ses propres D1/R2/Queue/DLQ ;
 - les migrations Support sont à zéro attente ;
 - les données OpenChat et l'ancienne source Dokploy sont toutes deux expliquées ;
 - les contacts, conversations, messages et pièces jointes sont réconciliés ;

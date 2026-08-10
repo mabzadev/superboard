@@ -126,14 +126,14 @@ test("production environments require deployment and encrypted-backup credential
           platform: {
             environments: {
               "production-example": {
-                variables: { OPENGROW_TARGET: "example" },
+                variables: { SUPERBOARD_TARGET: "example" },
                 secrets: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
               },
             },
           },
         },
       }),
-    /OPENGROW_BACKUP_ENCRYPTION_KEY/u,
+    /SUPERBOARD_BACKUP_ENCRYPTION_KEY/u,
   );
 });
 
@@ -158,11 +158,11 @@ test("a GitHub Environment cannot redirect a deployment to another target", () =
           platform: {
             environments: {
               "production-example": {
-                variables: { OPENGROW_TARGET: "another-application" },
+                variables: { SUPERBOARD_TARGET: "another-application" },
                 secrets: [
                   "CLOUDFLARE_ACCOUNT_ID",
                   "CLOUDFLARE_API_TOKEN",
-                  "OPENGROW_BACKUP_ENCRYPTION_KEY",
+                  "SUPERBOARD_BACKUP_ENCRYPTION_KEY",
                 ],
               },
             },

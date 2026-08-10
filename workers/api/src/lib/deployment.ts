@@ -55,6 +55,6 @@ export async function recordSuccessfulRegistration(env: Env, rawEmail: unknown):
 export function registrationDeniedBody() {
   return {
     error: REGISTRATION_NOT_ALLOWED,
-    message: 'This email is not authorized for this OpenGrow deployment.',
+    message: 'This email is not authorized for this SuperBoard deployment.',
   };
 }

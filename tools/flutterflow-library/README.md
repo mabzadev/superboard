@@ -1,23 +1,23 @@
-# OpenGrow FlutterFlow library
+# SuperBoard FlutterFlow library
 
 This directory is the Git authority for the reusable FlutterFlow project named
-`OpenGrow`. The remote FlutterFlow project is a compiled deployment target, not
+`SuperBoard`. The remote FlutterFlow project is a compiled deployment target, not
 the source of truth.
 
 The DSL contains only reusable adapters. Runtime URLs, project identifiers,
 environment selection and link domains are FlutterFlow library values supplied
 by each application. Identity refresh tokens are owned by the encrypted native
-session in `opengrow_flutterflow`; they are never stored in FlutterFlow App
+session in `superboard_flutterflow`; they are never stored in FlutterFlow App
 State.
 
 The machine-enforced public surface is:
 
 - 11 application-supplied Library Values;
-- 5 reusable widgets: `OpenGrowBootstrap`, `OpenGrowPaywall`,
-  `OpenGrowOnboarding`, `OpenGrowRestorePurchasesButton` and
-  `OpenGrowCustomerCenter`;
-- 3 reusable pages: `OpenGrowPaywallPage`, `OpenGrowOnboardingPage` and
-  `OpenGrowCustomerCenterPage`;
+- 5 reusable widgets: `SuperBoardBootstrap`, `SuperBoardPaywall`,
+  `SuperBoardOnboarding`, `SuperBoardRestorePurchasesButton` and
+  `SuperBoardCustomerCenter`;
+- 3 reusable pages: `SuperBoardPaywallPage`, `SuperBoardOnboardingPage` and
+  `SuperBoardCustomerCenterPage`;
 - 64 adapter actions covering session/authentication, Google and Apple account
   linking, push, files, custom jobs, support, purchases, onboarding, marketing
   consent and dynamic links.

@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:opengrow_flutter/models/opengrow_link.dart';
-import 'package:opengrow_flutter/opengrow_platform_interface.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutter/models/superboard_link.dart';
+import 'package:superboard_flutter/superboard_platform_interface.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class FakeOpenGrowPlatform
+class FakeSuperBoardPlatform
     with MockPlatformInterfaceMixin
-    implements OpenGrowPlatform {
+    implements SuperBoardPlatform {
   GenerateLinkParams? generatedLinkParams;
   Map<String, dynamic>? attributes;
   String? pushToken;
@@ -60,23 +60,23 @@ class FakeOpenGrowPlatform
 }
 
 void main() {
-  late FakeOpenGrowPlatform platform;
+  late FakeSuperBoardPlatform platform;
 
   setUp(() {
-    platform = FakeOpenGrowPlatform();
-    OpenGrowPlatform.instance = platform;
+    platform = FakeSuperBoardPlatform();
+    SuperBoardPlatform.instance = platform;
   });
 
   test('sets JSON attributes', () async {
     expect(
-      await opengrowSetUserAttributesJson('{"plan":"premium","age":42}'),
+      await superboardSetUserAttributesJson('{"plan":"premium","age":42}'),
       isTrue,
     );
     expect(platform.attributes, {'plan': 'premium', 'age': 42});
   });
 
   test('generates a typed link from JSON', () async {
-    final link = await opengrowGenerateLinkJson(
+    final link = await superboardGenerateLinkJson(
       '{"title":"Invite","data":{"screen":"home"},'
       '"tracking":{"utm_source":"flutterflow"}}',
     );
@@ -87,7 +87,7 @@ void main() {
   });
 
   test('forwards messaging calls', () async {
-    expect(await opengrowGetUnreadMessageCount(), 4);
-    expect(await opengrowDisplayMessages(), isTrue);
+    expect(await superboardGetUnreadMessageCount(), 4);
+    expect(await superboardDisplayMessages(), isTrue);
   });
 }

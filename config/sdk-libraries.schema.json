@@ -11,7 +11,7 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 3 },
+    "schemaVersion": { "const": 4 },
     "repository": { "type": "string", "format": "uri" },
     "developmentBranch": { "type": "string", "minLength": 1 },
     "releasePolicy": { "const": "immutable-tag" },
@@ -24,17 +24,13 @@
         "allOf": [
           {
             "if": {
-              "properties": { "releaseStatus": { "const": "released" } },
-              "required": ["releaseStatus"]
+              "properties": {
+                "lifecycle": { "enum": ["internal", "archived"] }
+              },
+              "required": ["lifecycle"]
             },
             "then": {
-              "properties": {
-                "releaseSha": {
-                  "type": "string",
-                  "pattern": "^[0-9a-f]{40}$"
-                }
-              },
-              "required": ["releaseSha"]
+              "properties": { "releaseStatus": { "const": "released" } }
             }
           },
           {
@@ -54,6 +50,7 @@
         ],
         "required": [
           "id",
+          "lifecycle",
           "displayName",
           "ecosystem",
           "packageName",
@@ -65,10 +62,12 @@
           "latestReleaseVersion",
           "releaseRef",
           "releaseStatus",
+          "releaseSha",
           "install"
         ],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "lifecycle": { "enum": ["active", "internal", "archived"] },
           "displayName": { "type": "string", "minLength": 1 },
           "ecosystem": { "type": "string", "minLength": 1 },
           "packageName": { "type": "string", "minLength": 1 },

@@ -1,42 +1,61 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg">
-    <img src="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="SuperBoard">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform"><img src="https://img.shields.io/badge/distribution-public%20Git-4F46E5?style=flat-square" alt="Public Git"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform"><img src="https://img.shields.io/badge/distribution-public%20Git-4F46E5?style=flat-square" alt="Public Git"/></a>
   <a href="#"><img src="https://img.shields.io/badge/platforms-iOS%20%7C%20Android-4F46E5?style=flat-square" alt="Platforms"/></a>
   <a href="#"><img src="https://img.shields.io/badge/flutter-3.0%2B-4F46E5?style=flat-square&logo=flutter&logoColor=white" alt="Flutter"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for Flutter.<br/>
-  Part of the <a href="https://github.com/mbzadev">OpenGrow</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mbzadev">SuperBoard</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/flutter#quick-start">Quick Start</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/flutter#api-reference">API Reference</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/docs">Full Docs</a>
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/flutter#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/flutter#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
 
-## OpenGrow Purchases
+## SuperBoard 3 migration
+
+The canonical package and import are now:
+
+```dart
+import 'package:superboard_flutter/superboard_flutter.dart';
+
+final superboard = SuperBoard();
+```
+
+OpenGrow 2.x Dart symbols and entrypoint files remain as deprecated aliases for
+one major release. Android manifest keys and iOS plist keys also fall back to
+their 2.x spelling. The encrypted purchase outbox, anonymous identifier,
+CustomerInfo cache, and JWKS cache deliberately keep their `opengrow.*`
+physical storage keys so an upgrade or rollback cannot disconnect a user or
+lose an unfinished purchase. Do not install the 2.x and 3.x packages together.
+Follow the [complete 2.x to 3.x migration checklist](MIGRATION.md) before
+regenerating the FlutterFlow or native application builds.
+
+## SuperBoard Purchases
 
 Version 2.1 adds resumable, server-verified App Store and Google Play purchases:
 
 ```dart
-final purchases = OpenGrowPurchases.instance;
+final purchases = SuperBoardPurchases.instance;
 await purchases.configure(
   projectKey: 'my_project_key',
   platformIdentifier: 'com.example.app',
-  identityTokenProvider: getShortLivedOpenGrowIdentityToken,
+  identityTokenProvider: getShortLivedSuperBoardIdentityToken,
 );
 
 final offerings = await purchases.getOfferings();
@@ -50,19 +69,19 @@ Available APIs: `configure`, `logIn`, `logOut`, `getOfferings`,
 `getCustomerInfo`, `isEntitled`, `purchasePackage`, `restorePurchases`,
 `syncPurchases`, `customerInfoStream`, and `purchaseResultStream`.
 
-The SDK sends StoreKit 2 JWS transactions or Google purchase tokens to OpenGrow.
+The SDK sends StoreKit 2 JWS transactions or Google purchase tokens to SuperBoard.
 It stores unfinished transactions in an encrypted outbox, verifies the ES256
 CustomerInfo JWS, and completes a purchase only after server verification and
 durable local persistence. Never put App Store Connect or Google
 service-account credentials in the application.
 
-The OpenGrow Flutter SDK provides deep linking, app links, universal links, link generation, in-app messaging, revenue tracking, and attribution for your Flutter apps. It wraps the native iOS and Android SDKs.
+The SuperBoard Flutter SDK provides deep linking, app links, universal links, link generation, in-app messaging, revenue tracking, and attribution for your Flutter apps. It wraps the native iOS and Android SDKs.
 
 ## Features
 
 - **Deep linking & universal links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
+- **In-app messaging** — display messages and announcements from the SuperBoard dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages
 - **Revenue tracking** — log App Store, Google Play, and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -78,6 +97,9 @@ The OpenGrow Flutter SDK provides deep linking, app links, universal links, link
 
 <!-- opengrow-sdk-documentation:flutter:start -->
 
+> **Lifecycle: active.** New versions may be published only through the
+> protected immutable-release workflow.
+
 ## Installation
 
 Add the published Flutter package `opengrow_flutter`
@@ -86,7 +108,7 @@ at the immutable release `sdk-flutter-v2.1.4`:
 ```yaml
 opengrow_flutter:
   git:
-    url: https://github.com/mbzadev/opengrow-platform.git
+    url: https://github.com/mbzadev/superboard-platform.git
     ref: sdk-flutter-v2.1.4
     path: sdks/flutter
 ```
@@ -108,20 +130,20 @@ flutter pub get
 
 **1. Add configuration to `AndroidManifest.xml`**
 
-Add the OpenGrow API key and environment setting inside the `<application>` tag in `android/app/src/main/AndroidManifest.xml`:
+Add the SuperBoard API key and environment setting inside the `<application>` tag in `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <application>
     <meta-data
-        android:name="opengrow_api_key"
+        android:name="superboard_api_key"
         android:value="YOUR_API_KEY" />
     <meta-data
-        android:name="opengrow_use_test_environment"
+        android:name="superboard_use_test_environment"
         android:value="true" /> <!-- Set to false for production -->
 
     <!-- Optional: Custom base URL for self-hosted backends -->
     <meta-data
-        android:name="opengrow_base_url"
+        android:name="superboard_base_url"
         android:value="https://your-domain.com" />
 </application>
 ```
@@ -165,13 +187,13 @@ Add these to your main activity for deep link handling:
 Add to `ios/Runner/Info.plist`:
 
 ```xml
-<key>OpenGrowApiKey</key>
+<key>SuperBoardApiKey</key>
 <string>YOUR_API_KEY</string>
-<key>OpenGrowUseTestEnvironment</key>
+<key>SuperBoardUseTestEnvironment</key>
 <true/> <!-- Set to <false/> for production -->
 
 <!-- Optional: Custom base URL for self-hosted backends -->
-<key>OpenGrowBaseURL</key>
+<key>SuperBoardBaseURL</key>
 <string>https://your-domain.com</string>
 ```
 
@@ -203,16 +225,16 @@ Add custom URL scheme support to `Info.plist`:
 ### Initialize and configure
 
 ```dart
-import 'package:opengrow_flutter/opengrow.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
 
-final opengrow = OpenGrow();
+final superboard = SuperBoard();
 
 // Optional: enable debug logging
-await opengrow.setDebugLevel('info');
+await superboard.setDebugLevel('info');
 
 // Optional: set user identity for analytics
-await opengrow.setUserIdentifier('user_id_from_your_app');
-await opengrow.setUserAttributes({
+await superboard.setUserIdentifier('user_id_from_your_app');
+await superboard.setUserAttributes({
   'name': 'John Doe',
   'plan': 'premium',
 });
@@ -224,14 +246,14 @@ Subscribe to the `onDeeplinkReceived` stream to handle incoming deep links:
 
 ```dart
 import 'dart:async';
-import 'package:opengrow_flutter/opengrow.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
 
 StreamSubscription<DeeplinkDetails>? _subscription;
 
 @override
 void initState() {
   super.initState();
-  _subscription = opengrow.onDeeplinkReceived.listen((details) {
+  _subscription = superboard.onDeeplinkReceived.listen((details) {
     final link = details.link;
     final payload = details.data;
     final tracking = details.tracking;
@@ -257,11 +279,11 @@ void dispose() {
 Create smart links with metadata, payload data, and tracking parameters:
 
 ```dart
-import 'package:opengrow_flutter/opengrow.dart';
-import 'package:opengrow_flutter/models/opengrow_link.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
+import 'package:superboard_flutter/models/superboard_link.dart';
 
 try {
-  final link = await opengrow.generateLink(
+  final link = await superboard.generateLink(
     GenerateLinkParams(
       title: 'Check out this product',
       subtitle: 'Limited time offer',
@@ -279,7 +301,7 @@ try {
     ),
   );
   print('Generated: $link');
-} on OpenGrowException catch (e) {
+} on SuperBoardException catch (e) {
   print('Error: ${e.message}');
 }
 ```
@@ -289,7 +311,7 @@ try {
 Override where a link sends users on each platform:
 
 ```dart
-final link = await opengrow.generateLink(
+final link = await superboard.generateLink(
   GenerateLinkParams(
     title: 'Special offer',
     data: {'promoId': 'summer25'},
@@ -309,7 +331,7 @@ Launch the platform share sheet after generating a link:
 ```dart
 import 'package:share_plus/share_plus.dart';
 
-final link = await opengrow.generateLink(
+final link = await superboard.generateLink(
   GenerateLinkParams(title: 'Share this', data: {'itemId': 'abc'}),
 );
 Share.share(link);
@@ -329,16 +351,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 // Get and set the token
 final token = await FirebaseMessaging.instance.getToken();
 if (token != null) {
-  await opengrow.setPushToken(token);
+  await superboard.setPushToken(token);
 }
 
 // Listen for token refreshes
 FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-  opengrow.setPushToken(newToken);
+  superboard.setPushToken(newToken);
 });
 ```
 
-Upload your Firebase or APNs credentials in the OpenGrow Dashboard deployed for the active application target, under your platform's push notification settings.
+Upload your Firebase or APNs credentials in the SuperBoard Dashboard deployed for the active application target, under your platform's push notification settings.
 
 > Push notifications require a physical device. They do not work in the iOS Simulator.
 
@@ -348,7 +370,7 @@ Upload your Firebase or APNs credentials in the OpenGrow Dashboard deployed for 
 
 ### Setup
 
-1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the SuperBoard Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
 2. Configure platform notifications:
    - **Android** — Set up Google Play Real-Time Developer Notifications
    - **iOS** — Configure App Store Server Notifications in App Store Connect
@@ -358,7 +380,7 @@ Upload your Firebase or APNs credentials in the OpenGrow Dashboard deployed for 
 ```dart
 // iOS: pass the StoreKit transaction ID as a string
 // Android: pass the purchase originalJson string
-await opengrow.logInAppPurchase('transaction_id_or_json');
+await superboard.logInAppPurchase('transaction_id_or_json');
 ```
 
 > The SDK automatically extracts price, currency, and product info. Duplicates are filtered.
@@ -366,9 +388,9 @@ await opengrow.logInAppPurchase('transaction_id_or_json');
 ### Custom purchases
 
 ```dart
-import 'package:opengrow_flutter/models/opengrow_link.dart';
+import 'package:superboard_flutter/models/superboard_link.dart';
 
-await opengrow.logCustomPurchase(
+await superboard.logCustomPurchase(
   type: TransactionType.buy,
   priceInCents: 999,       // $9.99
   currency: 'USD',
@@ -398,7 +420,7 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [Flutter SDK API reference](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/flutter#api-reference)
+Full API reference: [Flutter SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/flutter#api-reference)
 
 ## Example App
 
@@ -406,11 +428,11 @@ A demo project is included in the [`example/`](example/) directory.
 
 ## Migration Guides
 
-- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+- Migration procedures are maintained in the [canonical SuperBoard documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Support
 

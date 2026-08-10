@@ -7,7 +7,7 @@ import type {
 import {
   DEAD_LETTER_MAX_RECORDS,
   deadLetterPayload,
-} from "@opengrow/contracts/dead-letter";
+} from "@superboard/contracts/dead-letter";
 import { decryptJson } from "./secrets";
 import { isEmailTransportInProgress, sendSmtpMessage } from "./email-service";
 import { parseStoredJson } from "./validation";

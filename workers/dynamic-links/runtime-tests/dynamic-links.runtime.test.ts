@@ -1,4 +1,4 @@
-import{env}from"cloudflare:workers";import{SELF}from"cloudflare:test";import{signProjectContext}from"@opengrow/contracts";import{describe,expect,it}from"vitest";const secret="dynamic-runtime-secret";
+import{env}from"cloudflare:workers";import{SELF}from"cloudflare:test";import{signProjectContext}from"@superboard/contracts";import{describe,expect,it}from"vitest";const secret="dynamic-runtime-secret";
 describe("Dynamic Links Worker with D1",()=>{
  it("runs campaigns, links, redirect, domains, previews and tracking",async()=>{
   const campaign=await data<{id:string}>(await mutate("POST","/internal/v1/campaigns",{name:"Launch",slug:"launch",status:"active",metadata:{channel:"social"}},"campaign"));

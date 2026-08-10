@@ -10,7 +10,7 @@ import {
 import { generateShortCode } from '../lib/crypto';
 import { readCsvDownload, storeCsvDownload } from '../lib/files';
 import { downloadFileMessage, sendMail } from '../lib/mail';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const projects = new Hono<{ Bindings: Env }>();
 
@@ -515,7 +515,7 @@ projects.get('/:id/domain', async (c) => {
   if (!domain) {
     domain = await c.env.DB.prepare(
       'INSERT INTO domains (domain, subdomain, project_id, generic_title, generic_subtitle) VALUES (?, ?, ?, ?, ?) RETURNING *'
-    ).bind(c.env.SHORTLINK_DOMAIN, '', project.id, 'OpenGrow', 'Share & discover').first<any>();
+    ).bind(c.env.SHORTLINK_DOMAIN, '', project.id, 'SuperBoard', 'Share & discover').first<any>();
   }
   return c.json({
     domain: {
@@ -523,7 +523,7 @@ projects.get('/:id/domain', async (c) => {
       subdomain: domain.subdomain || '',
       domain: domain.domain || c.env.SHORTLINK_DOMAIN,
       google_tracking_id: domain.google_tracking_id || null,
-      generic_title: domain.generic_title || 'OpenGrow',
+      generic_title: domain.generic_title || 'SuperBoard',
       generic_subtitle: domain.generic_subtitle || 'Share & discover',
       generic_image_url: domain.generic_image_url || null,
     },
@@ -546,7 +546,7 @@ projects.put('/:id/domain', async (c) => {
     c.env.SHORTLINK_DOMAIN,
     body.subdomain || '',
     project.id,
-    body.generic_title || 'OpenGrow',
+    body.generic_title || 'SuperBoard',
     body.generic_subtitle || '',
     body.generic_image_url || null,
   ).run();
@@ -557,7 +557,7 @@ projects.put('/:id/domain', async (c) => {
       subdomain: domain.subdomain || '',
       domain: domain.domain || c.env.SHORTLINK_DOMAIN,
       google_tracking_id: domain.google_tracking_id || null,
-      generic_title: domain.generic_title || 'OpenGrow',
+      generic_title: domain.generic_title || 'SuperBoard',
       generic_subtitle: domain.generic_subtitle || '',
       generic_image_url: domain.generic_image_url || null,
     },
@@ -565,7 +565,7 @@ projects.put('/:id/domain', async (c) => {
 });
 
 projects.get('/:id/domain/defaults', async (c) => {
-  return c.json({ generic_title: 'OpenGrow', generic_subtitle: 'Share & discover', generic_image_url: null });
+  return c.json({ generic_title: 'SuperBoard', generic_subtitle: 'Share & discover', generic_image_url: null });
 });
 
 projects.post('/:id/domain/check_availability', async (c) => {

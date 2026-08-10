@@ -1,9 +1,9 @@
-name: Sync OpenGrow FlutterFlow applications
+name: Sync SuperBoard FlutterFlow applications
 
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [Sync OpenGrow FlutterFlow library]
+    workflows: [Sync SuperBoard FlutterFlow library]
     types: [completed]
 
 permissions:
@@ -50,7 +50,7 @@ jobs:
       FF_API_KEY: ${{ secrets.FF_API_KEY }}
       FF_APPLICATION_PROJECT_ID: ${{ vars.FF_APPLICATION_PROJECT_ID }}
       FF_LIBRARY_PROJECT_ID: ${{ vars.FF_LIBRARY_PROJECT_ID }}
-      OPENGROW_PROJECT_KEY: ${{ secrets.OPENGROW_PROJECT_KEY }}
+      SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.OPENGROW_PROJECT_KEY }}
       WORKSPACE: ${{ matrix.workspace }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -73,7 +73,7 @@ jobs:
           test -n "$FF_API_KEY"
           test -n "$FF_APPLICATION_PROJECT_ID"
           test -n "$FF_LIBRARY_PROJECT_ID"
-          test -n "$OPENGROW_PROJECT_KEY"
+          test -n "$SUPERBOARD_PROJECT_KEY"
       - name: Require reviewed immutable SDK tags
         run: |
           node -e 'for (const dependency of require("./config/flutterflow-library.json").dependencies) console.log(dependency.requiredRef)' |
@@ -90,7 +90,7 @@ jobs:
           --no-save
       - name: Resolve immutable reusable page identifiers from the synced library
         run: |
-          page_dir="$RUNNER_TEMP/opengrow-library-pages"
+          page_dir="$RUNNER_TEMP/superboard-library-pages"
           mkdir -p "$page_dir"
           node -e 'for (const page of require("./config/flutterflow-library.json").pages) console.log(page)' |
           while IFS= read -r page; do
@@ -112,5 +112,5 @@ jobs:
         run: >-
           flutterflow ai run dsl/edit.dart
           --project-id "$FF_APPLICATION_PROJECT_ID"
-          --commit-message "Sync OpenGrow configuration from $GITHUB_SHA"
+          --commit-message "Sync SuperBoard configuration from $GITHUB_SHA"
         working-directory: ${{ matrix.workspace }}

@@ -7,7 +7,7 @@ import { tokenDigest } from '../lib/token-storage';
 import { timingSafeEqual } from '../lib/secrets';
 import { readOtpSecret } from '../lib/auth-credentials';
 import { consumeDashboardAuthAttempt, dashboardAuthRateLimitResponse } from '../lib/auth-rate-limit';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 
 const oauth = new Hono<{ Bindings: Env }>();

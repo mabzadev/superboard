@@ -1,8 +1,8 @@
 # Application users back office
 
-OpenGrow exposes a target-owned administrator view at **App → Users**. It is
+SuperBoard exposes a target-owned administrator view at **App → Users**. It is
 the common operational surface for application authentication and the optional
-Billing capability; it is not an OpenGrow SaaS user database.
+Billing capability; it is not an SuperBoard SaaS user database.
 
 ## Authority and scope
 
@@ -63,7 +63,7 @@ missing Billing customer is represented as a valid free account, not an error.
 Identity migration `0002_project_scope.sql` adds `project_id` to users,
 provider identities, sessions and email/reset tokens. Composite uniqueness,
 foreign keys and project-leading indexes prevent an email, provider subject or
-session relation from crossing application boundaries. Access and OpenGrow
+session relation from crossing application boundaries. Access and SuperBoard
 exchange tokens include a signed positive `pid`; refresh tokens rotate the
 session already stored with its original project and cannot select a project
 from caller-controlled headers.

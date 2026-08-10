@@ -1,6 +1,6 @@
 # Cycle de vie d’un compte applicatif
 
-Ce document définit le contrat commun OpenGrow pour la déconnexion et la
+Ce document définit le contrat commun SuperBoard pour la déconnexion et la
 suppression d’un compte dans toutes les applications. Il s’applique à la
 référence MBZA, à VocoStar et aux futures cibles. Une application peut ajouter
 une purge métier dans son Worker custom, mais ne peut pas créer une seconde
@@ -10,8 +10,8 @@ autorité de suppression.
 
 | Opération             | Route commune                                                              | Effet                                                                                                                                   |
 | --------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Déconnexion           | `opengrowApplicationLogoutJson`                                            | Révoque la session Identity, vide le stockage sécurisé et déconnecte le fournisseur d’achats. Les données du compte restent intactes.   |
-| Suppression du compte | `DELETE /api/v1/sdk/account/v1` via `opengrowApplicationDeleteAccountJson` | Lance l’effacement durable de toutes les données applicatives rattachées à l’identité authentifiée, puis révoque l’identité en dernier. |
+| Déconnexion           | `superboardApplicationLogoutJson`                                            | Révoque la session Identity, vide le stockage sécurisé et déconnecte le fournisseur d’achats. Les données du compte restent intactes.   |
+| Suppression du compte | `DELETE /api/v1/sdk/account/v1` via `superboardApplicationDeleteAccountJson` | Lance l’effacement durable de toutes les données applicatives rattachées à l’identité authentifiée, puis révoque l’identité en dernier. |
 
 Le client ne fournit jamais l’identifiant à supprimer. Le middleware SDK
 vérifie le JWT applicatif, résout le projet et dérive le sujet côté serveur. La

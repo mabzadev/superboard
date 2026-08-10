@@ -148,7 +148,7 @@ export default function InfrastructurePage() {
         <div>
           <h1 className="text-2xl font-semibold">Infrastructure</h1>
           <p className="text-sm text-muted-foreground">
-            Live OpenGrow API, Worker, database, user and background-job status.
+            Live SuperBoard API, Worker, database, user and background-job status.
           </p>
         </div>
         <Button

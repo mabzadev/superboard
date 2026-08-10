@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { verifyInternalProjectContextRequest } from "@opengrow/contracts/project-context";
+import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
 import worker from "./index";
 import { Env } from "./types";
 import { createFakeD1, FakeD1Call } from "./test/fake-d1";

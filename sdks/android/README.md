@@ -1,17 +1,17 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg">
-    <img src="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-auth%20required-4F46E5?style=flat-square" alt="GitHub Packages authentication required"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-auth%20required-4F46E5?style=flat-square" alt="GitHub Packages authentication required"/></a>
   <a href="#"><img src="https://img.shields.io/badge/API-21%2B-4F46E5?style=flat-square" alt="API 21+"/></a>
   <a href="#"><img src="https://img.shields.io/badge/kotlin-1.9%2B-4F46E5?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -20,9 +20,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android#quick-start">Quick Start</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android#api-reference">API Reference</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/docs">Full Docs</a>
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/android#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/android#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -47,9 +47,13 @@ The OpenGrow Android SDK provides deep linking, app links, link generation, in-a
 
 <!-- opengrow-sdk-documentation:android:start -->
 
-## Installation
+> **Lifecycle: internal.** This standalone coordinate is retained only
+> to reproduce existing integrations. New public releases are disabled;
+> current native development happens inside the active Flutter SDK.
 
-Registry: `https://maven.pkg.github.com/mbzadev/opengrow-platform`.
+## Historical installation
+
+Registry: `https://maven.pkg.github.com/mbzadev/superboard-platform`.
 
 The GitHub Maven package record is public metadata. This does not make the
 registry anonymously installable: unauthenticated downloads are unsupported
@@ -73,7 +77,7 @@ dependencyResolutionManagement {
     repositories {
         maven {
             name = "OpenGrowGitHubPackages"
-            url = uri("https://maven.pkg.github.com/mbzadev/opengrow-platform")
+            url = uri("https://maven.pkg.github.com/mbzadev/superboard-platform")
             credentials {
                 username = openGrowPackagesUser
                 password = openGrowPackagesToken
@@ -470,11 +474,11 @@ Use `CANCELLATION` and `REFUND` payment event types for cancellations and refund
 | `logInAppPurchase(originalJson)` | Log a Google Play Billing purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [Android SDK API reference](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android#api-reference)
+Full API reference: [Android SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/android#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/android/OpenGrow/app`](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android/OpenGrow/app).
+A demo project is included in [`sdks/android/OpenGrow/app`](https://github.com/mbzadev/superboard-platform/tree/main/sdks/android/OpenGrow/app).
 
 ## Setup Guides
 
@@ -485,11 +489,11 @@ A demo project is included in [`sdks/android/OpenGrow/app`](https://github.com/m
 
 ## Migration Guides
 
-- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Support
 

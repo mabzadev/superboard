@@ -19,7 +19,7 @@ The endpoint must never return private keys, certificates, Store credentials, or
 ## Authority boundaries
 
 - `api-auth-gateway` remains the only application authentication authority.
-- OpenGrow verifies the short-lived ES256 JWT issued by that gateway and does not create a second application identity.
+- SuperBoard verifies the short-lived ES256 JWT issued by that gateway and does not create a second application identity.
 - In `service` mode, `opengrow-billing` resolves the authenticated customer context, signs CustomerInfo, and executes financial writes, receipt verification, restoration, reconciliation, and provider actions.
 - In `service` mode, `opengrow-billing` is also the only active consumer of the Billing queue. The API remains a producer but never executes or consumes financial jobs.
 - The dashboard and Messaging cannot assign an entitlement directly.
@@ -29,7 +29,7 @@ The endpoint must never return private keys, certificates, Store credentials, or
 
 ```text
 FlutterFlow / SDK
-  -> OpenGrow API (gateway-issued JWT)
+  -> SuperBoard API (gateway-issued JWT)
   -> private service binding
   -> Billing Worker (customer resolution + signed CustomerInfo)
   -> Apple / Google Play
@@ -72,7 +72,7 @@ After this technical cutover, run the complete certification matrix through `ser
 4. Apple Sandbox/TestFlight device evidence.
 5. Google Play License Testing/Internal device evidence routed to the test project from provider-verified purchase markers.
 6. Duplicate and out-of-order event evidence.
-7. Store, OpenGrow, and application projection convergence.
+7. Store, SuperBoard, and application projection convergence.
 8. Complete legacy subscription inventory and import.
 9. FlutterFlow iOS and Android recovery tests.
 10. Empty DLQ and active alerts throughout the observation window.

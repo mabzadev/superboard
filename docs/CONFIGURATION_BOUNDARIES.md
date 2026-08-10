@@ -1,4 +1,4 @@
-# Frontières de configuration OpenGrow
+# Frontières de configuration SuperBoard
 
 Ce document définit où chaque valeur de configuration a le droit d’exister.
 L’objectif n’est pas de supprimer les valeurs concrètes : un hostname, un nom
@@ -32,8 +32,9 @@ Le cœur partagé contient les protocoles et identités logiques réutilisables 
   `Request` envoyée par un Service Binding ;
 - endpoints officiels Apple, Google, Microsoft, Cloudflare et fournisseurs
   mail ;
-- namespace produit `opengrow` et noms logiques de santé comme
-  `opengrow-api`.
+- namespace produit logique `superboard`; namespace physique de compatibilité
+  `opengrow` et noms historiques de santé comme `opengrow-api`, conservés
+  jusqu'à un cutover de ressources vérifié.
 
 La liste des services et des noms de secrets communs appartient à
 `scripts/cloudflare-services.mjs`. Ces chaînes décrivent un contrat logiciel ;
@@ -42,7 +43,7 @@ Cloudflare physique.
 
 ### 2. Référence MBZA
 
-`opengrow.project.json#/development/target` sélectionne l’unique profil de
+`superboard.project.json#/development/target` sélectionne l’unique profil de
 référence. Sa valeur actuelle pointe vers
 `deploy/targets/mbza-development.json`.
 
@@ -90,7 +91,7 @@ Les valeurs suivantes ne sont jamais stockées dans un target :
 | --- | --- |
 | ID de compte Cloudflare | `CLOUDFLARE_ACCOUNT_ID_<ACCOUNT_ALIAS>` puis fallback CI `CLOUDFLARE_ACCOUNT_ID` |
 | Token Cloudflare | `CLOUDFLARE_API_TOKEN` dans le GitHub Environment sélectionné |
-| Identité projet SDK | `OPENGROW_PROJECT_ID` et `OPENGROW_PROJECT_KEY` |
+| Identité projet SDK | `SUPERBOARD_PROJECT_ID` et `SUPERBOARD_PROJECT_KEY` |
 | Secrets Workers communs | registres de `scripts/cloudflare-services.mjs`, valeurs dans Cloudflare Secrets |
 | Secrets Custom Worker | noms dans `customWorker.secrets`, valeurs dans Cloudflare Secrets |
 

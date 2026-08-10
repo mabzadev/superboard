@@ -11,6 +11,8 @@ import 'package:flutterflow_ai/src/helpers/data_schema_helpers.dart'
 import 'package:flutterflow_ai/src/helpers/data_type_helpers.dart';
 import 'package:flutterflow_ai/src/helpers/project_helpers.dart'
     as project_helpers;
+import 'package:flutterflow_ai/src/helpers/pub_dependency_helpers.dart'
+    as pub_dependency_helpers;
 import 'package:flutterflow_ai/src/ui/actions.dart' as ui_actions;
 import 'package:flutterflow_ai/src/ui/ui.dart';
 import 'package:test/test.dart';
@@ -20,19 +22,19 @@ import '../dsl/migration.dart' as migration;
 import '../generated/application_bindings.dart';
 
 void main() {
-  test('VocoStar binds the complete OpenGrow library contract', () {
+  test('VocoStar binds the complete SuperBoard library contract', () {
     final app = buildApp(
       (app) => application.buildApplicationConfigurationFor(
         app,
         libraryProjectId: 'test-opengrow-library',
-        environment: const {'OPENGROW_PROJECT_KEY': 'test-public-client-key'},
+        environment: const {'SUPERBOARD_PROJECT_KEY': 'test-public-client-key'},
       ),
     );
     final project = compileApp(app).project;
     final configured = project.appSettings.librarySettings.libraryValues;
 
-    expect(configured, hasLength(openGrowLibraryBindings.length));
-    for (final expected in openGrowLibraryBindings) {
+    expect(configured, hasLength(superBoardLibraryBindings.length));
+    for (final expected in superBoardLibraryBindings) {
       final actual = configured.singleWhere(
         (value) => value.parameter.identifier.name == expected.name,
       );
@@ -40,8 +42,8 @@ void main() {
       expect(actual.parameter.identifier.projectId, 'test-opengrow-library');
       expect(
         actual.value.inputValue.serializedValue,
-        application.resolveOpenGrowLibraryBinding(expected, const {
-          'OPENGROW_PROJECT_KEY': 'test-public-client-key',
+        application.resolveSuperBoardLibraryBinding(expected, const {
+          'SUPERBOARD_PROJECT_KEY': 'test-public-client-key',
         }),
       );
     }
@@ -74,7 +76,7 @@ void main() {
         isA<StateError>().having(
           (error) => error.message,
           'message',
-          contains('OPENGROW_PROJECT_KEY'),
+          contains('SUPERBOARD_PROJECT_KEY'),
         ),
       ),
     );
@@ -95,15 +97,14 @@ void main() {
       onboardingPageKey: 'library_onboarding_page',
     );
 
-    final actions =
-        project.customCode.customActions
-            .map((action) => action.identifier.name)
-            .toSet();
-    expect(actions, contains('opengrowApplicationUploadFileJson'));
-    expect(actions, contains('opengrowApplicationCreateCustomJobJson'));
-    expect(actions, contains('opengrowSupportInitializeAuthenticated'));
-    expect(actions, contains('opengrowRegisterPushDevice'));
-    expect(actions, contains('opengrowLogoutSession'));
+    final actions = project.customCode.customActions
+        .map((action) => action.identifier.name)
+        .toSet();
+    expect(actions, contains('superboardApplicationUploadFileJson'));
+    expect(actions, contains('superboardApplicationCreateCustomJobJson'));
+    expect(actions, contains('superboardSupportInitializeAuthenticated'));
+    expect(actions, contains('superboardRegisterPushDevice'));
+    expect(actions, contains('superboardLogoutSession'));
     expect(actions, isNot(contains('userMediaUpload')));
     expect(actions, isNot(contains('userMediaConverter')));
     expect(actions, isNot(contains('userMediaRemove')));
@@ -112,11 +113,10 @@ void main() {
     expect(actions, isNot(contains('supportSendMessage')));
     expect(actions, isNot(contains('userFCMToken')));
 
-    final widgets =
-        project.customCode.customWidgets
-            .map((widget) => widget.identifier.name)
-            .toSet();
-    expect(widgets, contains('OpenGrowSupportChatWidget'));
+    final widgets = project.customCode.customWidgets
+        .map((widget) => widget.identifier.name)
+        .toSet();
+    expect(widgets, contains('SuperBoardSupportChatWidget'));
     expect(widgets, isNot(contains('SupportChatWidget')));
 
     for (final page in [
@@ -160,7 +160,7 @@ void main() {
         .singleWhere((route) => route.pageKey == 'library_onboarding_page');
     expect(
       onboardingRoute.routePath.inputValue.serializedValue,
-      '/opengrow-onboarding',
+      '/superboard-onboarding',
     );
 
     for (final forbidden in [
@@ -180,10 +180,10 @@ void main() {
       );
     }
     for (final transient in [
-      'opengrowAccessTokenTransient',
-      'opengrowRefreshTokenUnavailable',
-      'opengrowTokenExpirationTransient',
-      'opengrowPushTokenTransient',
+      'superboardAccessTokenTransient',
+      'superboardRefreshTokenUnavailable',
+      'superboardTokenExpirationTransient',
+      'superboardPushTokenTransient',
     ]) {
       final field = data_schema_helpers.findAppStateField(
         project,
@@ -201,13 +201,13 @@ void main() {
     expect(source, isNot(contains('sup.vocostar.com')));
     expect(source, isNot(contains('file.vocostar.com')));
     expect(source, isNot(contains('.workers.dev')));
-    expect(source, contains('opengrowApplicationRestoreSessionJson'));
-    expect(source, contains('opengrowApplicationSignInProviderJson'));
-    expect(source, contains('opengrowApplicationRuntimePolicyJson'));
-    expect(source, contains('opengrowSetPushToken'));
-    expect(source, contains('opengrowApplicationDeleteAccountJson'));
-    expect(source, contains('opengrowApplicationLogoutJson'));
-    expect(source, contains('opengrowPurchaseLogout'));
+    expect(source, contains('superboardApplicationRestoreSessionJson'));
+    expect(source, contains('superboardApplicationSignInProviderJson'));
+    expect(source, contains('superboardApplicationRuntimePolicyJson'));
+    expect(source, contains('superboardSetPushToken'));
+    expect(source, contains('superboardApplicationDeleteAccountJson'));
+    expect(source, contains('superboardApplicationLogoutJson'));
+    expect(source, contains('superboardPurchaseLogout'));
     expect(source, isNot(contains('/clean/user')));
 
     expect(
@@ -218,14 +218,16 @@ void main() {
       ),
       isNull,
     );
-    final accountFixture =
-        project_helpers.findPage(project, name: 'AccountFixture')!;
+    final accountFixture = project_helpers.findPage(
+      project,
+      name: 'AccountFixture',
+    )!;
     final logoutNode = accountFixture.node.triggerActions.single.rootAction;
     expect(logoutNode.key, 'fixture_logout_node');
     expect(logoutNode.action.hasCustomCodeCall(), isTrue);
     expect(
       logoutNode.action.customCodeCall.identifier.name,
-      'opengrowLogoutSession',
+      'superboardLogoutSession',
     );
     expect(logoutNode.hasFollowUpAction(), isTrue);
     expect(logoutNode.followUpAction.action.hasSnackBar(), isTrue);
@@ -234,13 +236,24 @@ void main() {
         project.customCode.pubspecPackageInfo.pubspecDependencies;
     expect(
       dependencies.where(
-        (dependency) => dependency.name == 'opengrow_flutterflow',
+        (dependency) => const {
+          'opengrow_flutterflow',
+          'opengrow_flutterflow_messaging',
+        }.contains(dependency.name),
       ),
-      hasLength(1),
+      isEmpty,
+    );
+    final superBoardDependency = dependencies.singleWhere(
+      (dependency) => dependency.name == 'superboard_flutterflow',
+    );
+    expect(superBoardDependency.version, contains('sdk-flutterflow-v3.0.0'));
+    expect(
+      superBoardDependency.version,
+      isNot(contains('flutterflow_messaging')),
     );
     expect(
       dependencies.where(
-        (dependency) => dependency.name == 'opengrow_flutterflow_messaging',
+        (dependency) => dependency.name == 'superboard_flutterflow',
       ),
       hasLength(1),
     );
@@ -248,6 +261,16 @@ void main() {
 }
 
 void _seedLegacyVocoStar(FFProject project) {
+  pub_dependency_helpers.addPubDependency(
+    project,
+    name: 'opengrow_flutterflow',
+    version: 'legacy-v2-fixture',
+  );
+  pub_dependency_helpers.addPubDependency(
+    project,
+    name: 'opengrow_flutterflow_messaging',
+    version: 'legacy-v1-fixture',
+  );
   for (final field in [
     ('authAccessToken', stringType, true),
     ('authRefreshToken', stringType, true),
@@ -432,37 +455,36 @@ class SupportChatWidget extends StatelessWidget {
     name: 'FixtureHome',
     route: '/fixture-home',
     description: 'onboarding caller fixture',
-    body:
-        UI.scaffold()
-          ..triggerActions.add(
-            FFTriggerActions(
-              rootAction: FFActionNode(
-                key: 'fixture_event_node',
-                action: FFAction(
-                  key: 'fixture_event_action',
-                  triggerAppEventAction: FFTriggerAppEventAction(
-                    appEventIdentifier: eventIdentifier,
+    body: UI.scaffold()
+      ..triggerActions.add(
+        FFTriggerActions(
+          rootAction: FFActionNode(
+            key: 'fixture_event_node',
+            action: FFAction(
+              key: 'fixture_event_action',
+              triggerAppEventAction: FFTriggerAppEventAction(
+                appEventIdentifier: eventIdentifier,
+              ),
+            ),
+            followUpAction: FFActionNode(
+              key: 'fixture_navigation_node',
+              action: FFAction(
+                key: 'fixture_navigation_action',
+                navigate: FFNavigateAction(
+                  pageNodeKeyRef: FFNodeKeyReference(
+                    key: legacyOnboardingKeys['onboard00'],
                   ),
-                ),
-                followUpAction: FFActionNode(
-                  key: 'fixture_navigation_node',
-                  action: FFAction(
-                    key: 'fixture_navigation_action',
-                    navigate: FFNavigateAction(
-                      pageNodeKeyRef: FFNodeKeyReference(
-                        key: legacyOnboardingKeys['onboard00'],
-                      ),
-                      passedParameters: FFPassedParameters(
-                        widgetClassNodeKeyRef: FFNodeKeyReference(
-                          key: legacyOnboardingKeys['onboard00'],
-                        ),
-                      ),
+                  passedParameters: FFPassedParameters(
+                    widgetClassNodeKeyRef: FFNodeKeyReference(
+                      key: legacyOnboardingKeys['onboard00'],
                     ),
                   ),
                 ),
               ),
             ),
           ),
+        ),
+      ),
   );
 
   api_helpers.addApiGroup(project, name: 'Vocostar API Gateway');
@@ -478,26 +500,25 @@ class SupportChatWidget extends StatelessWidget {
     name: 'AccountFixture',
     route: '/account-fixture',
     description: 'legacy logout caller fixture',
-    body:
-        UI.scaffold()
-          ..triggerActions.add(
-            FFTriggerActions(
-              rootAction: FFActionNode(
-                key: 'fixture_logout_node',
-                action: FFAction(
-                  key: 'fixture_logout_action',
-                  database: FFDatabaseAction(
-                    apiCall: FFApiCall(
-                      endpointIdentifier: logoutIdentifier.deepCopy(),
-                    ),
-                  ),
-                ),
-                followUpAction: FFActionNode(
-                  key: 'fixture_logout_follow_up_node',
-                  action: ui_actions.Actions.snackBar('logged out'),
+    body: UI.scaffold()
+      ..triggerActions.add(
+        FFTriggerActions(
+          rootAction: FFActionNode(
+            key: 'fixture_logout_node',
+            action: FFAction(
+              key: 'fixture_logout_action',
+              database: FFDatabaseAction(
+                apiCall: FFApiCall(
+                  endpointIdentifier: logoutIdentifier.deepCopy(),
                 ),
               ),
             ),
+            followUpAction: FFActionNode(
+              key: 'fixture_logout_follow_up_node',
+              action: ui_actions.Actions.snackBar('logged out'),
+            ),
           ),
+        ),
+      ),
   );
 }

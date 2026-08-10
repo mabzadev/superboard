@@ -220,7 +220,7 @@ export const RELEASE_GATE_CHECKS: ReleaseGateCheckDefinition[] = [
       [
         "authority_convergence",
         "Authority convergence",
-        "Store state, OpenGrow, and the application projection converge.",
+        "Store state, SuperBoard, and the application projection converge.",
       ],
       [
         "flutterflow_ios",

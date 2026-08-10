@@ -15,7 +15,7 @@ export type Actor = {
   kind: ActorKind;
 };
 
-export type { ProjectContext } from '@opengrow/contracts/project-context';
+export type { ProjectContext } from '@superboard/contracts/project-context';
 
 export type Conversation = {
   id: string;

@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { SELF } from "cloudflare:test";
-import { signProjectContext } from "@opengrow/contracts/project-context";
+import { signProjectContext } from "@superboard/contracts/project-context";
 import { describe, expect, it } from "vitest";
 
 const secret = "products-runtime-secret";

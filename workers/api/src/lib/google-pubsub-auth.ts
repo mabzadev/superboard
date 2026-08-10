@@ -1,7 +1,7 @@
 import { decodeProtectedHeader, importJWK, jwtVerify, type JWK, type JWTPayload } from 'jose';
 import type { Env } from '../types';
 import { readTextLimited } from './http-limits';
-import { constantTimeEqual } from '@opengrow/contracts/secret';
+import { constantTimeEqual } from '@superboard/contracts/secret';
 
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 const GOOGLE_ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];

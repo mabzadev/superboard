@@ -33,7 +33,7 @@ test("VocoStar bindings derive every common origin from its target", async () =>
   assert.deepEqual(result.applications[0].values, {
     projectKey: {
       source: "github-environment-secret",
-      name: "OPENGROW_PROJECT_KEY",
+      name: "SUPERBOARD_PROJECT_KEY",
     },
     uriScheme: "vocostar",
     useTestEnvironment: false,
@@ -104,7 +104,7 @@ test("the client project key is resolved only from the protected environment", a
   assert.equal(values.application.client.projectKey, undefined);
   assert.equal(
     values.application.client.projectKeySecret,
-    "OPENGROW_PROJECT_KEY",
+    "SUPERBOARD_PROJECT_KEY",
   );
   const controlPlane = structuredClone(values.controlPlane);
   const environment =
@@ -112,12 +112,24 @@ test("the client project key is resolved only from the protected environment", a
       values.application.remoteProject.githubEnvironment
     ];
   environment.secrets = environment.secrets.filter(
-    (name) => name !== "OPENGROW_PROJECT_KEY",
+    (name) => name !== "SUPERBOARD_PROJECT_KEY",
   );
   await assert.rejects(
     () => resolveFlutterFlowApplication({ ...values, controlPlane }),
-    /GitHub secret OPENGROW_PROJECT_KEY is missing/u,
+    /GitHub secret SUPERBOARD_PROJECT_KEY is missing/u,
   );
+});
+
+test("the application workflow prefers the SuperBoard key and retains the migration fallback", async () => {
+  const workflow = await readFile(
+    resolve(root, ".github/workflows/sync-flutterflow-applications.yml"),
+    "utf8",
+  );
+  assert.match(
+    workflow,
+    /SUPERBOARD_PROJECT_KEY:\s*\$\{\{ secrets\.SUPERBOARD_PROJECT_KEY \|\| secrets\.OPENGROW_PROJECT_KEY \}\}/u,
+  );
+  assert.match(workflow, /test -n "\$SUPERBOARD_PROJECT_KEY"/u);
 });
 
 async function json(path) {

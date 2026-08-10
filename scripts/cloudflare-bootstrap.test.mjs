@@ -34,6 +34,15 @@ test("bootstrap inventory is derived from enabled target features", async () => 
     resources.some(({ key }) => key === "moduleQueues.support.dlq"),
     true,
   );
+  assert.equal(
+    resources.every(
+      ({ logicalName, physicalName, name, migrationStrategy }) =>
+        logicalName.startsWith("superboard") &&
+        physicalName === name &&
+        migrationStrategy === "canonical",
+    ),
+    true,
+  );
 });
 
 test("VocoStar bootstrap owns the legacy media bucket used by managed Workers", async () => {
@@ -41,14 +50,16 @@ test("VocoStar bootstrap owns the legacy media bucket used by managed Workers", 
   const resources = desiredCloudflareResources(target, "production");
   assert.ok(
     resources.some(
-      ({ key, name }) =>
+      ({ key, name, logicalName, physicalName }) =>
         key === "customR2" &&
-        name === target.environments.production.customR2.name,
+        name === target.environments.production.customR2.name &&
+        physicalName === "app-vocostar" &&
+        logicalName === "superboard-app-vocostar",
     ),
   );
 });
 
-test("remote resources with missing manifest ids are adopted without creation", async () => {
+test("canonical remote resources with missing manifest ids are adopted without creation", async () => {
   const { target: source } = await loadTarget("mbza-development");
   const target = targetWithoutResourceIds(source, "development");
   const desired = desiredCloudflareResources(target, "development");
@@ -58,6 +69,17 @@ test("remote resources with missing manifest ids are adopted without creation", 
     accountId: "a".repeat(32),
     inventories: inventoriesFor(desired),
   });
+  assert.equal(plan.resourceIdentity.logicalName, "superboard");
+  assert.equal(
+    plan.operations.every(
+      ({ name, physicalName, body }) =>
+        name === physicalName &&
+        name.startsWith("superboard") &&
+        JSON.stringify(body).includes("superboard"),
+    ),
+    true,
+    "the fresh MBZA target must use canonical SuperBoard resource names",
+  );
   assert.equal(plan.blockers.length, 0);
   assert.equal(
     plan.operations.filter(({ type }) => type === "create").length,

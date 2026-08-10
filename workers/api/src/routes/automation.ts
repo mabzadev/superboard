@@ -3,7 +3,7 @@ import { Env } from '../types';
 import { runMaintenance } from '../lib/maintenance';
 import { parseJsonObject } from '../lib/db';
 import { timingSafeEqual } from '../lib/secrets';
-import { readJsonObjectLimited, readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readJsonObjectLimited, readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const automation = new Hono<{ Bindings: Env }>();
 

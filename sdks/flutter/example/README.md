@@ -1,6 +1,6 @@
-# opengrow_example
+# SuperBoard Flutter example
 
-Demonstrates how to use the opengrow plugin.
+Demonstrates how to use the `superboard_flutter` plugin.
 
 ## Getting Started
 

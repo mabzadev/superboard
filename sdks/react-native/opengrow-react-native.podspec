@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => min_ios_version_supported }
-  s.source       = { :git => "https://github.com/mbzadev/opengrow-platform.git", :tag => "sdk-react-native-v#{s.version}" }
+  s.source       = { :git => "https://github.com/mbzadev/superboard-platform.git", :tag => "sdk-react-native-v#{s.version}" }
 
   s.swift_version = '5.0'
   if ENV['RCT_NEW_ARCH_ENABLED'] == '1'

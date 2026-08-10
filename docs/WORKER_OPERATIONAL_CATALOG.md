@@ -2,7 +2,7 @@
 
 The Infrastructure back office exposes one target-driven inventory through
 `GET /api/v1/platform/status`. It is intended for operators and remains behind
-the existing OpenGrow owner/admin authorization.
+the existing SuperBoard owner/admin authorization.
 
 ## Sources of truth
 

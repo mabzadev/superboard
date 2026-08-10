@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 void main() {
   test(
@@ -11,7 +11,7 @@ void main() {
     () async {
       final storage = MemoryApplicationSessionStorage();
       final now = DateTime.utc(2026, 8, 10, 8);
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         projectKey: 'project-key',
@@ -30,7 +30,7 @@ void main() {
           ),
         ),
       );
-      final manager = OpenGrowApplicationSessionManager(
+      final manager = SuperBoardApplicationSessionManager(
         client: client,
         storage: storage,
         storageKey: 'session-key',
@@ -63,7 +63,7 @@ void main() {
       }),
     });
     var requests = 0;
-    final client = OpenGrowApplicationClient(
+    final client = SuperBoardApplicationClient(
       apiBaseUrl: 'https://api.example.test',
       filesBaseUrl: 'https://files.example.test',
       httpClient: MockClient((_) async {
@@ -71,7 +71,7 @@ void main() {
         return http.Response('{}', 500);
       }),
     );
-    final manager = OpenGrowApplicationSessionManager(
+    final manager = SuperBoardApplicationSessionManager(
       client: client,
       storage: storage,
       storageKey: 'session-key',
@@ -84,6 +84,43 @@ void main() {
     expect(client.applicationAccessToken, 'stored-access');
     expect(requests, 0);
   });
+
+  test(
+    'mirrors a v2 session to the v3 key without breaking rollback',
+    () async {
+      final storedSession = jsonEncode({
+        'version': 1,
+        'access_token': 'legacy-access',
+        'refresh_token': 'legacy-refresh',
+        'expires_at': '2026-08-10T09:00:00.000Z',
+        'user_id': 'user-1',
+        'user': const {},
+      });
+      final storage = MemoryApplicationSessionStorage({
+        'opengrow-session-key': storedSession,
+      });
+      final client = SuperBoardApplicationClient(
+        apiBaseUrl: 'https://api.example.test',
+        filesBaseUrl: 'https://files.example.test',
+        httpClient: MockClient(
+          (_) async => throw StateError('migration must not call the network'),
+        ),
+      );
+      final manager = SuperBoardApplicationSessionManager(
+        client: client,
+        storage: storage,
+        storageKey: 'superboard-session-key',
+        legacyStorageKeys: const ['opengrow-session-key'],
+        clock: () => DateTime.utc(2026, 8, 10, 8),
+      );
+
+      final restored = await manager.restore();
+
+      expect(restored?.accessToken, 'legacy-access');
+      expect(storage.values['superboard-session-key'], storedSession);
+      expect(storage.values['opengrow-session-key'], storedSession);
+    },
+  );
 
   test(
     'rotates an expired refresh token and replaces the secure record',
@@ -99,7 +136,7 @@ void main() {
         }),
       });
       late http.Request refreshRequest;
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         projectKey: 'project-key',
@@ -119,7 +156,7 @@ void main() {
           );
         }),
       );
-      final manager = OpenGrowApplicationSessionManager(
+      final manager = SuperBoardApplicationSessionManager(
         client: client,
         storage: storage,
         storageKey: 'session-key',
@@ -152,7 +189,7 @@ void main() {
         'user': const {},
       }),
     });
-    final client = OpenGrowApplicationClient(
+    final client = SuperBoardApplicationClient(
       apiBaseUrl: 'https://api.example.test',
       filesBaseUrl: 'https://files.example.test',
       projectKey: 'project-key',
@@ -171,7 +208,7 @@ void main() {
         ),
       ),
     );
-    final manager = OpenGrowApplicationSessionManager(
+    final manager = SuperBoardApplicationSessionManager(
       client: client,
       storage: storage,
       storageKey: 'session-key',
@@ -187,7 +224,7 @@ void main() {
     'logout removes local credentials even when the network fails',
     () async {
       final storage = MemoryApplicationSessionStorage();
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         projectKey: 'project-key',
@@ -209,7 +246,7 @@ void main() {
           return http.Response('temporary failure', 503);
         }),
       );
-      final manager = OpenGrowApplicationSessionManager(
+      final manager = SuperBoardApplicationSessionManager(
         client: client,
         storage: storage,
         storageKey: 'session-key',
@@ -221,7 +258,7 @@ void main() {
 
       await expectLater(
         manager.logout(),
-        throwsA(isA<OpenGrowApplicationException>()),
+        throwsA(isA<SuperBoardApplicationException>()),
       );
       expect(storage.values, isEmpty);
       expect(client.applicationAccessToken, isEmpty);
@@ -229,17 +266,17 @@ void main() {
   );
 
   test('session storage keys are isolated by target and environment', () {
-    final production = OpenGrowApplicationSessionManager.scopedStorageKey(
+    final production = SuperBoardApplicationSessionManager.scopedStorageKey(
       apiBaseUri: Uri.parse('https://api.example.test'),
       projectKey: 'project-a',
       environment: 'production',
     );
-    final development = OpenGrowApplicationSessionManager.scopedStorageKey(
+    final development = SuperBoardApplicationSessionManager.scopedStorageKey(
       apiBaseUri: Uri.parse('https://api.example.test'),
       projectKey: 'project-a',
       environment: 'development',
     );
-    final anotherProject = OpenGrowApplicationSessionManager.scopedStorageKey(
+    final anotherProject = SuperBoardApplicationSessionManager.scopedStorageKey(
       apiBaseUri: Uri.parse('https://api.example.test'),
       projectKey: 'project-b',
       environment: 'production',
@@ -250,7 +287,7 @@ void main() {
 }
 
 class MemoryApplicationSessionStorage
-    implements OpenGrowApplicationSessionStorage {
+    implements SuperBoardApplicationSessionStorage {
   MemoryApplicationSessionStorage([Map<String, String>? initial])
     : values = {...?initial};
 

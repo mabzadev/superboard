@@ -5,14 +5,14 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 void main() {
   test(
     'sign-in keeps the access token in memory and authenticates profile reads',
     () async {
       final requests = <http.Request>[];
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         projectKey: 'project-key',
@@ -54,7 +54,7 @@ void main() {
 
   test('uploads bytes only to the configured Files origin', () async {
     late http.Request uploaded;
-    final client = OpenGrowApplicationClient(
+    final client = SuperBoardApplicationClient(
       apiBaseUrl: 'https://api.example.test',
       filesBaseUrl: 'https://files.example.test',
       applicationAccessToken: 'access-1',
@@ -84,7 +84,7 @@ void main() {
     'links a provider only through the authenticated Identity authority',
     () async {
       late http.Request observed;
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         projectKey: 'project-key',
@@ -114,7 +114,7 @@ void main() {
 
   test('loads runtime policy with project-scoped SDK headers', () async {
     late http.Request observed;
-    final client = OpenGrowApplicationClient(
+    final client = SuperBoardApplicationClient(
       apiBaseUrl: 'https://api.example.test',
       filesBaseUrl: 'https://files.example.test',
       projectKey: 'test_project-key',
@@ -148,7 +148,7 @@ void main() {
     'exchanges application identity and submits owner-scoped custom jobs',
     () async {
       final requests = <http.Request>[];
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         applicationAccessToken: 'application-access',
@@ -260,7 +260,7 @@ void main() {
 
   test('reads and updates project-scoped Marketing preferences', () async {
     final requests = <http.Request>[];
-    final client = OpenGrowApplicationClient(
+    final client = SuperBoardApplicationClient(
       apiBaseUrl: 'https://api.example.test',
       filesBaseUrl: 'https://files.example.test',
       applicationAccessToken: 'application-access',
@@ -313,7 +313,7 @@ void main() {
     'deletes the complete application account through the SDK coordinator',
     () async {
       late http.Request observed;
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         applicationAccessToken: 'application-access',
@@ -353,7 +353,7 @@ void main() {
     var exchanges = 0;
     final exchangeStarted = Completer<void>();
     final releaseExchange = Completer<void>();
-    final client = OpenGrowApplicationClient(
+    final client = SuperBoardApplicationClient(
       apiBaseUrl: 'https://api.example.test',
       filesBaseUrl: 'https://files.example.test',
       applicationAccessToken: 'application-access',
@@ -390,7 +390,7 @@ void main() {
   test(
     'surfaces stable API errors and does not accept unknown providers',
     () async {
-      final client = OpenGrowApplicationClient(
+      final client = SuperBoardApplicationClient(
         apiBaseUrl: 'https://api.example.test',
         filesBaseUrl: 'https://files.example.test',
         projectKey: 'project-key',
@@ -415,7 +415,7 @@ void main() {
           password: 'wrong-password',
         ),
         throwsA(
-          isA<OpenGrowApplicationException>().having(
+          isA<SuperBoardApplicationException>().having(
             (error) => error.code,
             'code',
             'credentials_invalid',
@@ -424,11 +424,11 @@ void main() {
       );
       expect(
         () => client.signInProvider(provider: 'microsoft', idToken: 'token'),
-        throwsA(isA<OpenGrowApplicationException>()),
+        throwsA(isA<SuperBoardApplicationException>()),
       );
       expect(
         () => client.linkProvider(provider: 'microsoft', idToken: 'token'),
-        throwsA(isA<OpenGrowApplicationException>()),
+        throwsA(isA<SuperBoardApplicationException>()),
       );
     },
   );

@@ -1,4 +1,4 @@
-name: Promote SDK set to OpenGrow Reference
+name: Promote SDK set to SuperBoard Reference
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
       catalogue_sha: ${{ steps.sdk-set.outputs.sha }}
     env:
       GH_TOKEN: ${{ github.token }}
-      OPENGROW_REFERENCE_REPOSITORY: ${{ vars.OPENGROW_REFERENCE_REPOSITORY }}
+      SUPERBOARD_REFERENCE_REPOSITORY: ${{ vars.SUPERBOARD_REFERENCE_REPOSITORY || vars.OPENGROW_REFERENCE_REPOSITORY }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -47,13 +47,14 @@ jobs:
         run: |
           ready="$(node - <<'NODE'
           const catalogue = require('./config/sdk-libraries.json');
-          const ids = ['flutterflow', 'flutterflow-support'];
-          const ready = ids.every((id) => {
-            const library = catalogue.libraries.find((item) => item.id === id);
-            return library &&
+          const libraries = catalogue.libraries.filter((library) =>
+            library.lifecycle === 'active' &&
+            library.ecosystem === 'FlutterFlow'
+          );
+          const ready = libraries.length > 0 && libraries.every((library) =>
               library.releaseStatus === 'released' &&
-              library.sourceVersion === library.latestReleaseVersion;
-          });
+              library.sourceVersion === library.latestReleaseVersion
+          );
           process.stdout.write(String(ready));
           NODE
           )"
@@ -62,7 +63,7 @@ jobs:
       - name: Verify every immutable SDK tag and GitHub release
         if: ${{ steps.sdk-set.outputs.ready == 'true' }}
         run: |
-          for library in flutterflow flutterflow-support; do
+          for library in $(node -p "require('./config/sdk-libraries.json').libraries.filter((item) => item.lifecycle === 'active' && item.ecosystem === 'FlutterFlow').map((item) => item.id).join(' ')"); do
             tag="$(node scripts/sdk-catalog.mjs release-tag --library "$library")"
             git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
             git merge-base --is-ancestor "refs/tags/$tag^{}" HEAD
@@ -71,8 +72,8 @@ jobs:
       - name: Validate cross-repository dispatch destination
         if: ${{ steps.sdk-set.outputs.ready == 'true' }}
         run: |
-          test -n "$OPENGROW_REFERENCE_REPOSITORY"
-          case "$OPENGROW_REFERENCE_REPOSITORY" in
+          test -n "$SUPERBOARD_REFERENCE_REPOSITORY"
+          case "$SUPERBOARD_REFERENCE_REPOSITORY" in
             */*) ;;
             *) exit 64 ;;
           esac
@@ -80,13 +81,13 @@ jobs:
         if: ${{ steps.sdk-set.outputs.ready == 'true' }}
         env:
           CATALOGUE_SHA: ${{ steps.sdk-set.outputs.sha }}
-          GH_TOKEN: ${{ secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ secrets.SUPERBOARD_REFERENCE_DISPATCH_TOKEN || secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::error::OPENGROW_REFERENCE_DISPATCH_TOKEN is required in the sdk-release Environment for cross-repository dispatch."
+            echo "::error::SUPERBOARD_REFERENCE_DISPATCH_TOKEN is required in the sdk-release Environment for cross-repository dispatch."
             exit 1
           fi
-          gh api --method POST "repos/$OPENGROW_REFERENCE_REPOSITORY/dispatches" \
+          gh api --method POST "repos/$SUPERBOARD_REFERENCE_REPOSITORY/dispatches" \
             --raw-field event_type=sdk-release-set-published \
             --raw-field "client_payload[catalogue_sha]=$CATALOGUE_SHA"
 

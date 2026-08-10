@@ -1,4 +1,4 @@
-# OpenGrow development and release workflow
+# SuperBoard development and release workflow
 
 ## Branches and environments
 
@@ -29,11 +29,11 @@ that environment. A pull request from `dev` to `main` promotes the same Git
 commit; merging it deploys production. There is no persistent staging or
 preview Cloudflare environment.
 
-Protect `dev` and `main` in `opengrow-platform` with the single required status
+Protect `dev` and `main` in `superboard-platform` with the single required status
 check `CI gate`, one CODEOWNERS approval, stale-review dismissal and linear
 history. It aggregates the always-required security/change plan and all
 conditional Worker, Dashboard and Flutter jobs, rejecting any selected job that
-failed or was cancelled. Protect `dev` and `main` in `opengrow-reference` with
+failed or was cancelled. Protect `dev` and `main` in `superboard-reference` with
 `Reference gate` and the same CODEOWNERS requirement. Requiring these stable aggregate checks avoids a branch rule
 that silently misses a conditional job or waits forever for a job that was
 correctly skipped.
@@ -171,7 +171,7 @@ Security and release integrity are code-first controls. Remote readiness is red
 unless both repositories have vulnerability alerts and unpaused Dependabot
 security updates enabled. It also requires repository release immutability for
 future publications. The Platform additionally requires the exact active
-`OpenGrow immutable SDK tags` tag ruleset, with no bypass actor, covering every
+`SuperBoard immutable SDK tags` tag ruleset, with no bypass actor, covering every
 declared SDK and semantic-version tag and denying tag update and deletion. Tag
 creation remains allowed, so the reviewed release workflow can continue to
 publish a new version.
@@ -228,23 +228,27 @@ change the reviewed intent to `enforced`, apply the exact confirmed plan with no
 pending jobs, then disable administrator bypass in the GitHub Environment UI.
 In each environment:
 
-- variable `OPENGROW_TARGET`: target manifest name; it must equal the `target`
+- variable `SUPERBOARD_TARGET`: target manifest name; it must equal the `target`
   field of that Environment's versioned deployment-matrix entry or the job
   fails before any Cloudflare operation;
 - secret `CLOUDFLARE_ACCOUNT_ID`: account selected for that environment;
 - secret `CLOUDFLARE_API_TOKEN`: least-privilege deployment token for only that
   account; it must also be able to read the target zones, DNS records and Worker
   custom domains for the non-mutating ownership gate.
-- development variable `OPENGROW_REFERENCE_REPOSITORY`: canonical owner/name of
+- optional development secret `CLOUDFLARE_ANALYTICS_TOKEN`: a separate,
+  read-only Account Analytics token enables advanced runtime summaries. It is
+  not required to deploy or run SuperBoard in development, and the deployment
+  token is never reused as a runtime secret.
+- development variable `SUPERBOARD_REFERENCE_REPOSITORY`: canonical owner/name of
   the reference repository;
-- development secret `OPENGROW_REFERENCE_DISPATCH_TOKEN`: fine-grained token
+- development secret `SUPERBOARD_REFERENCE_DISPATCH_TOKEN`: fine-grained token
   permitted only to create repository dispatch events in that repository;
-- production secret `OPENGROW_BACKUP_ENCRYPTION_KEY`: base64 encoding of 32
+- production secret `SUPERBOARD_BACKUP_ENCRYPTION_KEY`: base64 encoding of 32
   random bytes, retained independently for D1 recovery.
 
-The separate `opengrow-reference` repository also uses a `development`
+The separate `superboard-reference` repository also uses a `development`
 Environment. It contains the scoped Cloudflare account/token plus
-`OPENGROW_PROJECT_KEY` and `OPENGROW_PROJECT_ID`. The latter two select the
+`SUPERBOARD_PROJECT_KEY` and `SUPERBOARD_PROJECT_ID`. The latter two select the
 registered MBZA test application at build time and never appear in the Git
 tree. Reference CI first validates demo mode, records the exact tested platform
 and reference SHAs, then rebuilds the live Web artifact from those immutable
@@ -269,7 +273,7 @@ MCP, then dashboard. The dashboard is always last because it depends on the API.
 production deployment encrypts all pre-migration D1 backups before artifact
 retention; a missing encryption key blocks that release evidence.
 
-`opengrow-reference/.github/workflows/ci.yml` is the separate publication authority
+`superboard-reference/.github/workflows/ci.yml` is the separate publication authority
 for the acceptance application. Pull requests and both long-lived branches run
 the manifest, Dart and Flutter tests. A push to `dev` additionally builds Flutter
 Web, stores the build as a short-lived artifact and deploys the exact artifact
@@ -291,7 +295,7 @@ checkout uses no repository read token.
 
 ## Local procedure
 
-Every operational command requires `--target` or `OPENGROW_TARGET`. OpenGrow
+Every operational command requires `--target` or `SUPERBOARD_TARGET`. SuperBoard
 never selects VocoStar, mbza.dev or any Cloudflare account implicitly.
 
 ### Enregistrer une nouvelle application
@@ -317,7 +321,7 @@ npm run target:register -- \
   --mail-from-address noreply@sample.dev \
   --max-file-bytes 20971520 \
   --allowed-file-content-types application/pdf,image/png,text/plain \
-  --operator-docs-url https://github.com/example/opengrow-platform/tree/dev/docs \
+  --operator-docs-url https://github.com/example/superboard-platform/tree/dev/docs \
   --operator-support-email support@sample.dev \
   --application-web-origins https://reference.sample.dev \
   --auth-gateway-issuer https://api.sample.dev \
@@ -473,7 +477,7 @@ npm run cloudflare:secrets:plan -- --target <target>
 The schema-2 output also contains a complete value-free coordination graph. It
 identifies every cross-Worker value, its provenance, its target/application
 scope and its rotation procedure. See
-[Gestion des secrets OpenGrow](./SECRET_MANAGEMENT.md). Production values are
+[Gestion des secrets SuperBoard](./SECRET_MANAGEMENT.md). Production values are
 never generated by this planning command.
 
 On a brand-new Cloudflare account, create the private Worker service shells
@@ -496,7 +500,7 @@ After the required secrets have been uploaded and the name-only preflight is
 green, the normal deployment replaces every shell in dependency order. The
 shell command is idempotent and never replaces an existing Worker.
 
-For a capture-only development target, OpenGrow can generate the complete
+For a capture-only development target, SuperBoard can generate the complete
 cross-service secret graph in memory, fetch and fingerprint-check Apple's
 official Root CA G3, upload one inactive secret version per private Worker, and
 stage the dashboard OAuth database/hash pair together for the next deployment.
@@ -516,10 +520,11 @@ npm run cloudflare:dev-secrets:bootstrap -- \
   --apply --confirm CLOUDFLARE:DEV-SECRETS:<target>:development:<digest>
 ```
 
-`CLOUDFLARE_ANALYTICS_TOKEN` must be supplied by the operator or secret manager
-because OpenGrow cannot manufacture a scoped Cloudflare Analytics read token.
-The development bootstrap does not accept SMTP credentials and cannot be used
-for a production target.
+When `CLOUDFLARE_ANALYTICS_TOKEN` is absent, the Observability Worker remains
+healthy in development and reports advanced Analytics Engine queries as
+unavailable. The token can be added later without redeploying the rest of the
+platform. The development bootstrap does not accept SMTP credentials and
+cannot be used for a production target.
 
 The output never reads or returns secret values and distinguishes the complete
 allowlist from the target-specific required set. After uploading the values,
@@ -537,7 +542,7 @@ registry and maps allowed names to their owning coordination contract without
 reading stdin or invoking Wrangler.
 
 Custom Worker validation is also manifest-driven. `npm run custom:check`
-validates only the extension declared by `OPENGROW_TARGET`; CI uses
+validates only the extension declared by `SUPERBOARD_TARGET`; CI uses
 `npm run custom:check:all` to discover and validate every extension declared by
 the checked-in target manifests. Adding an application therefore does not
 require editing the common deployment workflow.
@@ -598,18 +603,18 @@ longer than the maximum token TTL, then remove the retired key.
 Before merging `dev` to `main`:
 
 1. all unit/runtime/type tests pass;
-2. `grow.mbza.dev/infrastructure` shows enabled Workers healthy and all public
+2. `board.mbza.dev/infrastructure` shows enabled Workers healthy and all public
    surface monitors, including `reference.mbza.dev`, reachable;
 3. transactional mail appears in `mail.mbza.dev` and never reaches external
    recipients in capture mode;
 4. upload, notification, Google/Apple authentication, paywall and support flows
-   pass in `opengrow-reference`;
+   pass in `superboard-reference`;
 5. D1 migrations have a backup/rollback plan;
 6. production target resources and secrets are complete;
 7. VocoStar-specific conversion jobs pass through the authenticated
    `/api/v1/sdk/custom/v1/jobs` facade, including owner-scoped cancellation,
    while retry remains back-office only;
-8. Chatwoot is removed only after OpenGrow Support parity and data migration are
+8. Chatwoot is removed only after SuperBoard Support parity and data migration are
    signed off.
 
 ## Bibliothèques et code FlutterFlow
@@ -627,13 +632,13 @@ VocoStar :
 npm run flutterflow:source:verify:vocostar -- \
   --source /chemin/vers/le/dernier/export-vocostar
 
-OPENGROW_CLIENT_SOURCE_VOCOSTAR=/chemin/vers/le/dernier/export-vocostar \
+SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/chemin/vers/le/dernier/export-vocostar \
   npm run flutterflow:source:verify:vocostar
 ```
 
 `--source` est prioritaire lorsqu'il est fourni. Sinon, le vérificateur lit le
 nom de l'application dans le manifeste et dérive automatiquement
-`OPENGROW_CLIENT_SOURCE_<APPLICATION>`; il ne contient aucun chemin de poste.
+`SUPERBOARD_CLIENT_SOURCE_<APPLICATION>`; il ne contient aucun chemin de poste.
 
 Une application cliente versionnée peut aussi déclarer un plan de migration
 dans `config/flutterflow-migrations/<application>.json`. Le validateur exige que
@@ -644,7 +649,7 @@ acycliques et ordonnées :
 ```bash
 npm run flutterflow:migration:plan:vocostar
 
-OPENGROW_CLIENT_SOURCE_VOCOSTAR=/chemin/vers/le/dernier/export-vocostar \
+SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/chemin/vers/le/dernier/export-vocostar \
   npm run flutterflow:migration:plan:vocostar
 ```
 
@@ -659,7 +664,7 @@ codé en dur. En local, fournir `--client-sources` avec des paires uniques
 la variable dérivée du nom de l'application :
 
 ```bash
-OPENGROW_CLIENT_SOURCE_VOCOSTAR=/chemin/vers/vocostar \
+SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/chemin/vers/vocostar \
   npm run platform:readiness
 
 npm run platform:readiness -- \
@@ -692,7 +697,7 @@ Après une modification de bibliothèque :
    met à jour `latestReleaseVersion`, `releaseRef` et `releaseStatus`;
 5. fusionner les PR de catalogue après CI. Dès que FlutterFlow et Support sont
    tous deux publiés, GitHub vérifie leurs tags/releases et ouvre une PR unique
-   qui épingle les deux dépendances immuables dans `opengrow-reference`.
+   qui épingle les deux dépendances immuables dans `superboard-reference`.
 
 Le Dashboard `/app/libraries` est une vue de cet état Git. Il n'accepte ni
 édition directe du code ni jeton de dépôt. Les écrans de configuration SDK ne
@@ -703,7 +708,7 @@ sa valeur est chiffrée avant persistance D1 avec le keyring versionné
 Les valeurs claires ne vont ni dans Git, ni dans les manifests de cible, ni
 dans l'état FlutterFlow.
 
-Le projet FlutterFlow réutilisable `OpenGrow` suit désormais le même modèle.
+Le projet FlutterFlow réutilisable `SuperBoard` suit désormais le même modèle.
 Sa source canonique est `tools/flutterflow-library/dsl/edit.dart`, son contrat
 est `config/flutterflow-library.json` et son projet FlutterFlow distant n'est
 qu'une cible compilée. Le contrat inventorie exactement 11 Library Values et 63
@@ -724,10 +729,10 @@ Le Dashboard affiche ce statut et les tags manquants sans posséder de droit
 d'écriture sur le dépôt.
 
 La session applicative suit la même règle. Depuis le SDK FlutterFlow `2.2.4`,
-`opengrowApplicationInitialize` restaure automatiquement access token et refresh
+`superboardApplicationInitialize` restaure automatiquement access token et refresh
 token depuis le stockage chiffré natif, puis effectue la rotation avant
 expiration. Le refresh token ne ressort jamais des actions publiques ;
-`opengrowApplicationCurrentSessionJson` ne fournit à l'hôte que l'access token
+`superboardApplicationCurrentSessionJson` ne fournit à l'hôte que l'access token
 éphémère, l'identité et l'échéance utiles à son auth en mémoire. Une application
 ou une bibliothèque FlutterFlow qui redéclare ces tokens dans un App State
 persisté, dans `SharedPreferences` ou dans son propre `FlutterSecureStorage`

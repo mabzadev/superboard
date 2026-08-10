@@ -1,6 +1,6 @@
 import type { Env, MessagingQueueJob } from './types';
-import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from '@opengrow/contracts/dead-letter';
-import { isSafePublicHttpsUrl } from '@opengrow/contracts/url-security';
+import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from '@superboard/contracts/dead-letter';
+import { isSafePublicHttpsUrl } from '@superboard/contracts/url-security';
 
 export async function publishMessagingEvent(
   env: Pick<Env, 'DB' | 'MESSAGING_QUEUE'>,

@@ -518,3 +518,6 @@ Expected: Build succeeds. This confirms the Android native SDK accepts the `base
 ```bash
 git add -A && git commit -m "fix: address build issues"
 ```
+> Historical OpenGrow 2.x implementation plan. Retained for release forensics
+> only; use the SuperBoard 3 API and migration section in `../../README.md` for
+> current integration instructions.

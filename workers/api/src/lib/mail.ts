@@ -1,5 +1,5 @@
 import { Env } from "../types";
-import { EMAIL_SERVICE_SEND_PATH } from "@opengrow/contracts/email";
+import { EMAIL_SERVICE_SEND_PATH } from "@superboard/contracts/email";
 import { readJsonObjectLimited, readTextLimited } from "./http-limits";
 
 type MailMessage = {
@@ -283,10 +283,10 @@ export function passwordResetMessage(
   return {
     to,
     idempotencyKey: `password-reset:${token}`,
-    subject: "Reset your OpenGrow password",
-    text: `Reset your OpenGrow password using this link: ${url}\n\nThis link expires in 6 hours.`,
+    subject: "Reset your SuperBoard password",
+    text: `Reset your SuperBoard password using this link: ${url}\n\nThis link expires in 6 hours.`,
     html: [
-      "<p>Use the link below to reset your OpenGrow password.</p>",
+      "<p>Use the link below to reset your SuperBoard password.</p>",
       `<p><a href="${safeUrl}">Reset your password</a></p>`,
       "<p>This link expires in 6 hours.</p>",
     ].join(""),
@@ -303,10 +303,10 @@ export function invitationMessage(
   return {
     to,
     idempotencyKey: `invitation:${token}`,
-    subject: "You have been invited to OpenGrow",
-    text: `Accept your OpenGrow invitation using this link: ${url}`,
+    subject: "You have been invited to SuperBoard",
+    text: `Accept your SuperBoard invitation using this link: ${url}`,
     html: [
-      "<p>You have been invited to join a OpenGrow workspace.</p>",
+      "<p>You have been invited to join a SuperBoard workspace.</p>",
       `<p><a href="${safeUrl}">Accept invitation</a></p>`,
     ].join(""),
   };
@@ -323,8 +323,8 @@ export function downloadFileMessage(
   return {
     to,
     idempotencyKey: `export:${fileName.replace(/[^A-Za-z0-9._:-]/g, "_").slice(0, 180)}`,
-    subject: "Data export - opengrow",
-    text: `Your requested OpenGrow export is ready to download: ${url}\n\nThis link expires in 24 hours.`,
+    subject: "Data export - SuperBoard",
+    text: `Your requested SuperBoard export is ready to download: ${url}\n\nThis link expires in 24 hours.`,
     html: [
       "<p>Your requested file is now available for download.</p>",
       `<p><strong>${safeName}</strong></p>`,

@@ -45,7 +45,7 @@ export interface ApiClient {
   archiveCampaign(token: string, projectId: string, campaignId: number): Promise<unknown>;
 }
 
-export function normalizeApiBaseUrl(value: unknown, variable = "OPENGROW_API_URL"): string {
+export function normalizeApiBaseUrl(value: unknown, variable = "SUPERBOARD_API_URL"): string {
   const configured = String(value || "").trim();
   if (!configured) {
     throw new ApiError(0, `${variable} is required; select an application target explicitly`);
@@ -69,7 +69,10 @@ export function normalizeApiBaseUrl(value: unknown, variable = "OPENGROW_API_URL
 }
 
 export function configuredApiBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  return normalizeApiBaseUrl(env.OPENGROW_API_URL);
+  if (env.SUPERBOARD_API_URL) {
+    return normalizeApiBaseUrl(env.SUPERBOARD_API_URL, "SUPERBOARD_API_URL");
+  }
+  return normalizeApiBaseUrl(env.OPENGROW_API_URL, "SUPERBOARD_API_URL");
 }
 
 export class ApiError extends Error {
@@ -142,7 +145,7 @@ export function createApiClient(options: {
   timeoutMs?: number;
 }): ApiClient {
   const runtime: ApiRuntime = {
-    baseUrl: normalizeApiBaseUrl(options.baseUrl, "OpenGrow API base URL"),
+    baseUrl: normalizeApiBaseUrl(options.baseUrl, "SuperBoard API base URL"),
     fetcher: options.fetcher ?? globalThis.fetch,
     timeoutMs: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
   };

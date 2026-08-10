@@ -3,10 +3,10 @@ import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
-enum OpenGrowExperienceKind { paywall, onboarding }
+enum SuperBoardExperienceKind { paywall, onboarding }
 
-class OpenGrowResolvedExperience {
-  const OpenGrowResolvedExperience({
+class SuperBoardResolvedExperience {
+  const SuperBoardResolvedExperience({
     required this.kind,
     required this.placement,
     required this.contentId,
@@ -21,7 +21,7 @@ class OpenGrowResolvedExperience {
     this.fromCache = false,
   });
 
-  final OpenGrowExperienceKind kind;
+  final SuperBoardExperienceKind kind;
   final String placement;
   final String contentId;
   final String placementId;
@@ -34,8 +34,8 @@ class OpenGrowResolvedExperience {
   final String? variant;
   final bool fromCache;
 
-  OpenGrowResolvedExperience copyWith({bool? fromCache}) =>
-      OpenGrowResolvedExperience(
+  SuperBoardResolvedExperience copyWith({bool? fromCache}) =>
+      SuperBoardResolvedExperience(
         kind: kind,
         placement: placement,
         contentId: contentId,
@@ -50,8 +50,8 @@ class OpenGrowResolvedExperience {
         fromCache: fromCache ?? this.fromCache,
       );
 
-  factory OpenGrowResolvedExperience.fromJson(
-    OpenGrowExperienceKind kind,
+  factory SuperBoardResolvedExperience.fromJson(
+    SuperBoardExperienceKind kind,
     Map<String, dynamic> json,
   ) {
     final definition = json['definition'];
@@ -60,10 +60,10 @@ class OpenGrowResolvedExperience {
         json['version_id'] == null) {
       throw const FormatException('Invalid resolved experience response');
     }
-    final contentKey = kind == OpenGrowExperienceKind.paywall
+    final contentKey = kind == SuperBoardExperienceKind.paywall
         ? 'paywall_id'
         : 'onboarding_id';
-    return OpenGrowResolvedExperience(
+    return SuperBoardResolvedExperience(
       kind: kind,
       placement: json['placement']?.toString() ?? 'default',
       contentId: json[contentKey]?.toString() ?? '',
@@ -79,8 +79,8 @@ class OpenGrowResolvedExperience {
   }
 }
 
-class OpenGrowExperienceEvent {
-  OpenGrowExperienceEvent({
+class SuperBoardExperienceEvent {
+  SuperBoardExperienceEvent({
     required this.type,
     required this.resolved,
     required this.platform,
@@ -96,7 +96,7 @@ class OpenGrowExperienceEvent {
 
   final String id;
   final String type;
-  final OpenGrowResolvedExperience resolved;
+  final SuperBoardResolvedExperience resolved;
   final String platform;
   final String? stepId;
   final String? customerId;
@@ -111,7 +111,7 @@ class OpenGrowExperienceEvent {
     'placement': resolved.placement,
     'occurred_at': occurredAt.toIso8601String(),
     'platform': platform,
-    if (resolved.kind == OpenGrowExperienceKind.paywall)
+    if (resolved.kind == SuperBoardExperienceKind.paywall)
       'paywall_id': resolved.contentId
     else
       'onboarding_id': resolved.contentId,
@@ -120,7 +120,7 @@ class OpenGrowExperienceEvent {
     if (resolved.variantId != null) 'variant_id': resolved.variantId,
     if (stepId != null) 'step_id': stepId,
     if (customerId != null) 'customer_id': customerId,
-    if (resolved.kind == OpenGrowExperienceKind.paywall) ...{
+    if (resolved.kind == SuperBoardExperienceKind.paywall) ...{
       'session_id': payload['session_id'],
       'revenue_micros': revenueMicros,
       if (currency != null) 'currency': currency,
@@ -129,30 +129,30 @@ class OpenGrowExperienceEvent {
   };
 }
 
-abstract interface class OpenGrowExperienceCache {
-  OpenGrowCacheEntry? read(String key);
-  void write(String key, OpenGrowCacheEntry entry);
+abstract interface class SuperBoardExperienceCache {
+  SuperBoardCacheEntry? read(String key);
+  void write(String key, SuperBoardCacheEntry entry);
   void remove(String key);
 }
 
-class OpenGrowCacheEntry {
-  const OpenGrowCacheEntry(this.value, this.cachedAt);
-  final OpenGrowResolvedExperience? value;
+class SuperBoardCacheEntry {
+  const SuperBoardCacheEntry(this.value, this.cachedAt);
+  final SuperBoardResolvedExperience? value;
   final DateTime cachedAt;
 }
 
-class OpenGrowMemoryExperienceCache implements OpenGrowExperienceCache {
-  final Map<String, OpenGrowCacheEntry> _entries = {};
+class SuperBoardMemoryExperienceCache implements SuperBoardExperienceCache {
+  final Map<String, SuperBoardCacheEntry> _entries = {};
   @override
-  OpenGrowCacheEntry? read(String key) => _entries[key];
+  SuperBoardCacheEntry? read(String key) => _entries[key];
   @override
   void remove(String key) => _entries.remove(key);
   @override
-  void write(String key, OpenGrowCacheEntry entry) => _entries[key] = entry;
+  void write(String key, SuperBoardCacheEntry entry) => _entries[key] = entry;
 }
 
-class OpenGrowExperienceException implements Exception {
-  const OpenGrowExperienceException(
+class SuperBoardExperienceException implements Exception {
+  const SuperBoardExperienceException(
     this.message, {
     this.code = 'experience_request_failed',
     this.statusCode,
@@ -168,8 +168,8 @@ class OpenGrowExperienceException implements Exception {
   String toString() => message;
 }
 
-class OpenGrowExperienceClient {
-  OpenGrowExperienceClient({
+class SuperBoardExperienceClient {
+  SuperBoardExperienceClient({
     required this.projectKey,
     required this.platform,
     required this.identifier,
@@ -178,11 +178,11 @@ class OpenGrowExperienceClient {
     this.cacheTtl = const Duration(minutes: 5),
     this.maxStale = const Duration(days: 7),
     http.Client? httpClient,
-    OpenGrowExperienceCache? cache,
+    SuperBoardExperienceCache? cache,
     DateTime Function()? now,
   }) : _http = httpClient ?? http.Client(),
        _ownsHttp = httpClient == null,
-       _cache = cache ?? OpenGrowMemoryExperienceCache(),
+       _cache = cache ?? SuperBoardMemoryExperienceCache(),
        _now = now ?? DateTime.now;
 
   final String projectKey;
@@ -194,11 +194,11 @@ class OpenGrowExperienceClient {
   final Duration maxStale;
   final http.Client _http;
   final bool _ownsHttp;
-  final OpenGrowExperienceCache _cache;
+  final SuperBoardExperienceCache _cache;
   final DateTime Function() _now;
   final Set<String> _sentEventIds = {};
 
-  Future<OpenGrowResolvedExperience?> resolvePaywall({
+  Future<SuperBoardResolvedExperience?> resolvePaywall({
     required String placement,
     String? customerId,
     String? sessionId,
@@ -207,7 +207,7 @@ class OpenGrowExperienceClient {
     Map<String, dynamic> attributes = const {},
     bool forceRefresh = false,
   }) => _resolve(
-    OpenGrowExperienceKind.paywall,
+    SuperBoardExperienceKind.paywall,
     placement: placement,
     customerId: customerId,
     anonymousId: sessionId,
@@ -217,7 +217,7 @@ class OpenGrowExperienceClient {
     forceRefresh: forceRefresh,
   );
 
-  Future<OpenGrowResolvedExperience?> resolveOnboarding({
+  Future<SuperBoardResolvedExperience?> resolveOnboarding({
     required String placement,
     String? customerId,
     String? anonymousId,
@@ -226,7 +226,7 @@ class OpenGrowExperienceClient {
     Map<String, dynamic> attributes = const {},
     bool forceRefresh = false,
   }) => _resolve(
-    OpenGrowExperienceKind.onboarding,
+    SuperBoardExperienceKind.onboarding,
     placement: placement,
     customerId: customerId,
     anonymousId: anonymousId,
@@ -236,8 +236,8 @@ class OpenGrowExperienceClient {
     forceRefresh: forceRefresh,
   );
 
-  Future<OpenGrowResolvedExperience?> _resolve(
-    OpenGrowExperienceKind kind, {
+  Future<SuperBoardResolvedExperience?> _resolve(
+    SuperBoardExperienceKind kind, {
     required String placement,
     String? customerId,
     String? anonymousId,
@@ -276,7 +276,7 @@ class OpenGrowExperienceClient {
               if (customerId != null && customerId.isNotEmpty)
                 'customer_id': customerId,
               if (anonymousId != null && anonymousId.isNotEmpty)
-                kind == OpenGrowExperienceKind.paywall
+                kind == SuperBoardExperienceKind.paywall
                         ? 'session_id'
                         : 'anonymous_id':
                     anonymousId,
@@ -291,12 +291,12 @@ class OpenGrowExperienceClient {
       final body = _decode(response);
       final raw = body['data'];
       final resolved = raw is Map
-          ? OpenGrowResolvedExperience.fromJson(
+          ? SuperBoardResolvedExperience.fromJson(
               kind,
               raw.cast<String, dynamic>(),
             )
           : null;
-      _cache.write(cacheKey, OpenGrowCacheEntry(resolved, now));
+      _cache.write(cacheKey, SuperBoardCacheEntry(resolved, now));
       return resolved;
     } catch (error) {
       if (cached != null && now.difference(cached.cachedAt) <= maxStale) {
@@ -306,7 +306,7 @@ class OpenGrowExperienceClient {
     }
   }
 
-  Future<bool> track(OpenGrowExperienceEvent event) async {
+  Future<bool> track(SuperBoardExperienceEvent event) async {
     if (_sentEventIds.contains(event.id)) return false;
     final kind = event.resolved.kind;
     for (var attempt = 0; attempt < 2; attempt++) {
@@ -323,7 +323,7 @@ class OpenGrowExperienceClient {
         _decode(response);
         _sentEventIds.add(event.id);
         return true;
-      } on OpenGrowExperienceException catch (error) {
+      } on SuperBoardExperienceException catch (error) {
         if (!error.retryable) return false;
       } catch (_) {
         // Retry once using the exact same event and idempotency key.
@@ -341,8 +341,8 @@ class OpenGrowExperienceClient {
     'ENVIRONMENT': environment,
   };
 
-  Uri _uri(OpenGrowExperienceKind kind, String resource) => Uri.parse(
-    '${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/${kind == OpenGrowExperienceKind.paywall ? 'paywalls' : 'onboardings'}/$resource',
+  Uri _uri(SuperBoardExperienceKind kind, String resource) => Uri.parse(
+    '${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/${kind == SuperBoardExperienceKind.paywall ? 'paywalls' : 'onboardings'}/$resource',
   );
 
   Map<String, dynamic> _decode(http.Response response) {
@@ -353,8 +353,8 @@ class OpenGrowExperienceClient {
           : jsonDecode(response.body);
       body = decoded is Map ? decoded.cast<String, dynamic>() : {};
     } catch (_) {
-      throw OpenGrowExperienceException(
-        'OpenGrow returned an invalid response',
+      throw SuperBoardExperienceException(
+        'SuperBoard returned an invalid response',
         statusCode: response.statusCode,
         retryable: response.statusCode >= 500,
       );
@@ -363,8 +363,8 @@ class OpenGrowExperienceClient {
       final error = body['error'] is Map
           ? (body['error'] as Map).cast<String, dynamic>()
           : const <String, dynamic>{};
-      throw OpenGrowExperienceException(
-        error['message']?.toString() ?? 'OpenGrow experience request failed',
+      throw SuperBoardExperienceException(
+        error['message']?.toString() ?? 'SuperBoard experience request failed',
         code: error['code']?.toString() ?? 'experience_request_failed',
         statusCode: response.statusCode,
         retryable: error['retryable'] == true || response.statusCode >= 500,
@@ -380,20 +380,20 @@ class OpenGrowExperienceClient {
   }
 }
 
-abstract final class OpenGrowExperienceSdk {
-  static OpenGrowExperienceClient? _client;
-  static OpenGrowExperienceClient get client {
+abstract final class SuperBoardExperienceSdk {
+  static SuperBoardExperienceClient? _client;
+  static SuperBoardExperienceClient get client {
     final value = _client;
     if (value == null) {
-      throw const OpenGrowExperienceException(
-        'OpenGrowBootstrap must configure experiences before rendering a widget',
+      throw const SuperBoardExperienceException(
+        'SuperBoardBootstrap must configure experiences before rendering a widget',
         code: 'experience_not_configured',
       );
     }
     return value;
   }
 
-  static void configure(OpenGrowExperienceClient value) {
+  static void configure(SuperBoardExperienceClient value) {
     _client?.close();
     _client = value;
   }

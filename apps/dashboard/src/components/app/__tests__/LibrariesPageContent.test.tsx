@@ -19,28 +19,33 @@ describe("LibrariesPageContent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getPlatformLibraries.mockResolvedValue({
-      schemaVersion: 3,
-      repository: "https://github.com/mbzadev/opengrow-platform",
+      schemaVersion: 4,
+      repository: "https://github.com/mbzadev/superboard-platform",
       developmentBranch: "dev",
       releasePolicy: "immutable-tag",
       libraries: [
         {
           id: "flutterflow",
-          displayName: "OpenGrow FlutterFlow",
+          lifecycle: "active",
+          displayName: "SuperBoard FlutterFlow",
           ecosystem: "FlutterFlow",
           packageName: "opengrow_flutterflow",
           sourcePath: "sdks/flutterflow",
           license: "MIT",
           licensePath: "sdks/flutterflow/LICENSE",
           versionSource: "sdks/flutterflow/pubspec.yaml",
-          sourceVersion: "2.2.5",
-          latestReleaseVersion: "2.2.4",
-          releaseRef: "sdk-flutterflow-v2.2.4",
+          sourceVersion: "3.0.0",
+          latestReleaseVersion: "2.2.5",
+          releaseRef: "sdk-flutterflow-v2.2.5",
           releaseStatus: "pending-release",
+          releaseSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           install: "opengrow_flutterflow: immutable",
+          candidatePackageName: "superboard_flutterflow",
+          candidateInstall: "superboard_flutterflow: candidate",
         },
         {
           id: "javascript",
+          lifecycle: "archived",
           displayName: "OpenGrow JavaScript",
           ecosystem: "npm",
           packageName: "@mbzadev/opengrow-js-sdk",
@@ -52,6 +57,7 @@ describe("LibrariesPageContent", () => {
           latestReleaseVersion: "1.0.2",
           releaseRef: "sdk-js-v1.0.2",
           releaseStatus: "released",
+          releaseSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           install: "npm install @mbzadev/opengrow-js-sdk@1.0.2",
           distribution: {
             registryKind: "github-packages-npm",
@@ -67,7 +73,7 @@ describe("LibrariesPageContent", () => {
       ],
       customCode: {
         schemaVersion: 1,
-        owner: "opengrow-platform",
+        owner: "superboard-platform",
         policy: "canonical-source",
         sourceFiles: {},
         widgets: [],
@@ -77,8 +83,8 @@ describe("LibrariesPageContent", () => {
       },
       flutterFlowLibrary: {
         schemaVersion: 1,
-        owner: "opengrow-platform",
-        displayName: "OpenGrow",
+        owner: "superboard-platform",
+        displayName: "SuperBoard",
         source: {
           path: "tools/flutterflow-library/dsl/edit.dart",
           testPath: "tools/flutterflow-library/test/app_test.dart",
@@ -115,28 +121,28 @@ describe("LibrariesPageContent", () => {
   it("shows the package-local MIT licence beside source and version authority", async () => {
     render(<LibrariesPageContent />);
 
-    expect(await screen.findByText("OpenGrow FlutterFlow")).toBeInTheDocument();
+    expect(await screen.findByText("SuperBoard FlutterFlow")).toBeInTheDocument();
     const licenseLink = screen
       .getAllByRole("link", { name: "MIT license" })
       .find(
         (link) =>
           link.getAttribute("href") ===
-          "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/LICENSE"
+          "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/LICENSE"
       );
     expect(licenseLink).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/LICENSE"
+      "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/LICENSE"
     );
     const versionLink = screen
       .getAllByRole("link", { name: /Version authority/i })
       .find(
         (link) =>
           link.getAttribute("href") ===
-          "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
+          "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
       );
     expect(versionLink).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/opengrow-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
+      "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
     );
   });
 
@@ -144,20 +150,20 @@ describe("LibrariesPageContent", () => {
     render(<LibrariesPageContent />);
 
     expect(
-      await screen.findByText("FlutterFlow library project · OpenGrow")
+      await screen.findByText("FlutterFlow library project · SuperBoard")
     ).toBeInTheDocument();
     expect(screen.getByText("1 immutable tag pending")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Open Git-owned DSL" })
     ).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/opengrow-platform/blob/dev/tools/flutterflow-library/dsl/edit.dart"
+      "https://github.com/mbzadev/superboard-platform/blob/dev/tools/flutterflow-library/dsl/edit.dart"
     );
     expect(
       screen.getByRole("link", { name: "Open controlled update workflow" })
     ).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/opengrow-platform/actions/workflows/sync-flutterflow-library.yml"
+      "https://github.com/mbzadev/superboard-platform/actions/workflows/sync-flutterflow-library.yml"
     );
   });
 
@@ -165,6 +171,7 @@ describe("LibrariesPageContent", () => {
     render(<LibrariesPageContent />);
 
     expect(await screen.findByText("OpenGrow JavaScript")).toBeInTheDocument();
+    expect(screen.getByText("Archived")).toBeInTheDocument();
     expect(screen.getByText("Public metadata")).toBeInTheDocument();
     expect(screen.getByText("Authentication required")).toBeInTheDocument();
     expect(
@@ -175,7 +182,18 @@ describe("LibrariesPageContent", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("https://npm.pkg.github.com")).toBeInTheDocument();
     expect(
-      screen.getByText("Authenticated dependency command")
+      screen.getByText("Historical dependency")
     ).toBeInTheDocument();
+  });
+
+  it("shows the staged SuperBoard coordinate without replacing the release baseline", async () => {
+    render(<LibrariesPageContent />);
+
+    expect(await screen.findByText("superboard_flutterflow")).toBeInTheDocument();
+    expect(screen.getByText("Migration candidate")).toBeInTheDocument();
+    expect(screen.getByText("Release pending")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("sdk-flutterflow-v2.2.5"),
+    ).not.toHaveLength(0);
   });
 });

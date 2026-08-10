@@ -13,6 +13,7 @@ import test from "node:test";
 import {
   flutterFlowSourceEnvironmentName,
   flutterFlowSourceEvidence,
+  legacyFlutterFlowSourceEnvironmentName,
   resolveFlutterFlowSourcePath,
   verifyFlutterFlowSource,
 } from "./flutterflow-source-verify.mjs";
@@ -35,7 +36,18 @@ test("the application source resolves from one portable environment contract", (
   const fixture = createFixture(t);
   assert.equal(
     flutterFlowSourceEnvironmentName("sample-app"),
+    "SUPERBOARD_CLIENT_SOURCE_SAMPLE_APP",
+  );
+  assert.equal(
+    legacyFlutterFlowSourceEnvironmentName("sample-app"),
     "OPENGROW_CLIENT_SOURCE_SAMPLE_APP",
+  );
+  assert.equal(
+    resolveFlutterFlowSourcePath({
+      manifestPath: fixture.manifestPath,
+      env: { SUPERBOARD_CLIENT_SOURCE_TEST: fixture.sourcePath },
+    }),
+    fixture.sourcePath,
   );
   assert.equal(
     resolveFlutterFlowSourcePath({
@@ -47,8 +59,18 @@ test("the application source resolves from one portable environment contract", (
   assert.equal(
     resolveFlutterFlowSourcePath({
       manifestPath: fixture.manifestPath,
+      env: {
+        SUPERBOARD_CLIENT_SOURCE_TEST: "/canonical/source",
+        OPENGROW_CLIENT_SOURCE_TEST: "/legacy/source",
+      },
+    }),
+    "/canonical/source",
+  );
+  assert.equal(
+    resolveFlutterFlowSourcePath({
+      manifestPath: fixture.manifestPath,
       explicitSource: "/explicit/source",
-      env: { OPENGROW_CLIENT_SOURCE_TEST: fixture.sourcePath },
+      env: { SUPERBOARD_CLIENT_SOURCE_TEST: fixture.sourcePath },
     }),
     "/explicit/source",
   );
@@ -58,7 +80,7 @@ test("the application source resolves from one portable environment contract", (
         manifestPath: fixture.manifestPath,
         env: {},
       }),
-    /--source or OPENGROW_CLIENT_SOURCE_TEST is required/u,
+    /--source or SUPERBOARD_CLIENT_SOURCE_TEST is required \(OPENGROW_CLIENT_SOURCE_TEST remains a migration alias\)/u,
   );
 });
 
@@ -330,7 +352,7 @@ test("an accepted client receipt binds the reviewed snapshot, policy and source 
 });
 
 function createFixture(t) {
-  const temporary = mkdtempSync(join(tmpdir(), "opengrow-flutterflow-source-"));
+  const temporary = mkdtempSync(join(tmpdir(), "superboard-flutterflow-source-"));
   const sourcePath = join(temporary, "source");
   const manifestPath = join(temporary, "snapshot.json");
   t.after(() => rmSync(temporary, { recursive: true, force: true }));

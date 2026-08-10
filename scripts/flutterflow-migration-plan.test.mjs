@@ -19,6 +19,10 @@ test("VocoStar migration maps every convergence gate to public SDK symbols", asy
   assert.equal(result.contractReady, true);
   assert.equal(result.sourceInspected, false);
   assert.equal(result.ready, false);
+  assert.equal(result.sourceEnvironment, "SUPERBOARD_CLIENT_SOURCE_VOCOSTAR");
+  assert.deepEqual(result.sourceEnvironmentAliases, [
+    "OPENGROW_CLIENT_SOURCE_VOCOSTAR",
+  ]);
   assert.deepEqual(result.contract, {
     phases: 7,
     workItems: 10,

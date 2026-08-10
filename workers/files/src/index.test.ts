@@ -13,7 +13,7 @@ import app, {
   type FilesEnv,
 } from "./index";
 
-describe("OpenGrow Files Worker", () => {
+describe("SuperBoard Files Worker", () => {
   it("reports a configured private runtime", async () => {
     const response = await app.request("/health", {}, environment());
     expect(response.status).toBe(200);

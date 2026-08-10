@@ -36,7 +36,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mbzadev/opengrow-platform.git",
+    "url": "git+https://github.com/mbzadev/superboard-platform.git",
     "directory": "sdks/javascript"
   },
   "publishConfig": {

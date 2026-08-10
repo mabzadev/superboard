@@ -1,8 +1,8 @@
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform">
+  <a href="https://github.com/mbzadev/superboard-platform">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg">
-      <img src="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
+      <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
     </picture>
   </a>
 </p>
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native#usage">Quick Start</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native#api-reference">API Reference</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/docs">Full Docs</a>
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#usage">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -41,7 +41,11 @@ The OpenGrow React Native SDK provides deep linking, universal links, app links,
 
 <!-- opengrow-sdk-documentation:react-native:start -->
 
-## Installation
+> **Lifecycle: archived.** This package is frozen for existing clients.
+> Its historical release remains available, but no new version may be
+> published.
+
+## Historical installation
 
 ### GitHub Packages registry
 
@@ -88,7 +92,7 @@ dependencyResolutionManagement {
     repositories {
         maven {
             name = "OpenGrowGitHubPackages"
-            url = uri("https://maven.pkg.github.com/mbzadev/opengrow-platform")
+            url = uri("https://maven.pkg.github.com/mbzadev/superboard-platform")
             credentials {
                 username = openGrowPackagesUser
                 password = openGrowPackagesToken
@@ -119,7 +123,7 @@ The React Native pod consumes the native OpenGrow podspec directly from its
 reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:
 
 ```ruby
-pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/opengrow-platform/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
+pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/superboard-platform/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
 ```
 
 The URL is pinned to `sdk-ios-v1.0.3`. Run `pod install` after updating
@@ -404,19 +408,19 @@ Use `'cancel'` and `'refund'` types for cancellations and refunds. For store pur
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [React Native SDK API reference](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native#api-reference)
+Full API reference: [React Native SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native/example).
+A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native/example).
 
 ## Migration Guides
 
-- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Support
 

@@ -1,6 +1,6 @@
-# OpenGrow Support and legacy Messaging
+# SuperBoard Support and legacy Messaging
 
-This filename is retained for old links. OpenGrow Support is the canonical
+This filename is retained for old links. SuperBoard Support is the canonical
 conversation implementation. `workers/messaging` is disabled by default and is
 kept only to read/migrate installations created before target schema version 5.
 
@@ -9,7 +9,7 @@ kept only to read/migrate installations created before target schema version 5.
 The Identity Worker is the application authentication authority. Support never
 creates an account or long-lived application session. Flutter/FlutterFlow calls
 the API gateway at `/api/v1/support-client`; the gateway forwards only the
-application bearer token and the allowlisted `X-OpenGrow-Project-Id` through the
+application bearer token and the allowlisted `X-SuperBoard-Project-Id` through the
 private `SUPPORT_MODULE` binding. No standalone public Messaging domain is
 required.
 
@@ -48,10 +48,11 @@ purchases, refunds or financial jobs.
 
 ## FlutterFlow compatibility
 
-`sdks/flutterflow_messaging` remains the package path during migration so
-existing FlutterFlow dependency declarations do not break. Version 1.3 and
-later expose the canonical `opengrowSupport*` action names. `opengrowMessaging*`
-symbols are compatibility aliases only and must not be used by new projects.
+`superboard_flutterflow` 3.0 integrates Support/Messaging directly and exposes
+the canonical `superboardSupport*` action names. The frozen
+`opengrow_flutterflow_messaging` 1.3 package and its `opengrowSupport*` /
+`opengrowMessaging*` symbols exist only for rollback and compatibility; new
+projects must not add that second package.
 
 The package covers configuration, conversations, messages, multiple
 attachments, download, read state, typing, realtime reconnect and CSAT. Its

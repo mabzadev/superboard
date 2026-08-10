@@ -141,47 +141,47 @@ Options:
 void buildStarterEditFlow(App app) {
   final projectKeyId = FFIdentifier(
     name: 'projectKey',
-    key: 'opengrow_project_key',
+    key: 'superboard_project_key',
   );
   final uriSchemeId = FFIdentifier(
     name: 'uriScheme',
-    key: 'opengrow_uri_scheme',
+    key: 'superboard_uri_scheme',
   );
   final useTestEnvironmentId = FFIdentifier(
     name: 'useTestEnvironment',
-    key: 'opengrow_use_test_environment',
+    key: 'superboard_use_test_environment',
   );
   final sdkBaseUrlId = FFIdentifier(
     name: 'sdkBaseUrl',
-    key: 'opengrow_sdk_base_url',
+    key: 'superboard_sdk_base_url',
   );
   final authGatewayBaseUrlId = FFIdentifier(
     name: 'authGatewayBaseUrl',
-    key: 'opengrow_auth_gateway_base_url',
+    key: 'superboard_auth_gateway_base_url',
   );
   final filesBaseUrlId = FFIdentifier(
     name: 'filesBaseUrl',
-    key: 'opengrow_files_base_url',
+    key: 'superboard_files_base_url',
   );
   final applicationIdentifierId = FFIdentifier(
     name: 'applicationIdentifier',
-    key: 'opengrow_application_identifier',
+    key: 'superboard_application_identifier',
   );
   final applicationEnvironmentId = FFIdentifier(
     name: 'applicationEnvironment',
-    key: 'opengrow_application_environment',
+    key: 'superboard_application_environment',
   );
   final supportBaseUrlId = FFIdentifier(
     name: 'supportBaseUrl',
-    key: 'opengrow_support_base_url',
+    key: 'superboard_support_base_url',
   );
   final supportProjectIdId = FFIdentifier(
     name: 'supportProjectId',
-    key: 'opengrow_support_project_id',
+    key: 'superboard_support_project_id',
   );
   final shortLinkHostId = FFIdentifier(
     name: 'shortLinkHost',
-    key: 'opengrow_short_link_host',
+    key: 'superboard_short_link_host',
   );
 
   void ensureLibraryParameter(
@@ -258,7 +258,7 @@ void buildStarterEditFlow(App app) {
       file.parameters.removeWhere(
         (_, parameter) => parameter.parameter.identifier.name == key,
       );
-      file.parameters['opengrow_${file.type.value}_$key'] =
+      file.parameters['superboard_${file.type.value}_$key'] =
           FFCustomFile_Parameter(
             parameter: FFParameter(
               identifier: FFIdentifier(name: key),
@@ -291,8 +291,8 @@ void buildStarterEditFlow(App app) {
     );
     upsertHook(
       androidManifest,
-      name: 'OpenGrow Deep Links',
-      key: 'opengrow_android_deep_links',
+      name: 'SuperBoard Deep Links',
+      key: 'superboard_android_deep_links',
       type: FFCustomFile_Hook_Type.MANIFEST_ACTIVITY_TAG,
       content: r'''
 <intent-filter android:autoVerify="true">
@@ -306,18 +306,18 @@ void buildStarterEditFlow(App app) {
     );
     upsertHook(
       androidManifest,
-      name: 'OpenGrow Native Configuration',
-      key: 'opengrow_android_native_configuration',
+      name: 'SuperBoard Native Configuration',
+      key: 'superboard_android_native_configuration',
       type: FFCustomFile_Hook_Type.MANIFEST_APP_COMPONENT_TAG,
       content: r'''
 <meta-data
-  android:name="opengrow_api_key"
+  android:name="superboard_api_key"
   android:value="{{projectKey}}" />
 <meta-data
-  android:name="opengrow_base_url"
+  android:name="superboard_base_url"
   android:value="{{sdkBaseUrl}}" />
 <meta-data
-  android:name="opengrow_use_test_environment"
+  android:name="superboard_use_test_environment"
   android:value="{{useTestEnvironment}}" />
 ''',
     );
@@ -358,15 +358,15 @@ void buildStarterEditFlow(App app) {
     );
     upsertHook(
       infoPlist,
-      name: 'OpenGrow Native Configuration',
-      key: 'opengrow_ios_native_configuration',
+      name: 'SuperBoard Native Configuration',
+      key: 'superboard_ios_native_configuration',
       type: FFCustomFile_Hook_Type.INFO_PLIST_PROPERTY,
       content: r'''
-<key>OpenGrowApiKey</key>
+<key>SuperBoardApiKey</key>
 <string>{{projectKey}}</string>
-<key>OpenGrowUseTestEnvironment</key>
+<key>SuperBoardUseTestEnvironment</key>
 <{{useTestEnvironment}}/>
-<key>OpenGrowBaseURL</key>
+<key>SuperBoardBaseURL</key>
 <string>{{sdkBaseUrl}}</string>
 <key>CFBundleURLTypes</key>
 <array>
@@ -412,8 +412,8 @@ void buildStarterEditFlow(App app) {
     );
     upsertHook(
       entitlements,
-      name: 'OpenGrow Associated Domain',
-      key: 'opengrow_ios_associated_domain',
+      name: 'SuperBoard Associated Domain',
+      key: 'superboard_ios_associated_domain',
       type: FFCustomFile_Hook_Type.ENTITLEMENT,
       content: r'''
 <key>com.apple.developer.associated-domains</key>
@@ -430,11 +430,41 @@ void buildStarterEditFlow(App app) {
     );
   });
 
-  app.state('opengrowIdentityUserIdentifier', string.withDefault(''));
-  app.state('opengrowPackageIdentifier', string.withDefault(''));
-  app.state('opengrowOfferingIdentifier', string.withDefault('default'));
+  app.state('superboardIdentityUserIdentifier', string.withDefault(''));
+  app.state('superboardPackageIdentifier', string.withDefault(''));
+  app.state('superboardOfferingIdentifier', string.withDefault('default'));
 
   app.raw((project) {
+    if (data_schema_helpers.findAppStateField(
+          project,
+          name: 'superboardIdentityToken',
+        ) !=
+        null) {
+      data_schema_helpers.removeAppStateField(
+        project,
+        name: 'superboardIdentityToken',
+      );
+    }
+    if (data_schema_helpers.findAppStateField(
+          project,
+          name: 'superboardVocostarAccessToken',
+        ) !=
+        null) {
+      data_schema_helpers.removeAppStateField(
+        project,
+        name: 'superboardVocostarAccessToken',
+      );
+    }
+    if (data_schema_helpers.findAppStateField(
+          project,
+          name: 'superboardApplicationAccessToken',
+        ) !=
+        null) {
+      data_schema_helpers.removeAppStateField(
+        project,
+        name: 'superboardApplicationAccessToken',
+      );
+    }
     if (data_schema_helpers.findAppStateField(
           project,
           name: 'opengrowIdentityToken',
@@ -477,91 +507,74 @@ void buildStarterEditFlow(App app) {
         custom_code_helpers.removeCustomAction(project, name: legacyAction);
       }
     }
+    project.customCode.pubspecPackageInfo.pubspecDependencies.removeWhere(
+      (dependency) => const {
+        'opengrow_flutterflow',
+        'opengrow_flutterflow_messaging',
+      }.contains(dependency.name),
+    );
     final sdkDependency =
         r'''
 git:
-  url: https://github.com/mbzadev/opengrow-platform.git
-  ref: sdk-flutterflow-v2.2.5
+  url: https://github.com/mbzadev/superboard-platform.git
+  ref: sdk-flutterflow-v3.0.0
   path: sdks/flutterflow
-'''.trim();
+'''
+            .trim();
     if (pub_dependency_helpers.findPubDependency(
           project,
-          name: 'opengrow_flutterflow',
+          name: 'superboard_flutterflow',
         ) ==
         null) {
       pub_dependency_helpers.addPubDependency(
         project,
-        name: 'opengrow_flutterflow',
+        name: 'superboard_flutterflow',
         version: sdkDependency,
       );
     } else {
       pub_dependency_helpers.updatePubDependency(
         project,
-        name: 'opengrow_flutterflow',
+        name: 'superboard_flutterflow',
         newVersion: sdkDependency,
-      );
-    }
-    final supportDependency =
-        r'''
-git:
-  url: https://github.com/mbzadev/opengrow-platform.git
-  ref: sdk-flutterflow-messaging-v1.3.0
-  path: sdks/flutterflow_messaging
-'''.trim();
-    if (pub_dependency_helpers.findPubDependency(
-          project,
-          name: 'opengrow_flutterflow_messaging',
-        ) ==
-        null) {
-      pub_dependency_helpers.addPubDependency(
-        project,
-        name: 'opengrow_flutterflow_messaging',
-        version: supportDependency,
-      );
-    } else {
-      pub_dependency_helpers.updatePubDependency(
-        project,
-        name: 'opengrow_flutterflow_messaging',
-        newVersion: supportDependency,
       );
     }
     if (action_block_helpers.findActionBlock(
           project,
-          name: 'OpenGrowIdentifyUser',
+          name: 'SuperBoardIdentifyUser',
         ) !=
         null) {
       action_block_helpers.removeActionBlock(
         project,
-        name: 'OpenGrowIdentifyUser',
+        name: 'SuperBoardIdentifyUser',
       );
     }
   });
 
   final initializeAuthenticated = app.customAction(
-    'opengrowInitializeAuthenticated',
+    'superboardInitializeAuthenticated',
     args: {'applicationAccessToken': string},
     returns: bool_,
     description:
         'Initializes Purchases through the configured application authentication gateway.',
     code: r'''
 import '/library_values.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowInitializeAuthenticated(String applicationAccessToken) {
+Future<bool> superboardInitializeAuthenticated(String applicationAccessToken) {
   final values = FFLibraryValues();
   final projectKey = values.projectKey?.trim() ?? '';
   if (projectKey.isEmpty) {
-    throw StateError('OpenGrow projectKey library value is required.');
+    throw StateError('SuperBoard projectKey library value is required.');
   }
   final sdkBaseUrl = values.sdkBaseUrl?.trim() ?? '';
   if (sdkBaseUrl.isEmpty) {
-    throw StateError('OpenGrow sdkBaseUrl library value is required.');
+    throw StateError('SuperBoard sdkBaseUrl library value is required.');
   }
   final authGatewayBaseUrl = values.authGatewayBaseUrl?.trim() ?? '';
   if (authGatewayBaseUrl.isEmpty) {
-    throw StateError('OpenGrow authGatewayBaseUrl library value is required.');
+    throw StateError('SuperBoard authGatewayBaseUrl library value is required.');
   }
-  return opengrow.opengrowInitializeAuthenticated(
+  return superboard.superboardInitializeAuthenticated(
     projectKey: projectKey,
     applicationAccessToken: applicationAccessToken,
     sdkBaseUrl: sdkBaseUrl,
@@ -572,34 +585,34 @@ Future<bool> opengrowInitializeAuthenticated(String applicationAccessToken) {
   );
 
   final initializeApplication = app.customAction(
-    'opengrowApplicationInitialize',
+    'superboardApplicationInitialize',
     returns: bool_,
     description:
         'Initializes the common application gateway and restores its encrypted native session.',
     code: r'''
 import '/library_values.dart';
 import 'package:flutter/foundation.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowApplicationInitialize() {
+Future<bool> superboardApplicationInitialize() {
   final values = FFLibraryValues();
   final projectKey = values.projectKey?.trim() ?? '';
   if (projectKey.isEmpty) {
-    throw StateError('OpenGrow projectKey library value is required.');
+    throw StateError('SuperBoard projectKey library value is required.');
   }
   final apiBaseUrl = values.authGatewayBaseUrl?.trim() ?? '';
   if (apiBaseUrl.isEmpty) {
-    throw StateError('OpenGrow authGatewayBaseUrl library value is required.');
+    throw StateError('SuperBoard authGatewayBaseUrl library value is required.');
   }
   final filesBaseUrl = values.filesBaseUrl?.trim() ?? '';
   if (filesBaseUrl.isEmpty) {
-    throw StateError('OpenGrow filesBaseUrl library value is required.');
+    throw StateError('SuperBoard filesBaseUrl library value is required.');
   }
   final identifier = values.applicationIdentifier?.trim() ?? '';
   if (identifier.isEmpty) {
-    throw StateError('OpenGrow applicationIdentifier library value is required.');
+    throw StateError('SuperBoard applicationIdentifier library value is required.');
   }
-  return opengrow.opengrowApplicationInitialize(
+  return superboard.superboardApplicationInitialize(
     apiBaseUrl: apiBaseUrl,
     filesBaseUrl: filesBaseUrl,
     projectKey: projectKey,
@@ -613,25 +626,25 @@ Future<bool> opengrowApplicationInitialize() {
   );
 
   final initializeAuthenticatedFromApplicationSession = app.customAction(
-    'opengrowInitializeAuthenticatedFromApplicationSession',
+    'superboardInitializeAuthenticatedFromApplicationSession',
     returns: bool_,
     description:
         'Initializes Purchases with the ephemeral access token restored by the SDK session manager.',
     code: r'''
 import '/library_values.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowInitializeAuthenticatedFromApplicationSession() async {
-  final accessToken = await opengrow.opengrowApplicationAccessToken();
+Future<bool> superboardInitializeAuthenticatedFromApplicationSession() async {
+  final accessToken = await superboard.superboardApplicationAccessToken();
   if (accessToken.isEmpty) return false;
   final values = FFLibraryValues();
   final projectKey = values.projectKey?.trim() ?? '';
   final sdkBaseUrl = values.sdkBaseUrl?.trim() ?? '';
   final authGatewayBaseUrl = values.authGatewayBaseUrl?.trim() ?? '';
   if (projectKey.isEmpty || sdkBaseUrl.isEmpty || authGatewayBaseUrl.isEmpty) {
-    throw StateError('OpenGrow authenticated library values are incomplete.');
+    throw StateError('SuperBoard authenticated library values are incomplete.');
   }
-  return opengrow.opengrowInitializeAuthenticated(
+  return superboard.superboardInitializeAuthenticated(
     projectKey: projectKey,
     applicationAccessToken: accessToken,
     sdkBaseUrl: sdkBaseUrl,
@@ -642,60 +655,60 @@ Future<bool> opengrowInitializeAuthenticatedFromApplicationSession() async {
   );
 
   app.customAction(
-    'opengrowApplicationRestoreSessionJson',
+    'superboardApplicationRestoreSessionJson',
     returns: string,
     description: 'Restores and rotates the encrypted application session.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationRestoreSessionJson() {
-  return opengrow.opengrowApplicationRestoreSessionJson();
+Future<String> superboardApplicationRestoreSessionJson() {
+  return superboard.superboardApplicationRestoreSessionJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationCurrentSessionJson',
+    'superboardApplicationCurrentSessionJson',
     returns: string,
     description:
         'Returns the current session without exposing the secure refresh token.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationCurrentSessionJson() {
-  return opengrow.opengrowApplicationCurrentSessionJson();
+Future<String> superboardApplicationCurrentSessionJson() {
+  return superboard.superboardApplicationCurrentSessionJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationAccessToken',
+    'superboardApplicationAccessToken',
     returns: string,
     description:
         'Returns the current access token as an ephemeral action result.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationAccessToken() {
-  return opengrow.opengrowApplicationAccessToken();
+Future<String> superboardApplicationAccessToken() {
+  return superboard.superboardApplicationAccessToken();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationRegisterJson',
+    'superboardApplicationRegisterJson',
     args: {'email': string, 'password': string, 'name': string},
     returns: string,
     description: 'Registers an application user and secures the new session.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationRegisterJson(
+Future<String> superboardApplicationRegisterJson(
   String email,
   String password,
   String name,
 ) {
-  return opengrow.opengrowApplicationRegisterJson(
+  return superboard.superboardApplicationRegisterJson(
     email: email,
     password: password,
     name: name,
@@ -705,18 +718,18 @@ Future<String> opengrowApplicationRegisterJson(
   );
 
   app.customAction(
-    'opengrowApplicationSignInPasswordJson',
+    'superboardApplicationSignInPasswordJson',
     args: {'email': string, 'password': string},
     returns: string,
     description: 'Signs in with email and stores the session securely.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationSignInPasswordJson(
+Future<String> superboardApplicationSignInPasswordJson(
   String email,
   String password,
 ) {
-  return opengrow.opengrowApplicationSignInPasswordJson(
+  return superboard.superboardApplicationSignInPasswordJson(
     email: email,
     password: password,
   );
@@ -725,19 +738,19 @@ Future<String> opengrowApplicationSignInPasswordJson(
   );
 
   app.customAction(
-    'opengrowApplicationSignInProviderJson',
+    'superboardApplicationSignInProviderJson',
     args: {'provider': string, 'idToken': string, 'name': string},
     returns: string,
     description: 'Signs in with Google or Apple and secures the session.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationSignInProviderJson(
+Future<String> superboardApplicationSignInProviderJson(
   String provider,
   String idToken,
   String name,
 ) {
-  return opengrow.opengrowApplicationSignInProviderJson(
+  return superboard.superboardApplicationSignInProviderJson(
     provider: provider,
     idToken: idToken,
     name: name,
@@ -747,19 +760,19 @@ Future<String> opengrowApplicationSignInProviderJson(
   );
 
   app.customAction(
-    'opengrowApplicationLinkProviderJson',
+    'superboardApplicationLinkProviderJson',
     args: {'provider': string, 'idToken': string},
     returns: string,
     description:
         'Links Google or Apple to the current authenticated application user.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationLinkProviderJson(
+Future<String> superboardApplicationLinkProviderJson(
   String provider,
   String idToken,
 ) {
-  return opengrow.opengrowApplicationLinkProviderJson(
+  return superboard.superboardApplicationLinkProviderJson(
     provider: provider,
     idToken: idToken,
   );
@@ -768,185 +781,185 @@ Future<String> opengrowApplicationLinkProviderJson(
   );
 
   app.customAction(
-    'opengrowApplicationSignInAnonymousJson',
+    'superboardApplicationSignInAnonymousJson',
     args: {'installationId': string},
     returns: string,
     description: 'Creates or restores an anonymous application session.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationSignInAnonymousJson(String installationId) {
-  return opengrow.opengrowApplicationSignInAnonymousJson(installationId);
+Future<String> superboardApplicationSignInAnonymousJson(String installationId) {
+  return superboard.superboardApplicationSignInAnonymousJson(installationId);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationRefreshJson',
+    'superboardApplicationRefreshJson',
     returns: string,
     description: 'Rotates the refresh token held by encrypted native storage.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationRefreshJson() {
-  return opengrow.opengrowApplicationRefreshJson();
+Future<String> superboardApplicationRefreshJson() {
+  return superboard.superboardApplicationRefreshJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationLogoutJson',
+    'superboardApplicationLogoutJson',
     returns: string,
     description: 'Revokes the server session and clears local credentials.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationLogoutJson() {
-  return opengrow.opengrowApplicationLogoutJson();
+Future<String> superboardApplicationLogoutJson() {
+  return superboard.superboardApplicationLogoutJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationDeleteAccountJson',
+    'superboardApplicationDeleteAccountJson',
     returns: string,
     description: 'Deletes the account and clears local credentials.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationDeleteAccountJson() {
-  return opengrow.opengrowApplicationDeleteAccountJson();
+Future<String> superboardApplicationDeleteAccountJson() {
+  return superboard.superboardApplicationDeleteAccountJson();
 }
 ''',
   );
 
   final identify = app.customAction(
-    'opengrowSetAnalyticsUser',
+    'superboardSetAnalyticsUser',
     args: {'userIdentifier': string},
     returns: bool_,
-    description: 'Associates a user with OpenGrow analytics.',
+    description: 'Associates a user with SuperBoard analytics.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowSetAnalyticsUser(String userIdentifier) {
-  return opengrow.opengrowIdentify(userIdentifier: userIdentifier);
+Future<bool> superboardSetAnalyticsUser(String userIdentifier) {
+  return superboard.superboardIdentify(userIdentifier: userIdentifier);
 }
 ''',
   );
 
   final identifyFromLibraryState = app.customAction(
-    'opengrowSetAnalyticsUserFromLibraryState',
+    'superboardSetAnalyticsUserFromLibraryState',
     returns: bool_,
     description: 'Internal bridge used by the analytics identity Action Block.',
     code: r'''
 import '/flutter_flow/flutter_flow_util.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowSetAnalyticsUserFromLibraryState() {
-  return opengrow.opengrowIdentify(
-    userIdentifier: FFAppState().opengrowIdentityUserIdentifier,
+Future<bool> superboardSetAnalyticsUserFromLibraryState() {
+  return superboard.superboardIdentify(
+    userIdentifier: FFAppState().superboardIdentityUserIdentifier,
   );
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSetUserAttributesJson',
+    'superboardSetUserAttributesJson',
     args: {'attributesJson': string},
     returns: bool_,
     description: 'Sends user attributes from a JSON object.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowSetUserAttributesJson(String attributesJson) {
-  return opengrow.opengrowSetUserAttributesJson(attributesJson);
+Future<bool> superboardSetUserAttributesJson(String attributesJson) {
+  return superboard.superboardSetUserAttributesJson(attributesJson);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSetPushToken',
+    'superboardSetPushToken',
     args: {'token': string},
     returns: bool_,
     description: 'Registers the device push token.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowSetPushToken(String token) {
-  return opengrow.opengrowSetPushToken(token);
+Future<bool> superboardSetPushToken(String token) {
+  return superboard.superboardSetPushToken(token);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowGenerateLinkJson',
+    'superboardGenerateLinkJson',
     args: {'paramsJson': string},
     returns: string,
-    description: 'Creates an OpenGrow link from JSON parameters.',
+    description: 'Creates an SuperBoard link from JSON parameters.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowGenerateLinkJson(String paramsJson) {
-  return opengrow.opengrowGenerateLinkJson(paramsJson);
+Future<String> superboardGenerateLinkJson(String paramsJson) {
+  return superboard.superboardGenerateLinkJson(paramsJson);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowGetUnreadMessageCount',
+    'superboardGetUnreadMessageCount',
     returns: int_,
-    description: 'Returns the number of unread OpenGrow messages.',
+    description: 'Returns the number of unread SuperBoard messages.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<int> opengrowGetUnreadMessageCount() {
-  return opengrow.opengrowGetUnreadMessageCount();
+Future<int> superboardGetUnreadMessageCount() {
+  return superboard.superboardGetUnreadMessageCount();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowDisplayMessages',
+    'superboardDisplayMessages',
     returns: bool_,
-    description: 'Displays the native OpenGrow message center.',
+    description: 'Displays the native SuperBoard message center.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowDisplayMessages() {
-  return opengrow.opengrowDisplayMessages();
+Future<bool> superboardDisplayMessages() {
+  return superboard.superboardDisplayMessages();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowGetLastDeepLinkJson',
+    'superboardGetLastDeepLinkJson',
     returns: string,
     description:
-        'Returns the latest deep link received by OpenGrowBootstrap as JSON.',
+        'Returns the latest deep link received by SuperBoardBootstrap as JSON.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowGetLastDeepLinkJson() {
-  return opengrow.opengrowGetLastDeepLinkJson();
+Future<String> superboardGetLastDeepLinkJson() {
+  return superboard.superboardGetLastDeepLinkJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowPurchaseLogout',
+    'superboardPurchaseLogout',
     returns: bool_,
     description: 'Clears the local purchase identity.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowPurchaseLogout() {
-  return opengrow.opengrowPurchaseLogout();
+Future<bool> superboardPurchaseLogout() {
+  return superboard.superboardPurchaseLogout();
 }
 ''',
   );
 
   final purchase = app.customAction(
-    'opengrowPurchase',
+    'superboardPurchase',
     args: {
       'packageIdentifier': string,
       'offeringIdentifier': string.withDefault('default'),
@@ -955,13 +968,13 @@ Future<bool> opengrowPurchaseLogout() {
     description:
         'Purchases a package and returns purchased, cancelled, pending, or failed.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowPurchase(
+Future<String> superboardPurchase(
   String packageIdentifier,
   String offeringIdentifier,
 ) {
-  return opengrow.opengrowPurchase(
+  return superboard.superboardPurchase(
     packageIdentifier: packageIdentifier,
     offeringIdentifier: offeringIdentifier,
   );
@@ -970,156 +983,156 @@ Future<String> opengrowPurchase(
   );
 
   final purchaseFromLibraryState = app.customAction(
-    'opengrowPurchaseFromLibraryState',
+    'superboardPurchaseFromLibraryState',
     returns: string,
     description: 'Internal bridge used by the purchase Action Block.',
     code: r'''
 import '/flutter_flow/flutter_flow_util.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowPurchaseFromLibraryState() {
-  return opengrow.opengrowPurchase(
-    packageIdentifier: FFAppState().opengrowPackageIdentifier,
-    offeringIdentifier: FFAppState().opengrowOfferingIdentifier,
+Future<String> superboardPurchaseFromLibraryState() {
+  return superboard.superboardPurchase(
+    packageIdentifier: FFAppState().superboardPackageIdentifier,
+    offeringIdentifier: FFAppState().superboardOfferingIdentifier,
   );
 }
 ''',
   );
 
   final restore = app.customAction(
-    'opengrowRestore',
+    'superboardRestore',
     returns: bool_,
     description: 'Restores and verifies App Store or Google Play purchases.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowRestore() {
-  return opengrow.opengrowRestore();
+Future<bool> superboardRestore() {
+  return superboard.superboardRestore();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSync',
+    'superboardSync',
     returns: bool_,
-    description: 'Synchronizes purchases with OpenGrow.',
+    description: 'Synchronizes purchases with SuperBoard.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowSync() {
-  return opengrow.opengrowSync();
+Future<bool> superboardSync() {
+  return superboard.superboardSync();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowHasEntitlement',
+    'superboardHasEntitlement',
     args: {'entitlementIdentifier': string.withDefault('premium')},
     returns: bool_,
     description: 'Checks whether the requested entitlement is active.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowHasEntitlement(String entitlementIdentifier) {
-  return opengrow.opengrowHasEntitlement(entitlementIdentifier);
+Future<bool> superboardHasEntitlement(String entitlementIdentifier) {
+  return superboard.superboardHasEntitlement(entitlementIdentifier);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowGetCustomerInfoJson',
+    'superboardGetCustomerInfoJson',
     returns: string,
     description: 'Returns only verified JWS CustomerInfo.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowGetCustomerInfoJson() {
-  return opengrow.opengrowGetCustomerInfoJson();
+Future<String> superboardGetCustomerInfoJson() {
+  return superboard.superboardGetCustomerInfoJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowOpenSubscriptionManagement',
+    'superboardOpenSubscriptionManagement',
     returns: bool_,
     description: 'Opens App Store or Google Play subscription management.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<bool> opengrowOpenSubscriptionManagement() {
-  return opengrow.opengrowOpenSubscriptionManagement();
+Future<bool> superboardOpenSubscriptionManagement() {
+  return superboard.superboardOpenSubscriptionManagement();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowGetOfferings',
+    'superboardGetOfferings',
     args: {'placement': string.withDefault('default')},
     returns: string,
     description: 'Returns offerings and packages as JSON.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowGetOfferings(String placement) {
-  return opengrow.opengrowGetOfferings(placement: placement);
+Future<String> superboardGetOfferings(String placement) {
+  return superboard.superboardGetOfferings(placement: placement);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationProfileJson',
+    'superboardApplicationProfileJson',
     returns: string,
     description: 'Returns the authenticated common Identity profile.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationProfileJson() {
-  return opengrow.opengrowApplicationProfileJson();
+Future<String> superboardApplicationProfileJson() {
+  return superboard.superboardApplicationProfileJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationUpdateProfileJson',
+    'superboardApplicationUpdateProfileJson',
     args: {'name': string},
     returns: string,
     description: 'Updates the authenticated common Identity profile.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationUpdateProfileJson(String name) {
-  return opengrow.opengrowApplicationUpdateProfileJson(name);
+Future<String> superboardApplicationUpdateProfileJson(String name) {
+  return superboard.superboardApplicationUpdateProfileJson(name);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationRequestPasswordResetJson',
+    'superboardApplicationRequestPasswordResetJson',
     args: {'email': string},
     returns: string,
     description: 'Requests the common Identity password-reset email.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationRequestPasswordResetJson(String email) {
-  return opengrow.opengrowApplicationRequestPasswordResetJson(email);
+Future<String> superboardApplicationRequestPasswordResetJson(String email) {
+  return superboard.superboardApplicationRequestPasswordResetJson(email);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationResetPasswordJson',
+    'superboardApplicationResetPasswordJson',
     args: {'token': string, 'password': string},
     returns: string,
     description: 'Completes a common Identity password reset.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationResetPasswordJson(
+Future<String> superboardApplicationResetPasswordJson(
   String token,
   String password,
 ) {
-  return opengrow.opengrowApplicationResetPasswordJson(
+  return superboard.superboardApplicationResetPasswordJson(
     token: token,
     password: password,
   );
@@ -1128,19 +1141,19 @@ Future<String> opengrowApplicationResetPasswordJson(
   );
 
   app.customAction(
-    'opengrowApplicationRuntimePolicyJson',
+    'superboardApplicationRuntimePolicyJson',
     args: {'appVersion': string, 'build': string},
     returns: string,
     description:
         'Loads maintenance and minimum-version policy from the selected target.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationRuntimePolicyJson(
+Future<String> superboardApplicationRuntimePolicyJson(
   String appVersion,
   String build,
 ) {
-  return opengrow.opengrowApplicationRuntimePolicyJson(
+  return superboard.superboardApplicationRuntimePolicyJson(
     appVersion: appVersion,
     build: build,
   );
@@ -1149,20 +1162,20 @@ Future<String> opengrowApplicationRuntimePolicyJson(
   );
 
   app.customAction(
-    'opengrowApplicationMarketingPreferencesJson',
+    'superboardApplicationMarketingPreferencesJson',
     returns: string,
     description: 'Returns project-scoped newsletter and consent preferences.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationMarketingPreferencesJson() {
-  return opengrow.opengrowApplicationMarketingPreferencesJson();
+Future<String> superboardApplicationMarketingPreferencesJson() {
+  return superboard.superboardApplicationMarketingPreferencesJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationUpdateMarketingConsentJson',
+    'superboardApplicationUpdateMarketingConsentJson',
     args: {
       'consented': bool_,
       'idempotencyKey': string,
@@ -1173,15 +1186,15 @@ Future<String> opengrowApplicationMarketingPreferencesJson() {
     description:
         'Updates newsletter consent independently from transactional mail.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationUpdateMarketingConsentJson(
+Future<String> superboardApplicationUpdateMarketingConsentJson(
   bool consented,
   String idempotencyKey,
   String attributesJson,
   String listIdsJson,
 ) {
-  return opengrow.opengrowApplicationUpdateMarketingConsentJson(
+  return superboard.superboardApplicationUpdateMarketingConsentJson(
     consented: consented,
     idempotencyKey: idempotencyKey,
     attributesJson: attributesJson,
@@ -1192,15 +1205,15 @@ Future<String> opengrowApplicationUpdateMarketingConsentJson(
   );
 
   app.customAction(
-    'opengrowApplicationListFilesJson',
+    'superboardApplicationListFilesJson',
     args: {'limit': int_.withDefault(50), 'offset': int_.withDefault(0)},
     returns: string,
     description: 'Lists owner-scoped files from the configured Files Worker.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationListFilesJson(int limit, int offset) {
-  return opengrow.opengrowApplicationListFilesJson(
+Future<String> superboardApplicationListFilesJson(int limit, int offset) {
+  return superboard.superboardApplicationListFilesJson(
     limit: limit,
     offset: offset,
   );
@@ -1209,15 +1222,15 @@ Future<String> opengrowApplicationListFilesJson(int limit, int offset) {
   );
 
   app.customAction(
-    'opengrowApplicationUploadFileJson',
+    'superboardApplicationUploadFileJson',
     args: {'file': uploadedFile, 'contentType': string},
     returns: string,
     description:
         'Uploads an owner-scoped FlutterFlow file to the configured Files Worker.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationUploadFileJson(
+Future<String> superboardApplicationUploadFileJson(
   FFUploadedFile file,
   String contentType,
 ) {
@@ -1229,7 +1242,7 @@ Future<String> opengrowApplicationUploadFileJson(
       ? file.originalFilename.trim()
       : file.name?.trim() ?? '';
   if (filename.isEmpty) throw StateError('The upload filename is required.');
-  return opengrow.opengrowApplicationUploadFileJson(
+  return superboard.superboardApplicationUploadFileJson(
     bytes: bytes,
     filename: filename,
     contentType: contentType,
@@ -1239,19 +1252,19 @@ Future<String> opengrowApplicationUploadFileJson(
   );
 
   app.customAction(
-    'opengrowApplicationDownloadFile',
+    'superboardApplicationDownloadFile',
     args: {'fileId': string, 'filename': string},
     returns: uploadedFile,
     description:
         'Downloads an owner-scoped file from the configured Files Worker.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<FFUploadedFile> opengrowApplicationDownloadFile(
+Future<FFUploadedFile> superboardApplicationDownloadFile(
   String fileId,
   String filename,
 ) async {
-  final bytes = await opengrow.opengrowApplicationDownloadFile(fileId);
+  final bytes = await superboard.superboardApplicationDownloadFile(fileId);
   return FFUploadedFile(
     name: filename,
     originalFilename: filename,
@@ -1262,21 +1275,21 @@ Future<FFUploadedFile> opengrowApplicationDownloadFile(
   );
 
   app.customAction(
-    'opengrowApplicationDeleteFileJson',
+    'superboardApplicationDeleteFileJson',
     args: {'fileId': string},
     returns: string,
     description: 'Deletes an owner-scoped file from the Files Worker.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationDeleteFileJson(String fileId) {
-  return opengrow.opengrowApplicationDeleteFileJson(fileId);
+Future<String> superboardApplicationDeleteFileJson(String fileId) {
+  return superboard.superboardApplicationDeleteFileJson(fileId);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationCreateCustomJobJson',
+    'superboardApplicationCreateCustomJobJson',
     args: {
       'capability': string,
       'payloadJson': string,
@@ -1285,14 +1298,14 @@ Future<String> opengrowApplicationDeleteFileJson(String fileId) {
     returns: string,
     description: 'Creates one authenticated application-specific job.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationCreateCustomJobJson(
+Future<String> superboardApplicationCreateCustomJobJson(
   String capability,
   String payloadJson,
   String idempotencyKey,
 ) {
-  return opengrow.opengrowApplicationCreateCustomJobJson(
+  return superboard.superboardApplicationCreateCustomJobJson(
     capability: capability,
     payloadJson: payloadJson,
     idempotencyKey: idempotencyKey,
@@ -1302,7 +1315,7 @@ Future<String> opengrowApplicationCreateCustomJobJson(
   );
 
   app.customAction(
-    'opengrowApplicationListCustomJobsJson',
+    'superboardApplicationListCustomJobsJson',
     args: {
       'limit': int_.withDefault(25),
       'status': string,
@@ -1312,15 +1325,15 @@ Future<String> opengrowApplicationCreateCustomJobJson(
     returns: string,
     description: 'Lists authenticated application-specific jobs.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationListCustomJobsJson(
+Future<String> superboardApplicationListCustomJobsJson(
   int limit,
   String status,
   String capability,
   String cursor,
 ) {
-  return opengrow.opengrowApplicationListCustomJobsJson(
+  return superboard.superboardApplicationListCustomJobsJson(
     limit: limit,
     status: status,
     capability: capability,
@@ -1331,54 +1344,54 @@ Future<String> opengrowApplicationListCustomJobsJson(
   );
 
   app.customAction(
-    'opengrowApplicationGetCustomJobJson',
+    'superboardApplicationGetCustomJobJson',
     args: {'jobId': string},
     returns: string,
     description: 'Returns one owner-scoped application-specific job.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationGetCustomJobJson(String jobId) {
-  return opengrow.opengrowApplicationGetCustomJobJson(jobId);
+Future<String> superboardApplicationGetCustomJobJson(String jobId) {
+  return superboard.superboardApplicationGetCustomJobJson(jobId);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowApplicationCancelCustomJobJson',
+    'superboardApplicationCancelCustomJobJson',
     args: {'jobId': string},
     returns: string,
     description: 'Cancels one owner-scoped application-specific job.',
     code: r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String> opengrowApplicationCancelCustomJobJson(String jobId) {
-  return opengrow.opengrowApplicationCancelCustomJobJson(jobId);
+Future<String> superboardApplicationCancelCustomJobJson(String jobId) {
+  return superboard.superboardApplicationCancelCustomJobJson(jobId);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportInitializeAuthenticated',
+    'superboardSupportInitializeAuthenticated',
     returns: bool_,
     description:
         'Initializes Support from the common encrypted application session.',
     code: r'''
 import '/library_values.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<bool> opengrowSupportInitializeAuthenticated() async {
-  final accessToken = await opengrow.opengrowApplicationAccessToken();
+Future<bool> superboardSupportInitializeAuthenticated() async {
+  final accessToken = await superboard.superboardApplicationAccessToken();
   if (accessToken.isEmpty) return false;
   final values = FFLibraryValues();
   final authGatewayUrl = values.authGatewayBaseUrl?.trim() ?? '';
   final supportUrl = values.supportBaseUrl?.trim() ?? '';
   final projectId = values.supportProjectId ?? 0;
   if (authGatewayUrl.isEmpty || supportUrl.isEmpty || projectId <= 0) {
-    throw StateError('OpenGrow Support library values are incomplete.');
+    throw StateError('SuperBoard Support library values are incomplete.');
   }
-  return support.opengrowSupportInitializeAuthenticated(
+  return support.superboardSupportInitializeAuthenticated(
     applicationAccessToken: accessToken,
     projectId: projectId,
     authGatewayUrl: authGatewayUrl,
@@ -1389,33 +1402,33 @@ Future<bool> opengrowSupportInitializeAuthenticated() async {
   );
 
   app.customAction(
-    'opengrowSupportGetConfigurationJson',
+    'superboardSupportGetConfigurationJson',
     returns: string,
     description: 'Returns the target-managed Support presentation policy.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportGetConfigurationJson() {
-  return support.opengrowSupportGetConfigurationJson();
+Future<String> superboardSupportGetConfigurationJson() {
+  return support.superboardSupportGetConfigurationJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportListConversationsJson',
+    'superboardSupportListConversationsJson',
     returns: string,
     description: 'Lists the authenticated user Support conversations.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportListConversationsJson() {
-  return support.opengrowSupportListConversationsJson();
+Future<String> superboardSupportListConversationsJson() {
+  return support.superboardSupportListConversationsJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportOpenConversation',
+    'superboardSupportOpenConversation',
     args: {
       'clientConversationId': string,
       'subject': string,
@@ -1425,15 +1438,15 @@ Future<String> opengrowSupportListConversationsJson() {
     returns: string,
     description: 'Opens one idempotent Support conversation.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportOpenConversation(
+Future<String> superboardSupportOpenConversation(
   String clientConversationId,
   String subject,
   String inboxId,
   String customAttributesJson,
 ) {
-  return support.opengrowSupportOpenConversation(
+  return support.superboardSupportOpenConversation(
     clientConversationId: clientConversationId,
     subject: subject.trim().isEmpty ? null : subject.trim(),
     inboxId: inboxId.trim().isEmpty ? null : inboxId.trim(),
@@ -1444,7 +1457,7 @@ Future<String> opengrowSupportOpenConversation(
   );
 
   app.customAction(
-    'opengrowSupportUpdateConversationJson',
+    'superboardSupportUpdateConversationJson',
     args: {
       'conversationId': string,
       'status': string,
@@ -1453,14 +1466,14 @@ Future<String> opengrowSupportOpenConversation(
     returns: string,
     description: 'Updates status or public custom attributes.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportUpdateConversationJson(
+Future<String> superboardSupportUpdateConversationJson(
   String conversationId,
   String status,
   String customAttributesJson,
 ) {
-  return support.opengrowSupportUpdateConversationJson(
+  return support.superboardSupportUpdateConversationJson(
     conversationId: conversationId,
     status: status.trim().isEmpty ? null : status.trim(),
     customAttributesJson: customAttributesJson.trim().isEmpty
@@ -1472,7 +1485,7 @@ Future<String> opengrowSupportUpdateConversationJson(
   );
 
   app.customAction(
-    'opengrowSupportMessagesJson',
+    'superboardSupportMessagesJson',
     args: {
       'conversationId': string,
       'beforeSequence': int_.withDefault(0),
@@ -1481,14 +1494,14 @@ Future<String> opengrowSupportUpdateConversationJson(
     returns: string,
     description: 'Loads a bounded page of Support messages.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportMessagesJson(
+Future<String> superboardSupportMessagesJson(
   String conversationId,
   int beforeSequence,
   int limit,
 ) {
-  return support.opengrowSupportMessagesJson(
+  return support.superboardSupportMessagesJson(
     conversationId,
     beforeSequence: beforeSequence > 0 ? beforeSequence : null,
     limit: limit,
@@ -1498,19 +1511,19 @@ Future<String> opengrowSupportMessagesJson(
   );
 
   app.customAction(
-    'opengrowSupportSend',
+    'superboardSupportSend',
     args: {'conversationId': string, 'body': string, 'clientMessageId': string},
     returns: string,
     description: 'Sends one idempotent text message.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportSend(
+Future<String> superboardSupportSend(
   String conversationId,
   String body,
   String clientMessageId,
 ) {
-  return support.opengrowSupportSend(
+  return support.superboardSupportSend(
     conversationId: conversationId,
     body: body,
     clientMessageId: clientMessageId,
@@ -1520,7 +1533,7 @@ Future<String> opengrowSupportSend(
   );
 
   app.customAction(
-    'opengrowSupportSendAdvanced',
+    'superboardSupportSendAdvanced',
     args: {
       'conversationId': string,
       'body': string,
@@ -1532,9 +1545,9 @@ Future<String> opengrowSupportSend(
     returns: string,
     description: 'Sends replies and interactive Support messages.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportSendAdvanced(
+Future<String> superboardSupportSendAdvanced(
   String conversationId,
   String body,
   String clientMessageId,
@@ -1542,7 +1555,7 @@ Future<String> opengrowSupportSendAdvanced(
   String replyToMessageId,
   String metadataJson,
 ) {
-  return support.opengrowSupportSendAdvanced(
+  return support.superboardSupportSendAdvanced(
     conversationId: conversationId,
     body: body,
     clientMessageId: clientMessageId,
@@ -1557,19 +1570,19 @@ Future<String> opengrowSupportSendAdvanced(
   );
 
   app.customAction(
-    'opengrowSupportSubmitCsatJson',
+    'superboardSupportSubmitCsatJson',
     args: {'conversationId': string, 'rating': int_, 'feedback': string},
     returns: string,
     description: 'Submits the authenticated customer satisfaction score.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportSubmitCsatJson(
+Future<String> superboardSupportSubmitCsatJson(
   String conversationId,
   int rating,
   String feedback,
 ) {
-  return support.opengrowSupportSubmitCsatJson(
+  return support.superboardSupportSubmitCsatJson(
     conversationId: conversationId,
     rating: rating,
     feedback: feedback.trim().isEmpty ? null : feedback.trim(),
@@ -1579,7 +1592,7 @@ Future<String> opengrowSupportSubmitCsatJson(
   );
 
   app.customAction(
-    'opengrowSupportUploadAttachmentJson',
+    'superboardSupportUploadAttachmentJson',
     args: {
       'conversationId': string,
       'file': uploadedFile,
@@ -1588,9 +1601,9 @@ Future<String> opengrowSupportSubmitCsatJson(
     returns: string,
     description: 'Uploads one authenticated Support attachment.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportUploadAttachmentJson(
+Future<String> superboardSupportUploadAttachmentJson(
   String conversationId,
   FFUploadedFile file,
   String contentType,
@@ -1603,7 +1616,7 @@ Future<String> opengrowSupportUploadAttachmentJson(
       ? file.originalFilename.trim()
       : file.name?.trim() ?? '';
   if (filename.isEmpty) throw StateError('The attachment filename is required.');
-  return support.opengrowSupportUploadAttachmentJson(
+  return support.superboardSupportUploadAttachmentJson(
     conversationId: conversationId,
     bytes: bytes,
     filename: filename,
@@ -1614,7 +1627,7 @@ Future<String> opengrowSupportUploadAttachmentJson(
   );
 
   app.customAction(
-    'opengrowSupportDownloadAttachment',
+    'superboardSupportDownloadAttachment',
     args: {
       'conversationId': string,
       'messageId': string,
@@ -1624,15 +1637,15 @@ Future<String> opengrowSupportUploadAttachmentJson(
     returns: uploadedFile,
     description: 'Downloads one authenticated Support attachment.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<FFUploadedFile> opengrowSupportDownloadAttachment(
+Future<FFUploadedFile> superboardSupportDownloadAttachment(
   String conversationId,
   String messageId,
   String attachmentId,
   String filename,
 ) async {
-  final bytes = await support.opengrowSupportDownloadAttachment(
+  final bytes = await support.superboardSupportDownloadAttachment(
     conversationId: conversationId,
     messageId: messageId,
     attachmentId: attachmentId.trim().isEmpty ? null : attachmentId.trim(),
@@ -1647,7 +1660,7 @@ Future<FFUploadedFile> opengrowSupportDownloadAttachment(
   );
 
   app.customAction(
-    'opengrowSupportSendAttachment',
+    'superboardSupportSendAttachment',
     args: {
       'conversationId': string,
       'attachmentJson': string,
@@ -1657,15 +1670,15 @@ Future<FFUploadedFile> opengrowSupportDownloadAttachment(
     returns: string,
     description: 'Sends one previously uploaded Support attachment.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportSendAttachment(
+Future<String> superboardSupportSendAttachment(
   String conversationId,
   String attachmentJson,
   String clientMessageId,
   String body,
 ) {
-  return support.opengrowSupportSendAttachment(
+  return support.superboardSupportSendAttachment(
     conversationId: conversationId,
     attachmentJson: attachmentJson,
     clientMessageId: clientMessageId,
@@ -1676,98 +1689,98 @@ Future<String> opengrowSupportSendAttachment(
   );
 
   app.customAction(
-    'opengrowSupportMarkRead',
+    'superboardSupportMarkRead',
     args: {'conversationId': string},
     returns: string,
     description: 'Advances the authenticated participant read receipt.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportMarkRead(String conversationId) {
-  return support.opengrowSupportMarkRead(conversationId);
+Future<String> superboardSupportMarkRead(String conversationId) {
+  return support.superboardSupportMarkRead(conversationId);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportSetTyping',
+    'superboardSupportSetTyping',
     args: {'conversationId': string, 'active': bool_},
     returns: bool_,
     description: 'Publishes bounded Support typing state.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<bool> opengrowSupportSetTyping(String conversationId, bool active) {
-  return support.opengrowSupportSetTyping(conversationId, active);
+Future<bool> superboardSupportSetTyping(String conversationId, bool active) {
+  return support.superboardSupportSetTyping(conversationId, active);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportConnectRealtime',
+    'superboardSupportConnectRealtime',
     args: {'conversationId': string},
     returns: bool_,
     description: 'Connects authenticated Support realtime events.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<bool> opengrowSupportConnectRealtime(String conversationId) {
-  return support.opengrowSupportConnectRealtime(conversationId);
+Future<bool> superboardSupportConnectRealtime(String conversationId) {
+  return support.superboardSupportConnectRealtime(conversationId);
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportDisconnectRealtime',
+    'superboardSupportDisconnectRealtime',
     returns: bool_,
     description: 'Disconnects Support realtime events.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<bool> opengrowSupportDisconnectRealtime() {
-  return support.opengrowSupportDisconnectRealtime();
+Future<bool> superboardSupportDisconnectRealtime() {
+  return support.superboardSupportDisconnectRealtime();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportGetLastRealtimeEventJson',
+    'superboardSupportGetLastRealtimeEventJson',
     returns: string,
     description: 'Returns the last validated Support realtime event.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<String> opengrowSupportGetLastRealtimeEventJson() {
-  return support.opengrowSupportGetLastRealtimeEventJson();
+Future<String> superboardSupportGetLastRealtimeEventJson() {
+  return support.superboardSupportGetLastRealtimeEventJson();
 }
 ''',
   );
 
   app.customAction(
-    'opengrowSupportDispose',
+    'superboardSupportDispose',
     returns: bool_,
     description: 'Disposes the canonical Support client.',
     code: r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<bool> opengrowSupportDispose() {
-  return support.opengrowSupportDispose();
+Future<bool> superboardSupportDispose() {
+  return support.superboardSupportDispose();
 }
 ''',
   );
 
   app.customWidget(
-    'OpenGrowBootstrap',
+    'SuperBoardBootstrap',
     parameters: {'projectKey': string, 'sdkBaseUrl': string},
     description:
-        'Initializes the common OpenGrow runtime from target-owned Library Values.',
+        'Initializes the common SuperBoard runtime from target-owned Library Values.',
     code: r'''
 import 'package:flutter/material.dart';
 import '/library_values.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-class OpenGrowBootstrap extends StatelessWidget {
-  const OpenGrowBootstrap({
+class SuperBoardBootstrap extends StatelessWidget {
+  const SuperBoardBootstrap({
     super.key,
     this.width,
     this.height,
@@ -1797,9 +1810,9 @@ class OpenGrowBootstrap extends StatelessWidget {
         resolvedSdkBaseUrl.isEmpty ||
         experienceApiBaseUrl.isEmpty ||
         environment.isEmpty) {
-      throw StateError('OpenGrow sdkBaseUrl is required.');
+      throw StateError('SuperBoard sdkBaseUrl is required.');
     }
-    return opengrow.OpenGrowBootstrap(
+    return superboard.SuperBoardBootstrap(
       width: width,
       height: height,
       projectKey: resolvedProjectKey,
@@ -1813,8 +1826,8 @@ class OpenGrowBootstrap extends StatelessWidget {
 ''',
   );
 
-  final dynamic openGrowPaywallWidget = app.customWidget(
-    'OpenGrowPaywall',
+  final dynamic superBoardPaywallWidget = app.customWidget(
+    'SuperBoardPaywall',
     parameters: {
       'offeringIdentifier': string,
       'title': string,
@@ -1830,10 +1843,10 @@ class OpenGrowBootstrap extends StatelessWidget {
     code: r'''
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-class OpenGrowPaywall extends StatelessWidget {
-  const OpenGrowPaywall({
+class SuperBoardPaywall extends StatelessWidget {
+  const SuperBoardPaywall({
     super.key,
     this.width,
     this.height,
@@ -1871,7 +1884,7 @@ class OpenGrowPaywall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return opengrow.OpenGrowPaywall(
+    return superboard.SuperBoardPaywall(
       width: width,
       height: height,
       offeringIdentifier: offeringIdentifier,
@@ -1889,8 +1902,8 @@ class OpenGrowPaywall extends StatelessWidget {
 ''',
   );
 
-  final dynamic openGrowOnboardingWidget = app.customWidget(
-    'OpenGrowOnboarding',
+  final dynamic superBoardOnboardingWidget = app.customWidget(
+    'SuperBoardOnboarding',
     parameters: {
       'placement': string.withDefault('app_launch'),
       'customerId': string.withDefault(''),
@@ -1899,7 +1912,7 @@ class OpenGrowPaywall extends StatelessWidget {
       'locale': string.withDefault(''),
       'fallbackTitle': string.withDefault(''),
       'fallbackBody': string.withDefault(''),
-      'completionRouteName': string.withDefault('/opengrow-paywall'),
+      'completionRouteName': string.withDefault('/superboard-paywall'),
       'unavailableRouteName': string.withDefault('/'),
     },
     description:
@@ -1907,10 +1920,10 @@ class OpenGrowPaywall extends StatelessWidget {
     code: r'''
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-class OpenGrowOnboarding extends StatelessWidget {
-  const OpenGrowOnboarding({
+class SuperBoardOnboarding extends StatelessWidget {
+  const SuperBoardOnboarding({
     super.key,
     this.width,
     this.height,
@@ -1921,7 +1934,7 @@ class OpenGrowOnboarding extends StatelessWidget {
     this.locale = '',
     this.fallbackTitle = '',
     this.fallbackBody = '',
-    this.completionRouteName = '/opengrow-paywall',
+    this.completionRouteName = '/superboard-paywall',
     this.unavailableRouteName = '/',
   });
 
@@ -1953,7 +1966,7 @@ class OpenGrowOnboarding extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String? optional(String value) => value.trim().isEmpty ? null : value.trim();
-    return opengrow.OpenGrowOnboarding(
+    return superboard.SuperBoardOnboarding(
       width: width,
       height: height,
       placement: placement.trim().isEmpty ? 'app_launch' : placement.trim(),
@@ -1974,16 +1987,16 @@ class OpenGrowOnboarding extends StatelessWidget {
   );
 
   app.customWidget(
-    'OpenGrowRestorePurchasesButton',
+    'SuperBoardRestorePurchasesButton',
     parameters: {'label': string.withDefault('Restore purchases')},
     description:
         'Restores purchases through the common verified Billing authority.',
     code: r'''
 import 'package:flutter/material.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-class OpenGrowRestorePurchasesButton extends StatelessWidget {
-  const OpenGrowRestorePurchasesButton({
+class SuperBoardRestorePurchasesButton extends StatelessWidget {
+  const SuperBoardRestorePurchasesButton({
     super.key,
     this.width,
     this.height,
@@ -1999,7 +2012,7 @@ class OpenGrowRestorePurchasesButton extends StatelessWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: opengrow.OpenGrowRestorePurchasesButton(
+      child: superboard.SuperBoardRestorePurchasesButton(
         label: label?.trim().isNotEmpty == true
             ? label!
             : 'Restore purchases',
@@ -2010,17 +2023,17 @@ class OpenGrowRestorePurchasesButton extends StatelessWidget {
 ''',
   );
 
-  final dynamic openGrowCustomerCenterWidget = app.customWidget(
-    'OpenGrowCustomerCenter',
+  final dynamic superBoardCustomerCenterWidget = app.customWidget(
+    'SuperBoardCustomerCenter',
     parameters: {'title': string.withDefault('My purchases')},
     description:
         'Displays subscriptions and verified entitlements from common Billing.',
     code: r'''
 import 'package:flutter/material.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-class OpenGrowCustomerCenter extends StatelessWidget {
-  const OpenGrowCustomerCenter({
+class SuperBoardCustomerCenter extends StatelessWidget {
+  const SuperBoardCustomerCenter({
     super.key,
     this.width,
     this.height,
@@ -2033,7 +2046,7 @@ class OpenGrowCustomerCenter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return opengrow.OpenGrowCustomerCenter(
+    return superboard.SuperBoardCustomerCenter(
       width: width,
       height: height,
       title: title.trim().isEmpty ? 'My purchases' : title.trim(),
@@ -2044,18 +2057,19 @@ class OpenGrowCustomerCenter extends StatelessWidget {
   );
 
   app.ensurePage(
-    'OpenGrowPaywallPage',
-    route: '/opengrow-paywall',
-    description: 'Reusable OpenGrow Paywalls and verified Billing destination.',
+    'SuperBoardPaywallPage',
+    route: '/superboard-paywall',
+    description:
+        'Reusable SuperBoard Paywalls and verified Billing destination.',
     params: {
       'successRouteName': string.withDefault('/'),
       'closeRouteName': string.withDefault('/'),
       'unavailableRouteName': string.withDefault('/'),
     },
     body: Scaffold(
-      body: openGrowPaywallWidget(
-        name: 'OpenGrowPaywallAuthority',
-        offeringIdentifier: AppState('opengrowOfferingIdentifier'),
+      body: superBoardPaywallWidget(
+        name: 'SuperBoardPaywallAuthority',
+        offeringIdentifier: AppState('superboardOfferingIdentifier'),
         title: 'Go Premium',
         subtitle: 'Unlock every feature.',
         purchaseLabel: 'Continue',
@@ -2068,18 +2082,18 @@ class OpenGrowCustomerCenter extends StatelessWidget {
   );
 
   app.ensurePage(
-    'OpenGrowOnboardingPage',
-    route: '/opengrow-onboarding',
+    'SuperBoardOnboardingPage',
+    route: '/superboard-onboarding',
     description: 'Reusable target-managed onboarding with lifecycle telemetry.',
     params: {
-      'completionRouteName': string.withDefault('/opengrow-paywall'),
+      'completionRouteName': string.withDefault('/superboard-paywall'),
       'unavailableRouteName': string.withDefault('/'),
       'customerId': string.withDefault(''),
       'locale': string.withDefault(''),
     },
     body: Scaffold(
-      body: openGrowOnboardingWidget(
-        name: 'OpenGrowOnboardingAuthority',
+      body: superBoardOnboardingWidget(
+        name: 'SuperBoardOnboardingAuthority',
         placement: 'app_launch',
         customerId: const PageParam('customerId'),
         anonymousId: '',
@@ -2094,13 +2108,13 @@ class OpenGrowCustomerCenter extends StatelessWidget {
   );
 
   app.ensurePage(
-    'OpenGrowCustomerCenterPage',
-    route: '/opengrow-customer-center',
+    'SuperBoardCustomerCenterPage',
+    route: '/superboard-customer-center',
     description:
         'Reusable customer view of verified subscriptions and entitlements.',
     body: Scaffold(
-      body: openGrowCustomerCenterWidget(
-        name: 'OpenGrowCustomerCenterAuthority',
+      body: superBoardCustomerCenterWidget(
+        name: 'SuperBoardCustomerCenterAuthority',
         title: 'My purchases',
       ),
     ),
@@ -2108,9 +2122,9 @@ class OpenGrowCustomerCenter extends StatelessWidget {
 
   app.raw((project) {
     final replacements = {
-      'OGBootstrapBridge': 'OpenGrowBootstrap',
-      'OGPaywallBridge': 'OpenGrowPaywall',
-      'OGRestoreBridge': 'OpenGrowRestorePurchasesButton',
+      'OGBootstrapBridge': 'SuperBoardBootstrap',
+      'OGPaywallBridge': 'SuperBoardPaywall',
+      'OGRestoreBridge': 'SuperBoardRestorePurchasesButton',
     };
 
     void visit(FFNode node, void Function(FFNode node) visitor) {
@@ -2163,7 +2177,7 @@ class OpenGrowCustomerCenter extends StatelessWidget {
   });
 
   app.actionBlock(
-    'OpenGrowBuyPackage',
+    'SuperBoardBuyPackage',
     params: {
       'packageIdentifier': string,
       'offeringIdentifier': string.withDefault('default'),
@@ -2171,21 +2185,21 @@ class OpenGrowCustomerCenter extends StatelessWidget {
     returns: string,
     actions: [
       UpdateAppState.set(
-        'opengrowPackageIdentifier',
+        'superboardPackageIdentifier',
         const ActionBlockParam('packageIdentifier'),
       ),
       UpdateAppState.set(
-        'opengrowOfferingIdentifier',
+        'superboardOfferingIdentifier',
         const ActionBlockParam('offeringIdentifier'),
       ),
       CallCustomAction(purchaseFromLibraryState, outputAs: 'purchaseOutcome'),
       Terminate(const ActionOutput('purchaseOutcome')),
     ],
-    description: 'Purchases a package from an OpenGrow offering.',
+    description: 'Purchases a package from an SuperBoard offering.',
   );
 
   app.actionBlock(
-    'OpenGrowRestorePurchases',
+    'SuperBoardRestorePurchases',
     returns: bool_,
     actions: [
       CallCustomAction(restore, outputAs: 'restored'),

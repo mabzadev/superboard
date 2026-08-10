@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/mcp-worker",
+  "name": "@superboard/mcp-worker",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",

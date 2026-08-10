@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/email-worker",
+  "name": "@superboard/email-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,8 +9,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
-    "@opengrow/email-transport": "*"
+    "@superboard/contracts": "*",
+    "@superboard/email-transport": "*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260808.1",

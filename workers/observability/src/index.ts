@@ -5,8 +5,11 @@ import {
   type ObservabilitySummary,
   type ObservabilityWindowMinutes,
   type RuntimeMetricRow,
-} from "@opengrow/contracts/observability";
-import { configuredSecrets, matchesAnySecret } from "@opengrow/contracts/secret";
+} from "@superboard/contracts/observability";
+import {
+  configuredSecrets,
+  matchesAnySecret,
+} from "@superboard/contracts/secret";
 
 interface ObservabilitySecrets {
   OBSERVABILITY_INTERNAL_TOKEN: string;
@@ -47,19 +50,31 @@ export default {
   },
 
   async fetch(request: Request, env: ObservabilityEnv): Promise<Response> {
-    if (!(await authorized(request, env))) return json({ error: "unauthorized" }, 401);
-    if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+    if (!(await authorized(request, env)))
+      return json({ error: "unauthorized" }, 401);
+    if (request.method !== "GET")
+      return json({ error: "method_not_allowed" }, 405);
 
     const url = new URL(request.url);
     if (url.pathname === OBSERVABILITY_HEALTH_PATH) {
-      return json({
-        service: "observability",
-        status: configured(env) ? "ok" : "misconfigured",
-        environment: env.ENVIRONMENT,
-        dataset: env.ANALYTICS_DATASET,
-        analyticsQueryConfigured: configured(env),
-        timestamp: new Date().toISOString(),
-      }, configured(env) ? 200 : 503);
+      const analyticsQueryConfigured = configured(env);
+      const optionalInDevelopment =
+        env.ENVIRONMENT === "development" && !analyticsQueryConfigured;
+      return json(
+        {
+          service: "observability",
+          status: analyticsQueryConfigured
+            ? "ok"
+            : optionalInDevelopment
+              ? "degraded"
+              : "misconfigured",
+          environment: env.ENVIRONMENT,
+          dataset: env.ANALYTICS_DATASET,
+          analyticsQueryConfigured,
+          timestamp: new Date().toISOString(),
+        },
+        analyticsQueryConfigured || optionalInDevelopment ? 200 : 503,
+      );
     }
     if (url.pathname === OBSERVABILITY_SUMMARY_PATH) {
       return runtimeSummary(env, parseWindow(url.searchParams.get("window")));
@@ -73,8 +88,9 @@ async function runtimeSummary(
   windowMinutes: ObservabilityWindowMinutes,
 ): Promise<Response> {
   if (!configured(env)) {
+    const optionalInDevelopment = env.ENVIRONMENT === "development";
     const summary: ObservabilitySummary = {
-      status: "misconfigured",
+      status: optionalInDevelopment ? "unavailable" : "misconfigured",
       environment: env.ENVIRONMENT,
       dataset: env.ANALYTICS_DATASET,
       windowMinutes,
@@ -82,7 +98,7 @@ async function runtimeSummary(
       rows: [],
       error: "Cloudflare analytics read credentials are not configured",
     };
-    return json(summary, 503);
+    return json(summary, optionalInDevelopment ? 200 : 503);
   }
 
   try {
@@ -99,8 +115,11 @@ async function runtimeSummary(
         signal: AbortSignal.timeout(5_000),
       },
     );
-    const payload = JSON.parse(await readBoundedText(response, 1_000_000)) as unknown;
-    if (!response.ok) throw new Error(cloudflareError(payload, response.status));
+    const payload = JSON.parse(
+      await readBoundedText(response, 1_000_000),
+    ) as unknown;
+    if (!response.ok)
+      throw new Error(cloudflareError(payload, response.status));
     const summary: ObservabilitySummary = {
       status: "ok",
       environment: env.ENVIRONMENT,
@@ -111,11 +130,13 @@ async function runtimeSummary(
     };
     return json(summary);
   } catch (error) {
-    console.error(JSON.stringify({
-      message: "observability_summary_failed",
-      error: error instanceof Error ? error.message : String(error),
-      environment: env.ENVIRONMENT,
-    }));
+    console.error(
+      JSON.stringify({
+        message: "observability_summary_failed",
+        error: error instanceof Error ? error.message : String(error),
+        environment: env.ENVIRONMENT,
+      }),
+    );
     const summary: ObservabilitySummary = {
       status: "unavailable",
       environment: env.ENVIRONMENT,
@@ -129,9 +150,14 @@ async function runtimeSummary(
   }
 }
 
-function summaryQuery(dataset: string, windowMinutes: ObservabilityWindowMinutes): string {
+function summaryQuery(
+  dataset: string,
+  windowMinutes: ObservabilityWindowMinutes,
+): string {
   if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(dataset)) {
-    throw new Error("ANALYTICS_DATASET must be a valid Analytics Engine identifier");
+    throw new Error(
+      "ANALYTICS_DATASET must be a valid Analytics Engine identifier",
+    );
   }
   return `SELECT
     blob2 AS service,
@@ -163,18 +189,20 @@ function normalizeRows(payload: unknown): RuntimeMetricRow[] {
     const outcome = text(value.outcome);
     const eventType = text(value.eventType);
     if (!service || !outcome || !eventType) return [];
-    return [{
-      service,
-      outcome,
-      eventType,
-      invocations: number(value.invocations) ?? 0,
-      exceptions: number(value.exceptions) ?? 0,
-      truncated: number(value.truncated) ?? 0,
-      averageCpuMs: number(value.averageCpuMs),
-      averageWallMs: number(value.averageWallMs),
-      maximumCpuMs: number(value.maximumCpuMs),
-      maximumWallMs: number(value.maximumWallMs),
-    }];
+    return [
+      {
+        service,
+        outcome,
+        eventType,
+        invocations: number(value.invocations) ?? 0,
+        exceptions: number(value.exceptions) ?? 0,
+        truncated: number(value.truncated) ?? 0,
+        averageCpuMs: number(value.averageCpuMs),
+        averageWallMs: number(value.averageWallMs),
+        maximumCpuMs: number(value.maximumCpuMs),
+        maximumWallMs: number(value.maximumWallMs),
+      },
+    ];
   });
 }
 
@@ -187,7 +215,11 @@ function classifyEvent(event: TraceItem["event"]): {
   if (!event) return { type: "unknown", method: "", path: "", status: "" };
   if ("request" in event) {
     let path = "unknown";
-    try { path = new URL(event.request.url).pathname; } catch { /* sanitized fallback */ }
+    try {
+      path = new URL(event.request.url).pathname;
+    } catch {
+      /* sanitized fallback */
+    }
     return {
       type: "fetch",
       method: bounded(event.request.method || "", 16),
@@ -195,38 +227,73 @@ function classifyEvent(event: TraceItem["event"]): {
       status: event.response ? String(event.response.status) : "",
     };
   }
-  if ("queue" in event) return { type: "queue", method: "", path: bounded(event.queue, 128), status: "" };
-  if ("cron" in event) return { type: "scheduled", method: "", path: bounded(event.cron, 128), status: "" };
-  if ("mailFrom" in event) return { type: "email", method: "", path: "", status: "" };
-  if ("rpcMethod" in event) return { type: "rpc", method: bounded(event.rpcMethod, 96), path: "", status: "" };
-  if ("consumedEvents" in event) return { type: "tail", method: "", path: "", status: "" };
-  if ("scheduledTime" in event) return { type: "alarm", method: "", path: "", status: "" };
+  if ("queue" in event)
+    return {
+      type: "queue",
+      method: "",
+      path: bounded(event.queue, 128),
+      status: "",
+    };
+  if ("cron" in event)
+    return {
+      type: "scheduled",
+      method: "",
+      path: bounded(event.cron, 128),
+      status: "",
+    };
+  if ("mailFrom" in event)
+    return { type: "email", method: "", path: "", status: "" };
+  if ("rpcMethod" in event)
+    return {
+      type: "rpc",
+      method: bounded(event.rpcMethod, 96),
+      path: "",
+      status: "",
+    };
+  if ("consumedEvents" in event)
+    return { type: "tail", method: "", path: "", status: "" };
+  if ("scheduledTime" in event)
+    return { type: "alarm", method: "", path: "", status: "" };
   return { type: "custom", method: "", path: "", status: "" };
 }
 
 function parseWindow(value: string | null): ObservabilityWindowMinutes {
   const candidate = Number(value || 60);
-  return OBSERVABILITY_WINDOWS_MINUTES.includes(candidate as ObservabilityWindowMinutes)
-    ? candidate as ObservabilityWindowMinutes
+  return OBSERVABILITY_WINDOWS_MINUTES.includes(
+    candidate as ObservabilityWindowMinutes,
+  )
+    ? (candidate as ObservabilityWindowMinutes)
     : 60;
 }
 
 function configured(env: ObservabilityEnv): boolean {
-  return /^[a-f0-9]{32}$/i.test(env.CLOUDFLARE_ANALYTICS_ACCOUNT_ID || "") &&
-    Boolean(env.CLOUDFLARE_ANALYTICS_TOKEN);
+  return (
+    /^[a-f0-9]{32}$/i.test(env.CLOUDFLARE_ANALYTICS_ACCOUNT_ID || "") &&
+    Boolean(env.CLOUDFLARE_ANALYTICS_TOKEN)
+  );
 }
 
-async function authorized(request: Request, env: ObservabilityEnv): Promise<boolean> {
+async function authorized(
+  request: Request,
+  env: ObservabilityEnv,
+): Promise<boolean> {
   const provided = request.headers.get("x-observability-token") || "";
-  return matchesAnySecret(provided, configuredSecrets(
-    env.OBSERVABILITY_INTERNAL_TOKEN,
-    env.OBSERVABILITY_INTERNAL_TOKEN_PREVIOUS,
-  ));
+  return matchesAnySecret(
+    provided,
+    configuredSecrets(
+      env.OBSERVABILITY_INTERNAL_TOKEN,
+      env.OBSERVABILITY_INTERNAL_TOKEN_PREVIOUS,
+    ),
+  );
 }
 
-async function readBoundedText(response: Response, maximumBytes: number): Promise<string> {
+async function readBoundedText(
+  response: Response,
+  maximumBytes: number,
+): Promise<string> {
   const declared = Number(response.headers.get("content-length") || 0);
-  if (declared > maximumBytes) throw new Error("Cloudflare analytics response is too large");
+  if (declared > maximumBytes)
+    throw new Error("Cloudflare analytics response is too large");
   if (!response.body) return "";
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -237,7 +304,8 @@ async function readBoundedText(response: Response, maximumBytes: number): Promis
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;
-      if (total > maximumBytes) throw new Error("Cloudflare analytics response is too large");
+      if (total > maximumBytes)
+        throw new Error("Cloudflare analytics response is too large");
       result += decoder.decode(value, { stream: true });
     }
     result += decoder.decode();
@@ -249,15 +317,25 @@ async function readBoundedText(response: Response, maximumBytes: number): Promis
 
 function cloudflareError(payload: unknown, status: number): string {
   if (isRecord(payload) && Array.isArray(payload.errors)) {
-    const message = payload.errors.flatMap((error) => isRecord(error) && text(error.message) ? [text(error.message)] : []).join("; ");
+    const message = payload.errors
+      .flatMap((error) =>
+        isRecord(error) && text(error.message) ? [text(error.message)] : [],
+      )
+      .join("; ");
     if (message) return `Cloudflare analytics ${status}: ${message}`;
   }
   return `Cloudflare analytics request failed with HTTP ${status}`;
 }
 
-function bounded(value: string, maximum: number): string { return value.slice(0, maximum); }
-function finite(value: number): number { return Number.isFinite(value) ? value : 0; }
-function text(value: unknown): string { return typeof value === "string" ? value.slice(0, 256) : ""; }
+function bounded(value: string, maximum: number): string {
+  return value.slice(0, maximum);
+}
+function finite(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+function text(value: unknown): string {
+  return typeof value === "string" ? value.slice(0, 256) : "";
+}
 function number(value: unknown): number | null {
   const candidate = typeof value === "number" ? value : Number(value);
   return Number.isFinite(candidate) ? candidate : null;
@@ -266,5 +344,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 function json(value: unknown, status = 200): Response {
-  return Response.json(value, { status, headers: { "cache-control": "no-store" } });
+  return Response.json(value, {
+    status,
+    headers: { "cache-control": "no-store" },
+  });
 }

@@ -24,8 +24,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "OpenGrow",
-    template: "%s | OpenGrow",
+    default: "SuperBoard",
+    template: "%s | SuperBoard",
   },
   description:
     "Private operations dashboard for applications, infrastructure, users, jobs, SDKs, support, purchases, and communications.",
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
     : undefined,
   openGraph: {
     type: "website",
-    siteName: "OpenGrow",
-    title: "OpenGrow — Application Operations",
+    siteName: "SuperBoard",
+    title: "SuperBoard — Application Operations",
     description:
       "Private back-office control plane for application operations.",
   },

@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/flutterflow-applications.schema.json",
   "schemaVersion": 2,
-  "owner": "opengrow-platform",
+  "owner": "superboard-platform",
   "applications": [
     {
       "id": "vocostar",
@@ -17,7 +17,7 @@
       },
       "libraryProjectIdVariable": "FF_LIBRARY_PROJECT_ID",
       "client": {
-        "projectKeySecret": "OPENGROW_PROJECT_KEY",
+        "projectKeySecret": "SUPERBOARD_PROJECT_KEY",
         "uriScheme": "vocostar",
         "applicationIdentifier": "com.createurs.vocostar",
         "supportProjectId": 12

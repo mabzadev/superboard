@@ -4,8 +4,6 @@ interface __BaseEnv_Env {
 	ANALYTICS: AnalyticsEngineDataset;
 	ENVIRONMENT: string;
 	ANALYTICS_DATASET: string;
-	CLOUDFLARE_ANALYTICS_ACCOUNT_ID: string;
-	CLOUDFLARE_ANALYTICS_TOKEN: string;
 	OBSERVABILITY_INTERNAL_TOKEN: string;
 }
 declare namespace Cloudflare {
@@ -19,7 +17,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "ANALYTICS_DATASET" | "CLOUDFLARE_ANALYTICS_ACCOUNT_ID" | "CLOUDFLARE_ANALYTICS_TOKEN" | "OBSERVABILITY_INTERNAL_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "ANALYTICS_DATASET" | "OBSERVABILITY_INTERNAL_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

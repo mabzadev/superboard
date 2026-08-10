@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      OPENGROW_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
+      SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
     outputs:
       api: ${{ steps.changes.outputs.api }}
       billing: ${{ steps.changes.outputs.billing }}
@@ -82,9 +82,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      OPENGROW_PIP_AUDIT_VERSION: "2.10.1"
-      OPENGROW_BUNDLER_VERSION: "2.7.2"
-      OPENGROW_BUNDLER_AUDIT_VERSION: "0.9.3"
+      SUPERBOARD_PIP_AUDIT_VERSION: "2.10.1"
+      SUPERBOARD_BUNDLER_VERSION: "2.7.2"
+      SUPERBOARD_BUNDLER_AUDIT_VERSION: "0.9.3"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -100,9 +100,9 @@ jobs:
           ruby-version: "3.4.9"
       - name: Install pinned security audit tools
         run: |
-          python3 -m pip install --disable-pip-version-check "pip-audit==$OPENGROW_PIP_AUDIT_VERSION"
-          gem install bundler --version "$OPENGROW_BUNDLER_VERSION" --no-document
-          gem install bundler-audit --version "$OPENGROW_BUNDLER_AUDIT_VERSION" --no-document
+          python3 -m pip install --disable-pip-version-check "pip-audit==$SUPERBOARD_PIP_AUDIT_VERSION"
+          gem install bundler --version "$SUPERBOARD_BUNDLER_VERSION" --no-document
+          gem install bundler-audit --version "$SUPERBOARD_BUNDLER_AUDIT_VERSION" --no-document
       - name: Audit committed Python and Ruby dependency inputs
         run: npm run security:audit:non-node
 
@@ -181,6 +181,9 @@ jobs:
         if: needs.plan.outputs.flutter == 'true'
         run: flutter pub get
         working-directory: sdks/flutter
+      - name: Verify embedded Flutter iOS sources
+        if: needs.plan.outputs.flutter == 'true'
+        run: node --test scripts/flutter-ios-embedded-sources.test.mjs
       - name: Analyze Flutter SDK
         if: needs.plan.outputs.flutter == 'true'
         run: flutter analyze
@@ -259,6 +262,11 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - name: Verify Flutter links to every internal iOS source
+        run: node --test scripts/flutter-ios-embedded-sources.test.mjs
       - name: Build and test iOS SDK
         run: ./scripts/run_tests.sh
         working-directory: sdks/ios
@@ -287,7 +295,17 @@ jobs:
   validation-gate:
     name: CI gate
     if: ${{ always() }}
-    needs: [plan, non_node_security, workers, dashboard, flutter, node_sdks, ios_sdk, android_sdk]
+    needs:
+      [
+        plan,
+        non_node_security,
+        workers,
+        dashboard,
+        flutter,
+        node_sdks,
+        ios_sdk,
+        android_sdk,
+      ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:

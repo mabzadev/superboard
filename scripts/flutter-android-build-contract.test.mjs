@@ -21,12 +21,20 @@ const flutterAndroidGradleUrl = new URL(
   "../sdks/flutter/android/build.gradle",
   import.meta.url,
 );
+const flutterAndroidPluginUrl = new URL(
+  "../sdks/flutter/android/src/main/kotlin/io/superboard/wrapper/SuperBoardPlugin.kt",
+  import.meta.url,
+);
+const flutterIosPluginUrl = new URL(
+  "../sdks/flutter/ios/Classes/SuperBoardPlugin.swift",
+  import.meta.url,
+);
 const nativeAndroidGradleUrl = new URL(
   "../sdks/android/OpenGrow/OpenGrow/build.gradle.kts",
   import.meta.url,
 );
 const flutterIosPodspecUrl = new URL(
-  "../sdks/flutter/ios/opengrow_flutter.podspec",
+  "../sdks/flutter/ios/superboard_flutter.podspec",
   import.meta.url,
 );
 const flutterExamplePodLockUrl = new URL(
@@ -150,9 +158,47 @@ test("Flutter iOS derives its CocoaPods version from the canonical pubspec", asy
     `the podspec must not hard-code a version instead of ${canonicalVersion}`,
   );
   assert.equal(
-    podfileLock.match(/^  - opengrow_flutter \(([^)]+)\):$/m)?.[1],
+    podfileLock.match(/^  - superboard_flutter \(([^)]+)\):$/m)?.[1],
     canonicalVersion,
     "the committed Flutter example Podfile.lock must resolve the canonical package version",
+  );
+});
+
+test("Flutter 3 registers one canonical SuperBoard plugin with legacy configuration fallbacks", async () => {
+  const [pubspec, androidPlugin, iosPlugin, androidBuild] = await Promise.all([
+    readFile(flutterPubspecUrl, "utf8"),
+    readFile(flutterAndroidPluginUrl, "utf8"),
+    readFile(flutterIosPluginUrl, "utf8"),
+    readFile(flutterAndroidGradleUrl, "utf8"),
+  ]);
+
+  assert.match(pubspec, /^name: superboard_flutter$/m);
+  assert.match(pubspec, /^version: 3\.0\.0$/m);
+  assert.match(pubspec, /package: io\.superboard\.wrapper/);
+  assert.match(pubspec, /pluginClass: SuperBoardPlugin/g);
+  assert.equal(
+    [...pubspec.matchAll(/pluginClass: SuperBoardPlugin/g)].length,
+    2,
+    "Android and iOS must register the same canonical plugin class exactly once per platform",
+  );
+
+  assert.match(androidPlugin, /^package io\.superboard\.wrapper$/m);
+  assert.match(androidPlugin, /class SuperBoardPlugin/);
+  assert.match(androidPlugin, /binaryMessenger, "superboard"/);
+  assert.match(androidPlugin, /binaryMessenger, "superboard\/deeplinks"/);
+  assert.match(androidPlugin, /meta\.getString\("superboard_api_key"\)/);
+  assert.match(androidPlugin, /meta\.getString\("opengrow_api_key"\)/);
+
+  assert.match(iosPlugin, /public class SuperBoardPlugin/);
+  assert.match(iosPlugin, /FlutterMethodChannel\(name: "superboard"/);
+  assert.match(iosPlugin, /FlutterEventChannel\(name: "superboard\/deeplinks"/);
+  assert.match(iosPlugin, /infoDictionary\["SuperBoardApiKey"\]/);
+  assert.match(iosPlugin, /infoDictionary\["OpenGrowApiKey"\]/);
+
+  assert.match(
+    androidBuild,
+    /namespace = "io\.opengrow"/,
+    "the embedded internal Android sources still require their physical R and BuildConfig namespace",
   );
 });
 

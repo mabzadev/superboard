@@ -1,11 +1,11 @@
-# Gestion des secrets OpenGrow
+# Gestion des secrets SuperBoard
 
 ## Décision d'architecture
 
 Chaque couple `cible/environnement` possède un graphe de secrets indépendant.
 Une valeur de développement MBZA ne doit jamais être réutilisée par VocoStar,
 et deux applications de production ne doivent jamais partager leurs clés, même
-si elles utilisent exactement les mêmes Workers OpenGrow.
+si elles utilisent exactement les mêmes Workers SuperBoard.
 
 Le dépôt public contient uniquement :
 
@@ -45,7 +45,7 @@ pas être ajouté silencieusement sans propriétaire ni stratégie de rotation.
 | Contrat logique                         | Bindings recevant la même valeur                                           | Rôle                                                                                                                                       |
 | --------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `module-internal-token`                 | API `MODULE_INTERNAL_TOKEN` + `INTERNAL_API_TOKEN` de chaque module activé | Authentifie les appels privés API vers App, Products, Paywalls, Dynamic Links, Support, Marketing et Onboardings.                          |
-| `email-internal-token`                  | API, Email, Identity et Marketing                                          | Authentifie la création d'e-mails transactionnels et la délégation privée du transport SMTP Marketing.                                    |
+| `email-internal-token`                  | API, Email, Identity et Marketing                                          | Authentifie la création d'e-mails transactionnels et la délégation privée du transport SMTP Marketing.                                     |
 | `files-internal-token`                  | Identity et Files                                                          | Autorise Identity à publier ou lire les artefacts privés nécessaires aux parcours d'identité.                                              |
 | `observability-internal-token`          | API et Observability                                                       | Autorise Grow à agréger l'état des Workers et des jobs sans exposer Observability publiquement.                                            |
 | `custom-worker-internal-token`          | API et Custom Worker de la cible                                           | Authentifie les jobs propres à l'application sans rendre le Custom Worker public.                                                          |
@@ -148,14 +148,14 @@ bindings Worker réels.
 
 ## GitHub et comptes Cloudflare
 
-Les dépôts `opengrow-platform` et `opengrow-reference` restent publics. Les
+Les dépôts `superboard-platform` et `superboard-reference` restent publics. Les
 secrets de déploiement sont attachés aux GitHub Environments, pas au dépôt :
 
 - `development` sélectionne `mbza-development` et le compte Cloudflare MBZA ;
 - `production` sélectionne `vocostar` et le compte Cloudflare VocoStar ;
 - `config/cloudflare-deployments.json` permet à une même branche de sélectionner
   plusieurs Environments et donc plusieurs comptes/applications ;
-- `OPENGROW_TARGET` est une variable d'Environment qui doit être strictement
+- `SUPERBOARD_TARGET` est une variable d'Environment qui doit être strictement
   égale à la cible versionnée dans l'entrée de matrice correspondante ;
 - `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` et la clé de chiffrement des
   sauvegardes D1 sont des secrets d'Environment ;
@@ -240,7 +240,7 @@ variable permanente à remplir ni un second secret partagé entre applications.
      --contracts email-internal-token,files-internal-token \
      --overlap \
      --apply --confirm CLOUDFLARE:SECRET-BUNDLE:<target>:<environment>:<digest> \
-     > /secure/opengrow/secret-upload-receipt.json
+     > /secure/superboard/secret-upload-receipt.json
    ```
 
    L'outil vérifie l'ensemble exact, distribue une valeur partagée à chaque
@@ -256,13 +256,13 @@ variable permanente à remplir ni un second secret partagé entre applications.
    ```bash
    npm run cloudflare:secrets:promote -- \
      --target <target> --environment <environment> \
-     --receipt /secure/opengrow/secret-upload-receipt.json
+     --receipt /secure/superboard/secret-upload-receipt.json
 
    npm run cloudflare:secrets:promote -- \
      --target <target> --environment <environment> \
-     --receipt /secure/opengrow/secret-upload-receipt.json \
+     --receipt /secure/superboard/secret-upload-receipt.json \
      --apply --confirm CLOUDFLARE:SECRET-PROMOTE:<target>:<environment>:<digest> \
-     > /secure/opengrow/secret-promotion-receipt.json
+     > /secure/superboard/secret-promotion-receipt.json
    ```
 
    Pour un token en mode chevauché, l'outil refuse un ordre qui placerait un
@@ -290,13 +290,13 @@ variable permanente à remplir ni un second secret partagé entre applications.
    ```bash
    npm run cloudflare:secrets:retire -- \
      --target <target> --environment <environment> \
-     --receipt /secure/opengrow/secret-promotion-receipt.json
+     --receipt /secure/superboard/secret-promotion-receipt.json
 
    npm run cloudflare:secrets:retire -- \
      --target <target> --environment <environment> \
-     --receipt /secure/opengrow/secret-promotion-receipt.json \
+     --receipt /secure/superboard/secret-promotion-receipt.json \
      --apply --confirm CLOUDFLARE:SECRET-RETIRE:<target>:<environment>:<digest> \
-     > /secure/opengrow/secret-retirement-receipt.json
+     > /secure/superboard/secret-retirement-receipt.json
    ```
 
    Le retrait s'arrête si un Worker n'exécute plus exactement la version du

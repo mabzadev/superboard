@@ -1,6 +1,6 @@
-# OpenGrow deployment
+# SuperBoard deployment
 
-This document is the deployment source of truth for the unified OpenGrow dashboard and its isolated Cloudflare Workers.
+This document is the deployment source of truth for the unified SuperBoard dashboard and its isolated Cloudflare Workers.
 
 Pull-request GitHub Actions validate without deploying. The separate protected
 deployment workflow publishes the exact `dev` or `main` revision only after its
@@ -38,7 +38,7 @@ SDK automation follows the same protection boundary. A successful immutable
 tag release opens a catalogue PR instead of pushing `dev`. Once the complete
 FlutterFlow and Support set is reviewed and merged, GitHub verifies every tag
 and GitHub release, synchronizes the MBZA FlutterFlow library from the exact
-catalogue SHA, and opens one dependency PR in `opengrow-reference`. The
+catalogue SHA, and opens one dependency PR in `superboard-reference`. The
 workflows can create PRs but contain no approval or merge operation.
 
 ## Services
@@ -157,7 +157,7 @@ protected backup directory:
 ```bash
 npm run cloudflare:d1:apply -- \
   --target <target> --environment production --service support \
-  --backup-directory /secure/opengrow/d1 \
+  --backup-directory /secure/superboard/d1 \
   --apply --confirm "MIGRATE:<target>:production:support"
 ```
 
@@ -203,12 +203,12 @@ exports exist, the finalization step still encrypts and retains every recoverabl
 artifact; plaintext is not deleted until all encrypted files and their index
 have been written. Before any production mutation, CI validates that the
 Environment key decodes to exactly 32 bytes. Configure the Environment secret
-`OPENGROW_BACKUP_ENCRYPTION_KEY` as one base64-encoded random 32-byte key. Store
+`SUPERBOARD_BACKUP_ENCRYPTION_KEY` as one base64-encoded random 32-byte key. Store
 that key in the approved secret manager independently of GitHub artifact
 retention. Restore an artifact with:
 
 ```bash
-OPENGROW_BACKUP_ENCRYPTION_KEY=... npm run cloudflare:d1:decrypt -- \
+SUPERBOARD_BACKUP_ENCRYPTION_KEY=... npm run cloudflare:d1:decrypt -- \
   --file /secure/download/support.sql.enc \
   --output /secure/restore/support.sql
 ```

@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 
 import 'experience_client.dart';
 import 'application_actions.dart'
-    show opengrowApplicationUpdateMarketingConsentJson;
+    show superboardApplicationUpdateMarketingConsentJson;
 
-typedef OpenGrowMarketingConsentUpdater =
+typedef SuperBoardMarketingConsentUpdater =
     Future<String> Function({
       required bool consented,
       required String idempotencyKey,
@@ -16,8 +16,8 @@ typedef OpenGrowMarketingConsentUpdater =
       String listIdsJson,
     });
 
-class OpenGrowOnboarding extends StatefulWidget {
-  const OpenGrowOnboarding({
+class SuperBoardOnboarding extends StatefulWidget {
+  const SuperBoardOnboarding({
     super.key,
     this.width,
     this.height,
@@ -51,18 +51,18 @@ class OpenGrowOnboarding extends StatefulWidget {
   final VoidCallback? onUnavailable;
   final String fallbackTitle;
   final String fallbackBody;
-  final OpenGrowExperienceClient? experienceClient;
-  final OpenGrowMarketingConsentUpdater? marketingConsentUpdater;
+  final SuperBoardExperienceClient? experienceClient;
+  final SuperBoardMarketingConsentUpdater? marketingConsentUpdater;
 
   @override
-  State<OpenGrowOnboarding> createState() => _OpenGrowOnboardingState();
+  State<SuperBoardOnboarding> createState() => _SuperBoardOnboardingState();
 }
 
-class _OpenGrowOnboardingState extends State<OpenGrowOnboarding> {
+class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
   late final String _anonymousId = widget.anonymousId?.trim().isNotEmpty == true
       ? widget.anonymousId!.trim()
       : 'onboarding_${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}_${Random.secure().nextInt(0x7fffffff).toRadixString(36)}';
-  OpenGrowResolvedExperience? _resolved;
+  SuperBoardResolvedExperience? _resolved;
   List<Map<String, dynamic>> _screens = const [];
   int _index = 0;
   bool _loaded = false;
@@ -73,8 +73,8 @@ class _OpenGrowOnboardingState extends State<OpenGrowOnboarding> {
   final Map<String, bool> _marketingConsents = {};
   final Set<String> _persistedMarketingConsents = {};
 
-  OpenGrowExperienceClient get _client =>
-      widget.experienceClient ?? OpenGrowExperienceSdk.client;
+  SuperBoardExperienceClient get _client =>
+      widget.experienceClient ?? SuperBoardExperienceSdk.client;
 
   @override
   void initState() {
@@ -135,7 +135,7 @@ class _OpenGrowOnboardingState extends State<OpenGrowOnboarding> {
     final resolved = _resolved;
     if (resolved == null) return;
     await _client.track(
-      OpenGrowExperienceEvent(
+      SuperBoardExperienceEvent(
         type: type,
         resolved: resolved,
         platform: _client.platform,
@@ -226,7 +226,7 @@ class _OpenGrowOnboardingState extends State<OpenGrowOnboarding> {
     try {
       final updater =
           widget.marketingConsentUpdater ??
-          opengrowApplicationUpdateMarketingConsentJson;
+          superboardApplicationUpdateMarketingConsentJson;
       for (final entry in consentBlocks) {
         final props = entry.block['props'] is Map
             ? (entry.block['props'] as Map).cast<String, dynamic>()
@@ -279,7 +279,7 @@ class _OpenGrowOnboardingState extends State<OpenGrowOnboarding> {
       '${_screenId ?? _index}:${block['id']?.toString() ?? blockIndex.toString()}';
 
   String _marketingConsentIdempotencyKey({
-    required OpenGrowResolvedExperience resolved,
+    required SuperBoardResolvedExperience resolved,
     required String blockKey,
     required bool consented,
   }) {

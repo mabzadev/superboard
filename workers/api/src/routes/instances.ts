@@ -7,7 +7,7 @@ import { storeCsvDownload } from '../lib/files';
 import { downloadFileMessage, invitationMessage, invitationUrl, sendMail } from '../lib/mail';
 import { encryptCredential } from '../lib/secrets';
 import { isRegistrationAllowed, registrationDeniedBody } from '../lib/deployment';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 import { readApiJson } from '../lib/request-body';
 import { tokenDigest } from '../lib/token-storage';
 
@@ -1148,7 +1148,7 @@ else
     --push-auth-token-audience="$PUSH_AUDIENCE" \
     --project="$PROJECT_ID"
 fi
-echo "OpenGrow Google Play RTDN authenticated push configured: $PUSH_ENDPOINT"
+echo "SuperBoard Google Play RTDN authenticated push configured: $PUSH_ENDPOINT"
 `;
 }
 

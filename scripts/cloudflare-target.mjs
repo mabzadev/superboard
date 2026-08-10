@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import Ajv from "ajv/dist/2020.js";
-import { validateCustomWorkerBindings } from "./opengrow-target-options.mjs";
+import { validateCustomWorkerBindings } from "./superboard-target-options.mjs";
+import {
+  assertTargetPhysicalResourceNames,
+  resourceIdentity,
+} from "./cloudflare-resource-identity.mjs";
+import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 
 export const root = resolve(new URL("..", import.meta.url).pathname);
 
@@ -49,6 +54,27 @@ export async function validateTarget(target) {
       "Invalid target manifest: at least one environment is required",
     );
   }
+  resourceIdentity(target);
+  const activeDomains = new Set(
+    Object.values(target.domains ?? {}).map((hostname) =>
+      String(hostname).toLowerCase(),
+    ),
+  );
+  const retiredDomains = new Set();
+  for (const retired of target.retiredDomains ?? []) {
+    const hostname = String(retired.hostname).toLowerCase();
+    if (activeDomains.has(hostname)) {
+      throw new Error(
+        `Invalid target manifest: retired domain ${hostname} is still active`,
+      );
+    }
+    if (retiredDomains.has(hostname)) {
+      throw new Error(
+        `Invalid target manifest: retired domain ${hostname} is declared more than once`,
+      );
+    }
+    retiredDomains.add(hostname);
+  }
   const requiredWorkers = [
     "api",
     "dashboard",
@@ -69,6 +95,7 @@ export async function validateTarget(target) {
     }
   }
   for (const environment of environments) {
+    assertTargetPhysicalResourceNames(target, environment);
     for (const [service, workerNames] of Object.entries(target.workers ?? {})) {
       if (!workerNames?.[environment]) {
         throw new Error(
@@ -228,9 +255,11 @@ function strictPublicHttpsUrl(value) {
   }
 }
 
-export function environmentFromArgs(args) {
+export function environmentFromArgs(args, env = process.env) {
   const environment =
-    args.environment ?? process.env.OPENGROW_ENVIRONMENT ?? "development";
+    args.environment ??
+    superboardEnvironmentValue("SUPERBOARD_ENVIRONMENT", env) ??
+    "development";
   if (!new Set(["development", "production"]).has(environment)) {
     throw new Error("--environment must be development or production");
   }
@@ -238,9 +267,13 @@ export function environmentFromArgs(args) {
 }
 
 export function targetNameFromArgs(args, env = process.env) {
-  const targetName = String(args.target ?? env.OPENGROW_TARGET ?? "").trim();
+  const targetName = String(
+    args.target ?? superboardEnvironmentValue("SUPERBOARD_TARGET", env) ?? "",
+  ).trim();
   if (!targetName) {
-    throw new Error("--target or OPENGROW_TARGET is required");
+    throw new Error(
+      "--target or SUPERBOARD_TARGET (fallback OPENGROW_TARGET) is required",
+    );
   }
   return targetName;
 }
@@ -258,26 +291,26 @@ export async function targetSelectionFromArgs(
     if (
       args.target ||
       args.environment ||
-      env.OPENGROW_TARGET ||
-      env.OPENGROW_ENVIRONMENT
+      superboardEnvironmentValue("SUPERBOARD_TARGET", env) ||
+      superboardEnvironmentValue("SUPERBOARD_ENVIRONMENT", env)
     ) {
       throw new Error(
         "--reference cannot be combined with an operational target or environment",
       );
     }
     const project = JSON.parse(
-      await readFile(resolve(root, "opengrow.project.json"), "utf8"),
+      await readFile(resolve(root, "superboard.project.json"), "utf8"),
     );
     const targetName = String(project.development?.target || "").trim();
     if (!targetName)
       throw new Error(
-        "opengrow.project.json does not define development.target",
+        "superboard.project.json does not define development.target",
       );
     return { targetName, environment: "development", reference: true };
   }
   return {
     targetName: targetNameFromArgs(args, env),
-    environment: environmentFromArgs(args),
+    environment: environmentFromArgs(args, env),
     reference: false,
   };
 }

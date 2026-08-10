@@ -334,10 +334,7 @@ function connectionCapabilities(provider: string, configured: boolean) {
     transactions: { status: configured ? "available" : "not_configured" },
     notifications: { status: configured ? "needs_test" : "not_configured" },
     refunds: {
-      status:
-        provider === "google" && configured
-          ? "available"
-          : "unsupported",
+      status: provider === "google" && configured ? "available" : "unsupported",
     },
     subscription_management: {
       status: configured ? "available" : "not_configured",
@@ -786,7 +783,7 @@ admin.get("/:projectId/release-gate", async (c) => {
       legacyInventory?.status === "completed" &&
       Number(legacyInventory.unresolved_subscriptions || 0) === 0;
     const legacyInventoryDetail = legacyInventoryReady
-      ? `${Number(legacyInventory.matched_subscriptions || 0)} active legacy subscriptions match provider-verified OpenGrow subscriptions.`
+      ? `${Number(legacyInventory.matched_subscriptions || 0)} active legacy subscriptions match provider-verified SuperBoard subscriptions.`
       : !legacyInventory
         ? "Run the verified production legacy subscription inventory."
         : legacyInventory.status === "completed"
@@ -2574,7 +2571,7 @@ admin.post("/:projectId/connections", async (c) => {
       );
     }
     const stored = await c.env.DB.prepare(
-        `
+      `
         INSERT INTO billing_store_connections (
           id, project_id, provider, environment, display_name, status, capabilities,
           configuration_encrypted, billing_configuration_encrypted, public_configuration
@@ -2587,19 +2584,19 @@ admin.post("/:projectId/connections", async (c) => {
           last_error_message = NULL, updated_at = datetime('now')
         RETURNING id
       `,
+    )
+      .bind(
+        id,
+        project.id,
+        provider,
+        environment,
+        data.display_name || provider,
+        JSON.stringify(connectionCapabilities(provider, true)),
+        null,
+        null,
+        JSON.stringify(publicConfiguration),
       )
-        .bind(
-          id,
-          project.id,
-          provider,
-          environment,
-          data.display_name || provider,
-          JSON.stringify(connectionCapabilities(provider, true)),
-          null,
-          null,
-          JSON.stringify(publicConfiguration),
-        )
-        .first<{ id: string }>();
+      .first<{ id: string }>();
     const connectionId = String(stored?.id || id);
     await c.env.DB.batch([
       c.env.DB.prepare(
@@ -4965,7 +4962,7 @@ admin.get("/:projectId/exports/:id/download", async (c) => {
           object.httpMetadata?.contentType || "application/octet-stream",
         "Content-Disposition":
           object.httpMetadata?.contentDisposition ||
-          `attachment; filename="opengrow-${job.dataset}.${job.format}"`,
+          `attachment; filename="superboard-${job.dataset}.${job.format}"`,
         ETag: object.httpEtag,
         "Cache-Control": "private, no-store",
       },

@@ -179,7 +179,7 @@ describe("InfrastructurePage", () => {
       screen.getByText("workflow:send-users-vocals-workflows")
     ).toBeInTheDocument();
     expect(screen.getByText("Jobs: unavailable")).toBeInTheDocument();
-    expect(screen.getByText("OpenGrow gateway")).toBeInTheDocument();
+    expect(screen.getByText("SuperBoard gateway")).toBeInTheDocument();
     expect(
       screen.getByText("Access: Application identity or Dashboard session")
     ).toBeInTheDocument();
@@ -398,7 +398,7 @@ function statusFixture(): PlatformStatus {
     },
     api: {
       status: "ok",
-      description: "OpenGrow gateway",
+      description: "SuperBoard gateway",
       capabilities: [
         {
           id: "identity",

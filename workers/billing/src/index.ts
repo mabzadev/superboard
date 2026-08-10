@@ -35,7 +35,7 @@ import { encryptCredential } from "../../api/src/lib/secrets";
 import {
   configuredSecrets,
   matchesAnySecret,
-} from "@opengrow/contracts/secret";
+} from "@superboard/contracts/secret";
 import purchasesAdminRoutes from "../../api/src/routes/purchases-admin";
 import purchasesV2AdminRoutes from "../../api/src/routes/purchases-v2-admin";
 

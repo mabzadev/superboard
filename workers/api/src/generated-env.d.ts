@@ -8,8 +8,10 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	PUSH_QUEUE: Queue;
 	MAINTENANCE_QUEUE: Queue;
 	BILLING_QUEUE: Queue;
+	SUPERBOARD_TARGET: string;
 	OPENGROW_TARGET: string;
 	D1_EXPECTED_MIGRATION: string;
+	SUPERBOARD_RELEASE: string;
 	OPENGROW_RELEASE: string;
 	PUBLIC_ROUTING_MODE: string;
 	ENVIRONMENT: string;

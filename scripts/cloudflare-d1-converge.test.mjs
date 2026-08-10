@@ -101,7 +101,7 @@ test("remote D1 plans expose exact reviewed pending migrations and global conver
     env: {},
     execute: (_command, args) => {
       if (!args.includes("list")) return { status: 0, stdout: "" };
-      return args.includes("opengrow-dev-db")
+      return args.includes("superboard-dev-db")
         ? {
             status: 0,
             stdout:

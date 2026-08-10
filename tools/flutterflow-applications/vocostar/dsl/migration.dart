@@ -21,13 +21,13 @@ import 'package:flutterflow_ai/src/helpers/library_value_helpers.dart'
 import 'package:flutterflow_ai/src/ui/actions.dart' as ui_actions;
 
 /// Brownfield VocoStar cutover from the historical mobile integrations to the
-/// common OpenGrow application SDKs.
+/// common SuperBoard application SDKs.
 ///
 /// The migration deliberately preserves identifiers when renaming actions and
 /// state fields. Existing FlutterFlow action graphs therefore continue to
 /// point at the same protobuf entities while generated Dart moves to the new
 /// names and implementations.
-void migrateVocoStarToOpenGrow(
+void migrateVocoStarToSuperBoard(
   App app, {
   required String libraryProjectId,
   required String onboardingPageKey,
@@ -189,7 +189,7 @@ void _migrateOnboarding(
     project,
     libraryProjectId: libraryProjectId,
     pageKey: onboardingPageKey,
-    routePath: '/opengrow-onboarding',
+    routePath: '/superboard-onboarding',
   );
 }
 
@@ -226,27 +226,23 @@ void _rewriteProjectMessages(
 }
 
 void _ensureSdkDependencies(FFProject project) {
-  _ensureDependency(
-    project,
-    name: 'opengrow_flutterflow',
-    version:
-        r'''
-git:
-  url: https://github.com/mbzadev/opengrow-platform.git
-  ref: sdk-flutterflow-v2.2.5
-  path: sdks/flutterflow
-'''.trim(),
+  project.customCode.pubspecPackageInfo.pubspecDependencies.removeWhere(
+    (dependency) => const {
+      'opengrow_flutterflow',
+      'opengrow_flutterflow_messaging',
+    }.contains(dependency.name),
   );
   _ensureDependency(
     project,
-    name: 'opengrow_flutterflow_messaging',
+    name: 'superboard_flutterflow',
     version:
         r'''
 git:
-  url: https://github.com/mbzadev/opengrow-platform.git
-  ref: sdk-flutterflow-messaging-v1.3.0
-  path: sdks/flutterflow_messaging
-'''.trim(),
+  url: https://github.com/mbzadev/superboard-platform.git
+  ref: sdk-flutterflow-v3.0.0
+  path: sdks/flutterflow
+'''
+            .trim(),
   );
 }
 
@@ -274,18 +270,18 @@ void _migrateTransientAuthenticationBridge(FFProject project) {
   _renameTransientState(
     project,
     oldName: 'authAccessToken',
-    newName: 'opengrowAccessTokenTransient',
+    newName: 'superboardAccessTokenTransient',
   );
   _renameTransientState(
     project,
     oldName: 'authRefreshToken',
-    newName: 'opengrowRefreshTokenUnavailable',
+    newName: 'superboardRefreshTokenUnavailable',
     clearDefault: true,
   );
   _renameTransientState(
     project,
     oldName: 'authExpiresIn',
-    newName: 'opengrowTokenExpirationTransient',
+    newName: 'superboardTokenExpirationTransient',
   );
   data_schema_helpers.setSecurePersistedValues(project, enabled: true);
 }
@@ -336,7 +332,7 @@ void _migrateApplicationBootstrap(FFProject project) {
     oldName: 'initApp',
     code: _initAppCode,
     description:
-        'Initializes OpenGrow, restores its encrypted session and bridges only the ephemeral access token into FlutterFlow custom auth.',
+        'Initializes SuperBoard, restores its encrypted session and bridges only the ephemeral access token into FlutterFlow custom auth.',
   );
 }
 
@@ -346,7 +342,7 @@ void _migrateAuthenticationActions(FFProject project) {
     oldName: 'userAuthenticate',
     code: _userAuthenticateCode,
     description:
-        'Restores or creates the secure OpenGrow application session and refreshes the VocoStar profile.',
+        'Restores or creates the secure SuperBoard application session and refreshes the VocoStar profile.',
   );
   _replaceAction(
     project,
@@ -360,31 +356,31 @@ void _migrateAuthenticationActions(FFProject project) {
     oldName: 'signlinkWithGoogle',
     code: _googleProviderCode,
     description:
-        'Signs in with or links Google through the common OpenGrow Identity authority.',
+        'Signs in with or links Google through the common SuperBoard Identity authority.',
   );
   _replaceAction(
     project,
     oldName: 'signlinkWithApple',
     code: _appleProviderCode,
     description:
-        'Signs in with or links Apple through the common OpenGrow Identity authority.',
+        'Signs in with or links Apple through the common SuperBoard Identity authority.',
   );
 }
 
 void _migrateAccountLifecycle(FFProject project) {
   final logoutAction = _upsertAction(
     project,
-    name: 'opengrowLogoutSession',
+    name: 'superboardLogoutSession',
     code: _logoutSessionCode,
     description:
-        'Revokes the common OpenGrow session, disconnects Purchases and clears every transient FlutterFlow authentication bridge.',
+        'Revokes the common SuperBoard session, disconnects Purchases and clears every transient FlutterFlow authentication bridge.',
   );
   _replaceAction(
     project,
     oldName: 'userCleanManager',
     code: _userCleanManagerCode,
     description:
-        'Deletes an account through the durable common OpenGrow erasure workflow while temporarily preserving the app-specific media and vocal cleanup adapters.',
+        'Deletes an account through the durable common SuperBoard erasure workflow while temporarily preserving the app-specific media and vocal cleanup adapters.',
   );
 
   final legacyLogout = api_helpers.findApiEndpoint(
@@ -412,11 +408,10 @@ void _migrateAccountLifecycle(FFProject project) {
     }
     message.action
       ..clearAction()
-      ..customCodeCall =
-          ui_actions.Actions.callCustomAction(
-            identifier: logoutAction.identifier.deepCopy(),
-            setStateAfter: true,
-          ).customCodeCall;
+      ..customCodeCall = ui_actions.Actions.callCustomAction(
+        identifier: logoutAction.identifier.deepCopy(),
+        setStateAfter: true,
+      ).customCodeCall;
   });
 
   var stillReferenced = false;
@@ -451,14 +446,14 @@ void _migrateRuntimePolicyActions(FFProject project) {
     oldName: 'appCheckMaintenance',
     code: _maintenancePolicyCode,
     description:
-        'Reads the target-managed maintenance policy through OpenGrow.',
+        'Reads the target-managed maintenance policy through SuperBoard.',
   );
   _replaceAction(
     project,
     oldName: 'appCheckUpdate',
     code: _updatePolicyCode,
     description:
-        'Reads the target-managed minimum-version policy through OpenGrow.',
+        'Reads the target-managed minimum-version policy through SuperBoard.',
   );
 }
 
@@ -466,15 +461,15 @@ void _migrateNotifications(FFProject project) {
   _renameTransientState(
     project,
     oldName: 'userFcmToken',
-    newName: 'opengrowPushTokenTransient',
+    newName: 'superboardPushTokenTransient',
   );
   _replaceAction(
     project,
     oldName: 'userFCMToken',
-    newName: 'opengrowRegisterPushDevice',
+    newName: 'superboardRegisterPushDevice',
     code: _registerPushDeviceCode,
     description:
-        'Requests notification permission and registers the device through the authenticated common OpenGrow notification contract.',
+        'Requests notification permission and registers the device through the authenticated common SuperBoard notification contract.',
   );
 }
 
@@ -482,7 +477,7 @@ void _migrateFileAndJobActions(FFProject project) {
   _replaceAction(
     project,
     oldName: 'userMediaUpload',
-    newName: 'opengrowApplicationUploadFileJson',
+    newName: 'superboardApplicationUploadFileJson',
     code: _uploadFileAdapterCode,
     description:
         'Uploads a local file through the common Files authority and returns only its opaque owner-scoped file ID to the legacy page graph.',
@@ -490,7 +485,7 @@ void _migrateFileAndJobActions(FFProject project) {
   _replaceAction(
     project,
     oldName: 'userMediaConverter',
-    newName: 'opengrowApplicationCreateCustomJobJson',
+    newName: 'superboardApplicationCreateCustomJobJson',
     code: _customJobAdapterCode,
     description:
         'Creates a VocoStar conversion job through the authenticated common Custom Worker gateway.',
@@ -501,15 +496,15 @@ void _migrateSupport(FFProject project) {
   _replaceAction(
     project,
     oldName: 'supportInit',
-    newName: 'opengrowSupportInitializeAuthenticated',
+    newName: 'superboardSupportInitializeAuthenticated',
     code: _supportInitializeCode,
     description:
-        'Initializes project-scoped Support using the encrypted OpenGrow application session.',
+        'Initializes project-scoped Support using the encrypted SuperBoard application session.',
   );
   _replaceAction(
     project,
     oldName: 'supportFetchMessages',
-    newName: 'opengrowSupportRefreshMessages',
+    newName: 'superboardSupportRefreshMessages',
     code: _supportRefreshCode,
     description:
         'Refreshes the common Support conversation without legacy Chatwoot client state.',
@@ -517,7 +512,7 @@ void _migrateSupport(FFProject project) {
   _replaceAction(
     project,
     oldName: 'supportSendMessage',
-    newName: 'opengrowSupportSendMessage',
+    newName: 'superboardSupportSendMessage',
     code: _supportSendCode,
     description: 'Sends a message through the common Support authority.',
   );
@@ -529,10 +524,10 @@ void _migrateSupport(FFProject project) {
     custom_code_helpers.updateCustomWidget(
       project,
       name: 'SupportChatWidget',
-      newName: 'OpenGrowSupportChatWidget',
+      newName: 'SuperBoardSupportChatWidget',
       code: _supportWidgetCode,
       description:
-          'Authenticated OpenGrow Support inbox with realtime refresh and attachment upload.',
+          'Authenticated SuperBoard Support inbox with realtime refresh and attachment upload.',
     );
   }
 }
@@ -561,7 +556,8 @@ void _migrateVoiceCloneEndpoint(FFProject project) {
     "language": "<language>"
   }
 }
-'''.trim();
+'''
+          .trim();
   endpoint.headers.removeWhere(
     (header) => header.toLowerCase().startsWith('idempotency-key:'),
   );
@@ -582,16 +578,14 @@ void _normalizeApiVariables(FFProject project) {
       }
       endpoint.headers[index] = header;
     }
-    final parameterVariableKeys =
-        endpoint.parameters
-            .map((parameter) => parameter.variableIdentifier.key)
-            .where((key) => key.isNotEmpty)
-            .toSet();
-    final parameterVariableNames =
-        endpoint.parameters
-            .map((parameter) => parameter.variableIdentifier.name)
-            .where((name) => name.isNotEmpty)
-            .toSet();
+    final parameterVariableKeys = endpoint.parameters
+        .map((parameter) => parameter.variableIdentifier.key)
+        .where((key) => key.isNotEmpty)
+        .toSet();
+    final parameterVariableNames = endpoint.parameters
+        .map((parameter) => parameter.variableIdentifier.name)
+        .where((name) => name.isNotEmpty)
+        .toSet();
     final template = [
       endpoint.url,
       endpoint.body,
@@ -614,12 +608,11 @@ String _lowerCamel(String value) =>
     value.isEmpty ? value : '${value[0].toLowerCase()}${value.substring(1)}';
 
 void _repairLegacyListStructState(FFProject project) {
-  for (final entry
-      in const {
-        'MenuBottom': 'userVocalsReplay',
-        'UserClone': 'userClones',
-        'UserPlayerMedia': 'userListVocal',
-      }.entries) {
+  for (final entry in const {
+    'MenuBottom': 'userVocalsReplay',
+    'UserClone': 'userClones',
+    'UserPlayerMedia': 'userListVocal',
+  }.entries) {
     final field = project_helpers.findStateField(
       project,
       widgetClassName: entry.key,
@@ -686,24 +679,24 @@ FFCustomAction _upsertAction(
 }
 
 const _logoutSessionCode = r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<void> opengrowLogoutSession() async {
+Future<void> superboardLogoutSession() async {
   try {
-    await opengrow.opengrowApplicationLogoutJson();
+    await superboard.superboardApplicationLogoutJson();
   } finally {
     try {
-      await opengrow.opengrowPurchaseLogout();
+      await superboard.superboardPurchaseLogout();
     } finally {
       FFAppState().update(() {
-        FFAppState().opengrowAccessTokenTransient = '';
-        FFAppState().opengrowRefreshTokenUnavailable = '';
-        FFAppState().opengrowTokenExpirationTransient = null;
-        FFAppState().opengrowPushTokenTransient = '';
+        FFAppState().superboardAccessTokenTransient = '';
+        FFAppState().superboardRefreshTokenUnavailable = '';
+        FFAppState().superboardTokenExpirationTransient = null;
+        FFAppState().superboardPushTokenTransient = '';
         FFAppState().authUserId = '';
         FFAppState().authUserData = UserStruct();
         FFAppState().userPremium = false;
-        FFAppState().opengrowPurchasesReady = false;
+        FFAppState().superboardPurchasesReady = false;
       });
     }
   }
@@ -713,7 +706,7 @@ Future<void> opengrowLogoutSession() async {
 const _userCleanManagerCode = r'''
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
 Future<bool> userCleanManager(
   String bearer,
@@ -728,24 +721,24 @@ Future<bool> userCleanManager(
 
   if (type == 'user') {
     try {
-      await opengrow.opengrowApplicationDeleteAccountJson();
+      await superboard.superboardApplicationDeleteAccountJson();
       return true;
     } catch (error) {
-      debugPrint('[OpenGrow] Account erasure request failed: $error');
+      debugPrint('[SuperBoard] Account erasure request failed: $error');
       return false;
     } finally {
       try {
-        await opengrow.opengrowPurchaseLogout();
+        await superboard.superboardPurchaseLogout();
       } finally {
         FFAppState().update(() {
-          FFAppState().opengrowAccessTokenTransient = '';
-          FFAppState().opengrowRefreshTokenUnavailable = '';
-          FFAppState().opengrowTokenExpirationTransient = null;
-          FFAppState().opengrowPushTokenTransient = '';
+          FFAppState().superboardAccessTokenTransient = '';
+          FFAppState().superboardRefreshTokenUnavailable = '';
+          FFAppState().superboardTokenExpirationTransient = null;
+          FFAppState().superboardPushTokenTransient = '';
           FFAppState().authUserId = '';
           FFAppState().authUserData = UserStruct();
           FFAppState().userPremium = false;
-          FFAppState().opengrowPurchasesReady = false;
+          FFAppState().superboardPurchasesReady = false;
         });
       }
     }
@@ -777,28 +770,28 @@ Future<bool> userCleanManager(
 const _initAppCode = r'''
 import 'dart:async';
 import 'dart:convert';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
-import 'package:open_grow_private_4m5us1/custom_code/actions/opengrow_application_initialize.dart' as application;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+import 'package:open_grow_private_4m5us1/custom_code/actions/superboard_application_initialize.dart' as application;
 
 StreamSubscription<String>? _verifiedCustomerInfoSubscription;
 
 Future<void> initApp() async {
-  await application.opengrowApplicationInitialize();
-  final sessionJson = await opengrow.opengrowApplicationRestoreSessionJson();
+  await application.superboardApplicationInitialize();
+  final sessionJson = await superboard.superboardApplicationRestoreSessionJson();
   final session = (jsonDecode(sessionJson) as Map).cast<String, dynamic>();
   if (session['authenticated'] == true) {
-    FFAppState().opengrowAccessTokenTransient =
+    FFAppState().superboardAccessTokenTransient =
         session['access_token']?.toString() ?? '';
-    FFAppState().opengrowRefreshTokenUnavailable = '';
+    FFAppState().superboardRefreshTokenUnavailable = '';
     FFAppState().authUserId = session['user_id']?.toString() ?? '';
-    FFAppState().opengrowTokenExpirationTransient =
+    FFAppState().superboardTokenExpirationTransient =
         DateTime.tryParse(session['expires_at']?.toString() ?? '');
   }
   _verifiedCustomerInfoSubscription ??=
-      opengrow.opengrowVerifiedCustomerInfoJsonStream.listen(
+      superboard.superboardVerifiedCustomerInfoJsonStream.listen(
     _applyVerifiedCustomerInfo,
     onError: (Object error) {
-      debugPrint('[OpenGrow] Verified CustomerInfo stream failed: $error');
+      debugPrint('[SuperBoard] Verified CustomerInfo stream failed: $error');
     },
   );
 }
@@ -818,10 +811,10 @@ void _applyVerifiedCustomerInfo(String customerInfoJson) {
       FFAppState().authUserData.subscription =
           subscriptions is List && subscriptions.isNotEmpty;
       FFAppState().userPremium = isPremium;
-      FFAppState().opengrowPurchasesReady = true;
+      FFAppState().superboardPurchasesReady = true;
     });
   } catch (error) {
-    debugPrint('[OpenGrow] Invalid CustomerInfo was ignored: $error');
+    debugPrint('[SuperBoard] Invalid CustomerInfo was ignored: $error');
   }
 }
 ''';
@@ -833,17 +826,17 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
-import 'package:open_grow_private_4m5us1/custom_code/actions/opengrow_application_initialize.dart' as application;
-import 'package:open_grow_private_4m5us1/custom_code/actions/opengrow_initialize_authenticated_from_application_session.dart' as purchases;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+import 'package:open_grow_private_4m5us1/custom_code/actions/superboard_application_initialize.dart' as application;
+import 'package:open_grow_private_4m5us1/custom_code/actions/superboard_initialize_authenticated_from_application_session.dart' as purchases;
 
-const _installationKey = 'opengrow.vocostar.installation.v1';
+const _installationKey = 'superboard.vocostar.installation.v1';
 
 Future<bool> userAuthenticate() async {
   try {
-    await application.opengrowApplicationInitialize();
+    await application.superboardApplicationInitialize();
     var session = (jsonDecode(
-      await opengrow.opengrowApplicationRestoreSessionJson(),
+      await superboard.superboardApplicationRestoreSessionJson(),
     ) as Map).cast<String, dynamic>();
     if (session['authenticated'] != true) {
       const storage = FlutterSecureStorage();
@@ -853,41 +846,41 @@ Future<bool> userAuthenticate() async {
         await storage.write(key: _installationKey, value: installationId);
       }
       session = (jsonDecode(
-        await opengrow.opengrowApplicationSignInAnonymousJson(installationId),
+        await superboard.superboardApplicationSignInAnonymousJson(installationId),
       ) as Map).cast<String, dynamic>();
     }
-    await _applyOpenGrowSession(session);
+    await _applySuperBoardSession(session);
     await _refreshVocoStarProfile();
-    FFAppState().opengrowPurchasesReady = false;
+    FFAppState().superboardPurchasesReady = false;
     try {
-      await purchases.opengrowInitializeAuthenticatedFromApplicationSession();
-      FFAppState().opengrowPurchasesReady = true;
+      await purchases.superboardInitializeAuthenticatedFromApplicationSession();
+      FFAppState().superboardPurchasesReady = true;
     } catch (error) {
-      debugPrint('[OpenGrow] Purchases bridge unavailable: $error');
+      debugPrint('[SuperBoard] Purchases bridge unavailable: $error');
     }
     return true;
   } catch (error) {
-    debugPrint('[OpenGrow] Secure authentication failed: $error');
-    FFAppState().opengrowAccessTokenTransient = '';
-    FFAppState().opengrowRefreshTokenUnavailable = '';
+    debugPrint('[SuperBoard] Secure authentication failed: $error');
+    FFAppState().superboardAccessTokenTransient = '';
+    FFAppState().superboardRefreshTokenUnavailable = '';
     return false;
   }
 }
 
-Future<void> _applyOpenGrowSession(Map<String, dynamic> session) async {
+Future<void> _applySuperBoardSession(Map<String, dynamic> session) async {
   final token = session['access_token']?.toString() ?? '';
   if (session['authenticated'] != true || token.isEmpty) {
-    throw StateError('OpenGrow returned no authenticated application session.');
+    throw StateError('SuperBoard returned no authenticated application session.');
   }
-  FFAppState().opengrowAccessTokenTransient = token;
-  FFAppState().opengrowRefreshTokenUnavailable = '';
-  FFAppState().opengrowTokenExpirationTransient =
+  FFAppState().superboardAccessTokenTransient = token;
+  FFAppState().superboardRefreshTokenUnavailable = '';
+  FFAppState().superboardTokenExpirationTransient =
       DateTime.tryParse(session['expires_at']?.toString() ?? '');
   FFAppState().authUserId = session['user_id']?.toString() ?? '';
 }
 
 Future<void> _refreshVocoStarProfile() async {
-  final token = FFAppState().opengrowAccessTokenTransient;
+  final token = FFAppState().superboardAccessTokenTransient;
   if (token.isEmpty) return;
   final response = await http.get(
     Uri.parse('${FFAppConstants.gatewayUrl}/users/me'),
@@ -953,14 +946,14 @@ Future<void> _refreshVocoStarProfile() async {
 ''';
 
 const _userRefreshAuthCode = r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
 Future<bool> userRefreshAuth() async {
   try {
-    await opengrow.opengrowApplicationRefreshJson();
+    await superboard.superboardApplicationRefreshJson();
     return userAuthenticate();
   } catch (error) {
-    debugPrint('[OpenGrow] Secure session refresh failed: $error');
+    debugPrint('[SuperBoard] Secure session refresh failed: $error');
     return false;
   }
 }
@@ -969,26 +962,26 @@ Future<bool> userRefreshAuth() async {
 const _googleProviderCode = r'''
 import 'dart:convert';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
-import 'package:open_grow_private_4m5us1/custom_code/actions/opengrow_application_initialize.dart' as application;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+import 'package:open_grow_private_4m5us1/custom_code/actions/superboard_application_initialize.dart' as application;
 
 Future<String> signlinkWithGoogle(String mode, String bearer) async {
   if (mode != 'link' && mode != 'signin') return 'invalid_mode';
   try {
-    await application.opengrowApplicationInitialize();
+    await application.superboardApplicationInitialize();
     final account = await GoogleSignIn(scopes: const ['email', 'profile']).signIn();
     if (account == null) return 'cancelled';
     final authentication = await account.authentication;
     final idToken = authentication.idToken ?? '';
     if (idToken.isEmpty) return 'google_id_token_missing';
     if (mode == 'link') {
-      await opengrow.opengrowApplicationLinkProviderJson(
+      await superboard.superboardApplicationLinkProviderJson(
         provider: 'google',
         idToken: idToken,
       );
       return '';
     }
-    final result = await opengrow.opengrowApplicationSignInProviderJson(
+    final result = await superboard.superboardApplicationSignInProviderJson(
       provider: 'google',
       idToken: idToken,
       name: account.displayName ?? '',
@@ -997,7 +990,7 @@ Future<String> signlinkWithGoogle(String mode, String bearer) async {
     if (session['authenticated'] != true) return 'identity_rejected';
     return await userAuthenticate() ? '' : 'session_bridge_failed';
   } catch (error) {
-    debugPrint('[OpenGrow] Google identity failed: $error');
+    debugPrint('[SuperBoard] Google identity failed: $error');
     return 'google_identity_failed';
   }
 }
@@ -1006,14 +999,14 @@ Future<String> signlinkWithGoogle(String mode, String bearer) async {
 const _appleProviderCode = r'''
 import 'dart:io';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
-import 'package:open_grow_private_4m5us1/custom_code/actions/opengrow_application_initialize.dart' as application;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+import 'package:open_grow_private_4m5us1/custom_code/actions/superboard_application_initialize.dart' as application;
 
 Future<String> signlinkWithApple(String mode, String bearer) async {
   if (mode != 'link' && mode != 'signin') return 'invalid_mode';
   if (!Platform.isIOS && !Platform.isMacOS) return 'platform_unsupported';
   try {
-    await application.opengrowApplicationInitialize();
+    await application.superboardApplicationInitialize();
     final credential = await SignInWithApple.getAppleIDCredential(
       scopes: const [
         AppleIDAuthorizationScopes.email,
@@ -1023,7 +1016,7 @@ Future<String> signlinkWithApple(String mode, String bearer) async {
     final idToken = credential.identityToken ?? '';
     if (idToken.isEmpty) return 'apple_id_token_missing';
     if (mode == 'link') {
-      await opengrow.opengrowApplicationLinkProviderJson(
+      await superboard.superboardApplicationLinkProviderJson(
         provider: 'apple',
         idToken: idToken,
       );
@@ -1033,7 +1026,7 @@ Future<String> signlinkWithApple(String mode, String bearer) async {
         .whereType<String>()
         .where((value) => value.trim().isNotEmpty)
         .join(' ');
-    await opengrow.opengrowApplicationSignInProviderJson(
+    await superboard.superboardApplicationSignInProviderJson(
       provider: 'apple',
       idToken: idToken,
       name: name,
@@ -1044,7 +1037,7 @@ Future<String> signlinkWithApple(String mode, String bearer) async {
         ? 'cancelled'
         : 'apple_identity_failed';
   } catch (error) {
-    debugPrint('[OpenGrow] Apple identity failed: $error');
+    debugPrint('[SuperBoard] Apple identity failed: $error');
     return 'apple_identity_failed';
   }
 }
@@ -1053,12 +1046,12 @@ Future<String> signlinkWithApple(String mode, String bearer) async {
 const _maintenancePolicyCode = r'''
 import 'dart:convert';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
 Future<bool> appCheckMaintenance(String bearerAuth) async {
   final info = await PackageInfo.fromPlatform();
   final policy = (jsonDecode(
-    await opengrow.opengrowApplicationRuntimePolicyJson(
+    await superboard.superboardApplicationRuntimePolicyJson(
       appVersion: info.version,
       build: info.buildNumber,
     ),
@@ -1071,12 +1064,12 @@ Future<bool> appCheckMaintenance(String bearerAuth) async {
 const _updatePolicyCode = r'''
 import 'dart:convert';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
 Future<bool> appCheckUpdate(String bearerAuth) async {
   final info = await PackageInfo.fromPlatform();
   final policy = (jsonDecode(
-    await opengrow.opengrowApplicationRuntimePolicyJson(
+    await superboard.superboardApplicationRuntimePolicyJson(
       appVersion: info.version,
       build: info.buildNumber,
     ),
@@ -1090,12 +1083,12 @@ const _registerPushDeviceCode = r'''
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<void> opengrowRegisterPushDevice(String bearer) async {
+Future<void> superboardRegisterPushDevice(String bearer) async {
   if (bearer.trim().isEmpty) {
     throw StateError(
-      'Notification registration requires an authenticated OpenGrow session.',
+      'Notification registration requires an authenticated SuperBoard session.',
     );
   }
   if (Firebase.apps.isEmpty) await Firebase.initializeApp();
@@ -1105,7 +1098,7 @@ Future<void> opengrowRegisterPushDevice(String bearer) async {
     badge: true,
     sound: true,
   );
-  FFAppState().opengrowPushTokenTransient = '';
+  FFAppState().superboardPushTokenTransient = '';
   if (settings.authorizationStatus != AuthorizationStatus.authorized &&
       settings.authorizationStatus != AuthorizationStatus.provisional) {
     return;
@@ -1123,10 +1116,10 @@ Future<void> opengrowRegisterPushDevice(String bearer) async {
   }
   final token = await messaging.getToken() ?? '';
   if (token.isEmpty) throw StateError('FCM returned an empty device token.');
-  if (!await opengrow.opengrowSetPushToken(token)) {
-    throw StateError('OpenGrow rejected the notification device token.');
+  if (!await superboard.superboardSetPushToken(token)) {
+    throw StateError('SuperBoard rejected the notification device token.');
   }
-  FFAppState().opengrowPushTokenTransient = token;
+  FFAppState().superboardPushTokenTransient = token;
 }
 ''';
 
@@ -1134,9 +1127,9 @@ const _uploadFileAdapterCode = r'''
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String?> opengrowApplicationUploadFileJson(
+Future<String?> superboardApplicationUploadFileJson(
   String? userMediaPath,
   String? userId,
   String? bearerToken,
@@ -1161,7 +1154,7 @@ Future<String?> opengrowApplicationUploadFileJson(
       }[extension] ??
       'application/octet-stream';
   final response = (jsonDecode(
-    await opengrow.opengrowApplicationUploadFileJson(
+    await superboard.superboardApplicationUploadFileJson(
       bytes: bytes,
       filename: filename,
       contentType: contentType,
@@ -1178,9 +1171,9 @@ Future<String?> opengrowApplicationUploadFileJson(
 
 const _customJobAdapterCode = r'''
 import 'dart:convert';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
 
-Future<String?> opengrowApplicationCreateCustomJobJson(
+Future<String?> superboardApplicationCreateCustomJobJson(
   String bearer,
   String vocalId,
   String mediaType,
@@ -1220,7 +1213,7 @@ Future<String?> opengrowApplicationCreateCustomJobJson(
     'input': normalized,
     'creditCost': credits,
   });
-  final result = await opengrow.opengrowApplicationCreateCustomJobJson(
+  final result = await superboard.superboardApplicationCreateCustomJobJson(
     capability: 'vocostar.media.convert',
     payloadJson: payload,
     idempotencyKey:
@@ -1237,21 +1230,21 @@ Future<String?> opengrowApplicationCreateCustomJobJson(
 ''';
 
 const _supportInitializeCode = r'''
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart' as opengrow;
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 import 'package:open_grow_private_4m5us1/library_values.dart' as library;
 
-Future<void> opengrowSupportInitializeAuthenticated() async {
+Future<void> superboardSupportInitializeAuthenticated() async {
   final values = library.FFLibraryValues();
-  final token = await opengrow.opengrowApplicationAccessToken();
+  final token = await superboard.superboardApplicationAccessToken();
   if (token.isEmpty) throw StateError('Application authentication is required.');
   final authUrl = values.authGatewayBaseUrl?.trim() ?? '';
   final supportUrl = values.supportBaseUrl?.trim() ?? '';
   final projectId = values.supportProjectId ?? 0;
   if (authUrl.isEmpty || supportUrl.isEmpty || projectId <= 0) {
-    throw StateError('OpenGrow Support configuration is incomplete.');
+    throw StateError('SuperBoard Support configuration is incomplete.');
   }
-  await support.opengrowSupportInitializeAuthenticated(
+  await support.superboardSupportInitializeAuthenticated(
     applicationAccessToken: token,
     projectId: projectId,
     authGatewayUrl: authUrl,
@@ -1261,25 +1254,25 @@ Future<void> opengrowSupportInitializeAuthenticated() async {
 ''';
 
 const _supportRefreshCode = r'''
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<void> opengrowSupportRefreshMessages() async {
-  await support.opengrowSupportListConversationsJson();
+Future<void> superboardSupportRefreshMessages() async {
+  await support.superboardSupportListConversationsJson();
 }
 ''';
 
 const _supportSendCode = r'''
 import 'dart:convert';
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-Future<bool> opengrowSupportSendMessage(String message) async {
+Future<bool> superboardSupportSendMessage(String message) async {
   final body = message.trim();
   if (body.isEmpty) return false;
-  final decoded = jsonDecode(await support.opengrowSupportListConversationsJson());
+  final decoded = jsonDecode(await support.superboardSupportListConversationsJson());
   if (decoded is! List || decoded.isEmpty || decoded.first is! Map) return false;
   final conversationId = (decoded.first as Map)['id']?.toString() ?? '';
   if (conversationId.isEmpty) return false;
-  await support.opengrowSupportSend(
+  await support.superboardSupportSend(
     conversationId: conversationId,
     body: body,
     clientMessageId: 'mobile-${DateTime.now().microsecondsSinceEpoch}',
@@ -1293,10 +1286,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart' as support;
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
-class OpenGrowSupportChatWidget extends StatefulWidget {
-  const OpenGrowSupportChatWidget({
+class SuperBoardSupportChatWidget extends StatefulWidget {
+  const SuperBoardSupportChatWidget({
     super.key,
     this.width,
     this.height,
@@ -1324,12 +1317,12 @@ class OpenGrowSupportChatWidget extends StatefulWidget {
   final String cameraText;
 
   @override
-  State<OpenGrowSupportChatWidget> createState() =>
-      _OpenGrowSupportChatWidgetState();
+  State<SuperBoardSupportChatWidget> createState() =>
+      _SuperBoardSupportChatWidgetState();
 }
 
-class _OpenGrowSupportChatWidgetState
-    extends State<OpenGrowSupportChatWidget> {
+class _SuperBoardSupportChatWidgetState
+    extends State<SuperBoardSupportChatWidget> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   final _picker = ImagePicker();
@@ -1349,15 +1342,15 @@ class _OpenGrowSupportChatWidgetState
 
   Future<void> _initialize() async {
     try {
-      await opengrowSupportInitializeAuthenticated();
+      await superboardSupportInitializeAuthenticated();
       final conversations =
-          jsonDecode(await support.opengrowSupportListConversationsJson());
+          jsonDecode(await support.superboardSupportListConversationsJson());
       if (conversations is List && conversations.isNotEmpty) {
         _conversationId =
             (conversations.first as Map)['id']?.toString() ?? '';
       }
       if (_conversationId.isEmpty) {
-        _conversationId = await support.opengrowSupportOpenConversation(
+        _conversationId = await support.superboardSupportOpenConversation(
           clientConversationId: 'primary',
           subject: widget.welcomeMessage.isEmpty
               ? 'Support'
@@ -1365,8 +1358,8 @@ class _OpenGrowSupportChatWidgetState
         );
       }
       await _refresh();
-      await support.opengrowSupportConnectRealtime(_conversationId);
-      _events = support.opengrowSupportEventJsonStream.listen((_) => _refresh());
+      await support.superboardSupportConnectRealtime(_conversationId);
+      _events = support.superboardSupportEventJsonStream.listen((_) => _refresh());
       _poll = Timer.periodic(const Duration(seconds: 20), (_) => _refresh());
     } catch (error) {
       _error = error.toString();
@@ -1379,7 +1372,7 @@ class _OpenGrowSupportChatWidgetState
     if (_conversationId.isEmpty) return;
     try {
       final decoded = jsonDecode(
-        await support.opengrowSupportMessagesJson(
+        await support.superboardSupportMessagesJson(
           _conversationId,
           limit: 100,
         ),
@@ -1393,7 +1386,7 @@ class _OpenGrowSupportChatWidgetState
                 .map((item) => item.cast<String, dynamic>()));
           _error = null;
         });
-        await support.opengrowSupportMarkRead(_conversationId);
+        await support.superboardSupportMarkRead(_conversationId);
         _scrollToBottom();
       }
     } catch (error) {
@@ -1407,7 +1400,7 @@ class _OpenGrowSupportChatWidgetState
     setState(() => _sending = true);
     _controller.clear();
     try {
-      await support.opengrowSupportSend(
+      await support.superboardSupportSend(
         conversationId: _conversationId,
         body: body,
         clientMessageId: 'mobile-${DateTime.now().microsecondsSinceEpoch}',
@@ -1427,13 +1420,13 @@ class _OpenGrowSupportChatWidgetState
     setState(() => _sending = true);
     try {
       final bytes = await file.readAsBytes();
-      final attachment = await support.opengrowSupportUploadAttachmentJson(
+      final attachment = await support.superboardSupportUploadAttachmentJson(
         conversationId: _conversationId,
         bytes: bytes,
         filename: file.name,
         contentType: 'image/jpeg',
       );
-      await support.opengrowSupportSendAttachment(
+      await support.superboardSupportSendAttachment(
         conversationId: _conversationId,
         attachmentJson: attachment,
         clientMessageId: 'mobile-file-${DateTime.now().microsecondsSinceEpoch}',
@@ -1462,7 +1455,7 @@ class _OpenGrowSupportChatWidgetState
   void dispose() {
     _poll?.cancel();
     _events?.cancel();
-    support.opengrowSupportDisconnectRealtime();
+    support.superboardSupportDisconnectRealtime();
     _controller.dispose();
     _scroll.dispose();
     super.dispose();

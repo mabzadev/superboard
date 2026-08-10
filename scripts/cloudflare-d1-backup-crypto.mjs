@@ -23,6 +23,7 @@ import {
 } from "./cloudflare-d1-backup.mjs";
 import { validateMigrationBatchReceipt } from "./cloudflare-migration-batch.mjs";
 import { parseArgs } from "./cloudflare-target.mjs";
+import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 
 const MAGIC = Buffer.from("OGD1ENC1", "ascii");
 const IV_BYTES = 12;
@@ -32,7 +33,7 @@ export function backupEncryptionKey(value) {
   const encoded = String(value || "").trim();
   if (!/^[A-Za-z0-9+/]{43}=$/u.test(encoded)) {
     throw new Error(
-      "OPENGROW_BACKUP_ENCRYPTION_KEY must be one base64-encoded 32-byte key",
+      "SUPERBOARD_BACKUP_ENCRYPTION_KEY must be one base64-encoded 32-byte key",
     );
   }
   const key = Buffer.from(encoded, "base64");
@@ -267,7 +268,9 @@ async function main(argv = process.argv.slice(2)) {
     ? argv[0]
     : "encrypt";
   const args = parseArgs(command === argv[0] ? argv.slice(1) : argv);
-  const key = backupEncryptionKey(process.env.OPENGROW_BACKUP_ENCRYPTION_KEY);
+  const key = backupEncryptionKey(
+    superboardEnvironmentValue("SUPERBOARD_BACKUP_ENCRYPTION_KEY", process.env),
+  );
   if (command === "check-key") {
     process.stdout.write(
       `${JSON.stringify({ valid: true, algorithm: "AES-256-GCM" })}\n`,

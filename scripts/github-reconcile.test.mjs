@@ -9,10 +9,10 @@ import {
 
 function manifest() {
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     repositories: {
       platform: {
-        nameWithOwner: "mbzadev/opengrow-platform",
+        nameWithOwner: "mbzadev/superboard-platform",
         description: "OpenGrow platform",
         settings: {
           issues: true,
@@ -37,7 +37,7 @@ function manifest() {
         releaseProtection: {
           immutableReleases: true,
           tagRuleset: {
-            name: "OpenGrow immutable SDK tags",
+            name: "SuperBoard immutable SDK tags",
             enforcement: "active",
             include: ["refs/tags/sdk-*-v*"],
             rules: ["update", "deletion"],
@@ -59,7 +59,7 @@ function manifest() {
         },
         environments: {
           development: {
-            variables: { OPENGROW_TARGET: "mbza-development" },
+            variables: { SUPERBOARD_TARGET: "mbza-development" },
             secrets: ["CLOUDFLARE_API_TOKEN"],
           },
         },
@@ -90,7 +90,7 @@ function releaseState() {
 test("reconciliation blocks a missing repository and never invents a creation mutation", () => {
   const plan = buildGitHubReconcilePlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "missing-or-inaccessible",
       ready: false,
     },
@@ -107,7 +107,7 @@ test("reconciliation blocks a missing repository and never invents a creation mu
 test("reconciliation plans structure but leaves every secret value manual", () => {
   const plan = buildGitHubReconcilePlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -125,7 +125,7 @@ test("reconciliation plans structure but leaves every secret value manual", () =
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: false },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: false },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: false }],
         },
@@ -152,7 +152,7 @@ test("reconciliation converges declarative repository settings", () => {
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -170,7 +170,7 @@ test("reconciliation converges declarative repository settings", () => {
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: true },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: true },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
         },
@@ -210,7 +210,7 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -228,7 +228,7 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: true },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: true },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
         },
@@ -244,7 +244,7 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
   });
   assert.equal(
     request.args.includes(
-      "repos/mbzadev/opengrow-platform/actions/permissions/workflow",
+      "repos/mbzadev/superboard-platform/actions/permissions/workflow",
     ),
     true,
   );
@@ -257,7 +257,7 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
 test("reconciliation plans security and future immutable-release hardening without moving tags", () => {
   const configuration = manifest();
   const state = {
-    nameWithOwner: "mbzadev/opengrow-platform",
+    nameWithOwner: "mbzadev/superboard-platform",
     status: "incomplete",
     ready: false,
     visibility: "public",
@@ -287,7 +287,7 @@ test("reconciliation plans security and future immutable-release hardening witho
         name: "development",
         exists: true,
         variables: [
-          { name: "OPENGROW_TARGET", exists: true, configured: true },
+          { name: "SUPERBOARD_TARGET", exists: true, configured: true },
         ],
         secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
       },
@@ -295,7 +295,7 @@ test("reconciliation plans security and future immutable-release hardening witho
     repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
   };
   const plan = buildGitHubReconcilePlan(configuration, [state]);
-  assert.match(plan.confirmation, /^GITHUB:RECONCILE:7:[a-f0-9]{12}$/u);
+  assert.match(plan.confirmation, /^GITHUB:RECONCILE:8:[a-f0-9]{12}$/u);
   assert.deepEqual(
     plan.repositories[0].operations.map(({ type }) => type),
     [
@@ -313,7 +313,7 @@ test("reconciliation plans security and future immutable-release hardening witho
   assert.equal(rulesetRequest.args.includes("--method"), true);
   assert.equal(rulesetRequest.args.includes("POST"), true);
   assert.equal(
-    rulesetRequest.args.includes("repos/mbzadev/opengrow-platform/rulesets"),
+    rulesetRequest.args.includes("repos/mbzadev/superboard-platform/rulesets"),
     true,
   );
   assert.deepEqual(rulesetRequest.body.bypass_actors, []);
@@ -330,7 +330,7 @@ test("reconciliation fails closed when Dependabot security updates are paused", 
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -352,7 +352,7 @@ test("reconciliation fails closed when Dependabot security updates are paused", 
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: true },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: true },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
         },
@@ -373,7 +373,7 @@ test("reconciliation fails closed on drifted tag rules or legacy mutable assets"
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -399,7 +399,7 @@ test("reconciliation fails closed on drifted tag rules or legacy mutable assets"
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: true },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: true },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
         },
@@ -420,7 +420,7 @@ test("reconciliation refuses every mutation without its exact confirmation", () 
     schemaVersion: 1,
     repositories: [
       {
-        nameWithOwner: "mbzadev/opengrow-platform",
+        nameWithOwner: "mbzadev/superboard-platform",
         blockers: [],
         operations: [{ type: "put-environment", environment: "development" }],
       },
@@ -451,7 +451,7 @@ test("confirmed reconciliation uses JSON stdin and never mutates secrets", () =>
     schemaVersion: 1,
     repositories: [
       {
-        nameWithOwner: "mbzadev/opengrow-platform",
+        nameWithOwner: "mbzadev/superboard-platform",
         blockers: [],
         manual: [
           {
@@ -465,7 +465,7 @@ test("confirmed reconciliation uses JSON stdin and never mutates secrets", () =>
           {
             type: "create-environment-variable",
             environment: "development",
-            name: "OPENGROW_TARGET",
+            name: "SUPERBOARD_TARGET",
           },
           {
             type: "put-branch-protection",
@@ -511,7 +511,10 @@ test("GitHub mutation requests use the current versioned REST contract", () => {
   });
   assert.deepEqual(request.body, { default_branch: "dev" });
   assert.equal(request.args.includes("X-GitHub-Api-Version: 2026-03-10"), true);
-  assert.equal(request.args.includes("repos/mbzadev/opengrow-platform"), true);
+  assert.equal(
+    request.args.includes("repos/mbzadev/superboard-platform"),
+    true,
+  );
 });
 
 test("pending external Environment hardening is reported but never planned as a mutation", () => {
@@ -528,7 +531,7 @@ test("pending external Environment hardening is reported but never planned as a 
   };
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -546,7 +549,7 @@ test("pending external Environment hardening is reported but never planned as a 
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: true },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: true },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
           protection: {
@@ -598,7 +601,7 @@ test("enforced Environment hardening plans reviewers, timer and missing branch-t
   };
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -616,7 +619,7 @@ test("enforced Environment hardening plans reviewers, timer and missing branch-t
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: true },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: true },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
           protection: {
@@ -727,7 +730,7 @@ test("enforcement is structurally blocked when declared reviewers lack verified 
   };
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -745,7 +748,7 @@ test("enforcement is structurally blocked when declared reviewers lack verified 
           name: "development",
           exists: true,
           variables: [
-            { name: "OPENGROW_TARGET", exists: true, configured: true },
+            { name: "SUPERBOARD_TARGET", exists: true, configured: true },
           ],
           secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
           protection: {

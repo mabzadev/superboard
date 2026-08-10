@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/custom-reference-worker",
+  "name": "@superboard/custom-reference-worker",
   "version": "1.2.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "vitest run && vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@opengrow/contracts": "*"
+    "@superboard/contracts": "*"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.20.3",

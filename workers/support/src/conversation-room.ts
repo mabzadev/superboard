@@ -4,7 +4,7 @@ import type { Actor, Conversation, Env } from "./types";
 import {
   configuredSecrets,
   matchesAnySecret,
-} from "@opengrow/contracts/secret";
+} from "@superboard/contracts/secret";
 import { runConversationAutomations } from "./workflows";
 import { publishSupportEvent } from "./webhooks";
 import { localAttachment, MESSAGE_WITH_ATTACHMENTS } from "./message-records";

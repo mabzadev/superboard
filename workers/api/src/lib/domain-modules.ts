@@ -5,7 +5,7 @@ import {
   type InternalProjectContext,
   type ProjectContext,
   type ProjectEnvironment,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import type { Env } from "../types";
 import { getAuthContext } from "./auth";
 

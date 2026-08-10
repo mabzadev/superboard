@@ -4,7 +4,11 @@ This library is independent from Purchases. It creates no token and maintains no
 
 <!-- opengrow-sdk-documentation:flutterflow-support:start -->
 
-## Installation
+> **Lifecycle: archived.** This package is frozen for existing clients.
+> Its historical release remains available, but no new version may be
+> published.
+
+## Historical installation
 
 Add the published FlutterFlow Support package `opengrow_flutterflow_messaging`
 at the immutable release `sdk-flutterflow-messaging-v1.3.0`:
@@ -12,7 +16,7 @@ at the immutable release `sdk-flutterflow-messaging-v1.3.0`:
 ```yaml
 opengrow_flutterflow_messaging:
   git:
-    url: https://github.com/mbzadev/opengrow-platform.git
+    url: https://github.com/mbzadev/superboard-platform.git
     ref: sdk-flutterflow-messaging-v1.3.0
     path: sdks/flutterflow_messaging
 ```

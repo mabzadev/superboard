@@ -1,7 +1,7 @@
 # FlutterFlow client release receipts
 
 This directory contains reviewed, non-secret receipts proving that an external
-FlutterFlow application snapshot satisfies its versioned OpenGrow convergence
+FlutterFlow application snapshot satisfies its versioned SuperBoard convergence
 contract. A receipt is generated only after the snapshot verifier reports zero
 blocked checks:
 

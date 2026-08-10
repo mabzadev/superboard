@@ -119,7 +119,7 @@ export async function applyRenderedChatwoot({
     "--target", targetName, "--environment", environment, "--service", "support", "--no-routes",
   ], { env });
 
-  const temporary = await mkdtemp(join(tmpdir(), "opengrow-chatwoot-r2-"));
+  const temporary = await mkdtemp(join(tmpdir(), "superboard-chatwoot-r2-"));
   try {
     for (const [position, object] of rendered.uploads.objects.entries()) {
       const key = String(object.storage_key || "");

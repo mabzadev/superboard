@@ -7,7 +7,7 @@
   "required": ["schemaVersion", "owner", "repositories"],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 7 },
+    "schemaVersion": { "const": 8 },
     "owner": {
       "type": "object",
       "additionalProperties": false,

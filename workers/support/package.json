@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/support-worker",
+  "name": "@superboard/support-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -11,7 +11,7 @@
     "types": "node ../../scripts/cloudflare-types.mjs --service support --reference --allow-unprovisioned"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
+    "@superboard/contracts": "*",
     "hono": "^4.13.1",
     "jose": "^5.10.0"
   },

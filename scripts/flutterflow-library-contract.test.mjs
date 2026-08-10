@@ -13,8 +13,8 @@ test("the Git-owned FlutterFlow library contract is complete", async () => {
   assert.deepEqual(result, {
     schemaVersion: 1,
     status: "ok",
-    displayName: "OpenGrow",
-    dependencies: 2,
+    displayName: "SuperBoard",
+    dependencies: 1,
     libraryValues: 11,
     widgets: 5,
     pages: 3,
@@ -31,10 +31,10 @@ test("mutable or SSH dependencies are rejected", async () => {
   const result = await validateFlutterFlowLibraryContract({
     sourceOverride: source
       .replace(
-        "https://github.com/mbzadev/opengrow-platform.git",
-        "git@github.com:mbzadev/opengrow-platform.git",
+        "https://github.com/mbzadev/superboard-platform.git",
+        "git@github.com:mbzadev/superboard-platform.git",
       )
-      .replace("ref: sdk-flutterflow-v2.2.5", "ref: main"),
+      .replace("ref: sdk-flutterflow-v3.0.0", "ref: main"),
   });
   assert.equal(result.status, "blocked");
   assert.ok(result.errors.some((error) => error.includes("public HTTPS")));

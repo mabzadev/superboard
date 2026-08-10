@@ -1,5 +1,5 @@
-import { verifyInternalProjectContextRequest, type ProjectContext } from '@opengrow/contracts/project-context';
-import { configuredSecrets } from '@opengrow/contracts/secret';
+import { verifyInternalProjectContextRequest, type ProjectContext } from '@superboard/contracts/project-context';
+import { configuredSecrets } from '@superboard/contracts/secret';
 import type { Env } from './types';
 
 export async function verifyInternalProjectContext(request: Request, env: Env): Promise<ProjectContext> {

@@ -1,13 +1,13 @@
-# OpenGrow
+# SuperBoard
 
-Public canonical monorepo for the OpenGrow platform and SDKs. The repository is
+Public canonical monorepo for the SuperBoard platform and SDKs. The repository is
 the only source of truth; Cloudflare targets are isolated by declarative manifests
 and never fork this code.
 
-- Platform repository: <https://github.com/mbzadev/opengrow-platform>
-- FlutterFlow reference application: <https://github.com/mbzadev/opengrow-reference>
+- Platform repository: <https://github.com/mbzadev/superboard-platform>
+- FlutterFlow reference application: <https://github.com/mbzadev/superboard-reference>
 - Development reference app: <https://reference.mbza.dev>
-- Development dashboard: <https://grow.mbza.dev>
+- Development dashboard: <https://board.mbza.dev>
 - Development API: <https://api.mbza.dev>
 - Development short links: <https://in.mbza.dev>
 - Development MCP: <https://mcp.mbza.dev/mcp>
@@ -15,20 +15,21 @@ and never fork this code.
 
 ## Layout
 
-| Path                | Purpose                                                         |
-| ------------------- | --------------------------------------------------------------- |
-| `apps/dashboard`    | Next.js dashboard deployed with OpenNext on Workers             |
-| `workers/api`       | Hono API, OAuth, short links, purchases and queues              |
-| `workers/mcp`       | Target-deployed stateless MCP Worker with a private API binding |
-| `apps/mcp`          | Local MCP adapter, reusable tool catalogue and editor plugin    |
-| `sdks/flutter`      | `opengrow_flutter`                                              |
-| `sdks/flutterflow`  | `opengrow_flutterflow` actions and paywall                      |
-| `sdks/ios`          | OpenGrow iOS SDK implementation                                 |
-| `sdks/android`      | `io.opengrow:opengrow-android-sdk`                              |
-| `sdks/javascript`   | `@mbzadev/opengrow-js-sdk`                                      |
-| `sdks/react-native` | `@mbzadev/opengrow-react-native-sdk`                            |
-| `packages/shared`   | Shared utilities                                                |
-| `deploy/targets`    | Non-secret target manifests and schema                          |
+| Path                         | Purpose                                                               |
+| ---------------------------- | --------------------------------------------------------------------- |
+| `apps/dashboard`             | SuperBoard back-office deployed with OpenNext on Workers              |
+| `workers/api`                | Hono API, OAuth, short links, purchases and queues                    |
+| `workers/mcp`                | Target-deployed stateless MCP Worker with a private API binding       |
+| `apps/mcp`                   | Local MCP adapter, reusable tool catalogue and editor plugin          |
+| `sdks/flutter`               | Active `superboard_flutter` 3.x SDK                                   |
+| `sdks/flutterflow`           | Active unified `superboard_flutterflow` 3.x library                   |
+| `sdks/flutterflow_messaging` | Archived 1.3 compatibility package; merged into FlutterFlow 3.x       |
+| `sdks/ios`                   | Internal native implementation embedded by the Flutter SDK            |
+| `sdks/android`               | Internal native implementation embedded by the Flutter SDK            |
+| `sdks/javascript`            | Archived historical JavaScript package                                |
+| `sdks/react-native`          | Archived historical React Native package                              |
+| `packages/shared`            | Shared utilities                                                      |
+| `deploy/targets`             | Non-secret target manifests and physical-resource migration contracts |
 
 The root `Package.swift` exposes the iOS SDK directly from `sdks/ios`.
 
@@ -47,10 +48,10 @@ report without committing its source, provide its absolute path by application:
 npm run platform:readiness -- \
   --client-sources 'vocostar=/absolute/path/to/app-vocostar-ff'
 
-OPENGROW_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
+SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
   npm run flutterflow:source:verify:vocostar
 
-OPENGROW_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
+SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
   npm run flutterflow:migration:plan:vocostar
 ```
 
@@ -93,7 +94,7 @@ The automated ownership rules are documented in
 be audited offline with `npm run configuration:check`.
 
 ```bash
-# Validate the OpenGrow development target (no remote write)
+# Validate the SuperBoard development target (no remote write)
 npm run cloudflare:bootstrap -- --target mbza-development --environment development
 
 # Compare the complete paginated remote inventory with a target-scoped token
@@ -142,7 +143,7 @@ never written into Git:
 ```bash
 npm run cloudflare:deploy:all -- \
   --target vocostar --environment production \
-  --backup-directory /secure/opengrow/d1
+  --backup-directory /secure/superboard/d1
 ```
 
 Runtime secrets are provisioned by logical contract. The first command is a
@@ -233,7 +234,7 @@ release. The Dashboard exposes the same read-only catalogue and licence links at
   `path`; no repository read token is required or stored in exported source.
 
 `tools/flutterflow-library` is the Git authority for the reusable FlutterFlow
-project named `OpenGrow`. `config/flutterflow-library.json` inventories its 11
+project named `SuperBoard`. `config/flutterflow-library.json` inventories its 11
 target-supplied Library Values and 64 custom actions. Run
 `npm run flutterflow-library:check` to prove that its DSL, public HTTPS
 dependencies, immutable refs, token-state policy and GitHub sync workflow stay
@@ -250,7 +251,7 @@ The migration provenance and source SHAs are documented in
 
 ## License
 
-OpenGrow is released under the [MIT License](./LICENSE).
+SuperBoard is released under the [MIT License](./LICENSE).
 
 Contributions follow [CONTRIBUTING.md](./CONTRIBUTING.md). Report security
 issues through the private process documented in [SECURITY.md](./SECURITY.md).

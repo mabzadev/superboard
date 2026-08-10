@@ -6,9 +6,9 @@
   },
   "ios": {
     "packageName": "OpenGrow",
-    "repository": "https://github.com/mbzadev/opengrow-platform.git",
+    "repository": "https://github.com/mbzadev/superboard-platform.git",
     "releaseRef": "sdk-ios-v1.0.3",
-    "podspecUrl": "https://raw.githubusercontent.com/mbzadev/opengrow-platform/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec",
+    "podspecUrl": "https://raw.githubusercontent.com/mbzadev/superboard-platform/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec",
     "version": "1.0.3"
   }
 }

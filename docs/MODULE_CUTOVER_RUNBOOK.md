@@ -20,13 +20,13 @@ The declarative registry is in `scripts/module-cutover/registry.mjs`. Each entit
 
 The current ownership mapping is:
 
-| Module | Legacy authority | Destination D1 |
-| --- | --- | --- |
-| App | API D1 | App D1 |
-| Products | Billing tables in API D1 | Products D1 |
-| Paywalls | Billing tables in API D1 | Paywalls D1 |
-| Dynamic Links | API D1 | Dynamic Links D1 |
-| Support | legacy Messaging D1 when present, or the separately rendered Chatwoot export | Support D1 |
+| Module        | Legacy authority                                                             | Destination D1   |
+| ------------- | ---------------------------------------------------------------------------- | ---------------- |
+| App           | API D1                                                                       | App D1           |
+| Products      | Billing tables in API D1                                                     | Products D1      |
+| Paywalls      | Billing tables in API D1                                                     | Paywalls D1      |
+| Dynamic Links | API D1                                                                       | Dynamic Links D1 |
+| Support       | legacy Messaging D1 when present, or the separately rendered Chatwoot export | Support D1       |
 
 Every source query is scoped by the resolved numeric `project_id`. The public `project_ref` is parsed as `<instance_id>-prod` or `<instance_id>-test`; it is never coerced directly to a number. The tool resolves exactly one matching project row before reading any business data.
 
@@ -39,8 +39,8 @@ Safety guards abort before writing when a legacy relationship cannot be represen
 Inspect the registry without network access:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs registry
-node scripts/opengrow-module-cutover.mjs --project-ref 10-test --modules app,products
+node scripts/superboard-module-cutover.mjs registry
+node scripts/superboard-module-cutover.mjs --project-ref 10-test --modules app,products
 ```
 
 Run the automated migration tests:
@@ -73,7 +73,7 @@ For an offline data rehearsal, provide a protected fixture with this shape:
 Then run:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs plan \
+node scripts/superboard-module-cutover.mjs plan \
   --project-ref 10-test \
   --fixture /secure/path/rehearsal.json \
   --report /secure/path/plan.json
@@ -86,34 +86,34 @@ Fixtures and snapshots contain project data. Keep them outside the repository wi
 Generate the backup command manifest without executing it:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs backup-plan \
+node scripts/superboard-module-cutover.mjs backup-plan \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
-  --output-directory /secure/opengrow/backups/10-test \
-  --report /secure/opengrow/10-test-backup-plan.json
+  --output-directory /secure/superboard/backups/10-test \
+  --report /secure/superboard/10-test-backup-plan.json
 ```
 
 Run a read-only source/target comparison:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs plan \
+node scripts/superboard-module-cutover.mjs plan \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
   --remote-read \
-  --report /secure/opengrow/10-test-plan.json
+  --report /secure/superboard/10-test-plan.json
 ```
 
 `plan` omits rows from its report. Use the explicit `snapshot` command only when a protected pre-cutover dataset is required for post-cutover reverse-delta calculation:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs snapshot \
+node scripts/superboard-module-cutover.mjs snapshot \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
   --remote-read \
-  --report /secure/opengrow/10-test-baseline.json
+  --report /secure/superboard/10-test-baseline.json
 ```
 
 No command in this section writes to Cloudflare.
@@ -131,7 +131,7 @@ Plan the complete logical bundle first. Never place a secret in shell history or
 
 ```bash
 npm run cloudflare:secrets:upload -- \
-  --target "$OPENGROW_TARGET" --environment production \
+  --target "$SUPERBOARD_TARGET" --environment production \
   --contracts module-internal-token,support-support-webhook-encryption-key,marketing-smtp-encryption-key,marketing-tracking-signing-key
 ```
 
@@ -150,14 +150,14 @@ and values must never be returned to the Dashboard.
 Create a window file. Times are ISO-8601 instants and must bracket the actual operation:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs window \
+node scripts/superboard-module-cutover.mjs window \
   --project-ref 10-test \
   --window-id global-cutover-2026-08-07 \
   --starts-at 2026-08-07T20:00:00Z \
   --ends-at 2026-08-07T22:00:00Z \
   --reason "Seven-module direct cutover rehearsal" \
   --approved-by owner@example.com \
-  --report /secure/opengrow/10-test-window.json
+  --report /secure/superboard/10-test-window.json
 ```
 
 The gateway maintenance contract is:
@@ -174,15 +174,15 @@ Enable and independently verify maintenance:
 
 ```bash
 export OPENGROW_CUTOVER_TOKEN='<operator-secret>'
-export OPENGROW_TARGET='<deployment-target>'
+export SUPERBOARD_TARGET='<deployment-target>'
 
-node scripts/opengrow-module-cutover.mjs maintenance-enable \
+node scripts/superboard-module-cutover.mjs maintenance-enable \
   --target vocostar --environment production --project-ref 10-test \
-  --window /secure/opengrow/10-test-window.json \
+  --window /secure/superboard/10-test-window.json \
   --apply \
-  --confirm "MAINTENANCE:${OPENGROW_TARGET}:10-test:global-cutover-2026-08-07"
+  --confirm "MAINTENANCE:${SUPERBOARD_TARGET}:10-test:global-cutover-2026-08-07"
 
-node scripts/opengrow-module-cutover.mjs maintenance-status \
+node scripts/superboard-module-cutover.mjs maintenance-status \
   --target vocostar --environment production --project-ref 10-test --remote-read
 ```
 
@@ -193,17 +193,17 @@ The enable command updates the protected window with the confirmed maintenance e
 The apply confirmation is different from the maintenance confirmation:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs apply \
+node scripts/superboard-module-cutover.mjs apply \
   --target vocostar \
   --environment production \
   --project-ref 10-test \
   --modules app,products,paywalls,dynamic-links,support \
   --remote-read \
-  --window /secure/opengrow/10-test-window.json \
-  --checkpoint /secure/opengrow/10-test-checkpoint.json \
-  --report /secure/opengrow/10-test-apply-report.json \
+  --window /secure/superboard/10-test-window.json \
+  --checkpoint /secure/superboard/10-test-checkpoint.json \
+  --report /secure/superboard/10-test-apply-report.json \
   --apply \
-  --confirm "CUTOVER:${OPENGROW_TARGET}:10-test:global-cutover-2026-08-07"
+  --confirm "CUTOVER:${SUPERBOARD_TARGET}:10-test:global-cutover-2026-08-07"
 ```
 
 Writes are per entity and use bounded, atomic `INSERT ... VALUES ... ON CONFLICT` statements of at most 100 rows and 96 KiB. Cloudflare D1 file imports are not globally atomic, so resumability is the safety mechanism: after every entity, the tool rereads the destination and requires exact count/checksum equality before atomically saving its checkpoint. A network or process interruption can use the same command and checkpoint; partially imported rows are safely upserted and already verified entities are reread without another write.
@@ -213,9 +213,9 @@ Any mismatch aborts immediately. Do not disable constraints, edit a checkpoint, 
 Run an independent final verification:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs verify \
+node scripts/superboard-module-cutover.mjs verify \
   --target vocostar --environment production --project-ref 10-test \
-  --remote-read --report /secure/opengrow/10-test-verify.json
+  --remote-read --report /secure/superboard/10-test-verify.json
 ```
 
 The command exits non-zero for any count/checksum mismatch.
@@ -233,11 +233,11 @@ Repeat the complete process for `10-prod` only after the `10-test` functional an
 After executing the generated export commands, create and attach that evidence without rereading the files into memory:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs backup-receipt \
+node scripts/superboard-module-cutover.mjs backup-receipt \
   --project-ref 10-prod \
-  --backup-plan /secure/opengrow/10-prod-backup-plan.json \
-  --window /secure/opengrow/10-prod-window.json \
-  --report /secure/opengrow/10-prod-backup-receipt.json
+  --backup-plan /secure/superboard/10-prod-backup-plan.json \
+  --window /secure/superboard/10-prod-window.json \
+  --report /secure/superboard/10-prod-backup-receipt.json
 ```
 
 For the VocoStar transitional target the receipt currently contains nine D1
@@ -252,15 +252,51 @@ VocoStar receipt example:
 {
   "completed_at": "2026-08-07T19:45:00Z",
   "artifacts": [
-    { "name": "legacy-api", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "legacy-messaging", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "module-app", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "module-products", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "module-paywalls", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "module-dynamicLinks", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "module-support", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "module-marketing", "bytes": 1234, "sha256": "64 lowercase hex characters" },
-    { "name": "module-onboardings", "bytes": 1234, "sha256": "64 lowercase hex characters" }
+    {
+      "name": "legacy-api",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "legacy-messaging",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "module-app",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "module-products",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "module-paywalls",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "module-dynamicLinks",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "module-support",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "module-marketing",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    },
+    {
+      "name": "module-onboardings",
+      "bytes": 1234,
+      "sha256": "64 lowercase hex characters"
+    }
   ]
 }
 ```
@@ -274,12 +310,12 @@ After backfill verification, deploy and smoke-test bindings in this order while 
 Legacy databases remain untouched for at least 30 days. Before any post-reopen rollback, re-enable maintenance and calculate the delta between the protected baseline and current module rows:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs reverse-delta \
+node scripts/superboard-module-cutover.mjs reverse-delta \
   --target vocostar --environment production --project-ref 10-prod \
   --remote-read \
-  --baseline /secure/opengrow/10-prod-baseline.json \
-  --report /secure/opengrow/10-prod-reverse-delta.json \
-  --sql-report /secure/opengrow/10-prod-reverse-sql.json
+  --baseline /secure/superboard/10-prod-baseline.json \
+  --report /secure/superboard/10-prod-reverse-delta.json \
+  --sql-report /secure/superboard/10-prod-reverse-sql.json
 ```
 
 The tool emits legacy upserts only for mappings proven reversible. Deletions or lossy mappings set `replayable=false`, exit non-zero, and block automated rollback. Resolve those records manually with two-person review before continuing.
@@ -287,13 +323,13 @@ The tool emits legacy upserts only for mappings proven reversible. Deletions or 
 Generate a rollback plan from the backup plan, recorded Worker version IDs, and reverse-delta report:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs rollback-plan \
+node scripts/superboard-module-cutover.mjs rollback-plan \
   --project-ref 10-prod \
-  --backup-plan /secure/opengrow/10-prod-backup-plan.json \
-  --backup-receipt /secure/opengrow/10-prod-backup-receipt.json \
-  --versions /secure/opengrow/10-prod-worker-versions.json \
-  --reverse-delta /secure/opengrow/10-prod-reverse-delta.json \
-  --report /secure/opengrow/10-prod-rollback-plan.json
+  --backup-plan /secure/superboard/10-prod-backup-plan.json \
+  --backup-receipt /secure/superboard/10-prod-backup-receipt.json \
+  --versions /secure/superboard/10-prod-worker-versions.json \
+  --reverse-delta /secure/superboard/10-prod-reverse-delta.json \
+  --report /secure/superboard/10-prod-rollback-plan.json
 ```
 
 The generated rollback remains `blocked=true` until every backup receipt, Worker version and replayable reverse delta is present. The rollback order is maintenance, reverse-delta export, Dashboard/gateway/module version rollback, verified delta replay into legacy, legacy smoke tests, then maintenance disable. Never restore a pre-cutover D1 backup over post-cutover writes and never reopen traffic while a delta is blocked.
@@ -301,11 +337,11 @@ The generated rollback remains `blocked=true` until every backup receipt, Worker
 Disable maintenance only after all global smoke checks and monitoring gates are green:
 
 ```bash
-node scripts/opengrow-module-cutover.mjs maintenance-disable \
+node scripts/superboard-module-cutover.mjs maintenance-disable \
   --target vocostar --environment production --project-ref 10-prod \
-  --window /secure/opengrow/10-prod-window.json \
+  --window /secure/superboard/10-prod-window.json \
   --apply \
-  --confirm "MAINTENANCE:${OPENGROW_TARGET}:10-prod:<window_id>"
+  --confirm "MAINTENANCE:${SUPERBOARD_TARGET}:10-prod:<window_id>"
 ```
 
 Retain reports, checkpoints, backup digests, version IDs, and smoke evidence with the release record. Store project data and secrets separately from those operational reports.

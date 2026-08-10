@@ -1,4 +1,4 @@
-# Architecture cible OpenGrow, MBZA et VocoStar
+# Architecture cible SuperBoard, MBZA et VocoStar
 
 État de la base de référence mis à jour le 9 août 2026. Ce document décrit la cible à
 déployer; l'ancien inventaire de VocoStar reste disponible uniquement comme
@@ -6,10 +6,10 @@ déployer; l'ancien inventaire de VocoStar reste disponible uniquement comme
 
 ## Décision d'architecture
 
-OpenGrow devient le back-office et le plan de contrôle commun à toutes les
+SuperBoard devient le back-office et le plan de contrôle commun à toutes les
 applications. Il n'est plus un SaaS autonome. Le code commun vit dans le dépôt
-`mbzadev/opengrow-platform`; l'application d'acceptation FlutterFlow vit dans
-`mbzadev/opengrow-reference`. `mbza.dev` est seulement l'environnement de
+`mbzadev/superboard-platform`; l'application d'acceptation FlutterFlow vit dans
+`mbzadev/superboard-reference`. `mbza.dev` est seulement l'environnement de
 développement et de recette de cette plateforme.
 
 Une application n'obtient jamais une copie modifiée des Workers communs. Elle
@@ -19,13 +19,13 @@ ajouter au maximum un Worker custom pour ses traitements véritablement uniques.
 ```mermaid
 flowchart TB
   app["Application Flutter / FlutterFlow"]
-  admin["Administrateurs OpenGrow"]
-  git["GitHub : opengrow-platform"]
-  gitref["GitHub : opengrow-reference"]
+  admin["Administrateurs SuperBoard"]
+  git["GitHub : superboard-platform"]
+  gitref["GitHub : superboard-reference"]
   gha["GitHub Actions + Environments"]
   cfdev["Compte Cloudflare développement"]
   cfprod["Compte Cloudflare production"]
-  dashboard["Dashboard OpenGrow"]
+  dashboard["Dashboard SuperBoard"]
   gateway["API Gateway"]
   common["Identity · Files · Email · Observability · Billing"]
   modules["App · Products · Paywalls · Dynamic Links · Support · Marketing · Onboardings"]
@@ -52,7 +52,7 @@ flowchart TB
 | Surface                  | Adresse                                      | Rôle                                                                                          |
 | ------------------------ | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Application de référence | `https://reference.mbza.dev`                 | recette exécutable Flutter Web des quinze parcours communs et du protocole d'extension custom |
-| Back-office              | `https://grow.mbza.dev`                      | administration, données, états et diagnostics                                                 |
+| Back-office              | `https://board.mbza.dev`                     | administration, données, états et diagnostics                                                 |
 | API                      | `https://api.mbza.dev`                       | façade authentifiée de tous les services                                                      |
 | SDK                      | `https://sdk.mbza.dev`                       | endpoints consommés par les bibliothèques mobiles                                             |
 | Liens courts             | `https://in.mbza.dev`                        | redirection, attribution et app/universal links                                               |
@@ -64,7 +64,7 @@ flowchart TB
 Les services de plateforme sont déclarés dans
 `deploy/targets/mbza-development.json`. L'adresse de l'application de référence
 et son Worker Static Assets sont déclarés dans
-`opengrow-reference/reference.project.json`. Ces manifestes ne contiennent ni ID de
+`superboard-reference/reference.project.json`. Ces manifestes ne contiennent ni ID de
 compte Cloudflare ni secret et leurs valeurs ne deviennent jamais des valeurs
 par défaut du code réutilisable.
 
@@ -113,7 +113,7 @@ base; il n'est conservé que comme source temporaire de migration sur VocoStar.
 | `identity`      | commun obligatoire     | compte applicatif, email/mot de passe, Google, Apple, sessions et échange JWT                                    | D1 Identity                                   |
 | `api`           | commun obligatoire     | façade publique, OAuth administrateur, utilisateurs/projets, notifications, orchestration SDK et état plateforme | D1 central + KV + R2 + Queues                 |
 | `mcp`           | commun obligatoire     | outils opérateur OAuth via Streamable HTTP stateless; validation et appels API par Service Binding privé         | aucun stockage ni secret propre               |
-| `dashboard`     | commun obligatoire     | interface back-office OpenGrow et page Infrastructure                                                            | Worker OpenNext + cache R2                    |
+| `dashboard`     | commun obligatoire     | interface back-office SuperBoard et page Infrastructure                                                          | Worker OpenNext + cache R2                    |
 | `billing`       | fonctionnalité         | achats Apple/Google, produits, abonnements, droits, remboursements et jobs financiers                            | D1 central pendant la convergence + Queue/DLQ |
 | `app`           | fonctionnalité         | clients, références, clés d'accès, configuration SDK et métriques                                                | D1 App                                        |
 | `products`      | fonctionnalité         | catalogue, offres, produits, droits et achats                                                                    | D1 Products                                   |
@@ -129,7 +129,7 @@ Billing, Custom, API, MCP, puis Dashboard. Le Dashboard est publié en dernier, 
 il décrit l'API effectivement déployée.
 
 L'application `reference.mbza.dev` est publiée séparément depuis
-`opengrow-reference/dev`, une fois ses tests et ceux de la bibliothèque terminés.
+`superboard-reference/dev`, une fois ses tests et ceux de la bibliothèque terminés.
 C'est un Worker d'assets statiques servant la recette, pas un Worker métier et
 il n'entre donc pas dans les seize rôles ci-dessus.
 
@@ -162,7 +162,7 @@ description, ses capacités et ses noms de secrets. Le Worker n'expose aucune
 route d'administration publique. L'API l'appelle par Service Binding et jeton
 interne.
 
-Le contrat `@opengrow/contracts/custom-worker` est en version privée **v2** :
+Le contrat `@superboard/contracts/custom-worker` est en version privée **v2** :
 le projet et le sujet sont indissociables pour toute requête issue du SDK
 public. Il définit :
 
@@ -372,7 +372,7 @@ obtenues via l'API Analytics avec un jeton en lecture seule; elles ne doivent pa
 
 `config/cloudflare-deployments.json` sélectionne, pour chaque branche, tous les
 GitHub Environments à déployer et fixe la cible attendue pour chacun. Chaque
-Environment fournit `OPENGROW_TARGET`, qui doit être strictement identique à
+Environment fournit `SUPERBOARD_TARGET`, qui doit être strictement identique à
 cette cible versionnée, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` et, en
 production, la clé de chiffrement des sauvegardes. Une divergence bloque le job
 avant toute commande Cloudflare. Un nouveau compte Cloudflare nécessite un
@@ -383,30 +383,30 @@ La CI des pull requests effectue les typechecks, tests et dry-runs de tous les
 Workers communs, modules et implémentations custom. Le workflow de déploiement
 protégé est la seule autorité de publication automatique.
 
-Le dépôt `opengrow-reference` applique la même frontière : une pull request ne fait
+Le dépôt `superboard-reference` applique la même frontière : une pull request ne fait
 que valider; un push sur `dev` compile Flutter Web, transfère l'artefact entre
-jobs puis publie `opengrow-reference-app-dev` sur
+jobs puis publie `superboard-reference-app-dev` sur
 `https://reference.mbza.dev`. Le compte et le jeton proviennent exclusivement
 de l'Environment GitHub `development`. `main` ne publie pas ce site de test.
-Après chaque déploiement réussi de `opengrow-platform/dev`, un événement
+Après chaque déploiement réussi de `superboard-platform/dev`, un événement
 `platform-dev-updated` transmet en plus le SHA exact au dépôt de référence : la
 recette est donc reconstruite contre le code réellement déployé, sans dépendre
 d'une branche mutable pendant ce run.
 
 ## Référence FlutterFlow
 
-`opengrow-reference`, publié en recette sur `https://reference.mbza.dev`, contient
+`superboard-reference`, publié en recette sur `https://reference.mbza.dev`, contient
 exactement seize parcours d'acceptation : bootstrap,
 connexion, création de compte, récupération de mot de passe, accueil, profil,
 notifications, fichiers, produits, paywall, liens dynamiques, support, consentement
 marketing, onboarding, extension custom `reference.echo`, receipt de promotion
 `reference.acceptance` lié aux révisions Git exactes, et diagnostic.
 
-La bibliothèque OpenGrow fournit les widgets Bootstrap, Paywall et Onboarding,
+La bibliothèque SuperBoard fournit les widgets Bootstrap, Paywall et Onboarding,
 les boutons Restore Purchases et Customer Center, ainsi que les actions communes
 d'identité, fichiers, achats, événements, liens, consentement Marketing,
 Support et jobs custom authentifiés.
-L'application consomme des références Git immuables vers `opengrow-platform`; elle ne
+L'application consomme des références Git immuables vers `superboard-platform`; elle ne
 copie pas les protocoles réseau dans du custom code FlutterFlow. Le catalogue
 exhaustif des pages, états, Dart defines, actions et tables est dans
 [REFERENCE_DATA_INVENTORY.md](./REFERENCE_DATA_INVENTORY.md).
@@ -424,7 +424,7 @@ La cible finale de VocoStar suit ces étapes, sans raccourci destructif :
 2. fournir les secrets manquants, appliquer les dix-huit migrations avec
    sauvegardes chiffrées et remplacer les shells privés par les Workers communs
    validés;
-3. faire de `api.vocostar.com` la façade OpenGrow, migrer le mobile vers
+3. faire de `api.vocostar.com` la façade SuperBoard, migrer le mobile vers
    `/api/v1/sdk/custom/v1/jobs` et connecter les anciens Workflows/Containers au
    Worker custom VocoStar;
 4. exporter l'ancienne source Dokploy si elle existe encore, puis D1/R2 du
@@ -455,9 +455,9 @@ canonique, migrations Chatwoot, bibliothèque FlutterFlow et application de
 référence. Son manifeste strict, son workflow `dev`, son Worker Static Assets et
 son dry-run de publication sont également validés.
 
-La bibliothèque FlutterFlow `OpenGrow` n'est plus un workspace local orphelin :
+La bibliothèque FlutterFlow `SuperBoard` n'est plus un workspace local orphelin :
 son DSL, ses tests et son manifeste (11 Library Values, 64 Custom Actions) sont
-maintenant dans `opengrow-platform`. Le workflow GitHub protégé vérifie les tags
+maintenant dans `superboard-platform`. Le workflow GitHub protégé vérifie les tags
 immuables, teste le DSL puis met à jour le projet distant avec une variable et un
 secret d'Environment; aucun ID de projet ni credential n'est codé dans la source.
 

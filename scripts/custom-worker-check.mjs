@@ -11,6 +11,7 @@ import {
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
 import { managedWorkerService } from "./cloudflare-services.mjs";
+import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 
 export function customWorkerPackagePaths(targets) {
   return [
@@ -39,14 +40,21 @@ export function validatedPackagePath(packagePath) {
     fromRoot === "" ||
     !/^[A-Za-z0-9._/-]+$/u.test(value)
   ) {
-    throw new Error(`Invalid custom Worker package path: ${value || "<empty>"}`);
+    throw new Error(
+      `Invalid custom Worker package path: ${value || "<empty>"}`,
+    );
   }
   return fromRoot;
 }
 
 export async function selectedCustomWorkerPackages(args, env = process.env) {
-  if (args.all && (args.target || env.OPENGROW_TARGET)) {
-    throw new Error("--all cannot be combined with --target or OPENGROW_TARGET");
+  if (
+    args.all &&
+    (args.target || superboardEnvironmentValue("SUPERBOARD_TARGET", env))
+  ) {
+    throw new Error(
+      "--all cannot be combined with --target or SUPERBOARD_TARGET (fallback OPENGROW_TARGET)",
+    );
   }
   if (!args.all) {
     const { target } = await loadTarget(targetNameFromArgs(args, env));
@@ -64,9 +72,7 @@ export async function selectedCustomWorkerPackages(args, env = process.env) {
           entry.name.endsWith(".json") &&
           entry.name !== "schema.json",
       )
-      .map(async (entry) =>
-        (await loadTarget(entry.name.slice(0, -5))).target,
-      ),
+      .map(async (entry) => (await loadTarget(entry.name.slice(0, -5))).target),
   );
   return customWorkerPackagePaths(targets);
 }
@@ -98,9 +104,7 @@ export async function selectedCustomWorkerTypeSelections(
             environment: environments.includes("development")
               ? "development"
               : environments[0],
-            packagePath: validatedPackagePath(
-              target.customWorker.packagePath,
-            ),
+            packagePath: validatedPackagePath(target.customWorker.packagePath),
             managedServices: (target.customWorker.managedWorkers ?? []).map(
               managedWorkerService,
             ),
@@ -113,29 +117,28 @@ export async function selectedCustomWorkerTypeSelections(
           };
         }),
     ).then((selections) =>
-      uniqueCustomWorkerTypeSelections(selections.filter(Boolean))
+      uniqueCustomWorkerTypeSelections(selections.filter(Boolean)),
     );
   }
   const targetName = targetNameFromArgs(args, env);
   const { target } = await loadTarget(targetName);
   if (!target.customWorker) return [];
-  return [{
-    targetName,
-    environment: environmentFromArgs({
-      ...args,
-      environment: args.environment ?? env.OPENGROW_ENVIRONMENT,
-    }),
-    packagePath: validatedPackagePath(target.customWorker.packagePath),
-    managedServices: (target.customWorker.managedWorkers ?? []).map(
-      managedWorkerService,
-    ),
-    managedPackages: Object.fromEntries(
-      (target.customWorker.managedWorkers ?? []).map((worker) => [
-        managedWorkerService(worker),
-        validatedPackagePath(worker.packagePath),
-      ]),
-    ),
-  }];
+  return [
+    {
+      targetName,
+      environment: environmentFromArgs(args, env),
+      packagePath: validatedPackagePath(target.customWorker.packagePath),
+      managedServices: (target.customWorker.managedWorkers ?? []).map(
+        managedWorkerService,
+      ),
+      managedPackages: Object.fromEntries(
+        (target.customWorker.managedWorkers ?? []).map((worker) => [
+          managedWorkerService(worker),
+          validatedPackagePath(worker.packagePath),
+        ]),
+      ),
+    },
+  ];
 }
 
 export function uniqueCustomWorkerTypeSelections(selections) {

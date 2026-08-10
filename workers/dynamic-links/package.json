@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/dynamic-links-worker",
+  "name": "@superboard/dynamic-links-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "vitest run && INTERNAL_API_TOKEN=dynamic-runtime-secret vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
+    "@superboard/contracts": "*",
     "hono": "^4.7.4"
   },
   "devDependencies": {

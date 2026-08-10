@@ -152,14 +152,14 @@ export function validateControlPlaneCoverage(configuration, controlPlane) {
         `${deployment.id} references undeclared GitHub Environment ${deployment.githubEnvironment}`,
       );
     }
-    if (environment.variables?.OPENGROW_TARGET == null) {
+    if (environment.variables?.SUPERBOARD_TARGET == null) {
       throw new Error(
-        `${deployment.githubEnvironment} must define OPENGROW_TARGET`,
+        `${deployment.githubEnvironment} must define SUPERBOARD_TARGET`,
       );
     }
-    if (environment.variables.OPENGROW_TARGET !== deployment.target) {
+    if (environment.variables.SUPERBOARD_TARGET !== deployment.target) {
       throw new Error(
-        `${deployment.githubEnvironment} OPENGROW_TARGET must equal the versioned deployment target ${deployment.target}`,
+        `${deployment.githubEnvironment} SUPERBOARD_TARGET must equal the versioned deployment target ${deployment.target}`,
       );
     }
     for (const name of ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]) {
@@ -169,10 +169,10 @@ export function validateControlPlaneCoverage(configuration, controlPlane) {
     }
     if (
       deployment.cloudflareEnvironment === "production" &&
-      !environment.secrets?.includes("OPENGROW_BACKUP_ENCRYPTION_KEY")
+      !environment.secrets?.includes("SUPERBOARD_BACKUP_ENCRYPTION_KEY")
     ) {
       throw new Error(
-        `${deployment.githubEnvironment} must declare OPENGROW_BACKUP_ENCRYPTION_KEY`,
+        `${deployment.githubEnvironment} must declare SUPERBOARD_BACKUP_ENCRYPTION_KEY`,
       );
     }
   }

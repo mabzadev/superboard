@@ -1,4 +1,4 @@
-group = "io.opengrow.wrapper"
+group = "io.superboard.wrapper"
 version = "1.0-SNAPSHOT"
 
 def localProperties = new Properties()
@@ -19,13 +19,13 @@ if (flutterRoot == null) {
 // catalogue, so a release version is changed in exactly one place.
 def flutterPubspecFile = project.file("../pubspec.yaml")
 if (!flutterPubspecFile.isFile()) {
-    throw new GradleException("OpenGrow Flutter pubspec not found at ${flutterPubspecFile}")
+    throw new GradleException("SuperBoard Flutter pubspec not found at ${flutterPubspecFile}")
 }
 
 def flutterPubspecVersionMatches = flutterPubspecFile.getText("UTF-8") =~
         /(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\s*$/
 if (flutterPubspecVersionMatches.count != 1) {
-    throw new GradleException("OpenGrow Flutter pubspec must declare exactly one valid semantic version")
+    throw new GradleException("SuperBoard Flutter pubspec must declare exactly one valid semantic version")
 }
 def flutterSdkVersion = flutterPubspecVersionMatches[0][1]
 
@@ -56,6 +56,9 @@ apply plugin: "kotlin-parcelize"
 android {
     // The native SDK sources are embedded in the Flutter plugin so a separate
     // Maven credential is never required by FlutterFlow's remote builder.
+    // The embedded internal Android SDK imports io.opengrow.R and
+    // io.opengrow.BuildConfig. Keep that physical resource namespace stable;
+    // the public Flutter registrant itself is io.superboard.wrapper.
     namespace = "io.opengrow"
 
     compileSdk = 36

@@ -5,10 +5,8 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { DOMAIN_SERVICES } from "./cloudflare-services.mjs";
 import { selectedCustomWorkerTypeSelections } from "./custom-worker-check.mjs";
-import {
-  parseArgs,
-  targetSelectionFromArgs,
-} from "./cloudflare-target.mjs";
+import { parseArgs, targetSelectionFromArgs } from "./cloudflare-target.mjs";
+import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const services = [
@@ -39,17 +37,19 @@ export async function cloudflareTypesMode(args, env = process.env) {
       "Cloudflare type generation requires either --reference or an explicit --target and --environment",
     );
   }
-  if (env.OPENGROW_TARGET && env.OPENGROW_TARGET !== args.target) {
+  const configuredTarget = superboardEnvironmentValue("SUPERBOARD_TARGET", env);
+  const configuredEnvironment = superboardEnvironmentValue(
+    "SUPERBOARD_ENVIRONMENT",
+    env,
+  );
+  if (configuredTarget && configuredTarget !== args.target) {
     throw new Error(
-      `--target ${args.target} does not match OPENGROW_TARGET ${env.OPENGROW_TARGET}`,
+      `--target ${args.target} does not match OPENGROW_TARGET/SUPERBOARD_TARGET configured value ${configuredTarget}`,
     );
   }
-  if (
-    env.OPENGROW_ENVIRONMENT &&
-    env.OPENGROW_ENVIRONMENT !== args.environment
-  ) {
+  if (configuredEnvironment && configuredEnvironment !== args.environment) {
     throw new Error(
-      `--environment ${args.environment} does not match OPENGROW_ENVIRONMENT ${env.OPENGROW_ENVIRONMENT}`,
+      `--environment ${args.environment} does not match OPENGROW_ENVIRONMENT/SUPERBOARD_ENVIRONMENT configured value ${configuredEnvironment}`,
     );
   }
   const selection = await targetSelectionFromArgs(args, env, {
@@ -91,19 +91,21 @@ export async function main(
   const outputs = [
     resolve(root, "workers/api/src/generated-env.d.ts"),
     ...services.map((service) =>
-      resolve(root, "workers", service, "worker-configuration.d.ts")
+      resolve(root, "workers", service, "worker-configuration.d.ts"),
     ),
     ...customSelections.map(({ packagePath }) =>
-      resolve(root, packagePath, "worker-configuration.d.ts")
+      resolve(root, packagePath, "worker-configuration.d.ts"),
     ),
     ...managedSelections.map(({ managedPackages, service }) =>
-      resolve(root, managedPackages[service], "worker-configuration.d.ts")
+      resolve(root, managedPackages[service], "worker-configuration.d.ts"),
     ),
   ];
   const before = compareReferenceOutputs
     ? new Map(
-      await Promise.all(outputs.map(async (path) => [path, await file(path)])),
-    )
+        await Promise.all(
+          outputs.map(async (path) => [path, await file(path)]),
+        ),
+      )
     : new Map();
 
   execute(process.execPath, [
@@ -148,7 +150,7 @@ export async function main(
   if (compareReferenceOutputs) {
     const stale = [];
     for (const path of outputs) {
-      if (before.get(path) !== await file(path)) {
+      if (before.get(path) !== (await file(path))) {
         stale.push(path.slice(root.length + 1));
       }
     }

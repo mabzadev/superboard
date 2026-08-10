@@ -26,8 +26,10 @@ export interface BillingEnv {
  * Bindings and regular vars come from `src/generated-env.d.ts`.
  */
 interface ApiSecretEnv {
+  SUPERBOARD_TARGET?: string;
   OPENGROW_TARGET?: string;
   PLATFORM_WORKERS_JSON?: string;
+  SUPERBOARD_RELEASE?: string;
   OPENGROW_RELEASE?: string;
   PUBLIC_ROUTING_MODE?: "active" | "staged";
   MODULE_INTERNAL_TOKEN?: string;

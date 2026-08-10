@@ -3,14 +3,14 @@ import { Hono, type Context, type Next } from "hono";
 import {
   EMAIL_SERVICE_SEND_PATH,
   type EmailServiceMessage,
-} from "@opengrow/contracts/email";
-import { configuredSecrets } from "@opengrow/contracts/secret";
-import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
-import { verifyInternalProjectContextRequest } from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/email";
+import { configuredSecrets } from "@superboard/contracts/secret";
+import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
+import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
 import {
   RequestBodyError,
   readJsonObjectLimited,
-} from "@opengrow/contracts/request-body";
+} from "@superboard/contracts/request-body";
 import {
   issueAccessToken,
   issueOpenGrowToken,

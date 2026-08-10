@@ -119,7 +119,7 @@ const ProjectFormDialog = ({
               <FolderPlus className="h-5 w-5 text-background" />
             </div>
             <h2 className="text-xl font-semibold tracking-tight mb-1">
-              {isFirstProject ? "Welcome to OpenGrow" : "Create Project"}
+              {isFirstProject ? "Welcome to SuperBoard" : "Create Project"}
             </h2>
             <p
               id="project-dialog-description"

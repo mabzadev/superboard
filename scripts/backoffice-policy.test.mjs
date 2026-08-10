@@ -48,7 +48,7 @@ test("deployment targets have no OpenGrow edition or usage plan", () => {
 });
 
 test("the root project references a target instead of duplicating its domains", () => {
-  const project = JSON.parse(read("opengrow.project.json"));
+  const project = JSON.parse(read("superboard.project.json"));
   assert.deepEqual(project.development, { target: "mbza-development" });
   const target = JSON.parse(read("deploy/targets/mbza-development.json"));
   assert.equal(target.domains.shortlinks, "in.mbza.dev");
@@ -225,8 +225,10 @@ test("MCP is a target-configured back-office adapter with no legacy SaaS gate", 
       assert.equal(token.test(source), false, `${path} still contains ${token}`);
     }
   }
-  assert.match(read("apps/mcp/plugin/.mcp.json"), /\$\{OPENGROW_MCP_URL\}/u);
-  assert.match(read("apps/mcp/src/api-client.ts"), /normalizeApiBaseUrl\(env\.OPENGROW_API_URL\)/u);
+  assert.match(read("apps/mcp/plugin/.mcp.json"), /\$\{SUPERBOARD_MCP_URL\}/u);
+  const apiClient = read("apps/mcp/src/api-client.ts");
+  assert.match(apiClient, /env\.SUPERBOARD_API_URL/u);
+  assert.match(apiClient, /normalizeApiBaseUrl\(env\.OPENGROW_API_URL/u);
   assert.match(read("workers/mcp/src/index.ts"), /env\.API_SERVICE\.fetch/u);
   assert.match(read("scripts/cloudflare-config.mjs"), /PUBLIC_MCP_URL: publicMcpUrl\(target\)/u);
   assert.match(read("scripts/dashboard-cloudflare.mjs"), /NEXT_PUBLIC_MCP_URL: publicMcpUrl\(target\)/u);

@@ -3,7 +3,7 @@ import {
   PROJECT_CONTEXT_HEADERS,
   signProjectContext,
   type InternalProjectContext,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import { decodeJwt } from "jose";
 import { describe, expect, it } from "vitest";
 

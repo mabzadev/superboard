@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 void main() {
   testWidgets('renders screens, tracks progression and completes', (
     tester,
   ) async {
     final eventTypes = <String>[];
-    final client = OpenGrowExperienceClient(
+    final client = SuperBoardExperienceClient(
       projectKey: 'test_key',
       platform: 'ios',
       identifier: 'com.example.app',
@@ -78,7 +78,7 @@ void main() {
     var completed = false;
     await tester.pumpWidget(
       MaterialApp(
-        home: OpenGrowOnboarding(
+        home: SuperBoardOnboarding(
           experienceClient: client,
           onCompleted: () => completed = true,
         ),
@@ -108,7 +108,7 @@ void main() {
     'renders nothing and invokes unavailable when no version resolves',
     (tester) async {
       var unavailable = false;
-      final client = OpenGrowExperienceClient(
+      final client = SuperBoardExperienceClient(
         projectKey: 'test_key',
         platform: 'ios',
         identifier: 'com.example.app',
@@ -119,7 +119,7 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
-          home: OpenGrowOnboarding(
+          home: SuperBoardOnboarding(
             experienceClient: client,
             onUnavailable: () => unavailable = true,
           ),
@@ -135,7 +135,7 @@ void main() {
     'records explicit newsletter consent independently during onboarding',
     (tester) async {
       final updates = <Map<String, dynamic>>[];
-      final client = OpenGrowExperienceClient(
+      final client = SuperBoardExperienceClient(
         projectKey: 'test_key',
         platform: 'ios',
         identifier: 'com.example.app',
@@ -185,7 +185,7 @@ void main() {
       var completed = false;
       await tester.pumpWidget(
         MaterialApp(
-          home: OpenGrowOnboarding(
+          home: SuperBoardOnboarding(
             anonymousId: 'installation-1',
             experienceClient: client,
             marketingConsentUpdater:

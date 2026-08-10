@@ -141,27 +141,27 @@
       {
         "id": "identity-secure-session-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationRestoreSessionJson",
+        "value": "superboardApplicationRestoreSessionJson",
         "paths": ["generated_code/lib"]
       },
       {
         "id": "identity-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationSignInProviderJson",
+        "value": "superboardApplicationSignInProviderJson",
         "paths": ["generated_code/lib"]
       },
       {
         "id": "logout-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationLogoutJson",
+        "value": "superboardApplicationLogoutJson",
         "paths": [
-          "generated_code/lib/custom_code/actions/opengrow_logout_session.dart"
+          "generated_code/lib/custom_code/actions/superboard_logout_session.dart"
         ]
       },
       {
         "id": "account-erasure-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationDeleteAccountJson",
+        "value": "superboardApplicationDeleteAccountJson",
         "paths": [
           "generated_code/lib/custom_code/actions/user_clean_manager.dart"
         ]
@@ -181,15 +181,15 @@
       {
         "id": "runtime-policy-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationRuntimePolicyJson",
+        "value": "superboardApplicationRuntimePolicyJson",
         "paths": ["generated_code/lib"]
       },
       {
         "id": "notifications-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowSetPushToken",
+        "value": "superboardSetPushToken",
         "paths": [
-          "generated_code/lib/custom_code/actions/opengrow_register_push_device.dart"
+          "generated_code/lib/custom_code/actions/superboard_register_push_device.dart"
         ]
       },
       {
@@ -207,19 +207,19 @@
       {
         "id": "files-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationUploadFileJson",
+        "value": "superboardApplicationUploadFileJson",
         "paths": ["generated_code/lib"]
       },
       {
         "id": "custom-jobs-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationCreateCustomJobJson",
+        "value": "superboardApplicationCreateCustomJobJson",
         "paths": ["generated_code/lib"]
       },
       {
         "id": "billing-authority-wired",
         "kind": "symbol-present",
-        "value": "OpenGrowPaywallPageWidget",
+        "value": "SuperBoardPaywallPageWidget",
         "paths": [
           "generated_code/lib/custom_code/actions/open_grow_paywall.dart"
         ]
@@ -227,13 +227,13 @@
       {
         "id": "support-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowSupportInitializeAuthenticated",
+        "value": "superboardSupportInitializeAuthenticated",
         "paths": ["generated_code/lib"]
       },
       {
         "id": "onboardings-authority-wired",
         "kind": "symbol-present",
-        "value": "OpenGrowOnboardingPageWidget.routeName",
+        "value": "SuperBoardOnboardingPageWidget.routeName",
         "paths": [
           "generated_code/lib/pages/main/index",
           "generated_code/lib/pages/main/user_vocals"
@@ -257,7 +257,7 @@
       {
         "id": "marketing-authority-wired",
         "kind": "symbol-present",
-        "value": "opengrowApplicationMarketingPreferencesJson",
+        "value": "superboardApplicationMarketingPreferencesJson",
         "paths": ["generated_code/lib"]
       },
       {

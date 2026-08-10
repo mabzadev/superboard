@@ -1,12 +1,12 @@
 {
   "$schema": "../schemas/platform-governance.schema.json",
   "schemaVersion": 1,
-  "product": "OpenGrow",
-  "canonicalRepository": "mbzadev/opengrow-platform",
-  "referenceRepository": "mbzadev/opengrow-reference",
+  "product": "SuperBoard",
+  "canonicalRepository": "mbzadev/superboard-platform",
+  "referenceRepository": "mbzadev/superboard-reference",
   "historicalUpstream": {
     "releasePolicy": "retired",
-    "decision": "docs/ADR-001-CANONICAL-OPENGROW-SOURCE.md",
+    "decision": "docs/ADR-001-CANONICAL-SUPERBOARD-SOURCE.md",
     "provenance": "docs/HISTORY_MIGRATION.md",
     "optionalComparisonCommand": "npm run migration:parity:check"
   }

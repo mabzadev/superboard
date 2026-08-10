@@ -147,7 +147,7 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
     "utf8",
   );
   const allowlist = await readFile(
-    new URL("./opengrow-allowlist.mjs", import.meta.url),
+    new URL("./superboard-allowlist.mjs", import.meta.url),
     "utf8",
   );
   const batchIndex = deployAll.indexOf("await applyD1Convergence");
@@ -171,7 +171,7 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
   assert.match(deployService, /!migrationsConvergedByBatch/u);
   assert.match(
     deployService,
-    /args\["no-routes"\][\s\S]*\["--no-routes"\][\s\S]*opengrow-allowlist/u,
+    /args\["no-routes"\][\s\S]*\["--no-routes"\][\s\S]*superboard-allowlist/u,
   );
   assert.match(allowlist, /args\["no-routes"\].*\["--no-routes"\]/u);
 });

@@ -1,11 +1,11 @@
 # Architecture complète de Vocostar
 
 > **Document historique.** Cette page décrit l'état constaté avant la
-> convergence OpenGrow. Elle ne doit pas servir de procédure de déploiement.
+> convergence SuperBoard. Elle ne doit pas servir de procédure de déploiement.
 > L'architecture cible et son état d'implémentation sont décrits dans
-> [Architecture cible OpenGrow et VocoStar](./ARCHITECTURE_CIBLE_FR.md), tandis
+> [Architecture cible SuperBoard et VocoStar](./ARCHITECTURE_CIBLE_FR.md), tandis
 > que le détail réutilisable se trouve dans
-> [OpenGrow reference architecture](./REFERENCE_ARCHITECTURE.md).
+> [SuperBoard reference architecture](./REFERENCE_ARCHITECTURE.md).
 > La décision de migration de chaque page, état et custom code FlutterFlow se
 > trouve dans
 > [Convergence FlutterFlow VocoStar](./VOCOSTAR_FLUTTERFLOW_CONVERGENCE.md).
@@ -29,10 +29,10 @@ Cloudflare.
 
 Pendant la coexistence de migration, l'ensemble contient **23 déploiements Worker
 déclarés** : **7 Workers propres au backend mobile Vocostar** et les **16 rôles de
-la cible OpenGrow**. Le Worker Messaging historique existe encore dans le dépôt,
+la cible SuperBoard**. Le Worker Messaging historique existe encore dans le dépôt,
 mais `features.messaging=false` l'exclut des deux cibles actives. FlutterFlow n'appelle pas
 directement tous ces Workers. Il utilise principalement `api.vocostar.com` pour le
-métier historique et `sdk.vocostar.com`/`go.vocostar.com` via le SDK OpenGrow pour
+métier historique et `sdk.vocostar.com`/`go.vocostar.com` via le SDK SuperBoard pour
 les achats et les liens.
 
 Le système se divise en trois plans :
@@ -40,18 +40,18 @@ Le système se divise en trois plans :
 1. l'application FlutterFlow, qui porte l'interface, l'état local, Firebase et les
    appels mobiles ;
 2. le backend Vocostar, autorité des utilisateurs, crédits, voix, médias et fichiers ;
-3. OpenGrow, back-office opérateur et autorité de monétisation applicative vérifiée.
+3. SuperBoard, back-office opérateur et autorité de monétisation applicative vérifiée.
 
-OpenGrow suit une architecture de type _strangler_ : `opengrow-api` reste la façade
+SuperBoard suit une architecture de type _strangler_ : `opengrow-api` reste la façade
 publique et l'orchestrateur, tandis que les domaines App, Products, Paywalls,
 Dynamic Links, Support, Marketing et Onboardings sont progressivement isolés dans
 leur propre Worker et leur propre base D1.
 
-Pour les seize rôles OpenGrow, le manifeste de cible
+Pour les seize rôles SuperBoard, le manifeste de cible
 [`deploy/targets/vocostar.json`](../deploy/targets/vocostar.json) est la source de
 vérité du déploiement. Les sept Workers du backend mobile gardent chacun leur propre
 configuration Wrangler sous `app-vocostar/cloudflare`; il n'existe pas de manifeste
-transversal commun. Les fichiers OpenGrow sous `deploy/generated` sont des artefacts
+transversal commun. Les fichiers SuperBoard sous `deploy/generated` sont des artefacts
 Wrangler générés et ne doivent pas être modifiés manuellement.
 
 ## Topologie générale
@@ -59,7 +59,7 @@ Wrangler générés et ne doivent pas être modifiés manuellement.
 ```mermaid
 flowchart TB
   mobile["Application FlutterFlow VocoStar<br/>iOS / Android"]
-  operators["Opérateurs OpenGrow"]
+  operators["Opérateurs SuperBoard"]
   stores["Apple App Store / Google Play"]
   firebase["Firebase Analytics, Crashlytics et FCM"]
   chatwoot["Code client : sup.vocostar.com (mort)<br/>Runtime : chat.vocostar.com"]
@@ -75,7 +75,7 @@ flowchart TB
     legacyMoney["intern-money-manager<br/>Webhook RevenueCat legacy"]
   end
 
-  subgraph grow["OpenGrow cible — 16 Workers"]
+  subgraph grow["SuperBoard cible — 16 Workers"]
     dashboard["opengrow<br/>grow.vocostar.com"]
     api["opengrow-api<br/>api + sdk + liens courts"]
     shared["Identity · Files · Email<br/>Observability · MCP"]
@@ -113,24 +113,24 @@ flowchart TB
 
 ## Les deux architectures Cloudflare
 
-Le backend Vocostar et OpenGrow partagent le compte et le domaine `vocostar.com`,
+Le backend Vocostar et SuperBoard partagent le compte et le domaine `vocostar.com`,
 mais pas leur autorité métier :
 
 | Plan                              | Entrée principale                                                        | Autorité                                                     | Stockage principal                                                  |
 | --------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------- |
 | Application Vocostar              | `api.vocostar.com`                                                       | utilisateurs, JWT, crédits, contenus, voix, médias           | D1 `vocostar-db`, R2 `app-vocostar`, deux Durable Objects WebSocket |
-| OpenGrow                          | `sdk.vocostar.com`, `go.vocostar.com`                                    | achats vérifiés, entitlements, paywalls, liens et croissance | D1/KV/R2 centraux et bases D1 de domaine                            |
+| SuperBoard                          | `sdk.vocostar.com`, `go.vocostar.com`                                    | achats vérifiés, entitlements, paywalls, liens et croissance | D1/KV/R2 centraux et bases D1 de domaine                            |
 | Support référencé par FlutterFlow | `sup.vocostar.com` ne résout plus ; runtime trouvé à `chat.vocostar.com` | contacts et conversations Chatwoot/OpenChat                  | fork `mbzadev/openchat`, trois Workers, D1/R2/Queues/Vectorize      |
 
 `api-auth-gateway` est le pont d'identité et de projection entre les deux plans : il
-émet un JWT ES256 OpenGrow à partir du JWT HS256 de Vocostar et reçoit le webhook
+émet un JWT ES256 SuperBoard à partir du JWT HS256 de Vocostar et reçoit le webhook
 signé qui projette `premium` et `subscription` dans la table `users` de Vocostar.
 
 ## Catalogue des 7 Workers du backend Vocostar
 
 | Worker configuré                 | Exposition observée                                                           | Rôle                                                                                          | Ressources                                                                                |
 | -------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `api-auth-gateway`               | domaine attendu `api.vocostar.com`; aucune route custom dans `wrangler.jsonc` | API mobile, JWT, données app, crédits, création de jobs, JWKS OpenGrow, webhooks et WebSocket | D1 `vocostar-db`, DO `UserVocalsRoom` et `UserMediasRoom`, Service Bindings Pipeline/Data |
+| `api-auth-gateway`               | domaine attendu `api.vocostar.com`; aucune route custom dans `wrangler.jsonc` | API mobile, JWT, données app, crédits, création de jobs, JWKS SuperBoard, webhooks et WebSocket | D1 `vocostar-db`, DO `UserVocalsRoom` et `UserMediasRoom`, Service Bindings Pipeline/Data |
 | `intern-data-manager`            | URL `workers.dev` construite explicitement par le code                        | upload R2 direct et suppression D1/R2                                                         | D1 `vocostar-db`, R2 `app-vocostar`                                                       |
 | `intern-pipeline-dispatcher`     | annoncé interne, mais `workers_dev=false` absent                              | enrichit les jobs et les distribue aux orchestrateurs/notifications                           | D1, trois Service Bindings                                                                |
 | `send-users-medias-orchestrator` | privé (`workers_dev=false`, sans route), généré depuis la target              | traitement vidéo/audio/texte, pools Standard/Premium                                          | D1, Workflow, Dispatcher DO, 2 classes Container                                          |
@@ -164,7 +164,7 @@ Cette transition est volontairement **bloquée pour tout déploiement actif**.
 Le plan expose `runtime-bridge-unverified`, `files-input-routing-inactive` et
 `gateway-callback-owner-mismatch`. Les versions peuvent être générées et chargées
 sans trafic, mais la promotion ne devient possible qu'après activation vérifiée
-de Files, portage et test des quatre callbacks dans l'API OpenGrow, changement du
+de Files, portage et test des quatre callbacks dans l'API SuperBoard, changement du
 propriétaire déclaré du gateway et revue explicite de `deploymentStatus`. Ainsi,
 aucune bascule de `api.vocostar.com` ou des orchestrateurs ne peut être déduite de
 la simple présence du code migré.
@@ -172,7 +172,7 @@ la simple présence du code migré.
 Le bucket média historique est lui aussi une ressource applicative déclarée par
 la target (`customR2`) et inventoriée par le bootstrap. Les conteneurs reçoivent
 son nom à l'exécution ; ils ne peuvent donc ni basculer silencieusement vers le
-bucket de fichiers OpenGrow, ni embarquer un nom de bucket dans leur source.
+bucket de fichiers SuperBoard, ni embarquer un nom de bucket dans leur source.
 Les tailles de pools sont dérivées de `maxInstances` et les réservations de slot
 ont un bail borné déclaré dans la target : un arrêt brutal de Workflow ne peut
 donc pas bloquer définitivement une instance dans le Dispatcher.
@@ -188,14 +188,14 @@ donc pas bloquer définitivement une instance dans le Dispatcher.
 | Santé               | `GET /health`                                                                        | disponibilité du gateway                                                            |
 | Auth applicative    | `POST /auth/anonymous`, `/auth/refresh`, `/auth/logout`                              | utilisateur anonyme lié au device, access JWT HS256, refresh JWT et sessions D1     |
 | Comptes sociaux     | `/auth/link/google`, `/auth/link/apple`, `/auth/signin/google`, `/auth/signin/apple` | vérification des JWT Google/Apple et liaison au profil D1                           |
-| Identité OpenGrow   | `POST /auth/opengrow-token`, `GET /.well-known/jwks.json`                            | échange du JWT applicatif contre un JWT ES256 de 5 minutes, vérifiable par OpenGrow |
+| Identité SuperBoard   | `POST /auth/opengrow-token`, `GET /.well-known/jwks.json`                            | échange du JWT applicatif contre un JWT ES256 de 5 minutes, vérifiable par SuperBoard |
 | Profil              | `GET/PATCH /users/me`                                                                | profil, langue, onboarding, FCM et préférences vocales                              |
 | Contenu app         | `/app/vocals`, `/app/categories`, `/app/questions`, `/app/board`                     | catalogue vocal et contenu d'onboarding provenant de D1                             |
 | Jobs                | `/users/vocals`, `/users/medias`, `/users/credits-check`                             | création/listage des transformations et débit atomique des crédits                  |
 | Fichiers/nettoyage  | `/upload/media`, `/clean/medias`, `/clean/vocals`, `/clean/user`                     | proxy authentifié vers `intern-data-manager`                                        |
 | Temps réel          | `/ws/vocals`, `/ws/medias` et routes de notification/progression                     | WebSocket par utilisateur via Durable Objects                                       |
 | Configuration       | `GET /settings/active`                                                               | maintenance, version forcée et ancien JSON de paywall                               |
-| Projection OpenGrow | `POST /webhook/opengrow/entitlements`                                                | vérifie HMAC, déduplique et projette premium/subscription                           |
+| Projection SuperBoard | `POST /webhook/opengrow/entitlements`                                                | vérifie HMAC, déduplique et projette premium/subscription                           |
 
 L'access token applicatif dure actuellement 1 296 000 secondes (15 jours) et le
 refresh token 3 888 000 secondes (45 jours). Les documents historiques qui parlent
@@ -274,7 +274,7 @@ watermark et miniature), audio (source + voix transformée) et texte (TTS transf
 `send-app-notifications` récupère un access token OAuth Google avec son compte de
 service, appelle FCM v1, puis marque l'audit D1 `sent` ou `failed`.
 
-`intern-money-manager` ne participe pas au parcours OpenGrow moderne. Il reçoit un
+`intern-money-manager` ne participe pas au parcours SuperBoard moderne. Il reçoit un
 webhook RevenueCat legacy, journalise l'achat et ajoute les crédits de manière
 idempotente. Aucun Service Binding ne le relie au gateway dans la configuration
 actuelle ; son routage de production doit donc être confirmé séparément.
@@ -291,14 +291,14 @@ portugais, allemand, japonais et coréen.
 
 | Zone                  | Pages principales                                                       | Fonctionnement                                                                                               |
 | --------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Entrée                | `index`                                                                 | restaure l'état, ré-authentifie anonymement, initialise OpenGrow puis oriente vers onboarding ou application |
-| Onboarding            | `onboard00` à `onboard05`                                               | contenu D1 `app_board`, questions/catégories, sélection des voix, FCM puis page Paywall OpenGrow             |
+| Entrée                | `index`                                                                 | restaure l'état, ré-authentifie anonymement, initialise SuperBoard puis oriente vers onboarding ou application |
+| Onboarding            | `onboard00` à `onboard05`                                               | contenu D1 `app_board`, questions/catégories, sélection des voix, FCM puis page Paywall SuperBoard             |
 | Navigation principale | `UserClone`, `UserVocals`, `UserLibrary`                                | trois onglets : créer un clone, choisir une voix, consulter les médias                                       |
 | Création              | `UserRecordVideo`, `UserRecordAudio`, `UserRecordText`, `UserUpload`    | capture locale, contrôle crédits, upload R2 et création du job                                               |
 | Lecture               | `UserPlayerMedia`                                                       | résout la sortie JSON, lit, partage ou supprime le média                                                     |
 | Compte                | `UserLinkAccount`, `UserSignAccount`                                    | liaison ou connexion Google/Apple au compte anonyme                                                          |
 | Réglages              | `SettingsUser`, `SettingsLanguage`, `SettingsSupport`, `SettingsTicket` | profil, langue, suppression, documents et chat Chatwoot                                                      |
-| Monétisation          | route de bibliothèque `/opengrow-paywall`                               | `paywallR1`, Settings Premium et la fin de l'onboarding ouvrent l'unique page Paywall OpenGrow               |
+| Monétisation          | route de bibliothèque `/opengrow-paywall`                               | `paywallR1`, Settings Premium et la fin de l'onboarding ouvrent l'unique page Paywall SuperBoard               |
 
 ### État local
 
@@ -309,7 +309,7 @@ Les éléments structurants de `FFAppState` sont :
 - catalogue : `appVocals`, `appMenu`, `appQuestions`, `appBoard`, `appPaywall` ;
 - utilisateur : `appUserVocals`, `appUserMedias`, catégories, crédits et Premium ;
 - temps réel/support : flags média/voix, progression d'upload, IDs Chatwoot et messages ;
-- OpenGrow : `opengrowPurchasesReady` indique qu'un `CustomerInfo` signé a été reçu.
+- SuperBoard : `opengrowPurchasesReady` indique qu'un `CustomerInfo` signé a été reçu.
 
 Les JWT applicatifs et le refresh token sont persistés dans `SharedPreferences` par
 le code généré. Le device UUID, lui, utilise `flutter_secure_storage` et le
@@ -317,18 +317,18 @@ trousseau synchronisable iCloud en secours.
 
 ### Démarrage et authentification
 
-1. `main()` initialise les valeurs OpenGrow, Firebase, Crashlytics, Analytics et le
-   listener de `CustomerInfo` OpenGrow.
+1. `main()` initialise les valeurs SuperBoard, Firebase, Crashlytics, Analytics et le
+   listener de `CustomerInfo` SuperBoard.
 2. `userAuthenticate()` choisit un identifiant stable du device, construit un email
    invité et appelle `POST /auth/anonymous`.
 3. Le gateway crée ou retrouve l'utilisateur puis renvoie access token, refresh token
    et profil. FlutterFlow les persiste et ouvre la session de son auth custom.
-4. L'app remet l'access token au package OpenGrow. Celui-ci appelle
+4. L'app remet l'access token au package SuperBoard. Celui-ci appelle
    `POST /auth/opengrow-token`, obtient le JWT ES256 court, puis initialise Purchases
    sur `https://sdk.vocostar.com/purchases/v2`.
 5. Le `CustomerInfo` signé met à jour `premium`, `subscription` et
    `opengrowPurchasesReady`. Le gateway reçoit également le webhook entitlement pour
-   que D1 reflète l'autorité OpenGrow côté serveur.
+   que D1 reflète l'autorité SuperBoard côté serveur.
 
 Ce paragraphe décrit encore le runtime observé dans l'export VocoStar. La cible
 de remplacement est désormais implémentée dans le SDK FlutterFlow `2.2.4` : le
@@ -337,7 +337,7 @@ l'auth FlutterFlow ne reçoit qu'un access token éphémère. Les trois champs d
 tokens/expiration persistés dans l'App State VocoStar doivent donc disparaître ;
 aucune application ne doit réimplémenter un second gestionnaire de session.
 
-### Achats OpenGrow : architecture prévue et câblage réel
+### Achats SuperBoard : architecture prévue et câblage réel
 
 L'export historique embarquait une ancienne révision privée du package
 FlutterFlow. La cible utilise exclusivement la référence immuable publiée dans
@@ -354,15 +354,15 @@ jusqu'à `RllpTDAzXqy5vRMb1dk4` ont conservé ce parcours unique :
 
 - `paywallR1`, Settings Premium et la fin de l'onboarding ouvrent la route
   `/opengrow-paywall`, qui est remplacée par la page de bibliothèque
-  `OpenGrowPaywallPage` et son widget canonique `OpenGrowPaywall` ;
+  `SuperBoardPaywallPage` et son widget canonique `SuperBoardPaywall` ;
 - `userLoginRevenueCat`, `userSubscriptionActivate`, `Paywallv1` et la page
   `onboardWall` ont été supprimés ;
 - la migration Git de la bibliothèque remappe les anciens widgets
   `OGBootstrapBridge`, `OGPaywallBridge` et `OGRestoreBridge` vers
-  `OpenGrowBootstrap`, `OpenGrowPaywall` et
-  `OpenGrowRestorePurchasesButton`, puis supprime ces trois doublons ;
+  `SuperBoardBootstrap`, `SuperBoardPaywall` et
+  `SuperBoardRestorePurchasesButton`, puis supprime ces trois doublons ;
 - il reste à certifier les achats/restaurations Apple et Google sur MBZA ;
-- `OpenGrowBootstrap` doit être monté dans l'écran hôte de VocoStar lors de la
+- `SuperBoardBootstrap` doit être monté dans l'écran hôte de VocoStar lors de la
   synchronisation contrôlée de la bibliothèque ; tant que cette migration distante
   n'est pas publiée, le transfert des deep links et certains callbacks globaux
   restent volontairement bloqués par la readiness.
@@ -410,10 +410,10 @@ sequenceDiagram
   A->>DB: premium/subscription + déduplication
 ```
 
-Ce diagramme représente le parcours voulu par l'architecture OpenGrow. Le paywall
+Ce diagramme représente le parcours voulu par l'architecture SuperBoard. Le paywall
 visible de l'export FlutterFlow doit encore être basculé vers ce parcours.
 
-## Catalogue des 16 rôles de la cible OpenGrow
+## Catalogue des 16 rôles de la cible SuperBoard
 
 | Worker déployé             | Entrée du code                         | Exposition                                             | Responsabilité principale                                                                                              | Ressources Cloudflare                                                           |
 | -------------------------- | -------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -493,7 +493,7 @@ consommateur attendu de `opengrow-billing`, avec un cron toutes les dix minutes.
 
 ### 4. Messaging `opengrow-messaging`
 
-Messaging est le service temps réel historique d'OpenGrow. Ses clients SDK peuvent
+Messaging est le service temps réel historique d'SuperBoard. Ses clients SDK peuvent
 l'appeler directement sur `messages.vocostar.com` avec un JWT applicatif délivré par
 `api-auth-gateway`, mais l'export FlutterFlow Vocostar analysé appelle Chatwoot et non
 ce service. D1 conserve conversations, messages, configuration, contacts et audits ;
@@ -595,7 +595,7 @@ flowchart LR
 
 | Ressource                         | Producteurs/lecteurs             | Usage                                                                                       |
 | --------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------- |
-| D1 `opengrow-db`                  | API + Billing                    | Identité opérateur, instances/projets, legacy OpenGrow, Billing, analytics et orchestration |
+| D1 `opengrow-db`                  | API + Billing                    | Identité opérateur, instances/projets, legacy SuperBoard, Billing, analytics et orchestration |
 | KV `opengrow`                     | API + Billing                    | Cache/état léger, notamment clés publiques Google et compatibilité Billing                  |
 | R2 `opengrow`                     | API + Billing + Dashboard        | Exports/fichiers API, besoins Billing, cache incrémental OpenNext                           |
 | D1 `opengrow-messaging-db`        | Messaging                        | État historique de messagerie                                                               |
@@ -665,7 +665,7 @@ registre de cutover.
 ### Corrigé — liaison de la Library Value FlutterFlow
 
 Le commit `FP4iR0KkMm5jpto4nfvZ` rattache `authGatewayBaseUrl` au véritable projet
-de bibliothèque OpenGrow, puis `9p0A3lMth8sLkly8lDis` fait passer l'action block
+de bibliothèque SuperBoard, puis `9p0A3lMth8sLkly8lDis` fait passer l'action block
 Paywall par un adaptateur compilable. L'export n'émet plus les symboles invalides
 `null_library_values` ou `$open_grow_private_4m5us1` sans import. L'analyse Dart
 complète confirme zéro erreur de compilation; les warnings et informations de
@@ -730,17 +730,17 @@ du compte et les URLs Modal. Ce ne sont pas tous des secrets, mais ce sont des
 paramètres de déploiement propres à un compte et une application; ils empêchent une
 promotion sûre dev/main et favorisent les déploiements sur la mauvaise cible.
 
-La base OpenGrow corrige cette classe de problème par les manifestes versionnés
+La base SuperBoard corrige cette classe de problème par les manifestes versionnés
 `deploy/targets/*`, les IDs de compte fournis uniquement par GitHub Environment et
 les configurations Wrangler générées. Les deux orchestrateurs VocoStar suivent
 désormais le même générateur et sont découverts depuis la target. Ils restent
 néanmoins des dépendances de migration tant que le runtime bridge fail-closed
 décrit plus haut n'est pas vérifié.
 
-### Résolu le 9 août — paywall unique OpenGrow
+### Résolu le 9 août — paywall unique SuperBoard
 
 Tous les points d'entrée partagés de l'application naviguent désormais vers la
-page de bibliothèque OpenGrow. Les actions client RevenueCat et l'ancienne
+page de bibliothèque SuperBoard. Les actions client RevenueCat et l'ancienne
 implémentation visuelle ont été supprimées. Le risque restant n'est plus un doublon
 d'architecture : c'est la certification externe des produits, achats et restaurations
 Apple/Google sur MBZA, puis la promotion immuable vers VocoStar.
@@ -765,9 +765,9 @@ malgré les commentaires du code qui annoncent le contraire.
 ### Élevé — le callback entitlement doit être aligné dans la configuration live
 
 La route réellement exposée par le gateway est au singulier
-`/webhook/opengrow/entitlements`. Plusieurs exemples/tests OpenGrow utilisent le
+`/webhook/opengrow/entitlements`. Plusieurs exemples/tests SuperBoard utilisent le
 pluriel `/webhooks/opengrow/entitlements`. La destination est stockée dans les données
-du projet OpenGrow et n'est pas visible dans les fichiers analysés : il faut vérifier
+du projet SuperBoard et n'est pas visible dans les fichiers analysés : il faut vérifier
 la valeur live, le secret HMAC des deux côtés et une livraison de bout en bout.
 
 ### Résolu dans la base cible — collision de consommateur Queue entre Messaging et Support
@@ -796,7 +796,7 @@ désormais de réintroduire ce Worker inexistant.
 ### Résolu dans la base cible — dépendance Auth Gateway hors inventaire
 
 `api.vocostar.com`, son issuer, son audience, son JWKS et ses origines applicatives
-sont maintenant portés par la cible OpenGrow. Identity, Files et les modules privés
+sont maintenant portés par la cible SuperBoard. Identity, Files et les modules privés
 reçoivent ces valeurs par génération, et l'API devient l'unique façade après le
 cutover. Le déploiement live et la rotation des clés restent des opérations externes.
 
@@ -808,19 +808,19 @@ D1 du service avant acquittement. Les corps sont bornés, les champs sensibles s
 masqués, l'empreinte SHA-256 est conservée et `/infrastructure` expose les compteurs
 des services actifs.
 
-### Résolu dans la base OpenGrow — CORS API plus large que le manifeste
+### Résolu dans la base SuperBoard — CORS API plus large que le manifeste
 
 L'API génère désormais `CORS_ORIGINS_JSON` depuis le Dashboard et les `webOrigins`
 de l'identité applicative; aucune origine générique n'est acceptée. Support et la
 compatibilité Messaging utilisent également l'origine exacte du manifeste. Les
-anciens Workers VocoStar hors OpenGrow doivent encore être fermés lors de leur
+anciens Workers VocoStar hors SuperBoard doivent encore être fermés lors de leur
 absorption ou de leur retrait.
 
 ### Moyen — jetons applicatifs persistés hors stockage sécurisé
 
 FlutterFlow écrit access token et refresh token dans `SharedPreferences`, alors qu'il
 utilise déjà `flutter_secure_storage` pour l'identifiant du device. Le refresh token
-devrait être migré vers Keychain/Keystore. Le provider OpenGrow de la version SDK
+devrait être migré vers Keychain/Keystore. Le provider SuperBoard de la version SDK
 embarquée capture aussi l'access token applicatif au moment de l'initialisation ; un
 refresh FlutterFlow ultérieur ne remplace pas automatiquement cette valeur dans la
 closure du SDK.
@@ -829,7 +829,7 @@ closure du SDK.
 
 `UserClone` se désabonne de `users_vocals` à la destruction sans jamais s'y abonner,
 donc la fin d'un clonage n'actualise pas cet écran en temps réel. Par ailleurs les
-manifests natifs OpenGrow sont configurés, mais `OpenGrowBootstrap` n'est monté dans
+manifests natifs SuperBoard sont configurés, mais `SuperBoardBootstrap` n'est monté dans
 aucun écran hôte. Les App/Universal Links peuvent ouvrir l'app au niveau natif sans
 que le bridge Flutter consomme et redistribue complètement leur payload.
 
@@ -865,7 +865,7 @@ runbooks exécutables.
 
 1. Conserver la Library Value FlutterFlow `authGatewayBaseUrl` et l'action
    `openGrowPaywall` sous test de non-régression. Le remplacement des appels
-   `paywallR1` par le paywall OpenGrow est réalisé; certifier maintenant Purchase
+   `paywallR1` par le paywall SuperBoard est réalisé; certifier maintenant Purchase
    et Restore sur appareils réels.
 2. Fermer tous les Workers Vocostar internes (`workers_dev=false`) et signer les appels
    inter-service. Remplacer l'upload statique par une autorisation courte, non
@@ -875,9 +875,9 @@ runbooks exécutables.
    `/api/v1/sdk/custom/v1/jobs`, corriger le contrat Chatwoot et l'abonnement
    WebSocket vocal, puis tester les trois pipelines de bout en bout, y compris
    le remboursement idempotent d'un job annulé avant démarrage.
-4. Faire une livraison OpenGrow réelle en sandbox : échange d'identité, offering,
+4. Faire une livraison SuperBoard réelle en sandbox : échange d'identité, offering,
    achat/restore, CustomerInfo signé et webhook entitlement jusqu'au D1 Vocostar.
-5. Conserver uniquement les ingress OpenGrow déclarés par la cible : Dashboard,
+5. Conserver uniquement les ingress SuperBoard déclarés par la cible : Dashboard,
    API/SDK/liens/fichiers, MCP et mail-preview protégée. Garder Billing et les sept
    domaines uniquement derrière les Service Bindings de l'API.
 6. Exploiter la Queue Support dédiée, surveiller les compteurs de quarantaine et
@@ -887,7 +887,7 @@ runbooks exécutables.
 8. Décider explicitement de la migration du support Chatwoot vers `opengrow-support` ;
    tant que ce n'est pas fait, ne pas présenter le Worker Support comme le backend du
    chat mobile.
-9. Terminer le cutover OpenGrow projet par projet, valider les buckets séparés et
+9. Terminer le cutover SuperBoard projet par projet, valider les buckets séparés et
    exécuter les runbooks GitHub/Cloudflare sur les comptes autorisés.
 
 ## Sources inspectées
@@ -900,7 +900,7 @@ runbooks exécutables.
 - [`FlutterFlow apis.dart`](/Users/appmonster/Workspace/app-vocostar-ff/lib/flutterflow_project/apis.dart)
 - [`export Flutter main.dart`](/Users/appmonster/Workspace/app-vocostar-ff/generated_code/lib/main.dart)
 - les pages, actions custom, auth, API calls, manifests natifs et package privé
-  OpenGrow sous `/Users/appmonster/Workspace/app-vocostar-ff/generated_code` ;
+  SuperBoard sous `/Users/appmonster/Workspace/app-vocostar-ff/generated_code` ;
 - [`deploy/targets/vocostar.json`](../deploy/targets/vocostar.json)
 - [`scripts/cloudflare-config.mjs`](../scripts/cloudflare-config.mjs)
 - [`scripts/cloudflare-services.mjs`](../scripts/cloudflare-services.mjs)
@@ -915,9 +915,9 @@ runbooks exécutables.
 
 | Zone                         | Commande                                    | Résultat                                                                                  |
 | ---------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| OpenGrow cibles/contrats     | `npm run cloudflare:test:targets`           | 73 tests réussis                                                                          |
-| OpenGrow API custom SDK      | test ciblé + type-check                     | 3 tests réussis, type-check réussi                                                        |
-| OpenGrow custom VocoStar     | `npm run custom-vocostar:check`             | 6 tests unitaires + 4 tests D1 runtime, type-check réussi                                 |
+| SuperBoard cibles/contrats     | `npm run cloudflare:test:targets`           | 73 tests réussis                                                                          |
+| SuperBoard API custom SDK      | test ciblé + type-check                     | 3 tests réussis, type-check réussi                                                        |
+| SuperBoard custom VocoStar     | `npm run custom-vocostar:check`             | 6 tests unitaires + 4 tests D1 runtime, type-check réussi                                 |
 | Gateway Vocostar             | `npm test`                                  | 17 tests réussis sur 7 fichiers                                                           |
 | Gateway Vocostar             | `npm run type-check`                        | réussi                                                                                    |
 | Money Manager                | `npm test`                                  | 4 tests réussis sur 2 fichiers                                                            |

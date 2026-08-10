@@ -9,13 +9,13 @@ import {
   parseCustomWorkerJob,
   parseCustomWorkerScope,
   type CustomWorkerManifest,
-} from "@opengrow/contracts/custom-worker";
+} from "@superboard/contracts/custom-worker";
 import {
   RequestBodyError,
   readJsonLimited,
-} from "@opengrow/contracts/request-body";
-import { configuredSecrets } from "@opengrow/contracts/secret";
-import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+} from "@superboard/contracts/request-body";
+import { configuredSecrets } from "@superboard/contracts/secret";
+import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import {
   cancelJob,
   createJob,

@@ -46,7 +46,7 @@ describe("SDK setup distribution contract", () => {
       'providers.environmentVariable("OPENGROW_GITHUB_PACKAGES_TOKEN")'
     );
     expect(blocks[0]?.code).toContain(
-      'url = uri("https://maven.pkg.github.com/mbzadev/opengrow-platform")'
+      'url = uri("https://maven.pkg.github.com/mbzadev/superboard-platform")'
     );
     expect(blocks[1]?.code).toBe(
       'implementation("io.opengrow:opengrow-android-sdk:1.0.3")'

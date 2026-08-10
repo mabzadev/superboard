@@ -91,11 +91,25 @@ function validateDependencies({ manifest, catalog, source, errors }) {
       errors.push(`Unknown SDK catalogue entry ${dependency.catalogId}`);
       continue;
     }
-    if (library.packageName !== dependency.packageName) {
+    const packageName = library.candidatePackageName ?? library.packageName;
+    const sourceVersion = library.candidatePackageName
+      ? library.sourceVersion
+      : library.latestReleaseVersion;
+    const requiredRef = library.candidatePackageName
+      ? candidateRef(library)
+      : library.releaseRef;
+    if (packageName !== dependency.packageName) {
       errors.push(`${dependency.catalogId} package name does not match catalogue`);
     }
-    if (library.sourceVersion !== dependency.sourceVersion) {
-      errors.push(`${dependency.catalogId} source version does not match catalogue`);
+    if (sourceVersion !== dependency.sourceVersion) {
+      errors.push(
+        `${dependency.catalogId} source version does not match catalogue candidate`,
+      );
+    }
+    if (requiredRef !== dependency.requiredRef) {
+      errors.push(
+        `${dependency.catalogId} immutable ref does not match catalogue candidate`,
+      );
     }
     if (!source.includes(`name: '${dependency.packageName}'`)) {
       errors.push(`${dependency.packageName} dependency is absent from the DSL`);
@@ -110,6 +124,13 @@ function validateDependencies({ manifest, catalog, source, errors }) {
   if (/ref:\s*(?:main|dev)\s*$/m.test(source)) {
     errors.push("FlutterFlow dependencies must use immutable release refs");
   }
+}
+
+function candidateRef(library) {
+  const prefix = library.id === "flutterflow"
+    ? "sdk-flutterflow-v"
+    : `sdk-${library.id}-v`;
+  return `${prefix}${library.sourceVersion}`;
 }
 
 function validateActions({ manifest, source, errors }) {

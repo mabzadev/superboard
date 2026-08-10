@@ -1,8 +1,8 @@
 import type {
   EmailServiceMessage,
   EmailSmtpTransportRequest,
-} from "@opengrow/contracts/email";
-import { constantTimeEqual } from "@opengrow/contracts/secret";
+} from "@superboard/contracts/email";
+import { constantTimeEqual } from "@superboard/contracts/secret";
 
 const EMAIL = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/;
 const KINDS = new Set(["transactional", "marketing", "test"]);

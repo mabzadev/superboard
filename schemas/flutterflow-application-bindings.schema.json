@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opengrow.dev/schemas/flutterflow-application-bindings.schema.json",
-  "title": "Resolved OpenGrow FlutterFlow application bindings",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-application-bindings.schema.json",
+  "title": "Resolved SuperBoard FlutterFlow application bindings",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "owner", "generatedFrom", "applications"],
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 2 },
-    "owner": { "const": "opengrow-platform" },
+    "owner": { "const": "superboard-platform" },
     "generatedFrom": { "const": "config/flutterflow-applications.json" },
     "applications": {
       "type": "array",
@@ -71,7 +71,7 @@
                     },
                     "key": {
                       "type": "string",
-                      "pattern": "^opengrow_[a-z0-9_]+$"
+                      "pattern": "^superboard_[a-z0-9_]+$"
                     },
                     "type": { "enum": ["string", "boolean", "integer"] }
                   }

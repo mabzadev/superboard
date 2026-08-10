@@ -1,7 +1,7 @@
 import {
   signProjectContext,
   type InternalProjectContext,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import {
   createExecutionContext,
   createMessageBatch,

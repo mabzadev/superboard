@@ -3,7 +3,7 @@ import {
   EMAIL_SERVICE_OPERATIONS_PATH,
   EMAIL_SERVICE_SEND_PATH,
   EMAIL_SERVICE_SMTP_TRANSPORT_PATH,
-} from "@opengrow/contracts/email";
+} from "@superboard/contracts/email";
 import type {
   EmailDeadLetterOperation,
   EmailOperation,
@@ -12,24 +12,24 @@ import type {
   EmailSmtpTransportReceipt,
   EmailSmtpTransportRequest,
   EmailTransportOperation,
-} from "@opengrow/contracts/email";
+} from "@superboard/contracts/email";
 import {
   RequestBodyError,
   readJsonLimited,
-} from "@opengrow/contracts/request-body";
+} from "@superboard/contracts/request-body";
 import {
   DEAD_LETTER_MAX_RECORDS,
   deadLetterPayload,
-} from "@opengrow/contracts/dead-letter";
+} from "@superboard/contracts/dead-letter";
 import {
   configuredSecrets,
   matchesAnySecret,
-} from "@opengrow/contracts/secret";
-import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+} from "@superboard/contracts/secret";
+import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import {
   EmailTransportError,
   sendSmtpMessage,
-} from "@opengrow/email-transport";
+} from "@superboard/email-transport";
 import {
   EmailValidationError,
   parseEmailMessage,
@@ -1421,12 +1421,12 @@ type ReplayableDeadLetterRow = Pick<
 
 const PREVIEW_HTML = `<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OpenGrow Mail Preview</title><style>
+<title>SuperBoard Mail Preview</title><style>
 body{font:14px system-ui;margin:0;background:#0b1020;color:#e5e7eb}main{max-width:1100px;margin:auto;padding:32px}
 input,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #334155;background:#111827;color:inherit}button{cursor:pointer}
 .bar{display:flex;gap:8px;margin-bottom:24px}.grid{display:grid;grid-template-columns:360px 1fr;gap:16px}.panel{background:#111827;border:1px solid #243047;border-radius:12px;padding:16px}
 .item{display:block;width:100%;text-align:left;margin:8px 0}.muted{color:#94a3b8}iframe{width:100%;min-height:480px;background:white;border:0;border-radius:8px}pre{white-space:pre-wrap}
-</style><main><h1>OpenGrow Mail Preview</h1><p class="muted">Development mail capture</p>
+</style><main><h1>SuperBoard Mail Preview</h1><p class="muted">Development mail capture</p>
 <div class="bar"><input id="token" type="password" placeholder="Preview access token"><button id="connect">Connect</button><button id="clear">Clear captured mail</button></div>
 <div class="grid"><section class="panel"><h2>Messages</h2><div id="messages"></div></section><section class="panel"><h2 id="subject">Preview</h2><div id="detail" class="muted">Select a message.</div></section></div>
 <script>

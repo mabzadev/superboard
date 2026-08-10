@@ -189,7 +189,7 @@ export function sdkInstallCode(platform: "android" | "web"): CodeBlockData[] {
     "dependencyResolutionManagement {",
     "    repositories {",
     "        maven {",
-    '            name = "OpenGrowGitHubPackages"',
+    '            name = "SuperBoardGitHubPackages"',
     `            url = uri("${distribution.registry}")`,
     "            credentials {",
     "                username = openGrowPackagesUser",
@@ -233,19 +233,19 @@ function stepCode(
       return code(
         "swift",
         "AppDelegate.swift",
-        `OpenGrow.shared.registerForPushNotifications()`
+        `SuperBoard.shared.registerForPushNotifications()`
       );
     if (step === 4)
       return code(
         "swift",
         "AppDelegate.swift",
-        `OpenGrowPurchases.shared.configure(storeKit: .automatic)`
+        `SuperBoardPurchases.shared.configure(storeKit: .automatic)`
       );
     if (step === 5)
       return code(
         "swift",
         "App.swift",
-        `OpenGrow.configure(\n  accessKey: "${accessKey}",\n  appId: "${form.bundle_id || "com.example.app"}"\n)`
+        `SuperBoard.configure(\n  accessKey: "${accessKey}",\n  appId: "${form.bundle_id || "com.example.app"}"\n)`
       );
   }
   if (platform === "android") {
@@ -259,20 +259,20 @@ function stepCode(
     if (step === 3)
       return code(
         "kotlin",
-        "OpenGrowMessagingService.kt",
-        `OpenGrow.setPushToken(token)`
+        "SuperBoardMessagingService.kt",
+        `SuperBoard.setPushToken(token)`
       );
     if (step === 4)
       return code(
         "kotlin",
         "Application.kt",
-        `OpenGrowPurchases.configure(this)`
+        `SuperBoardPurchases.configure(this)`
       );
     if (step === 5)
       return code(
         "kotlin",
         "Application.kt",
-        `OpenGrow.initialize(\n  context = this,\n  accessKey = "${accessKey}",\n  appId = "${form.package_name || "com.example.app"}"\n)`
+        `SuperBoard.initialize(\n  context = this,\n  accessKey = "${accessKey}",\n  appId = "${form.package_name || "com.example.app"}"\n)`
       );
   }
   if (platform === "web") {
@@ -281,8 +281,8 @@ function stepCode(
     if (step === 2)
       return code(
         "typescript",
-        "opengrow.ts",
-        `import OpenGrow from "${javascriptLibrary.packageName}";\n\nconst openGrow = new OpenGrow(\n  "${accessKey}",\n  false,\n  (data) => console.info("OpenGrow link", data),\n  "${config.sdkUrl}",\n);\nopenGrow.start();`
+        "superboard.ts",
+        `import SuperBoard from "${javascriptLibrary.packageName}";\n\nconst openGrow = new SuperBoard(\n  "${accessKey}",\n  false,\n  (data) => console.info("SuperBoard link", data),\n  "${config.sdkUrl}",\n);\nopenGrow.start();`
       );
   }
   return null;
@@ -745,22 +745,22 @@ function stepDescription(platform: SdkPlatform, step: number) {
     ios: [
       "Register the bundle and Apple development team used by your application.",
       "Declare the URL scheme used to return customers to the correct screen.",
-      "Install the native OpenGrow package with Swift Package Manager.",
+      "Install the native SuperBoard package with Swift Package Manager.",
       "Connect APNs so messaging and link attribution can continue after install.",
       "Connect server-side App Store purchase events without exposing credentials in the app.",
-      "Initialize OpenGrow once during application startup.",
+      "Initialize SuperBoard once during application startup.",
     ],
     android: [
       "Register the Android package and signing certificate.",
       "Declare verified intent filters for web and application deep links.",
-      "Add the OpenGrow Android package to your Gradle build.",
+      "Add the SuperBoard Android package to your Gradle build.",
       "Connect Firebase Cloud Messaging for attribution and support notifications.",
       "Connect server-side Google Play purchase events without shipping credentials.",
-      "Initialize OpenGrow once from the Application class.",
+      "Initialize SuperBoard once from the Application class.",
     ],
     web: [
       "Register the public domain allowed to initialize the Web SDK.",
-      "Install the OpenGrow Web package with your package manager.",
+      "Install the SuperBoard Web package with your package manager.",
       "Initialize the SDK once and forward client-side navigation events.",
     ],
   };

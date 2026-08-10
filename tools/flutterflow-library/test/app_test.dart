@@ -3,16 +3,16 @@ import 'package:flutterflow_ai/src/helpers/action_block_helpers.dart';
 import 'package:flutterflow_ai/src/helpers/library_value_helpers.dart';
 import 'package:test/test.dart';
 
-import '../dsl/edit.dart' as opengrow;
+import '../dsl/edit.dart' as superboard;
 
 void main() {
-  test('OpenGrow private library DSL compiles', () {
-    final app = buildApp(opengrow.buildStarterEditFlow);
+  test('SuperBoard private library DSL compiles', () {
+    final app = buildApp(superboard.buildStarterEditFlow);
     final project = compileApp(app).project;
 
-    expect(findActionBlock(project, name: 'OpenGrowBuyPackage'), isNotNull);
+    expect(findActionBlock(project, name: 'SuperBoardBuyPackage'), isNotNull);
     expect(
-      findActionBlock(project, name: 'OpenGrowRestorePurchases'),
+      findActionBlock(project, name: 'SuperBoardRestorePurchases'),
       isNotNull,
     );
     expect(
@@ -33,6 +33,18 @@ void main() {
     );
     expect(
       project.appState.fields.map((field) => field.parameter.identifier.name),
+      isNot(contains('superboardApplicationAccessToken')),
+    );
+    expect(
+      project.appState.fields.map((field) => field.parameter.identifier.name),
+      isNot(contains('superboardIdentityToken')),
+    );
+    expect(
+      project.appState.fields.map((field) => field.parameter.identifier.name),
+      isNot(contains('superboardVocostarAccessToken')),
+    );
+    expect(
+      project.appState.fields.map((field) => field.parameter.identifier.name),
       isNot(contains('opengrowApplicationAccessToken')),
     );
     expect(
@@ -46,50 +58,49 @@ void main() {
     expect(
       project.customCode.customActions.map((action) => action.identifier.name),
       containsAll([
-        'opengrowApplicationInitialize',
-        'opengrowApplicationRestoreSessionJson',
-        'opengrowApplicationSignInPasswordJson',
-        'opengrowApplicationSignInProviderJson',
-        'opengrowApplicationLinkProviderJson',
-        'opengrowApplicationSignInAnonymousJson',
-        'opengrowApplicationRuntimePolicyJson',
-        'opengrowApplicationUploadFileJson',
-        'opengrowApplicationCreateCustomJobJson',
-        'opengrowApplicationUpdateMarketingConsentJson',
-        'opengrowSupportInitializeAuthenticated',
-        'opengrowSupportGetConfigurationJson',
-        'opengrowSupportListConversationsJson',
-        'opengrowSupportOpenConversation',
-        'opengrowSupportUpdateConversationJson',
-        'opengrowSupportMessagesJson',
-        'opengrowSupportSend',
-        'opengrowSupportSendAdvanced',
-        'opengrowSupportSubmitCsatJson',
-        'opengrowSupportUploadAttachmentJson',
-        'opengrowSupportDownloadAttachment',
-        'opengrowSupportSendAttachment',
-        'opengrowSupportMarkRead',
-        'opengrowSupportSetTyping',
-        'opengrowSupportConnectRealtime',
-        'opengrowSupportDisconnectRealtime',
-        'opengrowSupportGetLastRealtimeEventJson',
-        'opengrowSupportDispose',
+        'superboardApplicationInitialize',
+        'superboardApplicationRestoreSessionJson',
+        'superboardApplicationSignInPasswordJson',
+        'superboardApplicationSignInProviderJson',
+        'superboardApplicationLinkProviderJson',
+        'superboardApplicationSignInAnonymousJson',
+        'superboardApplicationRuntimePolicyJson',
+        'superboardApplicationUploadFileJson',
+        'superboardApplicationCreateCustomJobJson',
+        'superboardApplicationUpdateMarketingConsentJson',
+        'superboardSupportInitializeAuthenticated',
+        'superboardSupportGetConfigurationJson',
+        'superboardSupportListConversationsJson',
+        'superboardSupportOpenConversation',
+        'superboardSupportUpdateConversationJson',
+        'superboardSupportMessagesJson',
+        'superboardSupportSend',
+        'superboardSupportSendAdvanced',
+        'superboardSupportSubmitCsatJson',
+        'superboardSupportUploadAttachmentJson',
+        'superboardSupportDownloadAttachment',
+        'superboardSupportSendAttachment',
+        'superboardSupportMarkRead',
+        'superboardSupportSetTyping',
+        'superboardSupportConnectRealtime',
+        'superboardSupportDisconnectRealtime',
+        'superboardSupportGetLastRealtimeEventJson',
+        'superboardSupportDispose',
       ]),
     );
     expect(
       project.customCode.customWidgets.map((widget) => widget.identifier.name),
       containsAll([
-        'OpenGrowBootstrap',
-        'OpenGrowPaywall',
-        'OpenGrowOnboarding',
-        'OpenGrowRestorePurchasesButton',
-        'OpenGrowCustomerCenter',
+        'SuperBoardBootstrap',
+        'SuperBoardPaywall',
+        'SuperBoardOnboarding',
+        'SuperBoardRestorePurchasesButton',
+        'SuperBoardCustomerCenter',
       ]),
     );
-    final widgetNames =
-        project.customCode.customWidgets
-            .map((widget) => widget.identifier.name)
-            .toSet();
+    final widgetNames = project.customCode.customWidgets
+        .map((widget) => widget.identifier.name)
+        .toSet();
     for (final legacy in [
       'OGBootstrapBridge',
       'OGPaywallBridge',
@@ -98,9 +109,9 @@ void main() {
       expect(widgetNames, isNot(contains(legacy)));
     }
     for (final page in [
-      'OpenGrowPaywallPage',
-      'OpenGrowOnboardingPage',
-      'OpenGrowCustomerCenterPage',
+      'SuperBoardPaywallPage',
+      'SuperBoardOnboardingPage',
+      'SuperBoardCustomerCenterPage',
     ]) {
       expect(findPage(project, name: page), isNotNull);
     }
@@ -108,36 +119,22 @@ void main() {
         .customCode
         .pubspecPackageInfo
         .pubspecDependencies
-        .singleWhere((dependency) => dependency.name == 'opengrow_flutterflow');
-    expect(
-      sdkDependency.version,
-      contains('https://github.com/mbzadev/opengrow-platform.git'),
-    );
-    expect(sdkDependency.version, contains('sdk-flutterflow-v2.2.5'));
-    expect(sdkDependency.version, isNot(contains('git@github.com')));
-    final supportDependency = project
-        .customCode
-        .pubspecPackageInfo
-        .pubspecDependencies
         .singleWhere(
-          (dependency) => dependency.name == 'opengrow_flutterflow_messaging',
+          (dependency) => dependency.name == 'superboard_flutterflow',
         );
     expect(
-      supportDependency.version,
-      contains('https://github.com/mbzadev/opengrow-platform.git'),
+      sdkDependency.version,
+      contains('https://github.com/mbzadev/superboard-platform.git'),
     );
-    expect(
-      supportDependency.version,
-      contains('sdk-flutterflow-messaging-v1.3.0'),
-    );
-    expect(supportDependency.version, isNot(contains('git@github.com')));
+    expect(sdkDependency.version, contains('sdk-flutterflow-v3.0.0'));
+    expect(sdkDependency.version, isNot(contains('git@github.com')));
 
     final manifest = project.customCode.customFiles.files.singleWhere(
       (file) => file.type == FFCustomFile_Type.ANDROID_MANIFEST,
     );
     expect(
       manifest.hooks.map((hook) => hook.identifier.name),
-      containsAll(['OpenGrow Deep Links', 'OpenGrow Native Configuration']),
+      containsAll(['SuperBoard Deep Links', 'SuperBoard Native Configuration']),
     );
     expect(
       manifest.parameters.values.map(
@@ -164,7 +161,7 @@ void main() {
     );
     expect(
       infoPlist.hooks.single.content,
-      contains('<key>OpenGrowApiKey</key>'),
+      contains('<key>SuperBoardApiKey</key>'),
     );
 
     final entitlements = project.customCode.customFiles.files.singleWhere(

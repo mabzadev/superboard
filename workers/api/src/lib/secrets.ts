@@ -1,5 +1,5 @@
 import type { BillingEnv } from '../types';
-import { constantTimeEqual } from '@opengrow/contracts/secret';
+import { constantTimeEqual } from '@superboard/contracts/secret';
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';

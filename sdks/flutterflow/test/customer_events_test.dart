@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 void main() {
   test('uses Access Key headers, canonical route and UTC payload', () async {
     late http.Request captured;
-    final client = OpenGrowCustomerEventsClient(
+    final client = SuperBoardCustomerEventsClient(
       projectKey: 'test_access_key',
       platform: 'ios',
       identifier: 'com.example.app',
@@ -21,7 +21,7 @@ void main() {
     );
 
     final accepted = await client.record(
-      OpenGrowCustomerEvent(
+      SuperBoardCustomerEvent(
         id: 'event-1',
         customerId: 'customer-1',
         referrerCustomerId: 'referrer-1',
@@ -55,7 +55,7 @@ void main() {
 
   test('suppresses a successful idempotency key locally', () async {
     var calls = 0;
-    final client = OpenGrowCustomerEventsClient(
+    final client = SuperBoardCustomerEventsClient(
       projectKey: 'key',
       platform: 'web',
       identifier: 'example.com',
@@ -66,8 +66,8 @@ void main() {
       }),
     );
     final events = [
-      OpenGrowCustomerEvent(id: 'one', type: 'view'),
-      OpenGrowCustomerEvent(id: 'two', type: 'open'),
+      SuperBoardCustomerEvent(id: 'one', type: 'view'),
+      SuperBoardCustomerEvent(id: 'two', type: 'open'),
     ];
 
     expect(await client.recordBatch(events, idempotencyKey: 'outbox-1'), 2);
@@ -77,7 +77,7 @@ void main() {
 
   test('deduplicates concurrent requests with the same key', () async {
     var calls = 0;
-    final client = OpenGrowCustomerEventsClient(
+    final client = SuperBoardCustomerEventsClient(
       projectKey: 'key',
       platform: 'web',
       identifier: 'example.com',
@@ -88,7 +88,7 @@ void main() {
         return http.Response('{"data":{"accepted":1}}', 200);
       }),
     );
-    final events = [OpenGrowCustomerEvent(id: 'one', type: 'view')];
+    final events = [SuperBoardCustomerEvent(id: 'one', type: 'view')];
 
     final results = await Future.wait([
       client.recordBatch(events, idempotencyKey: 'concurrent-1'),
@@ -101,7 +101,7 @@ void main() {
 
   test('retries once with the same idempotency key and payload', () async {
     final requests = <http.Request>[];
-    final client = OpenGrowCustomerEventsClient(
+    final client = SuperBoardCustomerEventsClient(
       projectKey: 'key',
       platform: 'android',
       identifier: 'com.example.app',
@@ -119,7 +119,7 @@ void main() {
 
     expect(
       await client.recordBatch([
-        OpenGrowCustomerEvent(id: 'retry-event', type: 'app_open'),
+        SuperBoardCustomerEvent(id: 'retry-event', type: 'app_open'),
       ], idempotencyKey: 'retry-batch'),
       1,
     );
@@ -132,7 +132,7 @@ void main() {
   });
 
   test('JSON action validates date and sends at most 100 events', () async {
-    final client = OpenGrowCustomerEventsClient(
+    final client = SuperBoardCustomerEventsClient(
       projectKey: 'key',
       platform: 'ios',
       identifier: 'com.example.app',
@@ -141,11 +141,11 @@ void main() {
         (_) async => http.Response('{"data":{"accepted":1}}', 200),
       ),
     );
-    OpenGrowCustomerEventsSdk.configure(client);
-    addTearDown(OpenGrowCustomerEventsSdk.resetForTesting);
+    SuperBoardCustomerEventsSdk.configure(client);
+    addTearDown(SuperBoardCustomerEventsSdk.resetForTesting);
 
     await expectLater(
-      opengrowRecordCustomerEventsJson(
+      superboardRecordCustomerEventsJson(
         eventsJson: jsonEncode([
           {
             'id': 'invalid-date',
@@ -157,7 +157,7 @@ void main() {
       throwsFormatException,
     );
     await expectLater(
-      opengrowRecordCustomerEventsJson(
+      superboardRecordCustomerEventsJson(
         eventsJson: jsonEncode([
           {'type': 'view', 'occurred_at': '2026-08-07T12:30:00Z'},
         ]),
@@ -168,17 +168,17 @@ void main() {
       () => client.recordBatch(
         List.generate(
           101,
-          (index) => OpenGrowCustomerEvent(id: 'event-$index', type: 'view'),
+          (index) => SuperBoardCustomerEvent(id: 'event-$index', type: 'view'),
         ),
       ),
       throwsFormatException,
     );
     expect(
-      () => OpenGrowCustomerEvent(id: 'unsupported', type: 'cancellation'),
+      () => SuperBoardCustomerEvent(id: 'unsupported', type: 'cancellation'),
       throwsFormatException,
     );
     expect(
-      () => OpenGrowCustomerEventsClient(
+      () => SuperBoardCustomerEventsClient(
         projectKey: 'key',
         platform: 'desktop',
         identifier: 'desktop-app',
@@ -192,8 +192,8 @@ void main() {
     'FlutterFlow action validates metadata and uses configured client',
     () async {
       late Map<String, dynamic> payload;
-      OpenGrowCustomerEventsSdk.configure(
-        OpenGrowCustomerEventsClient(
+      SuperBoardCustomerEventsSdk.configure(
+        SuperBoardCustomerEventsClient(
           projectKey: 'key',
           platform: 'web',
           identifier: 'example.com',
@@ -204,10 +204,10 @@ void main() {
           }),
         ),
       );
-      addTearDown(OpenGrowCustomerEventsSdk.resetForTesting);
+      addTearDown(SuperBoardCustomerEventsSdk.resetForTesting);
 
       expect(
-        await opengrowRecordCustomerEvent(
+        await superboardRecordCustomerEvent(
           eventId: 'action-event',
           type: 'time_spent',
           engagementTime: 42,
@@ -217,7 +217,7 @@ void main() {
       );
       expect((payload['events'] as List).single['engagement_time'], 42);
       expect(
-        () => opengrowRecordCustomerEvent(type: 'view', metadataJson: '[]'),
+        () => superboardRecordCustomerEvent(type: 'view', metadataJson: '[]'),
         throwsFormatException,
       );
     },

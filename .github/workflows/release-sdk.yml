@@ -1,15 +1,10 @@
-name: Release OpenGrow SDK
+name: Release SuperBoard SDK
 
 on:
   push:
     tags:
       - sdk-flutter-v*
       - sdk-flutterflow-v*
-      - sdk-flutterflow-messaging-v*
-      - sdk-ios-v*
-      - sdk-android-v*
-      - sdk-js-v*
-      - sdk-react-native-v*
   workflow_dispatch:
     inputs:
       release_tag:
@@ -59,10 +54,7 @@ jobs:
           version="${tag##*-v}"
           test "$version" = "1.0.0" || [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
           path="$sdk"
-          test "$sdk" != "flutterflow-messaging" || path="flutterflow_messaging"
           catalog_id="$sdk"
-          test "$sdk" != "js" || catalog_id="javascript"
-          test "$sdk" != "flutterflow-messaging" || catalog_id="flutterflow-support"
           development_branch="$(node -p 'require("./config/sdk-libraries.json").developmentBranch')"
           release_sha="$(git rev-parse HEAD)"
           test "$(git rev-parse "refs/tags/$tag^{}")" = "$release_sha"
@@ -82,6 +74,19 @@ jobs:
         run: |
           node scripts/sdk-catalog.mjs check --candidate-release-tag "$RELEASE_TAG"
           node scripts/sdk-documentation.mjs check
+      - name: Bind FlutterFlow to the already-published Flutter v3 source
+        if: steps.tag.outputs.sdk == 'flutterflow'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.tag.outputs.release_sha }}
+        run: |
+          flutter_tag="$(node scripts/sdk-catalog.mjs candidate-ref --library flutter)"
+          [[ "$flutter_tag" =~ ^sdk-flutter-v3\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
+          git fetch --no-tags origin "refs/tags/$flutter_tag:refs/tags/$flutter_tag"
+          flutter_sha="$(git rev-list -n 1 "$flutter_tag")"
+          test "$flutter_sha" = "$RELEASE_SHA"
+          test "$(git rev-parse "$flutter_tag:sdks/flutter")" = "$(git rev-parse "$RELEASE_SHA:sdks/flutter")"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$flutter_tag" --jq .tag_name)" = "$flutter_tag"
 
   authorize-publication:
     name: Authorize immutable SDK publication
@@ -101,12 +106,12 @@ jobs:
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
 
   flutter:
-    if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow' || needs.validate-tag.outputs.sdk == 'flutterflow-messaging'
+    if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow'
     needs: [validate-tag, authorize-publication]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -118,40 +123,13 @@ jobs:
           cache: true
       - run: flutter pub get && flutter analyze && flutter test
         working-directory: sdks/${{ needs.validate-tag.outputs.path }}
-      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
-        with:
-          tag_name: ${{ needs.validate-tag.outputs.tag }}
-          generate_release_notes: true
-          prerelease: ${{ contains(needs.validate-tag.outputs.version, '-') }}
 
-  ios:
-    if: needs.validate-tag.outputs.sdk == 'ios'
-    needs: [validate-tag, authorize-publication]
-    runs-on: macos-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ needs.validate-tag.outputs.tag }}
-          persist-credentials: false
-      - name: Build and test the tagged iOS SDK
-        run: ./scripts/run_tests.sh
-        working-directory: sdks/ios
-      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
-        with:
-          tag_name: ${{ needs.validate-tag.outputs.tag }}
-          generate_release_notes: true
-
-  android:
-    if: needs.validate-tag.outputs.sdk == 'android'
+  flutter-android-native:
+    name: Build immutable Flutter Android example
+    if: needs.validate-tag.outputs.sdk == 'flutter'
     needs: [validate-tag, authorize-publication]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write
-      packages: write
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -160,61 +138,73 @@ jobs:
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
-          java-version: 17
-      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
-      - run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
-      - run: ./gradlew :OpenGrow:testDebugUnitTest :OpenGrow:publishReleasePublicationToGithubPackagesRepository -PlibraryVersion=${{ needs.validate-tag.outputs.version }}
-        working-directory: sdks/android/OpenGrow
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+          java-version: "17"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          tag_name: ${{ needs.validate-tag.outputs.tag }}
-          generate_release_notes: true
+          channel: stable
+          cache: true
+      - name: Compile the Android wrapper through the consumer example
+        working-directory: sdks/flutter/example
+        run: |
+          flutter pub get
+          flutter build apk --debug
 
-  npm:
-    if: needs.validate-tag.outputs.sdk == 'js' || needs.validate-tag.outputs.sdk == 'react-native'
+  flutter-ios-native:
+    name: Build immutable Flutter iOS example on macOS
+    if: needs.validate-tag.outputs.sdk == 'flutter'
     needs: [validate-tag, authorize-publication]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-      packages: write
+    runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.validate-tag.outputs.tag }}
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          node-version: 22
-          registry-url: https://npm.pkg.github.com
-          scope: "@mbzadev"
-      - run: npm ci && npm run check
-        if: needs.validate-tag.outputs.sdk == 'js'
-        working-directory: sdks/javascript
-      - run: corepack enable && yarn install --immutable && yarn check
-        if: needs.validate-tag.outputs.sdk == 'react-native'
-        working-directory: sdks/react-native
-      - name: Install repository tooling for the React Native contract
-        if: needs.validate-tag.outputs.sdk == 'react-native'
-        run: npm ci --ignore-scripts
-      - run: npm run react-native:native-contract:check
-        if: needs.validate-tag.outputs.sdk == 'react-native'
-      - run: npm version ${{ needs.validate-tag.outputs.version }} --no-git-tag-version --allow-same-version && npm publish
-        working-directory: sdks/${{ needs.validate-tag.outputs.sdk == 'js' && 'javascript' || 'react-native' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
-        with:
-          tag_name: ${{ needs.validate-tag.outputs.tag }}
-          generate_release_notes: true
+          channel: stable
+          cache: true
+      - name: Resolve the example and its locked CocoaPods graph
+        working-directory: sdks/flutter/example
+        run: |
+          flutter pub get
+          pod install --project-directory=ios --deployment
+      - name: Verify embedded Flutter iOS sources
+        run: node --test scripts/flutter-ios-embedded-sources.test.mjs
+      - name: Validate the public CocoaPods identity
+        run: |
+          pod ipc spec sdks/flutter/ios/superboard_flutter.podspec > "$RUNNER_TEMP/superboard_flutter.podspec.json"
+          ruby -rjson -ryaml -e '
+            spec = JSON.parse(File.read(ARGV.fetch(0)))
+            package = YAML.safe_load(File.read(ARGV.fetch(1)), aliases: false)
+            abort "unexpected pod name" unless spec.fetch("name") == "superboard_flutter"
+            abort "pod/pub version mismatch" unless spec.fetch("version") == package.fetch("version")
+          ' "$RUNNER_TEMP/superboard_flutter.podspec.json" sdks/flutter/pubspec.yaml
+      - name: Compile the iOS pod target without requiring a simulator runtime
+        run: |
+          xcode_overrides=()
+          destinations="$(xcodebuild \
+            -workspace sdks/flutter/example/ios/Runner.xcworkspace \
+            -scheme Runner \
+            -showdestinations 2>&1)"
+          if ! grep -q 'platform:iOS Simulator' <<< "$destinations"; then
+            echo "No simulator destination is installed; compiling Swift while CocoaPods validates the XIB graph."
+            xcode_overrides=('EXCLUDED_SOURCE_FILE_NAMES=*.xib')
+          fi
+          xcodebuild \
+            -project sdks/flutter/example/ios/Pods/Pods.xcodeproj \
+            -target superboard_flutter \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            "${xcode_overrides[@]}" \
+            build
 
   release-gate:
     name: SDK release gate
     if: ${{ always() }}
-    needs: [validate-tag, authorize-publication, flutter, ios, android, npm]
+    needs: [validate-tag, authorize-publication, flutter, flutter-android-native, flutter-ios-native]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -222,29 +212,48 @@ jobs:
       VALIDATE_RESULT: ${{ needs.validate-tag.result }}
       AUTHORIZATION_RESULT: ${{ needs.authorize-publication.result }}
       FLUTTER_RESULT: ${{ needs.flutter.result }}
-      IOS_RESULT: ${{ needs.ios.result }}
-      ANDROID_RESULT: ${{ needs.android.result }}
-      NPM_RESULT: ${{ needs.npm.result }}
+      ANDROID_RESULT: ${{ needs.flutter-android-native.result }}
+      IOS_RESULT: ${{ needs.flutter-ios-native.result }}
     steps:
       - name: Require the selected publication job to pass
         run: |
           test "$VALIDATE_RESULT" = "success"
           test "$AUTHORIZATION_RESULT" = "success"
           case "$SDK" in
-            flutter|flutterflow|flutterflow-messaging) test "$FLUTTER_RESULT" = "success" ;;
-            ios) test "$IOS_RESULT" = "success" ;;
-            android) test "$ANDROID_RESULT" = "success" ;;
-            js|react-native) test "$NPM_RESULT" = "success" ;;
+            flutter)
+              test "$FLUTTER_RESULT" = "success"
+              test "$ANDROID_RESULT" = "success"
+              test "$IOS_RESULT" = "success"
+              ;;
+            flutterflow)
+              test "$FLUTTER_RESULT" = "success"
+              test "$ANDROID_RESULT" = "skipped"
+              test "$IOS_RESULT" = "skipped"
+              ;;
             *) exit 64 ;;
           esac
 
-  propose-catalogue:
+  publish-release:
+    name: Publish immutable SDK GitHub release
     needs: [validate-tag, release-gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        with:
+          tag_name: ${{ needs.validate-tag.outputs.tag }}
+          generate_release_notes: true
+          prerelease: ${{ contains(needs.validate-tag.outputs.version, '-') }}
+
+  propose-catalogue:
+    needs: [validate-tag, release-gate, publish-release]
     # `release-gate` intentionally depends on every package job, most of which
     # are skipped for a single-library publication. Without always(), GitHub's
     # implicit success condition suppresses this downstream promotion even
     # after the explicit gate succeeds.
-    if: ${{ always() && needs.validate-tag.result == 'success' && needs.release-gate.result == 'success' }}
+    if: ${{ always() && needs.validate-tag.result == 'success' && needs.release-gate.result == 'success' && needs.publish-release.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: sdk-release
@@ -283,8 +292,6 @@ jobs:
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           git merge-base --is-ancestor "$RELEASE_SHA" HEAD
           catalog_id="$SDK"
-          test "$SDK" != "js" || catalog_id="javascript"
-          test "$SDK" != "flutterflow-messaging" || catalog_id="flutterflow-support"
           node scripts/sdk-catalog.mjs promote \
             --library "$catalog_id" \
             --version "$VERSION" \
@@ -293,9 +300,7 @@ jobs:
           node scripts/sdk-catalog.mjs check \
             --release-tag "$TAG" \
             --release-sha "$RELEASE_SHA"
-          node scripts/react-native-native-contract.mjs write
           node scripts/sdk-documentation.mjs write
-          node scripts/react-native-native-contract.mjs check
           node scripts/sdk-documentation.mjs check
       - name: Propose the published catalogue state through a protected PR
         run: |
@@ -328,9 +333,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add config/sdk-libraries.json \
-            sdks/react-native/plugin/native-contract.json \
-            sdks/*/README.md
+          git add config/sdk-libraries.json sdks/*/README.md
           git commit -m "chore(sdk): publish $TAG"
           git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
           ensure_promotion_pr

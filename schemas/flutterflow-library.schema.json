@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opengrow.dev/schemas/flutterflow-library.schema.json",
-  "title": "OpenGrow FlutterFlow library source contract",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-library.schema.json",
+  "title": "SuperBoard FlutterFlow library source contract",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,7 +21,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
-    "owner": { "const": "opengrow-platform" },
+    "owner": { "const": "superboard-platform" },
     "displayName": { "type": "string", "minLength": 1 },
     "source": {
       "type": "object",
@@ -82,7 +82,7 @@
           "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]*$" },
           "key": {
             "type": "string",
-            "pattern": "^opengrow_[a-z0-9_]+$"
+            "pattern": "^superboard_[a-z0-9_]+$"
           },
           "type": { "enum": ["string", "boolean", "integer"] },
           "required": { "type": "boolean" },
@@ -97,7 +97,7 @@
         "type": "array",
         "items": {
           "type": "string",
-          "pattern": "^opengrow[A-Za-z0-9]+$"
+          "pattern": "^superboard[A-Za-z0-9]+$"
         }
       }
     },
@@ -107,7 +107,7 @@
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "pattern": "^OpenGrow[A-Za-z0-9]+$"
+        "pattern": "^SuperBoard[A-Za-z0-9]+$"
       }
     },
     "pages": {
@@ -116,7 +116,7 @@
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "pattern": "^OpenGrow[A-Za-z0-9]+Page$"
+        "pattern": "^SuperBoard[A-Za-z0-9]+Page$"
       }
     },
     "forbiddenAppState": {

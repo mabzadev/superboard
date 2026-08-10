@@ -352,7 +352,7 @@ project.afterEvaluate {
         repositories {
             maven {
                 name = "GithubPackages"
-                url = uri("https://maven.pkg.github.com/mbzadev/opengrow-platform")
+                url = uri("https://maven.pkg.github.com/mbzadev/superboard-platform")
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")

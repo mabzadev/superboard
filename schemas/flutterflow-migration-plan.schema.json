@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opengrow.dev/schemas/flutterflow-migration-plan.schema.json",
-  "title": "OpenGrow FlutterFlow application migration plan",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-migration-plan.schema.json",
+  "title": "SuperBoard FlutterFlow application migration plan",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -23,7 +23,7 @@
     "environment": { "enum": ["development", "production"] },
     "sourceEnvironment": {
       "type": "string",
-      "pattern": "^OPENGROW_CLIENT_SOURCE_[A-Z0-9_]+$"
+      "pattern": "^SUPERBOARD_CLIENT_SOURCE_[A-Z0-9_]+$"
     },
     "snapshotManifest": { "$ref": "#/$defs/repositoryPath" },
     "surfaceManifest": { "$ref": "#/$defs/repositoryPath" },

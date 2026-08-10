@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
-import { generateIdentityKeyset } from "./opengrow-generate-identity-keyset.mjs";
+import { generateIdentityKeyset } from "./superboard-generate-identity-keyset.mjs";
 import { requiredSecretInventory } from "./cloudflare-secret-inventory.mjs";
 import {
   cloudflareAccountId,
@@ -69,9 +69,10 @@ export function buildDevelopmentSecretPlan({
           ? "rotate-dashboard-oauth"
           : "generate-and-upload-in-memory",
     })),
-    blockers: analyticsTokenConfigured
-      ? []
-      : ["CLOUDFLARE_ANALYTICS_TOKEN is required for observability summaries"],
+    optionalCapabilities: {
+      analyticsQueries: analyticsTokenConfigured ? "enabled" : "disabled",
+    },
+    blockers: [],
   };
   return { ...plan, confirmation: developmentSecretConfirmation(plan) };
 }
@@ -87,6 +88,7 @@ export function developmentSecretConfirmation(plan) {
         environment: plan.environment,
         appleTrustRoot: plan.appleTrustRoot,
         services: plan.services,
+        optionalCapabilities: plan.optionalCapabilities,
         blockers: plan.blockers,
       }),
     )
@@ -102,8 +104,6 @@ export async function generateDevelopmentSecretAssignments({
   analyticsToken,
   appleRootBase64,
 }) {
-  if (!analyticsToken)
-    throw new Error("CLOUDFLARE_ANALYTICS_TOKEN is required");
   const token = () => randomBytes(48).toString("base64url");
   const moduleToken = token();
   const emailToken = token();
@@ -161,8 +161,12 @@ export async function generateDevelopmentSecretAssignments({
     },
     observability: {
       OBSERVABILITY_INTERNAL_TOKEN: observabilityToken,
-      CLOUDFLARE_ANALYTICS_ACCOUNT_ID: accountId,
-      CLOUDFLARE_ANALYTICS_TOKEN: analyticsToken,
+      ...(analyticsToken
+        ? {
+            CLOUDFLARE_ANALYTICS_ACCOUNT_ID: accountId,
+            CLOUDFLARE_ANALYTICS_TOKEN: analyticsToken,
+          }
+        : {}),
     },
     custom: {
       CUSTOM_WORKER_TOKEN: customToken,
@@ -313,7 +317,7 @@ export function versionedSecretBulkArgs(
     "--config",
     config,
     "--message",
-    `OpenGrow generated secrets for ${targetName}/${environment}/${service}`,
+    `SuperBoard generated secrets for ${targetName}/${environment}/${service}`,
   ];
 }
 
@@ -338,7 +342,9 @@ function uploadSecrets(targetName, environment, assignments, env) {
 async function rotateDashboardOAuth({ target, targetName, environment, env }) {
   const secret = randomBytes(48).toString("base64url");
   const digest = createHash("sha256").update(secret).digest("hex");
-  const directory = await mkdtemp(join(tmpdir(), "opengrow-oauth-bootstrap-"));
+  const directory = await mkdtemp(
+    join(tmpdir(), "superboard-oauth-bootstrap-"),
+  );
   const sqlPath = join(directory, "rotate.sql");
   try {
     const clientId = String(target.oauth.dashboardClientId).replaceAll(
@@ -353,7 +359,7 @@ INSERT INTO oauth_applications (
   redirect_uri, scopes
 )
 VALUES (
-  'OpenGrow Dashboard', '${clientId}', '${digest}', NULL, NULL,
+  'SuperBoard Dashboard', '${clientId}', '${digest}', NULL, NULL,
   'urn:ietf:wg:oauth:2.0:oob', 'read write'
 )
 ON CONFLICT(uid) DO UPDATE SET

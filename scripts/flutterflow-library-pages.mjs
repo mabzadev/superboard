@@ -10,6 +10,7 @@ export function flutterFlowLibraryPageEnvironmentName(pageName) {
     throw new Error(`Invalid FlutterFlow library page name ${String(pageName)}`);
   }
   const words = pageName
+    .replace(/^SuperBoard/u, "Superboard")
     .replace(/([a-z0-9])([A-Z])/gu, "$1_$2")
     .replace(/([A-Z]+)([A-Z][a-z])/gu, "$1_$2")
     .toUpperCase();

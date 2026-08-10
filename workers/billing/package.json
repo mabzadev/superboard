@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/billing-worker",
+  "name": "@superboard/billing-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
+    "@superboard/contracts": "*",
     "@apple/app-store-server-library": "^3.1.0",
     "hono": "^4.7.4",
     "jose": "^5.10.0"

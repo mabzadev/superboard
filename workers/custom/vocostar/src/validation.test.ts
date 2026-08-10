@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CustomWorkerJob } from "@opengrow/contracts/custom-worker";
+import type { CustomWorkerJob } from "@superboard/contracts/custom-worker";
 import { observedStatus, resolveDispatchPayload } from "./jobs";
 import {
   VocoStarJobError,

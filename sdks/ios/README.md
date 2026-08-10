@@ -1,15 +1,15 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg">
-    <img src="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform"><img src="https://img.shields.io/badge/distribution-SwiftPM-4F46E5?style=flat-square&logo=swift&logoColor=white" alt="Swift Package Manager"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform"><img src="https://img.shields.io/badge/distribution-SwiftPM-4F46E5?style=flat-square&logo=swift&logoColor=white" alt="Swift Package Manager"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -18,9 +18,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/ios#quick-start">Quick Start</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/ios#api-reference">API Reference</a> ·
-  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/docs">Full Docs</a>
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -45,7 +45,11 @@ The OpenGrow iOS SDK provides deep linking, universal linking, link generation, 
 
 <!-- opengrow-sdk-documentation:ios:start -->
 
-## Installation
+> **Lifecycle: internal.** This standalone coordinate is retained only
+> to reproduce existing integrations. New public releases are disabled;
+> current native development happens inside the active Flutter SDK.
+
+## Historical installation
 
 ### Swift Package Manager
 
@@ -53,11 +57,11 @@ The published iOS SDK is distributed from public Git with Swift Package
 Manager at the exact release `1.0.3`:
 
 ```swift
-.package(url: "https://github.com/mbzadev/opengrow-platform.git", exact: "1.0.3")
+.package(url: "https://github.com/mbzadev/superboard-platform.git", exact: "1.0.3")
 ```
 
 In Xcode, use **File → Add Package Dependencies**, enter
-`https://github.com/mbzadev/opengrow-platform.git`, and select exact version
+`https://github.com/mbzadev/superboard-platform.git`, and select exact version
 `1.0.3`. CocoaPods Trunk is not a published or supported
 distribution channel for this SDK.
 
@@ -335,11 +339,11 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionID:completion:)` | Log a StoreKit 2 purchase |
 | `logCustomPurchase(type:priceInCents:currency:productID:startDate:completion:)` | Log a custom purchase |
 
-Full API reference: [iOS SDK API reference](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/ios#api-reference)
+Full API reference: [iOS SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/ios`](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/ios).
+A demo project is included in [`sdks/ios`](https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios).
 
 ## Setup Guides
 
@@ -350,11 +354,11 @@ A demo project is included in [`sdks/ios`](https://github.com/mbzadev/opengrow-p
 
 ## Migration Guides
 
-- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Support
 

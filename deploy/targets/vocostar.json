@@ -1,8 +1,14 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "target": "vocostar",
   "accountAlias": "vocostar-production",
+  "resourceIdentity": {
+    "logicalName": "superboard",
+    "physicalName": "opengrow",
+    "previousNames": ["opengrow"],
+    "migrationStrategy": "retain-physical-name"
+  },
   "workersDevSubdomain": "vocostar",
   "registrationMode": "allowlist",
   "ssoEnabled": false,
@@ -42,7 +48,7 @@
   },
   "mail": {
     "transport": "smtp",
-    "fromName": "OpenGrow",
+    "fromName": "SuperBoard",
     "fromAddress": "noreply@vocostar.com"
   },
   "domains": {
@@ -54,6 +60,7 @@
     "mcp": "mcp.vocostar.com",
     "messaging": "messages.vocostar.com"
   },
+  "retiredDomains": [],
   "workers": {
     "api": {
       "production": "opengrow-api"
@@ -295,7 +302,7 @@
     }
   ],
   "operator": {
-    "docsUrl": "https://github.com/mbzadev/opengrow-platform/tree/main/docs"
+    "docsUrl": "https://github.com/mbzadev/superboard-platform/tree/main/docs"
   },
   "environments": {
     "production": {

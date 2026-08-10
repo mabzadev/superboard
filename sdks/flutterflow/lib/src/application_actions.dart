@@ -4,34 +4,34 @@ import 'dart:typed_data';
 import 'application_client.dart';
 import 'application_session.dart';
 
-OpenGrowApplicationClient? _applicationClient;
-OpenGrowApplicationSessionManager? _applicationSessionManager;
-OpenGrowApplicationSessionStorage _applicationSessionStorage =
-    const FlutterOpenGrowApplicationSessionStorage();
+SuperBoardApplicationClient? _applicationClient;
+SuperBoardApplicationSessionManager? _applicationSessionManager;
+SuperBoardApplicationSessionStorage _applicationSessionStorage =
+    const FlutterSuperBoardApplicationSessionStorage();
 
-OpenGrowApplicationClient get _client {
+SuperBoardApplicationClient get _client {
   final value = _applicationClient;
   if (value == null) {
-    throw const OpenGrowApplicationException(
+    throw const SuperBoardApplicationException(
       'not_initialized',
-      'Call opengrowApplicationInitialize first.',
+      'Call superboardApplicationInitialize first.',
     );
   }
   return value;
 }
 
-OpenGrowApplicationSessionManager get _sessionManager {
+SuperBoardApplicationSessionManager get _sessionManager {
   final value = _applicationSessionManager;
   if (value == null) {
-    throw const OpenGrowApplicationException(
+    throw const SuperBoardApplicationException(
       'not_initialized',
-      'Call opengrowApplicationInitialize first.',
+      'Call superboardApplicationInitialize first.',
     );
   }
   return value;
 }
 
-Future<bool> opengrowApplicationInitialize({
+Future<bool> superboardApplicationInitialize({
   required String apiBaseUrl,
   required String filesBaseUrl,
   String applicationAccessToken = '',
@@ -42,7 +42,7 @@ Future<bool> opengrowApplicationInitialize({
   bool restoreSession = true,
 }) async {
   _applicationClient?.close();
-  final client = OpenGrowApplicationClient(
+  final client = SuperBoardApplicationClient(
     apiBaseUrl: apiBaseUrl,
     filesBaseUrl: filesBaseUrl,
     applicationAccessToken: applicationAccessToken,
@@ -52,14 +52,21 @@ Future<bool> opengrowApplicationInitialize({
     environment: environment,
   );
   _applicationClient = client;
-  _applicationSessionManager = OpenGrowApplicationSessionManager(
+  _applicationSessionManager = SuperBoardApplicationSessionManager(
     client: client,
     storage: _applicationSessionStorage,
-    storageKey: OpenGrowApplicationSessionManager.scopedStorageKey(
+    storageKey: SuperBoardApplicationSessionManager.scopedStorageKey(
       apiBaseUri: client.apiBaseUri,
       projectKey: projectKey,
       environment: environment,
     ),
+    legacyStorageKeys: [
+      SuperBoardApplicationSessionManager.legacyScopedStorageKey(
+        apiBaseUri: client.apiBaseUri,
+        projectKey: projectKey,
+        environment: environment,
+      ),
+    ],
   );
   if (restoreSession && applicationAccessToken.trim().isEmpty) {
     await _applicationSessionManager!.restore();
@@ -67,14 +74,14 @@ Future<bool> opengrowApplicationInitialize({
   return true;
 }
 
-Future<bool> opengrowApplicationSetAccessToken(
+Future<bool> superboardApplicationSetAccessToken(
   String applicationAccessToken,
 ) async {
   _sessionManager.setTransientAccessToken(applicationAccessToken);
   return true;
 }
 
-Future<String> opengrowApplicationRegisterJson({
+Future<String> superboardApplicationRegisterJson({
   required String email,
   required String password,
   String name = '',
@@ -86,7 +93,7 @@ Future<String> opengrowApplicationRegisterJson({
   )).toClientJson(),
 );
 
-Future<String> opengrowApplicationSignInPasswordJson({
+Future<String> superboardApplicationSignInPasswordJson({
   required String email,
   required String password,
 }) async => jsonEncode(
@@ -96,7 +103,7 @@ Future<String> opengrowApplicationSignInPasswordJson({
   )).toClientJson(),
 );
 
-Future<String> opengrowApplicationSignInProviderJson({
+Future<String> superboardApplicationSignInProviderJson({
   required String provider,
   required String idToken,
   String name = '',
@@ -108,59 +115,59 @@ Future<String> opengrowApplicationSignInProviderJson({
   )).toClientJson(),
 );
 
-Future<String> opengrowApplicationLinkProviderJson({
+Future<String> superboardApplicationLinkProviderJson({
   required String provider,
   required String idToken,
 }) async => jsonEncode(
   await _client.linkProvider(provider: provider, idToken: idToken),
 );
 
-Future<String> opengrowApplicationSignInAnonymousJson(
+Future<String> superboardApplicationSignInAnonymousJson(
   String installationId,
 ) async => jsonEncode(
   (await _sessionManager.signInAnonymous(installationId)).toClientJson(),
 );
 
-Future<String> opengrowApplicationRefreshJson([
+Future<String> superboardApplicationRefreshJson([
   String refreshToken = '',
 ]) async =>
     jsonEncode((await _sessionManager.refresh(refreshToken)).toClientJson());
 
-Future<String> opengrowApplicationRestoreSessionJson() async {
+Future<String> superboardApplicationRestoreSessionJson() async {
   final session = await _sessionManager.restore();
   return jsonEncode(session?.toClientJson() ?? {'authenticated': false});
 }
 
-Future<String> opengrowApplicationCurrentSessionJson() async {
+Future<String> superboardApplicationCurrentSessionJson() async {
   final session = _sessionManager.currentSession;
   return jsonEncode(session?.toClientJson() ?? {'authenticated': false});
 }
 
-Future<String> opengrowApplicationAccessToken() async =>
+Future<String> superboardApplicationAccessToken() async =>
     _sessionManager.currentSession?.accessToken ??
     _client.applicationAccessToken;
 
-Future<String> opengrowApplicationRequestPasswordResetJson(
+Future<String> superboardApplicationRequestPasswordResetJson(
   String email,
 ) async => jsonEncode(await _client.requestPasswordReset(email));
 
-Future<String> opengrowApplicationResetPasswordJson({
+Future<String> superboardApplicationResetPasswordJson({
   required String token,
   required String password,
 }) async =>
     jsonEncode(await _client.resetPassword(token: token, password: password));
 
-Future<String> opengrowApplicationProfileJson() async =>
+Future<String> superboardApplicationProfileJson() async =>
     jsonEncode(await _client.profile());
-Future<String> opengrowApplicationUpdateProfileJson(String name) async =>
+Future<String> superboardApplicationUpdateProfileJson(String name) async =>
     jsonEncode(await _client.updateProfile(name: name));
-Future<String> opengrowApplicationLogoutJson() async =>
+Future<String> superboardApplicationLogoutJson() async =>
     jsonEncode(await _sessionManager.logout());
-Future<String> opengrowApplicationDeleteAccountJson() async =>
+Future<String> superboardApplicationDeleteAccountJson() async =>
     jsonEncode(await _sessionManager.deleteAccount());
-Future<String> opengrowApplicationMarketingPreferencesJson() async =>
+Future<String> superboardApplicationMarketingPreferencesJson() async =>
     jsonEncode(await _client.marketingPreferences());
-Future<String> opengrowApplicationUpdateMarketingConsentJson({
+Future<String> superboardApplicationUpdateMarketingConsentJson({
   required bool consented,
   required String idempotencyKey,
   String attributesJson = '{}',
@@ -184,17 +191,17 @@ Future<String> opengrowApplicationUpdateMarketingConsentJson({
   );
 }
 
-Future<String> opengrowApplicationRuntimePolicyJson({
+Future<String> superboardApplicationRuntimePolicyJson({
   required String appVersion,
   String build = '',
 }) async => jsonEncode(
   await _client.runtimePolicy(appVersion: appVersion, build: build),
 );
-Future<String> opengrowApplicationListFilesJson({
+Future<String> superboardApplicationListFilesJson({
   int limit = 50,
   int offset = 0,
 }) async => jsonEncode(await _client.listFiles(limit: limit, offset: offset));
-Future<String> opengrowApplicationUploadFileJson({
+Future<String> superboardApplicationUploadFileJson({
   required Uint8List bytes,
   required String filename,
   required String contentType,
@@ -205,12 +212,12 @@ Future<String> opengrowApplicationUploadFileJson({
     contentType: contentType,
   ),
 );
-Future<Uint8List> opengrowApplicationDownloadFile(String fileId) =>
+Future<Uint8List> superboardApplicationDownloadFile(String fileId) =>
     _client.downloadFile(fileId);
-Future<String> opengrowApplicationDeleteFileJson(String fileId) async =>
+Future<String> superboardApplicationDeleteFileJson(String fileId) async =>
     jsonEncode(await _client.deleteFile(fileId));
 
-Future<String> opengrowApplicationCreateCustomJobJson({
+Future<String> superboardApplicationCreateCustomJobJson({
   required String capability,
   required String payloadJson,
   required String idempotencyKey,
@@ -228,7 +235,7 @@ Future<String> opengrowApplicationCreateCustomJobJson({
   );
 }
 
-Future<String> opengrowApplicationListCustomJobsJson({
+Future<String> superboardApplicationListCustomJobsJson({
   int limit = 25,
   String status = '',
   String capability = '',
@@ -242,13 +249,13 @@ Future<String> opengrowApplicationListCustomJobsJson({
   ),
 );
 
-Future<String> opengrowApplicationGetCustomJobJson(String jobId) async =>
+Future<String> superboardApplicationGetCustomJobJson(String jobId) async =>
     jsonEncode(await _client.customJob(jobId));
 
-Future<String> opengrowApplicationCancelCustomJobJson(String jobId) async =>
+Future<String> superboardApplicationCancelCustomJobJson(String jobId) async =>
     jsonEncode(await _client.cancelCustomJob(jobId));
 
-Future<bool> opengrowApplicationDispose() async {
+Future<bool> superboardApplicationDispose() async {
   _applicationClient?.close();
   _applicationClient = null;
   _applicationSessionManager = null;

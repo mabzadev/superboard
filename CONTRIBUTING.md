@@ -1,6 +1,6 @@
-# Contributing to OpenGrow
+# Contributing to SuperBoard
 
-OpenGrow is a public multi-application Cloudflare platform. `dev` is the
+SuperBoard is a public multi-application Cloudflare platform. `dev` is the
 integration branch and `main` is the promoted production branch. Open a feature
 branch and a pull request into `dev`; do not deploy an unreviewed revision.
 Both long-lived branches require the aggregate `CI gate`, one approving

@@ -1,10 +1,10 @@
-# OpenGrow Email Worker
+# SuperBoard Email Worker
 
 Common delivery authority for transactional, marketing, and test email.
 
 - `capture` stores development mail for the protected preview origin declared by
   the selected target manifest.
-- `smtp` queues delivery and uses the shared `@opengrow/email-transport` package.
+- `smtp` queues delivery and uses the shared `@superboard/email-transport` package.
 - callers use the private `EMAIL_SERVICE` binding and `POST /internal/v1/messages`, authenticated with the shared `EMAIL_INTERNAL_TOKEN` secret.
 - Marketing uses the same private binding and
   `POST /internal/v1/transport/smtp` after it has selected a project profile,

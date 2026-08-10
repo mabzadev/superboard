@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/observability-worker",
+  "name": "@superboard/observability-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@opengrow/contracts": "*"
+    "@superboard/contracts": "*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260808.1",

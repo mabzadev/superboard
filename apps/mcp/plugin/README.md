@@ -1,10 +1,10 @@
-# OpenGrow Plugin for Claude Code
+# SuperBoard Plugin for Claude Code
 
 Manage deep links, analytics, and app configuration for your mobile apps — directly from Claude Code.
 
-## What is OpenGrow?
+## What is SuperBoard?
 
-[OpenGrow](https://github.com/mbzadev/opengrow-platform) is a self-hosted
+[SuperBoard](https://github.com/mbzadev/superboard-platform) is a self-hosted
 application operations control plane. Its MCP tools cover projects, Universal
 Links (iOS), App Links (Android), deferred deep linking, analytics, campaigns
 and SDK configuration for the selected deployment target.
@@ -12,52 +12,52 @@ and SDK configuration for the selected deployment target.
 ## Installation
 
 ```bash
-claude plugin install opengrow
+claude plugin install superboard
 ```
 
-This installs the OpenGrow MCP server and a set of skills that teach Claude how to use it.
+This installs the SuperBoard MCP server and a set of skills that teach Claude how to use it.
 
 ## Authentication
 
-Set `OPENGROW_MCP_URL` to the `/mcp` endpoint published by the selected
+Set `SUPERBOARD_MCP_URL` to the `/mcp` endpoint published by the selected
 application target. On first use, Claude Code opens the target's OAuth flow. No
 API key is stored in the plugin.
 
 ## Available Skills
 
-### opengrow-setup-project
-Set up a new OpenGrow project for your mobile app. Creates an instance, configures SDK settings for iOS/Android, and sets up redirect behavior.
+### superboard-setup-project
+Set up a new SuperBoard project for your mobile app. Creates an instance, configures SDK settings for iOS/Android, and sets up redirect behavior.
 
-**Try:** "Set up OpenGrow for my iOS app with bundle ID com.mycompany.myapp"
+**Try:** "Set up SuperBoard for my iOS app with bundle ID com.mycompany.myapp"
 
-### opengrow-create-link
+### superboard-create-link
 Create deep links with social previews, tags, custom data, and redirect overrides.
 
 **Try:** "Create a deep link for our summer sale that opens the promotions screen"
 
-### opengrow-analytics
+### superboard-analytics
 View link performance — overview metrics, top links, and per-link analytics.
 
 **Try:** "How are my deep links performing this month?"
 
-### opengrow-manage-links
+### superboard-manage-links
 Search, view, update, and archive your existing links.
 
 **Try:** "Show me all links tagged 'marketing'" or "Update the title on my /summer-sale link"
 
-### opengrow-campaigns
+### superboard-campaigns
 Group links into campaigns and track them as a whole — views, opens, installs, and revenue.
 
 **Try:** "Create a Summer Sale campaign and add these links to it"
 
-### opengrow-configure-platform
+### superboard-configure-platform
 Configure iOS/Android SDK settings, Universal Links, App Links, and redirect behavior.
 
 **Try:** "Set up Android App Links for package com.mycompany.myapp"
 
 ## MCP Tools
 
-The plugin connects to the OpenGrow MCP server which provides these tools:
+The plugin connects to the SuperBoard MCP server which provides these tools:
 
 | Tool | Description |
 |------|-------------|
@@ -80,6 +80,6 @@ The plugin connects to the OpenGrow MCP server which provides these tools:
 
 ## Links
 
-- [OpenGrow platform documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs)
+- [SuperBoard platform documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs)
 - Dashboard: use the `domains.dashboard` origin from the selected target manifest
-- [MCP Server Source](https://github.com/mbzadev/opengrow-platform/tree/main/apps/mcp)
+- [MCP Server Source](https://github.com/mbzadev/superboard-platform/tree/main/apps/mcp)

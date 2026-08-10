@@ -4,9 +4,9 @@ import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
-/// A customer analytics event accepted by the OpenGrow App module.
-class OpenGrowCustomerEvent {
-  OpenGrowCustomerEvent({
+/// A customer analytics event accepted by the SuperBoard App module.
+class SuperBoardCustomerEvent {
+  SuperBoardCustomerEvent({
     required String type,
     String? id,
     this.customerId,
@@ -34,7 +34,7 @@ class OpenGrowCustomerEvent {
   final int? engagementTime;
   final Map<String, dynamic> metadata;
 
-  factory OpenGrowCustomerEvent.fromJson(Map<String, dynamic> json) {
+  factory SuperBoardCustomerEvent.fromJson(Map<String, dynamic> json) {
     final rawId = json['id']?.toString().trim() ?? '';
     if (rawId.isEmpty) {
       throw const FormatException('Customer event id is required');
@@ -59,7 +59,7 @@ class OpenGrowCustomerEvent {
       throw const FormatException('metadata must be a JSON object');
     }
 
-    return OpenGrowCustomerEvent(
+    return SuperBoardCustomerEvent(
       id: rawId,
       customerId: _optionalString(json['customer_id']),
       referrerCustomerId: _optionalString(json['referrer_customer_id']),
@@ -98,7 +98,7 @@ class OpenGrowCustomerEvent {
     }
     if (!_customerEventTypes.contains(type)) {
       throw const FormatException(
-        'type must be a supported OpenGrow customer event',
+        'type must be a supported SuperBoard customer event',
       );
     }
     for (final value in [customerId, referrerCustomerId]) {
@@ -128,8 +128,8 @@ class OpenGrowCustomerEvent {
   }
 }
 
-class OpenGrowCustomerEventsException implements Exception {
-  const OpenGrowCustomerEventsException(
+class SuperBoardCustomerEventsException implements Exception {
+  const SuperBoardCustomerEventsException(
     this.message, {
     this.code = 'customer_events_request_failed',
     this.statusCode,
@@ -148,8 +148,8 @@ class OpenGrowCustomerEventsException implements Exception {
 }
 
 /// Access-Key authenticated client for App customer analytics.
-class OpenGrowCustomerEventsClient {
-  OpenGrowCustomerEventsClient({
+class SuperBoardCustomerEventsClient {
+  SuperBoardCustomerEventsClient({
     required this.projectKey,
     required this.platform,
     required this.identifier,
@@ -159,7 +159,7 @@ class OpenGrowCustomerEventsClient {
   }) : _http = httpClient ?? http.Client(),
        _ownsHttp = httpClient == null {
     if (projectKey.trim().isEmpty || identifier.trim().isEmpty) {
-      throw const FormatException('OpenGrow SDK credentials are required');
+      throw const FormatException('SuperBoard SDK credentials are required');
     }
     if (!const {
       'ios',
@@ -184,7 +184,7 @@ class OpenGrowCustomerEventsClient {
   final Map<String, Future<int>> _pendingBatches = {};
 
   /// Records one event. A repeated successful event is suppressed locally.
-  Future<bool> record(OpenGrowCustomerEvent event) async {
+  Future<bool> record(SuperBoardCustomerEvent event) async {
     final accepted = await recordBatch([event], idempotencyKey: event.id);
     return accepted > 0;
   }
@@ -195,7 +195,7 @@ class OpenGrowCustomerEventsClient {
   /// omitted, a deterministic key derived from the ordered event identifiers
   /// is used, so an immediate retry sends the exact same key and payload.
   Future<int> recordBatch(
-    List<OpenGrowCustomerEvent> events, {
+    List<SuperBoardCustomerEvent> events, {
     String? idempotencyKey,
   }) async {
     if (events.isEmpty || events.length > 100) {
@@ -251,7 +251,7 @@ class OpenGrowCustomerEventsClient {
         }
         _completedIdempotencyKeys.add(key);
         return accepted;
-      } on OpenGrowCustomerEventsException catch (error) {
+      } on SuperBoardCustomerEventsException catch (error) {
         if (!error.retryable || attempt == 1) rethrow;
       } catch (_) {
         if (attempt == 1) rethrow;
@@ -280,8 +280,8 @@ class OpenGrowCustomerEventsClient {
           : jsonDecode(response.body);
       body = decoded is Map ? decoded.cast<String, dynamic>() : {};
     } catch (_) {
-      throw OpenGrowCustomerEventsException(
-        'OpenGrow returned an invalid response',
+      throw SuperBoardCustomerEventsException(
+        'SuperBoard returned an invalid response',
         statusCode: response.statusCode,
         retryable: response.statusCode >= 500,
       );
@@ -290,7 +290,7 @@ class OpenGrowCustomerEventsClient {
       final error = body['error'] is Map
           ? (body['error'] as Map).cast<String, dynamic>()
           : const <String, dynamic>{};
-      throw OpenGrowCustomerEventsException(
+      throw SuperBoardCustomerEventsException(
         error['message']?.toString() ?? 'Customer events request failed',
         code: error['code']?.toString() ?? 'customer_events_request_failed',
         statusCode: response.statusCode,
@@ -307,22 +307,22 @@ class OpenGrowCustomerEventsClient {
   }
 }
 
-/// Process-wide client configured by [OpenGrowBootstrap].
-abstract final class OpenGrowCustomerEventsSdk {
-  static OpenGrowCustomerEventsClient? _client;
+/// Process-wide client configured by [SuperBoardBootstrap].
+abstract final class SuperBoardCustomerEventsSdk {
+  static SuperBoardCustomerEventsClient? _client;
 
-  static OpenGrowCustomerEventsClient get client {
+  static SuperBoardCustomerEventsClient get client {
     final value = _client;
     if (value == null) {
-      throw const OpenGrowCustomerEventsException(
-        'OpenGrowBootstrap must configure customer events first',
+      throw const SuperBoardCustomerEventsException(
+        'SuperBoardBootstrap must configure customer events first',
         code: 'customer_events_not_configured',
       );
     }
     return value;
   }
 
-  static void configure(OpenGrowCustomerEventsClient value) {
+  static void configure(SuperBoardCustomerEventsClient value) {
     _client?.close();
     _client = value;
   }
@@ -334,7 +334,7 @@ abstract final class OpenGrowCustomerEventsSdk {
 }
 
 /// FlutterFlow action for one typed customer analytics event.
-Future<bool> opengrowRecordCustomerEvent({
+Future<bool> superboardRecordCustomerEvent({
   required String type,
   String eventId = '',
   String customerId = '',
@@ -346,8 +346,8 @@ Future<bool> opengrowRecordCustomerEvent({
   String metadataJson = '{}',
 }) async {
   final metadata = _metadataFromJson(metadataJson);
-  return OpenGrowCustomerEventsSdk.client.record(
-    OpenGrowCustomerEvent(
+  return SuperBoardCustomerEventsSdk.client.record(
+    SuperBoardCustomerEvent(
       id: eventId,
       customerId: customerId.trim().isEmpty ? null : customerId,
       referrerCustomerId: referrerCustomerId.trim().isEmpty
@@ -364,7 +364,7 @@ Future<bool> opengrowRecordCustomerEvent({
 }
 
 /// FlutterFlow action for an offline/outbox batch represented as a JSON list.
-Future<int> opengrowRecordCustomerEventsJson({
+Future<int> superboardRecordCustomerEventsJson({
   required String eventsJson,
   String idempotencyKey = '',
 }) async {
@@ -379,10 +379,10 @@ Future<int> opengrowRecordCustomerEventsJson({
             'Each customer event must be a JSON object',
           );
         }
-        return OpenGrowCustomerEvent.fromJson(value.cast<String, dynamic>());
+        return SuperBoardCustomerEvent.fromJson(value.cast<String, dynamic>());
       })
       .toList(growable: false);
-  return OpenGrowCustomerEventsSdk.client.recordBatch(
+  return SuperBoardCustomerEventsSdk.client.recordBatch(
     events,
     idempotencyKey: idempotencyKey.trim().isEmpty ? null : idempotencyKey,
   );

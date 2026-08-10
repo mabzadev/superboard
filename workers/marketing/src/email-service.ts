@@ -4,8 +4,8 @@ import {
   type EmailSmtpSecretConfig,
   type EmailSmtpTransportMessage,
   type EmailSmtpTransportReceipt,
-} from "@opengrow/contracts/email";
-import { readTextLimited } from "@opengrow/contracts/request-body";
+} from "@superboard/contracts/email";
+import { readTextLimited } from "@superboard/contracts/request-body";
 import { failure } from "./auth";
 import type { Env } from "./types";
 

@@ -1,7 +1,7 @@
 # Production Migration Inventory
 
 This document is the migration contract before product implementation resumes.
-It is generated from the current OpenGrow workspace plus `upstream/opengrow/*`
+It is generated from the current SuperBoard workspace plus `upstream/opengrow/*`
 submodules pinned to GitHub `origin/main`.
 
 Run the reproducible inventory with:
@@ -26,7 +26,7 @@ npm run migration:inventory
 
 ## Current Inventory
 
-| Area        | Upstream OpenGrow |                                    Current OpenGrow |
+| Area        | Upstream SuperBoard |                                    Current SuperBoard |
 | ----------- | ----------------: | --------------------------------------------------: |
 | Routes      |               170 |                                 199 Worker handlers |
 | Tables      |                60 |                                   60 D1 table names |
@@ -70,7 +70,7 @@ block module-by-module production ports.
 - User creation and invitation acceptance persist OAuth access and refresh
   tokens instead of returning detached JWTs only.
 - Passwords are written as bcrypt hashes compatible with Devise-style storage;
-  the verifier still accepts existing OpenGrow PBKDF2 hashes for migration.
+  the verifier still accepts existing SuperBoard PBKDF2 hashes for migration.
 - OAuth password grant checks bcrypt/PBKDF2 hashes, enforces TOTP when enabled,
   and uses short-lived access tokens plus seven-day refresh tokens.
 - Identity SSO routes are ported at `/api/v1/identity/sso/auth/:provider`,
@@ -95,7 +95,7 @@ Auth-adjacent mail delivery is now covered by module 13.
 
 - iOS, Android, Desktop and Web applications are persisted in the upstream
   `applications` plus platform configuration tables and returned through a
-  OpenGrow-shaped `ApplicationSerializer` response.
+  SuperBoard-shaped `ApplicationSerializer` response.
 - iOS setup persists `bundle_id`, `app_prefix`, `tablet_enabled`, APNs `.p8`
   upload metadata/content, and key id.
 - Android setup persists `identifier`, `sha256s`, `tablet_enabled`, Firebase
@@ -184,7 +184,7 @@ Auth-adjacent mail delivery is now covered by module 13.
 - The historical browser validation used the now-removed
   `NEXT_PUBLIC_OPENGROW_EE` edition flag. Revenue visibility is now controlled
   by the application's `revenue_collection_enabled` capability and has no
-  OpenGrow plan dependency; the same fixture showed `pro_monthly`, iOS, 2 units
+  SuperBoard plan dependency; the same fixture showed `pro_monthly`, iOS, 2 units
   and `$9.98` from the local Worker without mocked network routes.
 
 ### 7. Messaging and SDK notifications
@@ -391,7 +391,7 @@ Auth-adjacent mail delivery is now covered by module 13.
 
 ### 16. Diagnostics and Worker log validation
 
-- OpenGrow upstream diagnostics routes are now available under
+- SuperBoard upstream diagnostics routes are now available under
   `/api/v1/diagnostics/test_logs`, `/test_diagnostics`, and `/test_exception`
   for GET and POST.
 - Diagnostics are protected by `DIAGNOSTICS_API_KEY` through
@@ -411,7 +411,7 @@ Auth-adjacent mail delivery is now covered by module 13.
 
 - The legacy `/api/v1/admin/create_enterprise_subscription` and
   `/api/v1/admin/update_enterprise_subscription` compatibility routes were
-  removed when OpenGrow became an operator back office rather than a SaaS.
+  removed when SuperBoard became an operator back office rather than a SaaS.
   Historical `enterprise_subscriptions` rows remain untouched for audit and
   controlled migration; no runtime plan or MAU quota reads them anymore.
 - `/api/v1/admin/migrate_firebase_links` accepts a real CSV upload, maps
@@ -428,7 +428,7 @@ Auth-adjacent mail delivery is now covered by module 13.
 
 ### 18. Upstream SDK compatibility routes
 
-- `/api/v1/sdk/authenticate` and `/device_for_vendor_id` now accept the OpenGrow
+- `/api/v1/sdk/authenticate` and `/device_for_vendor_id` now accept the SuperBoard
   upstream `PROJECT-KEY`, `PLATFORM`, `IDENTIFIER` and `LINKSQUARED` credential
   model while preserving the existing `X-Api-Key` Cloudflare adapter.
 - `/api/v1/sdk/event`, `/data_for_device`, `/data_for_device_and_url`,
@@ -454,7 +454,7 @@ Auth-adjacent mail delivery is now covered by module 13.
 - MCP OAuth 2.1 discovery now has matching top-level `/register`, `/authorize`
   and `/token` Worker routes. The flow persists dynamic clients, PKCE auth
   codes, access tokens and refresh tokens in the upstream-compatible MCP tables.
-- MCP SDK and redirect setup now accept the official OpenGrow MCP client query
+- MCP SDK and redirect setup now accept the official SuperBoard MCP client query
   parameters (`project_id`, `instance_id`) and write real platform rows for
   iOS, Android, desktop applications and redirect variations.
 
@@ -501,7 +501,7 @@ paths.
 5. SDK ingestion and visitors
    - Port device auth, device updates, events, visitor attributes, attribution
      and visitor merge behavior.
-   - Success: OpenGrow SDK e2e paths can authenticate, create/read links, submit
+   - Success: SuperBoard SDK e2e paths can authenticate, create/read links, submit
      events and update visitor attributes.
 
 6. Analytics and dashboard metrics

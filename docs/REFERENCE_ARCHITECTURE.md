@@ -1,14 +1,14 @@
-# OpenGrow reference architecture
+# SuperBoard reference architecture
 
 The source-of-truth boundary is governed by
-[ADR-001](./ADR-001-CANONICAL-OPENGROW-SOURCE.md): `opengrow-platform` is the single
-canonical platform repository and `opengrow-reference` is its independent acceptance
+[ADR-001](./ADR-001-CANONICAL-SUPERBOARD-SOURCE.md): `superboard-platform` is the single
+canonical platform repository and `superboard-reference` is its independent acceptance
 consumer. Historical upstream trees are provenance, not a second release
 authority.
 
 ## Objective
 
-OpenGrow is a reusable back-office platform for applications. It is not a SaaS
+SuperBoard is a reusable back-office platform for applications. It is not a SaaS
 tenant that owns every application runtime. The platform provides a common,
 versioned control plane; each application supplies non-secret configuration,
 feature flags, credentials through its Cloudflare account, and at most one
@@ -20,18 +20,18 @@ snippets never contain an MBZA, VocoStar or generic example hostname.
 
 The two canonical repositories are:
 
-- `mbzadev/opengrow-platform`: this monorepo, containing the dashboard, common
+- `mbzadev/superboard-platform`: this monorepo, containing the dashboard, common
   Workers, deployment automation, contracts, and SDKs;
-- `mbzadev/opengrow-reference`: the FlutterFlow reference application consuming
-  released OpenGrow libraries without copying their implementation.
+- `mbzadev/superboard-reference`: the FlutterFlow reference application consuming
+  released SuperBoard libraries without copying their implementation.
 
-The reusable FlutterFlow library project named `OpenGrow` is also owned by the
+The reusable FlutterFlow library project named `SuperBoard` is also owned by the
 platform repository: its Git source is `tools/flutterflow-library`, its
 machine-readable surface is `config/flutterflow-library.json`, and its remote
 FlutterFlow project ID/API key come only from the protected GitHub Environment.
 The remote project is never a second source authority.
 
-`mbza.dev` is the development and acceptance deployment of OpenGrow. It is not
+`mbza.dev` is the development and acceptance deployment of SuperBoard. It is not
 the product name and must not appear as a default inside reusable runtime code.
 
 ## Development endpoints
@@ -39,7 +39,7 @@ the product name and must not appear as a default inside reusable runtime code.
 | Surface       | URL                                          | Responsibility                                                                          |
 | ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Reference app | `https://reference.mbza.dev`                 | Executable Flutter Web acceptance specification                                         |
-| Back office   | `https://grow.mbza.dev`                      | OpenGrow administration and infrastructure status                                       |
+| Back office   | `https://board.mbza.dev`                     | SuperBoard administration and infrastructure status                                     |
 | API           | `https://api.mbza.dev`                       | Authenticated API gateway and SDK orchestration                                         |
 | SDK           | `https://sdk.mbza.dev`                       | Mobile and FlutterFlow SDK surface                                                      |
 | Short links   | `https://in.mbza.dev`                        | Redirects, attribution and universal/app links                                          |
@@ -51,7 +51,7 @@ the product name and must not appear as a default inside reusable runtime code.
 The API and short-link origins are deliberately distinct. Platform endpoints
 come from `deploy/targets/mbza-development.json`; the acceptance application's
 own URL and Static Assets Worker come from
-`opengrow-reference/reference.project.json`. Neither manifest contains a
+`superboard-reference/reference.project.json`. Neither manifest contains a
 Cloudflare account ID or credential.
 
 ## Runtime topology
@@ -60,7 +60,7 @@ Cloudflare account ID or credential.
 flowchart LR
   reference["reference.mbza.dev"] --> api["API gateway"]
   ff["Flutter / FlutterFlow app"] --> api
-  admin["OpenGrow dashboard"] --> api
+  admin["SuperBoard dashboard"] --> api
   agent["Claude / Cursor / MCP client"] --> mcp["MCP Worker"]
   mcp -->|"private Service Binding"| api
   api --> identity["Identity Worker"]
@@ -90,7 +90,7 @@ both pass through the API gateway.
 
 The reference application is not a seventeenth business service. It is a
 separately deployed, assets-only Worker whose sole role is end-to-end acceptance
-of the public SDK contracts. A push to `opengrow-reference/dev` builds Flutter Web
+of the public SDK contracts. A push to `superboard-reference/dev` builds Flutter Web
 and publishes it to `reference.mbza.dev` through the protected GitHub
 `development` Environment. Pull requests and `main` validate it but do not
 publish the MBZA test site.
@@ -100,7 +100,7 @@ publish the MBZA test site.
 | Worker          | Scope                        | Purpose                                                                                               | Primary state                                  |
 | --------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `api`           | common, mandatory            | OAuth/JWT gateway, users, projects, notifications, file orchestration, SDK routes, health aggregation | central D1, KV, R2, Queues                     |
-| `dashboard`     | common, mandatory            | OpenGrow administrator UI, including `/infrastructure`                                                | OpenNext assets and cache R2                   |
+| `dashboard`     | common, mandatory            | SuperBoard administrator UI, including `/infrastructure`                                                | OpenNext assets and cache R2                   |
 | `email`         | common, mandatory            | transactional/test delivery, SMTP dispatch, retries, capture and preview                              | email D1, Email Queue + DLQ                    |
 | `billing`       | optional feature             | store verification, purchases, subscriptions, entitlements, refunds and billing jobs                  | central D1/KV/R2, Billing Queue + DLQ          |
 | `identity`      | common, mandatory            | application accounts, email/password, Google/Apple federation, sessions and JWT exchange              | Identity D1                                    |
@@ -144,7 +144,7 @@ Cloudflare secrets and support overlap rotation.
 | Paywalls/products             | reusable feature Workers              | catalogue and application/store identifiers         |
 | Marketing/newsletters         | reusable marketing Worker             | contacts, consent, SMTP profile and campaigns       |
 | Transactional email           | common email Worker                   | sender identity and SMTP secret                     |
-| Support                       | reusable OpenGrow support Worker      | inbox configuration and webhooks                    |
+| Support                       | reusable SuperBoard support Worker      | inbox configuration and webhooks                    |
 | Unique conversions/AI jobs    | custom Worker contract                | implementation, queues, model/provider credentials  |
 | Domains/resources             | deployment generator                  | target manifest values                              |
 
@@ -166,7 +166,7 @@ Cloudflare secrets and support overlap rotation.
 - the per-application upload ceiling, processor-ticket lifetime and
   exact/wildcard MIME allowlist enforced by the common Files Worker.
 
-The current contract is `schemaVersion: 11`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
+The current contract is `schemaVersion: 12`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
 provider secrets, signing keys or preview tokens. Account selection resolves in
 this order:
 
@@ -261,7 +261,7 @@ no-store `503 degraded` response when readiness is not proven.
 ## Custom Worker protocol
 
 The app-specific Worker protocol is defined by
-`@opengrow/contracts/custom-worker`. It exposes a private manifest and a
+`@superboard/contracts/custom-worker`. It exposes a private manifest and a
 versioned job envelope containing a capability, project reference, timestamp and
 idempotency key. `workers/custom/reference` is the template used by `mbza.dev`.
 
@@ -275,7 +275,7 @@ Rules:
 - API access only through `CUSTOM_WORKER` Service Binding;
 - `CUSTOM_WORKER_TOKEN` stored as a secret on both sides;
 - persist idempotency before external side effects;
-- publish capability descriptions so the OpenGrow dashboard can explain what
+- publish capability descriptions so the SuperBoard dashboard can explain what
   the app-specific runtime does;
 - promote duplicated behavior into a common Worker.
 
@@ -355,10 +355,10 @@ permissions and are never guessed from application tables.
 
 ## Legacy VocoStar convergence
 
-`api.vocostar.com` becomes the OpenGrow gateway instead of a separate unmanaged
+`api.vocostar.com` becomes the SuperBoard gateway instead of a separate unmanaged
 API island. Existing VocoStar conversion/media workers move behind one
 `workers/custom/vocostar` implementation and the common file contract. The
-OpenGrow Support Worker replaces both the FlutterFlow/Chatwoot integration and
+SuperBoard Support Worker replaces both the FlutterFlow/Chatwoot integration and
 the temporary Cloudflare OpenChat runtime. `sup.vocostar.com` is already absent
 from public DNS; `chat.vocostar.com` remains the live migration source. Only
 after Support parity, data reconciliation, attachment export, rollback

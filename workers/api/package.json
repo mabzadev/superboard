@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/api-worker",
+  "name": "@superboard/api-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "npx vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
+    "@superboard/contracts": "*",
     "@apple/app-store-server-library": "^3.1.0",
     "bcryptjs": "^3.0.2",
     "hono": "^4.7.4",

@@ -4,10 +4,10 @@ This runbook repairs the one-time repository initialization split in which
 `main` and `dev` exist but GitHub cannot compute a merge base. It applies to
 both canonical public repositories:
 
-| Repository                   | Preserved pre-OpenGrow `main`                                                        |
+| Repository                   | Preserved pre-SuperBoard `main`                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------------ |
-| `mbzadev/opengrow-platform`  | `audit/pre-opengrow-main-b633af5ac8d5` at `b633af5ac8d523a36b9fe0e9ea6e83d2da2cf377` |
-| `mbzadev/opengrow-reference` | `audit/pre-opengrow-main-729eaf47b2dd` at `729eaf47b2dd061d2be9e01df37b00dc4f0bb490` |
+| `mbzadev/superboard-platform`  | `audit/pre-opengrow-main-b633af5ac8d5` at `b633af5ac8d523a36b9fe0e9ea6e83d2da2cf377` |
+| `mbzadev/superboard-reference` | `audit/pre-opengrow-main-729eaf47b2dd` at `729eaf47b2dd061d2be9e01df37b00dc4f0bb490` |
 
 The audit refs retain the independently initialized GitHub README histories.
 They are evidence and recovery refs; never move, delete or reuse them.
@@ -103,5 +103,5 @@ script or one shared confirmation.
 Before merge, rollback is closing the pull request and deleting only the
 dedicated bridge branch. After merge, do not force-reset `main`: stop production
 deployment, preserve the exact merge evidence and restore protection settings.
-The pre-OpenGrow audit branch remains available for forensic recovery, while a
+The pre-SuperBoard audit branch remains available for forensic recovery, while a
 forward corrective pull request preserves all reviewed history.

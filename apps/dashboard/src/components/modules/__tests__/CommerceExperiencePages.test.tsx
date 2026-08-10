@@ -16,7 +16,7 @@ vi.mock("@/context/useProjectSelection", () => ({
   }),
 }));
 vi.mock("@/components/layout/app-header", () => ({
-  default: () => <header>OpenGrow</header>,
+  default: () => <header>SuperBoard</header>,
 }));
 vi.mock("@/api/products/productsService", () => ({
   archiveEntitlement: vi.fn(),

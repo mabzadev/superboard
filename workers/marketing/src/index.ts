@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { inspectSqlDatabaseAndSchemaHealth } from "@opengrow/contracts/health";
+import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { verifyInternalProjectContext, failure } from "./auth";
 import { decryptJson, encryptJson, sha256 } from "./secrets";
 import { sendSmtpMessage } from "./email-service";
@@ -1956,9 +1956,9 @@ app.post("/internal/v1/settings/smtp/test", async (c) => {
       secret,
       message: {
         to: email(body.recipient || publicConfig.from_email, "recipient"),
-        subject: "OpenGrow SMTP connection test",
+        subject: "SuperBoard SMTP connection test",
         html: null,
-        text: "Your OpenGrow SMTP profile is working.",
+        text: "Your SuperBoard SMTP profile is working.",
       },
     });
     await c.env.DB.prepare(
@@ -2550,7 +2550,9 @@ function applicationIdentity(c: MarketingContext) {
     );
   }
   const userId = String(
-    c.req.header("x-opengrow-application-user-id") || "",
+    c.req.header("x-superboard-application-user-id") ||
+      c.req.header("x-opengrow-application-user-id") ||
+      "",
   ).trim();
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/.test(userId)) {
     throw failure(
@@ -2561,9 +2563,13 @@ function applicationIdentity(c: MarketingContext) {
   }
   return {
     userId,
-    email: email(c.req.header("x-opengrow-application-email")),
+    email: email(
+      c.req.header("x-superboard-application-email") ||
+        c.req.header("x-opengrow-application-email"),
+    ),
     name: optionalText(
-      c.req.header("x-opengrow-application-name"),
+      c.req.header("x-superboard-application-name") ||
+        c.req.header("x-opengrow-application-name"),
       "name",
       120,
     ),

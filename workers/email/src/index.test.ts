@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const smtp = vi.hoisted(() => ({ send: vi.fn() }));
-vi.mock("@opengrow/email-transport", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@opengrow/email-transport")>()),
+vi.mock("@superboard/email-transport", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@superboard/email-transport")>()),
   sendSmtpMessage: smtp.send,
 }));
-import { EmailTransportError } from "@opengrow/email-transport";
+import { EmailTransportError } from "@superboard/email-transport";
 import worker from "./index";
 
 const metrics = {

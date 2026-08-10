@@ -35,7 +35,7 @@ const androidBuild = await readFile(
   "utf8",
 );
 const flutterPodspec = await readFile(
-  new URL("../sdks/flutter/ios/opengrow_flutter.podspec", import.meta.url),
+  new URL("../sdks/flutter/ios/superboard_flutter.podspec", import.meta.url),
   "utf8",
 );
 const javascriptManifest = JSON.parse(
@@ -105,25 +105,25 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
   assert.match(workflow, /workflow_run\.conclusion == 'success'/);
   assert.match(workflow, /actions: read/);
   assert.match(workflow, /dev\|main\) ;;/);
-  assert.match(workflow, /vars\.OPENGROW_TARGET/);
+  assert.match(workflow, /vars\.SUPERBOARD_TARGET/);
   assert.match(
     workflow,
-    /OPENGROW_EXPECTED_TARGET: \$\{\{ matrix\.target \}\}/,
+    /SUPERBOARD_EXPECTED_TARGET: \$\{\{ matrix\.target \}\}/,
   );
   assert.match(
     workflow,
-    /test "\$OPENGROW_TARGET" = "\$OPENGROW_EXPECTED_TARGET"/,
+    /test "\$SUPERBOARD_TARGET" = "\$SUPERBOARD_EXPECTED_TARGET"/,
   );
   assert.match(workflow, /scripts\/github-deployment-matrix\.mjs/);
   assert.match(workflow, /fromJSON\(needs\.plan\.outputs\.matrix\)/);
   assert.match(workflow, /environment: \$\{\{ matrix\.githubEnvironment \}\}/);
   assert.match(
     workflow,
-    /OPENGROW_ENVIRONMENT: \$\{\{ matrix\.cloudflareEnvironment \}\}/,
+    /SUPERBOARD_ENVIRONMENT: \$\{\{ matrix\.cloudflareEnvironment \}\}/,
   );
   assert.match(
     workflow,
-    /OPENGROW_REFERENCE_ROOT: \$\{\{ github\.workspace \}\}\/\.ci-reference-contract/,
+    /SUPERBOARD_REFERENCE_ROOT: \$\{\{ github\.workspace \}\}\/\.ci-reference-contract/,
   );
   assert.match(
     workflow,
@@ -151,7 +151,7 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
   assert.match(workflow, /git rev-parse FETCH_HEAD/);
   assert.match(
     workflow,
-    /npm run cloudflare:types:check:target -- \\\n\s+--target "\$OPENGROW_TARGET" \\\n\s+--environment "\$OPENGROW_ENVIRONMENT"/u,
+    /npm run cloudflare:types:check:target -- \\\n\s+--target "\$SUPERBOARD_TARGET" \\\n\s+--environment "\$SUPERBOARD_ENVIRONMENT"/u,
   );
   assert.doesNotMatch(workflow, /npm run cloudflare:types:check(?:\s|$)/u);
   assert.match(workflow, /npm run cloudflare:secrets:check/);
@@ -170,18 +170,18 @@ test("Cloudflare deployment is restricted, preflighted and target-driven", () =>
   assert.match(workflow, /if-no-files-found: error/);
   assert.match(
     workflow,
-    /opengrow-d1-backups-\$\{\{ matrix\.id \}\}-\$\{\{ github\.run_id \}\}/,
+    /superboard-d1-backups-\$\{\{ matrix\.id \}\}-\$\{\{ github\.run_id \}\}/,
   );
   assert.match(workflow, /steps\.encrypt-backups\.outcome == 'failure'/);
-  assert.match(workflow, /opengrow-d1-recovery-/);
+  assert.match(workflow, /superboard-d1-recovery-/);
   assert.match(
     workflow,
-    /opengrow-d1-recovery-\$\{\{ matrix\.id \}\}-\$\{\{ github\.run_id \}\}/,
+    /superboard-d1-recovery-\$\{\{ matrix\.id \}\}-\$\{\{ github\.run_id \}\}/,
   );
   assert.match(workflow, /if-no-files-found: warn/);
   assert.doesNotMatch(
     workflow,
-    /steps\.deploy-workers\.outcome == 'success'.*OPENGROW_ENVIRONMENT == 'production'/u,
+    /steps\.deploy-workers\.outcome == 'success'.*SUPERBOARD_ENVIRONMENT == 'production'/u,
   );
   assert.doesNotMatch(workflow, /custom-(?:reference|vocostar):check/);
   assert.ok(
@@ -249,11 +249,11 @@ test("deployment validation cannot inherit operational Cloudflare context", () =
     const operationalStep = workflowSection(workflow, start, end);
     assert.match(
       operationalStep,
-      /OPENGROW_TARGET: \$\{\{ vars\.OPENGROW_TARGET \}\}/u,
+      /SUPERBOARD_TARGET: \$\{\{ vars\.SUPERBOARD_TARGET \|\| vars\.OPENGROW_TARGET \}\}/u,
     );
     assert.match(
       operationalStep,
-      /OPENGROW_ENVIRONMENT: \$\{\{ matrix\.cloudflareEnvironment \}\}/u,
+      /SUPERBOARD_ENVIRONMENT: \$\{\{ matrix\.cloudflareEnvironment \}\}/u,
     );
   }
 });
@@ -262,8 +262,8 @@ test("development dispatches the exact deployed revision to the reference reposi
   assert.match(workflow, /needs\.plan\.outputs\.branch == 'dev'/);
   assert.match(workflow, /needs\.plan\.outputs\.deploy == 'true'/);
   assert.match(workflow, /needs\.deploy\.result == 'success'/);
-  assert.match(workflow, /vars\.OPENGROW_REFERENCE_REPOSITORY/);
-  assert.match(workflow, /secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN/);
+  assert.match(workflow, /vars\.SUPERBOARD_REFERENCE_REPOSITORY/);
+  assert.match(workflow, /secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN/);
   assert.match(workflow, /event_type=platform-dev-updated/);
   assert.match(workflow, /DEPLOY_SHA: \$\{\{ needs\.plan\.outputs\.sha \}\}/);
   assert.match(workflow, /client_payload\[platform_sha\]=\$DEPLOY_SHA/);
@@ -275,7 +275,7 @@ test("branch protection can require one stable aggregate CI check", () => {
   assert.match(ciWorkflow, /if: \$\{\{ always\(\) \}\}/);
   assert.match(
     ciWorkflow,
-    /needs: \[plan, non_node_security, workers, dashboard, flutter, node_sdks, ios_sdk, android_sdk\]/,
+    /needs:\s*\[\s*plan,\s*non_node_security,\s*workers,\s*dashboard,\s*flutter,\s*node_sdks,\s*ios_sdk,\s*android_sdk,?\s*\]/u,
   );
   assert.match(ciWorkflow, /success\|skipped/);
   assert.match(ciWorkflow, /Validate Cloudflare and GitHub control planes/);
@@ -317,24 +317,24 @@ test("required CI executes pinned Python and Ruby dependency audits", () => {
       lockfile: "sdks/react-native/example/Gemfile.lock",
     },
   });
-  assert.match(auditJob, /OPENGROW_PIP_AUDIT_VERSION: "2\.10\.1"/u);
-  assert.match(auditJob, /OPENGROW_BUNDLER_VERSION: "2\.7\.2"/u);
-  assert.match(auditJob, /OPENGROW_BUNDLER_AUDIT_VERSION: "0\.9\.3"/u);
+  assert.match(auditJob, /SUPERBOARD_PIP_AUDIT_VERSION: "2\.10\.1"/u);
+  assert.match(auditJob, /SUPERBOARD_BUNDLER_VERSION: "2\.7\.2"/u);
+  assert.match(auditJob, /SUPERBOARD_BUNDLER_AUDIT_VERSION: "0\.9\.3"/u);
   assert.match(auditJob, /actions\/setup-python@[0-9a-f]{40}/u);
   assert.match(auditJob, /python-version: "3\.13\.7"/u);
   assert.match(auditJob, /ruby\/setup-ruby@[0-9a-f]{40}/u);
   assert.match(auditJob, /ruby-version: "3\.4\.9"/u);
   assert.match(
     auditJob,
-    /python3 -m pip install --disable-pip-version-check "pip-audit==\$OPENGROW_PIP_AUDIT_VERSION"/u,
+    /python3 -m pip install --disable-pip-version-check "pip-audit==\$SUPERBOARD_PIP_AUDIT_VERSION"/u,
   );
   assert.match(
     auditJob,
-    /gem install bundler --version "\$OPENGROW_BUNDLER_VERSION" --no-document/u,
+    /gem install bundler --version "\$SUPERBOARD_BUNDLER_VERSION" --no-document/u,
   );
   assert.match(
     auditJob,
-    /gem install bundler-audit --version "\$OPENGROW_BUNDLER_AUDIT_VERSION" --no-document/u,
+    /gem install bundler-audit --version "\$SUPERBOARD_BUNDLER_AUDIT_VERSION" --no-document/u,
   );
   assert.match(auditJob, /npm run security:audit:non-node/u);
   assert.match(
@@ -355,6 +355,10 @@ test("CI validates every maintained SDK family and the Chatwoot migration path",
   assert.match(ciWorkflow, /npm run react-native:native-contract:check/);
   assert.match(ciWorkflow, /run: yarn check/);
   assert.match(ciWorkflow, /ios_sdk:/);
+  assert.match(
+    ciWorkflow,
+    /ios_sdk:[\s\S]*?Verify Flutter links to every internal iOS source[\s\S]*?flutter-ios-embedded-sources\.test\.mjs[\s\S]*?\.\/scripts\/run_tests\.sh/u,
+  );
   assert.match(ciWorkflow, /\.\/scripts\/run_tests\.sh/);
   assert.match(ciWorkflow, /android_sdk:/);
   assert.match(ciWorkflow, /:OpenGrow:testDebugUnitTest/);
@@ -386,7 +390,7 @@ test("JavaScript CI and releases execute the complete first-party package check"
   assert.match(javascriptManifest.scripts.check, /npm run test:package/);
   assert.match(javascriptManifest.scripts.check, /npm run pack:check$/);
   assert.match(ciWorkflow, /npm ci && npm run check/);
-  assert.match(releaseWorkflow, /npm ci && npm run check/);
+  assert.doesNotMatch(releaseWorkflow, /working-directory: sdks\/javascript/u);
 });
 
 test("production routing cannot bypass client convergence through workflow dispatch", () => {
@@ -403,8 +407,8 @@ test("production routing cannot bypass client convergence through workflow dispa
   );
 });
 
-test("immutable SDK publication revalidates native and React Native packages", () => {
-  assert.match(releaseWorkflow, /^name: Release OpenGrow SDK$/m);
+test("immutable SDK publication is restricted to active Flutter packages", () => {
+  assert.match(releaseWorkflow, /^name: Release SuperBoard SDK$/m);
   assert.match(releaseWorkflow, /workflow_dispatch:[\s\S]*?release_tag:/);
   assert.match(
     releaseWorkflow,
@@ -423,47 +427,23 @@ test("immutable SDK publication revalidates native and React Native packages", (
     releaseWorkflow,
     /authorize-publication:[\s\S]*?name: Authorize immutable SDK publication[\s\S]*?needs: validate-tag[\s\S]*?environment: sdk-release[\s\S]*?Bind approval to the validated immutable release/u,
   );
-  for (const job of ["flutter", "ios", "android", "npm"]) {
-    assert.match(
-      releaseWorkflow,
-      new RegExp(
-        `\\n  ${job}:[\\s\\S]*?needs: \\[validate-tag, authorize-publication\\]`,
-        "u",
-      ),
-    );
-  }
+  assert.match(
+    releaseWorkflow,
+    /\n  flutter:[\s\S]*?needs: \[validate-tag, authorize-publication\]/u,
+  );
   assert.equal(
     (
       releaseWorkflow.match(
         /tag_name: \$\{\{ needs\.validate-tag\.outputs\.tag \}\}/gu,
       ) || []
     ).length,
-    4,
+    1,
   );
-  assert.match(releaseWorkflow, /Build and test the tagged iOS SDK/);
-  assert.match(releaseWorkflow, /\.\/scripts\/run_tests\.sh/);
-  assert.match(
+  assert.doesNotMatch(releaseWorkflow, /\n  (?:ios|android|npm):/u);
+  assert.doesNotMatch(releaseWorkflow, /sdk-flutterflow-messaging-v/u);
+  assert.doesNotMatch(
     releaseWorkflow,
-    /corepack enable && yarn install --immutable && yarn check/,
-  );
-  assert.match(releaseWorkflow, /npm ci && npm run check/);
-  assert.match(
-    releaseWorkflow,
-    /Install repository tooling for the React Native contract[\s\S]*npm ci --ignore-scripts[\s\S]*npm run react-native:native-contract:check/,
-  );
-  assert.match(releaseWorkflow, /npm run react-native:native-contract:check/);
-  assert.equal(
-    (
-      releaseWorkflow.match(
-        /test "\$[A-Z_a-z]+" != "js" \|\| catalog_id="javascript"/gu,
-      ) ?? []
-    ).length,
-    2,
-  );
-  assert.match(releaseWorkflow, /:OpenGrow:testDebugUnitTest/);
-  assert.match(
-    releaseWorkflow,
-    /publishReleasePublicationToGithubPackagesRepository/,
+    /sdk-(?:ios|android|js|react-native)-v/u,
   );
   assert.doesNotMatch(releaseWorkflow, /PrivateRepository|private SDK/i);
   assert.match(androidBuild, /name = "GithubPackages"/);
@@ -479,13 +459,156 @@ test("immutable SDK publication revalidates native and React Native packages", (
   );
   assert.match(
     releaseWorkflow,
-    /sdk-catalog\.mjs promote[\s\S]*?react-native-native-contract\.mjs write[\s\S]*?sdk-documentation\.mjs write[\s\S]*?react-native-native-contract\.mjs check[\s\S]*?sdk-documentation\.mjs check/,
+    /sdk-catalog\.mjs promote[\s\S]*?sdk-documentation\.mjs write[\s\S]*?sdk-documentation\.mjs check/,
   );
+  assert.doesNotMatch(releaseWorkflow, /react-native-native-contract/u);
   assert.match(releaseWorkflow, /--release-sha "\$RELEASE_SHA"/);
   assert.match(
     releaseWorkflow,
-    /propose-catalogue:[\s\S]*?if: \$\{\{ always\(\) && needs\.validate-tag\.result == 'success' && needs\.release-gate\.result == 'success' \}\}/,
+    /propose-catalogue:[\s\S]*?if: \$\{\{ always\(\) && needs\.validate-tag\.result == 'success' && needs\.release-gate\.result == 'success' && needs\.publish-release\.result == 'success' \}\}/,
   );
+});
+
+test("Flutter SDK release gates compile both native wrappers without a named simulator", () => {
+  const prepareAndroid = workflowSection(
+    prepareReleaseWorkflow,
+    "\n  flutter-android-native:",
+    "\n  flutter-ios-native:",
+  );
+  const prepareIos = workflowSection(
+    prepareReleaseWorkflow,
+    "\n  flutter-ios-native:",
+    "\n  native-candidate-gate:",
+  );
+  const prepareGate = workflowSection(
+    prepareReleaseWorkflow,
+    "\n  native-candidate-gate:",
+    "\n  tag:",
+  );
+  const prepareTag = workflowSection(
+    prepareReleaseWorkflow,
+    "\n  tag:",
+    "\n      - name: Create reviewed SDK tag",
+  );
+  const releaseAndroid = workflowSection(
+    releaseWorkflow,
+    "\n  flutter-android-native:",
+    "\n  flutter-ios-native:",
+  );
+  const releaseIos = workflowSection(
+    releaseWorkflow,
+    "\n  flutter-ios-native:",
+    "\n  release-gate:",
+  );
+  const releaseGate = workflowSection(
+    releaseWorkflow,
+    "\n  release-gate:",
+    "\n  publish-release:",
+  );
+  const publication = workflowSection(
+    releaseWorkflow,
+    "\n  publish-release:",
+    "\n  propose-catalogue:",
+  );
+
+  assert.match(prepareAndroid, /if: inputs\.library == 'flutter'/u);
+  assert.match(
+    prepareAndroid,
+    /ref: \$\{\{ needs\.validate\.outputs\.source_sha \}\}/u,
+  );
+  assert.match(prepareAndroid, /actions\/setup-java@[0-9a-f]{40}/u);
+  assert.match(prepareAndroid, /flutter build apk --debug/u);
+  assert.match(prepareIos, /runs-on: macos-latest/u);
+  assert.match(prepareIos, /pod install --project-directory=ios --deployment/u);
+  assert.match(prepareIos, /pod ipc spec sdks\/flutter\/ios\/superboard_flutter\.podspec/u);
+  assert.match(
+    prepareIos,
+    /-project sdks\/flutter\/example\/ios\/Pods\/Pods\.xcodeproj/u,
+  );
+  assert.match(prepareIos, /-target superboard_flutter/u);
+  assert.match(prepareIos, /CODE_SIGNING_ALLOWED=NO/u);
+  assert.doesNotMatch(prepareIos, /-destination|iPhone [0-9]/u);
+  assert.match(prepareIos, /-showdestinations/u);
+  assert.match(prepareIos, /EXCLUDED_SOURCE_FILE_NAMES=\*\.xib/u);
+  assert.match(prepareIos, /flutter-ios-embedded-sources\.test\.mjs/u);
+  assert.match(
+    prepareGate,
+    /needs: \[validate, flutter-android-native, flutter-ios-native\]/u,
+  );
+  assert.match(prepareGate, /test "\$ANDROID_RESULT" = "success"/u);
+  assert.match(prepareGate, /test "\$IOS_RESULT" = "success"/u);
+  assert.match(prepareTag, /needs: \[validate, native-candidate-gate\]/u);
+
+  assert.match(
+    releaseAndroid,
+    /ref: \$\{\{ needs\.validate-tag\.outputs\.tag \}\}/u,
+  );
+  assert.match(releaseAndroid, /flutter build apk --debug/u);
+  assert.match(releaseIos, /runs-on: macos-latest/u);
+  assert.match(releaseIos, /pod install --project-directory=ios --deployment/u);
+  assert.match(
+    releaseIos,
+    /-project sdks\/flutter\/example\/ios\/Pods\/Pods\.xcodeproj/u,
+  );
+  assert.match(releaseIos, /-target superboard_flutter/u);
+  assert.match(releaseIos, /CODE_SIGNING_ALLOWED=NO/u);
+  assert.doesNotMatch(releaseIos, /-destination|iPhone [0-9]/u);
+  assert.match(releaseIos, /-showdestinations/u);
+  assert.match(releaseIos, /EXCLUDED_SOURCE_FILE_NAMES=\*\.xib/u);
+  assert.match(releaseIos, /flutter-ios-embedded-sources\.test\.mjs/u);
+  assert.match(
+    releaseGate,
+    /needs: \[validate-tag, authorize-publication, flutter, flutter-android-native, flutter-ios-native\]/u,
+  );
+  assert.match(releaseGate, /test "\$ANDROID_RESULT" = "success"/u);
+  assert.match(releaseGate, /test "\$IOS_RESULT" = "success"/u);
+  assert.match(publication, /needs: \[validate-tag, release-gate\]/u);
+  assert.match(publication, /permissions:\n      contents: write/u);
+  assert.match(publication, /softprops\/action-gh-release@[0-9a-f]{40}/u);
+});
+
+test("FlutterFlow v3 tag and publication are bound to the published Flutter v3 source", () => {
+  const prepareValidation = workflowSection(
+    prepareReleaseWorkflow,
+    "      - name: Bind FlutterFlow to the published Flutter v3 source",
+    "\n  flutter-android-native:",
+  );
+  const tagRevalidation = workflowSection(
+    prepareReleaseWorkflow,
+    "      - name: Revalidate the reviewed source and unused immutable refs",
+    "      - name: Create reviewed SDK tag",
+  );
+  const publicationValidation = workflowSection(
+    releaseWorkflow,
+    "      - name: Bind FlutterFlow to the already-published Flutter v3 source",
+    "\n  authorize-publication:",
+  );
+
+  for (const [section, expectedSha] of [
+    [prepareValidation, "SOURCE_SHA"],
+    [tagRevalidation, "SOURCE_SHA"],
+    [publicationValidation, "RELEASE_SHA"],
+  ]) {
+    assert.match(section, /sdk-catalog\.mjs candidate-ref --library flutter/u);
+    assert.match(section, /\^sdk-flutter-v3\\\./u);
+    assert.match(
+      section,
+      /git fetch --no-tags origin "refs\/tags\/\$flutter_tag:refs\/tags\/\$flutter_tag"/u,
+    );
+    assert.match(section, /flutter_sha="\$\(git rev-list -n 1 "\$flutter_tag"\)"/u);
+    assert.match(section, new RegExp(`test "\\$flutter_sha" = "\\$${expectedSha}"`, "u"));
+    assert.match(
+      section,
+      new RegExp(
+        `git rev-parse "\\$flutter_tag:sdks/flutter"[\\s\\S]*?git rev-parse "\\$${expectedSha}:sdks/flutter"`,
+        "u",
+      ),
+    );
+    assert.match(
+      section,
+      /gh api "repos\/\$GITHUB_REPOSITORY\/releases\/tags\/\$flutter_tag" --jq \.tag_name/u,
+    );
+  }
 });
 
 test("SDK publication proposes protected catalogue and reference promotions", () => {
@@ -568,7 +691,7 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(releaseWorkflow, /name: SDK release gate/);
   assert.match(
     releaseWorkflow,
-    /needs: \[validate-tag, authorize-publication, flutter, ios, android, npm\]/u,
+    /needs: \[validate-tag, authorize-publication, flutter, flutter-android-native, flutter-ios-native\]/u,
   );
   assert.match(
     releaseWorkflow,
@@ -577,10 +700,14 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(releaseWorkflow, /sdk-catalog\.mjs promote/);
   assert.match(
     releaseWorkflow,
-    /git add config\/sdk-libraries\.json[\s\S]*?sdks\/react-native\/plugin\/native-contract\.json[\s\S]*?sdks\/\*\/README\.md/,
+    /git add config\/sdk-libraries\.json sdks\/\*\/README\.md/,
   );
   assert.match(releaseWorkflow, /permissions:\n  contents: read/);
   assert.match(releaseWorkflow, /pull-requests: write/);
+  assert.match(
+    releaseWorkflow,
+    /propose-catalogue:[\s\S]*?needs: \[validate-tag, release-gate, publish-release\]/u,
+  );
   assert.match(releaseWorkflow, /gh pr create/);
   assert.match(releaseWorkflow, /gh pr reopen/);
   assert.match(
@@ -599,7 +726,7 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   assert.match(promoteReferenceSdkWorkflow, /branches: \[dev\]/);
   assert.match(
     promoteReferenceSdkWorkflow,
-    /for library in flutterflow flutterflow-support/,
+    /library\.lifecycle === 'active'[\s\S]*?library\.ecosystem === 'FlutterFlow'/,
   );
   assert.match(
     promoteReferenceSdkWorkflow,
@@ -628,7 +755,7 @@ test("reference promotion separates repository reads from cross-repository crede
   assert.match(dispatchJobHeader, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.doesNotMatch(
     dispatchJobHeader,
-    /secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN/u,
+    /secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN/u,
   );
 
   const releaseVerification = workflowSection(
@@ -642,7 +769,7 @@ test("reference promotion separates repository reads from cross-repository crede
   );
   assert.doesNotMatch(
     releaseVerification,
-    /OPENGROW_REFERENCE_DISPATCH_TOKEN/u,
+    /SUPERBOARD_REFERENCE_DISPATCH_TOKEN/u,
   );
 
   const crossRepositoryDispatch = workflowSection(
@@ -652,16 +779,16 @@ test("reference promotion separates repository reads from cross-repository crede
   );
   assert.match(
     crossRepositoryDispatch,
-    /GH_TOKEN: \$\{\{ secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN \}\}/u,
+    /GH_TOKEN: \$\{\{ secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN \|\| secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN \}\}/u,
   );
   assert.match(
     crossRepositoryDispatch,
-    /::error::OPENGROW_REFERENCE_DISPATCH_TOKEN is required in the sdk-release Environment for cross-repository dispatch\./u,
+    /::error::SUPERBOARD_REFERENCE_DISPATCH_TOKEN is required in the sdk-release Environment for cross-repository dispatch\./u,
   );
   assert.equal(
     (
       promoteReferenceSdkWorkflow.match(
-        /secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN/gu,
+        /secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN/gu,
       ) ?? []
     ).length,
     1,

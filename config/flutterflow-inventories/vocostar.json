@@ -17,7 +17,7 @@
         "names": ["index"],
         "classification": "common",
         "authority": "identity",
-        "replacementSymbols": ["OpenGrowBootstrap"],
+        "replacementSymbols": ["SuperBoardBootstrap"],
         "phase": "identity-runtime",
         "gate": "identity-secure-session-wired"
       },
@@ -32,7 +32,7 @@
         ],
         "classification": "remove",
         "authority": "onboardings",
-        "replacementSymbols": ["OpenGrowOnboarding"],
+        "replacementSymbols": ["SuperBoardOnboarding"],
         "phase": "onboardings-marketing",
         "gate": "legacy-onboarding-pages-removed"
       },
@@ -50,8 +50,8 @@
         "classification": "vocostar",
         "authority": "custom-jobs",
         "replacementSymbols": [
-          "opengrowApplicationCreateCustomJobJson",
-          "opengrowApplicationListCustomJobsJson"
+          "superboardApplicationCreateCustomJobJson",
+          "superboardApplicationListCustomJobsJson"
         ],
         "phase": "custom-jobs",
         "gate": "custom-jobs-authority-wired"
@@ -61,8 +61,8 @@
         "classification": "configurable",
         "authority": "identity",
         "replacementSymbols": [
-          "opengrowApplicationSignInProviderJson",
-          "opengrowApplicationLinkProviderJson"
+          "superboardApplicationSignInProviderJson",
+          "superboardApplicationLinkProviderJson"
         ],
         "phase": "identity-runtime",
         "gate": "identity-authority-wired"
@@ -71,7 +71,7 @@
         "names": ["settings_support", "settings_ticket"],
         "classification": "common",
         "authority": "support",
-        "replacementSymbols": ["opengrowSupportInitializeAuthenticated"],
+        "replacementSymbols": ["superboardSupportInitializeAuthenticated"],
         "phase": "support",
         "gate": "support-authority-wired"
       },
@@ -120,7 +120,7 @@
         "names": ["CardPaywall", "CardToken", "FeatureItem", "Paycreditv1"],
         "classification": "remove",
         "authority": "billing",
-        "replacementSymbols": ["OpenGrowPaywall"],
+        "replacementSymbols": ["SuperBoardPaywall"],
         "phase": "billing",
         "gate": "billing-authority-wired"
       }
@@ -131,7 +131,7 @@
         "persisted": true,
         "classification": "remove",
         "authority": "onboardings",
-        "replacementSymbols": ["OpenGrowOnboarding"],
+        "replacementSymbols": ["SuperBoardOnboarding"],
         "phase": "onboardings-marketing",
         "gate": "legacy-onboarding-loader-removed"
       },
@@ -140,7 +140,7 @@
         "persisted": true,
         "classification": "remove",
         "authority": "billing",
-        "replacementSymbols": ["OpenGrowPaywall"],
+        "replacementSymbols": ["SuperBoardPaywall"],
         "phase": "billing",
         "gate": "billing-authority-wired"
       },
@@ -166,7 +166,7 @@
         "persisted": true,
         "classification": "vocostar",
         "authority": "custom-jobs",
-        "replacementSymbols": ["opengrowApplicationListCustomJobsJson"],
+        "replacementSymbols": ["superboardApplicationListCustomJobsJson"],
         "phase": "custom-jobs",
         "gate": "custom-jobs-authority-wired"
       },
@@ -198,7 +198,7 @@
         "persisted": true,
         "classification": "remove",
         "authority": "identity",
-        "replacementSymbols": ["opengrowApplicationRestoreSessionJson"],
+        "replacementSymbols": ["superboardApplicationRestoreSessionJson"],
         "phase": "identity-runtime",
         "gate": "persisted-access-token-removed"
       },
@@ -207,7 +207,7 @@
         "persisted": true,
         "classification": "common",
         "authority": "identity",
-        "replacementSymbols": ["opengrowApplicationProfileJson"],
+        "replacementSymbols": ["superboardApplicationProfileJson"],
         "phase": "identity-runtime",
         "gate": "identity-authority-wired"
       },
@@ -216,7 +216,7 @@
         "persisted": false,
         "classification": "common",
         "authority": "billing",
-        "replacementSymbols": ["opengrowGetCustomerInfoJson"],
+        "replacementSymbols": ["superboardGetCustomerInfoJson"],
         "phase": "billing",
         "gate": "billing-authority-wired"
       },
@@ -226,8 +226,8 @@
         "classification": "remove",
         "authority": "billing",
         "replacementSymbols": [
-          "opengrowGetVirtualCurrenciesJson",
-          "opengrowGetCustomerInfoJson"
+          "superboardGetVirtualCurrenciesJson",
+          "superboardGetCustomerInfoJson"
         ],
         "phase": "billing",
         "gate": "client-entitlement-activation-removed"
@@ -241,7 +241,7 @@
         "persisted": true,
         "classification": "remove",
         "authority": "support",
-        "replacementSymbols": ["opengrowSupportInitializeAuthenticated"],
+        "replacementSymbols": ["superboardSupportInitializeAuthenticated"],
         "phase": "support",
         "gate": "legacy-support-init-removed"
       },
@@ -250,7 +250,7 @@
         "persisted": false,
         "classification": "remove",
         "authority": "support",
-        "replacementSymbols": ["opengrowSupportMessagesJson"],
+        "replacementSymbols": ["superboardSupportMessagesJson"],
         "phase": "support",
         "gate": "legacy-support-widget-removed"
       },
@@ -259,7 +259,7 @@
         "persisted": true,
         "classification": "remove",
         "authority": "notifications",
-        "replacementSymbols": ["opengrowSetPushToken"],
+        "replacementSymbols": ["superboardSetPushToken"],
         "phase": "files-notifications",
         "gate": "persisted-notification-token-removed"
       }
@@ -269,7 +269,7 @@
         "names": ["appBoard", "appQuestion"],
         "classification": "remove",
         "authority": "onboardings",
-        "replacementSymbols": ["OpenGrowOnboarding"],
+        "replacementSymbols": ["SuperBoardOnboarding"],
         "phase": "onboardings-marketing",
         "gate": "legacy-onboarding-loader-removed"
       },
@@ -277,7 +277,7 @@
         "names": ["appPaywall"],
         "classification": "remove",
         "authority": "billing",
-        "replacementSymbols": ["OpenGrowPaywall"],
+        "replacementSymbols": ["SuperBoardPaywall"],
         "phase": "billing",
         "gate": "billing-authority-wired"
       },
@@ -285,7 +285,7 @@
         "names": ["appSupportMessages"],
         "classification": "remove",
         "authority": "support",
-        "replacementSymbols": ["opengrowSupportMessagesJson"],
+        "replacementSymbols": ["superboardSupportMessagesJson"],
         "phase": "support",
         "gate": "legacy-support-widget-removed"
       },
@@ -293,7 +293,7 @@
         "names": ["user"],
         "classification": "common",
         "authority": "identity",
-        "replacementSymbols": ["opengrowApplicationProfileJson"],
+        "replacementSymbols": ["superboardApplicationProfileJson"],
         "phase": "identity-runtime",
         "gate": "identity-authority-wired"
       },
@@ -319,7 +319,7 @@
         "names": ["auth Logout"],
         "classification": "remove",
         "authority": "identity",
-        "replacementSymbols": ["opengrowApplicationLogoutJson"],
+        "replacementSymbols": ["superboardApplicationLogoutJson"],
         "phase": "identity-runtime",
         "gate": "legacy-auth-logout-endpoint-removed"
       },
@@ -327,7 +327,7 @@
         "names": ["Get App Board", "get App Questions"],
         "classification": "remove",
         "authority": "onboardings",
-        "replacementSymbols": ["OpenGrowOnboarding"],
+        "replacementSymbols": ["SuperBoardOnboarding"],
         "phase": "onboardings-marketing",
         "gate": "legacy-onboarding-loader-removed"
       },
@@ -350,8 +350,8 @@
         "classification": "vocostar",
         "authority": "custom-jobs",
         "replacementSymbols": [
-          "opengrowApplicationCreateCustomJobJson",
-          "opengrowApplicationListCustomJobsJson"
+          "superboardApplicationCreateCustomJobJson",
+          "superboardApplicationListCustomJobsJson"
         ],
         "phase": "custom-jobs",
         "gate": "custom-jobs-authority-wired"
@@ -362,7 +362,7 @@
         "names": ["getAppOnBording"],
         "classification": "remove",
         "authority": "onboardings",
-        "replacementSymbols": ["OpenGrowOnboarding"],
+        "replacementSymbols": ["SuperBoardOnboarding"],
         "phase": "onboardings-marketing",
         "gate": "legacy-onboarding-loader-removed"
       },
@@ -370,7 +370,7 @@
         "names": ["getAppPaywall", "paywallR1"],
         "classification": "remove",
         "authority": "billing",
-        "replacementSymbols": ["OpenGrowPaywall"],
+        "replacementSymbols": ["SuperBoardPaywall"],
         "phase": "billing",
         "gate": "billing-authority-wired"
       },
@@ -378,7 +378,7 @@
         "names": ["getAppVocals", "getUserMedia"],
         "classification": "vocostar",
         "authority": "custom-jobs",
-        "replacementSymbols": ["opengrowApplicationListCustomJobsJson"],
+        "replacementSymbols": ["superboardApplicationListCustomJobsJson"],
         "phase": "custom-jobs",
         "gate": "custom-jobs-authority-wired"
       },
@@ -386,7 +386,7 @@
         "names": ["initUp"],
         "classification": "common",
         "authority": "identity",
-        "replacementSymbols": ["OpenGrowBootstrap"],
+        "replacementSymbols": ["SuperBoardBootstrap"],
         "phase": "identity-runtime",
         "gate": "identity-secure-session-wired"
       }
@@ -396,7 +396,7 @@
         "names": ["getAppOnBoarding"],
         "classification": "remove",
         "authority": "onboardings",
-        "replacementSymbols": ["OpenGrowOnboarding"],
+        "replacementSymbols": ["SuperBoardOnboarding"],
         "phase": "onboardings-marketing",
         "gate": "legacy-onboarding-loader-removed"
       },
@@ -404,7 +404,7 @@
         "names": ["getAppPaywall"],
         "classification": "remove",
         "authority": "billing",
-        "replacementSymbols": ["OpenGrowPaywall"],
+        "replacementSymbols": ["SuperBoardPaywall"],
         "phase": "billing",
         "gate": "billing-authority-wired"
       },
@@ -412,7 +412,7 @@
         "names": ["getUserMedia"],
         "classification": "vocostar",
         "authority": "custom-jobs",
-        "replacementSymbols": ["opengrowApplicationListCustomJobsJson"],
+        "replacementSymbols": ["superboardApplicationListCustomJobsJson"],
         "phase": "custom-jobs",
         "gate": "custom-jobs-authority-wired"
       },
@@ -420,7 +420,7 @@
         "names": ["getAppDatabase"],
         "classification": "common",
         "authority": "app",
-        "replacementSymbols": ["opengrowApplicationRuntimePolicyJson"],
+        "replacementSymbols": ["superboardApplicationRuntimePolicyJson"],
         "phase": "identity-runtime",
         "gate": "runtime-policy-wired"
       }
@@ -438,7 +438,7 @@
         "names": ["requestTrackingPermission"],
         "classification": "configurable",
         "authority": "marketing",
-        "replacementSymbols": ["opengrowApplicationUpdateMarketingConsentJson"],
+        "replacementSymbols": ["superboardApplicationUpdateMarketingConsentJson"],
         "phase": "onboardings-marketing",
         "gate": "marketing-authority-wired"
       },
@@ -446,7 +446,7 @@
         "names": ["appCheckMaintenance", "appCheckUpdate"],
         "classification": "common",
         "authority": "app",
-        "replacementSymbols": ["opengrowApplicationRuntimePolicyJson"],
+        "replacementSymbols": ["superboardApplicationRuntimePolicyJson"],
         "phase": "identity-runtime",
         "gate": "runtime-policy-wired"
       },
@@ -460,9 +460,9 @@
         "classification": "remove",
         "authority": "billing",
         "replacementSymbols": [
-          "OpenGrowPaywall",
-          "opengrowGetCustomerInfoJson",
-          "opengrowGetVirtualCurrenciesJson"
+          "SuperBoardPaywall",
+          "superboardGetCustomerInfoJson",
+          "superboardGetVirtualCurrenciesJson"
         ],
         "phase": "billing",
         "gate": "billing-authority-wired"
@@ -481,9 +481,9 @@
         "classification": "common",
         "authority": "identity",
         "replacementSymbols": [
-          "opengrowApplicationRestoreSessionJson",
-          "opengrowApplicationSignInProviderJson",
-          "opengrowApplicationDeleteAccountJson"
+          "superboardApplicationRestoreSessionJson",
+          "superboardApplicationSignInProviderJson",
+          "superboardApplicationDeleteAccountJson"
         ],
         "phase": "identity-runtime",
         "gate": "identity-authority-wired"
@@ -493,9 +493,9 @@
         "classification": "remove",
         "authority": "support",
         "replacementSymbols": [
-          "opengrowSupportInitializeAuthenticated",
-          "opengrowSupportMessagesJson",
-          "opengrowSupportSendAdvanced"
+          "superboardSupportInitializeAuthenticated",
+          "superboardSupportMessagesJson",
+          "superboardSupportSendAdvanced"
         ],
         "phase": "support",
         "gate": "support-authority-wired"
@@ -504,7 +504,7 @@
         "names": ["userFCMToken"],
         "classification": "remove",
         "authority": "notifications",
-        "replacementSymbols": ["opengrowSetPushToken"],
+        "replacementSymbols": ["superboardSetPushToken"],
         "phase": "files-notifications",
         "gate": "legacy-notification-action-removed"
       },
@@ -513,8 +513,8 @@
         "classification": "remove",
         "authority": "files",
         "replacementSymbols": [
-          "opengrowApplicationUploadFileJson",
-          "opengrowApplicationDeleteFileJson"
+          "superboardApplicationUploadFileJson",
+          "superboardApplicationDeleteFileJson"
         ],
         "phase": "files-notifications",
         "gate": "files-authority-wired"
@@ -532,8 +532,8 @@
         "classification": "vocostar",
         "authority": "custom-jobs",
         "replacementSymbols": [
-          "opengrowApplicationCreateCustomJobJson",
-          "opengrowApplicationListCustomJobsJson"
+          "superboardApplicationCreateCustomJobJson",
+          "superboardApplicationListCustomJobsJson"
         ],
         "phase": "custom-jobs",
         "gate": "custom-jobs-authority-wired"
@@ -544,7 +544,7 @@
         "names": ["appBoard", "appQuestions"],
         "classification": "remove",
         "authority": "onboardings",
-        "replacementSymbols": ["OpenGrowOnboarding"],
+        "replacementSymbols": ["SuperBoardOnboarding"],
         "phase": "onboardings-marketing",
         "gate": "legacy-onboarding-loader-removed"
       },
@@ -607,7 +607,7 @@
         "names": ["SupportChatWidget"],
         "classification": "remove",
         "authority": "support",
-        "replacementSymbols": ["opengrowSupportInitializeAuthenticated"],
+        "replacementSymbols": ["superboardSupportInitializeAuthenticated"],
         "phase": "support",
         "gate": "legacy-support-widget-removed"
       }
@@ -619,7 +619,7 @@
         "names": ["userLoginRevenueCat"],
         "classification": "remove",
         "authority": "billing",
-        "replacementSymbols": ["opengrowGetCustomerInfoJson"],
+        "replacementSymbols": ["superboardGetCustomerInfoJson"],
         "phase": "billing",
         "gate": "direct-revenuecat-login-removed"
       },
@@ -627,7 +627,7 @@
         "names": ["userSubscriptionActivate"],
         "classification": "remove",
         "authority": "billing",
-        "replacementSymbols": ["opengrowGetCustomerInfoJson"],
+        "replacementSymbols": ["superboardGetCustomerInfoJson"],
         "phase": "billing",
         "gate": "client-entitlement-activation-removed"
       }

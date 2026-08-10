@@ -1,14 +1,14 @@
 {
   "$schema": "../schemas/github-control-plane.schema.json",
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "owner": {
     "login": "mbzadev",
     "type": "user"
   },
   "repositories": {
     "platform": {
-      "nameWithOwner": "mbzadev/opengrow-platform",
-      "description": "OpenGrow multi-application back-office, Cloudflare Workers platform and reusable SDK libraries",
+      "nameWithOwner": "mbzadev/superboard-platform",
+      "description": "SuperBoard multi-application back-office, Cloudflare Workers platform and reusable Flutter/FlutterFlow libraries",
       "settings": {
         "issues": true,
         "projects": false,
@@ -32,7 +32,7 @@
       "releaseProtection": {
         "immutableReleases": true,
         "tagRuleset": {
-          "name": "OpenGrow immutable SDK tags",
+          "name": "SuperBoard immutable SDK tags",
           "enforcement": "active",
           "include": [
             "refs/tags/sdk-flutter-v*",
@@ -65,13 +65,13 @@
       "environments": {
         "development": {
           "variables": {
-            "OPENGROW_TARGET": "mbza-development",
-            "OPENGROW_REFERENCE_REPOSITORY": "mbzadev/opengrow-reference"
+            "SUPERBOARD_TARGET": "mbza-development",
+            "SUPERBOARD_REFERENCE_REPOSITORY": "mbzadev/superboard-reference"
           },
           "secrets": [
             "CLOUDFLARE_ACCOUNT_ID",
             "CLOUDFLARE_API_TOKEN",
-            "OPENGROW_REFERENCE_DISPATCH_TOKEN"
+            "SUPERBOARD_REFERENCE_DISPATCH_TOKEN"
           ],
           "protection": {
             "enforcement": "pending-external",
@@ -86,12 +86,12 @@
         },
         "production": {
           "variables": {
-            "OPENGROW_TARGET": "vocostar"
+            "SUPERBOARD_TARGET": "vocostar"
           },
           "secrets": [
             "CLOUDFLARE_ACCOUNT_ID",
             "CLOUDFLARE_API_TOKEN",
-            "OPENGROW_BACKUP_ENCRYPTION_KEY"
+            "SUPERBOARD_BACKUP_ENCRYPTION_KEY"
           ],
           "protection": {
             "enforcement": "pending-external",
@@ -108,9 +108,9 @@
         },
         "sdk-release": {
           "variables": {
-            "OPENGROW_REFERENCE_REPOSITORY": "mbzadev/opengrow-reference"
+            "SUPERBOARD_REFERENCE_REPOSITORY": "mbzadev/superboard-reference"
           },
-          "secrets": ["OPENGROW_REFERENCE_DISPATCH_TOKEN"],
+          "secrets": ["SUPERBOARD_REFERENCE_DISPATCH_TOKEN"],
           "protection": {
             "enforcement": "pending-external",
             "pendingReason": "A second trusted human reviewer must receive repository read access before self-review prevention can be activated safely.",
@@ -147,13 +147,13 @@
             "FF_APPLICATION_PROJECT_ID": "vocal-transform-z2j7dp",
             "FF_LIBRARY_PROJECT_ID": "open-grow-private-4m5us1"
           },
-          "secrets": ["FF_API_KEY", "OPENGROW_PROJECT_KEY"]
+          "secrets": ["FF_API_KEY", "SUPERBOARD_PROJECT_KEY"]
         }
       }
     },
     "reference": {
-      "nameWithOwner": "mbzadev/opengrow-reference",
-      "description": "Reference application validating OpenGrow common journeys on the MBZA development environment",
+      "nameWithOwner": "mbzadev/superboard-reference",
+      "description": "Reference application validating SuperBoard common journeys on the MBZA development environment",
       "settings": {
         "issues": true,
         "projects": false,
@@ -198,8 +198,8 @@
           "secrets": [
             "CLOUDFLARE_ACCOUNT_ID",
             "CLOUDFLARE_API_TOKEN",
-            "OPENGROW_PROJECT_KEY",
-            "OPENGROW_PROJECT_ID"
+            "SUPERBOARD_PROJECT_KEY",
+            "SUPERBOARD_PROJECT_ID"
           ]
         }
       }

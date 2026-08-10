@@ -52,7 +52,7 @@ export async function auditConfigurationBoundaries({
   );
   if (!referenceTargetName || !referenceTarget) {
     errors.push(
-      "opengrow.project.json development.target must select one existing reference target",
+      "superboard.project.json development.target must select one existing reference target",
     );
   }
 

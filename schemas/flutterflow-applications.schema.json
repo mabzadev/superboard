@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opengrow.dev/schemas/flutterflow-applications.schema.json",
-  "title": "OpenGrow FlutterFlow application registry",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-applications.schema.json",
+  "title": "SuperBoard FlutterFlow application registry",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "owner", "applications"],
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 2 },
-    "owner": { "const": "opengrow-platform" },
+    "owner": { "const": "superboard-platform" },
     "applications": {
       "type": "array",
       "minItems": 1,
@@ -74,7 +74,7 @@
             "supportProjectId"
           ],
           "properties": {
-            "projectKeySecret": { "const": "OPENGROW_PROJECT_KEY" },
+            "projectKeySecret": { "const": "SUPERBOARD_PROJECT_KEY" },
             "uriScheme": {
               "type": "string",
               "pattern": "^[a-z][a-z0-9+.-]{1,63}$"

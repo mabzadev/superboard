@@ -49,7 +49,7 @@ test("the injected secret inventory is derived from common and custom registries
 });
 
 test("shared source rejects target domains, resource ids and workstation paths", () => {
-  const resourceId = "e04af85c-d329-4026-a269-20816948729f";
+  const resourceId = "02001526-c44d-47e5-8b1d-df47a3b68d69";
   const occurrences = findForbiddenSharedOccurrences({
     path: "workers/api/src/example.ts",
     source: [

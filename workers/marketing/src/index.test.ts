@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   signProjectContext,
   type InternalProjectContext,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import worker, { serializeSubscriber } from "./index";
 import { encryptJson, decryptJson } from "./secrets";
 import type { Env } from "./types";

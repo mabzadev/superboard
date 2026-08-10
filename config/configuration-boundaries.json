@@ -4,7 +4,7 @@
   "authorities": {
     "sharedPlatform": {
       "serviceRegistry": "scripts/cloudflare-services.mjs",
-      "projectManifest": "opengrow.project.json",
+      "projectManifest": "superboard.project.json",
       "runtimeRoots": [
         "apps/dashboard/src",
         "apps/mcp/src",
@@ -15,7 +15,7 @@
       ]
     },
     "reference": {
-      "targetSelector": "opengrow.project.json#/development/target",
+      "targetSelector": "superboard.project.json#/development/target",
       "requiredEnvironment": "development",
       "domainSuffixPolicy": "derive-from-domains.api",
       "requiredMailTransport": "capture"
@@ -41,8 +41,8 @@
     },
     "deploymentCredentialEnvironmentNames": ["CLOUDFLARE_API_TOKEN"],
     "projectCredentialEnvironmentNames": [
-      "OPENGROW_PROJECT_ID",
-      "OPENGROW_PROJECT_KEY"
+      "SUPERBOARD_PROJECT_ID",
+      "SUPERBOARD_PROJECT_KEY"
     ],
     "secretRegistries": [
       "PLATFORM_SERVICE_SECRETS",

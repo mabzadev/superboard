@@ -34,7 +34,7 @@ function success(text: string): ToolResult {
 /**
  * Stringify non-object API responses; pass objects to the formatter.
  *
- * The OpenGrow backend may inject an operational `_warning` string into a response. When
+ * The SuperBoard backend may inject an operational `_warning` string into a response. When
  * present, it's appended after the formatted output so the user
  * always sees it regardless of which tool was called.
  */

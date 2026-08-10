@@ -4,7 +4,7 @@ import { generateApiKey, generateShortCode } from '../lib/crypto';
 import { getAuthUserId as getStrictAuthUserId } from '../lib/auth';
 import { getOrCreateProject, getOrCreateRedirectConfig, jsonArray, parseJsonObject, resolveProject } from '../lib/db';
 import { createMcpAuthorizationCode, findMcpClient, redirectUriAllowed, tokenDigest } from '../lib/mcp-oauth';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 import { buildPlatformStatus } from './platform-status';
 
 const mcp = new Hono<{ Bindings: Env }>();

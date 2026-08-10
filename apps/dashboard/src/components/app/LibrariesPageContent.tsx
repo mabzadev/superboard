@@ -99,6 +99,17 @@ export default function LibrariesPageContent() {
           <div className="grid gap-4 lg:grid-cols-2">
             {catalog.libraries.map((library) => {
               const pending = library.releaseStatus === "pending-release";
+              const status: {
+                label: string;
+                variant: "default" | "destructive" | "outline" | "secondary";
+              } =
+                library.lifecycle === "archived"
+                  ? { label: "Archived", variant: "secondary" }
+                  : library.lifecycle === "internal"
+                    ? { label: "Internal", variant: "outline" }
+                    : pending
+                      ? { label: "Release pending", variant: "destructive" }
+                      : { label: "Released", variant: "default" };
               return (
                 <Card key={library.id}>
                   <CardHeader>
@@ -112,13 +123,13 @@ export default function LibrariesPageContent() {
                           {library.packageName} · {library.ecosystem}
                         </CardDescription>
                       </div>
-                      <Badge variant={pending ? "destructive" : "default"}>
-                        {pending ? "Release pending" : "Released"}
+                      <Badge variant={status.variant}>
+                        {status.label}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
                       <Version
                         label="Source"
                         value={library.sourceVersion}
@@ -137,7 +148,32 @@ export default function LibrariesPageContent() {
                           <CheckCircle2 className="size-4 text-emerald-500" />
                         }
                       />
+                      <Version
+                        label="Lifecycle"
+                        value={library.lifecycle}
+                        icon={
+                          library.lifecycle === "active" ? (
+                            <CheckCircle2 className="size-4 text-emerald-500" />
+                          ) : (
+                            <TriangleAlert className="size-4 text-amber-500" />
+                          )
+                        }
+                      />
                     </div>
+                    {library.candidatePackageName &&
+                      library.candidateInstall && (
+                        <div className="space-y-2 rounded-md border border-blue-500/30 bg-blue-500/5 p-3 text-xs">
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline">Migration candidate</Badge>
+                            <code>{library.candidatePackageName}</code>
+                          </div>
+                          <p className="text-muted-foreground">
+                            Planned for source version {library.sourceVersion};
+                            the immutable release below remains the production
+                            baseline until promotion.
+                          </p>
+                        </div>
+                      )}
                     {library.notes && (
                       <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-muted-foreground">
                         {library.notes}
@@ -234,7 +270,9 @@ export default function LibrariesPageContent() {
                     </div>
                     <details>
                       <summary className="cursor-pointer text-sm font-medium">
-                        {library.distribution
+                        {library.lifecycle !== "active"
+                          ? "Historical dependency"
+                          : library.distribution
                           ? "Authenticated dependency command"
                           : "Installation"}
                       </summary>
@@ -277,7 +315,7 @@ export default function LibrariesPageContent() {
             <CardHeader>
               <CardTitle>FlutterFlow custom code</CardTitle>
               <CardDescription>
-                The canonical reusable surface belongs to opengrow-platform;
+                The canonical reusable surface belongs to superboard-platform;
                 application projects keep only thin UI adapters.{" "}
                 {catalog.customCode.widgets.length} widgets ·{" "}
                 {surfaceCount(catalog.customCode.actions)} actions ·{" "}

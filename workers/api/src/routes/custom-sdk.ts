@@ -5,11 +5,11 @@ import {
   CUSTOM_WORKER_SUBJECT_HEADER,
   CustomWorkerProtocolError,
   parseCustomWorkerJob,
-} from "@opengrow/contracts/custom-worker";
+} from "@superboard/contracts/custom-worker";
 import {
   RequestBodyError,
   readRequestObjectLimited,
-} from "@opengrow/contracts/request-body";
+} from "@superboard/contracts/request-body";
 import { Hono } from "hono";
 import type { AppVariables, Env } from "../types";
 import { verifiedAppUserId } from "../lib/billing-identity";

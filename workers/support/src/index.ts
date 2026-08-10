@@ -20,7 +20,7 @@ import {
 } from "./validation";
 import { consumeRealtimeTicket, issueRealtimeTicket } from "./realtime";
 import { MESSAGE_WITH_ATTACHMENTS } from "./message-records";
-import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 
 const app = new Hono<{
   Bindings: Env;

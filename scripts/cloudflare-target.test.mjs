@@ -15,22 +15,45 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   for (const name of ["mbza-development", "vocostar"]) {
     const { target } = await loadTarget(name);
     assert.equal("accountId" in target, false);
-    assert.equal(target.schemaVersion, 11);
+    assert.equal(target.schemaVersion, 12);
+    assert.deepEqual(
+      target.resourceIdentity,
+      name === "mbza-development"
+        ? {
+            logicalName: "superboard",
+            physicalName: "superboard",
+            previousNames: [],
+            migrationStrategy: "canonical",
+          }
+        : {
+            logicalName: "superboard",
+            physicalName: "opengrow",
+            previousNames: ["opengrow"],
+            migrationStrategy: "retain-physical-name",
+          },
+    );
     assert.ok(Number.isSafeInteger(target.filePolicy.maxBytes));
     assert.ok(Number.isSafeInteger(target.filePolicy.downloadTicketTtlSeconds));
     assert.ok(target.filePolicy.allowedContentTypes.length > 0);
     assert.match(
       target.workers.observability.development ??
         target.workers.observability.production,
-      /^opengrow-observability/,
+      name === "mbza-development"
+        ? /^superboard-observability/u
+        : /^opengrow-observability/u,
     );
     assert.match(
       target.workers.mcp.development ?? target.workers.mcp.production,
-      /^opengrow-mcp/,
+      name === "mbza-development" ? /^superboard-mcp/u : /^opengrow-mcp/u,
     );
     for (const resources of Object.values(target.environments)) {
       assert.match(resources.publicRouting, /^(?:active|staged)$/u);
-      assert.match(resources.analyticsDataset, /^opengrow_[a-z0-9_]+$/);
+      assert.match(
+        resources.analyticsDataset,
+        name === "mbza-development"
+          ? /^superboard_[a-z0-9_]+$/u
+          : /^opengrow_[a-z0-9_]+$/u,
+      );
       assert.ok(resources.identityD1.name.endsWith("identity-db"));
       assert.ok(resources.filesD1.name.endsWith("files-db"));
     }
@@ -78,6 +101,15 @@ test("mbza development domains keep API and short links separate", async () => {
   assert.equal(target.environments.development.publicRouting, "active");
   assert.equal(publicApiUrl(target), "https://api.mbza.dev");
   assert.equal(target.domains.shortlinks, "in.mbza.dev");
+  assert.equal(target.domains.dashboard, "board.mbza.dev");
+  assert.deepEqual(target.retiredDomains, [
+    {
+      hostname: "grow.mbza.dev",
+      formerSurface: "dashboard",
+      policy: "must-be-unassigned",
+      reason: "Previous back-office hostname replaced by board.mbza.dev.",
+    },
+  ]);
   assert.equal(target.domains.mailPreview, "mail.mbza.dev");
   assert.equal(target.domains.mcp, "mcp.mbza.dev");
   assert.equal(target.domains.messaging, undefined);
@@ -85,7 +117,7 @@ test("mbza development domains keep API and short links separate", async () => {
   assert.equal(target.environments.development.messagingD1, undefined);
   assert.equal(
     target.environments.development.customD1.name,
-    "opengrow-dev-custom-reference-db",
+    "superboard-dev-custom-reference-db",
   );
   assert.deepEqual(target.customWorker.d1Binding, {
     binding: "REFERENCE_DB",
@@ -98,6 +130,31 @@ test("mbza development domains keep API and short links separate", async () => {
   assert.equal(
     target.filePolicy.allowedContentTypes.includes("audio/*"),
     false,
+  );
+});
+
+test("resource identity keeps canonical and legacy physical resources fail-closed", async () => {
+  const { target: source } = await loadTarget("mbza-development");
+  const target = structuredClone(source);
+  target.environments.development.d1.name = "opengrow-dev-db";
+  await assert.rejects(
+    validateTarget(target),
+    /outside the declared superboard namespace/u,
+  );
+
+  const { target: vocostarSource } = await loadTarget("vocostar");
+  const vocostar = structuredClone(vocostarSource);
+  vocostar.environments.production.d1.name = "superboard-db";
+  await assert.rejects(
+    validateTarget(vocostar),
+    /outside the declared opengrow namespace/u,
+  );
+
+  const retired = structuredClone(source);
+  retired.retiredDomains[0].hostname = retired.domains.dashboard;
+  await assert.rejects(
+    validateTarget(retired),
+    /retired domain board\.mbza\.dev is still active/u,
   );
 });
 
@@ -171,9 +228,19 @@ test("operational commands never select an implicit application target", () => {
     targetNameFromArgs({}, { OPENGROW_TARGET: "mbza-development" }),
     "mbza-development",
   );
+  assert.equal(
+    targetNameFromArgs(
+      {},
+      {
+        SUPERBOARD_TARGET: "vocostar",
+        OPENGROW_TARGET: "mbza-development",
+      },
+    ),
+    "vocostar",
+  );
   assert.throws(
     () => targetNameFromArgs({}, {}),
-    /--target or OPENGROW_TARGET is required/,
+    /SUPERBOARD_TARGET.*OPENGROW_TARGET/u,
   );
 });
 

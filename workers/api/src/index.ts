@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { RequestBodyError } from "@opengrow/contracts/request-body";
-import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+import { RequestBodyError } from "@superboard/contracts/request-body";
+import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 import {
   PROJECT_CONTEXT_HEADERS,
   signProjectContext,
   type InternalProjectContext,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import { Env } from "./types";
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
@@ -106,6 +106,13 @@ app.use(
       "X-OpenGrow-Storefront",
       "X-OpenGrow-Campaign",
       "X-OpenGrow-Project-Id",
+      "X-SuperBoard-Anonymous-ID",
+      "X-SuperBoard-App-Version",
+      "X-SuperBoard-Build-Number",
+      "X-SuperBoard-SDK-Version",
+      "X-SuperBoard-Storefront",
+      "X-SuperBoard-Campaign",
+      "X-SuperBoard-Project-Id",
       "Idempotency-Key",
       "X-Filename",
       "ENVIRONMENT",
@@ -155,7 +162,7 @@ app.get("/health", async (c) => {
     return c.json(
       {
         status: current ? "ok" : "degraded",
-        service: "opengrow-api",
+        service: "superboard-api",
         environment: c.env.ENVIRONMENT,
         host: c.req.header("host"),
         timestamp: new Date().toISOString(),
@@ -180,7 +187,7 @@ app.get("/health", async (c) => {
     return c.json(
       {
         status: "degraded",
-        service: "opengrow-api",
+        service: "superboard-api",
         environment: c.env.ENVIRONMENT,
         timestamp: new Date().toISOString(),
         dependencies: { d1: "unavailable", kv: "unavailable" },
@@ -193,7 +200,10 @@ app.get("/health", async (c) => {
 
 app.get("/health/billing", async (c) => {
   if (!c.env.BILLING)
-    return c.json({ status: "unavailable", service: "opengrow-billing" }, 503);
+    return c.json(
+      { status: "unavailable", service: "superboard-billing" },
+      503,
+    );
   try {
     const response = await c.env.BILLING.fetch(
       "https://billing.internal/internal/v1/health",
@@ -214,7 +224,7 @@ app.get("/health/billing", async (c) => {
     return c.json(
       {
         status: "unavailable",
-        service: "opengrow-billing",
+        service: "superboard-billing",
         routing_mode: c.env.BILLING_EXECUTION_MODE || "local",
       },
       503,

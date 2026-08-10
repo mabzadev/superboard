@@ -5,9 +5,9 @@ custom Worker only when it has jobs or integrations that are genuinely unique.
 
 Rules:
 
-1. Start from `workers/custom/reference`; keep it in `opengrow-platform`.
+1. Start from `workers/custom/reference`; keep it in `superboard-platform`.
 2. Declare its source, description, and capabilities in the target manifest.
-3. Expose only the versioned private contract from `@opengrow/contracts/custom-worker`.
+3. Expose only the versioned private contract from `@superboard/contracts/custom-worker`.
 4. Reach it from the API through a Service Binding, never through a public admin endpoint.
 5. Every job carries an idempotency key and `projectRef`; queued handlers persist idempotency before side effects.
 6. Secrets are Worker secrets. Public configuration belongs in the target manifest or OpenGrow admin data.

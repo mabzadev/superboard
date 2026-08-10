@@ -38,7 +38,7 @@ export function NavUser() {
 
   if (!mounted) return <span className="ds-avatar" aria-hidden="true">OG</span>;
 
-  const name = userRef.current?.name ?? "OpenGrow user";
+  const name = userRef.current?.name ?? "SuperBoard user";
   const email = userRef.current?.email ?? "";
   const isDark = resolvedTheme === "dark";
 

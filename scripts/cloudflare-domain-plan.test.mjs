@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   evaluateDomainPlan,
+  evaluateOrphanWorkerDomains,
+  evaluateRetiredDomainPlan,
   expectedDomainOwners,
+  retiredDomainOwners,
+  targetWorkerNames,
 } from "./cloudflare-domain-plan-core.mjs";
 
 const target = {
@@ -17,6 +21,13 @@ const target = {
     mcp: "mcp.example.test",
     mailPreview: "mail.example.test",
   },
+  retiredDomains: [
+    {
+      hostname: "old-grow.example.test",
+      formerSurface: "dashboard",
+      policy: "must-be-unassigned",
+    },
+  ],
   workers: {
     api: { development: "opengrow-api-dev" },
     dashboard: { development: "opengrow-dashboard-dev" },
@@ -151,4 +162,55 @@ test("an unreadable DNS name blocks takeover unless the desired Worker already o
   assert.equal(shortlinks.status, "dns-unverified");
   assert.equal(shortlinks.blocking, true);
   assert.equal(shortlinks.dnsInspectionError, "Cloudflare DNS read denied");
+});
+
+test("retired domains fail closed until Worker and DNS ownership are removed", () => {
+  const retired = retiredDomainOwners(target);
+  const occupied = evaluateRetiredDomainPlan({
+    retired,
+    zones: [{ id: "zone", name: "example.test" }],
+    workerDomains: [
+      {
+        hostname: "old-grow.example.test",
+        service: "opengrow-dashboard-dev",
+      },
+    ],
+    dnsRecordsByHostname: {},
+  });
+  assert.equal(occupied[0].status, "retired-worker-domain");
+  assert.equal(occupied[0].blocking, true);
+
+  const clean = evaluateRetiredDomainPlan({
+    retired,
+    zones: [{ id: "zone", name: "example.test" }],
+    workerDomains: [],
+    dnsRecordsByHostname: { "old-grow.example.test": [] },
+  });
+  assert.equal(clean[0].status, "retired-clean");
+  assert.equal(clean[0].blocking, false);
+});
+
+test("unregistered domains attached to a target Worker are blocking orphans", () => {
+  const expected = expectedDomainOwners(target, "development");
+  const retired = retiredDomainOwners(target);
+  const orphaned = evaluateOrphanWorkerDomains({
+    expected,
+    retired,
+    workerDomains: [
+      {
+        hostname: "forgotten.example.test",
+        service: "opengrow-api-dev",
+      },
+      { hostname: "unrelated.example.test", service: "another-worker" },
+    ],
+    managedServices: targetWorkerNames(target, "development"),
+  });
+  assert.deepEqual(orphaned, [
+    {
+      hostname: "forgotten.example.test",
+      status: "orphan-worker-domain",
+      blocking: true,
+      currentServices: ["opengrow-api-dev"],
+    },
+  ]);
 });

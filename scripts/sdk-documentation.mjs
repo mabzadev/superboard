@@ -51,6 +51,7 @@ function libraryMap(catalog) {
 function published(libraries, id) {
   const library = libraries.get(id);
   for (const field of [
+    "lifecycle",
     "packageName",
     "latestReleaseVersion",
     "releaseRef",
@@ -63,13 +64,46 @@ function published(libraries, id) {
   return library;
 }
 
+function lifecycleNotice(library) {
+  switch (library.lifecycle) {
+    case "active":
+      return [
+        "> **Lifecycle: active.** New versions may be published only through the",
+        "> protected immutable-release workflow.",
+      ];
+    case "internal":
+      return [
+        "> **Lifecycle: internal.** This standalone coordinate is retained only",
+        "> to reproduce existing integrations. New public releases are disabled;",
+        "> current native development happens inside the active Flutter SDK.",
+      ];
+    case "archived":
+      return [
+        "> **Lifecycle: archived.** This package is frozen for existing clients.",
+        "> Its historical release remains available, but no new version may be",
+        "> published.",
+      ];
+    default:
+      throw new Error(
+        "SDK catalogue library " +
+          library.id +
+          " has invalid lifecycle " +
+          String(library.lifecycle),
+      );
+  }
+}
+
 function fenced(language, value) {
   return `\`\`\`${language}\n${value}\n\`\`\``;
 }
 
 function flutterInstallation(library, label = "Flutter") {
   return [
-    "## Installation",
+    ...lifecycleNotice(library),
+    "",
+    library.lifecycle === "active"
+      ? "## Installation"
+      : "## Historical installation",
     "",
     `Add the published ${label} package \`${library.packageName}\``,
     `at the immutable release \`${library.releaseRef}\`:`,
@@ -291,7 +325,9 @@ export function renderSdkDocumentationSections(catalog) {
     [
       "ios",
       [
-        "## Installation",
+        ...lifecycleNotice(ios),
+        "",
+        "## Historical installation",
         "",
         "### Swift Package Manager",
         "",
@@ -308,12 +344,20 @@ export function renderSdkDocumentationSections(catalog) {
     ],
     [
       "android",
-      ["## Installation", "", ...androidRegistryDisclosure(android)].join("\n"),
+      [
+        ...lifecycleNotice(android),
+        "",
+        "## Historical installation",
+        "",
+        ...androidRegistryDisclosure(android),
+      ].join("\n"),
     ],
     [
       "javascript",
       [
-        "## Installation",
+        ...lifecycleNotice(javascript),
+        "",
+        "## Historical installation",
         "",
         ...npmRegistryInstallation(javascript),
         "",
@@ -328,7 +372,9 @@ export function renderSdkDocumentationSections(catalog) {
     [
       "react-native",
       [
-        "## Installation",
+        ...lifecycleNotice(reactNative),
+        "",
+        "## Historical installation",
         "",
         ...npmRegistryInstallation(reactNative),
         "",

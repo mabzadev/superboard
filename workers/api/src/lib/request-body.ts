@@ -1,4 +1,4 @@
-import { readJsonObjectLimited } from "@opengrow/contracts/request-body";
+import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 
 export const API_JSON_BODY_MAX_BYTES = 1024 * 1024;
 

@@ -71,7 +71,7 @@ export default function AccessKeyPageContent() {
       setSecret(next.secret);
       setRotateOpen(false);
       showSuccessNotification(
-        "Access Key rotated. Copy it now; the full secret will not be shown again.",
+        "Access Key rotated. Copy it now; the full secret will not be shown again."
       );
     } catch (cause) {
       showErrorNotification(moduleErrorMessage(cause));
@@ -86,12 +86,13 @@ export default function AccessKeyPageContent() {
     showSuccessNotification("Access Key copied");
   };
 
-  const displayedKey = secret || (key ? `${key.prefix}••••••••••••••••` : "No key created");
+  const displayedKey =
+    secret || (key ? `${key.prefix}••••••••••••••••` : "No key created");
 
   return (
     <ModulePage
       title="Access Key"
-      description="Authenticate public OpenGrow SDK requests without exposing an administrative session."
+      description="Authenticate public SuperBoard SDK requests without exposing an administrative session."
       error={error}
     >
       {!selectedProject ? (
@@ -143,11 +144,19 @@ export default function AccessKeyPageContent() {
                   <Metadata label="Prefix" value={key?.prefix || "—"} />
                   <Metadata
                     label="Created"
-                    value={key?.created_at ? new Date(key.created_at).toLocaleString() : "—"}
+                    value={
+                      key?.created_at
+                        ? new Date(key.created_at).toLocaleString()
+                        : "—"
+                    }
                   />
                   <Metadata
                     label="Last used"
-                    value={key?.last_used_at ? new Date(key.last_used_at).toLocaleString() : "Never"}
+                    value={
+                      key?.last_used_at
+                        ? new Date(key.last_used_at).toLocaleString()
+                        : "Never"
+                    }
                   />
                 </dl>
                 <div className="flex flex-wrap gap-2">
@@ -158,7 +167,11 @@ export default function AccessKeyPageContent() {
                     <RefreshCw className="size-4" />
                     {key ? "Rotate Access Key" : "Create Access Key"}
                   </Button>
-                  <Button variant="outline" disabled={loading} onClick={() => void load()}>
+                  <Button
+                    variant="outline"
+                    disabled={loading}
+                    onClick={() => void load()}
+                  >
                     Refresh status
                   </Button>
                 </div>
@@ -179,13 +192,13 @@ export default function AccessKeyPageContent() {
                 data={[
                   {
                     language: "typescript",
-                    filename: "opengrow.ts",
-                    code: `OpenGrow.initialize({\n  accessKey: "${secret || "YOUR_ACCESS_KEY"}"\n});`,
+                    filename: "superboard.ts",
+                    code: `SuperBoard.initialize({\n  accessKey: "${secret || "YOUR_ACCESS_KEY"}"\n});`,
                   },
                   {
                     language: "dart",
                     filename: "main.dart",
-                    code: `await OpenGrow.initialize(\n  accessKey: '${secret || "YOUR_ACCESS_KEY"}',\n);`,
+                    code: `await SuperBoard.initialize(\n  accessKey: '${secret || "YOUR_ACCESS_KEY"}',\n);`,
                   },
                 ]}
               />
@@ -197,7 +210,9 @@ export default function AccessKeyPageContent() {
       <Dialog open={rotateOpen} onOpenChange={setRotateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{key ? "Rotate Access Key?" : "Create Access Key?"}</DialogTitle>
+            <DialogTitle>
+              {key ? "Rotate Access Key?" : "Create Access Key?"}
+            </DialogTitle>
             <DialogDescription>
               {key
                 ? "The existing key is revoked immediately. Deployed applications must be updated with the new value."

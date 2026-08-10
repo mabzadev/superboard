@@ -10,14 +10,14 @@ import {
 
 function manifest() {
   return {
-    schemaVersion: 7,
+    schemaVersion: 8,
     owner: {
       login: "mbzadev",
       type: "user",
     },
     repositories: {
       platform: {
-        nameWithOwner: "mbzadev/opengrow-platform",
+        nameWithOwner: "mbzadev/superboard-platform",
         description: "OpenGrow platform",
         settings: {
           issues: true,
@@ -32,7 +32,7 @@ function manifest() {
         visibility: "public",
       },
       reference: {
-        nameWithOwner: "mbzadev/opengrow-reference",
+        nameWithOwner: "mbzadev/superboard-reference",
         description: "OpenGrow reference application",
         settings: {
           issues: true,
@@ -53,12 +53,12 @@ function manifest() {
 test("bootstrap plans only unavailable declared repositories", () => {
   const plan = buildGitHubBootstrapPlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "missing-or-inaccessible",
       ready: false,
     },
     {
-      nameWithOwner: "mbzadev/opengrow-reference",
+      nameWithOwner: "mbzadev/superboard-reference",
       status: "present",
     },
   ]);
@@ -68,14 +68,14 @@ test("bootstrap plans only unavailable declared repositories", () => {
     [
       {
         type: "create-repository",
-        nameWithOwner: "mbzadev/opengrow-platform",
+        nameWithOwner: "mbzadev/superboard-platform",
         description: "OpenGrow platform",
         visibility: "public",
         settings: manifest().repositories.platform.settings,
       },
     ],
   );
-  assert.match(plan.confirmation, /^GITHUB:BOOTSTRAP:7:[a-f0-9]{12}$/u);
+  assert.match(plan.confirmation, /^GITHUB:BOOTSTRAP:8:[a-f0-9]{12}$/u);
   assert.equal(plan.confirmation, githubBootstrapConfirmation(plan));
   assert.match(plan.repositories[0].warning, /HTTP 404/u);
 });
@@ -98,10 +98,10 @@ test("bootstrap confirmation changes with declarative repository settings", () =
 test("bootstrap is ready when every declared repository exists", () => {
   const plan = buildGitHubBootstrapPlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "present",
     },
-    { nameWithOwner: "mbzadev/opengrow-reference", status: "present" },
+    { nameWithOwner: "mbzadev/superboard-reference", status: "present" },
   ]);
   assert.equal(plan.ready, true);
   assert.equal(
@@ -113,7 +113,7 @@ test("bootstrap is ready when every declared repository exists", () => {
 test("bootstrap blocks absent or invalid inspection state", () => {
   const plan = buildGitHubBootstrapPlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "inspection-failed",
     },
   ]);
@@ -172,7 +172,7 @@ test("repository creation follows the declared public visibility and user owner"
   assert.equal(request.args.at(-2), "--input");
   assert.equal(request.args.at(-1), "-");
   assert.deepEqual(request.body, {
-    name: "opengrow-platform",
+    name: "superboard-platform",
     description: "OpenGrow platform",
     visibility: "public",
     auto_init: false,
@@ -192,10 +192,10 @@ test("bootstrap refuses mutation without its plan-specific confirmation", () => 
   const configuration = manifest();
   const plan = buildGitHubBootstrapPlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "missing-or-inaccessible",
     },
-    { nameWithOwner: "mbzadev/opengrow-reference", status: "present" },
+    { nameWithOwner: "mbzadev/superboard-reference", status: "present" },
   ]);
   let calls = 0;
   assert.throws(
@@ -207,7 +207,7 @@ test("bootstrap refuses mutation without its plan-specific confirmation", () => 
           return { ok: true };
         },
       }),
-    /pass --confirm GITHUB:BOOTSTRAP:7:/u,
+    /pass --confirm GITHUB:BOOTSTRAP:8:/u,
   );
   assert.equal(calls, 0);
 });
@@ -216,10 +216,10 @@ test("confirmed bootstrap creates only the planned repositories", () => {
   const configuration = manifest();
   const plan = buildGitHubBootstrapPlan(configuration, [
     {
-      nameWithOwner: "mbzadev/opengrow-platform",
+      nameWithOwner: "mbzadev/superboard-platform",
       status: "missing-or-inaccessible",
     },
-    { nameWithOwner: "mbzadev/opengrow-reference", status: "present" },
+    { nameWithOwner: "mbzadev/superboard-reference", status: "present" },
   ]);
   const calls = [];
   const applied = applyGitHubBootstrapPlan(plan, configuration, {
@@ -231,12 +231,12 @@ test("confirmed bootstrap creates only the planned repositories", () => {
   });
   assert.deepEqual(applied, [
     {
-      repository: "mbzadev/opengrow-platform",
+      repository: "mbzadev/superboard-platform",
       type: "create-repository",
     },
   ]);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].body.name, "opengrow-platform");
+  assert.equal(calls[0].body.name, "superboard-platform");
 });
 
 test("bootstrap rejects an owner mismatch", () => {

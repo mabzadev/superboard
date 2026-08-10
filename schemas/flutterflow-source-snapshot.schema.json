@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opengrow.dev/schemas/flutterflow-source-snapshot.schema.json",
-  "title": "OpenGrow FlutterFlow source snapshot and convergence contract",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-source-snapshot.schema.json",
+  "title": "SuperBoard FlutterFlow source snapshot and convergence contract",
   "type": "object",
   "additionalProperties": false,
   "required": [

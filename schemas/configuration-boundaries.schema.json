@@ -39,7 +39,7 @@
           ],
           "properties": {
             "targetSelector": {
-              "const": "opengrow.project.json#/development/target"
+              "const": "superboard.project.json#/development/target"
             },
             "requiredEnvironment": { "const": "development" },
             "domainSuffixPolicy": { "const": "derive-from-domains.api" },

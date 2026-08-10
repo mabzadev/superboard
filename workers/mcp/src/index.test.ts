@@ -25,7 +25,7 @@ function mcpRequest(path: string, init: RequestInit = {}): Request {
   });
 }
 
-describe("OpenGrow MCP Worker", () => {
+describe("SuperBoard MCP Worker", () => {
   it("publishes target-aware health without authentication", async () => {
     const response = await worker.fetch(mcpRequest("/health"), env());
     expect(response.status).toBe(200);
@@ -101,7 +101,7 @@ describe("OpenGrow MCP Worker", () => {
     );
     expect(response.status).toBe(200);
     expect(runtime.API_SERVICE.fetch).toHaveBeenCalledOnce();
-    expect(await response.text()).toContain('"name":"opengrow-mcp"');
+    expect(await response.text()).toContain('"name":"superboard-mcp"');
   });
 
   it("rejects a hostile Host before authentication", async () => {

@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/dashboard",
+  "name": "@superboard/dashboard",
   "version": "0.1.1",
   "type": "module",
   "description": "Reusable operator back office for application infrastructure, identity, support, growth, and purchases",
@@ -7,11 +7,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mbzadev/opengrow-platform.git",
+    "url": "https://github.com/mbzadev/superboard-platform.git",
     "directory": "apps/dashboard"
   },
   "bugs": {
-    "url": "https://github.com/mbzadev/opengrow-platform/issues"
+    "url": "https://github.com/mbzadev/superboard-platform/issues"
   },
   "scripts": {
     "clean": "rm -rf .next out",

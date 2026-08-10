@@ -3,6 +3,10 @@ import {
   DOMAIN_SERVICES,
   DOMAIN_SERVICE_REGISTRY,
 } from "./cloudflare-services.mjs";
+import {
+  resourceIdentity,
+  resourceNameContract,
+} from "./cloudflare-resource-identity.mjs";
 
 const KIND = {
   d1: {
@@ -164,8 +168,14 @@ export function desiredCloudflareResources(target, environment) {
       ),
     );
   }
-  assertUniqueDesiredResources(desired);
-  return desired;
+  const contracted = desired.map((resource) => ({
+    ...resource,
+    ...resourceNameContract(target, resource.name, {
+      allowLegacyName: resource.legacyName,
+    }),
+  }));
+  assertUniqueDesiredResources(contracted);
+  return contracted;
 }
 
 export function buildCloudflareBootstrapPlan({
@@ -267,6 +277,7 @@ export function buildCloudflareBootstrapPlan({
     schemaVersion: 1,
     mode: "remote-read-only",
     target: target.target,
+    resourceIdentity: resourceIdentity(target),
     accountAlias: target.accountAlias,
     accountFingerprint: accountFingerprint(accountId),
     environment,
@@ -360,6 +371,7 @@ function idResource(key, kind, label, resource, idPath) {
     label,
     name: resource.name,
     manifestId: resource.id ?? null,
+    legacyName: resource.legacyName === true,
     idPath,
   };
 }
@@ -372,6 +384,7 @@ function namedResource(key, kind, label, resource) {
     label,
     name: resource.name,
     manifestId: null,
+    legacyName: resource.legacyName === true,
     idPath: null,
   };
 }
@@ -384,6 +397,10 @@ function operationFor(type, resource, remoteId) {
     kind: resource.kind,
     label: resource.label,
     name: resource.name,
+    logicalName: resource.logicalName,
+    physicalName: resource.physicalName,
+    previousNames: resource.previousNames,
+    migrationStrategy: resource.migrationStrategy,
     remoteId,
     idPath: resource.idPath,
     endpoint: definition.endpoint,
@@ -398,6 +415,10 @@ function resourceState(resource, state, remoteId) {
     kind: resource.kind,
     label: resource.label,
     name: resource.name,
+    logicalName: resource.logicalName,
+    physicalName: resource.physicalName,
+    previousNames: resource.previousNames,
+    migrationStrategy: resource.migrationStrategy,
     state,
     manifestIdConfigured: Boolean(resource.manifestId),
     remoteId: remoteId ?? null,

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   verifyInternalProjectContextRequest,
   verifyProjectContextSignature,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import { signToken } from "./crypto";
 import { app } from "../index";
 import type { Env } from "../types";

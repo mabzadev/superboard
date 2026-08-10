@@ -26,7 +26,7 @@ test("development secret plan is value-free, account-scoped and deterministic", 
   );
 });
 
-test("development secret plan refuses production and reports missing analytics credentials", async () => {
+test("development secret plan refuses production and treats analytics credentials as optional", async () => {
   const { target } = await loadTarget("mbza-development");
   assert.throws(
     () =>
@@ -44,16 +44,17 @@ test("development secret plan refuses production and reports missing analytics c
     accountId: "a".repeat(32),
     analyticsTokenConfigured: false,
   });
-  assert.equal(plan.blockers.length, 1);
+  assert.equal(plan.blockers.length, 0);
+  assert.equal(plan.optionalCapabilities.analyticsQueries, "disabled");
 });
 
-test("generated assignments satisfy every private cross-service contract", async () => {
+test("generated assignments satisfy every private cross-service contract without operator secrets", async () => {
   const { target } = await loadTarget("mbza-development");
   const assignments = await generateDevelopmentSecretAssignments({
     target,
     environment: "development",
     accountId: "a".repeat(32),
-    analyticsToken: "analytics-token",
+    analyticsToken: "",
     appleRootBase64: "apple-root",
   });
   assert.equal(
@@ -93,11 +94,26 @@ test("generated assignments satisfy every private cross-service contract", async
     assignments.api.PURCHASES_SIGNING_KEYSET,
     assignments.billing.PURCHASES_SIGNING_KEYSET,
   );
-  assert.equal(
-    assignments.observability.CLOUDFLARE_ANALYTICS_ACCOUNT_ID,
-    "a".repeat(32),
-  );
+  assert.deepEqual(Object.keys(assignments.observability), [
+    "OBSERVABILITY_INTERNAL_TOKEN",
+  ]);
   assert.equal(Object.hasOwn(assignments, "dashboard"), false);
+});
+
+test("development assignments include analytics credentials only when supplied", async () => {
+  const { target } = await loadTarget("mbza-development");
+  const assignments = await generateDevelopmentSecretAssignments({
+    target,
+    environment: "development",
+    accountId: "a".repeat(32),
+    analyticsToken: "analytics-token",
+    appleRootBase64: "apple-root",
+  });
+  assert.deepEqual(assignments.observability, {
+    OBSERVABILITY_INTERNAL_TOKEN: assignments.api.OBSERVABILITY_INTERNAL_TOKEN,
+    CLOUDFLARE_ANALYTICS_ACCOUNT_ID: "a".repeat(32),
+    CLOUDFLARE_ANALYTICS_TOKEN: "analytics-token",
+  });
 });
 
 test("secret bootstrap always creates an inactive secret version", () => {
@@ -116,7 +132,7 @@ test("secret bootstrap always creates an inactive secret version", () => {
       "--config",
       "/tmp/generated.jsonc",
       "--message",
-      "OpenGrow generated secrets for mbza-development/development/email",
+      "SuperBoard generated secrets for mbza-development/development/email",
     ],
   );
 });

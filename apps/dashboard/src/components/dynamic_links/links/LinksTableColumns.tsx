@@ -21,7 +21,7 @@ import LinkedInIconWhite from "@/assets/icons/ads_platform/linkedIn_dark_mode.sv
 import TikTokIconWhite from "@/assets/icons/ads_platform/tiktok_dark_mode.svg";
 import MetaIconcWhite from "@/assets/icons/ads_platform/meta_dark_mode.svg";
 
-import OpenGrow from "@/assets/icons/ads_platform/opengrow.svg";
+import SuperBoard from "@/assets/icons/ads_platform/superboard.svg";
 import React from "react";
 import Image from "next/image";
 import type { SortType } from "@/types";
@@ -177,8 +177,8 @@ export const getLinksTableColumns = (
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            This represents the number of app opens that occurred from a opengrow
-            link.
+            This represents the number of app opens that occurred from a
+            SuperBoard link.
           </p>
         </TooltipContent>
       </Tooltip>
@@ -484,7 +484,7 @@ const getPlatformIconSrc = (
       return resolvedTheme === "dark" ? TikTokIconWhite : TikTokIcon;
 
     case QUICK_LINK:
-      return OpenGrow;
+      return SuperBoard;
     default:
       return null;
   }

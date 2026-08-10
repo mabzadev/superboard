@@ -98,7 +98,7 @@ export function formatStatus(data: Obj): string {
 
 export function formatPlatformStatus(data: Obj): string {
   const lines: string[] = [
-    "# OpenGrow Platform Status",
+    "# SuperBoard Platform Status",
     "",
     `Status: ${val(data.status)} · Environment: ${val(data.environment)}`,
   ];

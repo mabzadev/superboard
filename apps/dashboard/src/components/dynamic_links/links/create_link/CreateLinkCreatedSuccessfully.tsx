@@ -1,7 +1,7 @@
 import Image, { type StaticImageData } from "next/image";
 import { useState } from "react";
 import type { Link } from "@/types";
-import QcLinkIcon from "@/assets/icons/ads_platform/opengrow.svg";
+import QcLinkIcon from "@/assets/icons/ads_platform/superboard.svg";
 import GoogleIcon from "@/assets/icons/ads_platform/google.svg";
 import GoogleIconWhite from "@/assets/icons/ads_platform/google_dark_mode.svg";
 import FacebookIcon from "@/assets/icons/ads_platform/facebook.svg";

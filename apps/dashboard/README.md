@@ -1,8 +1,8 @@
-# OpenGrow
+# SuperBoard
 
 **Open-source mobile app operations dashboard** — deep links, messaging, purchases, and audience analytics.
 
-OpenGrow gives mobile developers one dashboard for deep links, messaging, purchases, and audience analytics. Self-host it or connect it to the [OpenGrow](https://github.com/mbzadev/opengrow-platform) managed backend.
+SuperBoard gives mobile developers one dashboard for deep links, messaging, purchases, and audience analytics. Self-host it or connect it to the [SuperBoard](https://github.com/mbzadev/superboard-platform) managed backend.
 
 ## Tech Stack
 
@@ -22,8 +22,8 @@ OpenGrow gives mobile developers one dashboard for deep links, messaging, purcha
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/mbzadev/opengrow-platform.git
-   cd opengrow-platform/apps/dashboard
+   git clone https://github.com/mbzadev/superboard-platform.git
+   cd superboard-platform/apps/dashboard
    ```
 
 2. Install dependencies:

@@ -2,7 +2,7 @@ import {
   PROJECT_CONTEXT_HEADERS,
   signProjectContext,
   type InternalProjectContext,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import { Hono, type Context } from "hono";
 import { readJsonObjectLimited } from "../lib/http-limits";
 import type { AppVariables, Env } from "../types";
@@ -116,10 +116,15 @@ marketingSdk.all("/preferences", async (c) => {
     [PROJECT_CONTEXT_HEADERS.issuedAt]: String(context.issuedAt),
     [PROJECT_CONTEXT_HEADERS.version]: "1",
     [PROJECT_CONTEXT_HEADERS.signature]: signature,
+    "x-superboard-application-user-id": identity.id,
+    "x-superboard-application-email": identity.email,
     "x-opengrow-application-user-id": identity.id,
     "x-opengrow-application-email": identity.email,
   });
-  if (identity.name) headers.set("x-opengrow-application-name", identity.name);
+  if (identity.name) {
+    headers.set("x-superboard-application-name", identity.name);
+    headers.set("x-opengrow-application-name", identity.name);
+  }
   if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
   if (body) headers.set("content-type", "application/json; charset=UTF-8");
 

@@ -186,7 +186,7 @@ if (
     run(
       "node",
       [
-        resolve(root, "scripts", "opengrow-allowlist.mjs"),
+        resolve(root, "scripts", "superboard-allowlist.mjs"),
         "bootstrap",
         "--target",
         targetName,

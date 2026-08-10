@@ -1,4 +1,4 @@
-import { verifyInternalProjectContextRequest } from "@opengrow/contracts/project-context";
+import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { createFakeD1 } from "../test/fake-d1";
@@ -24,6 +24,12 @@ describe("application Marketing preferences", () => {
     expect(observed).toHaveLength(1);
     const forwarded = observed[0];
     expect(forwarded.headers.get("authorization")).toBeNull();
+    expect(forwarded.headers.get("x-superboard-application-user-id")).toBe(
+      "application-user-1",
+    );
+    expect(forwarded.headers.get("x-superboard-application-email")).toBe(
+      "user@example.test",
+    );
     expect(forwarded.headers.get("x-opengrow-application-user-id")).toBe(
       "application-user-1",
     );

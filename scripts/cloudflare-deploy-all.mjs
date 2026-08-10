@@ -6,6 +6,7 @@ import {
   loadTarget,
   parseArgs,
   root,
+  targetNameFromArgs,
 } from "./cloudflare-target.mjs";
 import { buildDeploymentExecutionPlan } from "./cloudflare-deploy-plan.mjs";
 import {
@@ -30,8 +31,7 @@ if (args["skip-backup"]) {
     "--skip-backup has been removed: production D1 backups are mandatory",
   );
 }
-const targetName = args.target ?? process.env.OPENGROW_TARGET;
-if (!targetName) throw new Error("--target or OPENGROW_TARGET is required");
+const targetName = targetNameFromArgs(args);
 const environment = environmentFromArgs(args);
 const { target } = await loadTarget(targetName);
 if (!target.environments[environment])

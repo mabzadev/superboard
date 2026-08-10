@@ -19,13 +19,14 @@ describe("platform library catalogue service", () => {
     requests.get.mockResolvedValue({
       data: {
         data: {
-          schemaVersion: 2,
-          repository: "https://github.com/mbzadev/opengrow-platform",
+          schemaVersion: 4,
+          repository: "https://github.com/mbzadev/superboard-platform",
           developmentBranch: "dev",
           releasePolicy: "immutable-tag",
           libraries: [
             {
               id: "flutterflow",
+              lifecycle: "active",
               license: "MIT",
               licensePath: "sdks/flutterflow/LICENSE",
               releaseStatus: "pending-release",
@@ -38,7 +39,12 @@ describe("platform library catalogue service", () => {
     await expect(getPlatformLibraries()).resolves.toMatchObject({
       releasePolicy: "immutable-tag",
       libraries: [
-        { id: "flutterflow", license: "MIT", releaseStatus: "pending-release" },
+        {
+          id: "flutterflow",
+          lifecycle: "active",
+          license: "MIT",
+          releaseStatus: "pending-release",
+        },
       ],
     });
     expect(requests.get).toHaveBeenCalledWith("/api/v1/platform/libraries", {

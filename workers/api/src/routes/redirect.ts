@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { generateShortCode } from '../lib/crypto';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 import { readApiJson } from '../lib/request-body';
 
 const redirect = new Hono<{ Bindings: Env }>();
@@ -375,7 +375,7 @@ redirect.get('/:code', async (c) => {
 
   if (isIOS || isAndroid) {
     return c.html(generatePlatformHandlingPage({
-      title: link.title || link.generic_title || link.project_name || 'OpenGrow',
+      title: link.title || link.generic_title || link.project_name || 'SuperBoard',
       subtitle: link.subtitle || link.generic_subtitle || '',
       imageUrl: link.image_url || link.generic_image_url || '',
       deeplink,
@@ -386,7 +386,7 @@ redirect.get('/:code', async (c) => {
   }
 
   return c.html(generateDesktopHandlingPage({
-    title: link.title || link.generic_title || link.project_name || 'OpenGrow',
+    title: link.title || link.generic_title || link.project_name || 'SuperBoard',
     subtitle: link.subtitle || link.generic_subtitle || '',
     imageUrl: link.image_url || link.generic_image_url || '',
     fallbackUrl: targetUrl,

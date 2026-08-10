@@ -9,7 +9,7 @@ import { defineConfig } from "vitest/config";
 
 const workerRoot = fileURLToPath(new URL(".", import.meta.url));
 const referenceProject = JSON.parse(
-  readFileSync(new URL("../../opengrow.project.json", import.meta.url), "utf8"),
+  readFileSync(new URL("../../superboard.project.json", import.meta.url), "utf8"),
 );
 const referenceTarget = String(referenceProject.development.target);
 

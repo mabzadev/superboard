@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Env } from "../types";
-import { verifyInternalProjectContextRequest } from "@opengrow/contracts/project-context";
+import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
 
 const mocks = vi.hoisted(() => ({
   getAuthContext: vi.fn(),

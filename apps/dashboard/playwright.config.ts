@@ -53,7 +53,7 @@ export default defineConfig({
   webServer: realBackend
     ? [
         {
-          command: `cd ../../workers/opengrow && npm run migrate:local && npx wrangler dev --port ${workerPort}`,
+          command: `cd ../../workers/api && npm run migrate:local && npx wrangler dev --port ${workerPort}`,
           url: `${workerUrl}/health`,
           reuseExistingServer: true,
           timeout: 120_000,

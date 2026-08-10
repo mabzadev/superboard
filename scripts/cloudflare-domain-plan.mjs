@@ -7,7 +7,11 @@ import {
 } from "./cloudflare-target.mjs";
 import {
   evaluateDomainPlan,
+  evaluateOrphanWorkerDomains,
+  evaluateRetiredDomainPlan,
   expectedDomainOwners,
+  retiredDomainOwners,
+  targetWorkerNames,
 } from "./cloudflare-domain-plan-core.mjs";
 
 const args = parseArgs();
@@ -22,6 +26,7 @@ if (!apiToken)
   );
 
 const expected = expectedDomainOwners(target, environment);
+const retired = retiredDomainOwners(target);
 const zones = await listAll("/zones", {
   "account.id": accountId,
   per_page: "50",
@@ -32,7 +37,7 @@ const workerDomains = await listAll(`/accounts/${accountId}/workers/domains`, {
 const dnsRecordsByHostname = {};
 const dnsInspectionErrorsByHostname = {};
 
-for (const owner of expected) {
+for (const owner of [...expected, ...retired]) {
   const zone = zones
     .filter(
       (candidate) =>
@@ -67,6 +72,19 @@ const domains = evaluateDomainPlan({
   dnsRecordsByHostname,
   dnsInspectionErrorsByHostname,
 });
+const retiredDomains = evaluateRetiredDomainPlan({
+  retired,
+  zones,
+  workerDomains,
+  dnsRecordsByHostname,
+  dnsInspectionErrorsByHostname,
+});
+const orphanedDomains = evaluateOrphanWorkerDomains({
+  expected,
+  retired,
+  workerDomains,
+  managedServices: targetWorkerNames(target, environment),
+});
 console.log(
   JSON.stringify(
     {
@@ -75,15 +93,22 @@ console.log(
       publicRouting: target.environments[environment].publicRouting,
       readOnly: true,
       domains,
+      retiredDomains,
+      orphanedDomains,
     },
     null,
     2,
   ),
 );
 
-if (args.strict && domains.some((domain) => domain.blocking)) {
+if (
+  args.strict &&
+  [...domains, ...retiredDomains, ...orphanedDomains].some(
+    (domain) => domain.blocking,
+  )
+) {
   throw new Error(
-    "Domain ownership conflicts must be resolved explicitly before deployment",
+    "Domain ownership, retirement, and orphan conflicts must be resolved explicitly before deployment",
   );
 }
 

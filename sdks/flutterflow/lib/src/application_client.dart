@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-class OpenGrowApplicationException implements Exception {
-  const OpenGrowApplicationException(
+class SuperBoardApplicationException implements Exception {
+  const SuperBoardApplicationException(
     this.code,
     this.message, {
     this.statusCode,
@@ -18,11 +18,11 @@ class OpenGrowApplicationException implements Exception {
   final bool retryable;
 
   @override
-  String toString() => 'OpenGrowApplicationException($code): $message';
+  String toString() => 'SuperBoardApplicationException($code): $message';
 }
 
-class OpenGrowApplicationClient {
-  OpenGrowApplicationClient({
+class SuperBoardApplicationClient {
+  SuperBoardApplicationClient({
     required String apiBaseUrl,
     required String filesBaseUrl,
     String applicationAccessToken = '',
@@ -79,7 +79,7 @@ class OpenGrowApplicationClient {
     String name = '',
   }) {
     if (!{'google', 'apple'}.contains(provider)) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'provider_invalid',
         'Provider must be google or apple.',
       );
@@ -95,7 +95,7 @@ class OpenGrowApplicationClient {
     required String idToken,
   }) {
     if (!{'google', 'apple'}.contains(provider)) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'provider_invalid',
         'Provider must be google or apple.',
       );
@@ -178,13 +178,13 @@ class OpenGrowApplicationClient {
   }) {
     final key = idempotencyKey.trim();
     if (key.isEmpty || key.length > 255) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'idempotency_key_invalid',
         'A stable Idempotency-Key of at most 255 characters is required.',
       );
     }
     if (listIds.length > 50 || listIds.any((value) => value.trim().isEmpty)) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'list_ids_invalid',
         'At most 50 non-empty Marketing list identifiers are allowed.',
       );
@@ -225,7 +225,7 @@ class OpenGrowApplicationClient {
   }) async {
     final key = idempotencyKey.trim();
     if (key.isEmpty || key.length > 255) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'idempotency_key_invalid',
         'A stable Idempotency-Key of at most 255 characters is required.',
       );
@@ -249,7 +249,7 @@ class OpenGrowApplicationClient {
     String cursor = '',
   }) async {
     if (limit < 1 || limit > 100) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'limit_invalid',
         'Custom job limit must be between 1 and 100.',
       );
@@ -300,7 +300,7 @@ class OpenGrowApplicationClient {
   String _customJobId(String value) {
     final id = value.trim();
     if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$').hasMatch(id)) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'job_id_invalid',
         'The custom job identifier is invalid.',
       );
@@ -339,7 +339,7 @@ class OpenGrowApplicationClient {
     final response = await _http.send(request).timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       await _decode(response);
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'download_failed',
         'File download failed.',
       );
@@ -349,7 +349,7 @@ class OpenGrowApplicationClient {
     await for (final chunk in response.stream.timeout(timeout)) {
       total += chunk.length;
       if (total > maximumBytes) {
-        throw const OpenGrowApplicationException(
+        throw const SuperBoardApplicationException(
           'download_too_large',
           'File download exceeded the configured limit.',
         );
@@ -377,7 +377,7 @@ class OpenGrowApplicationClient {
     );
     final accessToken = result['access_token']?.toString() ?? '';
     if (accessToken.isEmpty) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'identity_response_invalid',
         'Identity response has no access token.',
       );
@@ -421,13 +421,13 @@ class OpenGrowApplicationClient {
     final expiresIn =
         int.tryParse(result['expires_in']?.toString() ?? '') ?? 300;
     if (token.isEmpty || expiresIn < 1 || expiresIn > 3600) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'identity_response_invalid',
-        'OpenGrow identity exchange returned an invalid token.',
+        'SuperBoard identity exchange returned an invalid token.',
       );
     }
     if (generation != _identityGeneration) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'identity_session_changed',
         'The application session changed during identity exchange.',
         retryable: true,
@@ -447,7 +447,7 @@ class OpenGrowApplicationClient {
         identifier.trim().isEmpty ||
         !{'ios', 'android', 'web', 'desktop'}.contains(normalizedPlatform) ||
         !{'production', 'test'}.contains(normalizedEnvironment)) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'sdk_configuration_required',
         'This operation requires projectKey, platform, identifier and environment.',
       );
@@ -486,7 +486,7 @@ class OpenGrowApplicationClient {
 
   Map<String, String> _headers({required bool authenticated}) {
     if (authenticated && _applicationAccessToken.isEmpty) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'identity_required',
         'Application authentication is required.',
       );
@@ -503,9 +503,9 @@ class OpenGrowApplicationClient {
     await for (final chunk in response.stream.timeout(timeout)) {
       total += chunk.length;
       if (total > 1024 * 1024) {
-        throw const OpenGrowApplicationException(
+        throw const SuperBoardApplicationException(
           'response_too_large',
-          'OpenGrow response exceeded 1 MiB.',
+          'SuperBoard response exceeded 1 MiB.',
         );
       }
       bytes.add(chunk);
@@ -518,9 +518,9 @@ class OpenGrowApplicationClient {
           ? decoded.cast<String, dynamic>()
           : {'data': decoded};
     } catch (_) {
-      throw OpenGrowApplicationException(
+      throw SuperBoardApplicationException(
         'response_invalid',
-        'OpenGrow returned an invalid response.',
+        'SuperBoard returned an invalid response.',
         statusCode: response.statusCode,
         retryable: response.statusCode >= 500,
       );
@@ -530,9 +530,9 @@ class OpenGrowApplicationClient {
       final details = error is Map
           ? error.cast<Object?, Object?>()
           : const <Object?, Object?>{};
-      throw OpenGrowApplicationException(
+      throw SuperBoardApplicationException(
         details['code']?.toString() ?? 'request_failed',
-        details['message']?.toString() ?? 'OpenGrow request failed.',
+        details['message']?.toString() ?? 'SuperBoard request failed.',
         statusCode: response.statusCode,
         retryable: details['retryable'] == true || response.statusCode >= 500,
       );

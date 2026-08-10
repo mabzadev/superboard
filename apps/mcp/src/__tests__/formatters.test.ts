@@ -130,9 +130,9 @@ describe("formatStatus", () => {
 describe("formatPlatformStatus", () => {
   it("renders the operational control-plane inventory", () => {
     const out = formatPlatformStatus(platformStatus);
-    expect(out).toContain("OpenGrow Platform Status");
+    expect(out).toContain("SuperBoard Platform Status");
     expect(out).toContain("reference");
-    expect(out).toContain("OpenGrow API");
+    expect(out).toContain("SuperBoard API");
     expect(out).toContain("Transactional email");
     expect(out).toContain("Runtime metrics");
     expect(out).toContain("reference.echo");

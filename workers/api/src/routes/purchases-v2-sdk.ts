@@ -19,6 +19,10 @@ import {
 import { recordDeviceCertificationResult } from '../lib/device-certification';
 import { readApiJson } from '../lib/request-body';
 
+function brandedHeader(c: any, suffix: string): string | undefined {
+  return c.req.header(`X-SuperBoard-${suffix}`) || c.req.header(`X-OpenGrow-${suffix}`);
+}
+
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
 async function body(c: any): Promise<Record<string, any>> {
@@ -40,12 +44,12 @@ async function context(c: any) {
     WHERE p.id = ? LIMIT 1
   `).bind(String(projectId)).first() as { id: number; is_test: number; purchases_enabled: number; purchases_core: number; paywalls: number; virtual_currencies: number } | null;
   if (!project) throw purchasesError('invalid_sdk_project', 'Invalid project for SDK credentials', 403);
-  if (!isPurchasesEnabled(c.env, project.purchases_enabled)) throw purchasesError('purchases_disabled', 'OpenGrow Purchases is not enabled for this project', 403);
+  if (!isPurchasesEnabled(c.env, project.purchases_enabled)) throw purchasesError('purchases_disabled', 'SuperBoard Purchases is not enabled for this project', 403);
   if (Number(project.purchases_core) !== 1) throw purchasesError('purchases_v2_not_enabled', 'Purchases v2 core is not enabled for this project', 403);
   const resolved = await resolveCustomerFromBillingAuthority(c.env, {
     projectId,
     authorization: c.req.header('Authorization'),
-    anonymousId: c.req.header('X-OpenGrow-Anonymous-ID') || undefined,
+    anonymousId: brandedHeader(c, 'Anonymous-ID'),
   });
   return {
     projectId: String(projectId),
@@ -76,10 +80,10 @@ function targetingContext(c: any, customer: Record<string, unknown>): TargetingC
   return {
     platform: c.get('sdkPlatform') || c.req.header('PLATFORM'),
     country: requestCountry(c),
-    storefront: c.req.header('X-OpenGrow-Storefront'),
-    appVersion: c.req.header('X-OpenGrow-App-Version'),
-    sdkVersion: c.req.header('X-OpenGrow-SDK-Version'),
-    campaign: c.req.header('X-OpenGrow-Campaign'),
+    storefront: brandedHeader(c, 'Storefront'),
+    appVersion: brandedHeader(c, 'App-Version'),
+    sdkVersion: brandedHeader(c, 'SDK-Version'),
+    campaign: brandedHeader(c, 'Campaign'),
     attributes,
   };
 }
@@ -193,7 +197,7 @@ sdk.post('/events', async (c) => {
         id, ctx.projectId, String(ctx.customer.id), event.paywall_id || null, event.paywall_version_id || null,
         event.placement || null, event.experiment_id || null, event.variant_id || null, event.type,
         event.package_identifier || null, c.get('sdkPlatform') || c.req.header('PLATFORM') || null,
-        requestCountry(c), c.req.header('X-OpenGrow-App-Version') || null, c.req.header('X-OpenGrow-SDK-Version') || null,
+        requestCountry(c), brandedHeader(c, 'App-Version') || null, brandedHeader(c, 'SDK-Version') || null,
         JSON.stringify(event.metadata || {}), occurredAt,
       );
     });
@@ -230,9 +234,9 @@ sdk.post('/certification/device-results', async (c) => {
       projectId: ctx.projectId,
       sourcePlatform: platform as 'ios' | 'android' | 'web',
       applicationIdentifier: String(c.get('sdkIdentifier') || ''),
-      buildNumber: String(data.build_number || c.req.header('X-OpenGrow-Build-Number') || ''),
-      appVersion: c.req.header('X-OpenGrow-App-Version') || null,
-      sdkVersion: c.req.header('X-OpenGrow-SDK-Version') || null,
+      buildNumber: String(data.build_number || brandedHeader(c, 'Build-Number') || ''),
+      appVersion: brandedHeader(c, 'App-Version') || null,
+      sdkVersion: brandedHeader(c, 'SDK-Version') || null,
       deviceModel: data.device_model == null ? null : String(data.device_model),
       osVersion: data.os_version == null ? null : String(data.os_version),
       assertions,

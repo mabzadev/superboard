@@ -6,6 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { loadTarget, parseArgs } from "./cloudflare-target.mjs";
 import {
   flutterFlowSourceEnvironmentName,
+  legacyFlutterFlowSourceEnvironmentName,
   verifyFlutterFlowSource,
 } from "./flutterflow-source-verify.mjs";
 
@@ -215,6 +216,9 @@ export function migrationPlanStatus({ plan, contract, verification }) {
     target: plan.target,
     environment: plan.environment,
     sourceEnvironment: plan.sourceEnvironment,
+    sourceEnvironmentAliases: [
+      legacyFlutterFlowSourceEnvironmentName(plan.application),
+    ],
     contractReady: true,
     sourceInspected: Boolean(verification),
     snapshotVerified: verification?.snapshotVerified ?? null,
@@ -231,7 +235,7 @@ export function migrationPlanStatus({ plan, contract, verification }) {
     convergenceBlockers: verification?.convergence?.blockers ?? null,
     note: verification
       ? "The authenticated source snapshot is joined to every migration work item; no environment file or secret value is read."
-      : `Set ${plan.sourceEnvironment} or pass --source to join this validated contract to an authenticated application export.`,
+      : `Set ${plan.sourceEnvironment} (or the temporary ${legacyFlutterFlowSourceEnvironmentName(plan.application)} alias) or pass --source to join this validated contract to an authenticated application export.`,
   };
 }
 
@@ -296,8 +300,13 @@ async function main() {
   if (!manifestPath) throw new Error("--manifest is required");
   const rawPlan = readJson(resolve(manifestPath), "FlutterFlow migration plan");
   const sourceEnvironment = String(rawPlan.sourceEnvironment || "");
+  const legacySourceEnvironment =
+    legacyFlutterFlowSourceEnvironmentName(rawPlan.application);
   const sourcePath = String(
-    args.source || process.env[sourceEnvironment] || "",
+    args.source ||
+      process.env[sourceEnvironment] ||
+      process.env[legacySourceEnvironment] ||
+      "",
   ).trim();
   const result = await buildFlutterFlowMigrationPlan({
     manifestPath,

@@ -1,5 +1,5 @@
 import type { Env } from './types';
-import { configuredSecrets } from '@opengrow/contracts/secret';
+import { configuredSecrets } from '@superboard/contracts/secret';
 
 const TICKET_TTL_SECONDS = 60;
 

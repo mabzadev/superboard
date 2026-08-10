@@ -34,30 +34,37 @@ function jsonResponse(data: unknown, status = 200, statusText = "OK") {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  process.env.OPENGROW_API_URL = "https://api.test.com";
+  process.env.SUPERBOARD_API_URL = "https://api.test.com";
 });
 
 afterEach(() => {
+  delete process.env.SUPERBOARD_API_URL;
   delete process.env.OPENGROW_API_URL;
 });
 
 describe("target-owned API configuration", () => {
   it("fails closed when no application API origin is selected", () => {
-    expect(() => configuredApiBaseUrl({})).toThrow(/OPENGROW_API_URL is required/u);
+    expect(() => configuredApiBaseUrl({})).toThrow(/SUPERBOARD_API_URL is required/u);
   });
 
   it("rejects credentials and non-HTTP origins", () => {
-    expect(() => configuredApiBaseUrl({ OPENGROW_API_URL: "file:///tmp/api" })).toThrow(
+    expect(() => configuredApiBaseUrl({ SUPERBOARD_API_URL: "file:///tmp/api" })).toThrow(
       /HTTP\(S\)/u,
     );
     expect(() =>
-      configuredApiBaseUrl({ OPENGROW_API_URL: "https://user:secret@example.test" }),
+      configuredApiBaseUrl({ SUPERBOARD_API_URL: "https://user:secret@example.test" }),
     ).toThrow(/without credentials/u);
   });
 
   it("normalizes only a trailing slash", () => {
-    expect(configuredApiBaseUrl({ OPENGROW_API_URL: "https://api.example.test/" })).toBe(
+    expect(configuredApiBaseUrl({ SUPERBOARD_API_URL: "https://api.example.test/" })).toBe(
       "https://api.example.test",
+    );
+  });
+
+  it("accepts the legacy variable only as a migration fallback", () => {
+    expect(configuredApiBaseUrl({ OPENGROW_API_URL: "https://legacy.example.test" })).toBe(
+      "https://legacy.example.test",
     );
   });
 
@@ -67,7 +74,7 @@ describe("target-owned API configuration", () => {
       "https://api.example.test?target=other",
       "https://api.example.test/#fragment",
     ]) {
-      expect(() => configuredApiBaseUrl({ OPENGROW_API_URL: value })).toThrow(/origin only/u);
+      expect(() => configuredApiBaseUrl({ SUPERBOARD_API_URL: value })).toThrow(/origin only/u);
     }
   });
 });

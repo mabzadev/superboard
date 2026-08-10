@@ -4,8 +4,19 @@
 
 Each deployment target has one manifest under `deploy/targets` and declares
 either `development` or `production`. Secret values and Cloudflare account IDs
-are rejected by the manifest schema. `OPENGROW_TARGET` and
-`OPENGROW_ENVIRONMENT` select the manifest and environment used by automation.
+are rejected by the manifest schema. `SUPERBOARD_TARGET` and
+`SUPERBOARD_ENVIRONMENT` select the manifest and environment used by
+automation. During the non-destructive transition, scripts read
+`OPENGROW_TARGET` and `OPENGROW_ENVIRONMENT` only as fallbacks; a defined
+`SUPERBOARD_*` value always wins.
+
+The same read contract applies to `SUPERBOARD_RELEASE` (fallback
+`OPENGROW_RELEASE`) and `SUPERBOARD_REFERENCE_REPOSITORY` (fallback
+`OPENGROW_REFERENCE_REPOSITORY`). This change does not rewrite GitHub
+Environment variables or Worker vars remotely: migration of stored values is a
+separate, audited cutover. The same canonical-first rule applies to
+`SUPERBOARD_REFERENCE_DISPATCH_TOKEN` and
+`SUPERBOARD_BACKUP_ENCRYPTION_KEY`.
 The exact shared/reference/application/injected ownership boundary is enforced
 by `npm run configuration:check` and documented in
 [`CONFIGURATION_BOUNDARIES.md`](./CONFIGURATION_BOUNDARIES.md).
@@ -25,7 +36,7 @@ as one ordered release. `dev` deploys the development target; `main` deploys the
 production target. GitHub Environments hold the target/account selection and
 least-privilege token. The versioned deployment matrix also declares the exact
 target expected from each Environment, and the job fails before checkout or any
-Cloudflare command when `OPENGROW_TARGET` differs. Worker source contains no
+Cloudflare command when `SUPERBOARD_TARGET` differs. Worker source contains no
 account-specific constant.
 
 Do not enable a second automatic Cloudflare Workers Builds deployment for the
@@ -40,9 +51,9 @@ Private deployments use:
 - `registrationMode: "allowlist"`;
 - `ssoEnabled: false`.
 
-OpenGrow has no plan, MAU quota, upgrade gate, or paid platform edition. Product
+SuperBoard has no plan, MAU quota, upgrade gate, or paid platform edition. Product
 purchases and entitlements remain application modules and are enabled per
-project; they are not subscriptions to OpenGrow itself.
+project; they are not subscriptions to SuperBoard itself.
 
 The allowlist realm is derived from the target and environment. Manage exact addresses directly against the target D1 database:
 
@@ -57,7 +68,7 @@ No administrator key or email list is stored in the dashboard.
 
 ## Transactional email and newsletters
 
-The common OpenGrow Email Worker handles transactional/test mail. It stores an
+The common SuperBoard Email Worker handles transactional/test mail. It stores an
 idempotent message ledger, queues SMTP delivery, leases each recipient before an
 external side effect and quarantines exhausted work in its DLQ. API and Identity
 reach it only through a private Service Binding. The development target captures
@@ -99,7 +110,7 @@ delegated body or credential. Ambiguous binding failures retry the same profile
 and key before failover, preventing an unconfirmed send from being duplicated.
 Before enabling a production Marketing profile, enter its DKIM selector and run
 **Verify sender DNS** in
-`/marketing/settings`. OpenGrow checks SPF, DKIM and DMARC using Cloudflare's
+`/marketing/settings`. SuperBoard checks SPF, DKIM and DMARC using Cloudflare's
 binary DNS-over-HTTPS response and records the evidence. SMTP connectivity alone
 does not mark the profile ready, and production campaign/double-opt-in queues do
 not select an unverified profile.
@@ -111,7 +122,25 @@ reach Queue returns the item to quarantine.
 
 ## Resource bootstrap
 
-The target manifest is the desired resource-name registry. An offline pass
+Every target declares a strict `resourceIdentity` contract. `logicalName` is
+the current product namespace shown to operators; `physicalName` is the
+namespace that Cloudflare must actually resolve. The fresh MBZA target uses
+`superboard` for both namespaces with `migrationStrategy: canonical`; its first
+provisioning creates canonical `superboard-*` resources because no historical
+MBZA platform resources exist in the selected account. VocoStar uses
+`logicalName: superboard`, `physicalName: opengrow` and
+`migrationStrategy: retain-physical-name` because its production resources own
+historical data. `previousNames` records only a physical namespace that is
+actually retained. New application targets use the canonical `superboard`
+namespace for both fields.
+
+Bootstrap, generated Wrangler configuration, Worker shell planning and
+readiness all validate this contract. Plans expose both logical and physical
+names, but remote lookup and creation use only `physicalName`. App-specific
+legacy resources such as VocoStar's existing custom D1/R2 must carry
+`legacyName: true`; arbitrary out-of-namespace names fail validation.
+
+The target manifest is the desired physical resource-name registry. An offline pass
 lists every enabled D1, KV, R2 bucket and Queue without contacting Cloudflare:
 
 ```bash
@@ -156,6 +185,10 @@ deployment workflow verifies it before any domain inspection or mutation.
 
 1. Run `cloudflare:domains:plan -- --strict`; resolve every occupied hostname
    explicitly. The command is read-only and never adopts or deletes DNS.
+   `retiredDomains` must be unassigned and free of DNS records; any unregistered
+   custom domain still attached to a target Worker is reported as a blocking
+   orphan. For MBZA, `board.mbza.dev` is the canonical back office,
+   `grow.mbza.dev` is retired, and `in.mbza.dev` remains the short-link domain.
 2. Upload new Worker versions with `--preflight --upload-only`. This omits
    custom domains, D1 migrations, API queue consumers and cron triggers.
 3. Upload runtime secrets and validate private service readiness.

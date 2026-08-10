@@ -9,7 +9,7 @@ import {
 } from "./flutterflow-application-dsl.mjs";
 import { resolveFlutterFlowApplications } from "./flutterflow-application-config.mjs";
 
-test("the Git-owned VocoStar workspace binds all OpenGrow parameters", async () => {
+test("the Git-owned VocoStar workspace binds all SuperBoard parameters", async () => {
   const output = await resolveFlutterFlowApplications();
   const application = output.applications[0];
   const dart = renderFlutterFlowApplicationBindings(application);
@@ -21,7 +21,7 @@ test("the Git-owned VocoStar workspace binds all OpenGrow parameters", async () 
   );
   assert.match(dart, /name: "shortLinkHost"/u);
   assert.match(dart, /value: "go\.vocostar\.com"/u);
-  assert.match(dart, /environmentSecret: "OPENGROW_PROJECT_KEY"/u);
+  assert.match(dart, /environmentSecret: "SUPERBOARD_PROJECT_KEY"/u);
   assert.doesNotMatch(dart, /projectKey[^\n]*[A-Fa-f0-9]{32}/u);
   assert.doesNotMatch(dart, /FF_API_KEY|open-grow-private/u);
 });

@@ -1,4 +1,4 @@
-import type { CustomWorkerJob } from "@opengrow/contracts/custom-worker";
+import type { CustomWorkerJob } from "@superboard/contracts/custom-worker";
 
 export type VoiceCloneInput = {
   fileId: string;

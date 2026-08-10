@@ -38,10 +38,10 @@ test("React Native native contract is derived from published SDK baselines", asy
   });
   assert.deepEqual(contract.ios, {
     packageName: ios.packageName,
-    repository: `${catalog.repository}.git`,
+    repository: "https://github.com/mbzadev/superboard-platform.git",
     releaseRef: `sdk-ios-v${ios.latestReleaseVersion}`,
     podspecUrl:
-      `https://raw.githubusercontent.com/mbzadev/opengrow-platform/` +
+      `https://raw.githubusercontent.com/mbzadev/superboard-platform/` +
       `sdk-ios-v${ios.latestReleaseVersion}/${ios.versionSource}`,
     version: ios.latestReleaseVersion,
   });

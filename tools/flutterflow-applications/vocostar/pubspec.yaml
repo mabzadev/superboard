@@ -1,5 +1,5 @@
-name: opengrow_flutterflow_vocostar_configuration
-description: Git-owned OpenGrow Library Value deployment for VocoStar.
+name: superboard_flutterflow_vocostar_configuration
+description: Git-owned SuperBoard Library Value deployment for VocoStar.
 version: 1.0.0
 publish_to: none
 

@@ -84,7 +84,7 @@ export function ProjectSwitcher() {
                 <GalleryVerticalEnd className="size-4" />
               </span>
               <span className="ds-workspace-copy flex-1 text-left group-data-[collapsible=icon]:hidden">
-                <strong className="ds-application-name">OpenGrow</strong>
+                <strong className="ds-application-name">SuperBoard</strong>
                 <small className="ds-workspace-name">
                   {selectedInstance?.production?.name ?? "Select project"}
                 </small>

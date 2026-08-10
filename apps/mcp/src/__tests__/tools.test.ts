@@ -309,7 +309,7 @@ describe("handler success", () => {
     const result = await handleGetPlatformStatus("tok");
 
     expect(result.isError).toBeUndefined();
-    expect(result.content[0].text).toContain("OpenGrow Platform Status");
+    expect(result.content[0].text).toContain("SuperBoard Platform Status");
     expect(result.content[0].text).toContain("Transactional email");
   });
 

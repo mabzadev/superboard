@@ -14,7 +14,7 @@ Future<void> main(List<String> args) async {
   final libraryProjectId =
       Platform.environment['FF_LIBRARY_PROJECT_ID']?.trim() ?? '';
   final onboardingPageKey =
-      Platform.environment['FF_LIBRARY_OPEN_GROW_ONBOARDING_PAGE_KEY']
+      Platform.environment['FF_LIBRARY_SUPERBOARD_ONBOARDING_PAGE_KEY']
           ?.trim() ??
       '';
   if (libraryProjectId.isEmpty) {
@@ -23,7 +23,7 @@ Future<void> main(List<String> args) async {
   }
   if (onboardingPageKey.isEmpty) {
     stderr.writeln(
-      'Error: FF_LIBRARY_OPEN_GROW_ONBOARDING_PAGE_KEY is required.',
+      'Error: FF_LIBRARY_SUPERBOARD_ONBOARDING_PAGE_KEY is required.',
     );
     exit(64);
   }
@@ -34,7 +34,7 @@ Future<void> main(List<String> args) async {
           app,
           libraryProjectId: libraryProjectId,
         );
-        migrateVocoStarToOpenGrow(
+        migrateVocoStarToSuperBoard(
           app,
           libraryProjectId: libraryProjectId,
           onboardingPageKey: onboardingPageKey,
@@ -70,11 +70,11 @@ void buildApplicationConfigurationFor(
   }
   final runtimeEnvironment = environment ?? Platform.environment;
   app.raw((project) {
-    for (final binding in openGrowLibraryBindings) {
+    for (final binding in superBoardLibraryBindings) {
       library_value_helpers.setLibraryValue(
         project,
         libraryParameterName: binding.name,
-        value: resolveOpenGrowLibraryBinding(binding, runtimeEnvironment),
+        value: resolveSuperBoardLibraryBinding(binding, runtimeEnvironment),
       );
       final configured = project
           .ensureAppSettings()
@@ -94,8 +94,8 @@ void buildApplicationConfigurationFor(
   });
 }
 
-String resolveOpenGrowLibraryBinding(
-  OpenGrowLibraryBinding binding,
+String resolveSuperBoardLibraryBinding(
+  SuperBoardLibraryBinding binding,
   Map<String, String> environment,
 ) {
   final secretName = binding.environmentSecret?.trim() ?? '';

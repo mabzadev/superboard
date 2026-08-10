@@ -109,7 +109,7 @@ describe("platform status", () => {
         API_DOMAIN: "api.mbza.dev",
         SDK_DOMAIN: "sdk.mbza.dev",
         SHORTLINK_DOMAIN: "in.mbza.dev",
-        APP_URL: "https://grow.mbza.dev",
+        APP_URL: "https://board.mbza.dev",
         FILES_DOMAIN: "files.mbza.dev",
         BILLING: healthy,
         EMAIL_SERVICE: email,
@@ -390,7 +390,7 @@ describe("platform status", () => {
         API_DOMAIN: "api.mbza.dev",
         SDK_DOMAIN: "sdk.mbza.dev",
         SHORTLINK_DOMAIN: "in.mbza.dev",
-        APP_URL: "https://grow.mbza.dev",
+        APP_URL: "https://board.mbza.dev",
       } as never,
     );
     const body = (await response.json()) as any;
@@ -432,7 +432,7 @@ describe("platform status", () => {
         API_DOMAIN: "api.mbza.dev",
         SDK_DOMAIN: "sdk.mbza.dev",
         SHORTLINK_DOMAIN: "in.mbza.dev",
-        APP_URL: "https://grow.mbza.dev",
+        APP_URL: "https://board.mbza.dev",
       } as never,
     );
     const body = (await response.json()) as any;
@@ -489,7 +489,7 @@ describe("platform status", () => {
         API_DOMAIN: "api.mbza.dev",
         SDK_DOMAIN: "sdk.mbza.dev",
         SHORTLINK_DOMAIN: "in.mbza.dev",
-        APP_URL: "https://grow.mbza.dev",
+        APP_URL: "https://board.mbza.dev",
       } as never,
     );
     const body = (await response.json()) as any;
@@ -711,24 +711,32 @@ describe("platform status", () => {
     expect(
       body.data.libraries.find((library: any) => library.id === "flutterflow"),
     ).toMatchObject({
+      lifecycle: "active",
       license: "MIT",
       licensePath: "sdks/flutterflow/LICENSE",
+      candidatePackageName: "superboard_flutterflow",
+    });
+    expect(
+      body.data.libraries.find((library: any) => library.id === "javascript"),
+    ).toMatchObject({
+      lifecycle: "archived",
+      releaseStatus: "released",
     });
     expect(body.data.customCode.actions.support).toContain(
-      "opengrowSupportInitializeAuthenticated",
+      "superboardSupportInitializeAuthenticated",
     );
     expect(body.data.customCode.actions.purchases).toContain(
-      "opengrowGetEntitlements",
+      "superboardGetEntitlements",
     );
     expect(body.data.customCode.streams.support).toContain(
-      "opengrowSupportEventJsonStream",
+      "superboardSupportEventJsonStream",
     );
     expect(body.data.customCode.sourceFiles.flutterflow).toContain(
-      "sdks/flutterflow/lib/opengrow_flutterflow.dart",
+      "sdks/flutterflow/lib/superboard_flutterflow.dart",
     );
     expect(body.data.flutterFlowLibrary).toMatchObject({
-      owner: "opengrow-platform",
-      displayName: "OpenGrow",
+      owner: "superboard-platform",
+      displayName: "SuperBoard",
       releasePolicy: "immutable-tag-only",
       remoteProject: {
         projectIdVariable: "FF_LIBRARY_PROJECT_ID",
@@ -736,12 +744,12 @@ describe("platform status", () => {
         githubEnvironment: "flutterflow-library",
       },
     });
-    expect(body.data.flutterFlowLibrary.dependencies).toHaveLength(2);
+    expect(body.data.flutterFlowLibrary.dependencies).toHaveLength(1);
     expect(body.data.flutterFlowLibrary.actions.support).toContain(
-      "opengrowSupportDispose",
+      "superboardSupportDispose",
     );
     expect(body.data.flutterFlowLibrary.forbiddenAppState).toContain(
-      "opengrowApplicationAccessToken",
+      "superboardApplicationAccessToken",
     );
     expect(JSON.stringify(body)).not.toMatch(/chatwoot/i);
 

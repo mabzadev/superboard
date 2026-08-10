@@ -10,7 +10,7 @@ import {
   validRegistrationRedirectUri,
   verifyPkce,
 } from '../lib/mcp-oauth';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const mcpOauth = new Hono<{ Bindings: Env }>();
 

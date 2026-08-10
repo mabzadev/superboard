@@ -39,7 +39,7 @@ export const platformStatus = {
       status: "ok",
       httpStatus: 200,
       responseTimeMs: 18,
-      description: "OpenGrow API",
+      description: "SuperBoard API",
     },
   ],
   services: [

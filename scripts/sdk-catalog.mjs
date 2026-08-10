@@ -11,8 +11,12 @@ import {
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const catalogPath = resolve(root, "config/sdk-libraries.json");
 const catalogSchemaPath = resolve(root, "config/sdk-libraries.schema.json");
+const catalogSchemaVersion = 4;
+const canonicalRepository =
+  "https://github.com/mbzadev/superboard-platform";
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
 const commitSha = /^[0-9a-f]{40}$/;
+const lifecycles = new Set(["active", "internal", "archived"]);
 const githubPackagesTokenEnvironmentVariable =
   "OPENGROW_GITHUB_PACKAGES_TOKEN";
 const githubPackagesUserEnvironmentVariable =
@@ -40,7 +44,10 @@ export async function validateSdkCatalog(catalog, options = {}) {
   const errors = await sdkCatalogSchemaErrors(catalog);
   const releaseHistory =
     options.releaseHistory ?? (await loadSdkReleaseHistory());
-  if (catalog?.schemaVersion !== 3) errors.push("schemaVersion must be 3");
+  if (catalog?.schemaVersion !== catalogSchemaVersion)
+    errors.push(`schemaVersion must be ${catalogSchemaVersion}`);
+  if (catalog?.repository !== canonicalRepository)
+    errors.push(`repository must be ${canonicalRepository}`);
   if (catalog?.releasePolicy !== "immutable-tag")
     errors.push("releasePolicy must be immutable-tag");
   if (!Array.isArray(catalog?.libraries) || catalog.libraries.length === 0)
@@ -54,6 +61,9 @@ export async function validateSdkCatalog(catalog, options = {}) {
       errors.push(`${prefix}.id is invalid`);
     if (ids.has(library.id)) errors.push(`${prefix}.id is duplicated`);
     ids.add(library.id);
+    if (!lifecycles.has(library.lifecycle))
+      errors.push(`${prefix}.lifecycle is invalid`);
+    const active = library.lifecycle === "active";
     if (!library.packageName || packages.has(library.packageName))
       errors.push(`${prefix}.packageName is missing or duplicated`);
     packages.add(library.packageName);
@@ -65,6 +75,11 @@ export async function validateSdkCatalog(catalog, options = {}) {
       );
     }
     if (hasCandidatePackage) {
+      if (!active) {
+        errors.push(
+          `${prefix}.candidate package migration is only allowed for active libraries`,
+        );
+      }
       if (library.releaseStatus !== "pending-release") {
         errors.push(
           `${prefix}.candidate package migration requires a pending release`,
@@ -78,6 +93,11 @@ export async function validateSdkCatalog(catalog, options = {}) {
         errors.push(`${prefix}.candidatePackageName is invalid or duplicated`);
       }
       candidatePackages.add(library.candidatePackageName);
+      if (!/^superboard(?:[_-]|$)/u.test(library.candidatePackageName)) {
+        errors.push(
+          `${prefix}.candidatePackageName must use the SuperBoard namespace`,
+        );
+      }
       if (
         !String(library.candidateInstall ?? "").includes(
           library.candidatePackageName,
@@ -88,27 +108,44 @@ export async function validateSdkCatalog(catalog, options = {}) {
           `${prefix}.candidateInstall must pin candidatePackageName at sourceVersion`,
         );
       }
+      if (!String(library.candidateInstall).includes(canonicalRepository)) {
+        errors.push(
+          `${prefix}.candidateInstall must use the canonical SuperBoard repository`,
+        );
+      }
+    }
+    if (active && !/^SuperBoard\b/u.test(library.displayName ?? "")) {
+      errors.push(`${prefix}.displayName must use the SuperBoard brand`);
+    }
+    if (
+      active &&
+      /opengrow/iu.test(library.packageName ?? "") &&
+      !hasCandidatePackage
+    ) {
+      errors.push(
+        `${prefix} must stage a SuperBoard package coordinate before release`,
+      );
     }
     for (const key of ["sourceVersion", "latestReleaseVersion"]) {
       if (!semver.test(library[key] ?? ""))
         errors.push(`${prefix}.${key} is not SemVer`);
     }
-    const expectedStatus =
-      library.sourceVersion === library.latestReleaseVersion
+    const expectedStatus = active
+      ? library.sourceVersion === library.latestReleaseVersion
         ? "released"
-        : "pending-release";
+        : "pending-release"
+      : "released";
     if (library.releaseStatus !== expectedStatus)
       errors.push(`${prefix}.releaseStatus must be ${expectedStatus}`);
-    if (
-      library.releaseStatus === "released" &&
-      !commitSha.test(library.releaseSha ?? "")
-    ) {
-      errors.push(`${prefix}.releaseSha must identify the released commit`);
-    } else if (
-      Object.hasOwn(library, "releaseSha") &&
-      !commitSha.test(library.releaseSha ?? "")
-    ) {
-      errors.push(`${prefix}.releaseSha must be a lowercase 40-character SHA`);
+    if (!active && library.sourceVersion !== library.latestReleaseVersion) {
+      errors.push(
+        `${prefix}.sourceVersion must stay frozen at latestReleaseVersion for ${library.lifecycle} libraries`,
+      );
+    }
+    if (!commitSha.test(library.releaseSha ?? "")) {
+      errors.push(
+        `${prefix}.releaseSha must identify the latest published commit`,
+      );
     }
     if (!library.releaseRef || /^(?:dev|main)$/.test(library.releaseRef))
       errors.push(`${prefix}.releaseRef must be immutable`);
@@ -167,6 +204,22 @@ export async function validateSdkCatalog(catalog, options = {}) {
           );
         }
       }
+      if (
+        options.releaseCandidateTag ===
+          `${tagPrefixes[library.id] ?? ""}${library.sourceVersion}` &&
+        versionPath.endsWith("pubspec.yaml")
+      ) {
+        const manifest = await readFile(versionPath, "utf8");
+        const observedPackageName =
+          manifest.match(/^name:\s*([^\s]+)/mu)?.[1] ?? null;
+        const expectedPackageName =
+          library.candidatePackageName ?? library.packageName;
+        if (observedPackageName !== expectedPackageName) {
+          errors.push(
+            `${prefix}.source package name is ${String(observedPackageName)}, expected ${expectedPackageName} before candidate publication`,
+          );
+        }
+      }
     }
     if (library.surfaceManifest) {
       const manifestPath = protectedRepoPath(
@@ -186,7 +239,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
     }
   }
   if (Object.keys(tagPrefixes).some((id) => !ids.has(id)))
-    errors.push("catalogue is missing one or more supported release libraries");
+    errors.push("catalogue is missing one or more governed libraries");
   const historyResult = await validateSdkReleaseHistory(
     releaseHistory,
     catalog,
@@ -360,6 +413,11 @@ function validateReleaseTag(catalog, tag, expectedSha, errors) {
   const entry = releaseTagEntry(catalog, tag, errors);
   if (!entry) return;
   const { library, version } = entry;
+  if (library.lifecycle !== "active") {
+    errors.push(
+      `${tag} cannot publish ${library.lifecycle} library ${library.id}`,
+    );
+  }
   if (library.sourceVersion !== version)
     errors.push(
       `${tag} does not match source version ${library.sourceVersion}`,
@@ -386,6 +444,11 @@ function validateReleaseCandidateTag(catalog, history, tag, errors) {
   const entry = releaseTagEntry(catalog, tag, errors);
   if (!entry) return;
   const { library, version } = entry;
+  if (library.lifecycle !== "active") {
+    errors.push(
+      `${tag} cannot publish ${library.lifecycle} library ${library.id}`,
+    );
+  }
   try {
     assertSdkReleaseCandidateNotFailed(history, entry.id, version);
   } catch (error) {
@@ -418,11 +481,10 @@ async function validateFlutterFlowSurface(catalog, errors, manifestOverride) {
         "utf8",
       ),
     );
-  if (manifest.schemaVersion !== 1 || manifest.owner !== "opengrow-platform")
+  if (manifest.schemaVersion !== 1 || manifest.owner !== "superboard-platform")
     errors.push("FlutterFlow custom code manifest ownership is invalid");
   const sourceFiles = [
     ...(await readTree(resolve(root, "sdks/flutterflow/lib"))),
-    ...(await readTree(resolve(root, "sdks/flutterflow_messaging/lib"))),
   ];
   const source = sourceFiles.map((file) => file.source).join("\n");
   const declaredSourceFiles = Object.values(manifest.sourceFiles ?? {}).flat();
@@ -461,7 +523,7 @@ async function validateFlutterFlowSurface(catalog, errors, manifestOverride) {
   }
   const implementedSymbols = [
     ...source.matchAll(
-      /^(?:Future<[^\n=]+>|Stream<[^\n=]+>)\s+(?:get\s+)?(opengrow\w+)\s*(?:\(|=>)/gm,
+      /^(?:Future<[^\n=]+>|Stream<[^\n=]+>)\s+(?:get\s+)?(superboard\w+)\s*(?:\(|=>)/gm,
     ),
   ].map((match) => match[1]);
   const declaredSymbols = [
@@ -477,14 +539,14 @@ async function validateFlutterFlowSurface(catalog, errors, manifestOverride) {
   if (/chatwoot/i.test(JSON.stringify(manifest)))
     errors.push("FlutterFlow canonical manifest must not reference Chatwoot");
   const surfaceUsers = catalog.libraries
-    .filter((item) => item.surfaceManifest)
+    .filter(
+      (item) =>
+        item.lifecycle === "active" && item.ecosystem === "FlutterFlow",
+    )
     .map((item) => item.id);
-  if (
-    !surfaceUsers.includes("flutterflow") ||
-    !surfaceUsers.includes("flutterflow-support")
-  )
+  if (!surfaceUsers.includes("flutterflow"))
     errors.push(
-      "FlutterFlow libraries must declare the canonical surface manifest",
+      "The active FlutterFlow library must declare the canonical surface manifest",
     );
 }
 
@@ -587,6 +649,8 @@ export function releaseCandidateTagFor(catalog, id) {
   const library = catalog.libraries.find((item) => item.id === id);
   const prefix = tagPrefixes[id];
   if (!library || !prefix) throw new Error(`Unknown SDK library: ${id}`);
+  if (library.lifecycle !== "active")
+    throw new Error(`${id} is ${library.lifecycle} and cannot be published`);
   const pending =
     library.releaseStatus === "pending-release" &&
     library.sourceVersion !== library.latestReleaseVersion;
@@ -611,6 +675,8 @@ export function promoteSdkRelease(catalog, id, version, releaseSha) {
   const library = catalog.libraries.find((item) => item.id === id);
   if (!library || !tagPrefixes[id])
     throw new Error(`Unknown SDK library: ${id}`);
+  if (library.lifecycle !== "active")
+    throw new Error(`${id} is ${library.lifecycle} and cannot be published`);
   if (!semver.test(version ?? ""))
     throw new Error(`Invalid SDK release version: ${version}`);
   if (!commitSha.test(releaseSha ?? ""))

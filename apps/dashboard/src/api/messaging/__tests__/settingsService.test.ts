@@ -24,7 +24,7 @@ import {
 } from "../settingsService";
 
 const settings: MessagingProjectSettings = {
-  business_name: "OpenGrow Support",
+  business_name: "SuperBoard Support",
   locale: "en",
   timezone: "Europe/Zurich",
   date_format: "yyyy-MM-dd",

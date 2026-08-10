@@ -1,6 +1,6 @@
 # Public routing and application cutover
 
-OpenGrow separates a Worker deployment from ownership of public hostnames. The
+SuperBoard separates a Worker deployment from ownership of public hostnames. The
 target environment owns the decision through `publicRouting`:
 
 - `staged`: deploy and migrate private Workers, Service Bindings, Queues,
@@ -19,7 +19,7 @@ so a green `main` workflow cannot replace `api.vocostar.com`,
 The application snapshot lives in
 `config/flutterflow-sources/<application>.json`. Its schema-validated
 convergence contract must prove all declared legacy sources absent, all required
-OpenGrow authorities present in the generated application runtime and the
+SuperBoard authorities present in the generated application runtime and the
 declared diagnostic budget respected.
 
 Generate a receipt only from the fresh external export after the verifier is
@@ -30,7 +30,7 @@ npm run flutterflow:source:verify:vocostar -- \
   --source /secure/fresh/app-vocostar-ff
 
 # Equivalent portable CI form; the variable name is derived from the manifest.
-OPENGROW_CLIENT_SOURCE_VOCOSTAR=/secure/fresh/app-vocostar-ff \
+SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/secure/fresh/app-vocostar-ff \
   npm run flutterflow:source:verify:vocostar
 
 npm run flutterflow:client:release -- generate \
@@ -78,7 +78,7 @@ rollback rehearsal:
    protected pull request;
 6. let CI validate the receipt before the read-only domain plan;
 7. resolve any `wrong-worker` or `dns-conflict` explicitly during the approved
-   cutover window; OpenGrow never deletes or adopts it automatically;
+   cutover window; SuperBoard never deletes or adopts it automatically;
 8. deploy the exact reviewed revision with mandatory encrypted D1 backups;
 9. verify API, SDK, files, links, dashboard, MCP, queues and all application
    journeys;

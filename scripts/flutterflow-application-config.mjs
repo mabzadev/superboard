@@ -70,7 +70,7 @@ export async function resolveFlutterFlowApplications({
   const output = {
     $schema: "../schemas/flutterflow-application-bindings.schema.json",
     schemaVersion: 2,
-    owner: "opengrow-platform",
+    owner: "superboard-platform",
     generatedFrom: "config/flutterflow-applications.json",
     applications,
   };
@@ -203,7 +203,7 @@ export async function resolveFlutterFlowApplication({
   const resolvedValues = Object.keys(values).sort();
   if (canonical(declaredValues) !== canonical(resolvedValues)) {
     throw new Error(
-      `${application.id} bindings do not cover the exact OpenGrow Library Values`,
+      `${application.id} bindings do not cover the exact SuperBoard Library Values`,
     );
   }
 

@@ -4,8 +4,8 @@ import {
   constantTimeEqual,
   configuredSecrets,
   matchesAnySecret,
-} from "@opengrow/contracts/secret";
-import { inspectSqlSchemaHealth } from "@opengrow/contracts/health";
+} from "@superboard/contracts/secret";
+import { inspectSqlSchemaHealth } from "@superboard/contracts/health";
 
 export type FilesEnv = Cloudflare.Env;
 

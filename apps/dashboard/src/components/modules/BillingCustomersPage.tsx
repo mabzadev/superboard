@@ -149,7 +149,7 @@ export default function BillingCustomersPage() {
             <CardHeader>
               <CardTitle>Customer search</CardTitle>
               <CardDescription>
-                Results are isolated to the selected OpenGrow project.
+                Results are isolated to the selected SuperBoard project.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">

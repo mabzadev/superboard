@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "product": {
+    "name": "SuperBoard",
+    "slug": "superboard",
+    "legacySlugs": ["opengrow"]
+  },
+  "repositories": {
+    "platform": "https://github.com/mbzadev/superboard-platform",
+    "reference": "https://github.com/mbzadev/superboard-reference"
+  },
+  "development": {
+    "target": "mbza-development"
+  }
+}

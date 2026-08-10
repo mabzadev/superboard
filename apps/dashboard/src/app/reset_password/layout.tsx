@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Reset Password",
-  description: "Reset your OpenGrow account password.",
+  description: "Reset your SuperBoard account password.",
 };
 
 export default function ResetPasswordLayout({

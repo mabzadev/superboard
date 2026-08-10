@@ -77,7 +77,7 @@ test("a target can select one or several schema owners without hardcoded resourc
     ["identity", "support"],
   );
   assert.equal(selected[0].databaseId, null);
-  assert.equal(selected[0].databaseName, "opengrow-dev-identity-db");
+  assert.equal(selected[0].databaseName, "superboard-dev-identity-db");
 });
 
 test("runtime D1 bindings derive the expected schema from the migration chain", () => {

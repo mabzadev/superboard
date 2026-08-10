@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
-import { configuredSecrets, constantTimeEqual, matchesAnySecret } from '@opengrow/contracts/secret';
+import { configuredSecrets, constantTimeEqual, matchesAnySecret } from '@superboard/contracts/secret';
 import type { Env } from './types';
 
 const jwksByUrl = new Map<string, ReturnType<typeof createRemoteJWKSet>>();

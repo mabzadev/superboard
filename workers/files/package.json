@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/files-worker",
+  "name": "@superboard/files-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
+    "@superboard/contracts": "*",
     "hono": "^4.11.9",
     "jose": "^6.2.2"
   },

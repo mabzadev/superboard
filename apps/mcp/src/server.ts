@@ -64,7 +64,7 @@ export async function runWithAuth(
 
 export function createServer(client: ApiClient = defaultApiClient): McpServer {
   const server = new McpServer({
-    name: "opengrow-mcp",
+    name: "superboard-mcp",
     version: "1.0.0",
   });
 
@@ -75,7 +75,7 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
     {
       title: "Get Account & Projects",
       description:
-        "Returns the authenticated user's account info and all their OpenGrow projects with domains. Call this first to discover available project IDs before using other tools.",
+        "Returns the authenticated user's account info and all their SuperBoard projects with domains. Call this first to discover available project IDs before using other tools.",
     },
     (extra) => runWithAuth(extra, (token) => handleGetStatus(token, client)),
   );
@@ -85,7 +85,7 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
     {
       title: "Get Platform Infrastructure Status",
       description:
-        "Read the same target, API, public endpoint, Worker, data-store, job and runtime status shown in the OpenGrow Infrastructure back-office. This tool is read-only and restricted to owners and administrators.",
+        "Read the same target, API, public endpoint, Worker, data-store, job and runtime status shown in the SuperBoard Infrastructure back-office. This tool is read-only and restricted to owners and administrators.",
     },
     (extra) => runWithAuth(extra, (token) => handleGetPlatformStatus(token, client)),
   );
@@ -113,7 +113,7 @@ export function createServer(client: ApiClient = defaultApiClient): McpServer {
     {
       title: "Create Project",
       description:
-        "Create a new OpenGrow project. This provisions a production and test environment with their own domains for deep links.",
+        "Create a new SuperBoard project. This provisions a production and test environment with their own domains for deep links.",
       inputSchema: z.object({
         name: z.string().describe("Project name (e.g. 'My App')"),
       }),

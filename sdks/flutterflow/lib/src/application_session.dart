@@ -5,7 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'application_client.dart';
 
-abstract interface class OpenGrowApplicationSessionStorage {
+abstract interface class SuperBoardApplicationSessionStorage {
   Future<String?> read({required String key});
 
   Future<void> write({required String key, required String value});
@@ -13,9 +13,9 @@ abstract interface class OpenGrowApplicationSessionStorage {
   Future<void> delete({required String key});
 }
 
-class FlutterOpenGrowApplicationSessionStorage
-    implements OpenGrowApplicationSessionStorage {
-  const FlutterOpenGrowApplicationSessionStorage([
+class FlutterSuperBoardApplicationSessionStorage
+    implements SuperBoardApplicationSessionStorage {
+  const FlutterSuperBoardApplicationSessionStorage([
     this._storage = const FlutterSecureStorage(),
   ]);
 
@@ -32,8 +32,8 @@ class FlutterOpenGrowApplicationSessionStorage
   Future<void> delete({required String key}) => _storage.delete(key: key);
 }
 
-class OpenGrowApplicationSession {
-  const OpenGrowApplicationSession({
+class SuperBoardApplicationSession {
+  const SuperBoardApplicationSession({
     required this.accessToken,
     required this.refreshToken,
     required this.expiresAt,
@@ -68,7 +68,7 @@ class OpenGrowApplicationSession {
     'user': user,
   };
 
-  static OpenGrowApplicationSession? fromStoredJson(Object? value) {
+  static SuperBoardApplicationSession? fromStoredJson(Object? value) {
     if (value is! Map || value['version'] != 1) return null;
     final accessToken = value['access_token']?.toString().trim() ?? '';
     final refreshToken = value['refresh_token']?.toString().trim() ?? '';
@@ -77,7 +77,7 @@ class OpenGrowApplicationSession {
     if (accessToken.isEmpty || refreshToken.isEmpty || expiresAt == null) {
       return null;
     }
-    return OpenGrowApplicationSession(
+    return SuperBoardApplicationSession(
       accessToken: accessToken,
       refreshToken: refreshToken,
       expiresAt: expiresAt.toUtc(),
@@ -86,7 +86,7 @@ class OpenGrowApplicationSession {
     );
   }
 
-  static OpenGrowApplicationSession fromResponse(
+  static SuperBoardApplicationSession fromResponse(
     Map<String, dynamic> response,
     DateTime instant,
   ) {
@@ -94,13 +94,13 @@ class OpenGrowApplicationSession {
     final refreshToken = response['refresh_token']?.toString().trim() ?? '';
     final expiresIn = (response['expires_in'] as num?)?.toInt() ?? 0;
     if (accessToken.isEmpty || refreshToken.isEmpty || expiresIn <= 0) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'session_invalid',
         'Identity returned an incomplete application session.',
       );
     }
     final rawUser = response['user'];
-    return OpenGrowApplicationSession(
+    return SuperBoardApplicationSession(
       accessToken: accessToken,
       refreshToken: refreshToken,
       expiresAt: instant.toUtc().add(Duration(seconds: expiresIn)),
@@ -110,26 +110,46 @@ class OpenGrowApplicationSession {
   }
 }
 
-class OpenGrowApplicationSessionManager {
-  OpenGrowApplicationSessionManager({
+class SuperBoardApplicationSessionManager {
+  SuperBoardApplicationSessionManager({
     required this.client,
     required this.storage,
     required this.storageKey,
+    this.legacyStorageKeys = const [],
     DateTime Function()? clock,
     this.refreshLeeway = const Duration(seconds: 30),
   }) : _clock = clock ?? DateTime.now;
 
-  final OpenGrowApplicationClient client;
-  final OpenGrowApplicationSessionStorage storage;
+  final SuperBoardApplicationClient client;
+  final SuperBoardApplicationSessionStorage storage;
   final String storageKey;
+  final List<String> legacyStorageKeys;
   final Duration refreshLeeway;
   final DateTime Function() _clock;
-  OpenGrowApplicationSession? _session;
-  Future<OpenGrowApplicationSession?>? _restoring;
+  SuperBoardApplicationSession? _session;
+  Future<SuperBoardApplicationSession?>? _restoring;
 
-  OpenGrowApplicationSession? get currentSession => _session;
+  SuperBoardApplicationSession? get currentSession => _session;
 
   static String scopedStorageKey({
+    required Uri apiBaseUri,
+    required String projectKey,
+    required String environment,
+  }) {
+    final scope = base64Url
+        .encode(
+          utf8.encode(
+            '${apiBaseUri.origin}\u0000${projectKey.trim()}\u0000${environment.trim()}',
+          ),
+        )
+        .replaceAll('=', '');
+    return 'superboard.application_session.v1.$scope';
+  }
+
+  /// Previous secure-storage key retained during the v2 -> v3 rollback window.
+  /// v3 mirrors rotations to this secure key until the compatibility window is
+  /// closed in a later major release.
+  static String legacyScopedStorageKey({
     required Uri apiBaseUri,
     required String projectKey,
     required String environment,
@@ -144,7 +164,7 @@ class OpenGrowApplicationSessionManager {
     return 'opengrow.application_session.v1.$scope';
   }
 
-  Future<OpenGrowApplicationSession?> restore() {
+  Future<SuperBoardApplicationSession?> restore() {
     final inFlight = _restoring;
     if (inFlight != null) return inFlight;
     final operation = _restore();
@@ -154,21 +174,35 @@ class OpenGrowApplicationSessionManager {
     });
   }
 
-  Future<OpenGrowApplicationSession?> _restore() async {
-    final serialized = await storage.read(key: storageKey);
+  Future<SuperBoardApplicationSession?> _restore() async {
+    var sourceKey = storageKey;
+    var serialized = await storage.read(key: sourceKey);
+    if (serialized == null || serialized.trim().isEmpty) {
+      for (final legacyKey in legacyStorageKeys) {
+        serialized = await storage.read(key: legacyKey);
+        if (serialized != null && serialized.trim().isNotEmpty) {
+          sourceKey = legacyKey;
+          break;
+        }
+      }
+    }
     if (serialized == null || serialized.trim().isEmpty) return null;
 
-    OpenGrowApplicationSession? stored;
+    SuperBoardApplicationSession? stored;
     try {
-      stored = OpenGrowApplicationSession.fromStoredJson(
+      stored = SuperBoardApplicationSession.fromStoredJson(
         jsonDecode(serialized),
       );
     } on FormatException {
       stored = null;
     }
     if (stored == null) {
-      await clear();
+      await storage.delete(key: sourceKey);
       return null;
+    }
+
+    if (sourceKey != storageKey) {
+      await storage.write(key: storageKey, value: serialized);
     }
 
     _session = stored;
@@ -177,7 +211,7 @@ class OpenGrowApplicationSessionManager {
 
     try {
       return await refresh();
-    } on OpenGrowApplicationException catch (error) {
+    } on SuperBoardApplicationException catch (error) {
       if (error.statusCode == 401 || error.statusCode == 403) {
         await clear();
         return null;
@@ -186,7 +220,7 @@ class OpenGrowApplicationSessionManager {
     }
   }
 
-  Future<OpenGrowApplicationSession> register({
+  Future<SuperBoardApplicationSession> register({
     required String email,
     required String password,
     String name = '',
@@ -194,13 +228,13 @@ class OpenGrowApplicationSessionManager {
     await client.register(email: email, password: password, name: name),
   );
 
-  Future<OpenGrowApplicationSession> signInPassword({
+  Future<SuperBoardApplicationSession> signInPassword({
     required String email,
     required String password,
   }) async =>
       _adopt(await client.signInPassword(email: email, password: password));
 
-  Future<OpenGrowApplicationSession> signInProvider({
+  Future<SuperBoardApplicationSession> signInProvider({
     required String provider,
     required String idToken,
     String name = '',
@@ -212,16 +246,18 @@ class OpenGrowApplicationSessionManager {
     ),
   );
 
-  Future<OpenGrowApplicationSession> signInAnonymous(
+  Future<SuperBoardApplicationSession> signInAnonymous(
     String installationId,
   ) async => _adopt(await client.signInAnonymous(installationId));
 
-  Future<OpenGrowApplicationSession> refresh([String refreshToken = '']) async {
+  Future<SuperBoardApplicationSession> refresh([
+    String refreshToken = '',
+  ]) async {
     final token = refreshToken.trim().isNotEmpty
         ? refreshToken.trim()
         : _session?.refreshToken ?? '';
     if (token.isEmpty) {
-      throw const OpenGrowApplicationException(
+      throw const SuperBoardApplicationException(
         'refresh_token_missing',
         'No secure application refresh token is available.',
       );
@@ -253,16 +289,22 @@ class OpenGrowApplicationSessionManager {
     _session = null;
     client.setApplicationAccessToken('');
     await storage.delete(key: storageKey);
+    for (final legacyKey in legacyStorageKeys) {
+      await storage.delete(key: legacyKey);
+    }
   }
 
-  Future<OpenGrowApplicationSession> _adopt(
+  Future<SuperBoardApplicationSession> _adopt(
     Map<String, dynamic> response,
   ) async {
-    final session = OpenGrowApplicationSession.fromResponse(
+    final session = SuperBoardApplicationSession.fromResponse(
       response,
       _clock().toUtc(),
     );
     await storage.write(key: storageKey, value: jsonEncode(session.toJson()));
+    for (final legacyKey in legacyStorageKeys) {
+      await storage.write(key: legacyKey, value: jsonEncode(session.toJson()));
+    }
     _session = session;
     client.setApplicationAccessToken(session.accessToken);
     return session;

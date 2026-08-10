@@ -26,7 +26,15 @@ export function nativeContractFromCatalog(catalog) {
     }
   }
   const iosReleaseRef = `sdk-ios-v${ios.latestReleaseVersion}`;
-  const repository = new URL(catalog.repository);
+  const historicalRepository = ios.install.match(
+    /\.package\(url: "([^"]+)", exact:/u,
+  )?.[1];
+  if (!historicalRepository) {
+    throw new Error(
+      "React Native iOS contract requires the historical SwiftPM coordinate",
+    );
+  }
+  const repository = new URL(historicalRepository);
   if (repository.hostname !== "github.com") {
     throw new Error(
       "React Native iOS podspec generation requires a GitHub repository",
@@ -45,7 +53,7 @@ export function nativeContractFromCatalog(catalog) {
     },
     ios: {
       packageName: ios.packageName,
-      repository: `${catalog.repository}.git`,
+      repository: historicalRepository,
       releaseRef: iosReleaseRef,
       podspecUrl,
       version: ios.latestReleaseVersion,

@@ -10,7 +10,13 @@ import { createServer } from "../../../apps/mcp/src/server.js";
 
 preloadSchemas();
 
-export type Env = Cloudflare.Env;
+export type Env = Omit<Cloudflare.Env, "SUPERBOARD_TARGET"> & {
+  SUPERBOARD_TARGET?: string;
+};
+
+function deploymentTarget(env: Env): string {
+  return env.SUPERBOARD_TARGET || env.OPENGROW_TARGET || "unknown";
+}
 
 const MCP_ROUTE = "/mcp";
 const RESOURCE_METADATA_PATH = "/.well-known/oauth-protected-resource";
@@ -28,7 +34,7 @@ export default {
         {
           status: "ok",
           service: "mcp",
-          target: env.OPENGROW_TARGET,
+          target: deploymentTarget(env),
           environment: env.ENVIRONMENT,
           transport: "streamable-http",
           stateless: true,
@@ -67,7 +73,7 @@ export default {
       onerror: (error) => {
         console.error(JSON.stringify({
           event: "mcp_protocol_error",
-          target: env.OPENGROW_TARGET,
+          target: deploymentTarget(env),
           environment: env.ENVIRONMENT,
           error: error.message,
         }));
@@ -129,7 +135,7 @@ async function validateBearer(
   } catch (error) {
     console.error(JSON.stringify({
       event: "mcp_token_validation_unavailable",
-      target: env.OPENGROW_TARGET,
+      target: deploymentTarget(env),
       error: error instanceof Error ? error.message : String(error),
     }));
     return Response.json(

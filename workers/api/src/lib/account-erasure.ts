@@ -4,7 +4,7 @@ import {
   type DomainModuleName,
   type InternalProjectContext,
   type ProjectEnvironment,
-} from "@opengrow/contracts/project-context";
+} from "@superboard/contracts/project-context";
 import type { Env } from "../types";
 
 export type AccountErasureProject = {
@@ -367,6 +367,8 @@ function domainStep(
           [PROJECT_CONTEXT_HEADERS.issuedAt]: String(context.issuedAt),
           [PROJECT_CONTEXT_HEADERS.version]: "1",
           [PROJECT_CONTEXT_HEADERS.signature]: signature,
+          "x-superboard-application-user-id": userId,
+          "x-superboard-application-email": "erasure@invalid.superboard",
           "x-opengrow-application-user-id": userId,
           "x-opengrow-application-email": "erasure@invalid.opengrow",
           "idempotency-key": erasureKey(operation.id, module),

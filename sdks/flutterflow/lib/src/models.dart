@@ -1,7 +1,7 @@
-import 'package:opengrow_flutter/models/opengrow_purchases.dart';
+import 'package:superboard_flutter/models/superboard_purchases.dart';
 
-class OpenGrowFlutterFlowPackage {
-  const OpenGrowFlutterFlowPackage({
+class SuperBoardFlutterFlowPackage {
+  const SuperBoardFlutterFlowPackage({
     required this.identifier,
     required this.productId,
     required this.productType,
@@ -23,8 +23,10 @@ class OpenGrowFlutterFlowPackage {
     'title': title,
   };
 
-  factory OpenGrowFlutterFlowPackage.fromOpenGrow(OpenGrowPackage package) {
-    return OpenGrowFlutterFlowPackage(
+  factory SuperBoardFlutterFlowPackage.fromSuperBoard(
+    SuperBoardPackage package,
+  ) {
+    return SuperBoardFlutterFlowPackage(
       identifier: package.identifier,
       productId: package.product.identifier,
       productType: package.product.type,
@@ -34,8 +36,8 @@ class OpenGrowFlutterFlowPackage {
   }
 }
 
-class OpenGrowFlutterFlowOffering {
-  const OpenGrowFlutterFlowOffering({
+class SuperBoardFlutterFlowOffering {
+  const SuperBoardFlutterFlowOffering({
     required this.identifier,
     required this.title,
     required this.description,
@@ -45,7 +47,7 @@ class OpenGrowFlutterFlowOffering {
   final String identifier;
   final String title;
   final String description;
-  final List<OpenGrowFlutterFlowPackage> packages;
+  final List<SuperBoardFlutterFlowPackage> packages;
 
   Map<String, dynamic> toMap() => {
     'identifier': identifier,
@@ -54,20 +56,22 @@ class OpenGrowFlutterFlowOffering {
     'packages': packages.map((value) => value.toMap()).toList(),
   };
 
-  factory OpenGrowFlutterFlowOffering.fromOpenGrow(OpenGrowOffering offering) {
-    return OpenGrowFlutterFlowOffering(
+  factory SuperBoardFlutterFlowOffering.fromSuperBoard(
+    SuperBoardOffering offering,
+  ) {
+    return SuperBoardFlutterFlowOffering(
       identifier: offering.identifier,
       title: offering.displayName ?? offering.identifier,
       description: offering.description ?? '',
       packages: offering.packages
-          .map(OpenGrowFlutterFlowPackage.fromOpenGrow)
+          .map(SuperBoardFlutterFlowPackage.fromSuperBoard)
           .toList(),
     );
   }
 }
 
-class OpenGrowFlutterFlowEntitlement {
-  const OpenGrowFlutterFlowEntitlement({
+class SuperBoardFlutterFlowEntitlement {
+  const SuperBoardFlutterFlowEntitlement({
     required this.identifier,
     required this.active,
     required this.status,
@@ -81,10 +85,10 @@ class OpenGrowFlutterFlowEntitlement {
   final String productId;
   final String expirationIso;
 
-  factory OpenGrowFlutterFlowEntitlement.fromOpenGrow(
-    OpenGrowEntitlementInfo value,
+  factory SuperBoardFlutterFlowEntitlement.fromSuperBoard(
+    SuperBoardEntitlementInfo value,
   ) {
-    return OpenGrowFlutterFlowEntitlement(
+    return SuperBoardFlutterFlowEntitlement(
       identifier: value.identifier,
       active: value.isActive,
       status: value.status,

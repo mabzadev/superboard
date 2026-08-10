@@ -5,8 +5,8 @@ import type {
   CustomWorkerJobStatus,
   CustomWorkerScope,
   CustomWorkerStats,
-} from "@opengrow/contracts/custom-worker";
-import { readJsonObjectLimited } from "@opengrow/contracts/request-body";
+} from "@superboard/contracts/custom-worker";
+import { readJsonObjectLimited } from "@superboard/contracts/request-body";
 import { vocalSamples } from "./locales";
 import {
   VocoStarJobError,

@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/identity-worker",
+  "name": "@superboard/identity-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "vitest run && vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
+    "@superboard/contracts": "*",
     "bcryptjs": "^3.0.3",
     "hono": "^4.11.9",
     "jose": "^6.2.2"

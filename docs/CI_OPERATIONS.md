@@ -43,7 +43,7 @@ released catalogue state through a PR; it never pushes through branch
 protection. Once
 the complete FlutterFlow/Support set is merged into `dev`, a separate workflow
 verifies all tags and GitHub releases before dispatching one protected PR to
-`opengrow-reference`.
+`superboard-reference`.
 
 Release concurrency is isolated by immutable tag. Publishing several different
 SDKs therefore cannot cancel queued releases, while a repeated event for the
@@ -127,7 +127,7 @@ variable `FF_LIBRARY_PROJECT_ID`; its API credential is the encrypted secret
 `config/github-control-plane.json`. After the required SDK tag workflows
 succeed, `sync-flutterflow-library.yml` derives every release ref from
 `config/flutterflow-library.json`, tests the Git-owned DSL and updates the
-remote `OpenGrow` project. It never accepts a branch ref or repository token.
+remote `SuperBoard` project. It never accepts a branch ref or repository token.
 
 Run the same supported validation locally with:
 
@@ -151,7 +151,7 @@ human-readable major version remains beside the SHA so Dependabot can propose
 reviewable updates. The workflow token defaults to read-only and write access is
 granted only to the isolated jobs that create a tag, package, release or
 promotion PR. `npm run secrets:scan` scans both Git history and the complete
-working tree. Client configuration such as `OPENGROW_PROJECT_KEY` is injected
+working tree. Client configuration such as `SUPERBOARD_PROJECT_KEY` is injected
 from the protected application environment and is never written to a Git-owned
 FlutterFlow manifest or generated Dart source.
 
@@ -165,7 +165,7 @@ Cloudflare environment, account ID and least-privilege API token, so the same
 validated Git commit can deploy several applications to different Cloudflare
 accounts without copying or editing the workflow.
 The target name is committed in the matrix and must exactly match the
-`OPENGROW_TARGET` variable of the selected GitHub Environment. This redundant
+`SUPERBOARD_TARGET` variable of the selected GitHub Environment. This redundant
 selection is intentional: a mutable Environment variable cannot redirect an
 approved revision to another target or account boundary.
 

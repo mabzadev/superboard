@@ -3,7 +3,7 @@ import { Env } from '../types';
 import { hashPassword, verifyToken } from '../lib/crypto';
 import { getOrCreateInstanceForUser } from '../lib/db';
 import { isRegistrationAllowed, recordSuccessfulRegistration } from '../lib/deployment';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 import { timingSafeEqual } from '../lib/secrets';
 import { readJsonObjectLimited } from '../lib/http-limits';
 import { issueDbBackedTokens } from '../lib/auth';
@@ -185,7 +185,7 @@ async function oauthApplicationId(db: D1Database, clientId: string) {
 async function findOrCreateUser(c: any, provider: string, profile: { uid: string; email: string; name: string | null }) {
   if (!profile.email || !profile.uid) throw new Error('SSO provider did not return email or uid');
   if (!await isRegistrationAllowed(c.env, profile.email)) {
-    throw new Error('This email is not authorized for this OpenGrow deployment.');
+    throw new Error('This email is not authorized for this SuperBoard deployment.');
   }
   const existing = await c.env.DB.prepare('SELECT id, provider FROM users WHERE email = ? LIMIT 1').bind(profile.email).first() as any;
   if (existing) {

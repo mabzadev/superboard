@@ -1,10 +1,10 @@
 import { Hono, type Context, type Next } from "hono";
-import { inspectSqlDatabaseAndSchemaHealth } from "@opengrow/contracts/health";
+import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import {
   verifyInternalProjectContextRequest,
   type InternalProjectContext,
-} from "@opengrow/contracts/project-context";
-import { configuredSecrets } from "@opengrow/contracts/secret";
+} from "@superboard/contracts/project-context";
+import { configuredSecrets } from "@superboard/contracts/secret";
 
 type Variables = { projectId: string; projectContext: InternalProjectContext };
 type AppContext = Context<{ Bindings: Env; Variables: Variables }>;

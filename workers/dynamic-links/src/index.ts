@@ -1,14 +1,14 @@
 import { Hono, type Context, type Next } from "hono";
-import { inspectSqlDatabaseAndSchemaHealth } from "@opengrow/contracts/health";
+import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import {
   verifyInternalProjectContextRequest,
   type InternalProjectContext,
-} from "@opengrow/contracts";
+} from "@superboard/contracts";
 import {
   RequestBodyError,
   readJsonObjectLimited,
-} from "@opengrow/contracts/request-body";
-import { configuredSecrets } from "@opengrow/contracts/secret";
+} from "@superboard/contracts/request-body";
+import { configuredSecrets } from "@superboard/contracts/secret";
 
 type Variables = { projectId: string; projectContext: InternalProjectContext };
 type DynamicContext = Context<{ Bindings: Env; Variables: Variables }>;

@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { SELF } from "cloudflare:test";
-import { signProjectContext } from "@opengrow/contracts";
+import { signProjectContext } from "@superboard/contracts";
 import { describe, expect, it } from "vitest";
 const secret = "onboarding-runtime-secret";
 describe("Onboardings Worker with D1", () => {

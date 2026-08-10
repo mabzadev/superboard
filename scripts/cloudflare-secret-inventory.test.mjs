@@ -53,6 +53,27 @@ test("secret coordination covers every required binding without values", async (
   }
 });
 
+test("analytics query credentials are optional in development and required in production", async () => {
+  const development = (await loadTarget("mbza-development")).target;
+  const production = (await loadTarget("vocostar")).target;
+  assert.deepEqual(
+    requiredSecretInventory(development, "development").find(
+      ({ service }) => service === "observability",
+    ).names,
+    ["OBSERVABILITY_INTERNAL_TOKEN"],
+  );
+  assert.deepEqual(
+    requiredSecretInventory(production, "production").find(
+      ({ service }) => service === "observability",
+    ).names,
+    [
+      "OBSERVABILITY_INTERNAL_TOKEN",
+      "CLOUDFLARE_ANALYTICS_ACCOUNT_ID",
+      "CLOUDFLARE_ANALYTICS_TOKEN",
+    ],
+  );
+});
+
 test("managed Worker secrets are application-specific and value-free", async () => {
   const { target } = await loadTarget("vocostar");
   const inventory = secretInventory(target);

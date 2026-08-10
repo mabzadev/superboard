@@ -4,7 +4,7 @@ import { getOrCreateRedirectConfig, parseJsonObject, resolveProject } from '../l
 import { runMaintenance } from '../lib/maintenance';
 import { decryptCredential, encryptSecret, timingSafeEqual } from '../lib/secrets';
 import { domainError } from '../lib/domain-modules';
-import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const admin = new Hono<{ Bindings: Env }>();
 

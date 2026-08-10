@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/flutterflow-application-bindings.schema.json",
   "schemaVersion": 2,
-  "owner": "opengrow-platform",
+  "owner": "superboard-platform",
   "generatedFrom": "config/flutterflow-applications.json",
   "applications": [
     {
@@ -18,75 +18,69 @@
         "libraryProjectIdVariable": "FF_LIBRARY_PROJECT_ID"
       },
       "library": {
-        "displayName": "OpenGrow",
+        "displayName": "SuperBoard",
         "dependencies": [
           {
             "catalogId": "flutterflow",
-            "packageName": "opengrow_flutterflow",
-            "sourceVersion": "2.2.5",
-            "requiredRef": "sdk-flutterflow-v2.2.5"
-          },
-          {
-            "catalogId": "flutterflow-support",
-            "packageName": "opengrow_flutterflow_messaging",
-            "sourceVersion": "1.3.0",
-            "requiredRef": "sdk-flutterflow-messaging-v1.3.0"
+            "packageName": "superboard_flutterflow",
+            "sourceVersion": "3.0.0",
+            "requiredRef": "sdk-flutterflow-v3.0.0"
           }
         ],
         "parameters": [
           {
             "name": "projectKey",
-            "key": "opengrow_project_key",
+            "key": "superboard_project_key",
             "type": "string"
           },
           {
             "name": "uriScheme",
-            "key": "opengrow_uri_scheme",
+            "key": "superboard_uri_scheme",
             "type": "string"
           },
           {
             "name": "useTestEnvironment",
-            "key": "opengrow_use_test_environment",
+            "key": "superboard_use_test_environment",
             "type": "boolean"
           },
           {
             "name": "sdkBaseUrl",
-            "key": "opengrow_sdk_base_url",
+            "key": "superboard_sdk_base_url",
             "type": "string"
           },
           {
             "name": "authGatewayBaseUrl",
-            "key": "opengrow_auth_gateway_base_url",
+            "key": "superboard_auth_gateway_base_url",
             "type": "string"
           },
           {
             "name": "filesBaseUrl",
-            "key": "opengrow_files_base_url",
+            "key": "superboard_files_base_url",
             "type": "string"
           },
           {
             "name": "applicationIdentifier",
-            "key": "opengrow_application_identifier",
+            "key": "superboard_application_identifier",
             "type": "string"
           },
           {
             "name": "applicationEnvironment",
-            "key": "opengrow_application_environment",
+            "key": "superboard_application_environment",
             "type": "string"
           },
           {
             "name": "supportBaseUrl",
-            "key": "opengrow_support_base_url",
+            "key": "superboard_support_base_url",
             "type": "string"
           },
           {
             "name": "supportProjectId",
-            "key": "opengrow_support_project_id",
+            "key": "superboard_support_project_id",
             "type": "integer"
           },
           {
             "name": "shortLinkHost",
-            "key": "opengrow_short_link_host",
+            "key": "superboard_short_link_host",
             "type": "string"
           }
         ]
@@ -94,7 +88,7 @@
       "values": {
         "projectKey": {
           "source": "github-environment-secret",
-          "name": "OPENGROW_PROJECT_KEY"
+          "name": "SUPERBOARD_PROJECT_KEY"
         },
         "uriScheme": "vocostar",
         "useTestEnvironment": false,

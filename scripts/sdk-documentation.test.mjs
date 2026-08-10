@@ -55,6 +55,24 @@ test("documentation follows published metadata, not pending source state", async
   assert.doesNotMatch(sections.get("flutterflow"), /9\.9\.9/u);
 });
 
+test("documentation derives lifecycle notices independently from release status", async () => {
+  const catalog = await loadSdkCatalog();
+  const sections = renderSdkDocumentationSections(catalog);
+
+  assert.match(sections.get("flutter"), /Lifecycle: active/u);
+  assert.match(sections.get("flutterflow"), /Lifecycle: active/u);
+  assert.match(sections.get("ios"), /Lifecycle: internal/u);
+  assert.match(sections.get("android"), /Lifecycle: internal/u);
+  assert.match(sections.get("flutterflow-support"), /Lifecycle: archived/u);
+  assert.match(sections.get("javascript"), /Lifecycle: archived/u);
+  assert.match(sections.get("react-native"), /Lifecycle: archived/u);
+  assert.match(
+    sections.get("flutter"),
+    /sdk-flutter-v2\.1\.4/u,
+  );
+  assert.doesNotMatch(sections.get("flutter"), /sdk-flutter-v3\.0\.0/u);
+});
+
 test("a catalogue promotion regenerates documentation without frozen state", async () => {
   const catalog = await loadSdkCatalog();
   const flutterflow = catalog.libraries.find(({ id }) => id === "flutterflow");
@@ -108,7 +126,7 @@ test("all package coordinates and versions are derived state-independently", asy
   ios.latestReleaseVersion = "6.5.4";
   ios.releaseRef = "6.5.4";
   ios.install =
-    '.package(url: "https://github.com/mbzadev/opengrow-platform.git", exact: "6.5.4")';
+    '.package(url: "https://github.com/mbzadev/superboard-platform.git", exact: "6.5.4")';
   const sections = renderSdkDocumentationSections(catalog);
 
   assert.match(
@@ -161,7 +179,7 @@ test("registry documentation separates public metadata from authenticated instal
   for (const source of [android, reactNative]) {
     assert.match(
       source,
-      /https:\/\/maven\.pkg\.github\.com\/mbzadev\/opengrow-platform/u,
+      /https:\/\/maven\.pkg\.github\.com\/mbzadev\/superboard-platform/u,
     );
     assert.match(source, /OPENGROW_GITHUB_PACKAGES_USER/u);
     assert.match(source, /OPENGROW_GITHUB_PACKAGES_TOKEN/u);

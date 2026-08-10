@@ -28,6 +28,8 @@ import {
   workerNameForService,
 } from "./cloudflare-services.mjs";
 import { requiredSecretInventory } from "./cloudflare-secret-inventory.mjs";
+import { assertTargetPhysicalResourceNames } from "./cloudflare-resource-identity.mjs";
+import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 import { assertPublicRoutingReady } from "./public-routing-gate.mjs";
 import {
   D1_SCHEMA_OWNERS,
@@ -49,6 +51,7 @@ if (outputSuffix && !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(outputSuffix)) {
   throw new Error("--output-suffix must be a safe lowercase name");
 }
 const { target } = await loadTarget(targetName);
+assertTargetPhysicalResourceNames(target, environment);
 assertServiceForTarget(target, service);
 const managedWorker = managedWorkerDefinition(target, service);
 if (!isServiceEnabled(target, service) && !args["allow-disabled"]) {
@@ -202,10 +205,17 @@ function apiConfig() {
     ...baseConfig(),
     main: "../../workers/api/src/index.ts",
     vars: {
+      SUPERBOARD_TARGET: targetName,
       OPENGROW_TARGET: targetName,
       ...d1SchemaVars(),
+      SUPERBOARD_RELEASE:
+        superboardEnvironmentValue("SUPERBOARD_RELEASE") ||
+        process.env.GITHUB_SHA ||
+        "local",
       OPENGROW_RELEASE:
-        process.env.OPENGROW_RELEASE || process.env.GITHUB_SHA || "local",
+        superboardEnvironmentValue("SUPERBOARD_RELEASE") ||
+        process.env.GITHUB_SHA ||
+        "local",
       PUBLIC_ROUTING_MODE: resources.publicRouting,
       ENVIRONMENT: environment,
       SHORTLINK_DOMAIN: target.domains.shortlinks,
@@ -733,6 +743,7 @@ function managedWorkerConfig() {
     );
   }
   const commonVars = {
+    SUPERBOARD_TARGET: targetName,
     OPENGROW_TARGET: targetName,
     ENVIRONMENT: environment,
     GATEWAY_URL: target.customWorker.runtimeBridge.gatewayOrigin,
@@ -828,6 +839,7 @@ function mcpConfig() {
     main: "../../workers/mcp/src/index.ts",
     vars: {
       ENVIRONMENT: environment,
+      SUPERBOARD_TARGET: targetName,
       OPENGROW_TARGET: targetName,
       MCP_DOMAIN: target.domains.mcp,
       PUBLIC_API_URL: publicApiUrl(target),

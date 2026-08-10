@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
-import { verifyInternalProjectContextRequest } from "@opengrow/contracts/project-context";
-import { configuredSecrets } from "@opengrow/contracts/secret";
+import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
+import { configuredSecrets } from "@superboard/contracts/secret";
 
 export type ProjectContext = {
   projectId: string;

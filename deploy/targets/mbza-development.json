@@ -1,8 +1,14 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "target": "mbza-development",
   "accountAlias": "mbza-development",
+  "resourceIdentity": {
+    "logicalName": "superboard",
+    "physicalName": "superboard",
+    "previousNames": [],
+    "migrationStrategy": "canonical"
+  },
   "workersDevSubdomain": "mbza",
   "registrationMode": "allowlist",
   "ssoEnabled": false,
@@ -38,7 +44,7 @@
   },
   "mail": {
     "transport": "capture",
-    "fromName": "OpenGrow Development",
+    "fromName": "SuperBoard Development",
     "fromAddress": "noreply@mbza.dev",
     "replyToAddress": "support@mbza.dev"
   },
@@ -46,65 +52,73 @@
     "api": "api.mbza.dev",
     "shortlinks": "in.mbza.dev",
     "sdk": "sdk.mbza.dev",
-    "dashboard": "grow.mbza.dev",
+    "dashboard": "board.mbza.dev",
     "files": "files.mbza.dev",
     "mcp": "mcp.mbza.dev",
     "mailPreview": "mail.mbza.dev"
   },
+  "retiredDomains": [
+    {
+      "hostname": "grow.mbza.dev",
+      "formerSurface": "dashboard",
+      "policy": "must-be-unassigned",
+      "reason": "Previous back-office hostname replaced by board.mbza.dev."
+    }
+  ],
   "workers": {
     "api": {
-      "development": "opengrow-api-dev"
+      "development": "superboard-api-dev"
     },
     "dashboard": {
-      "development": "opengrow-dashboard-dev"
+      "development": "superboard-dashboard-dev"
     },
     "billing": {
-      "development": "opengrow-billing-dev"
+      "development": "superboard-billing-dev"
     },
     "email": {
-      "development": "opengrow-email-dev"
+      "development": "superboard-email-dev"
     },
     "identity": {
-      "development": "opengrow-identity-dev"
+      "development": "superboard-identity-dev"
     },
     "files": {
-      "development": "opengrow-files-dev"
+      "development": "superboard-files-dev"
     },
     "observability": {
-      "development": "opengrow-observability-dev"
+      "development": "superboard-observability-dev"
     },
     "mcp": {
-      "development": "opengrow-mcp-dev"
+      "development": "superboard-mcp-dev"
     },
     "app": {
-      "development": "opengrow-app-dev"
+      "development": "superboard-app-dev"
     },
     "products": {
-      "development": "opengrow-products-dev"
+      "development": "superboard-products-dev"
     },
     "paywalls": {
-      "development": "opengrow-paywalls-dev"
+      "development": "superboard-paywalls-dev"
     },
     "dynamic-links": {
-      "development": "opengrow-dynamic-links-dev"
+      "development": "superboard-dynamic-links-dev"
     },
     "support": {
-      "development": "opengrow-support-dev"
+      "development": "superboard-support-dev"
     },
     "marketing": {
-      "development": "opengrow-marketing-dev"
+      "development": "superboard-marketing-dev"
     },
     "onboardings": {
-      "development": "opengrow-onboardings-dev"
+      "development": "superboard-onboardings-dev"
     },
     "custom": {
-      "development": "opengrow-custom-reference-dev"
+      "development": "superboard-custom-reference-dev"
     }
   },
   "customWorker": {
     "source": "workers/custom/reference/src/index.ts",
     "packagePath": "workers/custom/reference",
-    "description": "OpenGrow reference extension used to validate the custom Worker protocol on mbza.dev.",
+    "description": "SuperBoard reference extension used to validate the custom Worker protocol on mbza.dev.",
     "capabilities": ["reference.echo", "reference.acceptance"],
     "secrets": ["CUSTOM_WORKER_TOKEN"],
     "vars": {
@@ -117,11 +131,11 @@
     }
   },
   "oauth": {
-    "dashboardClientId": "opengrow-mbza-development"
+    "dashboardClientId": "superboard-mbza-development"
   },
   "authGateway": {
     "issuer": "https://api.mbza.dev",
-    "audience": "opengrow",
+    "audience": "superboard",
     "jwksUrl": "https://api.mbza.dev/.well-known/jwks.json"
   },
   "publicSurfaceMonitors": [
@@ -129,108 +143,108 @@
       "id": "reference",
       "url": "https://reference.mbza.dev",
       "healthUrl": "https://reference.mbza.dev/",
-      "description": "Executable Flutter Web acceptance application for the common OpenGrow journeys"
+      "description": "Executable Flutter Web acceptance application for the common SuperBoard journeys"
     }
   ],
   "operator": {
-    "docsUrl": "https://github.com/mbzadev/opengrow-platform/tree/dev/docs",
+    "docsUrl": "https://github.com/mbzadev/superboard-platform/tree/dev/docs",
     "supportEmail": "support@mbza.dev"
   },
   "environments": {
     "development": {
       "d1": {
-        "name": "opengrow-dev-db",
-        "id": "e04af85c-d329-4026-a269-20816948729f"
+        "name": "superboard-dev-db",
+        "id": "02001526-c44d-47e5-8b1d-df47a3b68d69"
       },
       "kv": {
-        "name": "opengrow-dev",
-        "id": "36b7ce6eb4e342618ae8c7c60fe47c78"
+        "name": "superboard-dev",
+        "id": "f961a6d6fb3440a4a45bd30d927d675d"
       },
       "r2": {
-        "name": "opengrow-dev-files"
+        "name": "superboard-dev-files"
       },
       "dashboardCache": {
-        "name": "opengrow-dev-dashboard-cache"
+        "name": "superboard-dev-dashboard-cache"
       },
       "emailD1": {
-        "name": "opengrow-dev-email-db",
-        "id": "3b70e1b1-9369-40ee-957f-a9e594df660e"
+        "name": "superboard-dev-email-db",
+        "id": "aa7ecc13-5f11-4bdd-8505-2fcd921a47df"
       },
       "identityD1": {
-        "name": "opengrow-dev-identity-db",
-        "id": "a0ab5a1a-5ae8-4192-a602-cbc466ffc64c"
+        "name": "superboard-dev-identity-db",
+        "id": "0c7e4bf4-a0b3-443b-8da9-159795171aa0"
       },
       "filesD1": {
-        "name": "opengrow-dev-files-db",
-        "id": "b13bdd17-d532-4e9e-bd99-91b7de3cb2b3"
+        "name": "superboard-dev-files-db",
+        "id": "3261931d-8b84-4f04-b923-d20a57b4f9b7"
       },
       "customD1": {
-        "name": "opengrow-dev-custom-reference-db",
-        "id": "1175a3b8-41e3-4888-9877-3e0f3a63e290"
+        "name": "superboard-dev-custom-reference-db",
+        "id": "65c7edb8-d3fc-4a26-8317-96c511558679"
       },
-      "analyticsDataset": "opengrow_mbza_development",
+      "analyticsDataset": "superboard_mbza_development",
       "supportProjectIds": [],
       "moduleD1": {
         "app": {
-          "name": "opengrow-dev-app-db",
-          "id": "4e0fc0ac-f563-4713-b362-65b348ef57ae"
+          "name": "superboard-dev-app-db",
+          "id": "b9d5a1fe-a783-49f6-82a9-af8bab27d244"
         },
         "products": {
-          "name": "opengrow-dev-products-db",
-          "id": "bc9426c0-5f89-4ffd-aa18-5b09610b5b7b"
+          "name": "superboard-dev-products-db",
+          "id": "0abc5c90-1196-4f4a-8502-ff0a17ca946e"
         },
         "paywalls": {
-          "name": "opengrow-dev-paywalls-db",
-          "id": "54e44497-34e9-49c9-9b8d-431d9d45724c"
+          "name": "superboard-dev-paywalls-db",
+          "id": "fe34d47d-8b47-4f0b-b137-a02bea886927"
         },
         "dynamicLinks": {
-          "name": "opengrow-dev-dynamic-links-db",
-          "id": "b8f3a934-3f7f-4a78-924b-460464a0999b"
+          "name": "superboard-dev-dynamic-links-db",
+          "id": "0b1222e3-e2b5-4a96-a26d-6b9a0ce14116"
         },
         "support": {
-          "name": "opengrow-dev-support-db",
-          "id": "45cdca2d-556a-41a7-be69-6c8ffb835708"
+          "name": "superboard-dev-support-db",
+          "id": "6f08fb37-c2fc-4f91-beb2-7462f7976463"
         },
         "marketing": {
-          "name": "opengrow-dev-marketing-db",
-          "id": "0ad3a1f0-ff33-4d30-b6df-5b6c2b097456"
+          "name": "superboard-dev-marketing-db",
+          "id": "5bfda359-fd04-46e4-afc3-2d78b6565233"
         },
         "onboardings": {
-          "name": "opengrow-dev-onboardings-db",
-          "id": "2439fd4d-21fd-4ba4-b014-56ee50f500cf"
+          "name": "superboard-dev-onboardings-db",
+          "id": "d7a0389d-52a3-465b-a606-f995fa46202a"
         }
       },
       "moduleR2": {
         "support": {
-          "name": "opengrow-dev-support-attachments"
+          "name": "superboard-dev-support-attachments"
         },
         "marketing": {
-          "name": "opengrow-dev-marketing-media"
+          "name": "superboard-dev-marketing-media"
         }
       },
       "moduleQueues": {
         "support": {
-          "name": "opengrow-dev-support-events",
-          "dlq": "opengrow-dev-support-events-dlq"
+          "name": "superboard-dev-support-events",
+          "dlq": "superboard-dev-support-events-dlq"
         },
         "marketing": {
-          "name": "opengrow-dev-marketing-delivery",
-          "dlq": "opengrow-dev-marketing-delivery-dlq"
+          "name": "superboard-dev-marketing-delivery",
+          "dlq": "superboard-dev-marketing-delivery-dlq"
         }
       },
       "publicRouting": "active",
       "billingExecutionMode": "local",
       "queues": {
-        "events": "opengrow-dev-events",
-        "eventsDlq": "opengrow-dev-events-dlq",
-        "push": "opengrow-dev-push",
-        "pushDlq": "opengrow-dev-push-dlq",
-        "maintenance": "opengrow-dev-maintenance",
-        "maintenanceDlq": "opengrow-dev-maintenance-dlq",
-        "billing": "opengrow-dev-billing",
-        "billingDlq": "opengrow-dev-billing-dlq",
-        "email": "opengrow-dev-email-delivery",
-        "emailDlq": "opengrow-dev-email-delivery-dlq"
+        "events": "superboard-dev-events",
+        "eventsDlq": "superboard-dev-events-dlq",
+        "push": "superboard-dev-push",
+        "pushDlq": "superboard-dev-push-dlq",
+        "maintenance": "superboard-dev-maintenance",
+        "maintenanceDlq": "superboard-dev-maintenance-dlq",
+        "billing": "superboard-dev-billing",
+        "billingDlq": "superboard-dev-billing-dlq",
+        "email": "superboard-dev-email-delivery",
+        "emailDlq": "superboard-dev-email-delivery-dlq"
       }
     }
   }

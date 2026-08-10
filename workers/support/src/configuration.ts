@@ -3,7 +3,7 @@ import type { Env } from './types';
 import { readJsonObject } from './validation';
 import { validateWorkflowConfiguration } from './workflows';
 import { encryptSecret } from './secrets';
-import { isSafePublicHttpsUrl } from '@opengrow/contracts/url-security';
+import { isSafePublicHttpsUrl } from '@superboard/contracts/url-security';
 
 type FieldType = 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'string_list' | 'json';
 

@@ -47,10 +47,12 @@ describe('billing webhook delivery', () => {
     let update: unknown[] = [];
     const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({
+        'X-SuperBoard-Delivery': 'delivery-1',
         'X-OpenGrow-Delivery': 'delivery-1',
       });
       expect(init?.redirect).toBe('manual');
       expect(String((init?.headers as Record<string, string>)['X-OpenGrow-Signature'])).toMatch(/^v1=/);
+      expect(String((init?.headers as Record<string, string>)['X-SuperBoard-Signature'])).toMatch(/^v1=/);
       return new Response('{"received":true}', { status: 200 });
     });
     vi.stubGlobal('fetch', fetcher);

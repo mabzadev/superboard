@@ -2,11 +2,11 @@ import { Hono } from "hono";
 import {
   OBSERVABILITY_SUMMARY_PATH,
   type ObservabilitySummary,
-} from "@opengrow/contracts/observability";
+} from "@superboard/contracts/observability";
 import {
   inspectSqlSchemaHealth,
   type SqlSchemaHealth,
-} from "@opengrow/contracts/health";
+} from "@superboard/contracts/health";
 import {
   CUSTOM_WORKER_JOB_PATH,
   CUSTOM_WORKER_MANIFEST_PATH,
@@ -14,11 +14,11 @@ import {
   CUSTOM_WORKER_STATS_PATH,
   type CustomWorkerManifest,
   type CustomWorkerStats,
-} from "@opengrow/contracts/custom-worker";
+} from "@superboard/contracts/custom-worker";
 import {
   EMAIL_SERVICE_DEAD_LETTERS_PATH,
   EMAIL_SERVICE_OPERATIONS_PATH,
-} from "@opengrow/contracts/email";
+} from "@superboard/contracts/email";
 import { getAuthContext } from "../lib/auth";
 import { readJsonObjectLimited, readTextLimited } from "../lib/http-limits";
 import type { Env } from "../types";
@@ -42,7 +42,7 @@ const WORKERS = [
     null,
     "self",
     "/health",
-    "Authenticated OpenGrow gateway, orchestration and public SDK surface",
+    "Authenticated SuperBoard gateway, orchestration and public SDK surface",
     ["DB", "KV", "R2"],
     ["EVENT_QUEUE", "PUSH_QUEUE", "MAINTENANCE_QUEUE"],
     ["platformDeadLetters", "pushDeliveries", "accountErasures"],
@@ -53,7 +53,7 @@ const WORKERS = [
     null,
     "public",
     "/",
-    "OpenGrow operator back office",
+    "SuperBoard operator back office",
     ["dashboard-cache"],
     [],
     [],
@@ -97,7 +97,7 @@ const WORKERS = [
     "IDENTITY_SERVICE",
     "binding",
     "/health",
-    "Application users, email/password, Google/Apple federation and OpenGrow identity exchange",
+    "Application users, email/password, Google/Apple federation and SuperBoard identity exchange",
     ["identity"],
     [],
     [],
@@ -334,7 +334,7 @@ const API_CAPABILITIES = [
   },
   {
     id: "modules",
-    description: "Private gateway for enabled OpenGrow feature Workers",
+    description: "Private gateway for enabled SuperBoard feature Workers",
     access: "Authenticated project context signed by the API gateway",
     entrypoints: [
       "/api/v1/app/*",
@@ -594,14 +594,14 @@ export async function buildPlatformStatus(env: Env) {
     generatedAt: new Date().toISOString(),
     responseTimeMs: Date.now() - started,
     deployment: {
-      target: env.OPENGROW_TARGET || "unknown",
-      release: env.OPENGROW_RELEASE || "unknown",
+      target: env.SUPERBOARD_TARGET || env.OPENGROW_TARGET || "unknown",
+      release: env.SUPERBOARD_RELEASE || env.OPENGROW_RELEASE || "unknown",
       publicRouting: env.PUBLIC_ROUTING_MODE || "unknown",
     },
     catalog: {
       schemaVersion: 1,
       status: topology.status,
-      target: env.OPENGROW_TARGET || "unknown",
+      target: env.SUPERBOARD_TARGET || env.OPENGROW_TARGET || "unknown",
       environment: env.ENVIRONMENT,
       ...(topology.error ? { error: topology.error } : {}),
     },
@@ -616,7 +616,7 @@ export async function buildPlatformStatus(env: Env) {
     api: {
       status: apiStatus,
       description:
-        "Authenticated OpenGrow gateway, orchestration and public SDK surface",
+        "Authenticated SuperBoard gateway, orchestration and public SDK surface",
       capabilities: API_CAPABILITIES,
     },
     publicSurfaces,
@@ -863,7 +863,7 @@ function workerTopology(env: Env): WorkerTopology {
     if (
       !record(value) ||
       value.schemaVersion !== 1 ||
-      value.target !== env.OPENGROW_TARGET ||
+      value.target !== (env.SUPERBOARD_TARGET || env.OPENGROW_TARGET) ||
       value.environment !== env.ENVIRONMENT ||
       !Array.isArray(value.workers) ||
       !Array.isArray(value.customDependencies)
@@ -1552,7 +1552,7 @@ function dataStoreInventory(
       "R2",
       "support",
       serviceStatus("support"),
-      "Support attachments migrated from Chatwoot and created in OpenGrow",
+      "Support attachments migrated from Chatwoot and created in SuperBoard",
     ),
     store(
       "support-realtime",
@@ -1949,7 +1949,7 @@ async function customOverview(env: Env): Promise<{
       };
     }
     const stats = statsValue;
-    const target = env.OPENGROW_TARGET || "";
+    const target = env.SUPERBOARD_TARGET || env.OPENGROW_TARGET || "";
     if (
       !manifest ||
       typeof manifest !== "object" ||

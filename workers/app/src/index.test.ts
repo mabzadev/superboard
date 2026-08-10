@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   signProjectContext,
   type InternalProjectContext,
-} from "@opengrow/contracts";
+} from "@superboard/contracts";
 import app from "./index";
 
 describe("app worker", () => {

@@ -23,6 +23,10 @@ import {
   DOMAIN_SERVICES,
   DOMAIN_SERVICE_REGISTRY,
 } from "./cloudflare-services.mjs";
+import {
+  assertTargetPhysicalResourceNames,
+  resourceIdentity,
+} from "./cloudflare-resource-identity.mjs";
 import { flutterFlowSourceEnvironmentName } from "./flutterflow-source-verify.mjs";
 import { buildFlutterFlowMigrationPlan } from "./flutterflow-migration-plan.mjs";
 import { validateFlutterFlowLibraryContract } from "./flutterflow-library-contract.mjs";
@@ -32,6 +36,7 @@ import {
   canonicalReleaseTag,
   immutableFailureFor,
 } from "./sdk-release-history.mjs";
+import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 
 const uuidPattern =
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/iu;
@@ -77,7 +82,16 @@ export function requiredResourceIds(target, environment) {
       ),
     );
   }
-  return required;
+  const contracts = new Map(
+    assertTargetPhysicalResourceNames(target, environment).map((contract) => [
+      contract.key,
+      contract,
+    ]),
+  );
+  return required.map((entry) => ({
+    ...entry,
+    ...contracts.get(entry.key),
+  }));
 }
 
 function resource(key, label, value, pattern) {
@@ -115,6 +129,7 @@ export function targetReadiness(target, environment) {
   return {
     target: target.target,
     environment,
+    resourceIdentity: resourceIdentity(target),
     manifestProvisioned: missing.length === 0,
     resourceIds: {
       required: resourceIds.length,
@@ -132,7 +147,9 @@ export function inspectSdkRemoteState(
   releaseHistory = { immutableFailures: [] },
 ) {
   const publications = (catalogue.libraries || []).map((library) => {
-    const pending = library.releaseStatus !== "released";
+    const lifecycle = library.lifecycle ?? "active";
+    const pending =
+      lifecycle === "active" && library.releaseStatus !== "released";
     const tag = pending
       ? releaseCandidateTagFor(catalogue, library.id)
       : releaseTagFor(catalogue, library.id);
@@ -194,6 +211,7 @@ export function inspectSdkRemoteState(
     }
     return {
       id: library.id,
+      lifecycle,
       status: library.releaseStatus,
       tag,
       expectedSha: pending ? null : library.releaseSha,
@@ -470,9 +488,14 @@ function responseData(result) {
 
 export function sdkReadiness(catalogue, remoteState = null) {
   const pending = (catalogue.libraries || [])
-    .filter((library) => library.releaseStatus !== "released")
+    .filter(
+      (library) =>
+        (library.lifecycle ?? "active") === "active" &&
+        library.releaseStatus !== "released",
+    )
     .map((library) => ({
       id: library.id,
+      lifecycle: library.lifecycle ?? "active",
       sourceVersion: library.sourceVersion,
       latestReleaseVersion: library.latestReleaseVersion,
       releaseStatus: library.releaseStatus,
@@ -482,6 +505,14 @@ export function sdkReadiness(catalogue, remoteState = null) {
       pending.length === 0 &&
       (remoteState === null || remoteState.ready === true),
     total: (catalogue.libraries || []).length,
+    lifecycle: Object.fromEntries(
+      ["active", "internal", "archived"].map((value) => [
+        value,
+        (catalogue.libraries || []).filter(
+          (library) => (library.lifecycle ?? "active") === value,
+        ).length,
+      ]),
+    ),
     pending,
     remote: remoteState ?? {
       inspected: false,
@@ -674,9 +705,9 @@ export function credentialReadiness(target, environment, env = process.env) {
   ];
   if (environment === "production") {
     required.push({
-      name: "OPENGROW_BACKUP_ENCRYPTION_KEY",
+      name: "SUPERBOARD_BACKUP_ENCRYPTION_KEY",
       configured: Boolean(
-        String(env.OPENGROW_BACKUP_ENCRYPTION_KEY || "").trim(),
+        superboardEnvironmentValue("SUPERBOARD_BACKUP_ENCRYPTION_KEY", env),
       ),
     });
   }
@@ -874,7 +905,10 @@ function migrationReadiness(plan) {
 
 export async function buildReadiness({
   remote = false,
-  referenceRoot = process.env.OPENGROW_REFERENCE_ROOT || null,
+  referenceRoot = superboardEnvironmentValue(
+    "SUPERBOARD_REFERENCE_ROOT",
+    process.env,
+  ) || null,
   clientSources = {},
   env = process.env,
 } = {}) {
@@ -892,7 +926,7 @@ export async function buildReadiness({
       target:
         controlPlane.repositories.platform.environments[
           deployment.githubEnvironment
-        ].variables.OPENGROW_TARGET,
+        ].variables.SUPERBOARD_TARGET,
       referenceAcceptance: deployment.referenceAcceptance,
     })),
   };

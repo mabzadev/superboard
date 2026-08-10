@@ -1,4 +1,4 @@
-name: Sync OpenGrow FlutterFlow library
+name: Sync SuperBoard FlutterFlow library
 
 on:
   push:
@@ -67,9 +67,9 @@ jobs:
       - name: Test the compiled FlutterFlow DSL
         run: flutterflow ai test
         working-directory: tools/flutterflow-library
-      - name: Push the reviewed OpenGrow library
+      - name: Push the reviewed SuperBoard library
         run: >-
           flutterflow ai run dsl/edit.dart
           --project-id "$FF_LIBRARY_PROJECT_ID"
-          --commit-message "Sync OpenGrow library from $GITHUB_SHA"
+          --commit-message "Sync SuperBoard library from $GITHUB_SHA"
         working-directory: tools/flutterflow-library

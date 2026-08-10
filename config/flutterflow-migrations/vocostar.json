@@ -4,7 +4,7 @@
   "application": "vocostar",
   "target": "vocostar",
   "environment": "production",
-  "sourceEnvironment": "OPENGROW_CLIENT_SOURCE_VOCOSTAR",
+  "sourceEnvironment": "SUPERBOARD_CLIENT_SOURCE_VOCOSTAR",
   "snapshotManifest": "config/flutterflow-sources/vocostar.json",
   "surfaceManifest": "config/flutterflow-custom-code.json",
   "phases": [
@@ -41,7 +41,7 @@
     {
       "id": "support",
       "order": 6,
-      "title": "OpenGrow Support client cutover",
+      "title": "SuperBoard Support client cutover",
       "dependsOn": ["identity-runtime", "files-notifications"]
     },
     {
@@ -76,17 +76,17 @@
         "userAuthenticate and userRefreshAuth"
       ],
       "replacementSymbols": [
-        "opengrowApplicationInitialize",
-        "opengrowApplicationRestoreSessionJson",
-        "opengrowApplicationCurrentSessionJson",
-        "opengrowApplicationAccessToken",
-        "opengrowApplicationSignInProviderJson",
-        "opengrowApplicationSignInPasswordJson",
-        "opengrowApplicationSignInAnonymousJson",
-        "opengrowApplicationRefreshJson",
-        "opengrowApplicationLogoutJson",
-        "opengrowApplicationDeleteAccountJson",
-        "opengrowPurchaseLogout"
+        "superboardApplicationInitialize",
+        "superboardApplicationRestoreSessionJson",
+        "superboardApplicationCurrentSessionJson",
+        "superboardApplicationAccessToken",
+        "superboardApplicationSignInProviderJson",
+        "superboardApplicationSignInPasswordJson",
+        "superboardApplicationSignInAnonymousJson",
+        "superboardApplicationRefreshJson",
+        "superboardApplicationLogoutJson",
+        "superboardApplicationDeleteAccountJson",
+        "superboardPurchaseLogout"
       ],
       "acceptance": [
         "Anonymous, email, Google and Apple sessions survive restart through secure native storage",
@@ -104,10 +104,10 @@
       "title": "Replace application maintenance and update checks with App runtime policy",
       "convergenceChecks": ["runtime-policy-wired"],
       "legacy": ["appCheckMaintenance", "appCheckUpdate", "/settings/active"],
-      "replacementSymbols": ["opengrowApplicationRuntimePolicyJson"],
+      "replacementSymbols": ["superboardApplicationRuntimePolicyJson"],
       "acceptance": [
         "Minimum and recommended versions are loaded before protected navigation",
-        "Maintenance and update URLs come from the selected OpenGrow target"
+        "Maintenance and update URLs come from the selected SuperBoard target"
       ]
     },
     {
@@ -124,10 +124,10 @@
       ],
       "legacy": ["file.vocostar.com", "userMediaUpload", "userMediaRemove"],
       "replacementSymbols": [
-        "opengrowApplicationListFilesJson",
-        "opengrowApplicationUploadFileJson",
-        "opengrowApplicationDownloadFile",
-        "opengrowApplicationDeleteFileJson"
+        "superboardApplicationListFilesJson",
+        "superboardApplicationUploadFileJson",
+        "superboardApplicationDownloadFile",
+        "superboardApplicationDeleteFileJson"
       ],
       "acceptance": [
         "Upload, download, list and delete use only the target Files origin",
@@ -147,7 +147,7 @@
         "persisted-notification-token-removed"
       ],
       "legacy": ["userFCMToken", "userFcmToken"],
-      "replacementSymbols": ["opengrowSetPushToken"],
+      "replacementSymbols": ["superboardSetPushToken"],
       "acceptance": [
         "APNs and FCM device registration is project and user scoped",
         "The device token remains transient and the legacy registration action is absent",
@@ -171,11 +171,11 @@
         "locally authoritative userPremium and userCredits"
       ],
       "replacementSymbols": [
-        "opengrowPurchaseLogin",
-        "opengrowPurchase",
-        "opengrowRestore",
-        "opengrowGetCustomerInfoJson",
-        "opengrowGetVirtualCurrenciesJson"
+        "superboardPurchaseLogin",
+        "superboardPurchase",
+        "superboardRestore",
+        "superboardGetCustomerInfoJson",
+        "superboardGetVirtualCurrenciesJson"
       ],
       "acceptance": [
         "Apple and Google sandbox purchases are durably verified before Store completion",
@@ -200,10 +200,10 @@
         "appBoard",
         "appQuestions"
       ],
-      "replacementSymbols": ["OpenGrowOnboarding"],
+      "replacementSymbols": ["SuperBoardOnboarding"],
       "acceptance": [
         "Screens 00 through 05 resolve from one versioned onboarding definition",
-        "Every legacy entry navigation targets the reusable OpenGrow onboarding page and the six copied pages are absent",
+        "Every legacy entry navigation targets the reusable SuperBoard onboarding page and the six copied pages are absent",
         "Progression and completion events are visible in the back office",
         "The final paywall resolves through Paywalls and Billing"
       ]
@@ -217,8 +217,8 @@
       "convergenceChecks": ["marketing-authority-wired"],
       "legacy": ["application-local consent and notification preference state"],
       "replacementSymbols": [
-        "opengrowApplicationMarketingPreferencesJson",
-        "opengrowApplicationUpdateMarketingConsentJson"
+        "superboardApplicationMarketingPreferencesJson",
+        "superboardApplicationUpdateMarketingConsentJson"
       ],
       "acceptance": [
         "Consent and suppression are project and user scoped",
@@ -245,10 +245,10 @@
         "userMediaIndex"
       ],
       "replacementSymbols": [
-        "opengrowApplicationCreateCustomJobJson",
-        "opengrowApplicationListCustomJobsJson",
-        "opengrowApplicationGetCustomJobJson",
-        "opengrowApplicationCancelCustomJobJson"
+        "superboardApplicationCreateCustomJobJson",
+        "superboardApplicationListCustomJobsJson",
+        "superboardApplicationGetCustomJobJson",
+        "superboardApplicationCancelCustomJobJson"
       ],
       "acceptance": [
         "vocostar.voice.clone and vocostar.media.convert are capability allowlisted",
@@ -262,7 +262,7 @@
       "phase": "support",
       "scope": "common-adoption",
       "authority": "support",
-      "title": "Replace the complete legacy Chatwoot client group with OpenGrow Support",
+      "title": "Replace the complete legacy Chatwoot client group with SuperBoard Support",
       "convergenceChecks": [
         "legacy-support-origin-removed",
         "legacy-support-init-removed",
@@ -280,13 +280,13 @@
         "persistent Chatwoot contact, conversation and pubsub state"
       ],
       "replacementSymbols": [
-        "opengrowSupportInitializeAuthenticated",
-        "opengrowSupportListConversationsJson",
-        "opengrowSupportMessagesJson",
-        "opengrowSupportSendAdvanced",
-        "opengrowSupportUploadAttachmentJson",
-        "opengrowSupportConnectRealtime",
-        "opengrowSupportMarkRead"
+        "superboardSupportInitializeAuthenticated",
+        "superboardSupportListConversationsJson",
+        "superboardSupportMessagesJson",
+        "superboardSupportSendAdvanced",
+        "superboardSupportUploadAttachmentJson",
+        "superboardSupportConnectRealtime",
+        "superboardSupportMarkRead"
       ],
       "acceptance": [
         "Contacts, conversations, messages and attachments reconcile with the exported source",

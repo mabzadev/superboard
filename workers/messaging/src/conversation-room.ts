@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { parseMessageInput, readJsonObject } from './validation';
 import type { Actor, Conversation, Env } from './types';
-import { configuredSecrets, matchesAnySecret } from '@opengrow/contracts/secret';
+import { configuredSecrets, matchesAnySecret } from '@superboard/contracts/secret';
 import { runConversationAutomations } from './workflows';
 import { publishMessagingEvent } from './webhooks';
 

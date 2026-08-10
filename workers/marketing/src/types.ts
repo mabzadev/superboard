@@ -1,10 +1,10 @@
 export type Env = Cloudflare.Env;
 
-export type { ProjectContext } from "@opengrow/contracts/project-context";
+export type { ProjectContext } from "@superboard/contracts/project-context";
 export type {
   EmailSmtpPublicConfig as SmtpPublicConfig,
   EmailSmtpSecretConfig as SmtpSecretConfig,
-} from "@opengrow/contracts/email";
+} from "@superboard/contracts/email";
 
 export type MarketingQueueJob =
   | {

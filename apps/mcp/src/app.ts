@@ -63,7 +63,7 @@ export { ipRequests as _ipRequests };
 /** Exported for tests — clear to reset token validation cache between test suites. */
 export { tokenCache as _tokenCache };
 
-export function createApp(opengrowApiUrl: string, publicUrl: string): Express {
+export function createApp(superboardApiUrl: string, publicUrl: string): Express {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
   const publicHostname = new URL(publicUrl).hostname;
@@ -100,7 +100,7 @@ export function createApp(opengrowApiUrl: string, publicUrl: string): Express {
   app.get("/.well-known/oauth-protected-resource", (_req, res) => {
     res.json({
       resource: publicUrl,
-      authorization_servers: [opengrowApiUrl],
+      authorization_servers: [superboardApiUrl],
       scopes_supported: ["mcp:full"],
     });
   });
@@ -119,7 +119,7 @@ export function createApp(opengrowApiUrl: string, publicUrl: string): Express {
   /**
    * Require Bearer token on /mcp.
    *
-   * Validates the token against the selected OpenGrow API on cache miss.
+   * Validates the token against the selected SuperBoard API on cache miss.
    * This is CRITICAL: without upfront validation, a stale/expired token would
    * reach a tool handler, which would call the API, receive a 401, throw ApiError,
    * and `runWithAuth` would wrap it as a successful MCP tool response (HTTP 200 with
@@ -152,10 +152,10 @@ export function createApp(opengrowApiUrl: string, publicUrl: string): Express {
       return;
     }
 
-    // Validate with the selected OpenGrow API.
+    // Validate with the selected SuperBoard API.
     let validateRes: Response;
     try {
-      validateRes = await fetch(`${opengrowApiUrl}/api/v1/mcp/validate`, {
+      validateRes = await fetch(`${superboardApiUrl}/api/v1/mcp/validate`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(TOKEN_VALIDATE_TIMEOUT_MS),

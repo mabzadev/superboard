@@ -1,7 +1,7 @@
 {
   "$schema": "./sdk-release-history.schema.json",
   "schemaVersion": 1,
-  "repository": "mbzadev/opengrow-platform",
+  "repository": "mbzadev/superboard-platform",
   "immutableFailures": [
     {
       "libraryId": "ios",

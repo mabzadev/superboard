@@ -1,4 +1,4 @@
-import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from "@opengrow/contracts/dead-letter";
+import { DEAD_LETTER_MAX_RECORDS, deadLetterPayload } from "@superboard/contracts/dead-letter";
 
 type QueueMessageLike = {
   id: string;

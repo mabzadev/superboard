@@ -118,11 +118,16 @@ export function requiredSecretInventory(target, environment) {
     "INTERNAL_API_TOKEN",
   ]);
   add("files", ["FILES_INTERNAL_TOKEN", "FILES_DOWNLOAD_SIGNING_KEY"]);
-  add("observability", [
-    "OBSERVABILITY_INTERNAL_TOKEN",
-    "CLOUDFLARE_ANALYTICS_ACCOUNT_ID",
-    "CLOUDFLARE_ANALYTICS_TOKEN",
-  ]);
+  add(
+    "observability",
+    environment === "production"
+      ? [
+          "OBSERVABILITY_INTERNAL_TOKEN",
+          "CLOUDFLARE_ANALYTICS_ACCOUNT_ID",
+          "CLOUDFLARE_ANALYTICS_TOKEN",
+        ]
+      : ["OBSERVABILITY_INTERNAL_TOKEN"],
+  );
   if (target.customWorker) add("custom", target.customWorker.secrets);
   for (const component of target.customWorker?.managedWorkers ?? []) {
     add(`managed-${component.id}`, component.secrets);

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://opengrow.dev/schemas/flutterflow-client-release.schema.json",
-  "title": "OpenGrow FlutterFlow client convergence release receipt",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-client-release.schema.json",
+  "title": "SuperBoard FlutterFlow client convergence release receipt",
   "type": "object",
   "additionalProperties": false,
   "required": [

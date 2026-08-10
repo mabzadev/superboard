@@ -42,7 +42,7 @@ describe("Billing authority in the Workers runtime", () => {
     const payload = JSON.parse(raw) as Record<string, unknown>;
     expect(payload).toMatchObject({
       status: "ok",
-      service: "opengrow-billing",
+      service: "superboard-billing",
       execution: "private-service-binding",
       missing_secrets: [],
       signing_authority_ready: true,

@@ -1,5 +1,5 @@
 {
-  "name": "@opengrow/messaging-worker",
+  "name": "@superboard/messaging-worker",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -9,7 +9,7 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@opengrow/contracts": "*",
+    "@superboard/contracts": "*",
     "hono": "^4.7.4",
     "jose": "^5.10.0"
   },

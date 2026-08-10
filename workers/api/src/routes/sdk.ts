@@ -17,7 +17,7 @@ import { purchasesJwksFromBillingAuthority } from "../lib/billing-service";
 import {
   RequestBodyError,
   readRequestObjectLimited,
-} from "@opengrow/contracts/request-body";
+} from "@superboard/contracts/request-body";
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 sdk.get("/.well-known/purchases-jwks.json", async (c) =>

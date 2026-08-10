@@ -7,7 +7,14 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { cloudflareClient } from "./cloudflare-bootstrap.mjs";
 import { deploymentOrder } from "./cloudflare-deploy-plan.mjs";
-import { workerNameForService } from "./cloudflare-services.mjs";
+import {
+  managedWorkerDefinition,
+  workerNameForService,
+} from "./cloudflare-services.mjs";
+import {
+  resourceIdentity,
+  resourceNameContract,
+} from "./cloudflare-resource-identity.mjs";
 import {
   cloudflareAccountId,
   cloudflareEnv,
@@ -28,13 +35,18 @@ export function buildWorkerShellPlan({
 }) {
   const existing = new Set(existingWorkerNames.map((name) => String(name)));
   const workers = deploymentOrder(target).map((service) => {
-    const name = String(workerNameForService(target, service, environment) ?? "");
+    const name = String(
+      workerNameForService(target, service, environment) ?? "",
+    );
     if (!WORKER_NAME.test(name)) {
       throw new Error(`Invalid Worker name for ${service}/${environment}`);
     }
     return {
       service,
       name,
+      ...resourceNameContract(target, name, {
+        allowLegacyName: Boolean(managedWorkerDefinition(target, service)),
+      }),
       state: existing.has(name) ? "existing" : "create-private-shell",
     };
   });
@@ -45,6 +57,7 @@ export function buildWorkerShellPlan({
     schemaVersion: 1,
     mode: "remote-read-only",
     target: target.target,
+    resourceIdentity: resourceIdentity(target),
     accountAlias: target.accountAlias,
     accountFingerprint: createHash("sha256")
       .update(accountId)
@@ -59,14 +72,16 @@ export function buildWorkerShellPlan({
 
 export function workerShellConfirmation(plan) {
   const digest = createHash("sha256")
-    .update(JSON.stringify({
-      schemaVersion: plan.schemaVersion,
-      target: plan.target,
-      accountAlias: plan.accountAlias,
-      accountFingerprint: plan.accountFingerprint,
-      environment: plan.environment,
-      workers: plan.workers.filter(({ state }) => state !== "existing"),
-    }))
+    .update(
+      JSON.stringify({
+        schemaVersion: plan.schemaVersion,
+        target: plan.target,
+        accountAlias: plan.accountAlias,
+        accountFingerprint: plan.accountFingerprint,
+        environment: plan.environment,
+        workers: plan.workers.filter(({ state }) => state !== "existing"),
+      }),
+    )
     .digest("hex")
     .slice(0, 12);
   return `CLOUDFLARE:WORKER-SHELLS:${plan.target}:${plan.environment}:${digest}`;
@@ -75,13 +90,17 @@ export function workerShellConfirmation(plan) {
 export async function applyWorkerShellPlan(plan, { confirm, create }) {
   const expected = workerShellConfirmation(plan);
   if (confirm !== expected) {
-    throw new Error(`Refusing Worker shell bootstrap: pass --confirm ${expected}`);
+    throw new Error(
+      `Refusing Worker shell bootstrap: pass --confirm ${expected}`,
+    );
   }
   if (typeof create !== "function") {
     throw new Error("Worker shell create adapter is required");
   }
   const applied = [];
-  for (const worker of plan.workers.filter(({ state }) => state !== "existing")) {
+  for (const worker of plan.workers.filter(
+    ({ state }) => state !== "existing",
+  )) {
     await create(worker);
     applied.push({
       service: worker.service,
@@ -94,8 +113,46 @@ export async function applyWorkerShellPlan(plan, { confirm, create }) {
 
 async function listWorkerNames(client) {
   const scripts = await client.listPaged("/workers/scripts");
-  return scripts.map((script) => String(script?.id ?? script?.name ?? ""))
+  return scripts
+    .map((script) => String(script?.id ?? script?.name ?? ""))
     .filter(Boolean);
+}
+
+export function parseWranglerWorkerInspection(workerName, result) {
+  if (result.status === 0) return workerName;
+  const output = String(result.stderr || result.stdout || "");
+  if (/does not exist on your account/u.test(output) && /10007/u.test(output)) {
+    return null;
+  }
+  throw new Error(
+    `Unable to inspect Worker ${workerName} with Wrangler: ${output.trim() || `exit ${result.status}`}`,
+  );
+}
+
+async function listExpectedWorkerNamesWithWrangler(
+  target,
+  environment,
+  execute = spawnSync,
+) {
+  const env = cloudflareEnv(target);
+  const existing = [];
+  for (const service of deploymentOrder(target)) {
+    const workerName = workerNameForService(target, service, environment);
+    const result = execute(
+      "npx",
+      ["wrangler", "deployments", "list", "--name", workerName, "--json"],
+      {
+        cwd: root,
+        env,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: false,
+      },
+    );
+    const inspected = parseWranglerWorkerInspection(workerName, result);
+    if (inspected) existing.push(inspected);
+  }
+  return existing;
 }
 
 async function createPrivateWorkerShell(worker, target) {
@@ -110,12 +167,16 @@ async function createPrivateWorkerShell(worker, target) {
     );
     await writeFile(
       configPath,
-      `${JSON.stringify({
-        name: worker.name,
-        main: "index.mjs",
-        compatibility_date: new Date().toISOString().slice(0, 10),
-        workers_dev: false,
-      }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          name: worker.name,
+          main: "index.mjs",
+          compatibility_date: new Date().toISOString().slice(0, 10),
+          workers_dev: false,
+        },
+        null,
+        2,
+      )}\n`,
       { encoding: "utf8", mode: 0o600 },
     );
     const result = spawnSync(
@@ -146,13 +207,16 @@ async function main() {
   const { target } = await loadTarget(targetName);
   const accountId = cloudflareAccountId(target);
   const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!token) throw new Error("CLOUDFLARE_API_TOKEN is required for Worker shell bootstrap");
-  const client = cloudflareClient({ accountId, token });
+  const client = token ? cloudflareClient({ accountId, token }) : null;
+  const inspect = () =>
+    client
+      ? listWorkerNames(client)
+      : listExpectedWorkerNamesWithWrangler(target, environment);
   const plan = buildWorkerShellPlan({
     target,
     environment,
     accountId,
-    existingWorkerNames: await listWorkerNames(client),
+    existingWorkerNames: await inspect(),
   });
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
   if (!args.apply) {
@@ -167,18 +231,26 @@ async function main() {
     target,
     environment,
     accountId,
-    existingWorkerNames: await listWorkerNames(client),
+    existingWorkerNames: await inspect(),
   });
   if (!verified.ready) {
-    throw new Error("Worker shell bootstrap did not create every required Worker");
+    throw new Error(
+      "Worker shell bootstrap did not create every required Worker",
+    );
   }
-  process.stdout.write(`${JSON.stringify({
-    mode: "applied",
-    target: targetName,
-    environment,
-    applied,
-    verified: true,
-  }, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        mode: "applied",
+        target: targetName,
+        environment,
+        applied,
+        verified: true,
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 if (

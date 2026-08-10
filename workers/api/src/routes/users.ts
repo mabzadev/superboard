@@ -58,7 +58,7 @@ async function getAuthUser(c: any) {
   return getAuthUserId(c.env, c.req.header('Authorization'));
 }
 
-// POST /api/v1/users — Create an account used by the OpenGrow dashboard.
+// POST /api/v1/users — Create an account used by the SuperBoard dashboard.
 users.post('/', async (c) => {
   const body: any = await readJsonBody(c);
 

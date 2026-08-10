@@ -136,6 +136,8 @@ describe('Messaging realtime tickets', () => {
     );
     expect((forwarded as Request).headers.get('Authorization')).toBeNull();
     expect((forwarded as Request).headers.get('Cookie')).toBeNull();
+    expect((forwarded as Request).headers.get('X-SuperBoard-Internal-Token')).toBe('internal-capability');
+    expect((forwarded as Request).headers.get('X-SuperBoard-Agent-Id')).toBe('operator-1');
     expect((forwarded as Request).headers.get('X-OpenGrow-Internal-Token')).toBe('internal-capability');
     expect((forwarded as Request).headers.get('X-OpenGrow-Agent-Id')).toBe('operator-1');
     expect((forwarded as Request).headers.get('Upgrade')).toBe('websocket');

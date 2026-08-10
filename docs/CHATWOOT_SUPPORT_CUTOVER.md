@@ -1,6 +1,6 @@
-# Chatwoot to OpenGrow Support cutover
+# Chatwoot to SuperBoard Support cutover
 
-OpenGrow Support is the canonical conversation system. Legacy Messaging, the
+SuperBoard Support is the canonical conversation system. Legacy Messaging, the
 old Dokploy Chatwoot stack and the current Cloudflare OpenChat runtime are
 migration sources, not parallel long-term products. The VocoStar target declares
 `https://chat.vocostar.com` as its `legacy-chatwoot` public surface while this
@@ -42,7 +42,7 @@ The transformer preserves the application contact identifier, conversation and
 message ordering, assignments, labels, priority, private/public messages,
 reply-to references and every attachment. Configuration secret-like keys are
 removed recursively. Imported webhooks are disabled until their secrets are
-rotated in OpenGrow. A conversation without a stable application identifier or
+rotated in SuperBoard. A conversation without a stable application identifier or
 an attachment without checksum evidence blocks the entire plan.
 
 ## 1. Rehearse on the VocoStar test project
@@ -57,7 +57,7 @@ export CHATWOOT_ATTACHMENT_HOSTS='<optional comma-separated HTTPS attachment hos
 
 npm run chatwoot:export -- \
   --target vocostar --environment production \
-  --output-directory /secure/opengrow/chatwoot/export-test
+  --output-directory /secure/superboard/chatwoot/export-test
 ```
 
 Before attempting an export, run the value-free, read-only preflight against
@@ -103,12 +103,12 @@ object manifest:
 ```bash
 npm run chatwoot:cutover -- plan \
   --target vocostar --environment production --project-id 12 \
-  --bundle /secure/opengrow/chatwoot/export-test
+  --bundle /secure/superboard/chatwoot/export-test
 
 npm run chatwoot:cutover -- render \
   --target vocostar --environment production --project-id 12 \
-  --bundle /secure/opengrow/chatwoot/export-test \
-  --output-directory /secure/opengrow/chatwoot/render-test
+  --bundle /secure/superboard/chatwoot/export-test \
+  --output-directory /secure/superboard/chatwoot/render-test
 ```
 
 `project-id` must be present in the target's `supportProjectIds`. The rendered
@@ -136,7 +136,7 @@ each with byte length and SHA-256:
 1. `chatwoot-postgres`: native Chatwoot PostgreSQL backup;
 2. `chatwoot-storage`: the complete Chatwoot object-storage backup;
 3. `chatwoot-export`: the protected export bundle/archive;
-4. `module-support`: OpenGrow Support D1 export made immediately before import.
+4. `module-support`: SuperBoard Support D1 export made immediately before import.
 
 The approved window JSON is stored outside Git with mode `0600` and has this
 contract:
@@ -176,7 +176,7 @@ contract:
 }
 ```
 
-Do not fabricate maintenance evidence. Put the OpenGrow project in gateway
+Do not fabricate maintenance evidence. Put the SuperBoard project in gateway
 read-only maintenance and stop Chatwoot inbox/webhook writes before recording
 the confirmations. Keep both systems closed until verification finishes.
 
@@ -188,9 +188,9 @@ absolute checkpoint outside Git and `--allow-production`:
 ```bash
 npm run chatwoot:apply -- \
   --target vocostar --environment production \
-  --rendered /secure/opengrow/chatwoot/render-test \
-  --window /secure/opengrow/chatwoot/window-test.json \
-  --checkpoint /secure/opengrow/chatwoot/checkpoint-test.json \
+  --rendered /secure/superboard/chatwoot/render-test \
+  --window /secure/superboard/chatwoot/window-test.json \
+  --checkpoint /secure/superboard/chatwoot/checkpoint-test.json \
   --apply --allow-production \
   --confirm "CHATWOOT:vocostar:production:12:chatwoot-vocostar-test-2026-08-08"
 ```
@@ -212,12 +212,12 @@ Keep maintenance enabled while validating:
   `/api/v1/support-client`;
 - realtime connect, typing, mark-read, new message, multiple attachments and
   CSAT work from the reference/mobile client;
-- imported webhooks remain disabled, then work only after a new OpenGrow secret
+- imported webhooks remain disabled, then work only after a new SuperBoard secret
   is configured;
 - Chatwoot and Support counts are reconciled with the protected evidence.
 
 Repeat the whole process for the production project with a new export, backups,
-window and checkpoint. Reopen writes only on OpenGrow Support.
+window and checkpoint. Reopen writes only on SuperBoard Support.
 
 ## 5. Remove the OpenChat and historical Chatwoot duplicates
 
@@ -234,8 +234,8 @@ After the retention/sign-off gate:
 3. remove every Chatwoot/OpenChat URL, action, widget and state from
    FlutterFlow/environment configuration;
 4. remove the legacy Messaging Worker, Queue, D1/R2 declarations only after its
-   separate OpenGrow module cutover and retention are complete;
-5. keep OpenGrow Support, `grow.vocostar.com` and
+   separate SuperBoard module cutover and retention are complete;
+5. keep SuperBoard Support, `grow.vocostar.com` and
    `api.vocostar.com/api/v1/support-client` as the only support surfaces;
 6. delete the OpenChat Workers, D1, R2, Queues, Durable Object and Vectorize only
    after verified recovery and retention sign-off;

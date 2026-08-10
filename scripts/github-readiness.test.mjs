@@ -65,22 +65,19 @@ function repositoryPayload(name, overrides = {}) {
 test("GitHub control-plane manifest is strict and contains names, never secret values", async () => {
   const manifest = await loadGitHubControlPlane();
   const serialized = JSON.stringify(manifest);
-  assert.equal(manifest.schemaVersion, 7);
+  assert.equal(manifest.schemaVersion, 8);
   assert.deepEqual(manifest.owner, { login: "mbzadev", type: "user" });
   assert.equal(
     manifest.repositories.platform.nameWithOwner,
-    "mbzadev/opengrow-platform",
+    "mbzadev/superboard-platform",
   );
-  assert.match(manifest.repositories.platform.description, /OpenGrow/u);
+  assert.match(manifest.repositories.platform.description, /SuperBoard/u);
   assert.deepEqual(manifest.repositories.platform.settings, settings());
   assert.deepEqual(
     manifest.repositories.platform.workflowPermissions,
     workflowPermissions(),
   );
-  assert.deepEqual(
-    manifest.repositories.platform.security,
-    securityPolicy(),
-  );
+  assert.deepEqual(manifest.repositories.platform.security, securityPolicy());
   assert.equal(
     manifest.repositories.platform.releaseProtection.immutableReleases,
     true,
@@ -91,7 +88,7 @@ test("GitHub control-plane manifest is strict and contains names, never secret v
   );
   assert.equal(
     manifest.repositories.reference.nameWithOwner,
-    "mbzadev/opengrow-reference",
+    "mbzadev/superboard-reference",
   );
   assert.equal(manifest.repositories.platform.visibility, "public");
   assert.equal(manifest.repositories.reference.visibility, "public");
@@ -140,7 +137,7 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
   const plan = readinessPlan(await loadGitHubControlPlane());
   assert.equal(
     plan.repositories.platform.description,
-    "OpenGrow multi-application back-office, Cloudflare Workers platform and reusable SDK libraries",
+    "SuperBoard multi-application back-office, Cloudflare Workers platform and reusable Flutter/FlutterFlow libraries",
   );
   assert.deepEqual(plan.repositories.platform.settings, settings());
   assert.deepEqual(plan.repositories.platform.security, securityPolicy());
@@ -152,13 +149,13 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
     ({ name }) => name === "development",
   );
   assert.deepEqual(development.variables, [
-    "OPENGROW_REFERENCE_REPOSITORY",
-    "OPENGROW_TARGET",
+    "SUPERBOARD_REFERENCE_REPOSITORY",
+    "SUPERBOARD_TARGET",
   ]);
   assert.deepEqual(development.secrets, [
     "CLOUDFLARE_ACCOUNT_ID",
     "CLOUDFLARE_API_TOKEN",
-    "OPENGROW_REFERENCE_DISPATCH_TOKEN",
+    "SUPERBOARD_REFERENCE_DISPATCH_TOKEN",
   ]);
   const flutterFlowLibrary = plan.repositories.platform.environments.find(
     ({ name }) => name === "flutterflow-library",
@@ -168,8 +165,8 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
   const sdkRelease = plan.repositories.platform.environments.find(
     ({ name }) => name === "sdk-release",
   );
-  assert.deepEqual(sdkRelease.variables, ["OPENGROW_REFERENCE_REPOSITORY"]);
-  assert.deepEqual(sdkRelease.secrets, ["OPENGROW_REFERENCE_DISPATCH_TOKEN"]);
+  assert.deepEqual(sdkRelease.variables, ["SUPERBOARD_REFERENCE_REPOSITORY"]);
+  assert.deepEqual(sdkRelease.secrets, ["SUPERBOARD_REFERENCE_DISPATCH_TOKEN"]);
   assert.equal(sdkRelease.protection.enforcement, "pending-external");
   assert.equal(sdkRelease.protection.preventSelfReview, true);
   assert.equal(sdkRelease.protection.allowAdminBypass, false);
@@ -183,8 +180,8 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
   assert.deepEqual(referenceDevelopment.secrets, [
     "CLOUDFLARE_ACCOUNT_ID",
     "CLOUDFLARE_API_TOKEN",
-    "OPENGROW_PROJECT_ID",
-    "OPENGROW_PROJECT_KEY",
+    "SUPERBOARD_PROJECT_ID",
+    "SUPERBOARD_PROJECT_KEY",
   ]);
   assert.equal("values" in development, false);
   assert.equal("values" in flutterFlowLibrary, false);
@@ -207,7 +204,7 @@ test("enforced self-review protection fails closed until two reviewers are decla
       validateEnvironmentProtections({
         repositories: {
           platform: {
-            nameWithOwner: "mbzadev/opengrow-platform",
+            nameWithOwner: "mbzadev/superboard-platform",
             environments: { production: { protection } },
           },
         },
@@ -220,7 +217,7 @@ test("enforced self-review protection fails closed until two reviewers are decla
     validateEnvironmentProtections({
       repositories: {
         platform: {
-          nameWithOwner: "mbzadev/opengrow-platform",
+          nameWithOwner: "mbzadev/superboard-platform",
           environments: { production: { protection } },
         },
       },
@@ -276,7 +273,7 @@ test("remote GitHub inspection requires branches, protection, variables and secr
     },
     environments: {
       development: {
-        variables: { OPENGROW_TARGET: "mbza-development" },
+        variables: { SUPERBOARD_TARGET: "mbza-development" },
         secrets: ["CLOUDFLARE_API_TOKEN"],
       },
     },
@@ -357,7 +354,7 @@ test("remote GitHub inspection requires branches, protection, variables and secr
     [
       "api repos/mbzadev/ready/environments/development/variables",
       {
-        variables: [{ name: "OPENGROW_TARGET", value: "mbza-development" }],
+        variables: [{ name: "SUPERBOARD_TARGET", value: "mbza-development" }],
       },
     ],
     [
@@ -674,7 +671,7 @@ test("remote branch history fails closed when GitHub cannot produce a main/dev m
 
 test("release readiness compensates asset-free legacy releases only with the exact no-bypass tag ruleset", () => {
   const expected = {
-    name: "OpenGrow immutable SDK tags",
+    name: "SuperBoard immutable SDK tags",
     enforcement: "active",
     include: ["refs/tags/sdk-flutter-v*"],
     rules: ["update", "deletion"],

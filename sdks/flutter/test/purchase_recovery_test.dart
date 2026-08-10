@@ -6,11 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:opengrow_flutter/models/opengrow_purchases.dart';
-import 'package:opengrow_flutter/opengrow_purchases.dart';
-import 'package:opengrow_flutter/src/customer_info_verifier.dart';
-import 'package:opengrow_flutter/src/purchase_outbox.dart';
-import 'package:opengrow_flutter/src/purchase_store.dart';
+import 'package:superboard_flutter/models/superboard_purchases.dart';
+import 'package:superboard_flutter/superboard_purchases.dart';
+import 'package:superboard_flutter/src/customer_info_verifier.dart';
+import 'package:superboard_flutter/src/purchase_outbox.dart';
+import 'package:superboard_flutter/src/purchase_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -51,7 +51,7 @@ void main() {
       store.emit(purchased());
       final result = await resultFuture;
 
-      expect(result.outcome, OpenGrowPurchaseOutcome.purchased);
+      expect(result.outcome, SuperBoardPurchaseOutcome.purchased);
       expect(store.completed, hasLength(1));
       expect(
         events.indexOf('outbox.persisted'),
@@ -94,7 +94,7 @@ void main() {
       store.emit(purchased());
 
       await configuration;
-      expect((await resultFuture).outcome, OpenGrowPurchaseOutcome.purchased);
+      expect((await resultFuture).outcome, SuperBoardPurchaseOutcome.purchased);
       expect(store.completed, hasLength(1));
       expect(storage.outboxEntries, isEmpty);
       expect(
@@ -110,8 +110,8 @@ void main() {
       var receiptAttempts = 0;
       final store = FakePurchaseStore([]);
       final storage = MemoryPurchaseStorage([]);
-      await OpenGrowPurchaseOutbox(storage).upsert(
-        OpenGrowPurchaseOutboxEntry.create(
+      await SuperBoardPurchaseOutbox(storage).upsert(
+        SuperBoardPurchaseOutboxEntry.create(
           store: 'google',
           productId: 'premium-weekly',
           productType: 'subscription',
@@ -190,7 +190,7 @@ void main() {
       );
       store.emit(purchased());
       final recovered = await recoveredFuture;
-      expect(recovered.outcome, OpenGrowPurchaseOutcome.purchased);
+      expect(recovered.outcome, SuperBoardPurchaseOutcome.purchased);
       expect(receiptAttempts, 2);
       expect(store.completed, hasLength(1));
       expect(storage.outboxEntries, isEmpty);
@@ -218,7 +218,7 @@ void main() {
         (result) => result.code == 'server_response_too_large',
       );
       store.emit(purchased());
-      expect((await failedFuture).outcome, OpenGrowPurchaseOutcome.failed);
+      expect((await failedFuture).outcome, SuperBoardPurchaseOutcome.failed);
       expect(store.completed, isEmpty);
       expect(storage.outboxEntries, hasLength(1));
     },
@@ -250,7 +250,7 @@ void main() {
       await configure(purchases);
 
       final pendingFuture = purchases.purchaseResultStream.firstWhere(
-        (result) => result.outcome == OpenGrowPurchaseOutcome.pending,
+        (result) => result.outcome == SuperBoardPurchaseOutcome.pending,
       );
       store.emit(purchased());
       expect((await pendingFuture).code, 'purchase_pending');
@@ -261,7 +261,10 @@ void main() {
         (result) => result.code == 'purchase_verified',
       );
       store.emit(purchased());
-      expect((await resolvedFuture).outcome, OpenGrowPurchaseOutcome.purchased);
+      expect(
+        (await resolvedFuture).outcome,
+        SuperBoardPurchaseOutcome.purchased,
+      );
       expect(store.completed, hasLength(1));
       expect(storage.outboxEntries, isEmpty);
     },
@@ -300,7 +303,7 @@ void main() {
       await purchases.resumeOutboxForTesting();
       expect(
         (await recoveredFuture).outcome,
-        OpenGrowPurchaseOutcome.purchased,
+        SuperBoardPurchaseOutcome.purchased,
       );
       expect(receiptAttempts, 1);
       expect(store.completed, hasLength(1));
@@ -317,7 +320,7 @@ void main() {
       final store = FakePurchaseStore(events);
       final storage = MemoryPurchaseStorage(events);
 
-      OpenGrowPurchases createPurchases() =>
+      SuperBoardPurchases createPurchases() =>
           testPurchases(store, storage, (request) async {
             if (request.url.path.endsWith('/receipts')) {
               validationAttempts += 1;
@@ -406,16 +409,16 @@ void main() {
       identityAvailable = false;
 
       final result = await purchases.purchasePackage(
-        const OpenGrowPackage(
+        const SuperBoardPackage(
           identifier: 'weekly',
           packageType: 'weekly',
-          product: OpenGrowStoreProduct(
+          product: SuperBoardStoreProduct(
             identifier: 'premium-weekly',
             type: 'subscription',
           ),
         ),
       );
-      expect(result.outcome, OpenGrowPurchaseOutcome.failed);
+      expect(result.outcome, SuperBoardPurchaseOutcome.failed);
       expect(result.code, 'identity_sync_failed');
       expect(result.requestId, 'request-identity-1');
       expect(store.productQueryCount, 0);
@@ -589,7 +592,7 @@ void main() {
       });
       await configure(purchases);
 
-      Future<OpenGrowCertificationResult> submit() =>
+      Future<SuperBoardCertificationResult> submit() =>
           purchases.submitCertificationResult(
             runId: 'run-device-1',
             challenge: 'device-challenge',
@@ -614,18 +617,18 @@ void main() {
   );
 }
 
-OpenGrowPurchases testPurchases(
+SuperBoardPurchases testPurchases(
   FakePurchaseStore store,
   MemoryPurchaseStorage storage,
   Future<http.Response> Function(http.Request request) handler,
-) => OpenGrowPurchases.forTesting(
+) => SuperBoardPurchases.forTesting(
   purchaseStore: store,
   secureStorage: storage,
   customerInfoVerifier: AcceptingCustomerInfoVerifier(),
   httpClientFactory: () => MockClient(handler),
 );
 
-Future<void> configure(OpenGrowPurchases purchases) => purchases.configure(
+Future<void> configure(SuperBoardPurchases purchases) => purchases.configure(
   projectKey: 'project-key',
   platformIdentifier: 'com.example.app',
   baseUrl: 'https://sdk.example.com/purchases/v2',
@@ -689,7 +692,7 @@ PurchaseDetails purchased() {
   return value;
 }
 
-class AcceptingCustomerInfoVerifier extends OpenGrowCustomerInfoVerifier {
+class AcceptingCustomerInfoVerifier extends SuperBoardCustomerInfoVerifier {
   @override
   Future<Map<String, dynamic>> verify({
     required Map<String, dynamic> envelope,
@@ -699,7 +702,7 @@ class AcceptingCustomerInfoVerifier extends OpenGrowCustomerInfoVerifier {
   }) async => envelope;
 }
 
-class MemoryPurchaseStorage implements OpenGrowPurchaseStorage {
+class MemoryPurchaseStorage implements SuperBoardPurchaseStorage {
   MemoryPurchaseStorage(this.events);
 
   final List<String> events;
@@ -743,7 +746,7 @@ class MemoryPurchaseStorage implements OpenGrowPurchaseStorage {
   }
 }
 
-class FakePurchaseStore implements OpenGrowPurchaseStore {
+class FakePurchaseStore implements SuperBoardPurchaseStore {
   FakePurchaseStore(this.events);
 
   final List<String> events;
