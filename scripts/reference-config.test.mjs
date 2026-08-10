@@ -444,18 +444,35 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
     workflow,
     /name: Make the root commit scannable for a reviewed history bridge/,
   );
+  assert.match(workflow, /name: Validate the exact reviewed history bridge/);
+  assert.match(workflow, /id: history-bridge/);
   assert.match(
     workflow,
-    /startsWith\(github\.head_ref, 'history\/bridge-main-dev-'\)/,
+    /startsWith\(github\.head_ref, 'history\/bridge-'\)/,
   );
-  assert.match(workflow, /test "\$second_parent" = "\$BRIDGE_BASE_SHA"/);
+  assert.match(
+    workflow,
+    /BRIDGE_HEAD_REPOSITORY: \$\{\{ github\.event\.pull_request\.head\.repo\.full_name \}\}/,
+  );
+  assert.match(
+    workflow,
+    /DEFAULT_BRANCH: \$\{\{ github\.event\.repository\.default_branch \}\}/,
+  );
+  assert.match(
+    workflow,
+    /node scripts\/reference-history-bridge\.mjs >> "\$GITHUB_OUTPUT"/,
+  );
+  assert.match(
+    workflow,
+    /history_bridge_validated: \$\{\{ steps\.history-bridge\.outputs\.validated \}\}/,
+  );
   assert.match(
     workflow,
     /git replace --graft "\$root_commit" "\$BRIDGE_BASE_SHA"/,
   );
   assert.match(
     workflow,
-    /test "\$\(git rev-parse "\$BRIDGE_HEAD_SHA\^\{tree\}"\)" = "\$\(git rev-parse "\$first_parent\^\{tree\}"\)"/,
+    /if: \$\{\{ steps\.history-bridge\.outputs\.validated == 'true' \}\}/,
   );
   assert.match(
     workflow,
@@ -481,6 +498,38 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /git merge-base --is-ancestor/);
   assert.match(workflow, /refs\/heads\/\$DEPLOYMENT_BRANCH/);
   assert.match(workflow, /Resolve fail-closed development deployment gate/);
+  assert.match(
+    workflow,
+    /name: Bind a validated history bridge to the declared development branch/,
+  );
+  assert.match(
+    workflow,
+    /test "\$DEFAULT_BRANCH" = "\$DEPLOYMENT_BRANCH"/,
+  );
+  assert.match(workflow, /name: Resolve the official Platform validation ref/);
+  assert.match(workflow, /id: platform-ref/);
+  assert.match(
+    workflow,
+    /node scripts\/reference-platform-ref\.mjs >> "\$GITHUB_OUTPUT"/,
+  );
+  assert.match(
+    workflow,
+    /OPENGROW_HISTORY_BRIDGE_VALIDATED: \$\{\{ needs\.contract\.outputs\.history_bridge_validated \}\}/,
+  );
+  assert.match(workflow, /OPENGROW_PRODUCTION_BRANCH: main/);
+  assert.match(
+    workflow,
+    /ref: \$\{\{ steps\.platform-ref\.outputs\.ref \}\}/,
+  );
+  assert.match(
+    workflow,
+    /name: Require a bridge to use the official Platform development head/,
+  );
+  assert.match(
+    workflow,
+    /test "\$\(git rev-parse HEAD\)" = "\$\(git rev-parse FETCH_HEAD\)"/,
+  );
+  assert.doesNotMatch(workflow, /github\.base_ref == 'main'/);
   assert.match(
     workflow,
     /deployment_eligible: \$\{\{ steps\.deployment-gate\.outputs\.eligible \}\}/u,

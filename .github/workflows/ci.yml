@@ -23,6 +23,8 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      history_bridge_validated: ${{ steps.history-bridge.outputs.validated }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -36,21 +38,29 @@ jobs:
           test -n "$DEFAULT_BRANCH"
           git fetch --no-tags origin "refs/heads/$DEFAULT_BRANCH"
           test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+      - name: Validate the exact reviewed history bridge
+        id: history-bridge
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'history/bridge-') }}
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BRIDGE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BRIDGE_BASE_REF: ${{ github.base_ref }}
+          BRIDGE_HEAD_REF: ${{ github.head_ref }}
+          BRIDGE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BRIDGE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: node scripts/reference-history-bridge.mjs >> "$GITHUB_OUTPUT"
       - name: Make the root commit scannable for a reviewed history bridge
-        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'history/bridge-main-dev-') }}
+        if: ${{ steps.history-bridge.outputs.validated == 'true' }}
         env:
           BRIDGE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BRIDGE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEVELOPMENT_SHA: ${{ steps.history-bridge.outputs.development_sha }}
         run: |
           [[ "$BRIDGE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$BRIDGE_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
-
-          read -r first_parent second_parent unexpected_parent <<< "$(git show -s --format=%P "$BRIDGE_HEAD_SHA")"
-          test -n "$first_parent"
-          test "$second_parent" = "$BRIDGE_BASE_SHA"
-          test -z "${unexpected_parent:-}"
-          test "$(git rev-parse "$BRIDGE_HEAD_SHA^{tree}")" = "$(git rev-parse "$first_parent^{tree}")"
-          test "$(git merge-base "$BRIDGE_BASE_SHA" "$BRIDGE_HEAD_SHA")" = "$BRIDGE_BASE_SHA"
+          [[ "$DEVELOPMENT_SHA" =~ ^[0-9a-f]{40}$ ]]
 
           root_commits=$(git rev-list --first-parent --max-parents=0 "$BRIDGE_HEAD_SHA")
           test "$(printf '%s\n' "$root_commits" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
@@ -211,6 +221,7 @@ jobs:
       platform_repository: ${{ steps.metadata.outputs.platform_repository }}
       deployment_branch: ${{ steps.metadata.outputs.deployment_branch }}
       deployment_eligible: ${{ steps.deployment-gate.outputs.eligible }}
+      history_bridge_validated: ${{ needs.security.outputs.history_bridge_validated }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -234,6 +245,15 @@ jobs:
           OPENGROW_GITHUB_EVENT_ACTION: ${{ github.event.action }}
           OPENGROW_GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: node scripts/reference-deployment-gate.mjs >> "$GITHUB_OUTPUT"
+      - name: Bind a validated history bridge to the declared development branch
+        if: ${{ needs.security.outputs.history_bridge_validated == 'true' }}
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: |
+          test -n "$DEFAULT_BRANCH"
+          test -n "$DEPLOYMENT_BRANCH"
+          test "$DEFAULT_BRANCH" = "$DEPLOYMENT_BRANCH"
       - name: Verify all seven immutable SDK tags and public GitHub Releases
         run: npm run sdk:coverage:verify
       - name: Require repository dispatch to use the declared development branch
@@ -251,8 +271,6 @@ jobs:
     outputs:
       platform_sha: ${{ steps.platform-revision.outputs.sha }}
       reference_sha: ${{ steps.reference-revision.outputs.sha }}
-    env:
-      OPENGROW_PLATFORM_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.platform_sha || ((github.ref_name == 'main' || github.base_ref == 'main') && 'main' || needs.contract.outputs.deployment_branch) }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -268,21 +286,43 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Resolve the official Platform validation ref
+        id: platform-ref
+        env:
+          OPENGROW_GITHUB_EVENT_NAME: ${{ github.event_name }}
+          OPENGROW_GITHUB_REF_NAME: ${{ github.ref_name }}
+          OPENGROW_GITHUB_BASE_REF: ${{ github.base_ref }}
+          OPENGROW_DISPATCH_PLATFORM_SHA: ${{ github.event.client_payload.platform_sha }}
+          OPENGROW_DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
+          OPENGROW_PRODUCTION_BRANCH: main
+          OPENGROW_HISTORY_BRIDGE_VALIDATED: ${{ needs.contract.outputs.history_bridge_validated }}
+        run: node scripts/reference-platform-ref.mjs >> "$GITHUB_OUTPUT"
       - name: Validate dispatched platform revision
         if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          OPENGROW_PLATFORM_REF: ${{ steps.platform-ref.outputs.ref }}
         run: '[[ "$OPENGROW_PLATFORM_REF" =~ ^[0-9a-f]{40}$ ]]'
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: ${{ needs.contract.outputs.platform_repository }}
-          ref: ${{ env.OPENGROW_PLATFORM_REF }}
+          ref: ${{ steps.platform-ref.outputs.ref }}
           path: vendor/opengrow-platform
           fetch-depth: 0
           persist-credentials: false
+      - name: Require a bridge to use the official Platform development head
+        if: ${{ needs.contract.outputs.history_bridge_validated == 'true' }}
+        working-directory: vendor/opengrow-platform
+        env:
+          DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
+        run: |
+          git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
       - name: Require dispatched platform revision to belong to official dev
         if: ${{ github.event_name == 'repository_dispatch' }}
         working-directory: vendor/opengrow-platform
         env:
           DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
+          OPENGROW_PLATFORM_REF: ${{ steps.platform-ref.outputs.ref }}
         run: |
           test "$(git rev-parse HEAD)" = "$OPENGROW_PLATFORM_REF"
           git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
