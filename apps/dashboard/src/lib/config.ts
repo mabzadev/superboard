@@ -3,21 +3,31 @@
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 const clientId = process.env.NEXT_PUBLIC_CLIENT_ID;
+const docsUrl = process.env.NEXT_PUBLIC_DOCS_URL;
+const sdkUrl = process.env.NEXT_PUBLIC_SDK_URL;
+const shortlinkUrl = process.env.NEXT_PUBLIC_SHORTLINK_URL;
+const mcpUrl = process.env.NEXT_PUBLIC_MCP_URL;
 
 if (!apiUrl)
   throw new Error("Missing environment variable: NEXT_PUBLIC_API_URL");
 if (!clientId)
   throw new Error("Missing environment variable: NEXT_PUBLIC_CLIENT_ID");
+if (!docsUrl)
+  throw new Error("Missing environment variable: NEXT_PUBLIC_DOCS_URL");
+if (!sdkUrl)
+  throw new Error("Missing environment variable: NEXT_PUBLIC_SDK_URL");
+if (!shortlinkUrl)
+  throw new Error("Missing environment variable: NEXT_PUBLIC_SHORTLINK_URL");
+if (!mcpUrl)
+  throw new Error("Missing environment variable: NEXT_PUBLIC_MCP_URL");
 
 export const config = {
   apiUrl,
   apiPath: process.env.NEXT_PUBLIC_API_PATH ?? "/api/v1",
   clientId,
-  docsUrl: process.env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.opengrow.io",
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@opengrow.io",
-  termsUrl: process.env.NEXT_PUBLIC_TERMS_URL ?? "https://github.com/mbzadev/opengrow/terms",
-  privacyUrl: process.env.NEXT_PUBLIC_PRIVACY_URL ?? "https://github.com/mbzadev/opengrow/privacy",
-  pricingUrl: process.env.NEXT_PUBLIC_PRICING_URL ?? "https://github.com/mbzadev/opengrow/pricing",
-  salesUrl: process.env.NEXT_PUBLIC_SALES_URL ?? "https://github.com/mbzadev/opengrow/sales",
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "https://app.opengrow.io",
+  docsUrl,
+  sdkUrl,
+  shortlinkUrl,
+  mcpUrl,
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || null,
 } as const;

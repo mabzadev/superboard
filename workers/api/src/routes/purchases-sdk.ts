@@ -11,11 +11,12 @@ import {
   resolveCustomerFromBillingAuthority,
 } from '../lib/billing-service';
 import { restoreVerifiedPurchases } from '../lib/billing-restore';
+import { readApiJson } from '../lib/request-body';
 
 const purchases = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
 async function jsonBody(c: any): Promise<Record<string, any>> {
-  return c.req.json().catch(() => ({}));
+  return readApiJson(c.req.raw);
 }
 
 async function context(c: any) {

@@ -13,7 +13,7 @@ description: Search, list, and update your existing tracking links — change me
 | Full URL or path slug | link details | `get_link` with `path` (accepts both) |
 | Wants to update | numeric `link_id` | from `search_links` or `get_link` response |
 
-**`get_link` accepts a full URL (`https://myapp.opengrow.io/summer-sale`) or just the slug (`summer-sale`) — the server extracts the path. `update_link` takes a numeric ID. Never pass a path to `update_link`.**
+**`get_link` accepts a full URL (`<short-link-origin>/summer-sale`) or just the slug (`summer-sale`) — the server extracts the path. `update_link` takes a numeric ID. Never pass a path to `update_link`.**
 
 ## Key behaviors
 

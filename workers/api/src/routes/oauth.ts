@@ -1,20 +1,29 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
-import { signToken, verifyToken, verifyPassword, verifyTotpCode } from '../lib/crypto';
+import { verifyToken, verifyPassword, verifyTotpCode } from '../lib/crypto';
 import { getOrCreateInstanceForUser } from '../lib/db';
-import { getAuthContext } from '../lib/auth';
-import { isFullAccess } from '../lib/deployment';
+import { getAuthContext, issueDbBackedTokens } from '../lib/auth';
+import { tokenDigest } from '../lib/token-storage';
+import { timingSafeEqual } from '../lib/secrets';
+import { readOtpSecret } from '../lib/auth-credentials';
+import { consumeDashboardAuthAttempt, dashboardAuthRateLimitResponse } from '../lib/auth-rate-limit';
+import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
 
 
 const oauth = new Hono<{ Bindings: Env }>();
 
 async function readBody(c: any): Promise<Record<string, string>> {
-  const contentType = c.req.header('content-type') || '';
-  if (contentType.includes('application/json')) {
-    return await c.req.json().catch(() => ({}));
-  }
-  const formBody = await c.req.parseBody().catch(() => ({}));
-  return Object.fromEntries(Object.entries(formBody).map(([k, v]) => [k, String(v)]));
+  return await readRequestObjectLimited(c.req.raw, 1024 * 1024) as Record<string, string>;
+}
+
+async function oauthSecretMatches(
+  stored: string | null | undefined,
+  provided: string | undefined,
+  providedDigest: string,
+): Promise<boolean> {
+  if (!stored || !provided) return false;
+  return await timingSafeEqual(stored, providedDigest) ||
+    await timingSafeEqual(stored, provided);
 }
 
 // =============================================
@@ -33,10 +42,36 @@ oauth.post('/token', async (c) => {
 
   // Verify the OAuth client.
   const oauthApp = await c.env.DB.prepare(
-    'SELECT * FROM oauth_applications WHERE uid = ? AND secret = ?'
-  ).bind(clientId, clientSecret).first<{ id: number; uid: string }>();
+    `SELECT id, uid, secret, previous_secret,
+       CASE
+         WHEN previous_secret IS NOT NULL
+          AND previous_secret_expires_at IS NOT NULL
+          AND datetime(previous_secret_expires_at) > datetime('now')
+         THEN 1 ELSE 0
+       END AS previous_secret_valid
+     FROM oauth_applications WHERE uid = ? LIMIT 1`
+  ).bind(clientId).first<{
+    id: number;
+    uid: string;
+    secret: string;
+    previous_secret: string | null;
+    previous_secret_valid: number;
+  }>();
 
-  if (!oauthApp) {
+  const clientSecretDigest = clientSecret ? await tokenDigest(clientSecret) : '';
+  const currentSecretMatches = await oauthSecretMatches(
+    oauthApp?.secret,
+    clientSecret,
+    clientSecretDigest,
+  );
+  const previousSecretMatches = oauthApp?.previous_secret_valid === 1 &&
+    await oauthSecretMatches(
+      oauthApp.previous_secret,
+      clientSecret,
+      clientSecretDigest,
+    );
+  const clientSecretMatches = currentSecretMatches || previousSecretMatches;
+  if (!oauthApp || !clientSecretMatches) {
     return c.json({ error: 'invalid_client', error_description: 'Client authentication failed.' }, 401);
   }
 
@@ -44,6 +79,8 @@ oauth.post('/token', async (c) => {
   if (grantType === 'password') {
     const email = body['email'] || body['username'];
     const password = body['password'];
+    const rateLimit = await consumeDashboardAuthAttempt(c.env, c.req.raw, 'oauth.password', email);
+    if (!rateLimit.allowed) return dashboardAuthRateLimitResponse(rateLimit);
 
     const user = await c.env.DB.prepare(
       'SELECT id, email, password_hash, encrypted_password, name, otp_required_for_login, otp_secret FROM users WHERE email = ?'
@@ -64,7 +101,8 @@ oauth.post('/token', async (c) => {
 
     if (user.otp_required_for_login === 1) {
       const otpCode = body['otp_code'];
-      if (!otpCode || !user.otp_secret || !(await verifyTotpCode(otpCode, user.otp_secret))) {
+      const otpSecret = user.otp_secret ? await readOtpSecret(c.env, user.otp_secret) : null;
+      if (!otpCode || !otpSecret || !(await verifyTotpCode(otpCode, otpSecret))) {
         return c.json({ requires_otp: true });
       }
     }
@@ -73,38 +111,24 @@ oauth.post('/token', async (c) => {
       c.env.DB,
       user.id,
       user.email.split('@')[0],
-      isFullAccess(c.env),
+      true,
     );
 
-    const accessToken = await signToken({ sub: user.id, instanceId, type: 'access' }, c.env, '2h');
-    const refreshToken = await signToken({ sub: user.id, instanceId, type: 'refresh' }, c.env, '7d');
-
-    // Stocke le token en DB
-    await c.env.DB.prepare(
-      "INSERT INTO oauth_access_tokens (resource_owner_id, application_id, token, refresh_token, expires_in, scopes) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(user.id, oauthApp.id, accessToken, refreshToken, 7200, 'read write').run();
-
-    return c.json({
-      access_token: accessToken,
-      token_type: 'Bearer',
-      expires_in: 7200,
-      refresh_token: refreshToken,
-      scope: 'read write',
-      created_at: Math.floor(Date.now() / 1000),
-    });
+    return c.json(await issueDbBackedTokens(c.env, user.id, instanceId, oauthApp.id));
   }
 
   // === Refresh Token Grant ===
   if (grantType === 'refresh_token') {
     const refreshToken = body['refresh_token'] as string;
+    const refreshDigest = await tokenDigest(refreshToken);
 
     const stored = await c.env.DB.prepare(
       `SELECT *
        FROM oauth_access_tokens
-       WHERE refresh_token = ?
+       WHERE (refresh_token = ? OR refresh_token = ?)
          AND revoked_at IS NULL
          AND datetime(created_at) >= datetime('now', '-7 days')`
-    ).bind(refreshToken).first<{ id: number; resource_owner_id: number; token: string }>();
+    ).bind(refreshDigest, refreshToken).first<{ id: number; resource_owner_id: number; token: string }>();
 
     if (!stored) {
       return c.json({ error: 'invalid_grant', error_description: 'Invalid refresh token.' }, 401);
@@ -115,23 +139,16 @@ oauth.post('/token', async (c) => {
       return c.json({ error: 'invalid_grant' }, 401);
     }
 
-    const newAccess = await signToken({ sub: payload.sub, instanceId: payload.instanceId, type: 'access' }, c.env, '2h');
-    const newRefresh = await signToken({ sub: payload.sub, instanceId: payload.instanceId, type: 'refresh' }, c.env, '7d');
-
     // Revoke the previous token and create its replacement.
     await c.env.DB.prepare("UPDATE oauth_access_tokens SET revoked_at = datetime('now') WHERE id = ?").bind(stored.id).run();
-    await c.env.DB.prepare(
-      "INSERT INTO oauth_access_tokens (resource_owner_id, application_id, token, refresh_token, previous_refresh_token, expires_in, scopes) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).bind(payload.sub, oauthApp.id, newAccess, newRefresh, refreshToken, 7200, 'read write').run();
-
-    return c.json({
-      access_token: newAccess,
-      token_type: 'Bearer',
-      expires_in: 7200,
-      refresh_token: newRefresh,
-      scope: 'read write',
-      created_at: Math.floor(Date.now() / 1000),
-    });
+    return c.json(await issueDbBackedTokens(
+      c.env,
+      Number(payload.sub),
+      Number(payload.instanceId) || null,
+      oauthApp.id,
+      'read write',
+      refreshToken,
+    ));
   }
 
   return c.json({ error: 'unsupported_grant_type' }, 400);
@@ -142,9 +159,10 @@ oauth.post('/revoke', async (c) => {
   const body = await readBody(c);
   const token = body['token'] as string;
   if (token) {
+    const digest = await tokenDigest(token);
     await c.env.DB.prepare(
-      "UPDATE oauth_access_tokens SET revoked_at = datetime('now') WHERE token = ? OR refresh_token = ?"
-    ).bind(token, token).run();
+      "UPDATE oauth_access_tokens SET revoked_at = datetime('now') WHERE token IN (?, ?) OR refresh_token IN (?, ?)"
+    ).bind(digest, token, digest, token).run();
   }
   return c.json({});
 });
@@ -156,8 +174,12 @@ oauth.get('/token/info', async (c) => {
   if (!context) return c.json({ error: 'invalid_token' }, 401);
 
   const stored = await c.env.DB.prepare(
-    'SELECT oat.*, u.email, u.name FROM oauth_access_tokens oat JOIN users u ON u.id = oat.resource_owner_id WHERE oat.token = ? AND oat.revoked_at IS NULL'
-  ).bind(context.token).first<{ resource_owner_id: number; email: string; name: string; scopes: string; expires_in: number; created_at: string }>();
+    `SELECT oat.*, u.email, u.name, application.uid application_uid
+     FROM oauth_access_tokens oat
+     JOIN users u ON u.id = oat.resource_owner_id
+     LEFT JOIN oauth_applications application ON application.id = oat.application_id
+     WHERE oat.token IN (?, ?) AND oat.revoked_at IS NULL`
+  ).bind(await tokenDigest(context.token), context.token).first<{ resource_owner_id: number; email: string; name: string; scopes: string; expires_in: number; created_at: string; application_uid: string | null }>();
 
   if (!stored) return c.json({ error: 'invalid_token' }, 401);
 
@@ -166,7 +188,7 @@ oauth.get('/token/info', async (c) => {
     resource_owner_id: stored.resource_owner_id,
     scope: stored.scopes,
     expires_in: stored.expires_in,
-    application: { uid: 'vocostar' },
+    application: { uid: stored.application_uid || c.env.DASHBOARD_CLIENT_ID },
     created_at: Math.floor(createdAt),
   });
 });
@@ -183,9 +205,9 @@ oauth.get('/api/v1/me', async (c) => {
      JOIN users u ON u.id = oat.resource_owner_id
      LEFT JOIN instance_roles ir ON ir.user_id = u.id
      LEFT JOIN instances i ON i.id = ir.instance_id
-     WHERE oat.token = ? AND oat.revoked_at IS NULL
+     WHERE oat.token IN (?, ?) AND oat.revoked_at IS NULL
      ORDER BY ir.id ASC LIMIT 1`
-  ).bind(context.token).first<{ id: number; email: string; name: string; api_key: string | null; uri_scheme: string | null }>();
+  ).bind(await tokenDigest(context.token), context.token).first<{ id: number; email: string; name: string; api_key: string | null; uri_scheme: string | null }>();
 
   if (!stored) return c.json({ error: 'Unauthorized' }, 401);
 

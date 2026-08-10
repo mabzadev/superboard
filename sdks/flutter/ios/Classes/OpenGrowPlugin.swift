@@ -52,10 +52,15 @@ public class OpenGrowPlugin: NSObject, FlutterPlugin {
     // Hook into didFinishLaunchingWithOptions
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
         // Read API key and test environment flag from Info.plist
-        if let infoDictionary = Bundle.main.infoDictionary, let apiKey = infoDictionary["OpenGrowApiKey"] as? String {
+        if let infoDictionary = Bundle.main.infoDictionary,
+           let apiKey = infoDictionary["OpenGrowApiKey"] as? String,
+           !apiKey.isEmpty,
+           let baseURL = infoDictionary["OpenGrowBaseURL"] as? String,
+           !baseURL.isEmpty {
             let useTestEnvironment = infoDictionary["OpenGrowUseTestEnvironment"] as? Bool ?? false
-            let baseURL = infoDictionary["OpenGrowBaseURL"] as? String
             OpenGrow.configure(APIKey: apiKey, useTestEnvironment: useTestEnvironment, baseURL: baseURL, delegate: self)
+        } else {
+            NSLog("OpenGrowApiKey and OpenGrowBaseURL are required in Info.plist")
         }
         
         return true

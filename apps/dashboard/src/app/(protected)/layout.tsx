@@ -8,6 +8,7 @@ import React, { Suspense } from "react";
 import PageSkeleton from "@/components/common/PageSkeleton";
 import CreateCampaignGlobalDialogProvider from "@/context/useCreateCampaignDialogContext";
 import LinkDialogProvider from "@/context/useLinkDialogContext";
+import AppHeader from "@/components/layout/app-header";
 export default function DashboardLayout({
   children,
 }: {
@@ -25,13 +26,12 @@ export default function DashboardLayout({
         <LinkDialogProvider>
           <CreateCampaignGlobalDialogProvider>
             <ClientLayout>
-              <SidebarProvider>
+              <SidebarProvider className="h-svh min-h-0 overflow-hidden bg-[var(--color-shell)]">
                 <AppSidebar />
-                <SidebarInset>
-                  <main id="main-content">
-                    <Suspense fallback={<PageSkeleton />}>
-                      {children}
-                    </Suspense>
+                <SidebarInset className="min-h-0 overflow-hidden">
+                  <AppHeader />
+                  <main id="main-content" className="min-h-0 flex-1 overflow-auto">
+                    <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
                   </main>
                 </SidebarInset>
               </SidebarProvider>

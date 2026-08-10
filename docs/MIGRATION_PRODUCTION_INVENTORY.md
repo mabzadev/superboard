@@ -12,28 +12,28 @@ npm run migration:inventory
 
 ## Baseline Commits
 
-| Repository | Commit |
-|---|---|
-| backend | `6a20f36994ca587cdeb554e08a25689c4f5240e8` |
-| dashboard | `43b8fde26bf5d19b3fb1bdea6cb35d2f68e486b7` |
-| mcp | `c01b4bca89d0475a817f6671ca42efa9bec02c28` |
-| opengrow-js | `20fc5ab75e48697037daa3bc5b8b193dd679c35f` |
-| opengrow-iOS | `fd90467273ac63752be93d84e961941b5bdf149c` |
-| opengrow-Android | `1116eddf93507aab001e7d60080f38767af58b94` |
+| Repository            | Commit                                     |
+| --------------------- | ------------------------------------------ |
+| backend               | `6a20f36994ca587cdeb554e08a25689c4f5240e8` |
+| dashboard             | `43b8fde26bf5d19b3fb1bdea6cb35d2f68e486b7` |
+| mcp                   | `c01b4bca89d0475a817f6671ca42efa9bec02c28` |
+| opengrow-js           | `20fc5ab75e48697037daa3bc5b8b193dd679c35f` |
+| opengrow-iOS          | `fd90467273ac63752be93d84e961941b5bdf149c` |
+| opengrow-Android      | `1116eddf93507aab001e7d60080f38767af58b94` |
 | opengrow-react-native | `864d3bee900a34b24fce334d81abdf32e41b27ea` |
-| opengrow-flutter | `eec1c65b9732034db5b4679c65ded0b66e3e5c46` |
-| opengrow-utils | `49e30506df68704acfb8402c3b64ea56f8a54d65` |
+| opengrow-flutter      | `eec1c65b9732034db5b4679c65ded0b66e3e5c46` |
+| opengrow-utils        | `49e30506df68704acfb8402c3b64ea56f8a54d65` |
 
 ## Current Inventory
 
-| Area | Upstream OpenGrow | Current OpenGrow |
-|---|---:|---:|
-| Routes | 170 | 199 Worker handlers |
-| Tables | 60 | 60 D1 table names |
-| Jobs | 20 | Cloudflare cron/manual route plus route-local ports |
-| Services | 58 | Partial route-local logic |
-| Models | 53 | No model layer |
-| Serializers | 32 | Partial ad hoc response shaping |
+| Area        | Upstream OpenGrow |                                    Current OpenGrow |
+| ----------- | ----------------: | --------------------------------------------------: |
+| Routes      |               170 |                                 199 Worker handlers |
+| Tables      |                60 |                                   60 D1 table names |
+| Jobs        |                20 | Cloudflare cron/manual route plus route-local ports |
+| Services    |                58 |                           Partial route-local logic |
+| Models      |                53 |                                      No model layer |
+| Serializers |                32 |                     Partial ad hoc response shaping |
 
 The D1 table and column inventory now matches upstream locally after
 `workers/opengrow/migrations/0005_opengrow_production_column_parity.sql`.
@@ -181,9 +181,11 @@ Auth-adjacent mail delivery is now covered by module 13.
 - Local smoke validation covered revenue activation, raw purchase search,
   product revenue aggregation and dashboard overview revenue from a real D1
   purchase row.
-- Browser validation covered authenticated `/revenue` with
-  `NEXT_PUBLIC_OPENGROW_EE=true`, showing `pro_monthly`, iOS, 2 units and `$9.98`
-  from the local Worker without mocked network routes.
+- The historical browser validation used the now-removed
+  `NEXT_PUBLIC_OPENGROW_EE` edition flag. Revenue visibility is now controlled
+  by the application's `revenue_collection_enabled` capability and has no
+  OpenGrow plan dependency; the same fixture showed `pro_monthly`, iOS, 2 units
+  and `$9.98` from the local Worker without mocked network routes.
 
 ### 7. Messaging and SDK notifications
 
@@ -224,11 +226,11 @@ Auth-adjacent mail delivery is now covered by module 13.
   targets render an HTML/social-preview page.
 - `GET /public` and the public/go-subdomain wildcard routes are present so the
   Worker route surface matches the upstream Rails route contract.
-- `GET /api/v1/notifications/test` is ported exactly for upstream
-  compatibility.
-- Local smoke validation covered `/create`, quick link redirect,
-  `/api/v1/notifications/test`, `/public`, and the marketing-message wildcard
-  against Wrangler local D1/R2.
+- The historical unauthenticated `/api/v1/notifications/test` placeholder is
+  intentionally absent. Notification behavior is exposed only through the
+  authenticated project, SDK inbox and protected push-processor contracts.
+- Local smoke validation covered `/create`, quick link redirect, `/public`, and
+  the marketing-message wildcard against Wrangler local D1/R2.
 - Browser validation covered a public quick-link HTML/social-preview page in
   Chromium against Wrangler local D1/R2 with no mocked network routes.
 
@@ -266,43 +268,19 @@ Auth-adjacent mail delivery is now covered by module 13.
 - Browser validation covered `/account` rendering a real connected MCP app with
   status and last-used metadata.
 
-### 10. Stripe billing, portal and subscription webhooks
-
-- `GET /instances/:id/billing/mau` now computes current MAU from real
-  `visitor_daily_statistics`, `visitors` and raw `events` data across production
-  and test projects, using upstream `FREE_MAU_COUNT` semantics with a 10,000
-  default.
-- `GET /instances/:id/billing/subscription` and `/usage` now read real
-  `stripe_subscriptions` or `enterprise_subscriptions` rows and return upstream
-  404 responses when no active subscription exists instead of a self-hosted
-  placeholder.
-- `POST /instances/:id/billing/subscriptions` now creates a real Stripe hosted
-  checkout session through the Stripe REST API when `STRIPE_SECRET_KEY` and
-  `STRIPE_STANDARD_PRICE_ID` are configured, and stores the checkout session id
-  in `stripe_payment_intents`.
-- `GET /instances/:id/billing/stripe_portal` now creates a real Stripe billing
-  portal session for active Stripe subscriptions instead of returning `url:null`.
-- `DELETE /instances/:id/billing/subscription` now cancels the active Stripe
-  subscription through Stripe and updates local subscription state.
-- `POST /api/v1/webhooks/stripe` now verifies Stripe signatures, records
-  idempotent `stripe_webhook_messages`, creates subscription rows on
-  `checkout.session.completed`, and updates local subscription status on
-  `customer.subscription.*` plus payment failure events.
-- `POST /api/v1/webhooks/send_stripe_quotas` now sends current MAU usage records
-  to Stripe subscription items when protected by `SENT_QUOTAS_WEBHOOK_KEY`.
-- Local smoke validation covered no-subscription 404s, real MAU count from local
-  data, missing Stripe configuration errors, unsigned webhook rejection, signed
-  checkout and subscription-created webhook activation, TypeScript compile and
-  Wrangler dry-run bundling.
-- Browser validation covered authenticated `/settings` rendering the Free plan,
-  MAU usage and upgrade controls without visible billing errors.
-
 ### 11. Push delivery and RPush compatibility
 
 - Saving iOS push credentials now synchronizes upstream-shaped
   `Rpush::Apnsp8::App` rows for development and production APNs environments.
 - Saving Android Firebase credentials now synchronizes an upstream-shaped
-  `Rpush::Fcm::App` row with the Firebase project id and service-account JSON.
+  `Rpush::Fcm::App` row with the Firebase project id and encrypted
+  service-account JSON.
+- APNs private keys, FCM service accounts and cached FCM OAuth tokens are
+  encrypted with the versioned Worker keyring before D1 persistence. Migration
+  `0054_encrypt_push_credentials.sql` adds encrypted columns; bounded,
+  idempotent runtime convergence encrypts pre-existing plaintext values and
+  clears those legacy columns without copying secrets into Git or target
+  manifests.
 - Existing-user notification creation now creates `notification_messages` and
   queues `rpush_notifications` for iOS/Android devices with push tokens when
   `send_push` is enabled.
@@ -310,13 +288,40 @@ Auth-adjacent mail delivery is now covered by module 13.
   new-user campaigns when the registering device has a push token.
 - `POST /api/v1/push/process` now processes pending `rpush_notifications`
   behind `PUSH_PROCESS_KEY`, delivering via FCM HTTP v1 or APNs token auth and
-  marking rows delivered or failed with provider errors.
+  marking rows delivered or failed with provider errors. Provider requests have
+  hard timeouts; conditional 15-minute leases recover abandoned work and block
+  concurrent consumers from double-sending.
+- The administrator platform status reports registered push devices,
+  notification/message counts, push delivery states and push credential
+  security state. Plaintext or missing credentials degrade the platform status
+  instead of being hidden.
 - Local smoke validation covered Android RPush app synchronization, SDK device
   registration with a push token, queued `Rpush::Fcm::Notification` rows,
   protected processor access and failed-provider-state persistence using an
   intentionally invalid local key.
 - Browser validation covered authenticated `/messaging` rendering the push
   notification column and existing campaign rows without visible errors.
+
+### 11b. Authentication credential storage
+
+- New Dashboard OAuth and MCP access/refresh tokens are persisted only as
+  irreversible SHA-256 digests; the reusable clear bearer is returned once to
+  its client. Dashboard OAuth client secrets use the same digest-only storage,
+  including the Cloudflare rotation script.
+- Password-reset and invitation links persist only token digests. Clear tokens
+  remain in the one-time email/response and are accepted through digest lookup;
+  they are never written by new database operations.
+- TOTP seeds are encrypted with the versioned API credential keyring. The
+  runtime reads historical plaintext during convergence, while bounded
+  maintenance replaces it with ciphertext.
+- Bounded maintenance also converts pre-existing OAuth/MCP bearer columns,
+  client secrets and reset/invitation values. Infrastructure reports
+  digest/encryption state and degrades while reusable plaintext remains.
+- Dashboard password/OAuth login, registration, invitation acceptance and reset
+  requests share a ten-minute D1 rate-limit window keyed by a SHA-256 digest of
+  scope, Cloudflare client IP and subject. Raw IP/email/token values are not
+  persisted, stale counters are removed by maintenance and active blocks are
+  visible in Infrastructure.
 
 ### 12. Apple/Google IAP webhooks and subscription reconciliation
 
@@ -404,10 +409,11 @@ Auth-adjacent mail delivery is now covered by module 13.
 
 ### 17. Admin and automation machine routes
 
-- `/api/v1/admin/create_enterprise_subscription` and
-  `/api/v1/admin/update_enterprise_subscription` now persist real
-  `enterprise_subscriptions` rows and preserve the upstream success/error
-  contract.
+- The legacy `/api/v1/admin/create_enterprise_subscription` and
+  `/api/v1/admin/update_enterprise_subscription` compatibility routes were
+  removed when OpenGrow became an operator back office rather than a SaaS.
+  Historical `enterprise_subscriptions` rows remain untouched for audit and
+  controlled migration; no runtime plan or MAU quota reads them anymore.
 - `/api/v1/admin/migrate_firebase_links` accepts a real CSV upload, maps
   Firebase deeplink/short-link prefixes, writes dashboard links against the
   project domain and returns created/skipped counts.
@@ -454,17 +460,25 @@ Auth-adjacent mail delivery is now covered by module 13.
 
 ## Main Implementation Gaps
 
-The inventory currently reports no placeholder implementation markers, no
-missing D1 tables and no missing upstream columns. The remaining work is
+The inventory currently reports no placeholder implementation markers in the
+local Worker routes. It inventories 315 Worker routes and 118 central API D1
+tables. The historical Rails comparison source is not present, so missing
+upstream routes, tables and columns are deliberately reported as `null`, not as
+green empty arrays. Run `npm run migration:parity:check` only after restoring
+the exact immutable comparison source. The remaining verified local work is
 production hardening around infrastructure choices and full external-provider
-credential rollout rather than a blocker in the primary dashboard/API paths.
+credential rollout rather than a placeholder in the primary dashboard/API
+paths.
 
 ## Production Module Order
 
 1. Baseline and schema contract
-   - Update submodules to `origin/main`.
-   - Keep `npm run migration:inventory` green as the contract.
-   - Success: no missing tables; no missing columns for the module being migrated.
+   - Restore and record exact immutable upstream revisions if historical parity
+     remains a release requirement; do not compare against a moving branch.
+   - Keep the local inventory green and run
+     `npm run migration:parity:check` when the recorded source is available.
+   - Success: the comparison source is identified and no required route, table
+     or column is missing for the module being migrated.
 
 2. Authentication and permissions
    - Port Devise/Doorkeeper semantics: password grant, refresh/revoke, reset,
@@ -500,8 +514,8 @@ credential rollout rather than a blocker in the primary dashboard/API paths.
    - Success: notification created in dashboard appears through SDK, unread/read
      counts update and push jobs are traceable.
 
-8. Billing, quotas, Stripe and IAP
-   - Port Stripe checkout/portal/webhooks, MAU usage, quotas, Apple/Google IAP.
+8. Billing, quotas and IAP
+   - Port MAU usage, quotas, and Apple/Google IAP.
    - Success: payment/IAP webhooks update subscriptions, purchases and revenue UI.
 
 9. Exports, files and mail

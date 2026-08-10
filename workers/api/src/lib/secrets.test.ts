@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scopedStoreCredential } from './secrets';
+import { scopedStoreCredential, timingSafeEqual } from './secrets';
 
 describe('scoped Store credentials', () => {
   const connection = {
@@ -15,5 +15,16 @@ describe('scoped Store credentials', () => {
   it('fails closed when the Billing copy is absent', () => {
     expect(scopedStoreCredential(connection, { CREDENTIAL_KEY_SCOPE: 'billing' } as any)).toBe('billing-v1.ciphertext');
     expect(scopedStoreCredential({ configuration_encrypted: 'api-only' }, { CREDENTIAL_KEY_SCOPE: 'billing' } as any)).toBeNull();
+  });
+});
+
+describe('timing-safe secret comparison', () => {
+  it('accepts identical values in the Node Web Crypto fallback', async () => {
+    await expect(timingSafeEqual('operator-secret', 'operator-secret')).resolves.toBe(true);
+  });
+
+  it('rejects different values and lengths', async () => {
+    await expect(timingSafeEqual('operator-secret', 'operator-secreu')).resolves.toBe(false);
+    await expect(timingSafeEqual('operator-secret', 'short')).resolves.toBe(false);
   });
 });

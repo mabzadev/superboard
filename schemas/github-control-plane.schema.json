@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opengrow.local/schemas/github-control-plane.schema.json",
+  "title": "OpenGrow GitHub control plane",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "owner", "repositories"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 5 },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["login", "type"],
+      "properties": {
+        "login": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "type": { "enum": ["user", "organization"] }
+      }
+    },
+    "repositories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "reference"],
+      "properties": {
+        "platform": { "$ref": "#/$defs/repository" },
+        "reference": { "$ref": "#/$defs/repository" }
+      }
+    }
+  },
+  "$defs": {
+    "secretName": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$"
+    },
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredCheck",
+        "requirePullRequest",
+        "requireCodeOwnerReviews",
+        "requiredApprovals"
+      ],
+      "properties": {
+        "requiredCheck": { "type": "string", "minLength": 3, "maxLength": 100 },
+        "requirePullRequest": { "const": true },
+        "requireCodeOwnerReviews": { "const": true },
+        "requiredApprovals": { "type": "integer", "minimum": 1, "maximum": 6 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variables", "secrets"],
+      "properties": {
+        "variables": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "secrets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/secretName" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nameWithOwner",
+        "description",
+        "settings",
+        "visibility",
+        "defaultBranch",
+        "workflowPermissions",
+        "repositorySecrets",
+        "branches",
+        "environments"
+      ],
+      "properties": {
+        "nameWithOwner": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "description": { "type": "string", "minLength": 10, "maxLength": 350 },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "issues",
+            "projects",
+            "wiki",
+            "downloads",
+            "squashMerge",
+            "mergeCommit",
+            "rebaseMerge",
+            "deleteBranchOnMerge"
+          ],
+          "properties": {
+            "issues": { "type": "boolean" },
+            "projects": { "type": "boolean" },
+            "wiki": { "type": "boolean" },
+            "downloads": { "type": "boolean" },
+            "squashMerge": { "type": "boolean" },
+            "mergeCommit": { "type": "boolean" },
+            "rebaseMerge": { "type": "boolean" },
+            "deleteBranchOnMerge": { "type": "boolean" }
+          }
+        },
+        "visibility": { "enum": ["public", "private"] },
+        "defaultBranch": { "const": "dev" },
+        "workflowPermissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default", "canApprovePullRequestReviews"],
+          "properties": {
+            "default": { "const": "read" },
+            "canApprovePullRequestReviews": { "const": true }
+          }
+        },
+        "repositorySecrets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/secretName" },
+          "uniqueItems": true
+        },
+        "branches": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dev", "main"],
+          "properties": {
+            "dev": { "$ref": "#/$defs/branch" },
+            "main": { "$ref": "#/$defs/branch" }
+          }
+        },
+        "environments": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[a-z][a-z0-9-]+$" },
+          "additionalProperties": { "$ref": "#/$defs/environment" }
+        }
+      }
+    }
+  }
+}

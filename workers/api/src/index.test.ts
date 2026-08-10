@@ -1,46 +1,146 @@
-import { describe, expect, it, vi } from 'vitest';
-import worker from './index';
-import { Env } from './types';
-import { createFakeD1, FakeD1Call } from './test/fake-d1';
+import { describe, expect, it, vi } from "vitest";
+import worker from "./index";
+import { Env } from "./types";
+import { createFakeD1, FakeD1Call } from "./test/fake-d1";
 
 function env(overrides: Partial<Env> = {}): Env {
   const db = createFakeD1((call: FakeD1Call) => {
-    if (call.op === 'all' && call.sql.includes('FROM projects production')) return [];
-    if (call.op === 'all' && call.sql.includes('FROM rpush_notifications rn JOIN rpush_apps ra')) return [];
-    if (call.op === 'first' && call.sql.includes('FROM instances WHERE api_key = ?')) return { id: 10 };
-    if (call.op === 'first' && call.sql.includes('FROM projects WHERE instance_id = ? AND is_test = ?')) return { id: 101 };
-    if (call.op === 'first' && call.sql.includes('JOIN android_configurations')) return { id: 1 };
-    if (call.op === 'first' && call.sql.includes('FROM projects WHERE id = ? AND instance_id = ?')) {
-      return { id: 101, instance_id: 10, identifier: 'mobile-prod-key', is_test: 0 };
+    if (
+      call.op === "all" &&
+      call.sql.includes("FROM application_account_erasures")
+    )
+      return [];
+    if (call.op === "all" && call.sql.includes("FROM projects production"))
+      return [];
+    if (
+      call.op === "all" &&
+      call.sql.includes("FROM rpush_notifications rn JOIN rpush_apps ra")
+    )
+      return [];
+    if (call.op === "all" && call.sql.includes("encrypted_")) return [];
+    if (
+      call.op === "first" &&
+      call.sql.includes("FROM instances WHERE api_key = ?")
+    )
+      return { id: 10 };
+    if (
+      call.op === "first" &&
+      call.sql.includes("FROM projects WHERE instance_id = ? AND is_test = ?")
+    )
+      return { id: 101 };
+    if (call.op === "first" && call.sql.includes("JOIN android_configurations"))
+      return { id: 1 };
+    if (
+      call.op === "first" &&
+      call.sql.includes("FROM projects WHERE id = ? AND instance_id = ?")
+    ) {
+      return {
+        id: 101,
+        instance_id: 10,
+        identifier: "mobile-prod-key",
+        is_test: 0,
+      };
     }
-    if (call.op === 'first' && call.sql.includes('FROM devices WHERE vendor = ?')) return null;
+    if (
+      call.op === "first" &&
+      call.sql.includes("FROM devices WHERE vendor = ?")
+    )
+      return null;
     return undefined;
   });
   return {
     DB: db,
     KV: { get: async () => null, put: async () => undefined } as any,
-    ENVIRONMENT: 'test',
-    SHORTLINK_DOMAIN: 'go.test',
-    API_DOMAIN: 'api.test',
-    SDK_DOMAIN: 'sdk.test',
-    CORS_ORIGIN: '*',
-    JWT_SECRET: 'index-secret',
+    ENVIRONMENT: "test",
+    D1_EXPECTED_MIGRATION: "0057_application_account_erasure.sql",
+    SHORTLINK_DOMAIN: "go.test",
+    API_DOMAIN: "api.test",
+    SDK_DOMAIN: "sdk.test",
+    CORS_ORIGIN: "*",
+    JWT_SECRET: "index-secret",
     ...overrides,
   };
 }
 
-describe('Worker scheduled and queue handlers', () => {
+describe("Worker scheduled and queue handlers", () => {
+  it("reports real API dependency readiness and fails closed when D1 is unavailable", async () => {
+    const readyDb = createFakeD1((call) => {
+      if (call.op === "first" && call.sql === "SELECT 1 AS ready")
+        return { ready: 1 };
+      if (call.op === "first" && call.sql.includes("FROM d1_migrations")) {
+        return {
+          applied_migration_count: 57,
+          expected_migration_applied: 1,
+          latest_migration: "0057_application_account_erasure.sql",
+        };
+      }
+      return undefined;
+    });
+    const ready = await worker.fetch?.(
+      new Request("https://api.test/health"),
+      env({ DB: readyDb }),
+      {} as ExecutionContext,
+    );
+    expect(ready?.status).toBe(200);
+    await expect(ready?.json()).resolves.toMatchObject({
+      status: "ok",
+      dependencies: { d1: "ok", kv: "ok", publicDomains: "configured" },
+      schema: {
+        status: "current",
+        expectedMigration: "0057_application_account_erasure.sql",
+        latestMigration: "0057_application_account_erasure.sql",
+        appliedMigrationCount: 57,
+      },
+    });
+
+    const behindDb = createFakeD1((call) => {
+      if (call.op === "first" && call.sql === "SELECT 1 AS ready")
+        return { ready: 1 };
+      if (call.op === "first" && call.sql.includes("FROM d1_migrations")) {
+        return {
+          applied_migration_count: 55,
+          expected_migration_applied: 0,
+          latest_migration: "0055_dashboard_auth_rate_limits.sql",
+        };
+      }
+      return undefined;
+    });
+    const behind = await worker.fetch?.(
+      new Request("https://api.test/health"),
+      env({ DB: behindDb }),
+      {} as ExecutionContext,
+    );
+    expect(behind?.status).toBe(503);
+    await expect(behind?.json()).resolves.toMatchObject({
+      status: "degraded",
+      reason: "database_schema_not_current",
+      schema: { status: "behind" },
+      dependencies: { d1: "schema_not_current", kv: "ok" },
+    });
+
+    const unavailableDb = createFakeD1(() => undefined);
+    const degraded = await worker.fetch?.(
+      new Request("https://api.test/health"),
+      env({ DB: unavailableDb }),
+      {} as ExecutionContext,
+    );
+    expect(degraded?.status).toBe(503);
+    await expect(degraded?.json()).resolves.toMatchObject({
+      status: "degraded",
+    });
+  });
+
   it.each([
-    '/device_for_vendor_id?vendor_id=config-check',
-    '/api/v1/sdk/device_for_vendor_id?vendor_id=config-check',
-  ])('serves mobile SDK routes on the SDK domain at %s', async (pathname) => {
+    "/device_for_vendor_id?vendor_id=config-check",
+    "/api/v1/sdk/device_for_vendor_id?vendor_id=config-check",
+  ])("serves mobile SDK routes on the SDK domain at %s", async (pathname) => {
     const response = await worker.fetch?.(
       new Request(`https://sdk.test${pathname}`, {
         headers: {
-          Host: 'sdk.test',
-          'PROJECT-KEY': 'server-api-key',
-          PLATFORM: 'android',
-          IDENTIFIER: 'com.opengrow.android',
+          Host: "sdk.test",
+          "PROJECT-KEY": "server-api-key",
+          PLATFORM: "android",
+          IDENTIFIER: "com.opengrow.android",
         },
       }),
       env(),
@@ -51,17 +151,97 @@ describe('Worker scheduled and queue handlers', () => {
     await expect(response?.json()).resolves.toEqual({ last_seen: null });
   });
 
-  it('returns 404 for SSO routes when the target disables SSO', async () => {
+  it("returns 404 for SSO routes when the target disables SSO", async () => {
     const response = await worker.fetch?.(
-      new Request('https://go.test/api/v1/identity/sso/auth/google_oauth2', { method: 'POST' }),
-      env({ SSO_ENABLED: 'false' }),
+      new Request("https://go.test/api/v1/identity/sso/auth/google_oauth2", {
+        method: "POST",
+      }),
+      env({ SSO_ENABLED: "false" }),
       {} as ExecutionContext,
     );
 
     expect(response?.status).toBe(404);
   });
 
-  it('enqueues maintenance work from the scheduled handler when a queue binding exists', async () => {
+  it("proxies the common application identity contract without exposing its Worker", async () => {
+    let forwardedUrl = "";
+    let forwardedHeaders = new Headers();
+    let forwardedBody: unknown;
+    const fetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        forwardedUrl = String(input);
+        forwardedHeaders = new Headers(init?.headers);
+        forwardedBody = await new Response(init?.body).json();
+        return Response.json({ path: new URL(forwardedUrl).pathname });
+      },
+    );
+    const response = await worker.fetch?.(
+      new Request("https://api.test/auth/signin/apple", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "cf-connecting-ip": "192.0.2.10",
+        },
+        body: JSON.stringify({ token: "provider-token" }),
+      }),
+      env({ IDENTITY_SERVICE: { fetch } as unknown as Fetcher }),
+      {} as ExecutionContext,
+    );
+    expect(response?.status).toBe(200);
+    expect(new URL(forwardedUrl).pathname).toBe("/auth/signin/apple");
+    expect(forwardedHeaders.get("cf-connecting-ip")).toBe("192.0.2.10");
+    expect(forwardedBody).toEqual({ token: "provider-token" });
+  });
+
+  it("rejects incomplete legacy account deletion before Identity is reached", async () => {
+    const fetch = vi.fn(async () => Response.json({ deleted: true }));
+    const response = await worker.fetch?.(
+      new Request("https://api.test/auth/me", {
+        method: "DELETE",
+        headers: { authorization: "Bearer legacy-identity-token" },
+      }),
+      env({ IDENTITY_SERVICE: { fetch } as unknown as Fetcher }),
+      {} as ExecutionContext,
+    );
+    expect(response?.status).toBe(410);
+    await expect(response?.json()).resolves.toMatchObject({
+      error: {
+        code: "account_erasure_route_required",
+        retryable: false,
+      },
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("routes the files custom domain only to the authenticated Files surface", async () => {
+    let forwarded: Request | null = null;
+    const fetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        forwarded = new Request(input, init);
+        return Response.json({ path: new URL(forwarded.url).pathname });
+      },
+    );
+    const response = await worker.fetch?.(
+      new Request("https://files.test/v1/files?limit=10", {
+        headers: {
+          Host: "files.test",
+          authorization: "Bearer application-token",
+        },
+      }),
+      env({
+        FILES_DOMAIN: "files.test",
+        FILES_SERVICE: { fetch } as unknown as Fetcher,
+      }),
+      {} as ExecutionContext,
+    );
+    expect(response?.status).toBe(200);
+    expect(forwarded!.url).toBe("https://service.internal/v1/files?limit=10");
+    expect(forwarded!.headers.get("authorization")).toBe(
+      "Bearer application-token",
+    );
+  });
+
+  it("enqueues maintenance work from the scheduled handler when a queue binding exists", async () => {
     const sent: unknown[] = [];
     const waitUntil = vi.fn((promise: Promise<unknown>) => promise);
     const testEnv = env({
@@ -74,36 +254,76 @@ describe('Worker scheduled and queue handlers', () => {
 
     await worker.scheduled?.({} as any, testEnv, { waitUntil } as any);
 
-    expect(waitUntil).toHaveBeenCalledTimes(2);
+    expect(waitUntil).toHaveBeenCalledTimes(3);
     await Promise.all(waitUntil.mock.results.map((result) => result.value));
-    expect(sent).toEqual([{ type: 'maintenance.run', days: 3 }]);
+    expect(sent).toEqual([{ type: "maintenance.run", days: 3 }]);
   });
 
-  it('acks queue messages after successful job dispatch', async () => {
+  it("acks queue messages after successful job dispatch", async () => {
     const message = {
-      id: 'msg-1',
-      body: { type: 'push.process', limit: 1 },
+      id: "msg-1",
+      body: { type: "push.process", limit: 1 },
       ack: vi.fn(),
       retry: vi.fn(),
     };
 
-    await worker.queue?.({ queue: 'opengrow-push', messages: [message] } as any, env(), {} as any);
+    await worker.queue?.(
+      { queue: "opengrow-push", messages: [message] } as any,
+      env(),
+      {} as any,
+    );
 
     expect(message.ack).toHaveBeenCalledTimes(1);
     expect(message.retry).not.toHaveBeenCalled();
   });
 
-  it('retries queue messages after failed job dispatch', async () => {
+  it("retries queue messages after failed job dispatch", async () => {
     const message = {
-      id: 'msg-2',
-      body: { type: 'unknown.job' },
+      id: "msg-2",
+      body: { type: "unknown.job" },
       ack: vi.fn(),
       retry: vi.fn(),
     };
 
-    await worker.queue?.({ queue: 'opengrow-maintenance', messages: [message] } as any, env(), {} as any);
+    await worker.queue?.(
+      { queue: "opengrow-maintenance", messages: [message] } as any,
+      env(),
+      {} as any,
+    );
 
     expect(message.ack).not.toHaveBeenCalled();
     expect(message.retry).toHaveBeenCalledWith({ delaySeconds: 60 });
+  });
+
+  it("persists and redacts a DLQ message before acknowledging it", async () => {
+    const db = createFakeD1((call) => (call.op === "run" ? true : undefined));
+    const message = {
+      id: "dead-letter-1",
+      body: { type: "maintenance.run", secret: "private-queue-secret" },
+      attempts: 9,
+      ack: vi.fn(),
+      retry: vi.fn(),
+    };
+
+    await worker.queue?.(
+      { queue: "events-dlq", messages: [message] } as any,
+      env({
+        DB: db,
+        EVENT_DLQ_NAME: "events-dlq",
+        PUSH_DLQ_NAME: "push-dlq",
+        MAINTENANCE_DLQ_NAME: "maintenance-dlq",
+      }),
+      {} as any,
+    );
+
+    expect(message.ack).toHaveBeenCalledTimes(1);
+    expect(message.retry).not.toHaveBeenCalled();
+    const inserted = db.calls.find((call) =>
+      call.sql.includes("INSERT OR IGNORE INTO platform_dead_letters"),
+    );
+    expect(inserted?.args[4]).toBe(
+      '{"type":"maintenance.run","secret":"[REDACTED]"}',
+    );
+    expect(inserted?.args[7]).toBe(0);
   });
 });

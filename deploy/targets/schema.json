@@ -1,50 +1,190 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/mbzadev/opengrow/deploy/targets/schema.json",
+  "$id": "https://opengrow.local/deploy/targets/schema.json",
   "title": "OpenGrow deployment target",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "target", "accountId", "workersDevSubdomain", "accessMode", "registrationMode", "ssoEnabled", "mail", "domains", "workers", "oauth", "authGateway", "environments"],
+  "required": [
+    "schemaVersion",
+    "target",
+    "accountAlias",
+    "workersDevSubdomain",
+    "registrationMode",
+    "ssoEnabled",
+    "features",
+    "applicationIdentity",
+    "filePolicy",
+    "mail",
+    "operator",
+    "domains",
+    "workers",
+    "oauth",
+    "authGateway",
+    "environments"
+  ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 9 },
     "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
-    "accountId": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "accountAlias": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "workersDevSubdomain": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-    "accessMode": { "enum": ["full", "metered"] },
     "registrationMode": { "enum": ["allowlist", "public"] },
     "ssoEnabled": { "type": "boolean" },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "billing",
+        "messaging",
+        "app",
+        "products",
+        "paywalls",
+        "dynamic-links",
+        "support",
+        "marketing",
+        "onboardings"
+      ],
+      "properties": {
+        "billing": { "type": "boolean" },
+        "messaging": { "type": "boolean" },
+        "app": { "type": "boolean" },
+        "products": { "type": "boolean" },
+        "paywalls": { "type": "boolean" },
+        "dynamic-links": { "type": "boolean" },
+        "support": { "type": "boolean" },
+        "marketing": { "type": "boolean" },
+        "onboardings": { "type": "boolean" }
+      }
+    },
+    "applicationIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registrationMode",
+        "applicationAudience",
+        "googleAudiences",
+        "appleAudiences",
+        "webOrigins"
+      ],
+      "properties": {
+        "registrationMode": { "enum": ["open", "closed"] },
+        "applicationAudience": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.:-]{2,254}$"
+        },
+        "googleAudiences": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 3, "maxLength": 255 },
+          "uniqueItems": true
+        },
+        "appleAudiences": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 3, "maxLength": 255 },
+          "uniqueItems": true
+        },
+        "webOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "filePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxBytes",
+        "allowedContentTypes",
+        "downloadTicketTtlSeconds"
+      ],
+      "properties": {
+        "maxBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 104857600
+        },
+        "allowedContentTypes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9!#$&^_.+-]+/(?:\\*|[a-z0-9!#$&^_.+-]+)$"
+          }
+        },
+        "downloadTicketTtlSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600
+        }
+      }
+    },
     "mail": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["provider", "fromName", "fromAddress"],
+      "required": ["transport", "fromName", "fromAddress"],
       "properties": {
-        "provider": { "const": "cloudflare" },
+        "transport": { "enum": ["capture", "smtp"] },
         "fromName": { "type": "string", "minLength": 1 },
-        "fromAddress": { "type": "string", "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$" }
+        "fromAddress": {
+          "type": "string",
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        },
+        "replyToAddress": {
+          "type": "string",
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        }
       }
     },
     "domains": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["shortlinks", "sdk", "dashboard", "messaging"],
+      "required": ["api", "shortlinks", "sdk", "dashboard", "files", "mcp"],
       "properties": {
+        "api": { "$ref": "#/$defs/hostname" },
         "shortlinks": { "$ref": "#/$defs/hostname" },
         "sdk": { "$ref": "#/$defs/hostname" },
         "dashboard": { "$ref": "#/$defs/hostname" },
+        "files": { "$ref": "#/$defs/hostname" },
+        "mcp": { "$ref": "#/$defs/hostname" },
+        "mailPreview": { "$ref": "#/$defs/hostname" },
         "messaging": { "$ref": "#/$defs/hostname" }
       }
     },
     "workers": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["api", "dashboard", "billing", "messaging", "growth"],
+      "required": [
+        "api",
+        "dashboard",
+        "email",
+        "identity",
+        "files",
+        "observability",
+        "mcp"
+      ],
       "properties": {
         "api": { "$ref": "#/$defs/workerNames" },
         "dashboard": { "$ref": "#/$defs/workerNames" },
         "billing": { "$ref": "#/$defs/workerNames" },
         "messaging": { "$ref": "#/$defs/workerNames" },
-        "growth": { "$ref": "#/$defs/workerNames" }
+        "email": { "$ref": "#/$defs/workerNames" },
+        "identity": { "$ref": "#/$defs/workerNames" },
+        "files": { "$ref": "#/$defs/workerNames" },
+        "observability": { "$ref": "#/$defs/workerNames" },
+        "mcp": { "$ref": "#/$defs/workerNames" },
+        "custom": { "$ref": "#/$defs/workerNames" },
+        "app": { "$ref": "#/$defs/workerNames" },
+        "products": { "$ref": "#/$defs/workerNames" },
+        "paywalls": { "$ref": "#/$defs/workerNames" },
+        "dynamic-links": { "$ref": "#/$defs/workerNames" },
+        "support": { "$ref": "#/$defs/workerNames" },
+        "marketing": { "$ref": "#/$defs/workerNames" },
+        "onboardings": { "$ref": "#/$defs/workerNames" }
       }
     },
     "oauth": {
@@ -65,16 +205,156 @@
         "jwksUrl": { "type": "string", "pattern": "^https://[^\\s]+$" }
       }
     },
+    "publicSurfaceMonitors": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "url", "description"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,50}$" },
+          "url": { "type": "string", "pattern": "^https://[^\\s]+$" },
+          "healthUrl": { "type": "string", "pattern": "^https://[^\\s]+$" },
+          "description": { "type": "string", "minLength": 1, "maxLength": 300 }
+        }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["docsUrl"],
+      "properties": {
+        "docsUrl": { "type": "string", "pattern": "^https://[^\\s]+$" },
+        "supportEmail": {
+          "type": "string",
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        }
+      }
+    },
+    "customWorker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "packagePath",
+        "description",
+        "capabilities",
+        "secrets"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "pattern": "^workers/custom/[a-z0-9-]+/src/index\\.ts$"
+        },
+        "packagePath": {
+          "type": "string",
+          "pattern": "^workers/custom/[a-z0-9-]+$"
+        },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9.-]+$" },
+          "uniqueItems": true
+        },
+        "secrets": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "contains": { "const": "CUSTOM_WORKER_TOKEN" },
+          "uniqueItems": true
+        },
+        "vars": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "additionalProperties": { "type": "string", "maxLength": 2048 }
+        },
+        "crons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\S+(?:\\s+\\S+){4}$",
+            "maxLength": 100
+          },
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "d1Binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["binding", "migrationsDir"],
+          "properties": {
+            "binding": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+            "migrationsDir": {
+              "type": "string",
+              "pattern": "^workers/custom/[a-z0-9-]+/migrations$"
+            }
+          }
+        },
+        "serviceBindings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["binding", "workers"],
+            "properties": {
+              "binding": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+              "workers": { "$ref": "#/$defs/workerNames" }
+            }
+          }
+        }
+      }
+    },
+    "productionCutover": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "snapshot", "clientReceipt"],
+      "properties": {
+        "application": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "snapshot": {
+          "type": "string",
+          "pattern": "^config/flutterflow-sources/[a-z0-9-]+\\.json$"
+        },
+        "clientReceipt": {
+          "type": "string",
+          "pattern": "^config/flutterflow-releases/[a-z0-9-]+\\.json$"
+        }
+      }
+    },
     "environments": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["production"],
+      "minProperties": 1,
       "properties": {
-        "staging": { "$ref": "#/$defs/environment" },
+        "development": { "$ref": "#/$defs/environment" },
         "production": { "$ref": "#/$defs/environment" }
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["environments"],
+        "properties": {
+          "environments": {
+            "required": ["production"],
+            "properties": {
+              "production": {
+                "required": ["publicRouting"],
+                "properties": {
+                  "publicRouting": { "const": "active" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": { "required": ["productionCutover"] }
+    }
+  ],
   "$defs": {
     "hostname": {
       "type": "string",
@@ -83,9 +363,9 @@
     "workerNames": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["production"],
+      "minProperties": 1,
       "properties": {
-        "staging": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "development": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "production": { "type": "string", "pattern": "^[a-z0-9-]+$" }
       }
     },
@@ -99,10 +379,70 @@
         "legacyName": { "type": "boolean", "default": false }
       }
     },
+    "moduleD1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app",
+        "products",
+        "paywalls",
+        "dynamicLinks",
+        "support",
+        "marketing",
+        "onboardings"
+      ],
+      "properties": {
+        "app": { "$ref": "#/$defs/namedResource" },
+        "products": { "$ref": "#/$defs/namedResource" },
+        "paywalls": { "$ref": "#/$defs/namedResource" },
+        "dynamicLinks": { "$ref": "#/$defs/namedResource" },
+        "support": { "$ref": "#/$defs/namedResource" },
+        "marketing": { "$ref": "#/$defs/namedResource" },
+        "onboardings": { "$ref": "#/$defs/namedResource" }
+      }
+    },
+    "moduleR2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["support", "marketing"],
+      "properties": {
+        "support": { "$ref": "#/$defs/namedResource" },
+        "marketing": { "$ref": "#/$defs/namedResource" }
+      }
+    },
+    "moduleQueue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "dlq"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "dlq": { "type": "string", "minLength": 1 }
+      }
+    },
+    "moduleQueues": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["support", "marketing"],
+      "properties": {
+        "support": { "$ref": "#/$defs/moduleQueue" },
+        "marketing": { "$ref": "#/$defs/moduleQueue" }
+      }
+    },
     "queues": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["events", "eventsDlq", "push", "pushDlq", "maintenance", "maintenanceDlq", "billing", "billingDlq", "growth", "growthDlq"],
+      "required": [
+        "events",
+        "eventsDlq",
+        "push",
+        "pushDlq",
+        "maintenance",
+        "maintenanceDlq",
+        "billing",
+        "billingDlq",
+        "email",
+        "emailDlq"
+      ],
       "properties": {
         "events": { "type": "string" },
         "eventsDlq": { "type": "string" },
@@ -112,14 +452,32 @@
         "maintenanceDlq": { "type": "string" },
         "billing": { "type": "string" },
         "billingDlq": { "type": "string" },
-        "growth": { "type": "string" },
-        "growthDlq": { "type": "string" }
+        "messaging": { "type": "string" },
+        "messagingDlq": { "type": "string" },
+        "email": { "type": "string" },
+        "emailDlq": { "type": "string" }
       }
     },
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["d1", "kv", "r2", "dashboardCache", "messagingD1", "messagingR2", "messagingProjectIds", "growthD1", "billingExecutionMode", "queues"],
+      "required": [
+        "d1",
+        "kv",
+        "r2",
+        "dashboardCache",
+        "emailD1",
+        "identityD1",
+        "filesD1",
+        "analyticsDataset",
+        "supportProjectIds",
+        "moduleD1",
+        "moduleR2",
+        "moduleQueues",
+        "publicRouting",
+        "billingExecutionMode",
+        "queues"
+      ],
       "properties": {
         "d1": { "$ref": "#/$defs/namedResource" },
         "kv": { "$ref": "#/$defs/namedResource" },
@@ -127,12 +485,28 @@
         "dashboardCache": { "$ref": "#/$defs/namedResource" },
         "messagingD1": { "$ref": "#/$defs/namedResource" },
         "messagingR2": { "$ref": "#/$defs/namedResource" },
+        "emailD1": { "$ref": "#/$defs/namedResource" },
+        "identityD1": { "$ref": "#/$defs/namedResource" },
+        "filesD1": { "$ref": "#/$defs/namedResource" },
+        "customD1": { "$ref": "#/$defs/namedResource" },
+        "analyticsDataset": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+        },
+        "moduleD1": { "$ref": "#/$defs/moduleD1" },
+        "moduleR2": { "$ref": "#/$defs/moduleR2" },
+        "moduleQueues": { "$ref": "#/$defs/moduleQueues" },
         "messagingProjectIds": {
           "type": "array",
           "items": { "type": "integer", "minimum": 1 },
           "uniqueItems": true
         },
-        "growthD1": { "$ref": "#/$defs/namedResource" },
+        "supportProjectIds": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "uniqueItems": true
+        },
+        "publicRouting": { "enum": ["active", "staged"] },
         "billingExecutionMode": { "enum": ["local", "service"] },
         "queues": { "$ref": "#/$defs/queues" }
       }

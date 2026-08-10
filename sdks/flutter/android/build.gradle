@@ -39,7 +39,7 @@ apply plugin: "kotlin-android"
 apply plugin: "kotlin-parcelize"
 
 android {
-    // The native SDK sources are embedded in the Flutter plugin so a private
+    // The native SDK sources are embedded in the Flutter plugin so a separate
     // Maven credential is never required by FlutterFlow's remote builder.
     namespace = "io.opengrow"
 
@@ -66,7 +66,6 @@ android {
     defaultConfig {
         minSdk = 24
         consumerProguardFiles "../../android/OpenGrow/OpenGrow/consumer-rules.pro"
-        buildConfigField "String", "SERVER_URL", "\"https://sdk.vocostar.com/api/v1/sdk/\""
         buildConfigField "String", "TEST_SERVER_URL", "\"http://localhost:8080/\""
         buildConfigField "String", "SDK_VERSION", "\"1.1.1\""
         buildConfigField "boolean", "NETWORK_LOGGING", "false"

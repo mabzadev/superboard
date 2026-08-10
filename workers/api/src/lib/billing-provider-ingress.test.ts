@@ -52,7 +52,7 @@ describe('Billing provider ingress authority', () => {
     });
     const env = { DB: db, BILLING_QUEUE: queue } as unknown as BillingEnv;
 
-    await expect(ingestBillingProviderEvent(env, stripeRequest())).resolves.toEqual({
+    await expect(ingestBillingProviderEvent(env, googleRequest())).resolves.toEqual({
       event_id: 'event-1', duplicate: true, queued: false, processed: true,
     });
     expect(queue.send).not.toHaveBeenCalled();
@@ -61,8 +61,8 @@ describe('Billing provider ingress authority', () => {
   it('rejects mismatched jobs before persistence', async () => {
     const db = createFakeD1(() => undefined);
     const env = { DB: db, BILLING_QUEUE: { send: vi.fn() } } as unknown as BillingEnv;
-    const request = stripeRequest();
-    request.store = 'google';
+    const request = googleRequest();
+    request.store = 'apple';
 
     await expect(ingestBillingProviderEvent(env, request)).rejects.toMatchObject({
       code: 'provider_event_job_invalid', retryable: false,
@@ -80,10 +80,43 @@ describe('Billing provider ingress authority', () => {
     });
     const env = { DB: db, BILLING_QUEUE: queue } as unknown as BillingEnv;
 
-    await expect(ingestBillingProviderEvent(env, stripeRequest())).rejects.toMatchObject({
+    await expect(ingestBillingProviderEvent(env, googleRequest())).rejects.toMatchObject({
       code: 'billing_queue_unavailable', status: 503, retryable: true,
     });
     expect(db.calls.some((call) => call.sql.includes("status = 'failed'"))).toBe(true);
+  });
+
+  it('persists and queues Google refund reviews as a distinct financial job', async () => {
+    const queue = { send: vi.fn(async () => undefined) };
+    const db = createFakeD1((call) => {
+      if (call.op === 'run' && call.sql.startsWith('INSERT OR IGNORE INTO billing_webhook_events')) return true;
+      if (call.op === 'first' && call.sql.includes('FROM billing_webhook_events')) return { id: 'refund-event-1', status: 'received' };
+      if (call.op === 'run' && call.sql.includes('SET job_payload = COALESCE')) return true;
+      return undefined;
+    });
+    const env = { DB: db, BILLING_QUEUE: queue } as unknown as BillingEnv;
+
+    await expect(ingestBillingProviderEvent(env, {
+      projectId: '11',
+      store: 'google',
+      environment: 'production',
+      externalEventId: 'pubsub-review-1',
+      eventType: 'PENDING_REFUND_REVIEW_CHARGEBACK',
+      payload: '{"pendingRefundReviewNotification":{"pendingRefundToken":"token","orderId":"GPA.1"}}',
+      job: {
+        type: 'billing.google.refund.review',
+        projectId: '11',
+        environment: 'production',
+        eventOccurredAt: '2026-08-04T08:00:00.000Z',
+      },
+    })).resolves.toMatchObject({ event_id: 'refund-event-1', queued: true });
+    expect(queue.send).toHaveBeenCalledWith({
+      type: 'billing.google.refund.review',
+      eventId: 'refund-event-1',
+      projectId: '11',
+      environment: 'production',
+      eventOccurredAt: '2026-08-04T08:00:00.000Z',
+    });
   });
 });
 
@@ -103,14 +136,23 @@ function appleRequest() {
   };
 }
 
-function stripeRequest() {
+function googleRequest() {
   return {
     projectId: '11',
-    store: 'stripe' as 'apple' | 'google' | 'stripe',
+    store: 'google' as 'apple' | 'google',
     environment: 'sandbox' as const,
-    externalEventId: 'stripe-event-1',
-    eventType: 'checkout.session.completed',
-    payload: '{"id":"stripe-event-1"}',
-    job: { type: 'billing.stripe.notification' as const, connectionId: 'connection-1' },
+    externalEventId: 'google-event-1',
+    eventType: 'SUBSCRIPTION_RENEWED',
+    payload: '{"id":"google-event-1"}',
+    job: {
+      type: 'billing.google.notification' as const,
+      projectId: '11',
+      purchaseToken: 'purchase-token',
+      productId: 'product-id',
+      productType: 'subscription' as const,
+      eventType: 'SUBSCRIPTION_RENEWED',
+      eventOccurredAt: '2026-08-04T08:00:00.000Z',
+      environment: 'sandbox' as const,
+    },
   };
 }

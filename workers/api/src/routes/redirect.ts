@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
-import { isFullAccess } from '../lib/deployment';
 import { Env } from '../types';
 import { generateShortCode } from '../lib/crypto';
+import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readApiJson } from '../lib/request-body';
 
 const redirect = new Hono<{ Bindings: Env }>();
 
@@ -15,9 +16,7 @@ function dashboardUrl(c: any): string {
 }
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return await c.req.parseBody().catch(() => ({}));
+  return readRequestObjectLimited(c.req.raw, 10 * 1024 * 1024);
 }
 
 function firstValue(body: Record<string, any>, ...names: string[]) {
@@ -187,7 +186,7 @@ redirect.post('/create', async (c) => {
 });
 
 redirect.post('/', async (c) => {
-  const body = await c.req.json().catch(() => ({} as any));
+  const body = await readApiJson(c.req.raw);
   const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || '0.0.0.0';
   const userAgent = body.user_agent || c.req.header('User-Agent') || '';
   const device = await c.env.DB.prepare(`
@@ -277,7 +276,6 @@ redirect.get('/:code', async (c) => {
            p.name AS project_name,
            p.instance_id,
            i.uri_scheme,
-           COALESCE(i.quota_exceeded, 0) AS quota_exceeded,
            d.generic_title, d.generic_subtitle, d.generic_image_url
     FROM links l
     JOIN redirect_configs rc ON rc.id = l.redirect_config_id
@@ -291,15 +289,11 @@ redirect.get('/:code', async (c) => {
     project_id: number; instance_id: number; project_name: string | null; uri_scheme: string | null;
     show_preview_ios: number | null; show_preview_android: number | null;
     config_show_preview_ios: number | null; config_show_preview_android: number | null;
-    quota_exceeded: number; generic_title: string | null; generic_subtitle: string | null; generic_image_url: string | null;
+    generic_title: string | null; generic_subtitle: string | null; generic_image_url: string | null;
   }>();
 
   if (!link) {
     return c.redirect(dashboardUrl(c), 302);
-  }
-
-  if (!isFullAccess(c.env) && link.quota_exceeded === 1) {
-    return c.html(generateQuotaExceededPage(link.project_name || 'OpenGrow'), 402);
   }
 
   // Detect platform
@@ -458,29 +452,6 @@ async function googlePlayUrl(db: D1Database, instanceId: number): Promise<string
     LIMIT 1
   `).bind(instanceId).first<{ identifier: string }>();
   return row?.identifier ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(row.identifier)}` : 'https://play.google.com';
-}
-
-function generateQuotaExceededPage(name: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quota exceeded</title>
-  <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; background: #f9fafb; }
-    main { width: min(440px, calc(100vw - 32px)); text-align: center; }
-    h1 { font-size: 24px; margin: 0 0 10px; }
-    p { color: #4b5563; line-height: 1.5; margin: 0; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Link temporarily unavailable</h1>
-    <p>${escapeHtml(name)} has exceeded its current usage quota.</p>
-  </main>
-</body>
-</html>`;
 }
 
 function generatePlatformHandlingPage(config: {

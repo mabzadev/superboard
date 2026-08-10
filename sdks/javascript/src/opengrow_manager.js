@@ -13,11 +13,17 @@ class OpenGrowManager {
    * @param {string} APIKey - The API key for authentication.
    * @param {boolean} testEnvironment - Indicates if the environment is a test environment.
    * @param {Function} linkHandlingCallback - Callback function to handle OpenGrow data.
+   * @param {string} baseURL - Application-specific SDK origin.
    */
-  constructor(APIKey, testEnvironment, linkHandlingCallback) {
+  constructor(APIKey, testEnvironment, linkHandlingCallback, baseURL) {
+    const parsedBaseURL = new URL(baseURL);
+    if (!/^https?:$/.test(parsedBaseURL.protocol) || !parsedBaseURL.hostname) {
+      throw new TypeError("baseURL must be an absolute HTTP(S) URL");
+    }
     // Set API key and environment in the context
     OpenGrowContext.API_KEY = APIKey;
     OpenGrowContext.testEnvironment = testEnvironment;
+    OpenGrowContext.API_BASE_URL = `${parsedBaseURL.origin}/api/v1/sdk`;
 
     // Initialize callback for handling links
     this.linkHandlingCallback = linkHandlingCallback;

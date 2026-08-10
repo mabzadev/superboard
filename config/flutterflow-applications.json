@@ -1,0 +1,27 @@
+{
+  "$schema": "../schemas/flutterflow-applications.schema.json",
+  "schemaVersion": 2,
+  "owner": "opengrow-platform",
+  "applications": [
+    {
+      "id": "vocostar",
+      "displayName": "VocoStar",
+      "target": "vocostar",
+      "environment": "production",
+      "sourceSnapshot": "config/flutterflow-sources/vocostar.json",
+      "migrationPlan": "config/flutterflow-migrations/vocostar.json",
+      "remoteProject": {
+        "githubEnvironment": "flutterflow-vocostar",
+        "projectIdVariable": "FF_APPLICATION_PROJECT_ID",
+        "apiKeySecret": "FF_API_KEY"
+      },
+      "libraryProjectIdVariable": "FF_LIBRARY_PROJECT_ID",
+      "client": {
+        "projectKeySecret": "OPENGROW_PROJECT_KEY",
+        "uriScheme": "vocostar",
+        "applicationIdentifier": "com.createurs.vocostar",
+        "supportProjectId": 12
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+name: Prepare immutable SDK release
+
+on:
+  workflow_dispatch:
+    inputs:
+      library:
+        description: Library declared ready in config/sdk-libraries.json
+        required: true
+        type: choice
+        options:
+          - flutter
+          - flutterflow
+          - flutterflow-support
+          - ios
+          - android
+          - javascript
+          - react-native
+      source_ref:
+        description: Exact reviewed head of the catalogue development branch
+        required: true
+        default: dev
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-release-${{ inputs.library }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      development_branch: ${{ steps.source.outputs.development_branch }}
+      tag: ${{ steps.release.outputs.tag }}
+      release_ref: ${{ steps.release.outputs.release_ref }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+      - name: Verify complete SDK catalogue
+        run: node scripts/sdk-catalog.mjs check
+      - name: Require the exact official development head
+        id: source
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          development_branch="$(node -p 'require("./config/sdk-libraries.json").developmentBranch')"
+          test "$SOURCE_REF" = "$development_branch" || [[ "$SOURCE_REF" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags origin "refs/heads/$development_branch"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "development_branch=$development_branch" >> "$GITHUB_OUTPUT"
+      - name: Resolve immutable release tag
+        id: release
+        env:
+          LIBRARY: ${{ inputs.library }}
+        run: |
+          tag="$(node scripts/sdk-catalog.mjs candidate-tag --library "$LIBRARY")"
+          release_ref="$(node scripts/sdk-catalog.mjs candidate-ref --library "$LIBRARY")"
+          node scripts/sdk-catalog.mjs check --candidate-release-tag "$tag"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag already exists: $tag" >&2
+            exit 1
+          fi
+          if test "$release_ref" != "$tag" && git ls-remote --exit-code --tags origin "refs/tags/$release_ref" >/dev/null 2>&1; then
+            echo "Package reference already exists: $release_ref" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_ref=$release_ref" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        if: ${{ inputs.library == 'flutter' || inputs.library == 'flutterflow' || inputs.library == 'flutterflow-support' }}
+        with:
+          channel: stable
+          cache: true
+      - name: Validate the candidate Dart package before creating its tag
+        if: ${{ inputs.library == 'flutter' || inputs.library == 'flutterflow' || inputs.library == 'flutterflow-support' }}
+        env:
+          LIBRARY: ${{ inputs.library }}
+        run: |
+          case "$LIBRARY" in
+            flutter) package_path="sdks/flutter" ;;
+            flutterflow) package_path="sdks/flutterflow" ;;
+            flutterflow-support) package_path="sdks/flutterflow_messaging" ;;
+            *) exit 64 ;;
+          esac
+          (cd "$package_path" && flutter pub get && flutter analyze && flutter test)
+
+  tag:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: sdk-release
+    permissions:
+      contents: write
+    env:
+      SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+      DEVELOPMENT_BRANCH: ${{ needs.validate.outputs.development_branch }}
+      TAG: ${{ needs.validate.outputs.tag }}
+      RELEASE_REF: ${{ needs.validate.outputs.release_ref }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          fetch-depth: 0
+      - name: Revalidate the reviewed source and unused immutable refs
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git fetch --no-tags origin "refs/heads/$DEVELOPMENT_BRANCH"
+          test "$(git rev-parse FETCH_HEAD)" = "$SOURCE_SHA"
+          node scripts/sdk-catalog.mjs check --candidate-release-tag "$TAG"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG" >&2
+            exit 1
+          fi
+          if test "$RELEASE_REF" != "$TAG" && git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_REF" >/dev/null 2>&1; then
+            echo "Package reference already exists: $RELEASE_REF" >&2
+            exit 1
+          fi
+      - name: Create reviewed SDK tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          if test "$RELEASE_REF" != "$TAG"; then
+            git tag -a "$RELEASE_REF" -m "Package release $TAG"
+            git push --atomic origin "refs/tags/$TAG" "refs/tags/$RELEASE_REF"
+          else
+            git push origin "refs/tags/$TAG"
+          fi

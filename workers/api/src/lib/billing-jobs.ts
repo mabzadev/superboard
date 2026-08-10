@@ -3,7 +3,8 @@ import { decryptCredential, hmacSha256 } from './secrets';
 import { verifyAppleNotification } from './store-verification';
 import { reconcileAppleSubscription, verifyGooglePurchase } from './store-verification';
 import { applyVerifiedPurchase, queueCustomerEntitlementChanged, type BillingEnvironment } from './billing';
-import { reconcileStripeSubscription } from './stripe-subscription-reconciliation';
+import { recordGooglePendingRefundReview } from './refunds';
+import { readTextLimited } from './http-limits';
 
 export async function reconcileRefundDeadlines(env: BillingEnv, limit = 100) {
   const boundedLimit = Math.max(1, Math.min(500, Math.trunc(limit || 100)));
@@ -122,6 +123,43 @@ export async function processGoogleBillingNotification(env: BillingEnv, params: 
   }
 }
 
+export async function processGooglePendingRefundReview(env: BillingEnv, params: {
+  eventId: string;
+  projectId: string;
+  eventOccurredAt: string;
+  environment: BillingEnvironment;
+}) {
+  try {
+    const event = await env.DB.prepare(`
+      SELECT payload FROM billing_webhook_events
+      WHERE id = ? AND project_id = ? AND store = 'google' AND environment = ?
+      LIMIT 1
+    `).bind(params.eventId, params.projectId, params.environment).first<{ payload: string }>();
+    if (!event?.payload || event.payload.length > 1_048_576) throw new Error('Google pending refund review payload is unavailable');
+    let payload: Record<string, unknown>;
+    try { payload = JSON.parse(event.payload) as Record<string, unknown>; }
+    catch { throw new Error('Google pending refund review payload is invalid'); }
+    const result = await recordGooglePendingRefundReview(env, {
+      projectId: params.projectId,
+      environment: params.environment,
+      eventOccurredAt: params.eventOccurredAt,
+      payload,
+    });
+    await env.DB.prepare(`
+      UPDATE billing_webhook_events SET status = 'processed', attempts = attempts + 1,
+        event_type = 'PENDING_REFUND_REVIEW_CHARGEBACK', processed_at = datetime('now'), error_message = NULL
+      WHERE id = ?
+    `).bind(params.eventId).run();
+    return { processed: true, refund_case_id: result?.caseId || null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await env.DB.prepare(`
+      UPDATE billing_webhook_events SET status = 'failed', attempts = attempts + 1, error_message = ? WHERE id = ?
+    `).bind(message.slice(0, 1000), params.eventId).run();
+    throw error;
+  }
+}
+
 function safeWebhookUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== 'https:') throw new Error('Billing webhook URL must use HTTPS');
@@ -132,60 +170,174 @@ function safeWebhookUrl(value: string): URL {
   return url;
 }
 
+function webhookDeliveryError(message: string, retryable: boolean, retryDelaySeconds?: number) {
+  return Object.assign(new Error(message), {
+    retryable,
+    ...(retryDelaySeconds ? { retryDelaySeconds } : {}),
+  });
+}
+
+function webhookRetryDelay(attempt: number, response?: Response) {
+  const retryAfter = Number(response?.headers.get('Retry-After') || 0);
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return Math.max(30, Math.min(3600, Math.trunc(retryAfter)));
+  }
+  return Math.min(3600, 30 * (1 << Math.min(7, Math.max(1, attempt))));
+}
+
+function responseDeclaresRetryable(body: string) {
+  try {
+    const value = JSON.parse(body);
+    return Boolean(value && typeof value === 'object' && value.retryable === true);
+  } catch {
+    return false;
+  }
+}
+
+async function responsePreview(response: Response) {
+  try {
+    return await readTextLimited(response, 4096, 'Webhook response body is too large');
+  } catch (error) {
+    if ((error as { code?: string })?.code === 'body_too_large') {
+      return '[Webhook response body exceeded 4096 bytes]';
+    }
+    throw error;
+  }
+}
+
+async function recordWebhookDeliveryFailure(env: BillingEnv, params: {
+  deliveryId: string;
+  claimToken: string;
+  attempt: number;
+  message: string;
+  retryable: boolean;
+  retryDelaySeconds: number;
+  responseStatus?: number | null;
+  responseBody?: string | null;
+}) {
+  await env.DB.prepare(`
+    UPDATE billing_webhook_deliveries
+    SET attempts = ?, last_attempt_at = datetime('now'), response_status = ?, response_body = ?,
+        error_message = ?, status = 'failed',
+        next_attempt_at = CASE WHEN ? THEN datetime('now', '+' || ? || ' seconds') ELSE NULL END,
+        claim_token = NULL, claim_expires_at = NULL
+    WHERE id = ? AND claim_token = ?
+  `).bind(
+    params.attempt,
+    params.responseStatus ?? null,
+    params.responseBody?.slice(0, 4096) ?? null,
+    params.message.slice(0, 1000),
+    params.retryable ? 1 : 0,
+    params.retryDelaySeconds,
+    params.deliveryId,
+    params.claimToken,
+  ).run();
+}
+
 export async function deliverBillingWebhook(env: BillingEnv, deliveryId: string) {
+  const claimToken = crypto.randomUUID();
+  const claimed = await env.DB.prepare(`
+    UPDATE billing_webhook_deliveries
+    SET claim_token = ?, claim_expires_at = datetime('now', '+2 minutes')
+    WHERE id = ? AND status IN ('pending', 'failed')
+      AND attempts < 10
+      AND (next_attempt_at IS NULL OR datetime(next_attempt_at) <= datetime('now'))
+      AND (claim_token IS NULL OR claim_expires_at IS NULL OR datetime(claim_expires_at) <= datetime('now'))
+  `).bind(claimToken, deliveryId).run();
+  if (Number(claimed.meta.changes || 0) === 0) {
+    const state = await env.DB.prepare(`
+      SELECT status, attempts, next_attempt_at, claim_expires_at
+      FROM billing_webhook_deliveries WHERE id = ? LIMIT 1
+    `).bind(deliveryId).first<Record<string, unknown>>();
+    if (!state) throw webhookDeliveryError('Billing webhook delivery not found', false);
+    return { skipped: true, status: String(state.status || 'unknown') };
+  }
   const delivery = await env.DB.prepare(`
     SELECT d.id, d.payload, d.attempts, e.url, e.signing_secret_encrypted, e.active
     FROM billing_webhook_deliveries d
     JOIN billing_webhook_endpoints e ON e.id = d.endpoint_id
-    WHERE d.id = ?
+    WHERE d.id = ? AND d.claim_token = ?
     LIMIT 1
-  `).bind(deliveryId).first<Record<string, unknown>>();
-  if (!delivery) throw new Error('Billing webhook delivery not found');
-  if (Number(delivery.active) !== 1) return { skipped: true };
-  safeWebhookUrl(String(delivery.url));
-  const payload = String(delivery.payload);
-  const secretReference = String(delivery.signing_secret_encrypted);
-  const secret = [
-    'env:OPENGROW_ENTITLEMENT_WEBHOOK_SECRET',
-    'env:OPENGROW_VOCOSTAR_WEBHOOK_SECRET',
-  ].includes(secretReference)
-    ? env.OPENGROW_ENTITLEMENT_WEBHOOK_SECRET || env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET
-    : await decryptCredential(env, secretReference);
-  if (!secret) throw new Error('Billing webhook signing secret is unavailable');
-  const timestamp = String(Math.floor(Date.now() / 1000));
-  const signature = await hmacSha256(secret, `${timestamp}.${payload}`);
+  `).bind(deliveryId, claimToken).first<Record<string, unknown>>();
+  if (!delivery) throw webhookDeliveryError('Claimed billing webhook delivery not found', false);
   const attempt = Number(delivery.attempts || 0) + 1;
-  const response = await fetch(String(delivery.url), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'OpenGrow-Purchases-Webhook/1.0',
-      'X-OpenGrow-Delivery': deliveryId,
-      'X-OpenGrow-Timestamp': timestamp,
-      'X-OpenGrow-Signature': `v1=${signature}`,
-    },
-    body: payload,
-    redirect: 'error',
-  });
-  const responseBody = (await response.text()).slice(0, 4096);
-  await env.DB.prepare(`
-    UPDATE billing_webhook_deliveries
-    SET attempts = ?, last_attempt_at = datetime('now'), response_status = ?, response_body = ?,
-        status = ?, delivered_at = CASE WHEN ? THEN datetime('now') ELSE delivered_at END,
-        next_attempt_at = CASE WHEN ? THEN NULL ELSE datetime('now', '+' || MIN(3600, 30 * (1 << MIN(7, ?))) || ' seconds') END
-    WHERE id = ?
-  `).bind(
-    attempt,
-    response.status,
-    responseBody,
-    response.ok ? 'delivered' : 'failed',
-    response.ok ? 1 : 0,
-    response.ok ? 1 : 0,
-    attempt,
-    deliveryId,
-  ).run();
-  if (!response.ok) throw new Error(`Billing webhook returned HTTP ${response.status}`);
-  return { delivered: true, status: response.status };
+  if (Number(delivery.active) !== 1) {
+    await env.DB.prepare(`
+      UPDATE billing_webhook_deliveries
+      SET status = 'skipped', next_attempt_at = NULL, error_message = 'Webhook endpoint is inactive',
+          claim_token = NULL, claim_expires_at = NULL
+      WHERE id = ? AND claim_token = ?
+    `).bind(deliveryId, claimToken).run();
+    return { skipped: true, status: 'inactive' };
+  }
+  let response: Response | undefined;
+  try {
+    try {
+      safeWebhookUrl(String(delivery.url));
+    } catch (error) {
+      throw webhookDeliveryError(
+        error instanceof Error ? error.message : 'Billing webhook URL is invalid',
+        false,
+      );
+    }
+    const payload = String(delivery.payload);
+    const secretReference = String(delivery.signing_secret_encrypted);
+    const secret = secretReference === 'env:OPENGROW_ENTITLEMENT_WEBHOOK_SECRET'
+      ? env.OPENGROW_ENTITLEMENT_WEBHOOK_SECRET
+      : await decryptCredential(env, secretReference);
+    if (!secret) throw webhookDeliveryError('Billing webhook signing secret is unavailable', false);
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const signature = await hmacSha256(secret, `${timestamp}.${payload}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort('Webhook delivery timed out'), 15_000);
+    try {
+      response = await fetch(String(delivery.url), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'OpenGrow-Purchases-Webhook/1.0',
+          'X-OpenGrow-Delivery': deliveryId,
+          'X-OpenGrow-Timestamp': timestamp,
+          'X-OpenGrow-Signature': `v1=${signature}`,
+        },
+        body: payload,
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    const responseBody = await responsePreview(response);
+    if (!response.ok) {
+      const retryable = response.status === 408 || response.status === 429
+        || response.status >= 500 || responseDeclaresRetryable(responseBody);
+      const retryDelaySeconds = webhookRetryDelay(attempt, response);
+      const message = `Billing webhook returned HTTP ${response.status}`;
+      await recordWebhookDeliveryFailure(env, {
+        deliveryId, claimToken, attempt, message, retryable, retryDelaySeconds,
+        responseStatus: response.status, responseBody,
+      });
+      throw webhookDeliveryError(message, retryable, retryDelaySeconds);
+    }
+    await env.DB.prepare(`
+      UPDATE billing_webhook_deliveries
+      SET attempts = ?, last_attempt_at = datetime('now'), response_status = ?, response_body = ?,
+          error_message = NULL, status = 'delivered', delivered_at = datetime('now'),
+          next_attempt_at = NULL, claim_token = NULL, claim_expires_at = NULL
+      WHERE id = ? AND claim_token = ?
+    `).bind(attempt, response.status, responseBody, deliveryId, claimToken).run();
+    return { delivered: true, status: response.status };
+  } catch (error) {
+    if (response) throw error;
+    const tagged = error as { retryable?: boolean; retryDelaySeconds?: number };
+    const retryable = tagged.retryable !== false;
+    const retryDelaySeconds = tagged.retryDelaySeconds || webhookRetryDelay(attempt);
+    const message = error instanceof Error ? error.message : String(error);
+    await recordWebhookDeliveryFailure(env, {
+      deliveryId, claimToken, attempt, message, retryable, retryDelaySeconds,
+    });
+    throw webhookDeliveryError(message, retryable, retryDelaySeconds);
+  }
 }
 
 export async function reconcileBillingState(env: BillingEnv) {
@@ -280,25 +432,6 @@ export async function reconcileBillingState(env: BillingEnv) {
       await env.BILLING_QUEUE.send({ type: 'billing.google.voided.reconcile', projectId: row.project_id });
     }
   }
-  const stripeCatalogs = await env.DB.prepare(`
-    SELECT project_id, environment
-    FROM billing_store_connections
-    WHERE provider = 'stripe' AND status = 'connected'
-      AND (last_synced_at IS NULL
-        OR datetime(last_synced_at) <= datetime('now', '-12 hours')
-        OR last_error_code IS NOT NULL)
-    ORDER BY COALESCE(last_synced_at, '1970-01-01') ASC
-    LIMIT 25
-  `).all<{ project_id: string; environment: BillingEnvironment }>();
-  if (env.BILLING_QUEUE) {
-    for (const row of stripeCatalogs.results || []) {
-      await env.BILLING_QUEUE.send({
-        type: 'billing.stripe.catalog.reconcile',
-        projectId: row.project_id,
-        environment: row.environment,
-      });
-    }
-  }
   const legacyInventoryRuns = await env.DB.prepare(`
     SELECT id, next_cursor
     FROM billing_legacy_inventory_runs
@@ -324,7 +457,6 @@ export async function reconcileBillingState(env: BillingEnv) {
     refund_actions_enqueued: refundActions.results?.length || 0,
     refund_deadlines_missed: refundDeadlinesMissed,
     google_voided_reconciliations_enqueued: googleVoidedProjects.results?.length || 0,
-    stripe_catalog_reconciliations_enqueued: stripeCatalogs.results?.length || 0,
     legacy_inventory_runs_enqueued: legacyInventoryRuns.results?.length || 0,
   };
 }
@@ -361,9 +493,6 @@ export async function reconcileStoreSubscription(env: BillingEnv, subscriptionId
       });
       verified.purchase.eventType = `RECONCILIATION_${verified.purchase.status.toUpperCase()}`;
       result = { store: 'google', ...await applyVerifiedPurchase(env, verified.purchase) };
-    } else if (row.store === 'stripe') {
-      const purchase = await reconcileStripeSubscription(env, row);
-      result = { store: 'stripe', ...await applyVerifiedPurchase(env, purchase) };
     } else {
       throw Object.assign(new Error('Subscription cannot be reconciled without provider verification data'), {
         code: 'subscription_reconciliation_data_missing', retryable: false,

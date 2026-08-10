@@ -1,22 +1,32 @@
 # OpenGrow Parity Strategy
 
-OpenGrow tracks OpenGrow upstream as a Cloudflare adaptation, not as a reduced clone.
-The goal is to keep the data model, route surface, and dashboard behavior as close
-as possible to `upstream/opengrow/*`, changing only the infrastructure pieces that
-cannot run directly on Cloudflare.
+OpenGrow historically tracked a Rails upstream as a Cloudflare adaptation. The
+comparison source was expected below `upstream/opengrow/*`. Those sources are
+not present in the current platform checkout, so upstream parity is currently
+**unverified**. The checked-in Cloudflare contracts, migrations, manifests and
+tests remain authoritative for the new reference platform, but an empty
+upstream inventory must never be presented as proof of Rails parity.
+
+[ADR-001](./ADR-001-CANONICAL-OPENGROW-SOURCE.md) retires that historical
+comparison as a release gate. `opengrow-platform` is now the canonical product
+source; the fail-closed comparison remains available only as an optional
+forensic tool when immutable historical sources are supplied.
 
 ## Current Baseline
 
 - Upstream OpenGrow backend is Rails with PostgreSQL, Redis, Sidekiq, Devise,
-  Doorkeeper, Active Storage, Stripe, RPush, MCP, and mobile push integrations.
+  Doorkeeper, Active Storage, payment processor, RPush, MCP, and mobile push integrations.
 - OpenGrow backend is a Hono Worker on Cloudflare Workers with D1-compatible SQL.
-- `workers/opengrow/migrations/0004_opengrow_full_parity_schema.sql` brought the D1
-  table list closer to upstream.
-- `workers/opengrow/migrations/0005_opengrow_production_column_parity.sql` closes the
-  remaining upstream column gaps detected by `npm run migration:inventory`.
-  The table and column contract is now green locally.
-- `npm run migration:inventory` now also reports no upstream OpenGrow route missing
-  from the Worker route surface.
+- the local inventory currently finds 315 Worker routes and 118 central API D1
+  tables;
+- `npm run migration:inventory` reports these local counts and explicitly emits
+  `verification.status=upstream-unavailable` while the comparison source is
+  absent;
+- missing-route, extra-route, missing-table and missing-column fields are `null`,
+  rather than misleading empty arrays, whenever no upstream comparison ran;
+- `npm run migration:parity:check` is the fail-closed command for an actual
+  upstream comparison. It exits non-zero until
+  `upstream/opengrow/backend` is available.
 - The Auth/Users module now follows the upstream Devise/Doorkeeper flows for
   client-validated registration, OAuth password/refresh tokens, invitations,
   password reset tokens, TOTP 2FA challenge/verification, identity SSO
@@ -36,7 +46,7 @@ cannot run directly on Cloudflare.
   details backed by D1 event data.
 - Purchase and revenue APIs now read real `purchase_events` rows for purchase
   search, product-level revenue metrics, dashboard revenue cards and the
-  enterprise revenue page.
+  operator revenue views.
 - Messaging now persists notification targets, creates notification messages for
   existing and new SDK visitors, exposes upstream SDK notification endpoints,
   tracks read counts, and renders the messaging table from real D1 rows.
@@ -45,13 +55,13 @@ cannot run directly on Cloudflare.
   send the upstream-shaped export email.
 - The account MCP section now lists and revokes real connected MCP tokens from
   `mcp_tokens`, with client-name resolution from `mcp_clients`.
-- Stripe billing now uses real subscription rows, hosted checkout, billing
-  portal sessions, signed Stripe webhooks, local webhook idempotence, Stripe
-  subscription status updates and MAU usage reporting.
 - Push delivery now keeps the upstream RPush table contract, synchronizes
   APNs/FCM app rows from platform credentials, queues `rpush_notifications` for
   push-enabled campaigns and processes them through Cloudflare Worker routes
-  using APNs token auth or FCM HTTP v1.
+  using APNs token auth or FCM HTTP v1. Provider private keys and cached FCM
+  bearer tokens are encrypted at rest; a bounded idempotent maintenance pass
+  converges legacy plaintext rows, while conditional leases prevent concurrent
+  consumers from sending the same notification.
 - Apple and Google IAP webhooks now persist webhook logs, validated
   `purchase_events`, subscription state updates and protected subscription
   reconciliation on Cloudflare.
@@ -62,34 +72,42 @@ cannot run directly on Cloudflare.
   backfills daily analytics tables and cleans expired R2 downloadable files.
 - OpenGrow diagnostics endpoints now run on Workers with structured logs, D1/KV
   checks, protected access and intentional exception testing.
-- OpenGrow admin and automation machine routes are now available on Workers with
-  `X-AUTH`/`ADMIN_API_KEY`, enterprise subscription writes, Firebase CSV link
-  migration, event flushing, visitor automation metrics and link details.
+- OpenGrow admin and automation machine routes are available on Workers with
+  `X-AUTH`/`ADMIN_API_KEY` for Firebase CSV link migration, event flushing,
+  visitor automation metrics and link details. Legacy OpenGrow subscription
+  writes were deliberately removed from the reference back-office surface.
 - The Worker SDK route now supports both the existing Cloudflare `X-Api-Key`
   adapter and upstream OpenGrow `PROJECT-KEY`/`LINKSQUARED` endpoints for
   authenticate, device lookup, events, deferred link data, SDK link creation,
   visitor attributes, payment events and server SDK metrics.
 - Public shortlink compatibility now covers upstream quick-link creation
-  (`POST /create`), quick-link rendering/redirects, public wildcard routes,
-  marketing-message wildcard routes and `notifications/test`.
+  (`POST /create`), quick-link rendering/redirects, public wildcard routes and
+  marketing-message wildcard routes. The unauthenticated placeholder
+  `notifications/test` route was deliberately removed; real notification
+  creation, search, inbox/read state and APNs/FCM delivery use authenticated
+  project, SDK and processor contracts.
 - MCP OAuth 2.1 and protected API routes now perform real D1 client
   registration, PKCE consent/token exchange, project, link, campaign, redirect,
   SDK setup and analytics operations behind bearer-token auth.
 - Dashboard code remains a Cloudflare Pages adaptation of the upstream Next app.
-- The authoritative production baseline is the latest `origin/main` commit for
-  each `upstream/opengrow/*` submodule, not an older checked-out submodule pointer.
+- If historical upstream sources are restored, their exact repository URLs and
+  immutable revisions must be recorded before parity is claimed. A moving
+  `origin/main`, an absent directory or an empty result is not acceptable
+  evidence.
 
 ## Porting Rules
 
-1. Treat `upstream/opengrow/backend/db/schema.rb` as the source of truth for tables,
-   indexes, and associations.
+1. When the historical upstream is deliberately restored, treat its recorded
+   `backend/db/schema.rb` revision as the comparison source for tables, indexes
+   and associations. Until then, do not claim upstream parity.
 2. Keep Rails column names when possible. If the Worker already uses a Cloudflare
    compatibility name, keep both names until the Worker code can be safely moved.
 3. Do not add permanent "not available" endpoints. If a feature is not fully
    implemented yet, back it with the upstream-shaped tables and make the missing
    behavior explicit in follow-up work.
-4. Do not edit `upstream/opengrow/*` for product work. Port behavior into
-   `workers/opengrow` and `apps/dashboard`.
+4. Do not edit restored `upstream/opengrow/*` comparison sources for product
+   work. Port behavior into `workers/api`, the domain Workers and
+   `apps/dashboard`.
 5. Prefer Cloudflare-native replacements for infrastructure:
    - D1 for PostgreSQL tables that fit relational storage.
    - R2 for Active Storage blobs and exports.
@@ -99,8 +117,16 @@ cannot run directly on Cloudflare.
 6. Rust Workers are allowed by Cloudflare, but language choice is secondary to
    preserving OpenGrow behavior and schema compatibility.
 
-## Known Remaining Gaps
+## Historical comparison status
 
+- The historical Rails source and the other former upstream repositories are
+  not checked out. Consequently route/schema parity against them is not proven
+  and is never shown as green. This is recorded provenance, not an active
+  OpenGrow release blocker under ADR-001.
+- An operator may restore exact immutable sources and run
+  `npm run migration:parity:check` to discover useful historical behavior. The
+  result cannot supersede the current canonical manifests, migrations and
+  contracts without a reviewed product change.
 - Background-job and internal service parity is still being worked module by
   module. The schema, route surface, primary dashboard flows, exports, mail,
   billing, push, IAP, MCP and public quick-link paths are no longer blocked by

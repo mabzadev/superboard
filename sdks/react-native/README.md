@@ -1,8 +1,8 @@
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow">
+  <a href="https://github.com/mbzadev/opengrow-platform">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
-      <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg">
+      <img src="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
     </picture>
   </a>
 </p>
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.opengrow.io/docs/sdk/react-native/quick-start">Quick Start</a> ·
-  <a href="https://docs.opengrow.io/docs/sdk/react-native/api-reference">API Reference</a> ·
-  <a href="https://docs.opengrow.io">Full Docs</a>
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native#usage">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -275,7 +275,7 @@ if (token) {
 }
 ```
 
-Upload your Firebase or APNs credentials in the [OpenGrow dashboard](https://app.opengrow.io).
+Upload your Firebase or APNs credentials in the OpenGrow Dashboard deployed for the active application target.
 
 ### Display messages
 
@@ -294,7 +294,7 @@ console.log(`Unread: ${count}`);
 
 ### Setup
 
-1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
 2. Configure platform notifications:
    - **Android** — Set up Google Play Real-Time Developer Notifications
    - **iOS** — Configure App Store Server Notifications in App Store Connect
@@ -340,24 +340,23 @@ Use `'cancel'` and `'refund'` types for cancellations and refunds. For store pur
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [docs.opengrow.io/docs/sdk/react-native/api-reference](https://docs.opengrow.io/docs/sdk/react-native/api-reference)
+Full API reference: [React Native SDK API reference](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/opengrow/tree/main/sdks/react-native/example).
+A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/react-native/example).
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/android)
-- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/android)
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
 
 ## Support
 
-For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
+For technical support, use the support channel configured for the active target or open a repository issue.
 
 ## License
 

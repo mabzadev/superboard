@@ -10,7 +10,6 @@ import {
   resolvePurchaseConfiguration,
   type TargetingContext,
 } from '../lib/purchases-v2';
-import { createWebCheckoutSession, createWebPortalSession, redeemWebPurchase } from '../lib/web-billing';
 import {
   billingServiceEnabled,
   callBillingService,
@@ -18,11 +17,12 @@ import {
   resolveCustomerFromBillingAuthority,
 } from '../lib/billing-service';
 import { recordDeviceCertificationResult } from '../lib/device-certification';
+import { readApiJson } from '../lib/request-body';
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
 async function body(c: any): Promise<Record<string, any>> {
-  return c.req.json().catch(() => ({}));
+  return readApiJson(c.req.raw);
 }
 
 async function context(c: any) {
@@ -33,14 +33,12 @@ async function context(c: any) {
            COALESCE(s.purchases_enabled, 0) AS purchases_enabled,
            COALESCE(f.purchases_core, 1) AS purchases_core,
            COALESCE(f.paywalls, 1) AS paywalls,
-           COALESCE(f.growth, 1) AS growth,
-           COALESCE(f.web_billing, 1) AS web_billing,
            COALESCE(f.virtual_currencies, 1) AS virtual_currencies
     FROM projects p
     LEFT JOIN billing_project_settings s ON s.project_id = p.id
     LEFT JOIN billing_feature_flags f ON f.project_id = p.id
     WHERE p.id = ? LIMIT 1
-  `).bind(String(projectId)).first() as { id: number; is_test: number; purchases_enabled: number; purchases_core: number; paywalls: number; growth: number; web_billing: number; virtual_currencies: number } | null;
+  `).bind(String(projectId)).first() as { id: number; is_test: number; purchases_enabled: number; purchases_core: number; paywalls: number; virtual_currencies: number } | null;
   if (!project) throw purchasesError('invalid_sdk_project', 'Invalid project for SDK credentials', 403);
   if (!isPurchasesEnabled(c.env, project.purchases_enabled)) throw purchasesError('purchases_disabled', 'OpenGrow Purchases is not enabled for this project', 403);
   if (Number(project.purchases_core) !== 1) throw purchasesError('purchases_v2_not_enabled', 'Purchases v2 core is not enabled for this project', 403);
@@ -54,8 +52,6 @@ async function context(c: any) {
     environment: (Number(project.is_test) === 1 ? 'sandbox' : 'production') as BillingEnvironment,
     features: {
       paywalls: Number(project.paywalls) === 1,
-      growth: Number(project.growth) === 1,
-      webBilling: Number(project.web_billing) === 1,
       virtualCurrencies: Number(project.virtual_currencies) === 1,
     },
     ...resolved,
@@ -99,7 +95,7 @@ sdk.get('/configuration', async (c) => {
       String(ctx.customer.id),
       placement,
       targetingContext(c, ctx.customer),
-      { growthEnabled: ctx.features.growth, paywallsEnabled: ctx.features.paywalls },
+      { paywallsEnabled: ctx.features.paywalls },
     );
     const offerings = await offeringsForCustomer(c.env.DB, ctx.projectId, platform, ctx.environment, placement);
     const selected = resolved.offeringIdentifier ? (offerings.all as Record<string, unknown>)[resolved.offeringIdentifier] : offerings.current;
@@ -183,11 +179,9 @@ sdk.post('/events', async (c) => {
     const ctx = await context(c); const data = await body(c);
     const events = Array.isArray(data.events) ? data.events : [data];
     if (events.length < 1 || events.length > 100) throw purchasesError('invalid_event_batch', 'Events batch must contain 1-100 events');
-    const eventIds: string[] = [];
-    const statements = events.map((event: Record<string, any>, index: number) => {
+    const statements = events.map((event: Record<string, any>) => {
       if (!PAYWALL_EVENT_TYPES.includes(event.type)) throw purchasesError('invalid_event_type', `Unsupported paywall event: ${event.type}`);
       const id = String(event.id || crypto.randomUUID());
-      eventIds[index] = id;
       const occurredAt = event.occurred_at && !Number.isNaN(Date.parse(event.occurred_at)) ? event.occurred_at : new Date().toISOString();
       return c.env.DB.prepare(`
         INSERT OR IGNORE INTO billing_paywall_events (
@@ -204,27 +198,6 @@ sdk.post('/events', async (c) => {
       );
     });
     const results = await c.env.DB.batch(statements);
-    if (c.env.EVENT_QUEUE) {
-      for (const [index, event] of events.entries()) {
-        const metadata = event.metadata && typeof event.metadata === 'object' && !Array.isArray(event.metadata)
-          ? event.metadata as Record<string, unknown>
-          : {};
-        const sessionId = typeof metadata.session_id === 'string' ? metadata.session_id.trim() : '';
-        if (!['closed', 'purchase_cancelled', 'purchase_failed'].includes(String(event.type))
-          || !sessionId || sessionId.length > 128) continue;
-        c.executionCtx.waitUntil(c.env.EVENT_QUEUE.send({
-          type: 'growth.paywall-abandonment.evaluate',
-          projectId: ctx.projectId,
-          paywallEventId: eventIds[index],
-        }, { delaySeconds: 30 }).catch((error) => {
-          console.error(JSON.stringify({
-            event: 'paywall_growth_projection_queue_failed',
-            paywall_event_id: eventIds[index],
-            error: error instanceof Error ? error.message : String(error),
-          }));
-        }));
-      }
-    }
     return c.json({ accepted: results.reduce((sum: number, item: any) => sum + Number(item.meta.changes || 0), 0), received: events.length }, 202);
   } catch (error) { return fail(c, error); }
 });
@@ -313,87 +286,6 @@ sdk.get('/customer-center', async (c) => {
         management_url: subscriptions.find((item) => item.management_url)?.management_url || null,
       },
     });
-  } catch (error) { return fail(c, error); }
-});
-
-sdk.post('/checkout-sessions', async (c) => {
-  try {
-    const ctx = await context(c); const data = await body(c);
-    if (!ctx.features.webBilling) throw purchasesError('web_billing_not_enabled', 'Web Billing is not enabled for this project', 403);
-    if (!data.package_identifier || !data.success_url || !data.cancel_url) {
-      throw purchasesError('checkout_fields_required', 'package_identifier, success_url and cancel_url are required');
-    }
-    const idempotencyKey = c.req.header('Idempotency-Key') || data.idempotency_key;
-    if (!idempotencyKey) throw purchasesError('idempotency_key_required', 'Idempotency-Key header is required');
-    if (billingServiceEnabled(c.env)) {
-      const result = await callBillingService<{ data: Record<string, unknown> }>(c.env, '/internal/v1/web/checkout-sessions', {
-        project_id: ctx.projectId,
-        customer_id: String(ctx.customer.id),
-        package_identifier: String(data.package_identifier),
-        offering_identifier: data.offering_identifier ? String(data.offering_identifier) : undefined,
-        provider: data.provider ? String(data.provider) : undefined,
-        environment: ctx.environment,
-        success_url: String(data.success_url),
-        cancel_url: String(data.cancel_url),
-        idempotency_key: String(idempotencyKey),
-      });
-      return c.json(result.data);
-    }
-    return c.json(await createWebCheckoutSession(c.env, {
-      projectId: ctx.projectId,
-      customerId: String(ctx.customer.id),
-      packageIdentifier: String(data.package_identifier),
-      offeringIdentifier: data.offering_identifier ? String(data.offering_identifier) : undefined,
-      provider: data.provider ? String(data.provider) : undefined,
-      environment: ctx.environment,
-      successUrl: String(data.success_url),
-      cancelUrl: String(data.cancel_url),
-      idempotencyKey: String(idempotencyKey),
-    }));
-  } catch (error) { return fail(c, error); }
-});
-
-sdk.post('/portal-sessions', async (c) => {
-  try {
-    const ctx = await context(c); const data = await body(c);
-    if (!ctx.features.webBilling) throw purchasesError('web_billing_not_enabled', 'Web Billing is not enabled for this project', 403);
-    if (!data.return_url) throw purchasesError('return_url_required', 'return_url is required');
-    if (billingServiceEnabled(c.env)) {
-      const result = await callBillingService<{ data: Record<string, unknown> }>(c.env, '/internal/v1/web/portal-sessions', {
-        project_id: ctx.projectId,
-        customer_id: String(ctx.customer.id),
-        environment: ctx.environment,
-        return_url: String(data.return_url),
-      });
-      return c.json(result.data);
-    }
-    return c.json(await createWebPortalSession(c.env, {
-      projectId: ctx.projectId,
-      customerId: String(ctx.customer.id),
-      environment: ctx.environment,
-      returnUrl: String(data.return_url),
-    }));
-  } catch (error) { return fail(c, error); }
-});
-
-sdk.post('/redemptions', async (c) => {
-  try {
-    const ctx = await context(c); const data = await body(c);
-    if (!ctx.features.webBilling) throw purchasesError('web_billing_not_enabled', 'Web Billing is not enabled for this project', 403);
-    if (!data.code) throw purchasesError('redemption_code_required', 'Redemption code is required');
-    if (billingServiceEnabled(c.env)) {
-      const result = await callBillingService<{ data: Record<string, unknown> }>(c.env, '/internal/v1/web/redemptions', {
-        project_id: ctx.projectId,
-        customer_id: String(ctx.customer.id),
-        code: String(data.code),
-      });
-      return c.json(result.data);
-    }
-    return c.json(await redeemWebPurchase(c.env, {
-      projectId: ctx.projectId,
-      customerId: String(ctx.customer.id),
-      code: String(data.code),
-    }));
   } catch (error) { return fail(c, error); }
 });
 

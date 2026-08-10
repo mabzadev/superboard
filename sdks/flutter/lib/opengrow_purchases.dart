@@ -71,6 +71,7 @@ class OpenGrowPurchases {
       StreamController<OpenGrowCustomerInfo>.broadcast();
   final _purchaseCompleters = <String, Completer<OpenGrowPurchaseResult>>{};
   final _pendingStoreCompletions = <String, PurchaseDetails>{};
+  final _bufferedPurchaseBatches = <List<PurchaseDetails>>[];
   final _purchaseResultController =
       StreamController<OpenGrowPurchaseResult>.broadcast();
   final _products = <String, ProductDetails>{};
@@ -78,13 +79,17 @@ class OpenGrowPurchases {
   Timer? _restoreTimer;
   Timer? _outboxRetryTimer;
   bool _retryingOutbox = false;
+  bool _configurationReady = false;
+  Future<void> _purchaseHandlingTail = Future<void>.value();
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   SharedPreferences? _preferences;
   OpenGrowIdentityTokenProvider? _tokenProvider;
   String? _identityToken;
+  DateTime? _identityTokenExpiresAt;
+  Future<String?>? _identityTokenRefresh;
   String? _projectKey;
   String? _platformIdentifier;
-  String _baseUrl = 'https://sdk.vocostar.com/purchases/v2';
+  String _baseUrl = '';
   String _appVersion = '';
   String _buildNumber = '';
   String _sdkVersion = '2.1.3';
@@ -103,7 +108,7 @@ class OpenGrowPurchases {
   Future<OpenGrowCustomerInfo> configure({
     required String projectKey,
     required String platformIdentifier,
-    String baseUrl = 'https://sdk.vocostar.com/purchases/v2',
+    required String baseUrl,
     String? identityToken,
     OpenGrowIdentityTokenProvider? identityTokenProvider,
     String appVersion = '',
@@ -119,14 +124,22 @@ class OpenGrowPurchases {
         'OpenGrow Purchases supports iOS and Android only',
       );
     }
+    _configurationReady = false;
     _subscription ??= _iap.purchaseStream.listen(
-      _handlePurchases,
+      _receivePurchaseBatch,
       onError: _handlePurchaseStreamError,
     );
     _projectKey = projectKey;
     _platformIdentifier = platformIdentifier;
+    final parsedBaseUrl = Uri.tryParse(baseUrl);
+    if (parsedBaseUrl == null || !parsedBaseUrl.hasScheme || !const {'http', 'https'}.contains(parsedBaseUrl.scheme)) {
+      throw const OpenGrowPurchasesException(
+        'A valid OpenGrow Purchases base URL is required',
+        code: 'base_url_invalid',
+      );
+    }
     _baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), '');
-    _identityToken = identityToken;
+    _setIdentityToken(identityToken);
     _tokenProvider = identityTokenProvider;
     _appVersion = appVersion;
     _buildNumber = buildNumber;
@@ -168,11 +181,14 @@ class OpenGrowPurchases {
         'The platform store is unavailable',
       );
     }
-    unawaited(_resumeOutbox());
+    _configurationReady = true;
+    _drainBufferedPurchaseBatches();
+    unawaited(_enqueueOutboxResume());
     return getCustomerInfo();
   }
 
-  Future<void> setIdentityToken(String? token) async => _identityToken = token;
+  Future<void> setIdentityToken(String? token) async =>
+      _setIdentityToken(token);
 
   /// Records an authenticated, challenge-bound result for a live purchase
   /// certification run. The server accepts only a verified application
@@ -188,11 +204,26 @@ class OpenGrowPurchases {
     String? resultId,
     DateTime? observedAt,
   }) async {
+    final stableResultId = resultId?.trim().isNotEmpty == true
+        ? resultId!.trim()
+        : const Uuid().v5(
+            Namespace.url.value,
+            [
+              'opengrow-certification-v1',
+              runId.trim(),
+              checkKey.trim(),
+              passed ? 'passed' : 'failed',
+              _buildNumber,
+              _platformIdentifier ?? '',
+              deviceModel.trim(),
+              osVersion.trim(),
+            ].join('|'),
+          );
     final response = await _request(
       'POST',
       '/certification/device-results',
       body: {
-        'id': resultId ?? const Uuid().v4(),
+        'id': stableResultId,
         'run_id': runId,
         'challenge': challenge,
         'check_key': checkKey,
@@ -215,7 +246,7 @@ class OpenGrowPurchases {
   }
 
   Future<OpenGrowCustomerInfo> logIn(String identityToken) async {
-    _identityToken = identityToken;
+    _setIdentityToken(identityToken);
     final response = await _request(
       'POST',
       '/identify',
@@ -225,7 +256,7 @@ class OpenGrowPurchases {
   }
 
   Future<OpenGrowCustomerInfo> logOut() async {
-    _identityToken = null;
+    _setIdentityToken(null);
     _tokenProvider = null;
     _anonymousId = r'$opengrow_anon_' + const Uuid().v4();
     await _preferences?.setString(
@@ -553,6 +584,46 @@ class OpenGrowPurchases {
 
   Future<OpenGrowCustomerInfo> syncPurchases() => restorePurchases();
 
+  void _receivePurchaseBatch(List<PurchaseDetails> purchases) {
+    final batch = List<PurchaseDetails>.unmodifiable(purchases);
+    if (!_configurationReady) {
+      _bufferedPurchaseBatches.add(batch);
+      return;
+    }
+    _enqueuePurchaseBatch(batch);
+  }
+
+  void _drainBufferedPurchaseBatches() {
+    if (!_configurationReady || _bufferedPurchaseBatches.isEmpty) return;
+    final batches = List<List<PurchaseDetails>>.of(_bufferedPurchaseBatches);
+    _bufferedPurchaseBatches.clear();
+    for (final batch in batches) {
+      _enqueuePurchaseBatch(batch);
+    }
+  }
+
+  void _enqueuePurchaseBatch(List<PurchaseDetails> purchases) {
+    _purchaseHandlingTail = _purchaseHandlingTail.then((_) async {
+      try {
+        await _handlePurchases(purchases);
+      } catch (error) {
+        _handlePurchaseStreamError(error);
+      }
+    });
+  }
+
+  Future<void> _enqueueOutboxResume() {
+    final scheduled = _purchaseHandlingTail.then((_) async {
+      try {
+        await _resumeOutbox();
+      } catch (error) {
+        _handlePurchaseStreamError(error);
+      }
+    });
+    _purchaseHandlingTail = scheduled;
+    return scheduled;
+  }
+
   Future<void> _handlePurchases(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       final completer = _purchaseCompleters[purchase.productID];
@@ -823,12 +894,12 @@ class OpenGrowPurchases {
     _outboxRetryTimer?.cancel();
     _outboxRetryTimer = Timer(
       const Duration(seconds: 15),
-      () => unawaited(_resumeOutbox()),
+      () => unawaited(_enqueueOutboxResume()),
     );
   }
 
   @visibleForTesting
-  Future<void> resumeOutboxForTesting() => _resumeOutbox();
+  Future<void> resumeOutboxForTesting() => _enqueueOutboxResume();
 
   void _completeAndPublish(
     Completer<OpenGrowPurchaseResult>? completer,
@@ -1032,19 +1103,76 @@ class OpenGrowPurchases {
   }
 
   Future<String?> _identityTokenForRequest() async {
-    final provided = await _tokenProvider?.call();
-    if (provided != null && provided.isNotEmpty) {
-      _identityToken = provided;
-      return provided;
+    final cached = _identityToken;
+    final expiresAt = _identityTokenExpiresAt;
+    if (cached != null &&
+        cached.isNotEmpty &&
+        (_tokenProvider == null ||
+            (expiresAt != null &&
+                expiresAt.isAfter(
+                  DateTime.now().toUtc().add(const Duration(seconds: 30)),
+                )))) {
+      return cached;
     }
-    return _identityToken;
+    final provider = _tokenProvider;
+    if (provider == null) return cached;
+    final activeRefresh = _identityTokenRefresh;
+    if (activeRefresh != null) return activeRefresh;
+    final refresh = _refreshIdentityToken(provider);
+    _identityTokenRefresh = refresh;
+    try {
+      return await refresh;
+    } finally {
+      if (identical(_identityTokenRefresh, refresh)) {
+        _identityTokenRefresh = null;
+      }
+    }
+  }
+
+  Future<String?> _refreshIdentityToken(
+    OpenGrowIdentityTokenProvider provider,
+  ) async {
+    final provided = await provider();
+    if (provided == null || provided.isEmpty) {
+      _setIdentityToken(null);
+      return null;
+    }
+    _setIdentityToken(provided);
+    return provided;
+  }
+
+  void _setIdentityToken(String? token) {
+    _identityToken = token;
+    _identityTokenExpiresAt = _readJwtExpiration(token);
+  }
+
+  DateTime? _readJwtExpiration(String? token) {
+    if (token == null || token.isEmpty) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      if (payload is! Map) return null;
+      final expiresAt = payload['exp'];
+      if (expiresAt is! num || expiresAt <= 0) return null;
+      return DateTime.fromMillisecondsSinceEpoch(
+        expiresAt.toInt() * 1000,
+        isUtc: true,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   @visibleForTesting
   Future<void> disposeForTesting() async {
+    _configurationReady = false;
     _restoreTimer?.cancel();
     _outboxRetryTimer?.cancel();
     await _subscription?.cancel();
+    await _purchaseHandlingTail;
     await _customerInfoController.close();
     await _purchaseResultController.close();
   }

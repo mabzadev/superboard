@@ -242,7 +242,7 @@ Add before the `onDeeplinkReceived` stream getter (before line 119):
 
   /// Log a custom purchase for revenue tracking
   ///
-  /// Tracks a non-store purchase (e.g. Stripe, PayPal) for revenue attribution.
+  /// Tracks a non-store purchase for revenue attribution.
   ///
   /// [type] - The transaction type: buy, cancel, or refund
   /// [priceInCents] - The price in cents (e.g. 999 for $9.99)

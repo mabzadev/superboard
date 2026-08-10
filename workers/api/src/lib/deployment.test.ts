@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { createFakeD1 } from '../test/fake-d1';
 import { Env } from '../types';
 import {
-  isFullAccess,
   isPurchasesEnabled,
   isRegistrationAllowed,
   normalizeRegistrationEmail,
@@ -13,7 +12,6 @@ function environment(options: {
   realm?: string;
   rows?: Array<{ realm: string; email: string; active: number }>;
   mode?: 'allowlist' | 'public';
-  accessMode?: 'full' | 'metered';
 }) {
   const rows = options.rows || [];
   const db = createFakeD1(({ op, sql, args }) => {
@@ -37,7 +35,6 @@ function environment(options: {
     JWT_SECRET: 'test-secret',
     REGISTRATION_MODE: options.mode || 'allowlist',
     REGISTRATION_REALM: options.realm,
-    OPENGROW_ACCESS_MODE: options.accessMode,
   } satisfies Env;
 }
 
@@ -82,15 +79,10 @@ describe('deployment access policy', () => {
     expect(update?.args).toEqual(['vocostar:production', 'owner@example.com']);
   });
 
-  it('detects full access explicitly', () => {
-    expect(isFullAccess(environment({ accessMode: 'full' }))).toBe(true);
-    expect(isFullAccess(environment({ accessMode: 'metered' }))).toBe(false);
-  });
-
-  it('keeps Purchases enabled throughout Full Access deployments', () => {
-    expect(isPurchasesEnabled(environment({ accessMode: 'full' }), 0)).toBe(true);
-    expect(isPurchasesEnabled(environment({ accessMode: 'full' }), null)).toBe(true);
-    expect(isPurchasesEnabled(environment({ accessMode: 'metered' }), 1)).toBe(true);
-    expect(isPurchasesEnabled(environment({ accessMode: 'metered' }), 0)).toBe(false);
+  it('treats Purchases as a per-project application capability', () => {
+    expect(isPurchasesEnabled(environment({}), 1)).toBe(true);
+    expect(isPurchasesEnabled(environment({}), true)).toBe(true);
+    expect(isPurchasesEnabled(environment({}), 0)).toBe(false);
+    expect(isPurchasesEnabled(environment({}), null)).toBe(false);
   });
 });

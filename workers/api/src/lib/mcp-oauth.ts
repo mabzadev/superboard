@@ -1,3 +1,6 @@
+import { tokenDigest } from './token-storage';
+export { tokenDigest } from './token-storage';
+
 export const MCP_TOKEN_TTL_SECONDS = 90 * 24 * 60 * 60;
 
 export interface McpClientRow {
@@ -24,11 +27,6 @@ export function randomToken(prefix = 'mcp_'): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return `${prefix}${bytesToBase64Url(bytes)}`;
-}
-
-export async function tokenDigest(token: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 async function sha256Base64Url(value: string): Promise<string> {
@@ -140,8 +138,8 @@ export async function issueMcpToken(
   `).bind(
     params.client.id,
     String(params.userId),
-    accessToken,
-    refreshToken,
+    accessDigest,
+    refreshDigest,
     JSON.stringify([scope]),
     name,
     params.client.client_id,

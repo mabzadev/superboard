@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -33,7 +34,7 @@ Stream<String> get opengrowPurchaseResultJsonStream => OpenGrowPurchases
 Future<bool> opengrowInitialize({
   required String projectKey,
   required String platformIdentifier,
-  String purchasesBaseUrl = 'https://sdk.vocostar.com/purchases/v2',
+  required String purchasesBaseUrl,
   String identityToken = '',
   String appVersion = '',
   String buildNumber = '',
@@ -56,23 +57,17 @@ Future<bool> opengrowInitialize({
 /// from Info.plist/AndroidManifest.xml before this action runs.
 Future<bool> opengrowInitializeAuto({
   required String projectKey,
-  String sdkBaseUrl = 'https://sdk.vocostar.com',
+  required String sdkBaseUrl,
   String identityToken = '',
   String appVersion = '',
   String buildNumber = '',
   String sdkVersion = '2.1.3',
 }) async {
   final platformIdentifier = await OpenGrow().getPlatformIdentifier();
-  final trimmedBaseUrl = sdkBaseUrl
-      .replaceFirst(RegExp(r'/+$'), '')
-      .replaceFirst(RegExp(r'/purchases/v\d+$'), '');
-  final purchasesBaseUrl = trimmedBaseUrl.endsWith('/purchases/v2')
-      ? trimmedBaseUrl
-      : '$trimmedBaseUrl/purchases/v2';
   return opengrowInitialize(
     projectKey: projectKey,
     platformIdentifier: platformIdentifier,
-    purchasesBaseUrl: purchasesBaseUrl,
+    purchasesBaseUrl: _purchasesBaseUrl(sdkBaseUrl),
     identityToken: identityToken,
     appVersion: appVersion,
     buildNumber: buildNumber,
@@ -85,8 +80,8 @@ Future<bool> opengrowInitializeAuto({
 Future<bool> opengrowInitializeAuthenticated({
   required String projectKey,
   required String applicationAccessToken,
-  String sdkBaseUrl = 'https://sdk.vocostar.com',
-  String authGatewayBaseUrl = 'https://api.vocostar.com',
+  required String sdkBaseUrl,
+  required String authGatewayBaseUrl,
   String appVersion = '',
   String buildNumber = '',
   String sdkVersion = '2.1.3',
@@ -100,27 +95,59 @@ Future<bool> opengrowInitializeAuthenticated({
   Future<String?> tokenProvider() async {
     final client = http.Client();
     try {
-      final response = await client
-          .post(
-            Uri.parse(
-              '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
-            ),
-            headers: {
-              'Authorization': 'Bearer ${applicationAccessToken.trim()}',
-              'Accept': 'application/json',
-            },
-          )
-          .timeout(const Duration(seconds: 10));
-      final body = response.body.isEmpty ? const {} : jsonDecode(response.body);
-      final token = body is Map ? body['access_token']?.toString() : null;
-      if (response.statusCode != 200 || token == null || token.isEmpty) {
-        throw OpenGrowPurchasesException(
-          'Identity synchronization failed',
-          code: 'identity_sync_failed',
-          retryable: response.statusCode >= 500,
+      try {
+        final response = await client
+            .post(
+              Uri.parse(
+                '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
+              ),
+              headers: {
+                'Authorization': 'Bearer ${applicationAccessToken.trim()}',
+                'Accept': 'application/json',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
+        dynamic body;
+        try {
+          body = response.body.isEmpty ? const {} : jsonDecode(response.body);
+        } catch (_) {
+          throw const OpenGrowPurchasesException(
+            'Identity synchronization returned an invalid response',
+            code: 'identity_response_invalid',
+            retryable: true,
+          );
+        }
+        final token = body is Map ? body['access_token']?.toString() : null;
+        if (response.statusCode != 200 || token == null || token.isEmpty) {
+          final error = body is Map && body['error'] is Map
+              ? body['error'] as Map
+              : null;
+          throw OpenGrowPurchasesException(
+            'Identity synchronization failed',
+            code: error?['code']?.toString() ?? 'identity_sync_failed',
+            retryable:
+                response.statusCode == 408 ||
+                response.statusCode == 429 ||
+                response.statusCode >= 500,
+            requestId:
+                error?['request_id']?.toString() ??
+                response.headers['x-request-id'],
+          );
+        }
+        return token;
+      } on TimeoutException {
+        throw const OpenGrowPurchasesException(
+          'Identity synchronization timed out',
+          code: 'identity_timeout',
+          retryable: true,
+        );
+      } on http.ClientException {
+        throw const OpenGrowPurchasesException(
+          'Identity synchronization is unavailable',
+          code: 'identity_network_unavailable',
+          retryable: true,
         );
       }
-      return token;
     } finally {
       client.close();
     }
@@ -132,7 +159,7 @@ Future<bool> opengrowInitializeAuthenticated({
   await OpenGrowPurchases.instance.configure(
     projectKey: projectKey,
     platformIdentifier: platformIdentifier,
-    baseUrl: '$base/purchases/v2',
+    baseUrl: _purchasesBaseUrl(base),
     identityToken: initialToken,
     identityTokenProvider: tokenProvider,
     appVersion: appVersion,
@@ -140,6 +167,13 @@ Future<bool> opengrowInitializeAuthenticated({
     sdkVersion: sdkVersion,
   );
   return true;
+}
+
+String _purchasesBaseUrl(String sdkBaseUrl) {
+  final base = sdkBaseUrl
+      .replaceFirst(RegExp(r'/+$'), '')
+      .replaceFirst(RegExp(r'/purchases/v\d+$'), '');
+  return '$base/purchases/v2';
 }
 
 /// Submits structured evidence from the authenticated FlutterFlow build to an

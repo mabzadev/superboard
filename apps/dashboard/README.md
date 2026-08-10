@@ -1,8 +1,8 @@
 # OpenGrow
 
-**Open-source dashboard for mobile app growth** — deep links, messaging campaigns, revenue tracking, and audience analytics.
+**Open-source mobile app operations dashboard** — deep links, messaging, purchases, and audience analytics.
 
-OpenGrow helps mobile developers grow their apps by providing a single dashboard to manage deep links, send targeted push notifications, track revenue, and understand their audience. Self-host it or connect it to the [OpenGrow](https://github.com/mbzadev/opengrow) managed backend.
+OpenGrow gives mobile developers one dashboard for deep links, messaging, purchases, and audience analytics. Self-host it or connect it to the [OpenGrow](https://github.com/mbzadev/opengrow-platform) managed backend.
 
 ## Tech Stack
 
@@ -22,8 +22,8 @@ OpenGrow helps mobile developers grow their apps by providing a single dashboard
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/mbzadev/opengrow.git
-   cd opengrow/apps/dashboard
+   git clone https://github.com/mbzadev/opengrow-platform.git
+   cd opengrow-platform/apps/dashboard
    ```
 
 2. Install dependencies:
@@ -81,9 +81,14 @@ src/
 
 See [`.env.example`](.env.example) for all available configuration options.
 
-**Required:** `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CLIENT_ID`, `CLIENT_SECRET`
+**Required:** `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CLIENT_ID`,
+`NEXT_PUBLIC_DOCS_URL`, `NEXT_PUBLIC_SDK_URL`,
+`NEXT_PUBLIC_SHORTLINK_URL`, `NEXT_PUBLIC_MCP_URL`, `CLIENT_SECRET`. Cloudflare builds derive every
+public URL from the selected target manifest; operators do not maintain a
+second domain list in the Dashboard.
 
-**Optional:** Firebase, PostHog, GTM (features gracefully disable when not configured)
+**Optional:** `NEXT_PUBLIC_SUPPORT_EMAIL`, Firebase, PostHog and GTM (features
+gracefully disable when not configured).
 
 ## Scripts
 

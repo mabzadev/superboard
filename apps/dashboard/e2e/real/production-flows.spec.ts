@@ -188,12 +188,8 @@ test.describe.serial("real OpenGrow production flows", () => {
     await page.goto("/messaging");
     await expect(page.getByText(notificationTitle).first()).toBeVisible();
 
-    const billing = await request.get(`${baseUrl}/api/v1/instances/${instance.id}/billing/mau`, {
-      headers: authHeaders,
-    });
-    expect(billing.ok()).toBeTruthy();
     await expect(page.goto("/settings")).resolves.toBeTruthy();
-    await expect(page.getByText(/monthly active users|active users/i).first()).toBeVisible();
+    await expect(page.getByText(/project settings/i).first()).toBeVisible();
 
     const redirectUri = "http://localhost:3001/mcp-callback";
     const mcpClient = await request.post(`${baseUrl}/register`, {

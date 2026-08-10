@@ -13,11 +13,14 @@ import { getOrCreateProject } from '../lib/db';
 import { getAuthUserId, issueDbBackedTokens } from '../lib/auth';
 import { passwordResetMessage, sendMail } from '../lib/mail';
 import {
-  isFullAccess,
   isRegistrationAllowed,
   recordSuccessfulRegistration,
   registrationDeniedBody,
 } from '../lib/deployment';
+import { readApiJson } from '../lib/request-body';
+import { tokenDigest } from '../lib/token-storage';
+import { readOtpSecret, storeOtpSecret } from '../lib/auth-credentials';
+import { consumeDashboardAuthAttempt, dashboardAuthRateLimitResponse } from '../lib/auth-rate-limit';
 
 const users = new Hono<{ Bindings: Env }>();
 
@@ -32,7 +35,7 @@ type UserRow = {
 };
 
 async function readJsonBody(c: any): Promise<Record<string, any>> {
-  return c.req.json().catch(() => ({}));
+  return readApiJson(c.req.raw);
 }
 
 function normalizeEmail(email: string): string {
@@ -62,6 +65,8 @@ users.post('/', async (c) => {
   const userData = body.user || (body as any);
   const { password, name } = userData;
   const email = typeof userData.email === 'string' ? normalizeEmail(userData.email) : '';
+  const rateLimit = await consumeDashboardAuthAttempt(c.env, c.req.raw, 'dashboard.register', email);
+  if (!rateLimit.allowed) return dashboardAuthRateLimitResponse(rateLimit);
   const oauthApp = await findOAuthApplication(c, userData.client_id || body.client_id);
 
   if (!oauthApp) {
@@ -81,7 +86,12 @@ users.post('/', async (c) => {
   ).bind(email).first<UserRow>();
   if (existing) {
     const invitationToken = userData.invitation_token || body.invitation_token;
-    if (invitationToken && existing.invitation_token === invitationToken && !existing.invitation_accepted_at) {
+    const invitationTokenHash = invitationToken ? await tokenDigest(String(invitationToken)) : null;
+    if (
+      invitationToken &&
+      [invitationToken, invitationTokenHash].includes(existing.invitation_token || '') &&
+      !existing.invitation_accepted_at
+    ) {
       const passwordHash = await hashPassword(password);
       await c.env.DB.prepare(`
         UPDATE users
@@ -117,7 +127,7 @@ users.post('/', async (c) => {
   const uriScheme = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString(36);
   const instanceResult = await c.env.DB.prepare(
     'INSERT INTO instances (api_key, uri_scheme, revenue_collection_enabled) VALUES (?, ?, ?) RETURNING id'
-  ).bind(apiKey, uriScheme, isFullAccess(c.env) ? 1 : 0).first<{ id: number }>();
+  ).bind(apiKey, uriScheme, 1).first<{ id: number }>();
 
   await c.env.DB.prepare(
     'INSERT INTO instance_roles (user_id, instance_id, role) VALUES (?, ?, ?)'
@@ -177,7 +187,7 @@ users.patch('/me', async (c) => {
   const userId = await getAuthUser(c);
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
 
   if (body.name !== undefined) {
     await c.env.DB.prepare('UPDATE users SET name = ? WHERE id = ?').bind(body.name, userId).run();
@@ -192,8 +202,10 @@ users.patch('/me', async (c) => {
 
 // POST /api/v1/users/reset_password
 users.post('/reset_password', async (c) => {
-  const body: { email?: string; user?: { email?: string } } = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw) as { email?: string; user?: { email?: string } };
   const email = body.email || body.user?.email;
+  const rateLimit = await consumeDashboardAuthAttempt(c.env, c.req.raw, 'dashboard.reset_password', email);
+  if (!rateLimit.allowed) return dashboardAuthRateLimitResponse(rateLimit);
   if (email) {
     const normalizedEmail = normalizeEmail(email);
     const user = await c.env.DB.prepare(
@@ -207,7 +219,7 @@ users.post('/reset_password', async (c) => {
     const token = crypto.randomUUID().replace(/-/g, '');
     await c.env.DB.prepare(
       'UPDATE users SET reset_password_token = ?, reset_password_sent_at = datetime("now") WHERE id = ?'
-    ).bind(token, user.id).run();
+    ).bind(await tokenDigest(token), user.id).run();
 
     try {
       await sendMail(c.env, passwordResetMessage(c.env, user.email, token));
@@ -226,14 +238,15 @@ users.post('/change_password', async (c) => {
   const newPassword = body.new_password || body.password || body.user?.password;
 
   if (resetToken && newPassword) {
+    const resetTokenHash = await tokenDigest(String(resetToken));
     const user = await c.env.DB.prepare(`
       SELECT id
       FROM users
-      WHERE reset_password_token = ?
+      WHERE reset_password_token IN (?, ?)
         AND reset_password_sent_at IS NOT NULL
         AND datetime(reset_password_sent_at) >= datetime('now', '-6 hours')
       LIMIT 1
-    `).bind(resetToken).first<{ id: number }>();
+    `).bind(resetTokenHash, resetToken).first<{ id: number }>();
 
     if (!user) return c.json({ error: 'Invalid reset token' }, 404);
 
@@ -296,11 +309,11 @@ users.get('/me/otp_qr', async (c) => {
 
   if (!user) return c.json({ error: 'User not found' }, 404);
 
-  const currentSecret = user.otp_secret || '';
+  const currentSecret = user.otp_secret ? await readOtpSecret(c.env, user.otp_secret) : '';
   const secret = /^[A-Z2-7]+$/.test(currentSecret) ? currentSecret : generateOtpSecret();
   if (secret !== currentSecret) {
     await c.env.DB.prepare('UPDATE users SET otp_secret = ?, updated_at = datetime("now") WHERE id = ?')
-      .bind(secret, userId).run();
+      .bind(await storeOtpSecret(c.env, secret), userId).run();
   }
 
   const uri = buildOtpAuthUri(user.email, secret);
@@ -323,6 +336,8 @@ users.delete('/me', async (c) => {
 users.post('/accept_invite', async (c) => {
   const body: any = await readJsonBody(c);
   const invitationToken = body.invitation_token || body.token;
+  const rateLimit = await consumeDashboardAuthAttempt(c.env, c.req.raw, 'dashboard.accept_invite', invitationToken);
+  if (!rateLimit.allowed) return dashboardAuthRateLimitResponse(rateLimit);
   const oauthApp = await findOAuthApplication(c, body.client_id);
 
   if (!oauthApp) {
@@ -333,9 +348,11 @@ users.post('/accept_invite', async (c) => {
     return c.json({ error: 'invitation_token and password required' }, 422);
   }
 
+  const invitationTokenHash = await tokenDigest(String(invitationToken));
+
   const invited = await c.env.DB.prepare(
-    'SELECT id, email, name FROM users WHERE invitation_token = ? AND invitation_accepted_at IS NULL LIMIT 1'
-  ).bind(invitationToken).first<{ id: number; email: string; name: string | null }>();
+    'SELECT id, email, name FROM users WHERE invitation_token IN (?, ?) AND invitation_accepted_at IS NULL LIMIT 1'
+  ).bind(invitationTokenHash, invitationToken).first<{ id: number; email: string; name: string | null }>();
 
   if (!invited) {
     return c.json({ error: 'Invitation token is invalid or already accepted' }, 422);
@@ -386,7 +403,7 @@ users.put('/me/two_factor', async (c) => {
   if (!user) return c.json({ error: 'User not found' }, 404);
   if (!user.otp_secret) return c.json({ error: 'OTP setup required' }, 422);
 
-  const valid = await verifyTotpCode(otpCode, user.otp_secret);
+  const valid = await verifyTotpCode(otpCode, await readOtpSecret(c.env, user.otp_secret));
   if (!valid) return c.json({ error: 'Invalid OTP code' }, 403);
 
   await c.env.DB.prepare(

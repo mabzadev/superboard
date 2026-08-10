@@ -70,9 +70,9 @@ public class OpenGrow {
     /// Configures the OpenGrow SDK with the provided API key.
     ///
     /// - Parameters:
-    ///   - APIKey: The API key obtained from the web console at https://github.com/mbzadev/opengrow.
+    ///   - APIKey: The API key obtained from the web console at https://github.com/mbzadev/opengrow-platform.
     ///   - useTestEnvironment: If this is enabled the test environment will be used.
-    ///   - baseURL: Optional custom API domain for self-hosted backends (e.g. `https://sdk.opengrow.link`). The SDK appends the API path automatically.
+    ///   - baseURL: Required application API domain. The SDK appends the API path automatically.
     ///   - delegate: The delegate to receive payload from the SDK.
     ///   - completion: Optional callback indicating whether SDK authentication succeeded or failed. Called on the **main thread**.
     public static func configure(APIKey: String, useTestEnvironment: Bool, baseURL: String? = nil, delegate: OpenGrowDelegate?, completion: OpenGrowBoolCompletion? = nil) {
@@ -273,7 +273,7 @@ public class OpenGrow {
     /// Checks the configuration validity.
     private static func checkConfiguration(completion: OpenGrowBoolCompletion? = nil) {
         guard let APIKey = APIKey, APIKey.count > 0 else {
-            DebugLogger.shared.log(.error, "API Key is invalid. Make sure you've used the right value from the Web interface at https://app.opengrow.io.")
+            DebugLogger.shared.log(.error, "API Key is invalid. Use the value issued by the configured OpenGrow dashboard.")
             self.manager = nil
             completion?(false)
             return

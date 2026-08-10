@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import * as bcrypt from 'bcryptjs';
 import { Env } from '../types';
+import { constantTimeEqual } from '@opengrow/contracts/secret';
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -55,7 +56,7 @@ async function verifyPbkdf2Password(password: string, stored: string): Promise<b
     keyMaterial, 256
   );
   const hashHex = Array.from(new Uint8Array(derived)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return timingSafeEqual(hashHex, storedHash);
+  return constantTimeEqual(hashHex, storedHash);
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
@@ -92,7 +93,7 @@ export async function verifyTotpCode(code: string, secret: string, window = 1): 
   const counter = Math.floor(Date.now() / 30000);
   for (let offset = -window; offset <= window; offset++) {
     const expected = await hotp(keyBytes, counter + offset);
-    if (timingSafeEqual(expected, normalizedCode)) return true;
+    if (await constantTimeEqual(expected, normalizedCode)) return true;
   }
   return false;
 }
@@ -150,13 +151,4 @@ async function hotp(keyBytes: Uint8Array, counter: number): Promise<string> {
     (signature[offset + 3] & 0xff);
 
   return String(binary % 1000000).padStart(6, '0');
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return mismatch === 0;
 }

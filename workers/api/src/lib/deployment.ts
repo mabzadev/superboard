@@ -6,13 +6,9 @@ export function normalizeRegistrationEmail(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
-export function isFullAccess(env: Env): boolean {
-  return env.OPENGROW_ACCESS_MODE === 'full';
-}
-
-/** Full Access deployments cannot have Purchases disabled by a stale project row. */
-export function isPurchasesEnabled(env: Env, configured: unknown): boolean {
-  return isFullAccess(env) || configured === true || Number(configured) === 1;
+/** Purchases are an application capability, independently enabled per project. */
+export function isPurchasesEnabled(_env: Env, configured: unknown): boolean {
+  return configured === true || Number(configured) === 1;
 }
 
 export function registrationRealm(env: Env): string {

@@ -141,7 +141,7 @@ describe('OpenGrowWrapper', () => {
 
   describe('generateLink', () => {
     it('generates a link with all parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/opengrow/abc123');
+      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/opengrow-platform/abc123');
 
       const customRedirects = {
         ios: { link: 'https://ios.example.com', open_if_app_installed: true },
@@ -172,7 +172,7 @@ describe('OpenGrowWrapper', () => {
         tracking
       );
 
-      expect(link).toBe('https://github.com/mbzadev/opengrow/abc123');
+      expect(link).toBe('https://github.com/mbzadev/opengrow-platform/abc123');
       expect(mockGenerateLink).toHaveBeenCalledWith(
         'Title',
         'Subtitle',
@@ -187,10 +187,10 @@ describe('OpenGrowWrapper', () => {
     });
 
     it('generates a link with minimal parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/opengrow/minimal');
+      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/opengrow-platform/minimal');
 
       const link = await OpenGrow.generateLink('Title');
-      expect(link).toBe('https://github.com/mbzadev/opengrow/minimal');
+      expect(link).toBe('https://github.com/mbzadev/opengrow-platform/minimal');
     });
 
     it('throws on native error', async () => {
@@ -263,7 +263,7 @@ describe('OpenGrowWrapper', () => {
       OpenGrow.onDeeplinkReceived(callback);
 
       const deeplinkData = {
-        link: 'https://github.com/mbzadev/opengrow/deep',
+        link: 'https://github.com/mbzadev/opengrow-platform/deep',
         data: { screen: 'profile' },
       };
       // Simulate the NativeEventEmitter firing — triggerDeeplink fans out to listeners
@@ -277,7 +277,7 @@ describe('OpenGrowWrapper', () => {
       const subscription = OpenGrow.onDeeplinkReceived(callback);
       subscription.remove();
 
-      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow/after-remove' };
+      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow-platform/after-remove' };
       // Trigger on any remaining listeners — callback should not be in set
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
@@ -290,7 +290,7 @@ describe('OpenGrowWrapper', () => {
       OpenGrow.onDeeplinkReceived(cb1);
       OpenGrow.onDeeplinkReceived(cb2);
 
-      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow/multi' };
+      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow-platform/multi' };
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).toHaveBeenCalledWith(deeplinkData);
@@ -305,7 +305,7 @@ describe('OpenGrowWrapper', () => {
 
       sub1.remove();
 
-      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow/partial' };
+      const deeplinkData = { link: 'https://github.com/mbzadev/opengrow-platform/partial' };
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).not.toHaveBeenCalled();

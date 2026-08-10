@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:opengrow_flutter/opengrow.dart';
 
 import 'actions.dart';
+import 'customer_events.dart';
+import 'experience_client.dart';
 
 /// One-time bootstrap widget for a FlutterFlow application's initial page.
 ///
@@ -15,9 +18,11 @@ class OpenGrowBootstrap extends StatefulWidget {
   const OpenGrowBootstrap({
     super.key,
     required this.projectKey,
+    required this.sdkBaseUrl,
+    required this.experienceApiBaseUrl,
     this.width,
     this.height,
-    this.sdkBaseUrl = 'https://sdk.vocostar.com',
+    this.environment = 'production',
     this.identityToken = '',
     this.appVersion = '',
     this.buildNumber = '',
@@ -36,6 +41,8 @@ class OpenGrowBootstrap extends StatefulWidget {
   final double? width;
   final double? height;
   final String sdkBaseUrl;
+  final String experienceApiBaseUrl;
+  final String environment;
   final String identityToken;
   final String appVersion;
   final String buildNumber;
@@ -103,6 +110,30 @@ class _OpenGrowBootstrapState extends State<OpenGrowBootstrap> {
 
   Future<void> _initialize() async {
     try {
+      final platformIdentifier = await OpenGrow().getPlatformIdentifier();
+      final platform = switch (defaultTargetPlatform) {
+        TargetPlatform.iOS => 'ios',
+        TargetPlatform.android => 'android',
+        _ => 'web',
+      };
+      OpenGrowExperienceSdk.configure(
+        OpenGrowExperienceClient(
+          projectKey: widget.projectKey,
+          platform: platform,
+          identifier: platformIdentifier,
+          environment: widget.environment,
+          baseUrl: widget.experienceApiBaseUrl,
+        ),
+      );
+      OpenGrowCustomerEventsSdk.configure(
+        OpenGrowCustomerEventsClient(
+          projectKey: widget.projectKey,
+          platform: platform,
+          identifier: platformIdentifier,
+          environment: widget.environment,
+          baseUrl: widget.experienceApiBaseUrl,
+        ),
+      );
       if (widget.initializePurchases) {
         await opengrowInitializeAuto(
           projectKey: widget.projectKey,

@@ -1,11 +1,13 @@
+import eslintConfigPrettier from "eslint-config-prettier";
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
-import eslintConfigPrettier from "eslint-config-prettier";
 
 const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      ".open-next/**",
+      ".wrangler/**",
       "out/**",
       "build/**",
       "node_modules/**",
@@ -18,6 +20,14 @@ const eslintConfig = [
   eslintConfigPrettier,
   {
     rules: {
+      // The Dashboard remains on React 18 and does not enable the React Compiler.
+      // These compiler-only rules become defaults in eslint-config-next 16 and
+      // would reject established, valid React 18 synchronization patterns.
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/incompatible-library": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" },
@@ -26,13 +36,6 @@ const eslintConfig = [
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "prefer-const": "error",
       "no-var": "error",
-      // New React 19.2 compiler rules — downgrade to warn during upgrade,
-      // address in a follow-up pass
-      "react-hooks/refs": "warn",
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/incompatible-library": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/static-components": "warn",
     },
   },
 ];

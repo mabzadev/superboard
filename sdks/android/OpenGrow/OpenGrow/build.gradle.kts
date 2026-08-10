@@ -12,7 +12,6 @@ val BOOLEAN = "boolean"
 val STRING = "String"
 val TRUE = "true"
 val FALSE = "false"
-val SERVER_URL = "SERVER_URL"
 val SDK_VERSION = "SDK_VERSION"
 val NETWORK_LOGGING = "NETWORK_LOGGING"
 
@@ -50,12 +49,6 @@ android {
 
     buildTypes {
 
-        val SERVER_URL_PRODUCTION = if (project.hasProperty("serverUrl")) {
-            "\"${project.property("serverUrl")}/api/v1/sdk/\""
-        } else {
-            "\"https://sdk.sqd.link/api/v1/sdk/\""
-        }
-
         debug {
             isMinifyEnabled = false
             enableAndroidTestCoverage = true
@@ -65,7 +58,6 @@ android {
                 "proguard-rules.pro"
             )
 
-            buildConfigField(STRING, SERVER_URL, SERVER_URL_PRODUCTION)
             buildConfigField(STRING, SDK_VERSION, "\"" + libraryVersion + "\"")
             buildConfigField(BOOLEAN, NETWORK_LOGGING, NETWORK_LOGGING_VALUE)
         }
@@ -77,28 +69,10 @@ android {
                 "proguard-rules.pro"
             )
 
-            buildConfigField(STRING, SERVER_URL, SERVER_URL_PRODUCTION)
             buildConfigField(STRING, SDK_VERSION, "\"" + libraryVersion + "\"")
             buildConfigField(BOOLEAN, NETWORK_LOGGING, NETWORK_LOGGING_VALUE)
         }
     }
-
-//    productFlavors {
-//        val SERVER_URL_DEVELOPMENT = "\"https://sdk.sqd.link/api/v1/sdk/\""
-//        val SERVER_URL_PRODUCTION = "\"https://sdk.sqd.link/api/v1/sdk/\""
-//
-//        create("envDevelopment") {
-//            buildConfigField(STRING, SERVER_URL, SERVER_URL_DEVELOPMENT)
-//            dimension = "default"
-//        }
-//
-//        create("envProd") {
-//            buildConfigField(STRING, SERVER_URL, SERVER_URL_PRODUCTION)
-//            dimension = "default"
-//        }
-//    }
-//
-//    flavorDimensions.add("default")
 
     buildFeatures {
         buildConfig = true
@@ -381,8 +355,8 @@ project.afterEvaluate {
     publishing {
         repositories {
             maven {
-                name = "GithubPackagesPrivate"
-                url = uri("https://maven.pkg.github.com/mbzadev/opengrow")
+                name = "GithubPackages"
+                url = uri("https://maven.pkg.github.com/mbzadev/opengrow-platform")
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")

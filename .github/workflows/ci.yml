@@ -2,149 +2,259 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  secrets:
-    name: Secret scan
+  plan:
+    name: Security and change plan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      billing: ${{ steps.changes.outputs.billing }}
+      messaging: ${{ steps.changes.outputs.messaging }}
+      mcp: ${{ steps.changes.outputs.mcp }}
+      workers: ${{ steps.changes.outputs.workers }}
+      dashboard: ${{ steps.changes.outputs.dashboard }}
+      flutter: ${{ steps.changes.outputs.flutter }}
+      flutterflow: ${{ steps.changes.outputs.flutterflow }}
+      flutterflow_messaging: ${{ steps.changes.outputs.flutterflow_messaging }}
+      flutter_packages: ${{ steps.changes.outputs.flutter_packages }}
+      ios: ${{ steps.changes.outputs.ios }}
+      android: ${{ steps.changes.outputs.android }}
+      javascript: ${{ steps.changes.outputs.javascript }}
+      react_native: ${{ steps.changes.outputs.react_native }}
+      node_sdks: ${{ steps.changes.outputs.node_sdks }}
+      native_sdks: ${{ steps.changes.outputs.native_sdks }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-
-  worker:
-    name: API Worker
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run copy:check
-      - run: npm run cloudflare:config:api
-      - run: npm run worker:typecheck
-      - run: npm run worker:test
-      - run: npx wrangler deploy --dry-run --config deploy/generated/vocostar-api-production.jsonc
+      - name: Test change planner
+        run: node --test .github/scripts/ci-change-plan.test.mjs
+      - name: Select affected checks
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          FULL_VALIDATION: ${{ github.event_name == 'workflow_dispatch' }}
+        run: .github/scripts/ci-change-plan.sh
+      - name: Validate product copy
+        run: node scripts/check-product-copy.mjs
+      - name: Validate SDK and FlutterFlow catalogues
+        run: npm run sdk:catalog:check && npm run sdk:catalog:test && npm run flutterflow:source:test && npm run flutterflow-library:check && npm run flutterflow-applications:check
+      - name: Validate Cloudflare and GitHub control planes
+        run: npm run migration:inventory && npm run migration:inventory:test && npm run cloudflare:test:targets && npm run cloudflare:test:services
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+
+  workers:
+    name: Affected Workers
+    needs: plan
+    if: needs.plan.outputs.workers == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify generated Cloudflare binding types
+        run: npm run cloudflare:types:check
+      - name: Validate API Worker
+        if: needs.plan.outputs.api == 'true'
+        run: npm run worker:check
+      - name: Validate Billing Worker
+        if: needs.plan.outputs.billing == 'true'
+        run: npm run billing:check
+      - name: Validate legacy Messaging compatibility
+        if: needs.plan.outputs.messaging == 'true'
+        run: npm run legacy-messaging:check
+      - name: Validate common and domain Workers
+        run: |
+          npm run email:check
+          npm run identity:check
+          npm run files:check
+          npm run observability:check
+          npm run mcp:check
+          npm run modules:check
+          npm run custom:check:all
+          npm run chatwoot:test
 
   dashboard:
     name: Dashboard OpenNext
+    needs: plan
+    if: needs.plan.outputs.dashboard == 'true'
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_API_URL: https://go.vocostar.com
-      NEXT_PUBLIC_API_PATH: /api/v1
-      NEXT_PUBLIC_CLIENT_ID: opengrow-vocostar
-      NEXT_PUBLIC_APP_URL: https://grow.vocostar.com
-      NEXT_PUBLIC_ENV: test
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run dashboard:typecheck
       - run: npm run dashboard:test
-      - run: npm run cloudflare:config:dashboard
-      - run: npm run dashboard:cf-build
+      - run: npm run cloudflare:config:dashboard:reference
+      - run: npm run dashboard:cf-build:reference
 
   flutter:
-    name: Flutter and FlutterFlow
+    name: Affected Flutter packages
+    needs: plan
+    if: needs.plan.outputs.flutter_packages == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
+      - name: Resolve Flutter SDK
+        if: needs.plan.outputs.flutter == 'true'
+        run: flutter pub get
         working-directory: sdks/flutter
-      - run: flutter analyze
+      - name: Analyze Flutter SDK
+        if: needs.plan.outputs.flutter == 'true'
+        run: flutter analyze
         working-directory: sdks/flutter
-      - run: flutter test
+      - name: Test Flutter SDK
+        if: needs.plan.outputs.flutter == 'true'
+        run: flutter test
         working-directory: sdks/flutter
-      - run: flutter pub get
+      - name: Resolve FlutterFlow library
+        if: needs.plan.outputs.flutterflow == 'true'
+        run: flutter pub get
         working-directory: sdks/flutterflow
-      - run: flutter analyze
+      - name: Analyze FlutterFlow library
+        if: needs.plan.outputs.flutterflow == 'true'
+        run: flutter analyze
         working-directory: sdks/flutterflow
-      - run: flutter test
+      - name: Test FlutterFlow library
+        if: needs.plan.outputs.flutterflow == 'true'
+        run: flutter test
         working-directory: sdks/flutterflow
+      - name: Resolve FlutterFlow Messaging library
+        if: needs.plan.outputs.flutterflow_messaging == 'true'
+        run: flutter pub get
+        working-directory: sdks/flutterflow_messaging
+      - name: Analyze FlutterFlow Messaging library
+        if: needs.plan.outputs.flutterflow_messaging == 'true'
+        run: flutter analyze
+        working-directory: sdks/flutterflow_messaging
+      - name: Test FlutterFlow Messaging library
+        if: needs.plan.outputs.flutterflow_messaging == 'true'
+        run: flutter test
+        working-directory: sdks/flutterflow_messaging
 
-  ios:
-    name: Swift SDK
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: xcodebuild -project sdks/ios/OpenGrow.xcodeproj -scheme OpenGrow -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
-
-  android:
-    name: Android SDK
+  node_sdks:
+    name: Affected JavaScript and React Native SDKs
+    needs: plan
+    if: needs.plan.outputs.node_sdks == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Validate JavaScript SDK
+        if: needs.plan.outputs.javascript == 'true'
+        run: npm ci && npm run build
+        working-directory: sdks/javascript
+      - name: Enable Corepack for React Native
+        if: needs.plan.outputs.react_native == 'true'
+        run: corepack enable
+      - name: Install React Native dependencies
+        if: needs.plan.outputs.react_native == 'true'
+        run: yarn install --immutable
+        working-directory: sdks/react-native
+      - name: Typecheck, test and package React Native SDK
+        if: needs.plan.outputs.react_native == 'true'
+        run: yarn typecheck && yarn test --runInBand && yarn prepare
+        working-directory: sdks/react-native
+
+  ios_sdk:
+    name: Affected iOS SDK
+    needs: plan
+    if: needs.plan.outputs.ios == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build and test iOS SDK
+        run: ./scripts/run_tests.sh
+        working-directory: sdks/ios
+
+  android_sdk:
+    name: Affected Android SDK
+    needs: plan
+    if: needs.plan.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: 17
-          cache: gradle
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
-      - run: ./gradlew :OpenGrow:testDebugUnitTest
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Install pinned Android SDK components
+        run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
+      - name: Test Android SDK
+        run: ./gradlew :OpenGrow:testDebugUnitTest
         working-directory: sdks/android/OpenGrow
 
-  javascript:
-    name: JavaScript SDK
+  validation-gate:
+    name: CI gate
+    if: ${{ always() }}
+    needs: [plan, workers, dashboard, flutter, node_sdks, ios_sdk, android_sdk]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PLAN_RESULT: ${{ needs.plan.result }}
+      WORKERS_RESULT: ${{ needs.workers.result }}
+      DASHBOARD_RESULT: ${{ needs.dashboard.result }}
+      FLUTTER_RESULT: ${{ needs.flutter.result }}
+      NODE_SDKS_RESULT: ${{ needs.node_sdks.result }}
+      IOS_SDK_RESULT: ${{ needs.ios_sdk.result }}
+      ANDROID_SDK_RESULT: ${{ needs.android_sdk.result }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: sdks/javascript/package-lock.json
-      - run: npm ci
-        working-directory: sdks/javascript
-      - run: npm run build
-        working-directory: sdks/javascript
-
-  react-native:
-    name: React Native SDK
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-          cache-dependency-path: sdks/react-native/yarn.lock
-      - run: corepack enable
-      - run: yarn install --immutable
-        working-directory: sdks/react-native
-      - run: yarn typecheck
-        working-directory: sdks/react-native
-      - run: yarn test --runInBand
-        working-directory: sdks/react-native
-
-  mcp:
-    name: MCP
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: apps/mcp/package-lock.json
-      - run: npm ci
-        working-directory: apps/mcp
-      - run: npm test
-        working-directory: apps/mcp
-      - run: npm run build
-        working-directory: apps/mcp
+      - name: Require every selected validation to pass
+        run: |
+          test "$PLAN_RESULT" = "success"
+          for result in "$WORKERS_RESULT" "$DASHBOARD_RESULT" "$FLUTTER_RESULT" "$NODE_SDKS_RESULT" "$IOS_SDK_RESULT" "$ANDROID_SDK_RESULT"; do
+            case "$result" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done

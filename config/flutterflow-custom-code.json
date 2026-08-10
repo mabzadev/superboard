@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "owner": "opengrow-platform",
+  "repository": "https://github.com/mbzadev/opengrow-platform",
+  "policy": "library-owned-no-copied-network-protocol",
+  "sourceFiles": {
+    "flutterflow": [
+      "sdks/flutterflow/lib/opengrow_flutterflow.dart",
+      "sdks/flutterflow/lib/src/actions.dart",
+      "sdks/flutterflow/lib/src/application_actions.dart",
+      "sdks/flutterflow/lib/src/application_client.dart",
+      "sdks/flutterflow/lib/src/application_session.dart",
+      "sdks/flutterflow/lib/src/bootstrap.dart",
+      "sdks/flutterflow/lib/src/customer_events.dart",
+      "sdks/flutterflow/lib/src/experience_client.dart",
+      "sdks/flutterflow/lib/src/models.dart",
+      "sdks/flutterflow/lib/src/onboarding.dart",
+      "sdks/flutterflow/lib/src/paywall.dart"
+    ],
+    "support": [
+      "sdks/flutterflow_messaging/lib/opengrow_flutterflow_messaging.dart",
+      "sdks/flutterflow_messaging/lib/src/actions.dart",
+      "sdks/flutterflow_messaging/lib/src/client.dart",
+      "sdks/flutterflow_messaging/lib/src/models.dart",
+      "sdks/flutterflow_messaging/lib/src/realtime.dart",
+      "sdks/flutterflow_messaging/lib/src/support_actions.dart"
+    ]
+  },
+  "widgets": [
+    "OpenGrowBootstrap",
+    "OpenGrowPaywall",
+    "OpenGrowOnboarding",
+    "OpenGrowRestorePurchasesButton",
+    "OpenGrowCustomerCenter"
+  ],
+  "actions": {
+    "identity": [
+      "opengrowInitialize",
+      "opengrowInitializeAuto",
+      "opengrowInitializeAuthenticated",
+      "opengrowIdentify",
+      "opengrowSetUserAttributesJson",
+      "opengrowSetPushToken"
+    ],
+    "applicationGateway": [
+      "opengrowApplicationInitialize",
+      "opengrowApplicationSetAccessToken",
+      "opengrowApplicationRegisterJson",
+      "opengrowApplicationSignInPasswordJson",
+      "opengrowApplicationSignInProviderJson",
+      "opengrowApplicationLinkProviderJson",
+      "opengrowApplicationSignInAnonymousJson",
+      "opengrowApplicationRefreshJson",
+      "opengrowApplicationRestoreSessionJson",
+      "opengrowApplicationCurrentSessionJson",
+      "opengrowApplicationAccessToken",
+      "opengrowApplicationRequestPasswordResetJson",
+      "opengrowApplicationResetPasswordJson",
+      "opengrowApplicationProfileJson",
+      "opengrowApplicationUpdateProfileJson",
+      "opengrowApplicationLogoutJson",
+      "opengrowApplicationDeleteAccountJson",
+      "opengrowApplicationMarketingPreferencesJson",
+      "opengrowApplicationUpdateMarketingConsentJson",
+      "opengrowApplicationRuntimePolicyJson",
+      "opengrowApplicationDispose"
+    ],
+    "files": [
+      "opengrowApplicationListFilesJson",
+      "opengrowApplicationUploadFileJson",
+      "opengrowApplicationDownloadFile",
+      "opengrowApplicationDeleteFileJson"
+    ],
+    "customJobs": [
+      "opengrowApplicationCreateCustomJobJson",
+      "opengrowApplicationListCustomJobsJson",
+      "opengrowApplicationGetCustomJobJson",
+      "opengrowApplicationCancelCustomJobJson"
+    ],
+    "purchases": [
+      "opengrowPurchaseLogin",
+      "opengrowPurchaseLogout",
+      "opengrowPurchase",
+      "opengrowRestore",
+      "opengrowSync",
+      "opengrowHasEntitlement",
+      "opengrowGetOfferings",
+      "opengrowGetPurchaseConfigurationJson",
+      "opengrowGetCustomerInfoJson",
+      "opengrowGetVirtualCurrenciesJson",
+      "opengrowGetCustomerCenterJson",
+      "opengrowGetLastPurchaseResultJson",
+      "opengrowGetLastVerifiedCustomerInfoJson",
+      "opengrowGetEntitlements",
+      "opengrowOpenSubscriptionManagement",
+      "opengrowRecordCertificationResultJson"
+    ],
+    "linksAndEvents": [
+      "opengrowGenerateLinkJson",
+      "opengrowGetLastDeepLinkJson",
+      "opengrowRecordCustomerEvent",
+      "opengrowRecordCustomerEventsJson"
+    ],
+    "support": [
+      "opengrowSupportInitializeAuthenticated",
+      "opengrowSupportOpenConversation",
+      "opengrowSupportGetConfigurationJson",
+      "opengrowSupportListConversationsJson",
+      "opengrowSupportUpdateConversationJson",
+      "opengrowSupportMessagesJson",
+      "opengrowSupportSend",
+      "opengrowSupportSendAdvanced",
+      "opengrowSupportSubmitCsatJson",
+      "opengrowSupportUploadAttachmentJson",
+      "opengrowSupportDownloadAttachment",
+      "opengrowSupportSendAttachment",
+      "opengrowSupportMarkRead",
+      "opengrowSupportSetTyping",
+      "opengrowSupportConnectRealtime",
+      "opengrowSupportDisconnectRealtime",
+      "opengrowSupportGetLastRealtimeEventJson",
+      "opengrowSupportDispose"
+    ],
+    "compatibilityAliases": [
+      "opengrowGetUnreadMessageCount",
+      "opengrowDisplayMessages",
+      "opengrowMessagingInitializeAuthenticated",
+      "opengrowMessagingOpenConversation",
+      "opengrowMessagingGetConfigurationJson",
+      "opengrowMessagingListConversationsJson",
+      "opengrowMessagingUpdateConversationJson",
+      "opengrowMessagingMessagesJson",
+      "opengrowMessagingSend",
+      "opengrowMessagingSendAdvanced",
+      "opengrowMessagingSubmitCsatJson",
+      "opengrowMessagingUploadAttachmentJson",
+      "opengrowMessagingDownloadAttachment",
+      "opengrowMessagingSendAttachment",
+      "opengrowMessagingMarkRead",
+      "opengrowMessagingSetTyping",
+      "opengrowMessagingConnectRealtime",
+      "opengrowMessagingDisconnectRealtime",
+      "opengrowMessagingGetLastRealtimeEventJson",
+      "opengrowMessagingDispose"
+    ]
+  },
+  "streams": {
+    "purchases": [
+      "opengrowVerifiedCustomerInfoJsonStream",
+      "opengrowPurchaseResultJsonStream"
+    ],
+    "support": ["opengrowSupportEventJsonStream"],
+    "compatibilityAliases": ["opengrowMessagingEventJsonStream"]
+  },
+  "referenceAdapters": {}
+}

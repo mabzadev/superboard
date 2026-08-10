@@ -15,7 +15,7 @@ class MockOpenGrowPlatform
 
   @override
   Future<String> generateLink(GenerateLinkParams params) =>
-      Future.value('https://github.com/mbzadev/opengrow/test-link');
+      Future.value('https://github.com/mbzadev/opengrow-platform/test-link');
 
   @override
   Future<void> setPushToken(String token) => Future.value();
@@ -76,6 +76,6 @@ void main() {
       GenerateLinkParams(title: 'Test'),
     );
 
-    expect(link, 'https://github.com/mbzadev/opengrow/test-link');
+    expect(link, 'https://github.com/mbzadev/opengrow-platform/test-link');
   });
 }

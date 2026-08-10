@@ -2,7 +2,7 @@
   "mcpServers": {
     "opengrow": {
       "type": "http",
-      "url": "https://mcp.opengrow.io/mcp"
+      "url": "${OPENGROW_MCP_URL}"
     }
   }
 }

@@ -25,7 +25,7 @@ create_link(
   data: {"screen": "promo", "sale_id": "summer-2026"},
   tags: ["marketing", "summer-2026"]
 )
-→ URL: https://foodies.opengrow.io/summer-sale
+→ URL: <short-link-origin>/summer-sale
 ```
 
 User: "Create a link for the Summer Sale campaign"
@@ -38,7 +38,7 @@ User: "Create a link for the Summer Sale campaign"
      campaign_id: 42,
      data: {"screen": "promo"}
    )
-→ URL: https://foodies.opengrow.io/summer-sale-banner (assigned to campaign 42)
+→ URL: <short-link-origin>/summer-sale-banner (assigned to campaign 42)
 ```
 
 If the campaign doesn't exist yet and they're creating several related links, create it first:

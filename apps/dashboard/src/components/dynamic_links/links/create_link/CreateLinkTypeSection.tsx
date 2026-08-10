@@ -75,7 +75,7 @@ const CreateLinkTypeSection = ({
               <CardDescription>
                 These links provide a simple way to connect any campaign or
                 channel, ensuring reliable tracking, smooth user routing, and
-                actionable insights to maximize engagement and growth.
+                actionable insights to improve engagement.
               </CardDescription>
             </CardHeader>
             <CardContent>

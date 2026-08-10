@@ -1,0 +1,18 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "opengrow-paywalls",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "secrets": { "required": ["INTERNAL_API_TOKEN"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "opengrow-paywalls-db",
+      "database_id": "00000000-0000-0000-0000-000000000002",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

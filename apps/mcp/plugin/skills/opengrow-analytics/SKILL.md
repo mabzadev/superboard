@@ -48,7 +48,7 @@ get_top_links(project_id: "p_m9f", start_date: "2026-04-01", end_date: "2026-04-
 
 User: "Show me the daily breakdown for that one"
 ```
-get_link_analytics(project_id: "p_m9f", path: "https://foodies.opengrow.io/summer-sale", start_date: "2026-04-01", end_date: "2026-04-08")
+get_link_analytics(project_id: "p_m9f", path: "<short-link-origin>/summer-sale", start_date: "2026-04-01", end_date: "2026-04-08")
 → Daily rows. Sum if user wants totals.
 ```
 

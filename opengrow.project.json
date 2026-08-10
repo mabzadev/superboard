@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "product": {
+    "name": "OpenGrow",
+    "slug": "opengrow"
+  },
+  "repositories": {
+    "platform": "https://github.com/mbzadev/opengrow-platform",
+    "reference": "https://github.com/mbzadev/opengrow-reference"
+  },
+  "development": {
+    "target": "mbza-development"
+  }
+}

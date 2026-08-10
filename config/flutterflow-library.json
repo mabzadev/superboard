@@ -1,0 +1,200 @@
+{
+  "$schema": "../schemas/flutterflow-library.schema.json",
+  "schemaVersion": 1,
+  "owner": "opengrow-platform",
+  "displayName": "OpenGrow",
+  "source": {
+    "path": "tools/flutterflow-library/dsl/edit.dart",
+    "testPath": "tools/flutterflow-library/test/app_test.dart",
+    "workflow": ".github/workflows/sync-flutterflow-library.yml"
+  },
+  "remoteProject": {
+    "projectIdVariable": "FF_LIBRARY_PROJECT_ID",
+    "apiKeySecret": "FF_API_KEY",
+    "githubEnvironment": "flutterflow-library"
+  },
+  "releasePolicy": "immutable-tag-only",
+  "dependencies": [
+    {
+      "catalogId": "flutterflow",
+      "packageName": "opengrow_flutterflow",
+      "sourceVersion": "2.2.4",
+      "requiredRef": "sdk-flutterflow-v2.2.4"
+    },
+    {
+      "catalogId": "flutterflow-support",
+      "packageName": "opengrow_flutterflow_messaging",
+      "sourceVersion": "1.3.0",
+      "requiredRef": "sdk-flutterflow-messaging-v1.3.0"
+    }
+  ],
+  "libraryValues": [
+    {
+      "name": "projectKey",
+      "key": "opengrow_project_key",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "uriScheme",
+      "key": "opengrow_uri_scheme",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "useTestEnvironment",
+      "key": "opengrow_use_test_environment",
+      "type": "boolean",
+      "required": true,
+      "defaultValue": false
+    },
+    {
+      "name": "sdkBaseUrl",
+      "key": "opengrow_sdk_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "authGatewayBaseUrl",
+      "key": "opengrow_auth_gateway_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "filesBaseUrl",
+      "key": "opengrow_files_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "applicationIdentifier",
+      "key": "opengrow_application_identifier",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "applicationEnvironment",
+      "key": "opengrow_application_environment",
+      "type": "string",
+      "required": true,
+      "defaultValue": "production"
+    },
+    {
+      "name": "supportBaseUrl",
+      "key": "opengrow_support_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "supportProjectId",
+      "key": "opengrow_support_project_id",
+      "type": "integer",
+      "required": true
+    },
+    {
+      "name": "shortLinkHost",
+      "key": "opengrow_short_link_host",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "widgets": [
+    "OpenGrowBootstrap",
+    "OpenGrowPaywall",
+    "OpenGrowOnboarding",
+    "OpenGrowRestorePurchasesButton",
+    "OpenGrowCustomerCenter"
+  ],
+  "pages": [
+    "OpenGrowPaywallPage",
+    "OpenGrowOnboardingPage",
+    "OpenGrowCustomerCenterPage"
+  ],
+  "actions": {
+    "bootstrap": [
+      "opengrowInitializeAuthenticated",
+      "opengrowApplicationInitialize",
+      "opengrowInitializeAuthenticatedFromApplicationSession"
+    ],
+    "identity": [
+      "opengrowApplicationRestoreSessionJson",
+      "opengrowApplicationCurrentSessionJson",
+      "opengrowApplicationAccessToken",
+      "opengrowApplicationRegisterJson",
+      "opengrowApplicationSignInPasswordJson",
+      "opengrowApplicationSignInProviderJson",
+      "opengrowApplicationLinkProviderJson",
+      "opengrowApplicationSignInAnonymousJson",
+      "opengrowApplicationRefreshJson",
+      "opengrowApplicationLogoutJson",
+      "opengrowApplicationDeleteAccountJson",
+      "opengrowApplicationProfileJson",
+      "opengrowApplicationUpdateProfileJson",
+      "opengrowApplicationRequestPasswordResetJson",
+      "opengrowApplicationResetPasswordJson"
+    ],
+    "application": [
+      "opengrowApplicationRuntimePolicyJson",
+      "opengrowApplicationMarketingPreferencesJson",
+      "opengrowApplicationUpdateMarketingConsentJson"
+    ],
+    "analyticsAndLinks": [
+      "opengrowSetAnalyticsUser",
+      "opengrowSetAnalyticsUserFromLibraryState",
+      "opengrowSetUserAttributesJson",
+      "opengrowSetPushToken",
+      "opengrowGenerateLinkJson",
+      "opengrowGetUnreadMessageCount",
+      "opengrowDisplayMessages",
+      "opengrowGetLastDeepLinkJson"
+    ],
+    "purchases": [
+      "opengrowPurchaseLogout",
+      "opengrowPurchase",
+      "opengrowPurchaseFromLibraryState",
+      "opengrowRestore",
+      "opengrowSync",
+      "opengrowHasEntitlement",
+      "opengrowGetCustomerInfoJson",
+      "opengrowOpenSubscriptionManagement",
+      "opengrowGetOfferings"
+    ],
+    "files": [
+      "opengrowApplicationListFilesJson",
+      "opengrowApplicationUploadFileJson",
+      "opengrowApplicationDownloadFile",
+      "opengrowApplicationDeleteFileJson"
+    ],
+    "customJobs": [
+      "opengrowApplicationCreateCustomJobJson",
+      "opengrowApplicationListCustomJobsJson",
+      "opengrowApplicationGetCustomJobJson",
+      "opengrowApplicationCancelCustomJobJson"
+    ],
+    "support": [
+      "opengrowSupportInitializeAuthenticated",
+      "opengrowSupportGetConfigurationJson",
+      "opengrowSupportListConversationsJson",
+      "opengrowSupportOpenConversation",
+      "opengrowSupportUpdateConversationJson",
+      "opengrowSupportMessagesJson",
+      "opengrowSupportSend",
+      "opengrowSupportSendAdvanced",
+      "opengrowSupportSubmitCsatJson",
+      "opengrowSupportUploadAttachmentJson",
+      "opengrowSupportDownloadAttachment",
+      "opengrowSupportSendAttachment",
+      "opengrowSupportMarkRead",
+      "opengrowSupportSetTyping",
+      "opengrowSupportConnectRealtime",
+      "opengrowSupportDisconnectRealtime",
+      "opengrowSupportGetLastRealtimeEventJson",
+      "opengrowSupportDispose"
+    ]
+  },
+  "forbiddenAppState": [
+    "opengrowApplicationAccessToken",
+    "opengrowIdentityToken",
+    "opengrowVocostarAccessToken"
+  ]
+}

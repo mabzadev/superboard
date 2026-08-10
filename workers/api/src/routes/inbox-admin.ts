@@ -7,7 +7,7 @@ import type { AppVariables, Env } from '../types';
 
 type InboxItem = {
   id: string;
-  source_type: 'conversation' | 'store_review' | 'refund_case';
+  source_type: 'conversation' | 'refund_case';
   source_id: string;
   title: string;
   preview: string;
@@ -37,26 +37,23 @@ inbox.get('/:projectId/items', async (c) => {
     const project = await projectFor(c);
     const selectedType = String(c.req.query('type') || 'all');
     const selectedStatus = String(c.req.query('status') || '');
-    if (!['all', 'conversation', 'store_review', 'refund_case'].includes(selectedType)) {
+    if (!['all', 'conversation', 'refund_case'].includes(selectedType)) {
       throw purchasesError('inbox_type_invalid', 'Unsupported Inbox item type');
     }
     if (selectedStatus && !['open', 'pending', 'closed'].includes(selectedStatus)) {
       throw purchasesError('inbox_status_invalid', 'Unsupported Inbox status');
     }
     const degradedSources: Array<{ source_type: string; code: string; message: string }> = [];
-    const [conversations, reviews, refunds] = await Promise.all([
+    const [conversations, refunds] = await Promise.all([
       selectedType === 'all' || selectedType === 'conversation'
         ? conversationItems(c.env, project.id, degradedSources)
-        : Promise.resolve([]),
-      selectedType === 'all' || selectedType === 'store_review'
-        ? reviewItems(c.env.DB, project.id)
         : Promise.resolve([]),
       selectedType === 'all' || selectedType === 'refund_case'
         ? refundItems(c.env.DB, project.id)
         : Promise.resolve([]),
     ]);
     const priority = { urgent: 0, high: 1, normal: 2, low: 3 } as const;
-    const data = [...conversations, ...reviews, ...refunds]
+    const data = [...conversations, ...refunds]
       .filter((item) => !selectedStatus || item.status === selectedStatus)
       .sort((left, right) => priority[left.priority] - priority[right.priority] || right.updated_at.localeCompare(left.updated_at))
       .slice(0, 500);
@@ -101,54 +98,6 @@ export function mapConversationItem(row: Record<string, unknown>): InboxItem {
       capabilities: ['reply', 'assign', 'set_priority', 'set_status'],
       source: row,
   };
-}
-
-async function reviewItems(db: D1Database, projectId: string): Promise<InboxItem[]> {
-  const rows = await db.prepare(`
-    SELECT r.id, r.provider, r.provider_review_id, r.rating, r.title, r.body,
-      r.translated_body, r.author_name, r.territory, r.language, r.provider_created_at, r.updated_at,
-      (SELECT status FROM store_review_response_drafts d WHERE d.review_id = r.id ORDER BY d.created_at DESC LIMIT 1) AS draft_status,
-      (SELECT ia.id FROM inbox_automation_alerts ia
-        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
-        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_id,
-      (SELECT ia.title FROM inbox_automation_alerts ia
-        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
-        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_title,
-      (SELECT ia.body FROM inbox_automation_alerts ia
-        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
-        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_body,
-      (SELECT ia.priority FROM inbox_automation_alerts ia
-        WHERE ia.project_id = r.project_id AND ia.source_type = 'store_review' AND ia.source_id = r.id AND ia.status = 'open'
-        ORDER BY ia.updated_at DESC LIMIT 1) AS automation_alert_priority
-    FROM store_reviews r
-    WHERE r.project_id = ? AND r.response_body IS NULL
-    ORDER BY r.provider_created_at DESC, r.updated_at DESC LIMIT 250
-  `).bind(projectId).all<Record<string, unknown>>();
-  return rows.results.map(mapReviewItem);
-}
-
-export function mapReviewItem(row: Record<string, unknown>): InboxItem {
-  const ratingPriority = Number(row.rating) <= 1 ? 'urgent' : Number(row.rating) <= 2 ? 'high' : 'normal';
-  const automationPriority = row.automation_alert_priority ? itemPriority(row.automation_alert_priority) : 'low';
-  return {
-    id: `store_review:${row.id}`,
-    source_type: 'store_review',
-    source_id: String(row.id),
-    title: String(row.title || row.author_name || 'Customer review').slice(0, 255),
-    preview: String(row.translated_body || row.body || 'No written comment').slice(0, 1000),
-    status: row.draft_status === 'approved' || row.draft_status === 'queued' ? 'pending' : 'open',
-    priority: higherPriority(ratingPriority, automationPriority),
-    customer_reference: row.author_name ? String(row.author_name) : null,
-    updated_at: isoDate(row.provider_created_at || row.updated_at),
-    destination: `/store-reviews?review=${encodeURIComponent(String(row.id))}`,
-    capabilities: ['draft_response', 'approve_response', 'publish_response', ...(row.automation_alert_id ? ['automation_alert'] : [])],
-    source: row,
-  };
-}
-
-function higherPriority(left: InboxItem['priority'], right: InboxItem['priority']): InboxItem['priority'] {
-  const ranks: Record<InboxItem['priority'], number> = { low: 0, normal: 1, high: 2, urgent: 3 };
-  return ranks[right] > ranks[left] ? right : left;
 }
 
 async function refundItems(db: D1Database, projectId: string): Promise<InboxItem[]> {
@@ -198,7 +147,7 @@ function isoDate(value: unknown): string {
 }
 
 function providerName(value: unknown): string {
-  return value === 'apple' ? 'Apple' : value === 'google' ? 'Google Play' : value === 'stripe' ? 'Stripe' : 'Provider';
+  return value === 'apple' ? 'Apple' : value === 'google' ? 'Google Play' : 'Provider';
 }
 
 function humanize(value: unknown): string {

@@ -4,7 +4,10 @@ Manage deep links, analytics, and app configuration for your mobile apps — dir
 
 ## What is OpenGrow?
 
-[OpenGrow](https://github.com/mbzadev/opengrow) is a deep linking platform for mobile apps. It provides Universal Links (iOS), App Links (Android), deferred deep linking, analytics, and social preview configuration.
+[OpenGrow](https://github.com/mbzadev/opengrow-platform) is a self-hosted
+application operations control plane. Its MCP tools cover projects, Universal
+Links (iOS), App Links (Android), deferred deep linking, analytics, campaigns
+and SDK configuration for the selected deployment target.
 
 ## Installation
 
@@ -16,7 +19,9 @@ This installs the OpenGrow MCP server and a set of skills that teach Claude how 
 
 ## Authentication
 
-On first use, Claude Code will open a browser window to authenticate with your OpenGrow account via OAuth. No API keys needed.
+Set `OPENGROW_MCP_URL` to the `/mcp` endpoint published by the selected
+application target. On first use, Claude Code opens the target's OAuth flow. No
+API key is stored in the plugin.
 
 ## Available Skills
 
@@ -57,7 +62,7 @@ The plugin connects to the OpenGrow MCP server which provides these tools:
 | Tool | Description |
 |------|-------------|
 | `get_status` | View instances, projects, domains, and current config |
-| `get_usage` | Check usage metrics and subscription status for an instance |
+| `get_usage` | Read the 30-day active-user metric for an instance |
 | `create_project` | Create a new instance with production and test projects |
 | `create_link` | Create a deep link with metadata and custom data |
 | `get_link` | Get details of a specific link |
@@ -75,6 +80,6 @@ The plugin connects to the OpenGrow MCP server which provides these tools:
 
 ## Links
 
-- [OpenGrow Documentation](https://docs.opengrow.io)
-- [OpenGrow Dashboard](https://app.opengrow.io)
-- [MCP Server Source](https://github.com/mbzadev/opengrow/tree/main/apps/mcp)
+- [OpenGrow platform documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs)
+- Dashboard: use the `domains.dashboard` origin from the selected target manifest
+- [MCP Server Source](https://github.com/mbzadev/opengrow-platform/tree/main/apps/mcp)

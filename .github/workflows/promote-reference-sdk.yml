@@ -1,0 +1,87 @@
+name: Promote SDK set to OpenGrow Reference
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - config/sdk-libraries.json
+      - .github/workflows/promote-reference-sdk.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reference-sdk-set-promotion
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: sdk-release
+    outputs:
+      ready: ${{ steps.sdk-set.outputs.ready }}
+      catalogue_sha: ${{ steps.sdk-set.outputs.sha }}
+    env:
+      GH_TOKEN: ${{ secrets.OPENGROW_REFERENCE_DISPATCH_TOKEN }}
+      OPENGROW_REFERENCE_REPOSITORY: ${{ vars.OPENGROW_REFERENCE_REPOSITORY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate the complete SDK catalogue
+        run: node scripts/sdk-catalog.mjs check
+      - name: Resolve whether the complete FlutterFlow SDK set is published
+        id: sdk-set
+        run: |
+          ready="$(node - <<'NODE'
+          const catalogue = require('./config/sdk-libraries.json');
+          const ids = ['flutterflow', 'flutterflow-support'];
+          const ready = ids.every((id) => {
+            const library = catalogue.libraries.find((item) => item.id === id);
+            return library &&
+              library.releaseStatus === 'released' &&
+              library.sourceVersion === library.latestReleaseVersion;
+          });
+          process.stdout.write(String(ready));
+          NODE
+          )"
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Verify every immutable SDK tag and GitHub release
+        if: ${{ steps.sdk-set.outputs.ready == 'true' }}
+        run: |
+          for library in flutterflow flutterflow-support; do
+            tag="$(node scripts/sdk-catalog.mjs release-tag --library "$library")"
+            git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
+            git merge-base --is-ancestor "refs/tags/$tag^{}" HEAD
+            gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" >/dev/null
+          done
+      - name: Validate cross-repository dispatch configuration
+        if: ${{ steps.sdk-set.outputs.ready == 'true' }}
+        run: |
+          test -n "$GH_TOKEN"
+          test -n "$OPENGROW_REFERENCE_REPOSITORY"
+          case "$OPENGROW_REFERENCE_REPOSITORY" in
+            */*) ;;
+            *) exit 64 ;;
+          esac
+      - name: Dispatch the verified SDK set
+        if: ${{ steps.sdk-set.outputs.ready == 'true' }}
+        env:
+          CATALOGUE_SHA: ${{ steps.sdk-set.outputs.sha }}
+        run: |
+          gh api --method POST "repos/$OPENGROW_REFERENCE_REPOSITORY/dispatches" \
+            --raw-field event_type=sdk-release-set-published \
+            --raw-field "client_payload[catalogue_sha]=$CATALOGUE_SHA"
+
+  sync-development-library:
+    needs: dispatch
+    if: ${{ needs.dispatch.outputs.ready == 'true' }}
+    uses: ./.github/workflows/sync-flutterflow-library.yml
+    with:
+      source_ref: ${{ needs.dispatch.outputs.catalogue_sha }}
+    secrets: inherit

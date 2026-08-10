@@ -26,6 +26,8 @@ void main() {
       MaterialApp(
         home: OpenGrowBootstrap(
           projectKey: 'project-key',
+          sdkBaseUrl: 'https://sdk.example.com',
+          experienceApiBaseUrl: 'https://api.example.com/api/v1',
           purchaseResultStream: purchases.stream,
           customerInfoStream: customerInfo.stream,
           onPurchaseResultJson: (value) async {

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opengrow.dev/schemas/flutterflow-applications.schema.json",
+  "title": "OpenGrow FlutterFlow application registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "owner", "applications"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 2 },
+    "owner": { "const": "opengrow-platform" },
+    "applications": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/application" }
+    }
+  },
+  "$defs": {
+    "environmentName": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "(^/|(^|/)\\.\\.(/|$))" }
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "displayName",
+        "target",
+        "environment",
+        "sourceSnapshot",
+        "migrationPlan",
+        "remoteProject",
+        "libraryProjectIdVariable",
+        "client"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
+        "environment": { "enum": ["development", "production"] },
+        "sourceSnapshot": { "$ref": "#/$defs/repositoryPath" },
+        "migrationPlan": { "$ref": "#/$defs/repositoryPath" },
+        "remoteProject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "githubEnvironment",
+            "projectIdVariable",
+            "apiKeySecret"
+          ],
+          "properties": {
+            "githubEnvironment": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]+$"
+            },
+            "projectIdVariable": { "$ref": "#/$defs/environmentName" },
+            "apiKeySecret": { "$ref": "#/$defs/environmentName" }
+          }
+        },
+        "libraryProjectIdVariable": { "$ref": "#/$defs/environmentName" },
+        "client": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "projectKeySecret",
+            "uriScheme",
+            "applicationIdentifier",
+            "supportProjectId"
+          ],
+          "properties": {
+            "projectKeySecret": { "const": "OPENGROW_PROJECT_KEY" },
+            "uriScheme": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9+.-]{1,63}$"
+            },
+            "applicationIdentifier": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9.-]{2,254}$"
+            },
+            "supportProjectId": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

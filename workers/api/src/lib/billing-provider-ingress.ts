@@ -5,11 +5,11 @@ import { verifyAppleNotification } from './store-verification';
 type ProviderJob =
   | Omit<Extract<BillingQueueJob, { type: 'billing.apple.notification' }>, 'eventId'>
   | Omit<Extract<BillingQueueJob, { type: 'billing.google.notification' }>, 'eventId'>
-  | Omit<Extract<BillingQueueJob, { type: 'billing.stripe.notification' }>, 'eventId'>;
+  | Omit<Extract<BillingQueueJob, { type: 'billing.google.refund.review' }>, 'eventId'>;
 
 export type BillingProviderIngressRequest = {
   projectId: string;
-  store: 'apple' | 'google' | 'stripe';
+  store: 'apple' | 'google';
   environment: 'sandbox' | 'production';
   externalEventId: string;
   eventType?: string;
@@ -85,7 +85,7 @@ function validateRequest(request: BillingProviderIngressRequest) {
   if (!request.projectId || request.projectId.length > 255) {
     throw ingressError('provider_event_project_invalid', 'Provider event project is invalid');
   }
-  if (!['apple', 'google', 'stripe'].includes(request.store)) {
+  if (!['apple', 'google'].includes(request.store)) {
     throw ingressError('provider_event_store_invalid', 'Provider event store is invalid');
   }
   if (!['sandbox', 'production'].includes(request.environment)) {
@@ -97,8 +97,10 @@ function validateRequest(request: BillingProviderIngressRequest) {
   if ((request.eventType || '').length > 255 || !request.payload || request.payload.length > 1_048_576) {
     throw ingressError('provider_event_payload_invalid', 'Provider event payload is invalid', 413);
   }
-  const expectedType = `billing.${request.store}.notification`;
-  if (request.job.type !== expectedType) {
+  const expectedTypes = request.store === 'google'
+    ? new Set(['billing.google.notification', 'billing.google.refund.review'])
+    : new Set([`billing.${request.store}.notification`]);
+  if (!expectedTypes.has(request.job.type)) {
     throw ingressError('provider_event_job_invalid', 'Provider event job does not match its store');
   }
   if ('projectId' in request.job && request.job.projectId !== request.projectId) {
@@ -109,6 +111,10 @@ function validateRequest(request: BillingProviderIngressRequest) {
     throw ingressError('provider_event_job_invalid', 'Provider event job does not match its environment');
   }
   if (request.store === 'google' && request.job.type === 'billing.google.notification'
+    && request.job.environment !== request.environment) {
+      throw ingressError('provider_event_job_invalid', 'Provider event job does not match its environment');
+  }
+  if (request.store === 'google' && request.job.type === 'billing.google.refund.review'
     && request.job.environment !== request.environment) {
     throw ingressError('provider_event_job_invalid', 'Provider event job does not match its environment');
   }

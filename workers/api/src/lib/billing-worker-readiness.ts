@@ -10,7 +10,6 @@ type BillingSecretEnv = Pick<
   | 'PURCHASES_SIGNING_KEYSET'
   | 'APPLE_ROOT_CERTIFICATES_B64'
   | 'OPENGROW_ENTITLEMENT_WEBHOOK_SECRET'
-  | 'OPENGROW_VOCOSTAR_WEBHOOK_SECRET'
 >;
 
 export type BillingWorkerReadiness = {
@@ -34,7 +33,7 @@ export function billingSecretReadiness(env: BillingSecretEnv) {
   }
   if (!env.PURCHASES_SIGNING_KEYSET) missing.push('PURCHASES_SIGNING_KEYSET');
   if (!env.APPLE_ROOT_CERTIFICATES_B64) missing.push('APPLE_ROOT_CERTIFICATES_B64');
-  if (!env.OPENGROW_ENTITLEMENT_WEBHOOK_SECRET && !env.OPENGROW_VOCOSTAR_WEBHOOK_SECRET) {
+  if (!env.OPENGROW_ENTITLEMENT_WEBHOOK_SECRET) {
     missing.push('OPENGROW_ENTITLEMENT_WEBHOOK_SECRET');
   }
   return { ready: missing.length === 0, missing };
@@ -47,7 +46,6 @@ export async function billingStoreReadiness(db: D1Database): Promise<Record<stri
         CASE connection.provider
           WHEN 'apple' THEN 'platform_configuration'
           WHEN 'google' THEN 'platform_configuration'
-          WHEN 'stripe' THEN 'store_connection'
         END AS credential_source,
         CASE
           WHEN connection.provider = 'apple' AND EXISTS (
@@ -80,13 +78,11 @@ export async function billingStoreReadiness(db: D1Database): Promise<Record<stri
                 )
               )
           ) THEN 1
-          WHEN connection.provider = 'stripe'
-            AND connection.billing_configuration_encrypted IS NOT NULL THEN 1
           ELSE 0
         END AS credentials_ready
       FROM billing_store_connections connection
       JOIN projects project ON project.id = connection.project_id
-      WHERE connection.provider IN ('apple', 'google', 'stripe')
+      WHERE connection.provider IN ('apple', 'google')
     )
     SELECT provider, environment, credential_source, COUNT(*) AS connections,
       SUM(credentials_ready) AS configured,

@@ -1,17 +1,17 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/opengrow"><img src="https://img.shields.io/badge/distribution-private%20Git-4F46E5?style=flat-square" alt="Private Git"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform"><img src="https://img.shields.io/badge/distribution-public%20Git-4F46E5?style=flat-square" alt="Public Git"/></a>
   <a href="#"><img src="https://img.shields.io/badge/platforms-iOS%20%7C%20Android-4F46E5?style=flat-square" alt="Platforms"/></a>
   <a href="#"><img src="https://img.shields.io/badge/flutter-3.0%2B-4F46E5?style=flat-square&logo=flutter&logoColor=white" alt="Flutter"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -20,9 +20,9 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.opengrow.io/docs/sdk/flutter/quick-start">Quick Start</a> ·
-  <a href="https://docs.opengrow.io/docs/sdk/flutter/api-reference">API Reference</a> ·
-  <a href="https://docs.opengrow.io">Full Docs</a>
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/flutter#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/flutter#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -84,7 +84,7 @@ Add the dependency to your `pubspec.yaml`:
 dependencies:
   opengrow_flutter:
     git:
-      url: git@github.com:mbzadev/opengrow.git
+      url: git@github.com:mbzadev/opengrow-platform.git
       ref: sdk-flutter-v2.1.3
       path: sdks/flutter
 ```
@@ -331,7 +331,7 @@ FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
 });
 ```
 
-Upload your Firebase or APNs credentials in the [OpenGrow dashboard](https://app.opengrow.io) under your platform's push notification settings.
+Upload your Firebase or APNs credentials in the OpenGrow Dashboard deployed for the active application target, under your platform's push notification settings.
 
 > Push notifications require a physical device. They do not work in the iOS Simulator.
 
@@ -341,7 +341,7 @@ Upload your Firebase or APNs credentials in the [OpenGrow dashboard](https://app
 
 ### Setup
 
-1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
 2. Configure platform notifications:
    - **Android** — Set up Google Play Real-Time Developer Notifications
    - **iOS** — Configure App Store Server Notifications in App Store Connect
@@ -391,7 +391,7 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [docs.opengrow.io/docs/sdk/flutter/api-reference](https://docs.opengrow.io/docs/sdk/flutter/api-reference)
+Full API reference: [Flutter SDK API reference](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/flutter#api-reference)
 
 ## Example App
 
@@ -399,16 +399,15 @@ A demo project is included in the [`example/`](example/) directory.
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/android)
-- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/android)
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
 
 ## Support
 
-For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
+For technical support, use the support channel configured for the active target or open a repository issue.
 
 ## License
 

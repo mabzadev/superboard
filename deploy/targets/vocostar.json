@@ -1,21 +1,57 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 9,
   "target": "vocostar",
-  "accountId": "4fec11873e7130ab0e44e795e3e3afd3",
+  "accountAlias": "vocostar-production",
   "workersDevSubdomain": "vocostar",
-  "accessMode": "full",
   "registrationMode": "allowlist",
   "ssoEnabled": false,
+  "features": {
+    "billing": true,
+    "messaging": false,
+    "app": true,
+    "products": true,
+    "paywalls": true,
+    "dynamic-links": true,
+    "support": true,
+    "marketing": true,
+    "onboardings": true
+  },
+  "applicationIdentity": {
+    "registrationMode": "open",
+    "applicationAudience": "vocostar.application",
+    "googleAudiences": [
+      "1070077172350-r9legn34b4ue4ahndu364h7i6fhgi1s0.apps.googleusercontent.com",
+      "1070077172350-enr69udbu6m6vo2gsjvjqhoneaesr51i.apps.googleusercontent.com",
+      "1070077172350-empj1r44188iuscqckckta1ghbajn4sl.apps.googleusercontent.com"
+    ],
+    "appleAudiences": ["com.createurs.vocostar"],
+    "webOrigins": []
+  },
+  "filePolicy": {
+    "maxBytes": 52428800,
+    "downloadTicketTtlSeconds": 1800,
+    "allowedContentTypes": [
+      "application/octet-stream",
+      "audio/*",
+      "image/jpeg",
+      "image/png",
+      "text/plain",
+      "video/*"
+    ]
+  },
   "mail": {
-    "provider": "cloudflare",
+    "transport": "smtp",
     "fromName": "OpenGrow",
     "fromAddress": "noreply@vocostar.com"
   },
   "domains": {
+    "api": "api.vocostar.com",
     "shortlinks": "go.vocostar.com",
     "sdk": "sdk.vocostar.com",
     "dashboard": "grow.vocostar.com",
+    "files": "files.vocostar.com",
+    "mcp": "mcp.vocostar.com",
     "messaging": "messages.vocostar.com"
   },
   "workers": {
@@ -31,9 +67,86 @@
     "messaging": {
       "production": "opengrow-messaging"
     },
-    "growth": {
-      "production": "opengrow-growth"
+    "email": {
+      "production": "opengrow-email"
+    },
+    "identity": {
+      "production": "opengrow-identity"
+    },
+    "files": {
+      "production": "opengrow-files"
+    },
+    "observability": {
+      "production": "opengrow-observability"
+    },
+    "mcp": {
+      "production": "opengrow-mcp"
+    },
+    "app": {
+      "production": "opengrow-app"
+    },
+    "products": {
+      "production": "opengrow-products"
+    },
+    "paywalls": {
+      "production": "opengrow-paywalls"
+    },
+    "dynamic-links": {
+      "production": "opengrow-dynamic-links"
+    },
+    "support": {
+      "production": "opengrow-support"
+    },
+    "marketing": {
+      "production": "opengrow-marketing"
+    },
+    "onboardings": {
+      "production": "opengrow-onboardings"
+    },
+    "custom": {
+      "production": "opengrow-custom-vocostar"
     }
+  },
+  "customWorker": {
+    "source": "workers/custom/vocostar/src/index.ts",
+    "packagePath": "workers/custom/vocostar",
+    "description": "VocoStar voice-cloning and media-conversion job adapter backed by the existing Cloudflare Workflows and Containers.",
+    "capabilities": [
+      "vocostar.voice.clone",
+      "vocostar.media.convert",
+      "vocostar.jobs.read",
+      "vocostar.jobs.cancel",
+      "vocostar.jobs.retry"
+    ],
+    "secrets": ["CUSTOM_WORKER_TOKEN", "FILES_INTERNAL_TOKEN"],
+    "vars": {
+      "MAX_AUTOMATIC_DISPATCH_ATTEMPTS": "5"
+    },
+    "crons": ["*/1 * * * *"],
+    "d1Binding": {
+      "binding": "VOCOSTAR_DB",
+      "migrationsDir": "workers/custom/vocostar/migrations"
+    },
+    "serviceBindings": [
+      {
+        "binding": "VOCALS_ORCHESTRATOR",
+        "workers": {
+          "production": "send-users-vocals-orchestrator"
+        }
+      },
+      {
+        "binding": "MEDIAS_ORCHESTRATOR",
+        "workers": {
+          "production": "send-users-medias-orchestrator"
+        }
+      },
+      {
+        "binding": "FILES_SERVICE",
+        "workers": {
+          "production": "opengrow-files"
+        }
+      }
+    ]
   },
   "oauth": {
     "dashboardClientId": "opengrow-vocostar"
@@ -42,6 +155,17 @@
     "issuer": "https://api.vocostar.com",
     "audience": "opengrow",
     "jwksUrl": "https://api.vocostar.com/.well-known/jwks.json"
+  },
+  "publicSurfaceMonitors": [
+    {
+      "id": "legacy-chatwoot",
+      "url": "https://chat.vocostar.com",
+      "healthUrl": "https://chat.vocostar.com/ready",
+      "description": "Legacy Chatwoot migration source; keep read-only until OpenGrow Support acceptance and retention sign-off, then remove this monitor with the service"
+    }
+  ],
+  "operator": {
+    "docsUrl": "https://github.com/mbzadev/opengrow-platform/tree/main/docs"
   },
   "environments": {
     "production": {
@@ -53,12 +177,88 @@
         "name": "opengrow",
         "id": "72a311dd206d47538688937943f44553"
       },
-      "r2": { "name": "opengrow" },
-      "dashboardCache": { "name": "opengrow" },
-      "messagingD1": { "name": "opengrow-messaging-db", "id": "e7142cd8-d708-48b6-a311-47a49d3a67ac" },
-      "messagingR2": { "name": "opengrow-messaging" },
+      "r2": {
+        "name": "opengrow"
+      },
+      "dashboardCache": {
+        "name": "opengrow-dashboard-cache"
+      },
+      "messagingD1": {
+        "name": "opengrow-messaging-db",
+        "id": "e7142cd8-d708-48b6-a311-47a49d3a67ac"
+      },
+      "messagingR2": {
+        "name": "opengrow-messaging"
+      },
+      "emailD1": {
+        "name": "opengrow-email-db",
+        "id": "f88f2bc8-a6e6-46ce-b727-a9586871d3af"
+      },
+      "identityD1": {
+        "name": "opengrow-identity-db",
+        "id": "3f910042-4725-46f4-9b04-265a36eef872"
+      },
+      "filesD1": {
+        "name": "opengrow-files-db",
+        "id": "415d569f-5a2d-4fb9-9b32-89e2a6196ef7"
+      },
+      "customD1": {
+        "name": "vocostar-db",
+        "id": "07c6f044-e00a-421f-90de-b56db7bcfc40",
+        "legacyName": true
+      },
+      "analyticsDataset": "opengrow_vocostar_production",
       "messagingProjectIds": [11, 12],
-      "growthD1": { "name": "opengrow-growth-db", "id": "d131bb22-f3b5-4f7b-96df-c06a9f4ecc31" },
+      "supportProjectIds": [11, 12],
+      "moduleD1": {
+        "app": {
+          "name": "opengrow-app-db",
+          "id": "37f3fe3d-88c0-424f-8cb4-0875d5d2004a"
+        },
+        "products": {
+          "name": "opengrow-products-db",
+          "id": "e88a9146-e13e-47f2-97ca-049a75c3af32"
+        },
+        "paywalls": {
+          "name": "opengrow-paywalls-db",
+          "id": "a9376d0d-1149-423f-ba12-a8b7ea3e869b"
+        },
+        "dynamicLinks": {
+          "name": "opengrow-dynamic-links-db",
+          "id": "8c46f117-6b12-49df-8308-e82458e31eab"
+        },
+        "support": {
+          "name": "opengrow-support-db",
+          "id": "13171470-dfb5-46ce-b047-c9b151c34ae2"
+        },
+        "marketing": {
+          "name": "opengrow-marketing-db",
+          "id": "b9989b1d-fea5-454e-aba5-9f674b85af9b"
+        },
+        "onboardings": {
+          "name": "opengrow-onboardings-db",
+          "id": "f55b41a7-b705-4953-95ac-d2e7bf5779e9"
+        }
+      },
+      "moduleR2": {
+        "support": {
+          "name": "opengrow-support-attachments"
+        },
+        "marketing": {
+          "name": "opengrow-marketing-media"
+        }
+      },
+      "moduleQueues": {
+        "support": {
+          "name": "opengrow-support-events",
+          "dlq": "opengrow-support-events-dlq"
+        },
+        "marketing": {
+          "name": "opengrow-marketing-delivery",
+          "dlq": "opengrow-marketing-delivery-dlq"
+        }
+      },
+      "publicRouting": "staged",
       "billingExecutionMode": "service",
       "queues": {
         "events": "opengrow-events",
@@ -69,8 +269,10 @@
         "maintenanceDlq": "opengrow-maintenance-dlq",
         "billing": "opengrow-billing",
         "billingDlq": "opengrow-billing-dlq",
-        "growth": "opengrow-growth",
-        "growthDlq": "opengrow-growth-dlq"
+        "messaging": "opengrow-messaging-events",
+        "messagingDlq": "opengrow-messaging-events-dlq",
+        "email": "opengrow-email-delivery",
+        "emailDlq": "opengrow-email-delivery-dlq"
       }
     }
   }

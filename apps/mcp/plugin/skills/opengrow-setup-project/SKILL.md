@@ -46,14 +46,11 @@ User: "Set up OpenGrow for my app Foodies, it's iOS only, bundle is com.foodies.
 
 Present the production project_id (`p_m9f`) — the user will need it for every other tool.
 
-## Checking usage and subscription
+## Checking operational activity
 
-`get_usage` takes an **instance_id** and returns current MAU count, MAU limit, quota status, and subscription status. Use it when:
-- The user asks about their plan, usage, limits, or billing
-- `get_status` shows a usage warning (quota exceeded) — `get_usage` gives the full picture
-- Before setting up a new project, to check if the user's instance has capacity
-
-If the quota is exceeded and there's no subscription, deep links stop working. Tell the user to subscribe.
+`get_usage` takes an **instance_id** and returns the number of active users seen
+over the last 30 days. Use it for operational visibility and adoption analysis.
+It is not an OpenGrow edition, quota, capacity or subscription gate.
 
 ## If something fails
 

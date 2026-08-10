@@ -10,24 +10,29 @@ import {
   validRegistrationRedirectUri,
   verifyPkce,
 } from '../lib/mcp-oauth';
+import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
 
 const mcpOauth = new Hono<{ Bindings: Env }>();
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return await c.req.parseBody().catch(() => ({}));
-}
-
-function originFor(c: any) {
-  const url = new URL(c.req.url);
-  return `${url.protocol}//${url.host}`;
+  return readRequestObjectLimited(c.req.raw, 1024 * 1024);
 }
 
 function consentUrl(c: any) {
-  if (c.env.MCP_CONSENT_URL) return String(c.env.MCP_CONSENT_URL);
-  if (c.env.APP_URL) return `${String(c.env.APP_URL).replace(/\/$/, '')}/mcp/authorize`;
-  return `${originFor(c)}/mcp/authorize`;
+  return configuredMcpConsentUrl(c.env);
+}
+
+export function configuredMcpConsentUrl(env: Pick<Env, 'MCP_CONSENT_URL' | 'APP_URL'>): string {
+  const explicit = String(env.MCP_CONSENT_URL || '').trim();
+  const dashboard = String(env.APP_URL || '').trim();
+  const candidate = explicit || (dashboard ? `${dashboard.replace(/\/$/, '')}/mcp/authorize` : '');
+  if (!candidate) throw new Error('MCP consent URL is not configured');
+  const url = new URL(candidate);
+  const local = new Set(['localhost', '127.0.0.1', '[::1]']).has(url.hostname);
+  if ((url.protocol !== 'https:' && !(local && url.protocol === 'http:')) || url.username || url.password) {
+    throw new Error('MCP consent URL must be an absolute HTTPS URL');
+  }
+  return url.toString();
 }
 
 function htmlError(c: any, error: string, description: string) {

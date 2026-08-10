@@ -1,0 +1,318 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  applyGitHubReconcilePlan,
+  buildGitHubReconcilePlan,
+  mutationRequest,
+  reconciliationConfirmation,
+} from "./github-reconcile.mjs";
+
+function manifest() {
+  return {
+    schemaVersion: 5,
+    repositories: {
+      platform: {
+        nameWithOwner: "mbzadev/opengrow-platform",
+        description: "OpenGrow platform",
+        settings: {
+          issues: true,
+          projects: false,
+          wiki: false,
+          downloads: false,
+          squashMerge: true,
+          mergeCommit: false,
+          rebaseMerge: false,
+          deleteBranchOnMerge: true,
+        },
+        visibility: "public",
+        defaultBranch: "dev",
+        workflowPermissions: {
+          default: "read",
+          canApprovePullRequestReviews: true,
+        },
+        branches: {
+          dev: {
+            requiredCheck: "CI gate",
+            requirePullRequest: true,
+            requireCodeOwnerReviews: true,
+            requiredApprovals: 1,
+          },
+          main: {
+            requiredCheck: "CI gate",
+            requirePullRequest: true,
+            requireCodeOwnerReviews: true,
+            requiredApprovals: 1,
+          },
+        },
+        environments: {
+          development: {
+            variables: { OPENGROW_TARGET: "mbza-development" },
+            secrets: ["CLOUDFLARE_API_TOKEN"],
+          },
+        },
+        repositorySecrets: ["READ_TOKEN"],
+      },
+    },
+  };
+}
+
+test("reconciliation blocks a missing repository and never invents a creation mutation", () => {
+  const plan = buildGitHubReconcilePlan(manifest(), [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "missing-or-inaccessible",
+      ready: false,
+    },
+  ]);
+  assert.equal(plan.ready, false);
+  assert.equal(plan.repositories[0].operations.length, 0);
+  assert.deepEqual(
+    plan.repositories[0].blockers.map(({ type }) => type),
+    ["repository-access"],
+  );
+  assert.equal(JSON.stringify(plan).includes("create-repository"), false);
+});
+
+test("reconciliation plans structure but leaves every secret value manual", () => {
+  const plan = buildGitHubReconcilePlan(manifest(), [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: true,
+      workflowPermissionsMatch: true,
+      defaultBranch: "main",
+      branches: [
+        { name: "dev", exists: true, protectionMatches: false },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: false },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: false }],
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: false }],
+    },
+  ]);
+  assert.deepEqual(
+    plan.repositories[0].operations.map(({ type }) => type),
+    [
+      "put-branch-protection",
+      "set-default-branch",
+      "update-environment-variable",
+    ],
+  );
+  assert.deepEqual(
+    plan.repositories[0].manual.map(({ name }) => name),
+    ["CLOUDFLARE_API_TOKEN", "READ_TOKEN"],
+  );
+  assert.equal(JSON.stringify(plan).includes("mbza-development"), false);
+});
+
+test("reconciliation converges declarative repository settings", () => {
+  const configuration = manifest();
+  const plan = buildGitHubReconcilePlan(configuration, [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: false,
+      workflowPermissionsMatch: true,
+      defaultBranch: "dev",
+      branches: [
+        { name: "dev", exists: true, protectionMatches: true },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: true },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+    },
+  ]);
+  assert.deepEqual(plan.repositories[0].operations, [
+    {
+      type: "update-repository-settings",
+    },
+  ]);
+  assert.equal(plan.repositories[0].blockers.length, 0);
+  assert.equal(plan.repositories[0].manual.length, 0);
+
+  const request = mutationRequest(configuration.repositories.platform, {
+    type: "update-repository-settings",
+  });
+  assert.deepEqual(request.body, {
+    description: "OpenGrow platform",
+    has_issues: true,
+    has_projects: false,
+    has_wiki: false,
+    has_downloads: false,
+    allow_squash_merge: true,
+    allow_merge_commit: false,
+    allow_rebase_merge: false,
+    delete_branch_on_merge: true,
+  });
+  const firstConfirmation = reconciliationConfirmation(plan, configuration);
+  const changed = structuredClone(configuration);
+  changed.repositories.platform.settings.wiki = true;
+  assert.notEqual(firstConfirmation, reconciliationConfirmation(plan, changed));
+});
+
+test("reconciliation enables least-privilege workflow PR creation explicitly", () => {
+  const configuration = manifest();
+  const plan = buildGitHubReconcilePlan(configuration, [
+    {
+      nameWithOwner: "mbzadev/opengrow-platform",
+      status: "incomplete",
+      ready: false,
+      visibility: "public",
+      settingsMatch: true,
+      workflowPermissionsMatch: false,
+      defaultBranch: "dev",
+      branches: [
+        { name: "dev", exists: true, protectionMatches: true },
+        { name: "main", exists: true, protectionMatches: true },
+      ],
+      environments: [
+        {
+          name: "development",
+          exists: true,
+          variables: [
+            { name: "OPENGROW_TARGET", exists: true, configured: true },
+          ],
+          secrets: [{ name: "CLOUDFLARE_API_TOKEN", configured: true }],
+        },
+      ],
+      repositorySecrets: [{ name: "READ_TOKEN", configured: true }],
+    },
+  ]);
+  assert.deepEqual(plan.repositories[0].operations, [
+    { type: "set-workflow-permissions" },
+  ]);
+  const request = mutationRequest(configuration.repositories.platform, {
+    type: "set-workflow-permissions",
+  });
+  assert.equal(
+    request.args.includes(
+      "repos/mbzadev/opengrow-platform/actions/permissions/workflow",
+    ),
+    true,
+  );
+  assert.deepEqual(request.body, {
+    default_workflow_permissions: "read",
+    can_approve_pull_request_reviews: true,
+  });
+});
+
+test("reconciliation refuses every mutation without its exact confirmation", () => {
+  const configuration = manifest();
+  const plan = {
+    schemaVersion: 1,
+    repositories: [
+      {
+        nameWithOwner: "mbzadev/opengrow-platform",
+        blockers: [],
+        operations: [{ type: "put-environment", environment: "development" }],
+      },
+    ],
+  };
+  let calls = 0;
+  assert.throws(
+    () =>
+      applyGitHubReconcilePlan(plan, configuration, {
+        confirm: "wrong",
+        run: () => {
+          calls += 1;
+          return { ok: true };
+        },
+      }),
+    /pass --confirm GITHUB:RECONCILE:1:[a-f0-9]{12}/u,
+  );
+  assert.equal(calls, 0);
+  assert.match(
+    reconciliationConfirmation(plan, configuration),
+    /^GITHUB:RECONCILE:1:[a-f0-9]{12}$/u,
+  );
+});
+
+test("confirmed reconciliation uses JSON stdin and never mutates secrets", () => {
+  const configuration = manifest();
+  const plan = {
+    schemaVersion: 1,
+    repositories: [
+      {
+        nameWithOwner: "mbzadev/opengrow-platform",
+        blockers: [],
+        manual: [
+          {
+            type: "set-environment-secret",
+            environment: "development",
+            name: "CLOUDFLARE_API_TOKEN",
+          },
+        ],
+        operations: [
+          { type: "put-environment", environment: "development" },
+          {
+            type: "create-environment-variable",
+            environment: "development",
+            name: "OPENGROW_TARGET",
+          },
+          {
+            type: "put-branch-protection",
+            branch: "dev",
+            requiredCheck: "CI gate",
+            requiredApprovals: 1,
+            requireCodeOwnerReviews: true,
+          },
+        ],
+      },
+    ],
+  };
+  const calls = [];
+  const applied = applyGitHubReconcilePlan(plan, configuration, {
+    confirm: reconciliationConfirmation(plan, configuration),
+    run: (args, body) => {
+      calls.push({ args, body });
+      return { ok: true };
+    },
+  });
+  assert.equal(applied.length, 3);
+  assert.equal(calls.length, 3);
+  assert.equal(
+    calls.every(({ args }) => args.includes("--input") && args.includes("-")),
+    true,
+  );
+  assert.equal(
+    calls.some(({ body }) => "CLOUDFLARE_API_TOKEN" in body),
+    false,
+  );
+  assert.equal(calls[1].body.value, "mbza-development");
+  assert.deepEqual(calls[2].body.required_status_checks.contexts, ["CI gate"]);
+  assert.equal(
+    calls[2].body.required_pull_request_reviews.require_code_owner_reviews,
+    true,
+  );
+});
+
+test("GitHub mutation requests use the current versioned REST contract", () => {
+  const request = mutationRequest(manifest().repositories.platform, {
+    type: "set-default-branch",
+    branch: "dev",
+  });
+  assert.deepEqual(request.body, { default_branch: "dev" });
+  assert.equal(request.args.includes("X-GitHub-Api-Version: 2026-03-10"), true);
+  assert.equal(request.args.includes("repos/mbzadev/opengrow-platform"), true);
+});

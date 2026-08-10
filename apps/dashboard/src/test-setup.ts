@@ -2,7 +2,9 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
-if (typeof localStorage === "undefined" || typeof localStorage.clear !== "function") {
+const browserStorage = typeof window !== "undefined" ? window.localStorage : undefined;
+
+if (!browserStorage || typeof browserStorage.clear !== "function") {
   const store = new Map<string, string>();
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,

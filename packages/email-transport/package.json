@@ -1,0 +1,14 @@
+{
+  "name": "@opengrow/email-transport",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260808.1",
+    "typescript": "^5.8.3"
+  }
+}

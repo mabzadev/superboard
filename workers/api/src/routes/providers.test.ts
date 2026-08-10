@@ -2,25 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { importPKCS8, SignJWT } from 'jose';
 import iapRoutes from './iap';
 import { processPushNotifications } from './push';
-import webhooksRoutes from './webhooks';
 import { Env } from '../types';
 import { createFakeD1, FakeD1Call } from '../test/fake-d1';
+import { encryptCredential } from '../lib/secrets';
 
-function hex(buffer: ArrayBuffer): string {
-  return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-async function stripeSignature(secret: string, payload: string, timestamp = Math.floor(Date.now() / 1000)) {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const digest = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${payload}`));
-  return `t=${timestamp},v1=${hex(digest)}`;
-}
 
 function pemFromPkcs8(bytes: ArrayBuffer): string {
   const binary = String.fromCharCode(...new Uint8Array(bytes));
@@ -67,6 +52,8 @@ function baseEnv(db: D1Database, overrides: Partial<Env> = {}): Env {
     SDK_DOMAIN: 'sdk.test',
     CORS_ORIGIN: '*',
     JWT_SECRET: 'providers-secret',
+    STORE_CREDENTIALS_ENCRYPTION_KEYS: JSON.stringify({ v1: 'push-test-key-material' }),
+    STORE_CREDENTIALS_ACTIVE_KEY_VERSION: 'v1',
     ...overrides,
   };
 }
@@ -116,34 +103,17 @@ function queuedAppleDb(state: { event: { id: string; status: string } | null; qu
   });
 }
 
-function stripeDb(state: { messages: Map<string, { processed: number }> }) {
-  return createFakeD1((call: FakeD1Call) => {
-    const { op, sql, args } = call;
-    if (op === 'first' && sql.includes('FROM stripe_webhook_messages WHERE stripe_event_id = ?')) {
-      return state.messages.get(String(args[0])) || null;
-    }
-    if (op === 'run' && sql.startsWith('INSERT INTO stripe_webhook_messages')) {
-      state.messages.set(String(args[0]), { processed: 0 });
-      return true;
-    }
-    if (op === 'run' && sql.startsWith('UPDATE stripe_webhook_messages SET processed = 1')) {
-      const row = state.messages.get(String(args[0]));
-      if (row) row.processed = 1;
-      return true;
-    }
-    return undefined;
-  });
-}
 
-function pushDb(rows: any[], state: { updates: any[] }) {
+function pushDb(rows: any[], state: { updates: any[]; claimChanges?: number }) {
   return createFakeD1((call: FakeD1Call) => {
     const { op, sql, args } = call;
     if (op === 'all' && sql.includes('FROM rpush_notifications rn JOIN rpush_apps ra')) {
       return rows;
     }
+    if (op === 'all' && sql.includes('encrypted_')) return [];
     if (op === 'run' && sql.startsWith('UPDATE rpush_notifications SET processing = 1')) {
       state.updates.push({ type: 'processing', id: args[0] });
-      return true;
+      return { success: true, meta: { changes: state.claimChanges ?? 1 } };
     }
     if (op === 'run' && sql.includes('SET delivered = 1')) {
       state.updates.push({ type: 'delivered', id: args[0] });
@@ -165,42 +135,6 @@ function pushDb(rows: any[], state: { updates: any[] }) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe('Stripe webhooks', () => {
-  it('rejects invalid Stripe signatures', async () => {
-    const env = baseEnv(stripeDb({ messages: new Map() }), { STRIPE_WEBHOOK_SECRET: 'whsec_test' });
-    const response = await webhooksRoutes.request('/stripe', {
-      method: 'POST',
-      headers: { 'Stripe-Signature': 't=1,v1=bad' },
-      body: JSON.stringify({ id: 'evt_bad', type: 'noop.event' }),
-    }, env);
-
-    expect(response.status).toBe(400);
-  });
-
-  it('accepts signed Stripe webhooks once and treats replay as idempotent', async () => {
-    const state = { messages: new Map<string, { processed: number }>() };
-    const env = baseEnv(stripeDb(state), { STRIPE_WEBHOOK_SECRET: 'whsec_test' });
-    const payload = JSON.stringify({ id: 'evt_1', type: 'noop.event', data: { object: {} } });
-    const signature = await stripeSignature('whsec_test', payload);
-
-    const first = await webhooksRoutes.request('/stripe', {
-      method: 'POST',
-      headers: { 'Stripe-Signature': signature },
-      body: payload,
-    }, env);
-    expect(first.status).toBe(200);
-    await expect(first.json()).resolves.toEqual({ message: 'Stripe webhook processed' });
-
-    const replay = await webhooksRoutes.request('/stripe', {
-      method: 'POST',
-      headers: { 'Stripe-Signature': signature },
-      body: payload,
-    }, env);
-    expect(replay.status).toBe(200);
-    await expect(replay.json()).resolves.toEqual({ message: 'Stripe webhook already processed' });
-  });
 });
 
 describe('IAP webhooks', () => {
@@ -303,9 +237,9 @@ describe('IAP webhooks', () => {
       ENVIRONMENT: 'production',
       GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'expected-token',
     });
-    const response = await iapRoutes.request('/google/10?token=wrong-token', {
+    const response = await iapRoutes.request('/google/10?token=expected-token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Channel-Token': 'wrong-token' },
       body: JSON.stringify({ subscriptionNotification: { purchaseToken: 'gpa-token', subscriptionId: 'premium' } }),
     }, env);
 
@@ -322,9 +256,12 @@ describe('IAP webhooks', () => {
       ENVIRONMENT: 'production',
       GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'expected-token',
     });
-    const response = await iapRoutes.request('/google/10?token=expected-token', {
+    const response = await iapRoutes.request('/google/10', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'cf-ray': 'google-payload-test' },
+      headers: {
+        'Content-Type': 'application/json', 'cf-ray': 'google-payload-test',
+        'X-Goog-Channel-Token': 'expected-token',
+      },
       body: JSON.stringify({ message: { data: 'not-json' } }),
     }, env);
 
@@ -364,9 +301,9 @@ describe('IAP webhooks', () => {
         subscriptionId: 'premium_weekly',
       },
     };
-    const response = await iapRoutes.request('/google/10?token=migration-token', {
+    const response = await iapRoutes.request('/google/10', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Channel-Token': 'migration-token' },
       body: JSON.stringify({
         message: { messageId: 'pubsub-message-1', data: btoa(JSON.stringify(providerPayload)) },
       }),
@@ -381,6 +318,67 @@ describe('IAP webhooks', () => {
       project_id: '102',
       environment: 'sandbox',
       job: { projectId: '102', environment: 'sandbox' },
+    });
+  });
+
+  it('accepts pending Google chargeback reviews without attempting purchase verification', async () => {
+    const calls: Array<{ path: string; body: Record<string, any> }> = [];
+    const db = createFakeD1((call) => {
+      if (call.op === 'first' && call.sql.includes('FROM projects WHERE instance_id = ? AND is_test = ?')) {
+        return { id: 101, instance_id: 10, is_test: 0, name: 'Production', identifier: 'prod' };
+      }
+      if (call.op === 'first' && call.sql.includes('FROM billing_transactions t') && call.sql.includes('JOIN projects p')) {
+        return { project_id: '102', environment: 'sandbox' };
+      }
+      return undefined;
+    });
+    const billing = {
+      fetch: vi.fn(async (request: Request) => {
+        const body = await request.json() as Record<string, any>;
+        calls.push({ path: new URL(request.url).pathname, body });
+        return Response.json({ data: { event_id: 'refund-event-1', duplicate: false, queued: true, processed: false } });
+      }),
+    };
+    const env = baseEnv(db, {
+      ENVIRONMENT: 'production',
+      BILLING_EXECUTION_MODE: 'service',
+      BILLING: billing as unknown as Fetcher,
+      GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'migration-token',
+    });
+    const providerPayload = {
+      packageName: 'com.example.android',
+      eventTimeMillis: '1785830400000',
+      pendingRefundReviewNotification: {
+        version: '1.0',
+        pendingRefundToken: 'pending-refund-token',
+        orderId: 'GPA.1234-5678-9012-34567',
+        refundReason: 7,
+      },
+    };
+    const response = await iapRoutes.request('/google/10', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Channel-Token': 'migration-token' },
+      body: JSON.stringify({
+        message: { messageId: 'pubsub-refund-review-1', data: btoa(JSON.stringify(providerPayload)) },
+      }),
+    }, env);
+
+    expect(response.status).toBe(202);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      path: '/internal/v1/provider-events/ingest',
+      body: {
+        project_id: '102',
+        environment: 'sandbox',
+        external_event_id: 'pubsub-refund-review-1',
+        event_type: 'PENDING_REFUND_REVIEW_CHARGEBACK',
+        job: {
+          type: 'billing.google.refund.review',
+          projectId: '102',
+          environment: 'sandbox',
+          eventOccurredAt: '2026-08-04T08:00:00.000Z',
+        },
+      },
     });
   });
 
@@ -411,9 +409,9 @@ describe('IAP webhooks', () => {
       ENVIRONMENT: 'production',
       GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'expected-token',
     });
-    const response = await iapRoutes.request('/google/10?token=expected-token', {
+    const response = await iapRoutes.request('/google/10', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Channel-Token': 'expected-token' },
       body: JSON.stringify({
         packageName: 'com.opengrow.android',
         subscriptionNotification: { notificationType: 'SUBSCRIPTION_PURCHASED', purchaseToken: 'purchase-token', subscriptionId: 'premium_monthly' },
@@ -450,9 +448,9 @@ describe('IAP webhooks', () => {
       GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'expected-token',
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: await googleServiceAccountJson(),
     });
-    const response = await iapRoutes.request('/google/10?token=expected-token', {
+    const response = await iapRoutes.request('/google/10', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Channel-Token': 'expected-token' },
       body: JSON.stringify({
         packageName: 'com.opengrow.android',
         subscriptionNotification: { notificationType: 'SUBSCRIPTION_PURCHASED', purchaseToken: 'purchase-token', subscriptionId: 'premium_monthly' },
@@ -469,6 +467,7 @@ describe('IAP webhooks', () => {
 describe('push processing', () => {
   it('marks FCM notifications delivered when provider send succeeds', async () => {
     const state = { updates: [] as any[] };
+    const env = baseEnv(pushDb([], state));
     const row = {
       id: 1,
       type: 'Rpush::Fcm::Notification',
@@ -476,13 +475,14 @@ describe('push processing', () => {
       notification: JSON.stringify({ title: 'Hello', body: 'World' }),
       data: JSON.stringify({ linksquared: 'true' }),
       firebase_project_id: 'firebase-project',
-      access_token: 'cached-fcm-token',
+      encrypted_access_token: await encryptCredential(env, 'cached-fcm-token'),
       access_token_expiration: new Date(Date.now() + 3600_000).toISOString(),
       retries: 0,
     };
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ name: 'messages/1' }), { status: 200 })));
 
-    const result = await processPushNotifications(baseEnv(pushDb([row], state)));
+    env.DB = pushDb([row], state);
+    const result = await processPushNotifications(env);
 
     expect(result).toMatchObject({ processed: 1, results: [{ id: 1, delivered: true }] });
     expect(state.updates).toEqual([{ type: 'processing', id: 1 }, { type: 'delivered', id: 1 }]);
@@ -490,6 +490,7 @@ describe('push processing', () => {
 
   it('marks push notifications failed after the final retry', async () => {
     const state = { updates: [] as any[] };
+    const env = baseEnv(pushDb([], state));
     const row = {
       id: 2,
       type: 'Rpush::Fcm::Notification',
@@ -497,15 +498,39 @@ describe('push processing', () => {
       notification: '{}',
       data: '{}',
       firebase_project_id: 'firebase-project',
-      access_token: 'cached-fcm-token',
+      encrypted_access_token: await encryptCredential(env, 'cached-fcm-token'),
       access_token_expiration: new Date(Date.now() + 3600_000).toISOString(),
       retries: 4,
     };
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { message: 'Invalid token' } }), { status: 400 })));
 
-    const result = await processPushNotifications(baseEnv(pushDb([row], state)));
+    env.DB = pushDb([row], state);
+    const result = await processPushNotifications(env);
 
     expect(result).toMatchObject({ processed: 1, results: [{ id: 2, delivered: false, retry: false, retries: 5 }] });
     expect(state.updates.at(-1)).toMatchObject({ type: 'failed', failed: 1, message: 'Invalid token', retries: 5, id: 2 });
+  });
+
+  it('does not deliver a notification claimed by another queue consumer', async () => {
+    const state = { updates: [] as any[], claimChanges: 0 };
+    const env = baseEnv(pushDb([], state));
+    const row = {
+      id: 3,
+      type: 'Rpush::Fcm::Notification',
+      device_token: 'device-token',
+      notification: '{}',
+      data: '{}',
+      firebase_project_id: 'firebase-project',
+      encrypted_access_token: await encryptCredential(env, 'cached-fcm-token'),
+      access_token_expiration: new Date(Date.now() + 3600_000).toISOString(),
+      retries: 0,
+    };
+    env.DB = pushDb([row], state);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await expect(processPushNotifications(env)).resolves.toEqual({ processed: 0, results: [] });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(state.updates).toEqual([{ type: 'processing', id: 3 }]);
   });
 });

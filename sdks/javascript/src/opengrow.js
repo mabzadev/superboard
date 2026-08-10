@@ -10,13 +10,15 @@ class OpenGrow {
    * @param {string} APIKey - The API key for authentication.
    * @param {boolean} testEnvironment - Indicates if the environment is a test environment.
    * @param {Function} linkHandlingCallback - Callback function to handle OpenGrow data.
+   * @param {string} baseURL - Application-specific SDK origin, for example `https://sdk.example.com`.
    */
-  constructor(APIKey, testEnvironment, linkHandlingCallback) {
+  constructor(APIKey, testEnvironment, linkHandlingCallback, baseURL) {
     // Initialize the OpenGrowManager with the provided API key and callback
     this.manager = new OpenGrowManager(
       APIKey,
       testEnvironment,
-      linkHandlingCallback
+      linkHandlingCallback,
+      baseURL
     );
   }
 

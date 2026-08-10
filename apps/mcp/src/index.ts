@@ -1,18 +1,20 @@
 import "dotenv/config";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { createServer } from "./server.js";
 import { createApp } from "./app.js";
+import { configuredApiBaseUrl, normalizeApiBaseUrl } from "./api-client.js";
 
 const isStdio = process.argv.includes("--stdio");
+const OPENGROW_API_URL = configuredApiBaseUrl();
 
 if (isStdio) {
-  const server = createServer();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  serveStdio(() => createServer(), {
+    legacy: "serve",
+    onerror: (error) => console.error(error),
+  });
 } else {
   const PORT = parseInt(process.env.PORT || "8080", 10);
-  const OPENGROW_API_URL = process.env.OPENGROW_API_URL || "https://mcp.opengrow.io";
-  const PUBLIC_URL = process.env.PUBLIC_URL || `http://localhost:${PORT}`;
+  const PUBLIC_URL = normalizeApiBaseUrl(process.env.PUBLIC_URL, "PUBLIC_URL");
 
   const app = createApp(OPENGROW_API_URL, PUBLIC_URL);
 

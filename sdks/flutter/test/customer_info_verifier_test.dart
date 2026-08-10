@@ -44,7 +44,7 @@ void main() {
         'original_app_user_id': 'forged-user',
         'entitlements': const {},
       },
-      purchasesBaseUrl: 'https://sdk.vocostar.com/purchases/v2',
+      purchasesBaseUrl: 'https://sdk.example.com/purchases/v2',
       preferences: await SharedPreferences.getInstance(),
     );
 
@@ -69,7 +69,7 @@ void main() {
         envelope: {
           'signature': '${_signature.substring(0, _signature.length - 1)}A',
         },
-        purchasesBaseUrl: 'https://sdk.vocostar.com/purchases/v2',
+        purchasesBaseUrl: 'https://sdk.example.com/purchases/v2',
         preferences: await SharedPreferences.getInstance(),
       ),
       throwsA(isA<OpenGrowCustomerInfoVerificationException>()),

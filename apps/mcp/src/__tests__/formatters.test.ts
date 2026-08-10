@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatStatus,
+  formatPlatformStatus,
   formatUsage,
   formatCreateProject,
   formatLink,
@@ -17,26 +18,20 @@ import { slugify, extractPath } from "../tools/utils.js";
 import {
   statusWithProjects,
   statusEmpty,
-  statusWithUsageWarning,
-  statusWithSubscription,
+  platformStatus,
   createdProject,
-  createdLink,
-  minimalLink,
   searchLinksPage,
   searchLinksEmpty,
   analyticsOverview,
   linkAnalytics,
   topLinks,
   redirectConfig,
-  sdkConfig,
   sdkConfigWithSensitive,
   createdCampaign,
   archivedCampaign,
   campaignListSingle,
   campaignListEmpty,
-  usageWithinLimits,
-  usageExceededNoSubscription,
-  usageExceededWithSubscription,
+  usageActivity,
 } from "./fixtures.js";
 
 // ── slugify ──
@@ -72,7 +67,7 @@ describe("slugify", () => {
 
 describe("extractPath", () => {
   it("extracts path from full URL", () => {
-    expect(extractPath("https://myapp.opengrow.io/summer-sale")).toBe("summer-sale");
+    expect(extractPath("https://links.example.test/summer-sale")).toBe("summer-sale");
   });
 
   it("returns slug as-is", () => {
@@ -84,11 +79,11 @@ describe("extractPath", () => {
   });
 
   it("handles URL with https and subdomain", () => {
-    expect(extractPath("https://test.myapp.opengrow.io/promo-link")).toBe("promo-link");
+    expect(extractPath("https://test-links.example.test/promo-link")).toBe("promo-link");
   });
 
   it("handles URL with trailing slash", () => {
-    expect(extractPath("https://myapp.opengrow.io/sale/")).toBe("sale/");
+    expect(extractPath("https://links.example.test/sale/")).toBe("sale/");
   });
 
   it("handles URL with http", () => {
@@ -109,10 +104,10 @@ describe("formatStatus", () => {
     expect(out).toContain("Account Overview");
     expect(out).toContain("Alice");
     expect(out).toContain("alice@test.com");
-    expect(out).toContain("myapp.opengrow.io");
     expect(out).toContain("inst1");
-    expect(out).toContain("prod1");
-    expect(out).toContain("test1");
+    expect(out).toContain("inst1-prod");
+    expect(out).toContain("inst1-test");
+    expect(out).toContain("17");
   });
 
   it("handles no instances", () => {
@@ -126,57 +121,38 @@ describe("formatStatus", () => {
     // val() produces em-dash for missing fields
   });
 
-  it("shows usage warning when quota_exceeded and no subscription", () => {
-    const out = formatStatus(statusWithUsageWarning);
-
-    expect(out).toContain("WARNING: Usage exceeded (12000/10000 MAU)");
-    expect(out).toContain("deep links are not working");
-    expect(out).toContain("Subscribe to a paid plan");
-  });
-
-  it("does not show usage warning when has_subscription is true", () => {
-    const out = formatStatus(statusWithSubscription);
-
-    expect(out).not.toContain("WARNING");
-  });
-
-  it("does not show usage warning when quota is not exceeded", () => {
+  it("does not turn operational activity into a product gate", () => {
     const out = formatStatus(statusWithProjects);
+    expect(out).not.toMatch(/quota|subscription|paid plan/iu);
+  });
+});
 
-    expect(out).not.toContain("WARNING");
+describe("formatPlatformStatus", () => {
+  it("renders the operational control-plane inventory", () => {
+    const out = formatPlatformStatus(platformStatus);
+    expect(out).toContain("OpenGrow Platform Status");
+    expect(out).toContain("reference");
+    expect(out).toContain("OpenGrow API");
+    expect(out).toContain("Transactional email");
+    expect(out).toContain("Runtime metrics");
+    expect(out).toContain("reference.echo");
+    expect(out).toContain("Data stores");
+    expect(out).toContain('email: {"queued":1,"failed":0}');
+    expect(out).toContain("Authentication");
+    expect(out).not.toContain("signed-proof");
   });
 });
 
 // ── formatUsage ──
 
 describe("formatUsage", () => {
-  it("renders usage within limits", () => {
-    const out = formatUsage(usageWithinLimits);
+  it("renders 30-day activity without quota or subscription fields", () => {
+    const out = formatUsage(usageActivity);
 
-    expect(out).toContain("Usage");
-    expect(out).toContain("Current MAU: 5000 / 10000");
-    expect(out).toContain("Quota exceeded: No");
-    expect(out).toContain("Has subscription: Yes");
-    expect(out).not.toContain("WARNING");
-  });
-
-  it("renders usage exceeded without subscription and shows warning", () => {
-    const out = formatUsage(usageExceededNoSubscription);
-
-    expect(out).toContain("Current MAU: 12000 / 10000");
-    expect(out).toContain("Quota exceeded: Yes");
-    expect(out).toContain("Has subscription: No");
-    expect(out).toContain("WARNING: Usage exceeded");
-    expect(out).toContain("Subscribe to a paid plan");
-  });
-
-  it("renders usage exceeded with subscription and no warning", () => {
-    const out = formatUsage(usageExceededWithSubscription);
-
-    expect(out).toContain("Current MAU: 12000 / 10000");
-    expect(out).toContain("Quota exceeded: Yes");
-    expect(out).toContain("Has subscription: Yes");
-    expect(out).not.toContain("WARNING");
+    expect(out).toContain("Activity");
+    expect(out).toContain("Instance ID: inst1");
+    expect(out).toContain("Active users (30 days): 5000");
+    expect(out).not.toMatch(/quota|subscription|paid plan/iu);
   });
 
   it("handles missing usage key gracefully", () => {
@@ -195,8 +171,8 @@ describe("formatCreateProject", () => {
     expect(out).toContain("Project Created");
     expect(out).toContain("abc123");
     expect(out).toContain("myapp");
-    expect(out).toContain("prod1");
-    expect(out).toContain("test1");
+    expect(out).toContain("abc123-prod");
+    expect(out).toContain("abc123-test");
   });
 
   it("handles missing instance gracefully", () => {
@@ -215,7 +191,7 @@ describe("formatLink", () => {
           id: 42,
           name: "Sale Link",
           path: "summer-sale",
-          access_path: "https://myapp.opengrow.io/summer-sale",
+          access_path: "https://links.example.test/summer-sale",
           title: "Summer Sale",
           tags: ["promo"],
           data: { screen: "sale" },
@@ -493,7 +469,22 @@ describe("helper edge cases", () => {
     // pct is exercised through formatAnalyticsOverview
     const out = formatAnalyticsOverview({
       metrics: {
-        current: { views: 1, opens: 0, installs: 0, app_opens: 0, new_users: 0, returning_users: 0, returning_rate: "abc", reinstalls: 0, referred_users: 0, revenue: 0, units_sold: 0, cancellations: 0, arpu: 0, arppu: 0 },
+        current: {
+          views: 1,
+          opens: 0,
+          installs: 0,
+          app_opens: 0,
+          new_users: 0,
+          returning_users: 0,
+          returning_rate: "abc",
+          reinstalls: 0,
+          referred_users: 0,
+          revenue: 0,
+          units_sold: 0,
+          cancellations: 0,
+          arpu: 0,
+          arppu: 0,
+        },
       },
     });
     expect(out).toContain("0%");
@@ -503,7 +494,15 @@ describe("helper edge cases", () => {
   it("cents handles NaN input", () => {
     const out = formatListCampaigns({
       campaigns: [
-        { id: 1, name: "X", total_views: 0, total_opens: 0, total_installs: 0, total_revenue: "not-a-number", archived: false },
+        {
+          id: 1,
+          name: "X",
+          total_views: 0,
+          total_opens: 0,
+          total_installs: 0,
+          total_revenue: "not-a-number",
+          archived: false,
+        },
       ],
       meta: { page: 1, total_pages: 1, per_page: 20, total_entries: 1 },
     });

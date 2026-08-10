@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import Ajv from "ajv/dist/2020.js";
+import { validateCustomWorkerBindings } from "./opengrow-target-options.mjs";
 
 export const root = resolve(new URL("..", import.meta.url).pathname);
 
@@ -22,7 +23,9 @@ export function parseArgs(argv = process.argv.slice(2)) {
 
 export async function loadTarget(targetName) {
   if (!/^[a-z][a-z0-9-]{1,30}$/.test(targetName ?? "")) {
-    throw new Error("--target must contain only lowercase letters, numbers and hyphens");
+    throw new Error(
+      "--target must contain only lowercase letters, numbers and hyphens",
+    );
   }
   const path = resolve(root, "deploy", "targets", `${targetName}.json`);
   const target = JSON.parse(await readFile(path, "utf8"));
@@ -35,16 +38,250 @@ export async function validateTarget(target) {
   const schema = JSON.parse(await readFile(schemaPath, "utf8"));
   const validate = new Ajv({ allErrors: true, strict: false }).compile(schema);
   if (!validate(target)) {
-    const details = validate.errors?.map((error) => `${error.instancePath || "/"} ${error.message}`).join("; ");
+    const details = validate.errors
+      ?.map((error) => `${error.instancePath || "/"} ${error.message}`)
+      .join("; ");
     throw new Error(`Invalid target manifest: ${details}`);
+  }
+  const environments = Object.keys(target.environments ?? {});
+  if (environments.length === 0) {
+    throw new Error(
+      "Invalid target manifest: at least one environment is required",
+    );
+  }
+  const requiredWorkers = [
+    "api",
+    "dashboard",
+    "email",
+    "identity",
+    "files",
+    "observability",
+    "mcp",
+    ...Object.entries(target.features ?? {})
+      .filter(([, enabled]) => enabled)
+      .map(([service]) => service),
+  ];
+  for (const service of requiredWorkers) {
+    if (!target.workers?.[service]) {
+      throw new Error(
+        `Invalid target manifest: workers.${service} is required because the feature is enabled`,
+      );
+    }
+  }
+  for (const environment of environments) {
+    for (const [service, workerNames] of Object.entries(target.workers ?? {})) {
+      if (!workerNames?.[environment]) {
+        throw new Error(
+          `Invalid target manifest: workers.${service}.${environment} is required when environments.${environment} exists`,
+        );
+      }
+    }
+  }
+  if (Boolean(target.customWorker) !== Boolean(target.workers?.custom)) {
+    throw new Error(
+      "Invalid target manifest: customWorker and workers.custom must be declared together",
+    );
+  }
+  for (const monitor of target.publicSurfaceMonitors ?? []) {
+    const publicUrl = strictPublicHttpsUrl(monitor.url);
+    const healthUrl = strictPublicHttpsUrl(monitor.healthUrl ?? monitor.url);
+    if (!publicUrl || !healthUrl || publicUrl.origin !== healthUrl.origin) {
+      throw new Error(
+        `Invalid target manifest: public surface monitor ${monitor.id} requires credential-free public HTTPS URLs on one origin`,
+      );
+    }
+  }
+  if (target.features?.messaging) {
+    if (!target.domains?.messaging || !target.workers?.messaging) {
+      throw new Error(
+        "Invalid target manifest: legacy Messaging requires its domain and Worker names",
+      );
+    }
+    for (const environment of environments) {
+      const resources = target.environments[environment];
+      if (
+        !resources.messagingD1 ||
+        !resources.messagingR2 ||
+        !Array.isArray(resources.messagingProjectIds) ||
+        !resources.queues?.messaging ||
+        !resources.queues?.messagingDlq
+      ) {
+        throw new Error(
+          `Invalid target manifest: legacy Messaging resources are incomplete in ${environment}`,
+        );
+      }
+    }
+  }
+  for (const environment of environments) {
+    const resources = target.environments[environment];
+    const queueNames = [
+      resources.queues.events,
+      resources.queues.eventsDlq,
+      resources.queues.push,
+      resources.queues.pushDlq,
+      resources.queues.maintenance,
+      resources.queues.maintenanceDlq,
+      resources.queues.email,
+      resources.queues.emailDlq,
+      ...(target.features.billing
+        ? [resources.queues.billing, resources.queues.billingDlq]
+        : []),
+      ...(target.features.messaging
+        ? [resources.queues.messaging, resources.queues.messagingDlq]
+        : []),
+      ...Object.entries(resources.moduleQueues ?? {})
+        .filter(([moduleName]) => target.features[moduleName])
+        .flatMap(([, queue]) => [queue.name, queue.dlq]),
+    ];
+    if (new Set(queueNames).size !== queueNames.length) {
+      throw new Error(
+        `Invalid target manifest: enabled queue names must be unique in ${environment}`,
+      );
+    }
+  }
+  if (target.customWorker) {
+    validateCustomWorkerBindings(target.customWorker);
+    for (const environment of environments) {
+      if (
+        target.customWorker.d1Binding &&
+        !target.environments[environment].customD1
+      ) {
+        throw new Error(
+          `Invalid target manifest: environments.${environment}.customD1 is required by customWorker.d1Binding`,
+        );
+      }
+      for (const binding of target.customWorker.serviceBindings ?? []) {
+        if (!binding.workers?.[environment]) {
+          throw new Error(
+            `Invalid target manifest: customWorker service binding ${binding.binding} needs a ${environment} Worker name`,
+          );
+        }
+      }
+    }
   }
   return target;
 }
 
+function strictPublicHttpsUrl(value) {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    const unsafeHostname =
+      hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal") ||
+      hostname.startsWith("[") ||
+      /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+    return url.protocol === "https:" &&
+      hostname &&
+      !unsafeHostname &&
+      !url.username &&
+      !url.password &&
+      (!url.port || url.port === "443")
+      ? url
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function environmentFromArgs(args) {
-  const environment = args.environment ?? "staging";
-  if (!new Set(["staging", "production"]).has(environment)) {
-    throw new Error("--environment must be staging or production");
+  const environment =
+    args.environment ?? process.env.OPENGROW_ENVIRONMENT ?? "development";
+  if (!new Set(["development", "production"]).has(environment)) {
+    throw new Error("--environment must be development or production");
   }
   return environment;
+}
+
+export function targetNameFromArgs(args, env = process.env) {
+  const targetName = String(args.target ?? env.OPENGROW_TARGET ?? "").trim();
+  if (!targetName) {
+    throw new Error("--target or OPENGROW_TARGET is required");
+  }
+  return targetName;
+}
+
+export async function targetSelectionFromArgs(
+  args,
+  env = process.env,
+  { allowReference = false } = {},
+) {
+  if (args.reference) {
+    if (!allowReference)
+      throw new Error(
+        "--reference is valid only for local/CI validation commands",
+      );
+    if (
+      args.target ||
+      args.environment ||
+      env.OPENGROW_TARGET ||
+      env.OPENGROW_ENVIRONMENT
+    ) {
+      throw new Error(
+        "--reference cannot be combined with an operational target or environment",
+      );
+    }
+    const project = JSON.parse(
+      await readFile(resolve(root, "opengrow.project.json"), "utf8"),
+    );
+    const targetName = String(project.development?.target || "").trim();
+    if (!targetName)
+      throw new Error(
+        "opengrow.project.json does not define development.target",
+      );
+    return { targetName, environment: "development", reference: true };
+  }
+  return {
+    targetName: targetNameFromArgs(args, env),
+    environment: environmentFromArgs(args),
+    reference: false,
+  };
+}
+
+export function cloudflareAccountEnvName(target) {
+  const suffix = String(target.accountAlias || target.target || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_");
+  return suffix ? `CLOUDFLARE_ACCOUNT_ID_${suffix}` : "CLOUDFLARE_ACCOUNT_ID";
+}
+
+export function cloudflareAccountId(target, env = process.env, options = {}) {
+  const scopedName = cloudflareAccountEnvName(target);
+  const accountId = String(
+    env[scopedName] || env.CLOUDFLARE_ACCOUNT_ID || "",
+  ).trim();
+  if (!accountId && options.required === false) return undefined;
+  if (!/^[a-f0-9]{32}$/i.test(accountId)) {
+    throw new Error(
+      `${scopedName} (or CLOUDFLARE_ACCOUNT_ID) must contain the 32-character Cloudflare account id for ${target.target}`,
+    );
+  }
+  return accountId;
+}
+
+export function cloudflareEnv(target, env = process.env) {
+  return { ...env, CLOUDFLARE_ACCOUNT_ID: cloudflareAccountId(target, env) };
+}
+
+export function publicApiUrl(target) {
+  return `https://${target.domains.api}`;
+}
+
+export function publicDashboardUrl(target) {
+  return `https://${target.domains.dashboard}`;
+}
+
+export function publicMcpUrl(target) {
+  return `https://${target.domains.mcp}`;
+}
+
+export function publicSdkUrl(target) {
+  return `https://${target.domains.sdk}`;
+}
+
+export function publicShortlinkUrl(target) {
+  return `https://${target.domains.shortlinks}`;
 }

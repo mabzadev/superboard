@@ -1,26 +1,37 @@
-name: Release private SDK
+name: Release OpenGrow SDK
 
 on:
   push:
     tags:
       - sdk-flutter-v*
       - sdk-flutterflow-v*
+      - sdk-flutterflow-messaging-v*
       - sdk-ios-v*
       - sdk-android-v*
       - sdk-js-v*
       - sdk-react-native-v*
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
+
+concurrency:
+  group: sdk-release-publication
+  cancel-in-progress: false
 
 jobs:
   validate-tag:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       sdk: ${{ steps.tag.outputs.sdk }}
       version: ${{ steps.tag.outputs.version }}
+      path: ${{ steps.tag.outputs.path }}
+      development_branch: ${{ steps.tag.outputs.development_branch }}
+      release_ref: ${{ steps.tag.outputs.release_ref }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
       - id: tag
         shell: bash
         run: |
@@ -29,21 +40,36 @@ jobs:
           sdk="${sdk%-v*}"
           version="${tag##*-v}"
           test "$version" = "1.0.0" || [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]
+          path="$sdk"
+          test "$sdk" != "flutterflow-messaging" || path="flutterflow_messaging"
+          catalog_id="$sdk"
+          test "$sdk" != "flutterflow-messaging" || catalog_id="flutterflow-support"
+          development_branch="$(node -p 'require("./config/sdk-libraries.json").developmentBranch')"
+          release_ref="$(node scripts/sdk-catalog.mjs candidate-ref --library "$catalog_id")"
           echo "sdk=$sdk" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "development_branch=$development_branch" >> "$GITHUB_OUTPUT"
+          echo "release_ref=$release_ref" >> "$GITHUB_OUTPUT"
+      - name: Verify package, catalogue and immutable release version
+        run: node scripts/sdk-catalog.mjs check --candidate-release-tag "$GITHUB_REF_NAME"
 
   flutter:
-    if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow'
+    if: needs.validate-tag.outputs.sdk == 'flutter' || needs.validate-tag.outputs.sdk == 'flutterflow' || needs.validate-tag.outputs.sdk == 'flutterflow-messaging'
     needs: validate-tag
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
+          cache: true
       - run: flutter pub get && flutter analyze && flutter test
-        working-directory: sdks/${{ needs.validate-tag.outputs.sdk }}
-      - uses: softprops/action-gh-release@v2
+        working-directory: sdks/${{ needs.validate-tag.outputs.path }}
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true
           prerelease: ${{ contains(needs.validate-tag.outputs.version, '-') }}
@@ -52,10 +78,15 @@ jobs:
     if: needs.validate-tag.outputs.sdk == 'ios'
     needs: validate-tag
     runs-on: macos-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - run: xcodebuild -project sdks/ios/OpenGrow.xcodeproj -scheme OpenGrow -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
-      - uses: softprops/action-gh-release@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build and test the tagged iOS SDK
+        run: ./scripts/run_tests.sh
+        working-directory: sdks/ios
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true
 
@@ -63,20 +94,24 @@ jobs:
     if: needs.validate-tag.outputs.sdk == 'android'
     needs: validate-tag
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
-      - run: ./gradlew :OpenGrow:testDebugUnitTest :OpenGrow:publishReleasePublicationToGithubPackagesPrivateRepository -PlibraryVersion=${{ needs.validate-tag.outputs.version }}
+      - run: ./gradlew :OpenGrow:testDebugUnitTest :OpenGrow:publishReleasePublicationToGithubPackagesRepository -PlibraryVersion=${{ needs.validate-tag.outputs.version }}
         working-directory: sdks/android/OpenGrow
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true
 
@@ -84,23 +119,126 @@ jobs:
     if: needs.validate-tag.outputs.sdk == 'js' || needs.validate-tag.outputs.sdk == 'react-native'
     needs: validate-tag
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: '@mbzadev'
+          scope: "@mbzadev"
       - run: npm ci && npm run build
         if: needs.validate-tag.outputs.sdk == 'js'
         working-directory: sdks/javascript
-      - run: corepack enable && yarn install --immutable && yarn prepare
+      - run: corepack enable && yarn install --immutable && yarn typecheck && yarn test --runInBand && yarn prepare
         if: needs.validate-tag.outputs.sdk == 'react-native'
         working-directory: sdks/react-native
       - run: npm version ${{ needs.validate-tag.outputs.version }} --no-git-tag-version --allow-same-version && npm publish
         working-directory: sdks/${{ needs.validate-tag.outputs.sdk == 'js' && 'javascript' || 'react-native' }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true
+
+  release-gate:
+    name: SDK release gate
+    if: ${{ always() }}
+    needs: [validate-tag, flutter, ios, android, npm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SDK: ${{ needs.validate-tag.outputs.sdk }}
+      VALIDATE_RESULT: ${{ needs.validate-tag.result }}
+      FLUTTER_RESULT: ${{ needs.flutter.result }}
+      IOS_RESULT: ${{ needs.ios.result }}
+      ANDROID_RESULT: ${{ needs.android.result }}
+      NPM_RESULT: ${{ needs.npm.result }}
+    steps:
+      - name: Require the selected publication job to pass
+        run: |
+          test "$VALIDATE_RESULT" = "success"
+          case "$SDK" in
+            flutter|flutterflow|flutterflow-messaging) test "$FLUTTER_RESULT" = "success" ;;
+            ios) test "$IOS_RESULT" = "success" ;;
+            android) test "$ANDROID_RESULT" = "success" ;;
+            js|react-native) test "$NPM_RESULT" = "success" ;;
+            *) exit 64 ;;
+          esac
+
+  propose-catalogue:
+    needs: [validate-tag, release-gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: sdk-release
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      SDK: ${{ needs.validate-tag.outputs.sdk }}
+      VERSION: ${{ needs.validate-tag.outputs.version }}
+      DEVELOPMENT_BRANCH: ${{ needs.validate-tag.outputs.development_branch }}
+      RELEASE_SHA: ${{ github.sha }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PROMOTION_BRANCH: automation/catalogue-${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.validate-tag.outputs.development_branch }}
+          fetch-depth: 0
+      - name: Create the isolated catalogue promotion branch
+        run: |
+          if git fetch --no-tags origin "refs/heads/$PROMOTION_BRANCH"; then
+            git checkout -B "$PROMOTION_BRANCH" FETCH_HEAD
+          else
+            git checkout -b "$PROMOTION_BRANCH"
+          fi
+      - name: Validate the release against the current catalogue head
+        run: |
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$RELEASE_SHA" HEAD
+          catalog_id="$SDK"
+          test "$SDK" != "flutterflow-messaging" || catalog_id="flutterflow-support"
+          node scripts/sdk-catalog.mjs promote \
+            --library "$catalog_id" \
+            --version "$VERSION" \
+            --write
+          node scripts/sdk-catalog.mjs check --release-tag "$GITHUB_REF_NAME"
+      - name: Propose the published catalogue state through a protected PR
+        run: |
+          ensure_promotion_pr() {
+            existing="$(gh pr list --state open --base "$DEVELOPMENT_BRANCH" --head "$PROMOTION_BRANCH" --json url --jq '.[0].url // empty')"
+            if test -n "$existing"; then
+              echo "Catalogue promotion PR already exists: $existing"
+              return 0
+            fi
+            closed="$(gh pr list --state closed --base "$DEVELOPMENT_BRANCH" --head "$PROMOTION_BRANCH" --json number,mergedAt --jq 'map(select(.mergedAt == null))[0].number // empty')"
+            if test -n "$closed"; then
+              gh pr reopen "$closed"
+              return 0
+            fi
+            gh pr create \
+              --base "$DEVELOPMENT_BRANCH" \
+              --head "$PROMOTION_BRANCH" \
+              --title "chore(sdk): publish $GITHUB_REF_NAME" \
+              --body "Promotes the successfully tested immutable SDK tag $GITHUB_REF_NAME into the canonical catalogue."
+          }
+          git fetch --no-tags origin \
+            "refs/heads/$DEVELOPMENT_BRANCH:refs/remotes/origin/$DEVELOPMENT_BRANCH"
+          if git diff --quiet -- config/sdk-libraries.json; then
+            if git merge-base --is-ancestor HEAD "origin/$DEVELOPMENT_BRANCH"; then
+              echo "The development branch already records $GITHUB_REF_NAME."
+              exit 0
+            fi
+            ensure_promotion_pr
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/sdk-libraries.json
+          git commit -m "chore(sdk): publish $GITHUB_REF_NAME"
+          git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
+          ensure_promotion_pr

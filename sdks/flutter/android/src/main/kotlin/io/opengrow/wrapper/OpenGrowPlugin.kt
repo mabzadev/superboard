@@ -81,7 +81,11 @@ class OpenGrowPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         val apiKey = meta.getString("opengrow_api_key")
         val useTestEnvironment = meta.getBoolean("opengrow_use_test_environment", false)
         val baseURL = meta.getString("opengrow_base_url")
-        OpenGrow.configure(application, apiKey ?: "", useTestEnvironment, baseURL)
+        if (apiKey.isNullOrBlank() || baseURL.isNullOrBlank()) {
+            Log.e("OpenGrow", "opengrow_api_key and opengrow_base_url are required in AndroidManifest.xml")
+            return
+        }
+        OpenGrow.configure(application, apiKey, useTestEnvironment, baseURL)
     }
 
     private fun setupDeeplinkListener() {

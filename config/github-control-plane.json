@@ -1,0 +1,133 @@
+{
+  "$schema": "../schemas/github-control-plane.schema.json",
+  "schemaVersion": 5,
+  "owner": {
+    "login": "mbzadev",
+    "type": "user"
+  },
+  "repositories": {
+    "platform": {
+      "nameWithOwner": "mbzadev/opengrow-platform",
+      "description": "OpenGrow multi-application back-office, Cloudflare Workers platform and reusable SDK libraries",
+      "settings": {
+        "issues": true,
+        "projects": false,
+        "wiki": false,
+        "downloads": false,
+        "squashMerge": true,
+        "mergeCommit": false,
+        "rebaseMerge": false,
+        "deleteBranchOnMerge": true
+      },
+      "visibility": "public",
+      "defaultBranch": "dev",
+      "workflowPermissions": {
+        "default": "read",
+        "canApprovePullRequestReviews": true
+      },
+      "repositorySecrets": [],
+      "branches": {
+        "dev": {
+          "requiredCheck": "CI gate",
+          "requirePullRequest": true,
+          "requireCodeOwnerReviews": true,
+          "requiredApprovals": 1
+        },
+        "main": {
+          "requiredCheck": "CI gate",
+          "requirePullRequest": true,
+          "requireCodeOwnerReviews": true,
+          "requiredApprovals": 1
+        }
+      },
+      "environments": {
+        "development": {
+          "variables": {
+            "OPENGROW_TARGET": "mbza-development",
+            "OPENGROW_REFERENCE_REPOSITORY": "mbzadev/opengrow-reference"
+          },
+          "secrets": [
+            "CLOUDFLARE_ACCOUNT_ID",
+            "CLOUDFLARE_API_TOKEN",
+            "OPENGROW_REFERENCE_DISPATCH_TOKEN"
+          ]
+        },
+        "production": {
+          "variables": {
+            "OPENGROW_TARGET": "vocostar"
+          },
+          "secrets": [
+            "CLOUDFLARE_ACCOUNT_ID",
+            "CLOUDFLARE_API_TOKEN",
+            "OPENGROW_BACKUP_ENCRYPTION_KEY"
+          ]
+        },
+        "sdk-release": {
+          "variables": {
+            "OPENGROW_REFERENCE_REPOSITORY": "mbzadev/opengrow-reference"
+          },
+          "secrets": ["OPENGROW_REFERENCE_DISPATCH_TOKEN"]
+        },
+        "flutterflow-library": {
+          "variables": {
+            "FF_LIBRARY_PROJECT_ID": "open-grow-private-4m5us1"
+          },
+          "secrets": ["FF_API_KEY"]
+        },
+        "flutterflow-vocostar": {
+          "variables": {
+            "FF_APPLICATION_PROJECT_ID": "vocal-transform-z2j7dp",
+            "FF_LIBRARY_PROJECT_ID": "open-grow-private-4m5us1"
+          },
+          "secrets": ["FF_API_KEY", "OPENGROW_PROJECT_KEY"]
+        }
+      }
+    },
+    "reference": {
+      "nameWithOwner": "mbzadev/opengrow-reference",
+      "description": "Reference application validating OpenGrow common journeys on the MBZA development environment",
+      "settings": {
+        "issues": true,
+        "projects": false,
+        "wiki": false,
+        "downloads": false,
+        "squashMerge": true,
+        "mergeCommit": false,
+        "rebaseMerge": false,
+        "deleteBranchOnMerge": true
+      },
+      "visibility": "public",
+      "defaultBranch": "dev",
+      "workflowPermissions": {
+        "default": "read",
+        "canApprovePullRequestReviews": true
+      },
+      "repositorySecrets": [],
+      "branches": {
+        "dev": {
+          "requiredCheck": "Reference gate",
+          "requirePullRequest": true,
+          "requireCodeOwnerReviews": true,
+          "requiredApprovals": 1
+        },
+        "main": {
+          "requiredCheck": "Reference gate",
+          "requirePullRequest": true,
+          "requireCodeOwnerReviews": true,
+          "requiredApprovals": 1
+        }
+      },
+      "environments": {
+        "development": {
+          "variables": {},
+          "secrets": [
+            "CLOUDFLARE_ACCOUNT_ID",
+            "CLOUDFLARE_API_TOKEN",
+            "OPENGROW_PROJECT_KEY",
+            "OPENGROW_PROJECT_ID"
+          ]
+        }
+      }
+    }
+  }
+}

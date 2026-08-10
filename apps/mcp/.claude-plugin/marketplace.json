@@ -2,7 +2,7 @@
   "name": "opengrow",
   "owner": {
     "name": "OpenGrow",
-    "url": "https://github.com/mbzadev/opengrow"
+    "url": "https://github.com/mbzadev/opengrow-platform"
   },
   "plugins": [
     {
@@ -12,10 +12,10 @@
       "version": "1.0.0",
       "author": {
         "name": "OpenGrow",
-        "url": "https://github.com/mbzadev/opengrow"
+        "url": "https://github.com/mbzadev/opengrow-platform"
       },
-      "homepage": "https://github.com/mbzadev/opengrow",
-      "repository": "https://github.com/mbzadev/mcp",
+      "homepage": "https://github.com/mbzadev/opengrow-platform/tree/dev/apps/mcp",
+      "repository": "https://github.com/mbzadev/opengrow-platform",
       "license": "MIT",
       "keywords": [
         "deep-links",

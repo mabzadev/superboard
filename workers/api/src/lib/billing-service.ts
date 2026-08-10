@@ -28,6 +28,7 @@ export async function callBillingServiceBinding<T>(env: Env, path: string, body?
     method: body === undefined ? 'GET' : 'POST',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(10_000),
   }));
   const text = await readTextLimited(response, 1_048_576, 'Billing service response is too large');
   let payload: any = {};

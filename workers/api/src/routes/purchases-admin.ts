@@ -7,13 +7,14 @@ import { signedCustomerInfo } from '../lib/billing-identity';
 import { customerInfo, identifyCustomer, queueCustomerEntitlementChanged } from '../lib/billing';
 import { customerForAppUserId } from '../lib/billing-identity';
 import { fetchStoreCatalog, testStoreCredentials, type StoreCatalogProduct } from '../lib/store-verification';
-import { isFullAccess, isPurchasesEnabled } from '../lib/deployment';
+import { isPurchasesEnabled } from '../lib/deployment';
+import { readApiJson } from '../lib/request-body';
 
 const admin = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 admin.use('*', authMiddleware);
 
 async function body(c: any): Promise<Record<string, any>> {
-  return c.req.json().catch(() => ({}));
+  return readApiJson(c.req.raw);
 }
 
 async function projectFor(c: any) {
@@ -39,7 +40,7 @@ admin.get('/:projectId', async (c) => {
     const project = await projectFor(c);
     const [settings, products, entitlements, offerings, packages, productEntitlements, metrics, appleCredentials, googleCredentials] = await Promise.all([
       c.env.DB.prepare('SELECT * FROM billing_project_settings WHERE project_id = ?').bind(project.id).first(),
-      c.env.DB.prepare("SELECT * FROM billing_products WHERE project_id = ? AND store IN ('apple','google','stripe') ORDER BY created_at DESC").bind(project.id).all(),
+      c.env.DB.prepare("SELECT * FROM billing_products WHERE project_id = ? AND store IN ('apple','google') ORDER BY created_at DESC").bind(project.id).all(),
       c.env.DB.prepare('SELECT * FROM billing_entitlements WHERE project_id = ? ORDER BY identifier').bind(project.id).all(),
       c.env.DB.prepare('SELECT * FROM billing_offerings WHERE project_id = ? ORDER BY is_current DESC, created_at').bind(project.id).all(),
       c.env.DB.prepare(`
@@ -143,7 +144,7 @@ admin.put('/:projectId/settings', async (c) => {
       VALUES (?, ?, ?)
       ON CONFLICT(project_id) DO UPDATE SET restore_behavior = excluded.restore_behavior,
         purchases_enabled = excluded.purchases_enabled, updated_at = datetime('now')
-    `).bind(project.id, restore, isFullAccess(c.env) || data.purchases_enabled ? 1 : 0).run();
+    `).bind(project.id, restore, data.purchases_enabled ? 1 : 0).run();
     return c.json(await c.env.DB.prepare('SELECT * FROM billing_project_settings WHERE project_id = ?').bind(project.id).first());
   } catch (error) { return fail(c, error); }
 });
@@ -181,7 +182,7 @@ admin.get('/:projectId/products', async (c) => {
     const rows = await c.env.DB.prepare(`
       SELECT p.*, GROUP_CONCAT(pe.entitlement_id) AS entitlement_ids
       FROM billing_products p LEFT JOIN billing_product_entitlements pe ON pe.product_id = p.id
-      WHERE p.project_id = ? AND p.store IN ('apple','google','stripe') GROUP BY p.id ORDER BY p.created_at DESC
+      WHERE p.project_id = ? AND p.store IN ('apple','google') GROUP BY p.id ORDER BY p.created_at DESC
     `).bind(project.id).all();
     return c.json({ data: rows.results });
   } catch (error) { return fail(c, error); }

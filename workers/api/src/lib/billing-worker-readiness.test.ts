@@ -31,7 +31,7 @@ describe('Billing signing authority readiness', () => {
 });
 
 describe('billing store readiness', () => {
-  it('reports native platform credentials and Stripe connection credentials through one contract', async () => {
+  it('reports native platform credentials through one contract', async () => {
     const expected = [
       {
         provider: 'apple',
@@ -41,20 +41,12 @@ describe('billing store readiness', () => {
         configured: 1,
         billing_credentials_ready: 1,
       },
-      {
-        provider: 'stripe',
-        environment: 'production',
-        credential_source: 'store_connection',
-        connections: 1,
-        configured: 0,
-        billing_credentials_ready: 0,
-      },
     ];
     const db = createFakeD1((call) => {
       if (call.op !== 'all') return undefined;
       expect(call.sql).toContain('FROM ios_server_api_keys credential');
       expect(call.sql).toContain('FROM android_server_api_keys credential');
-      expect(call.sql).toContain('connection.billing_configuration_encrypted IS NOT NULL');
+      expect(call.sql).not.toContain('connection.billing_configuration_encrypted IS NOT NULL');
       expect(call.sql).toContain('SUM(credentials_ready) AS billing_credentials_ready');
       return expected;
     });

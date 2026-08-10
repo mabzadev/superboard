@@ -1,0 +1,112 @@
+{
+  "$schema": "../schemas/flutterflow-application-bindings.schema.json",
+  "schemaVersion": 2,
+  "owner": "opengrow-platform",
+  "generatedFrom": "config/flutterflow-applications.json",
+  "applications": [
+    {
+      "id": "vocostar",
+      "displayName": "VocoStar",
+      "target": "vocostar",
+      "environment": "production",
+      "sourceSnapshot": "config/flutterflow-sources/vocostar.json",
+      "migrationPlan": "config/flutterflow-migrations/vocostar.json",
+      "remoteProject": {
+        "githubEnvironment": "flutterflow-vocostar",
+        "projectIdVariable": "FF_APPLICATION_PROJECT_ID",
+        "apiKeySecret": "FF_API_KEY",
+        "libraryProjectIdVariable": "FF_LIBRARY_PROJECT_ID"
+      },
+      "library": {
+        "displayName": "OpenGrow",
+        "dependencies": [
+          {
+            "catalogId": "flutterflow",
+            "packageName": "opengrow_flutterflow",
+            "sourceVersion": "2.2.4",
+            "requiredRef": "sdk-flutterflow-v2.2.4"
+          },
+          {
+            "catalogId": "flutterflow-support",
+            "packageName": "opengrow_flutterflow_messaging",
+            "sourceVersion": "1.3.0",
+            "requiredRef": "sdk-flutterflow-messaging-v1.3.0"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectKey",
+            "key": "opengrow_project_key",
+            "type": "string"
+          },
+          {
+            "name": "uriScheme",
+            "key": "opengrow_uri_scheme",
+            "type": "string"
+          },
+          {
+            "name": "useTestEnvironment",
+            "key": "opengrow_use_test_environment",
+            "type": "boolean"
+          },
+          {
+            "name": "sdkBaseUrl",
+            "key": "opengrow_sdk_base_url",
+            "type": "string"
+          },
+          {
+            "name": "authGatewayBaseUrl",
+            "key": "opengrow_auth_gateway_base_url",
+            "type": "string"
+          },
+          {
+            "name": "filesBaseUrl",
+            "key": "opengrow_files_base_url",
+            "type": "string"
+          },
+          {
+            "name": "applicationIdentifier",
+            "key": "opengrow_application_identifier",
+            "type": "string"
+          },
+          {
+            "name": "applicationEnvironment",
+            "key": "opengrow_application_environment",
+            "type": "string"
+          },
+          {
+            "name": "supportBaseUrl",
+            "key": "opengrow_support_base_url",
+            "type": "string"
+          },
+          {
+            "name": "supportProjectId",
+            "key": "opengrow_support_project_id",
+            "type": "integer"
+          },
+          {
+            "name": "shortLinkHost",
+            "key": "opengrow_short_link_host",
+            "type": "string"
+          }
+        ]
+      },
+      "values": {
+        "projectKey": {
+          "source": "github-environment-secret",
+          "name": "OPENGROW_PROJECT_KEY"
+        },
+        "uriScheme": "vocostar",
+        "useTestEnvironment": false,
+        "sdkBaseUrl": "https://sdk.vocostar.com",
+        "authGatewayBaseUrl": "https://api.vocostar.com",
+        "filesBaseUrl": "https://files.vocostar.com",
+        "applicationIdentifier": "com.createurs.vocostar",
+        "applicationEnvironment": "production",
+        "supportBaseUrl": "https://api.vocostar.com/api/v1/support-client",
+        "supportProjectId": 12,
+        "shortLinkHost": "go.vocostar.com"
+      }
+    }
+  ]
+}

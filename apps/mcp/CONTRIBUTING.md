@@ -3,9 +3,10 @@
 ## Setup
 
 ```bash
-git clone https://github.com/mbzadev/opengrow.git
-cd opengrow/apps/mcp
-npm install
+git clone https://github.com/mbzadev/opengrow-platform.git
+cd opengrow-platform
+npm ci
+cd apps/mcp
 ```
 
 ## Development
@@ -60,7 +61,7 @@ plugin/
 
 ## Reporting issues
 
-Use [GitHub Issues](https://github.com/mbzadev/opengrow/issues). Include steps to reproduce, expected behavior, and actual behavior.
+Use [GitHub Issues](https://github.com/mbzadev/opengrow-platform/issues). Include steps to reproduce, expected behavior, and actual behavior.
 
 ## License
 

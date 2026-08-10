@@ -61,15 +61,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mbzadev/opengrow.git",
+    "url": "git+https://github.com/mbzadev/opengrow-platform.git",
     "directory": "sdks/react-native"
   },
-  "author": "OpenGrow <razvan@appssemble.com> (https://github.com/mbzadev/opengrow)",
+  "author": "OpenGrow <razvan@appssemble.com> (https://github.com/mbzadev/opengrow-platform)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mbzadev/opengrow/issues"
+    "url": "https://github.com/mbzadev/opengrow-platform/issues"
   },
-  "homepage": "https://github.com/mbzadev/opengrow",
+  "homepage": "https://github.com/mbzadev/opengrow-platform",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },

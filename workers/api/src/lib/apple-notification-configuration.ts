@@ -210,7 +210,11 @@ async function appleJson(url: string, token: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   headers.set('Authorization', `Bearer ${token}`);
   headers.set('Accept', 'application/json');
-  const response = await fetch(url, { ...init, headers });
+  const response = await fetch(url, {
+    ...init,
+    headers,
+    signal: init.signal || AbortSignal.timeout(10_000),
+  });
   const text = await readTextLimited(response, 1_000_000, 'App Store Connect response is too large');
   let payload: Record<string, unknown> = {};
   try { payload = text ? JSON.parse(text) as Record<string, unknown> : {}; }

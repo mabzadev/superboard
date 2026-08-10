@@ -53,6 +53,7 @@ class OpenGrowSingletonTest {
     private lateinit var application: Application
     private lateinit var context: Context
     private val testDispatcher = StandardTestDispatcher()
+    private val baseURL = "https://sdk.example.com"
 
     @Before
     fun setUp() {
@@ -80,7 +81,7 @@ class OpenGrowSingletonTest {
     fun `OpenGrow configure initializes opengrowManager when given valid API key`() {
         val apiKey = "test-api-key-123"
 
-        OpenGrow.configure(application, apiKey, useTestEnvironment = false)
+        OpenGrow.configure(application, apiKey, useTestEnvironment = false, baseURL = baseURL)
 
         val opengrowInstance = getOpenGrowInstance()
         val opengrowManagerField = OpenGrow::class.java.getDeclaredField("opengrowManager")
@@ -96,7 +97,7 @@ class OpenGrowSingletonTest {
     fun `OpenGrow configure sets useTestEnvironment flag in opengrowContext settings`() {
         val apiKey = "test-api-key"
 
-        OpenGrow.configure(application, apiKey, useTestEnvironment = true)
+        OpenGrow.configure(application, apiKey, useTestEnvironment = true, baseURL = baseURL)
 
         val opengrowInstance = getOpenGrowInstance()
         val opengrowContextField = OpenGrow::class.java.getDeclaredField("opengrowContext")
@@ -111,8 +112,8 @@ class OpenGrowSingletonTest {
 
     @Test
     fun `OpenGrow configure can be called multiple times with different settings`() {
-        OpenGrow.configure(application, "first-key", useTestEnvironment = false)
-        OpenGrow.configure(application, "second-key", useTestEnvironment = true)
+        OpenGrow.configure(application, "first-key", useTestEnvironment = false, baseURL = baseURL)
+        OpenGrow.configure(application, "second-key", useTestEnvironment = true, baseURL = baseURL)
 
         val opengrowInstance = getOpenGrowInstance()
         val opengrowContextField = OpenGrow::class.java.getDeclaredField("opengrowContext")
@@ -129,7 +130,7 @@ class OpenGrowSingletonTest {
 
     @Test
     fun `OpenGrow setSDK enables SDK when enabled parameter is true`() {
-        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false)
+        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false, baseURL = baseURL)
 
         OpenGrow.setSDK(enabled = true)
 
@@ -146,7 +147,7 @@ class OpenGrowSingletonTest {
 
     @Test
     fun `OpenGrow setSDK disables SDK when enabled parameter is false`() {
-        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false)
+        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false, baseURL = baseURL)
 
         OpenGrow.setSDK(enabled = false)
 
@@ -165,7 +166,7 @@ class OpenGrowSingletonTest {
 
     @Test
     fun `OpenGrow identifier property can be set after configuration`() {
-        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false)
+        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false, baseURL = baseURL)
 
         OpenGrow.identifier = "user-123"
 
@@ -179,7 +180,7 @@ class OpenGrowSingletonTest {
 
     @Test
     fun `OpenGrow pushToken property can be set after configuration`() {
-        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false)
+        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false, baseURL = baseURL)
 
         OpenGrow.pushToken = "fcm-token-abc123"
 
@@ -193,7 +194,7 @@ class OpenGrowSingletonTest {
 
     @Test
     fun `OpenGrow attributes property can be set after configuration`() {
-        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false)
+        OpenGrow.configure(application, "test-api-key", useTestEnvironment = false, baseURL = baseURL)
         val attrs = mapOf<String, Any>("name" to "John", "age" to 30)
 
         OpenGrow.attributes = attrs

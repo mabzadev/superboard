@@ -70,6 +70,85 @@ void main() {
   );
 
   test(
+    'buffers a Store transaction delivered before configuration is ready',
+    () async {
+      final events = <String>[];
+      final store = FakePurchaseStore(events);
+      final storage = MemoryPurchaseStorage(events);
+      final purchases = testPurchases(store, storage, (request) async {
+        if (request.url.path.endsWith('/receipts')) {
+          events.add('server.validated');
+          return jsonResponse(verifiedPurchaseResponse());
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+
+      final resultFuture = purchases.purchaseResultStream.firstWhere(
+        (result) => result.code == 'purchase_verified',
+      );
+      final configuration = configure(purchases);
+      store.emit(purchased());
+
+      await configuration;
+      expect((await resultFuture).outcome, OpenGrowPurchaseOutcome.purchased);
+      expect(store.completed, hasLength(1));
+      expect(storage.outboxEntries, isEmpty);
+      expect(
+        events.indexOf('server.validated'),
+        lessThan(events.indexOf('store.completed')),
+      );
+    },
+  );
+
+  test(
+    'serializes startup recovery with an early replayed Store transaction',
+    () async {
+      var receiptAttempts = 0;
+      final store = FakePurchaseStore([]);
+      final storage = MemoryPurchaseStorage([]);
+      await OpenGrowPurchaseOutbox(storage).upsert(
+        OpenGrowPurchaseOutboxEntry.create(
+          store: 'google',
+          productId: 'premium-weekly',
+          productType: 'subscription',
+          verificationData: 'purchase-token-1',
+          restoring: false,
+          transactionId: 'store-transaction-1',
+        ),
+      );
+      final purchases = testPurchases(store, storage, (request) async {
+        if (request.url.path.endsWith('/receipts')) {
+          receiptAttempts += 1;
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          return jsonResponse(verifiedPurchaseResponse());
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+
+      final terminal = purchases.purchaseResultStream.firstWhere(
+        (result) => result.code == 'purchase_verified',
+      );
+      final configuration = configure(purchases);
+      store.emit(purchased());
+
+      await configuration;
+      await terminal;
+      await purchases.resumeOutboxForTesting();
+      expect(receiptAttempts, 1);
+      expect(store.completed, hasLength(1));
+      expect(storage.outboxEntries, isEmpty);
+    },
+  );
+
+  test(
     'keeps an unfinished purchase in the encrypted outbox across a network failure',
     () async {
       var receiptAttempts = 0;
@@ -344,6 +423,79 @@ void main() {
     },
   );
 
+  test('reuses a valid identity JWT until it approaches expiration', () async {
+    var tokenProviderCalls = 0;
+    final store = FakePurchaseStore([]);
+    final purchases = testPurchases(
+      store,
+      MemoryPurchaseStorage([]),
+      (_) async => jsonResponse(customerInfo()),
+    );
+    addTearDown(() async {
+      await purchases.disposeForTesting();
+      await store.close();
+    });
+    final initialToken = unsignedJwt(
+      DateTime.now().toUtc().add(const Duration(minutes: 5)),
+    );
+
+    await purchases.configure(
+      projectKey: 'project-key',
+      platformIdentifier: 'com.example.app',
+      baseUrl: 'https://sdk.example.com/purchases/v2',
+      identityToken: initialToken,
+      identityTokenProvider: () async {
+        tokenProviderCalls += 1;
+        return unsignedJwt(
+          DateTime.now().toUtc().add(const Duration(minutes: 5)),
+        );
+      },
+    );
+    await Future.wait([
+      purchases.getCustomerInfo(),
+      purchases.getCustomerInfo(),
+    ]);
+
+    expect(tokenProviderCalls, 0);
+  });
+
+  test('deduplicates concurrent identity JWT refreshes', () async {
+    var tokenProviderCalls = 0;
+    final refreshGate = Completer<void>();
+    final store = FakePurchaseStore([]);
+    final purchases = testPurchases(
+      store,
+      MemoryPurchaseStorage([]),
+      (_) async => jsonResponse(customerInfo()),
+    );
+    addTearDown(() async {
+      await purchases.disposeForTesting();
+      await store.close();
+    });
+    final expiringToken = unsignedJwt(
+      DateTime.now().toUtc().add(const Duration(seconds: 5)),
+    );
+    final configuration = purchases.configure(
+      projectKey: 'project-key',
+      platformIdentifier: 'com.example.app',
+      baseUrl: 'https://sdk.example.com/purchases/v2',
+      identityToken: expiringToken,
+      identityTokenProvider: () async {
+        tokenProviderCalls += 1;
+        await refreshGate.future;
+        return unsignedJwt(
+          DateTime.now().toUtc().add(const Duration(minutes: 5)),
+        );
+      },
+    );
+    await Future<void>.delayed(Duration.zero);
+    final concurrentRequest = purchases.getCustomerInfo();
+    refreshGate.complete();
+
+    await Future.wait([configuration, concurrentRequest]);
+    expect(tokenProviderCalls, 1);
+  });
+
   test(
     'submits challenge-bound certification evidence with build context',
     () async {
@@ -403,6 +555,63 @@ void main() {
       );
     },
   );
+
+  test(
+    'reuses a deterministic certification result ID after an uncertain retry',
+    () async {
+      final resultIds = <String>[];
+      final store = FakePurchaseStore([]);
+      final purchases = testPurchases(store, MemoryPurchaseStorage([]), (
+        request,
+      ) async {
+        if (request.url.path.endsWith('/certification/device-results')) {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          final id = body['id'].toString();
+          resultIds.add(id);
+          return jsonResponse({
+            'data': {
+              'id': id,
+              'run_id': 'run-device-1',
+              'check_key': 'cross_platform.identity_sync',
+              'outcome': 'passed',
+              'evidence_sha256': List.filled(64, 'a').join(),
+              'observed_at': '2026-08-04T12:00:00.000Z',
+              'received_at': '2026-08-04T12:00:01.000Z',
+              'duplicate': resultIds.length > 1,
+            },
+          }, resultIds.length > 1 ? 200 : 201);
+        }
+        return jsonResponse(customerInfo());
+      });
+      addTearDown(() async {
+        await purchases.disposeForTesting();
+        await store.close();
+      });
+      await configure(purchases);
+
+      Future<OpenGrowCertificationResult> submit() =>
+          purchases.submitCertificationResult(
+            runId: 'run-device-1',
+            challenge: 'device-challenge',
+            checkKey: 'cross_platform.identity_sync',
+            passed: true,
+            deviceModel: 'Pixel 10',
+            osVersion: 'Android 17',
+            assertions: const {
+              'authenticated_identity_verified': true,
+              'purchase_blocked_without_identity': true,
+            },
+          );
+
+      final first = await submit();
+      final retry = await submit();
+
+      expect(resultIds, hasLength(2));
+      expect(resultIds[0], resultIds[1]);
+      expect(first.id, retry.id);
+      expect(retry.duplicate, isTrue);
+    },
+  );
 }
 
 OpenGrowPurchases testPurchases(
@@ -456,6 +665,13 @@ http.Response jsonResponse(Map<String, dynamic> value, [int status = 200]) =>
       status,
       headers: {'content-type': 'application/json'},
     );
+
+String unsignedJwt(DateTime expiresAt) {
+  String encode(Map<String, dynamic> value) =>
+      base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+  return '${encode(const {'alg': 'ES256', 'typ': 'JWT'})}.'
+      '${encode({'exp': expiresAt.millisecondsSinceEpoch ~/ 1000})}.signature';
+}
 
 PurchaseDetails purchased() {
   final value = PurchaseDetails(

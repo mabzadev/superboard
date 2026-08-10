@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createElement } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 // --- Mocks must be declared before imports ---
@@ -32,7 +33,7 @@ vi.mock("@/api/mcp/mcpService", () => ({
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => {
     const { src, ...rest } = props;
-    return <img src={typeof src === "string" ? src : ""} {...rest} />;
+    return createElement("img", { alt: "", src: typeof src === "string" ? src : "", ...rest });
   },
 }));
 

@@ -20,7 +20,7 @@ class FakeOpenGrowPlatform
   @override
   Future<String> generateLink(GenerateLinkParams params) async {
     generatedLinkParams = params;
-    return 'https://go.vocostar.com/test';
+    return 'https://in.example.com/test';
   }
 
   @override
@@ -80,7 +80,7 @@ void main() {
       '{"title":"Invite","data":{"screen":"home"},'
       '"tracking":{"utm_source":"flutterflow"}}',
     );
-    expect(link, 'https://go.vocostar.com/test');
+    expect(link, 'https://in.example.com/test');
     expect(platform.generatedLinkParams?.title, 'Invite');
     expect(platform.generatedLinkParams?.data, {'screen': 'home'});
     expect(platform.generatedLinkParams?.tracking?.utmSource, 'flutterflow');

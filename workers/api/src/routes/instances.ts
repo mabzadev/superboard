@@ -6,7 +6,10 @@ import { getOrCreateProject } from '../lib/db';
 import { storeCsvDownload } from '../lib/files';
 import { downloadFileMessage, invitationMessage, invitationUrl, sendMail } from '../lib/mail';
 import { encryptCredential } from '../lib/secrets';
-import { isFullAccess, isRegistrationAllowed, registrationDeniedBody } from '../lib/deployment';
+import { isRegistrationAllowed, registrationDeniedBody } from '../lib/deployment';
+import { readRequestObjectLimited } from '@opengrow/contracts/request-body';
+import { readApiJson } from '../lib/request-body';
+import { tokenDigest } from '../lib/token-storage';
 
 const instances = new Hono<{ Bindings: Env }>();
 
@@ -14,7 +17,7 @@ async function getAuthUserId(c: any): Promise<number | null> {
   return getStrictAuthUserId(c.env, c.req.header('Authorization'));
 }
 
-async function buildInstance(db: any, instanceId: number, userId: number) {
+async function buildInstance(db: any, instanceId: number, userId: number, shortlinkDomain: string) {
   const inst: any = await db.prepare(
     'SELECT id, api_key, uri_scheme, get_started_dismissed, revenue_collection_enabled, created_at FROM instances WHERE id = ?'
   ).bind(instanceId).first();
@@ -31,7 +34,7 @@ async function buildInstance(db: any, instanceId: number, userId: number) {
   const productionProject = {
     id: String(instanceId) + '-prod',
     name: inst.uri_scheme,
-    domain: 'go.vocostar.com',
+    domain: shortlinkDomain,
     hash_id: hashId,
     bundle_id: null, team_id: null, app_store_id: null,
     play_store_id: null, package_name: null, sha256_cert_fingerprints: null,
@@ -39,7 +42,7 @@ async function buildInstance(db: any, instanceId: number, userId: number) {
   const testProject = {
     id: String(instanceId) + '-test',
     name: inst.uri_scheme + ' (test)',
-    domain: 'go.vocostar.com',
+    domain: shortlinkDomain,
     hash_id: hashId + 't',
     bundle_id: null, team_id: null, app_store_id: null,
     play_store_id: null, package_name: null, sha256_cert_fingerprints: null,
@@ -90,147 +93,15 @@ async function requireInstanceRole(c: any, instanceId: number, adminOnly = false
   return { userId, role: role.role };
 }
 
-function freeMauCount(env: Env): number {
-  const configured = Number(env.FREE_MAU_COUNT || 10000);
-  return Number.isFinite(configured) && configured > 0 ? configured : 10000;
-}
-
-function dashboardBaseUrl(c: any): string {
-  if (c.env.APP_URL) return String(c.env.APP_URL).replace(/\/$/, '');
-  if (c.env.REACT_HOST) {
-    const protocol = c.env.REACT_HOST_PROTOCOL || 'https://';
-    return `${protocol}${c.env.REACT_HOST}`.replace(/\/$/, '');
-  }
-  return requestOrigin(c);
-}
-
-function dashboardPath(c: any): string {
-  const path = c.env.REACT_HOST_DASHBOARD_PATH || '/settings';
-  return path.startsWith('/') ? path : `/${path}`;
-}
-
-function stripeDate(value: unknown): string | null {
-  if (value === null || value === undefined || value === '') return null;
-  if (typeof value === 'number') return new Date(value * 1000).toISOString();
-  return String(value);
-}
-
-function unixSeconds(value: unknown, fallback = 0): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string' && /^\d+$/.test(value)) return Number(value);
-  const parsed = Date.parse(String(value || ''));
-  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : fallback;
-}
-
-function formBody(params: Record<string, string | number | boolean | null | undefined>) {
-  const body = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') body.set(key, String(value));
-  }
-  return body;
-}
-
-async function stripeRequest(c: any, method: string, path: string, params?: Record<string, string | number | boolean | null | undefined>) {
-  const secret = c.env.STRIPE_SECRET_KEY;
-  if (!secret) {
-    return { error: c.json({ error: 'Stripe is not configured' }, 503) };
-  }
-
-  const response = await fetch(`https://api.stripe.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: method === 'GET' ? undefined : formBody(params || {}),
-  });
-  const payload: any = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    return {
-      error: c.json({
-        error: payload?.error?.message || 'Stripe request failed',
-        stripe_error: payload?.error?.type || undefined,
-      }, response.status),
-    };
-  }
-  return { data: payload };
-}
-
-async function activeStripeSubscription(db: D1Database, instanceId: number) {
-  return db.prepare(`
-    SELECT *
-    FROM stripe_subscriptions
-    WHERE instance_id = ?
-      AND (
-        active = 1
-        OR status IN ('active', 'trialing', 'past_due', 'paused')
-      )
-    ORDER BY updated_at DESC, created_at DESC
-    LIMIT 1
-  `).bind(instanceId).first<any>();
-}
-
-async function activeEnterpriseSubscription(db: D1Database, instanceId: number) {
-  return db.prepare(`
-    SELECT *
-    FROM enterprise_subscriptions
-    WHERE instance_id = ?
-      AND COALESCE(active, CASE WHEN status = 'active' THEN 1 ELSE 0 END, 1) = 1
-      AND (COALESCE(end_date, ends_at) IS NULL OR datetime(COALESCE(end_date, ends_at)) >= datetime('now'))
-    ORDER BY updated_at DESC, created_at DESC
-    LIMIT 1
-  `).bind(instanceId).first<any>();
-}
-
 async function instanceProjects(db: D1Database, instanceId: number) {
   const production = await getOrCreateProject(db, instanceId, 'production');
   const test = await getOrCreateProject(db, instanceId, 'test');
   return [String(production.id), String(test.id)];
 }
 
-async function currentMau(db: D1Database, instanceId: number, startDate?: string, endDate?: string): Promise<number> {
-  const now = new Date();
-  const start = startDate || new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
-  const end = endDate || new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
-  const projectIds = await instanceProjects(db, instanceId);
-
-  const visitorStats = await db.prepare(`
-    SELECT COUNT(DISTINCT visitor_id) AS total
-    FROM visitor_daily_statistics
-    WHERE project_id IN (?, ?)
-      AND date(COALESCE(event_date, date)) BETWEEN ? AND ?
-  `).bind(...projectIds, start, end).first<{ total: number }>().catch(() => null);
-  if (Number(visitorStats?.total || 0) > 0) return Number(visitorStats?.total || 0);
-
-  const visitors = await db.prepare(`
-    SELECT COUNT(DISTINCT id) AS total
-    FROM visitors
-    WHERE project_id IN (?, ?)
-      AND date(COALESCE(last_seen_at, created_at)) BETWEEN ? AND ?
-  `).bind(...projectIds, start, end).first<{ total: number }>().catch(() => null);
-  if (Number(visitors?.total || 0) > 0) return Number(visitors?.total || 0);
-
-  const events = await db.prepare(`
-    SELECT COUNT(DISTINCT device_id) AS total
-    FROM events
-    WHERE project_id IN (?, ?)
-      AND device_id IS NOT NULL
-      AND date(created_at) BETWEEN ? AND ?
-  `).bind(...projectIds, start, end).first<{ total: number }>().catch(() => null);
-  return Number(events?.total || 0);
-}
-
-function subscriptionId(row: any): string | null {
-  return row?.subscription_id || row?.stripe_subscription_id || null;
-}
-
-function subscriptionCustomerId(row: any): string | null {
-  return row?.customer_id || row?.stripe_customer_id || null;
-}
-
 async function syncIosRpushApps(db: D1Database, iosConfigId: string | number) {
   const push = await db.prepare(`
-    SELECT ipc.name, ipc.p8_key, ipc.key_id, ipc.certificate_password, ipc.team_id,
+    SELECT ipc.name, ipc.encrypted_p8_key, ipc.key_id, ipc.certificate_password, ipc.team_id,
            COALESCE(ipc.bundle_id, ic.bundle_id) AS bundle_id,
            COALESCE(ipc.team_id, ic.app_prefix) AS resolved_team_id
     FROM ios_push_configurations ipc
@@ -238,7 +109,7 @@ async function syncIosRpushApps(db: D1Database, iosConfigId: string | number) {
     WHERE ipc.ios_configuration_id = ?
     LIMIT 1
   `).bind(iosConfigId).first<any>();
-  if (!push?.name || !push?.p8_key) return;
+  if (!push?.name || !push?.encrypted_p8_key) return;
   const keyId = push.key_id || push.certificate_password;
   const teamId = push.resolved_team_id || push.team_id;
   const names = [`${push.name}-development`, `${push.name}-production`];
@@ -246,28 +117,28 @@ async function syncIosRpushApps(db: D1Database, iosConfigId: string | number) {
   for (const environment of ['development', 'production']) {
     await db.prepare(`
       INSERT INTO rpush_apps (
-        name, environment, type, apn_key, apn_key_id, team_id, bundle_id,
+        name, environment, type, encrypted_apn_key, apn_key_id, team_id, bundle_id,
         connections, feedback_enabled, created_at, updated_at
       ) VALUES (?, ?, 'Rpush::Apnsp8::App', ?, ?, ?, ?, 1, 1, datetime('now'), datetime('now'))
-    `).bind(`${push.name}-${environment}`, environment, push.p8_key, keyId, teamId, push.bundle_id).run();
+    `).bind(`${push.name}-${environment}`, environment, push.encrypted_p8_key, keyId, teamId, push.bundle_id).run();
   }
 }
 
 async function syncAndroidRpushApp(db: D1Database, androidConfigId: string | number) {
   const push = await db.prepare(`
-    SELECT name, fcm_server_key, firebase_project_id
+    SELECT name, encrypted_fcm_server_key, firebase_project_id
     FROM android_push_configurations
     WHERE android_configuration_id = ?
     LIMIT 1
   `).bind(androidConfigId).first<any>();
-  if (!push?.name || !push?.fcm_server_key) return;
+  if (!push?.name || !push?.encrypted_fcm_server_key) return;
   await db.prepare('DELETE FROM rpush_apps WHERE name = ?').bind(push.name).run();
   await db.prepare(`
     INSERT INTO rpush_apps (
-      name, environment, type, json_key, firebase_project_id, connections,
+      name, environment, type, encrypted_json_key, firebase_project_id, connections,
       feedback_enabled, created_at, updated_at
     ) VALUES (?, 'production', 'Rpush::Fcm::App', ?, ?, 30, 1, datetime('now'), datetime('now'))
-  `).bind(push.name, push.fcm_server_key, push.firebase_project_id).run();
+  `).bind(push.name, push.encrypted_fcm_server_key, push.firebase_project_id).run();
 }
 
 async function getStartedSetup(db: D1Database, instanceId: number) {
@@ -497,8 +368,6 @@ async function deleteInstanceTree(env: Env, instanceId: number) {
 
   await add('mcp_clients', 'DELETE FROM mcp_clients WHERE instance_id = ?', [instanceId]);
   await add('setup_progress_steps', 'DELETE FROM setup_progress_steps WHERE instance_id = ?', [instanceId]);
-  await add('stripe_payment_intents', 'DELETE FROM stripe_payment_intents WHERE instance_id = ?', [instanceId]);
-  await add('stripe_subscriptions', 'DELETE FROM stripe_subscriptions WHERE instance_id = ?', [instanceId]);
   await add('enterprise_subscriptions', 'DELETE FROM enterprise_subscriptions WHERE instance_id = ?', [instanceId]);
   await add('quick_links_by_instance', 'DELETE FROM quick_links WHERE instance_id = ?', [instanceId]);
   await add('instance_roles', 'DELETE FROM instance_roles WHERE instance_id = ?', [instanceId]);
@@ -517,7 +386,7 @@ instances.get('/', async (c) => {
     'SELECT instance_id FROM instance_roles WHERE user_id = ?'
   ).bind(userId).all<{ instance_id: number }>();
   const list = await Promise.all(
-    (roles.results || []).map(r => buildInstance(c.env.DB, r.instance_id, userId))
+    (roles.results || []).map(r => buildInstance(c.env.DB, r.instance_id, userId, c.env.SHORTLINK_DOMAIN))
   );
   return c.json({ instances: list.filter(Boolean) });
 });
@@ -525,17 +394,17 @@ instances.get('/', async (c) => {
 instances.post('/', async (c) => {
   const userId = await getAuthUserId(c);
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   const name = body.name || 'My App';
   const apiKey = crypto.randomUUID().replace(/-/g, '');
   const uriScheme = name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now().toString(36);
   const result = await c.env.DB.prepare(
     'INSERT INTO instances (api_key, uri_scheme, revenue_collection_enabled) VALUES (?, ?, ?) RETURNING id'
-  ).bind(apiKey, uriScheme, isFullAccess(c.env) ? 1 : 0).first<{ id: number }>();
+  ).bind(apiKey, uriScheme, 1).first<{ id: number }>();
   await c.env.DB.prepare(
     'INSERT INTO instance_roles (user_id, instance_id, role) VALUES (?, ?, ?)'
   ).bind(userId, result!.id, 'owner').run();
-  const instance = await buildInstance(c.env.DB, result!.id, userId);
+  const instance = await buildInstance(c.env.DB, result!.id, userId, c.env.SHORTLINK_DOMAIN);
   return c.json({ instance }, 201);
 });
 
@@ -543,7 +412,7 @@ instances.get('/:id', async (c) => {
   const userId = await getAuthUserId(c);
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
   const instanceId = Number(c.req.param('id'));
-  const instance = await buildInstance(c.env.DB, instanceId, userId);
+  const instance = await buildInstance(c.env.DB, instanceId, userId, c.env.SHORTLINK_DOMAIN);
   if (!instance) return c.json({ error: 'Not found' }, 404);
   return c.json({
     instance,
@@ -555,12 +424,12 @@ instances.put('/:id', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   if (body.name) {
     await c.env.DB.prepare('UPDATE instances SET uri_scheme = ? WHERE id = ?')
       .bind(body.name, instanceId).run();
   }
-  const instance = await buildInstance(c.env.DB, instanceId, access.userId);
+  const instance = await buildInstance(c.env.DB, instanceId, access.userId, c.env.SHORTLINK_DOMAIN);
   return c.json({ instance });
 });
 
@@ -594,7 +463,7 @@ instances.post('/:id/members', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   const email = String(body.email || body.user?.email || '').trim().toLowerCase();
   const name = body.name || body.user?.name || null;
   const role = body.role || 'member';
@@ -605,6 +474,7 @@ instances.post('/:id/members', async (c) => {
   }
 
   const invitationToken = crypto.randomUUID().replace(/-/g, '');
+  const invitationTokenDigest = await tokenDigest(invitationToken);
   let invited = await c.env.DB.prepare(
     'SELECT id, email, name FROM users WHERE email = ? LIMIT 1'
   ).bind(email).first<{ id: number; email: string; name: string | null }>();
@@ -624,7 +494,7 @@ instances.post('/:id/members', async (c) => {
       )
       VALUES (?, ?, ?, ?, ?, datetime("now"), 'User', ?)
       RETURNING id, email, name
-    `).bind(email, placeholderPassword, placeholderPassword, name, invitationToken, access.userId).first<{ id: number; email: string; name: string | null }>();
+    `).bind(email, placeholderPassword, placeholderPassword, name, invitationTokenDigest, access.userId).first<{ id: number; email: string; name: string | null }>();
   } else {
     await c.env.DB.prepare(`
       UPDATE users
@@ -635,7 +505,7 @@ instances.post('/:id/members', async (c) => {
           invited_by_id = ?,
           updated_at = datetime("now")
       WHERE id = ?
-    `).bind(invitationToken, access.userId, invited.id).run();
+    `).bind(invitationTokenDigest, access.userId, invited.id).run();
   }
 
   await c.env.DB.prepare(
@@ -669,7 +539,7 @@ instances.delete('/:id/members', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   const targetUserId = body.user_id || body.id || null;
   const targetEmail = body.email || null;
 
@@ -709,9 +579,7 @@ instances.get('/:id/role', async (c) => {
 // =================== CONFIGURATIONS ===================
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return await c.req.parseBody().catch(() => ({}));
+  return readRequestObjectLimited(c.req.raw, 10 * 1024 * 1024);
 }
 
 function toBool(value: unknown, fallback = true): boolean {
@@ -1048,18 +916,19 @@ instances.put('/:id/configurations/ios/push', async (c) => {
   const password = pick(body, 'push_certificate_password');
   if (!file || !password) return c.json({ error: 'push_certificate and push_certificate_password are required' }, 422);
   const { content, filename } = await validateP8File(file).catch((error) => { throw error; });
+  const encryptedP8Key = await encryptCredential(c.env, content);
 
   await c.env.DB.prepare('DELETE FROM ios_push_configurations WHERE ios_configuration_id = ? OR application_id = ?')
     .bind(iosConfigId, appId).run();
   await c.env.DB.prepare(`
     INSERT INTO ios_push_configurations (
-      name, p8_key, key_id, team_id, bundle_id, certificate_password,
+      name, p8_key, encrypted_p8_key, key_id, team_id, bundle_id, certificate_password,
       ios_configuration_id, application_id, environment
     )
-    SELECT ?, ?, ?, ic.app_prefix, ic.bundle_id, ?, ic.id, ?, 'production'
+    SELECT ?, NULL, ?, ?, ic.app_prefix, ic.bundle_id, ?, ic.id, ?, 'production'
     FROM ios_configurations ic
     WHERE ic.id = ?
-  `).bind(filename, content, password, password, appId, iosConfigId).run();
+  `).bind(filename, encryptedP8Key, password, password, appId, iosConfigId).run();
   await syncIosRpushApps(c.env.DB, iosConfigId!);
 
   return c.json(configPayload(await loadApplicationConfig(c.env.DB, instanceId, 'ios')));
@@ -1134,6 +1003,7 @@ instances.put('/:id/configurations/android/push', async (c) => {
   const file = pick(body, 'push_certificate');
   if (!firebaseProjectId || !file) return c.json({ error: 'firebase_project_id and push_certificate are required' }, 422);
   const { content, filename, parsed } = await validateServiceAccountJson(file);
+  const encryptedFcmServerKey = await encryptCredential(c.env, content);
 
   const appId = await getOrCreateApplication(c.env.DB, instanceId, 'android', true);
   let androidConfigId = await findConfigId(c.env.DB, 'android_configurations', appId);
@@ -1147,9 +1017,10 @@ instances.put('/:id/configurations/android/push', async (c) => {
     .bind(androidConfigId, appId).run();
   await c.env.DB.prepare(`
     INSERT INTO android_push_configurations (
-      name, fcm_server_key, fcm_sender_id, firebase_project_id, android_configuration_id, application_id
-    ) VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(filename, content, parsed.project_id || null, firebaseProjectId, androidConfigId, appId).run();
+      name, fcm_server_key, encrypted_fcm_server_key, fcm_sender_id,
+      firebase_project_id, android_configuration_id, application_id
+    ) VALUES (?, NULL, ?, ?, ?, ?, ?)
+  `).bind(filename, encryptedFcmServerKey, parsed.project_id || null, firebaseProjectId, androidConfigId, appId).run();
   await syncAndroidRpushApp(c.env.DB, androidConfigId!);
 
   return c.json(configPayload(await loadApplicationConfig(c.env.DB, instanceId, 'android')));
@@ -1227,32 +1098,34 @@ instances.put('/:id/configurations/ios/api_access_key', async (c) => {
   return c.json(configPayload(await loadApplicationConfig(c.env.DB, instanceId, 'ios')));
 });
 
-instances.get('/:id/configurations/android/google_configuration_script', async (c) => {
-  const instanceId = Number(c.req.param('id'));
-  const access = await requireInstanceRole(c, instanceId, true);
-  if ('error' in access) return access.error;
-  const endpoint = `https://${c.env.API_DOMAIN}/api/v1/iap/google/${instanceId}`;
-  return c.text(`#!/bin/bash
+export function buildGoogleConfigurationScript(params: {
+  instanceId: number;
+  apiDomain: string;
+  projectId: string;
+  serviceAccountEmail: string;
+}) {
+  const endpoint = `https://${params.apiDomain}/api/v1/iap/google/${params.instanceId}`;
+  return `#!/bin/bash
 set -e
 
-PROJECT_ID="$1"
-if [ -z "$PROJECT_ID" ]; then
-  echo "Usage: ./opengrow_android_gcloud_setup.sh <google-cloud-project-id>"
+CONFIGURED_PROJECT_ID="${params.projectId}"
+SA_EMAIL="${params.serviceAccountEmail}"
+PROJECT_ID="$CONFIGURED_PROJECT_ID"
+TOPIC_NAME="$1"
+SUBSCRIPTION_NAME="\${2:-opengrow-play-rtdn-subscription}"
+
+if [ -z "$TOPIC_NAME" ]; then
+  echo "Usage: ./opengrow_android_gcloud_setup.sh <existing-play-rtdn-topic-name> [subscription-name]"
   exit 1
 fi
 
-gcloud config set project "$PROJECT_ID"
-gcloud services enable cloudresourcemanager.googleapis.com iam.googleapis.com pubsub.googleapis.com androidpublisher.googleapis.com --project="$PROJECT_ID"
-
-SA_ACCOUNT_ID="opengrow-play-api-service-account"
-TOPIC_NAME="opengrow-play-rtdn-topic"
-SUBSCRIPTION_NAME="play-rtdn-subscription"
 PUSH_ENDPOINT="${endpoint}"
 PUSH_AUDIENCE="${endpoint}"
 
-gcloud iam service-accounts create "$SA_ACCOUNT_ID" --display-name="OpenGrow Play API Service Account" --project="$PROJECT_ID" || true
-gcloud pubsub topics create "$TOPIC_NAME" --project="$PROJECT_ID" || true
-SA_EMAIL="$SA_ACCOUNT_ID@$PROJECT_ID.iam.gserviceaccount.com"
+gcloud services enable cloudresourcemanager.googleapis.com iam.googleapis.com pubsub.googleapis.com androidpublisher.googleapis.com --project="$PROJECT_ID"
+gcloud beta services identity create --service=pubsub.googleapis.com --project="$PROJECT_ID"
+gcloud pubsub topics describe "$TOPIC_NAME" --project="$PROJECT_ID" >/dev/null
+
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 PUBSUB_SERVICE_AGENT="service-$PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com"
 
@@ -1276,7 +1149,28 @@ else
     --project="$PROJECT_ID"
 fi
 echo "OpenGrow Google Play RTDN authenticated push configured: $PUSH_ENDPOINT"
-`, 200, { 'Content-Type': 'application/x-sh; charset=utf-8' });
+`;
+}
+
+instances.get('/:id/configurations/android/google_configuration_script', async (c) => {
+  const instanceId = Number(c.req.param('id'));
+  const access = await requireInstanceRole(c, instanceId, true);
+  if ('error' in access) return access.error;
+  const config = await loadApplicationConfig(c.env.DB, instanceId, 'android') as any;
+  const projectId = String(config?.configuration?.server_api_key?.project_id || '').trim();
+  const serviceAccountEmail = String(config?.configuration?.server_api_key?.client_email || '').trim();
+  const validProjectId = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId);
+  const validServiceAccount = /^[a-z0-9-]{1,30}@[a-z][a-z0-9-]{4,28}[a-z0-9]\.iam\.gserviceaccount\.com$/.test(serviceAccountEmail)
+    && serviceAccountEmail.endsWith(`@${projectId}.iam.gserviceaccount.com`);
+  if (!validProjectId || !validServiceAccount) {
+    return c.json({ error: 'Upload and test the Google Play service-account key before generating the RTDN setup script' }, 409);
+  }
+  return c.text(buildGoogleConfigurationScript({
+    instanceId,
+    apiDomain: c.env.API_DOMAIN,
+    projectId,
+    serviceAccountEmail,
+  }), 200, { 'Content-Type': 'application/x-sh; charset=utf-8' });
 });
 
 instances.get('/:id/configurations/desktop', async (c) => {
@@ -1379,246 +1273,17 @@ instances.delete('/:id/configurations/web', async (c) => {
   return c.json({ config: null, configuration: null });
 });
 
-// =================== BILLING ===================
-
-instances.get('/:id/billing/subscription', async (c) => {
-  const instanceId = Number(c.req.param('id'));
-  const access = await requireInstanceRole(c, instanceId, true);
-  if ('error' in access) return access.error;
-
-  if (isFullAccess(c.env)) {
-    return c.json({
-      type: 'full',
-      unlimited: true,
-      current_maus: await currentMau(c.env.DB, instanceId),
-      total_available: null,
-    });
-  }
-
-  const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
-  if (stripeRow) {
-    const subId = subscriptionId(stripeRow);
-    let stripeSubscription: any = null;
-    if (subId && c.env.STRIPE_SECRET_KEY) {
-      const stripe = await stripeRequest(c, 'GET', `/subscriptions/${encodeURIComponent(subId)}`);
-      if (stripe.error) return stripe.error;
-      stripeSubscription = stripe.data;
-    }
-    const periodStart = unixSeconds(
-      stripeSubscription?.current_period_start ?? stripeRow.current_period_start,
-      Math.floor(Date.now() / 1000),
-    );
-    const periodEnd = unixSeconds(
-      stripeSubscription?.current_period_end ?? stripeRow.current_period_end,
-      periodStart + 30 * 86400,
-    );
-    const maus = await currentMau(
-      c.env.DB,
-      instanceId,
-      new Date(periodStart * 1000).toISOString().slice(0, 10),
-      new Date(periodEnd * 1000).toISOString().slice(0, 10),
-    );
-    const free = freeMauCount(c.env);
-    return c.json({
-      type: 'stripe',
-      details: {
-        active: stripeRow.active === 1 || ['active', 'trialing', 'past_due'].includes(stripeRow.status),
-        paused: stripeRow.status === 'paused',
-      },
-      stripe_subscription: {
-        current_period_start: periodStart,
-        current_period_end: periodEnd,
-        status: stripeSubscription?.status || stripeRow.status,
-        id: subId,
-      },
-      quantity_for_current_billing_cycle: Math.max(0, maus - free),
-      amount_cents: 0,
-      amount_formatted: null,
-      maus,
-      period_start: periodStart,
-      period_end: periodEnd,
-      next_payment_attempt: null,
-    });
-  }
-
-  const enterprise = await activeEnterpriseSubscription(c.env.DB, instanceId);
-  if (enterprise) {
-    const start = enterprise.start_date || enterprise.starts_at || enterprise.created_at;
-    const end = enterprise.end_date || enterprise.ends_at || null;
-    return c.json({
-      type: 'enterprise',
-      current_maus: await currentMau(c.env.DB, instanceId, String(start || '').slice(0, 10) || undefined),
-      total_maus: Number(enterprise.total_maus || enterprise.seats || freeMauCount(c.env)),
-      start_at: start,
-      end_at: end,
-    });
-  }
-
-  return c.json({ error: 'No active subscriptions' }, 404);
-});
-
-instances.get('/:id/billing/mau', async (c) => {
-  const instanceId = Number(c.req.param('id'));
-  const access = await requireInstanceRole(c, instanceId, true);
-  if ('error' in access) return access.error;
-  const currentQuantity = await currentMau(c.env.DB, instanceId);
-  if (isFullAccess(c.env)) {
-    return c.json({
-      current_quantity: currentQuantity,
-      total_available: null,
-      unlimited: true,
-    });
-  }
-  return c.json({
-    current_quantity: currentQuantity,
-    total_available: String(freeMauCount(c.env)),
-  });
-});
-
-instances.get('/:id/billing/usage', async (c) => {
-  const instanceId = Number(c.req.param('id'));
-  const access = await requireInstanceRole(c, instanceId, true);
-  if ('error' in access) return access.error;
-
-  if (isFullAccess(c.env)) {
-    return c.json({
-      type: 'full',
-      unlimited: true,
-      current_maus: await currentMau(c.env.DB, instanceId),
-      total_available: null,
-    });
-  }
-
-  const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
-  if (stripeRow) {
-    const subId = subscriptionId(stripeRow);
-    let stripeSubscription: any = null;
-    if (subId && c.env.STRIPE_SECRET_KEY) {
-      const stripe = await stripeRequest(c, 'GET', `/subscriptions/${encodeURIComponent(subId)}`);
-      if (stripe.error) return stripe.error;
-      stripeSubscription = stripe.data;
-    }
-    const periodStart = unixSeconds(stripeSubscription?.current_period_start ?? stripeRow.current_period_start);
-    const periodEnd = unixSeconds(stripeSubscription?.current_period_end ?? stripeRow.current_period_end);
-    const maus = await currentMau(
-      c.env.DB,
-      instanceId,
-      periodStart ? new Date(periodStart * 1000).toISOString().slice(0, 10) : undefined,
-      periodEnd ? new Date(periodEnd * 1000).toISOString().slice(0, 10) : undefined,
-    );
-    return c.json({
-      amount: null,
-      maus,
-      next_payment_attempt: null,
-      start_date: periodStart ? stripeDate(periodStart) : null,
-    });
-  }
-
-  const enterprise = await activeEnterpriseSubscription(c.env.DB, instanceId);
-  if (enterprise) {
-    return c.json({
-      type: 'enterprise',
-      current_maus: await currentMau(c.env.DB, instanceId),
-      total_maus: Number(enterprise.total_maus || enterprise.seats || freeMauCount(c.env)),
-      start_at: enterprise.start_date || enterprise.starts_at,
-      end_at: enterprise.end_date || enterprise.ends_at,
-    });
-  }
-
-  return c.json({ error: 'No active subscription' }, 404);
-});
-
-instances.get('/:id/billing/stripe_portal', async (c) => {
-  const instanceId = Number(c.req.param('id'));
-  const access = await requireInstanceRole(c, instanceId, true);
-  if ('error' in access) return access.error;
-  if (isFullAccess(c.env)) return c.json({ error: 'Billing is disabled for full-access deployments' }, 409);
-
-  const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
-  const customer = subscriptionCustomerId(stripeRow);
-  if (!customer) return c.json({ error: 'No active subscriptions' }, 404);
-
-  const returnUrl = c.env.STRIPE_PORTAL_RETURN_URL || `${dashboardBaseUrl(c)}${dashboardPath(c)}?instance_id=${instanceId}`;
-  const stripe = await stripeRequest(c, 'POST', '/billing_portal/sessions', {
-    customer,
-    return_url: returnUrl,
-  });
-  if (stripe.error) return stripe.error;
-  return c.json({ url: stripe.data.url });
-});
-
-instances.post('/:id/billing/subscriptions', async (c) => {
-  const instanceId = Number(c.req.param('id'));
-  const access = await requireInstanceRole(c, instanceId, true);
-  if ('error' in access) return access.error;
-  if (isFullAccess(c.env)) return c.json({ error: 'Billing is disabled for full-access deployments' }, 409);
-
-  const existing = await activeStripeSubscription(c.env.DB, instanceId);
-  if (existing) return c.json({ error: 'This project is already subscribed' }, 422);
-  const priceId = c.env.STRIPE_STANDARD_PRICE_ID;
-  if (!priceId) return c.json({ error: 'Stripe price is not configured' }, 503);
-
-  const user = await c.env.DB.prepare('SELECT email FROM users WHERE id = ? LIMIT 1')
-    .bind(access.userId).first<{ email: string }>();
-  const settingsUrl = `${dashboardBaseUrl(c)}${dashboardPath(c)}`;
-  const stripe = await stripeRequest(c, 'POST', '/checkout/sessions', {
-    success_url: c.env.STRIPE_SUCCESS_URL || `${settingsUrl}?instance_id=${instanceId}`,
-    cancel_url: c.env.STRIPE_CANCEL_URL || `${settingsUrl}?cancel=true&instance_id=${instanceId}`,
-    mode: 'subscription',
-    customer_email: user?.email,
-    client_reference_id: String(instanceId),
-    'line_items[0][price]': priceId,
-    'line_items[0][quantity]': 1,
-    'metadata[instance_id]': String(instanceId),
-    'metadata[product_type]': 'scale_up',
-  });
-  if (stripe.error) return stripe.error;
-
-  await c.env.DB.prepare(`
-    INSERT INTO stripe_payment_intents (instance_id, user_id, stripe_payment_intent_id, intent_id, product_type, created_at, updated_at)
-    VALUES (?, ?, ?, ?, 'scale_up', datetime('now'), datetime('now'))
-  `).bind(instanceId, access.userId, stripe.data.id, stripe.data.id).run().catch(() => null);
-
-  return c.json({ url: stripe.data.url });
-});
-
-instances.delete('/:id/billing/subscription', async (c) => {
-  const instanceId = Number(c.req.param('id'));
-  const access = await requireInstanceRole(c, instanceId, true);
-  if ('error' in access) return access.error;
-  if (isFullAccess(c.env)) return c.json({ error: 'Billing is disabled for full-access deployments' }, 409);
-
-  const stripeRow = await activeStripeSubscription(c.env.DB, instanceId);
-  const subId = subscriptionId(stripeRow);
-  if (!stripeRow || !subId) return c.json({ error: 'No active subscriptions' }, 404);
-
-  const stripe = await stripeRequest(c, 'DELETE', `/subscriptions/${encodeURIComponent(subId)}`);
-  if (stripe.error) return stripe.error;
-  await c.env.DB.prepare(`
-    UPDATE stripe_subscriptions
-    SET active = 0,
-        status = 'canceled',
-        canceled_at = COALESCE(canceled_at, datetime('now')),
-        cancels_at = COALESCE(cancels_at, datetime('now')),
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).bind(stripeRow.id).run();
-  return c.json({ result: stripe.data });
-});
-
-
-
 // =================== REVENUE COLLECTION ===================
 
 instances.put('/:id/revenue_collection', async (c) => {
   const instanceId = Number(c.req.param('id'));
   const access = await requireInstanceRole(c, instanceId, true);
   if ('error' in access) return access.error;
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   const enabled = body.revenue_collection_enabled === true || body.revenue_collection_enabled === 1 || body.revenue_collection_enabled === 'true';
   await c.env.DB.prepare('UPDATE instances SET revenue_collection_enabled = ?, updated_at = datetime("now") WHERE id = ?')
     .bind(enabled ? 1 : 0, instanceId).run();
-  const instance = await buildInstance(c.env.DB, instanceId, access.userId);
+  const instance = await buildInstance(c.env.DB, instanceId, access.userId, c.env.SHORTLINK_DOMAIN);
   return c.json({ instance, message: 'Revenue collection updated' });
 });
 
@@ -1653,7 +1318,7 @@ instances.post('/:id/setup_progress/complete', async (c) => {
   const userId = await getAuthUserId(c);
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
   const instanceId = Number(c.req.param('id'));
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   const step = body.step || body.name;
   if (!step) return c.json({ error: 'step required' }, 422);
 
@@ -1683,7 +1348,7 @@ instances.post('/:id/exports/usage', async (c) => {
     'SELECT role FROM instance_roles WHERE user_id = ? AND instance_id = ? LIMIT 1'
   ).bind(userId, instanceId).first();
   if (!role) return c.json({ error: 'Forbidden' }, 403);
-  const body: { start_date?: string; end_date?: string } = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw) as { start_date?: string; end_date?: string };
   const startDate = (body.start_date && /^\d{4}-\d{2}-\d{2}$/.test(body.start_date))
     ? body.start_date
     : new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -1742,7 +1407,7 @@ instances.post('/:id/events/billing', async (c) => {
   ).bind(userId, instanceId).first();
   if (!role) return c.json({ error: 'Forbidden' }, 403);
 
-  const body: { start_date?: string; end_date?: string } = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw) as { start_date?: string; end_date?: string };
   const startDate = (body.start_date && /^\d{4}-\d{2}-\d{2}$/.test(body.start_date))
     ? body.start_date
     : new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);

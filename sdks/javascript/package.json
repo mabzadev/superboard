@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mbzadev/opengrow.git",
+    "url": "git+https://github.com/mbzadev/opengrow-platform.git",
     "directory": "sdks/javascript"
   },
   "publishConfig": {

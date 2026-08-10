@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BillingEnv } from '../types';
 import { createFakeD1 } from '../test/fake-d1';
-import { reconcileRefundDeadlines } from './billing-jobs';
+import { reconcileBillingState, reconcileRefundDeadlines } from './billing-jobs';
 
 describe('billing refund deadline reconciliation', () => {
   it('marks overdue non-terminal deadlines once and appends immutable audit events', async () => {

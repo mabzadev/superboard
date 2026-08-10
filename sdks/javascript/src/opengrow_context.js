@@ -16,6 +16,12 @@ class OpenGrowContext {
    */
   static testEnvironment = false;
 
+  /**
+   * Application-provided OpenGrow SDK endpoint, including `/api/v1/sdk`.
+   * @type {string|null}
+   */
+  static API_BASE_URL = null;
+
   static get linksquaredID() {
     return OpenGrowDeviceDetails.getValue("linksquared");
   }

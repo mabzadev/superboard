@@ -2,23 +2,17 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.opengrow/mcp",
   "title": "OpenGrow",
-  "description": "Manage deep links, attribution, analytics, and campaigns on OpenGrow — open-source Branch alternative.",
-  "version": "1.0.1",
+  "description": "Operate projects, links, attribution, analytics, campaigns, and SDK configuration on a target-owned OpenGrow deployment.",
+  "version": "1.0.0",
   "repository": {
-    "url": "https://github.com/mbzadev/opengrow/tree/main/apps/mcp",
+    "url": "https://github.com/mbzadev/opengrow-platform/tree/main/apps/mcp",
     "source": "github"
   },
-  "websiteUrl": "https://github.com/mbzadev/opengrow",
+  "websiteUrl": "https://github.com/mbzadev/opengrow-platform",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/mbzadev/opengrow/main/.github/logo.svg",
+      "src": "https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg",
       "type": "image/svg+xml"
-    }
-  ],
-  "remotes": [
-    {
-      "type": "streamable-http",
-      "url": "https://mcp.opengrow.io/mcp"
     }
   ]
 }

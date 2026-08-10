@@ -7,14 +7,14 @@ Pod::Spec.new do |s|
   s.version          = '1.1.1'
   s.summary          = 'OpenGrow SDK integration for Flutter.'
   s.description      = <<-DESC
-Private Flutter SDK for OpenGrow links, messaging, attribution, and purchases.
+OpenGrow Flutter SDK for links, messaging, attribution, and purchases.
                        DESC
-  s.homepage         = 'https://github.com/mbzadev/opengrow'
+  s.homepage         = 'https://github.com/mbzadev/opengrow-platform'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'OpenGrow' => 'support@vocostar.com' }
+  s.author           = { 'OpenGrow' => 'https://github.com/mbzadev/opengrow-platform' }
   s.source           = { :path => '.' }
-  # Embed the private native SDK in the Flutter pod. FlutterFlow can therefore
-  # build the Git dependency without access to a second private CocoaPods repo.
+  # Embed the native SDK in the Flutter pod. FlutterFlow can therefore build the
+  # public Git dependency without access to a second CocoaPods repository.
   s.source_files = [
     'Classes/**/*',
     '../../ios/Sources/OpenGrow/**/*.swift'

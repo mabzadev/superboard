@@ -4,9 +4,6 @@ import OpenGrowContext from "./opengrow_context";
  * Helper class for making API requests to OpenGrow service.
  */
 class OpenGrowAPIServiceHelper {
-  // Endpoint URL for the OpenGrow API
-  static ENDPOINT = "https://sdk.sqd.link/api/v1/sdk";
-  // static ENDPOINT = "http://sdk.lvh.me:3000/api/v1/sdk";
 
   /**
    * Constructor for OpenGrowAPIServiceHelper.
@@ -25,7 +22,7 @@ class OpenGrowAPIServiceHelper {
    */
   POST(path, data, success, error) {
     const headers = this.buildHeaders();
-    const endpoint = OpenGrowAPIServiceHelper.ENDPOINT + path;
+    const endpoint = this.endpoint(path);
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", endpoint, true);
@@ -51,7 +48,7 @@ class OpenGrowAPIServiceHelper {
 
   GET(path, data, success, error) {
     const headers = this.buildHeaders();
-    const endpoint = OpenGrowAPIServiceHelper.ENDPOINT + path;
+    const endpoint = this.endpoint(path);
 
     const xhr = new XMLHttpRequest();
     xhr.open("GET", endpoint, true);
@@ -73,6 +70,13 @@ class OpenGrowAPIServiceHelper {
     };
 
     xhr.send(JSON.stringify(data));
+  }
+
+  endpoint(path) {
+    if (!OpenGrowContext.API_BASE_URL) {
+      throw new Error("OpenGrow baseURL is not configured");
+    }
+    return OpenGrowContext.API_BASE_URL + path;
   }
 
   /**

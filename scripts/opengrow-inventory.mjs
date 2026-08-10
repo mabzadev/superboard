@@ -248,7 +248,7 @@ function listUpstream(kind) {
 function markerRoutes() {
   const markers = [];
   const placeholderPattern =
-    /not available|not supported|emptyMetrics|emptyConfig\(|metrics:\s*\{\s*\}|return c\.json\(\{\s*(tokens|visitors|data|notifications):\s*\[\]|message:\s*['"]ok['"]/i;
+    /not available|not implemented|emptyMetrics|emptyConfig\(|metrics:\s*\{\s*\}|return c\.json\(\{\s*(tokens|visitors|data|notifications):\s*\[\]|message:\s*['"]ok['"]/i;
 
   for (const file of listFiles(`${workerRoot}/src/routes`, ".ts").filter((file) => !file.endsWith(".test.ts"))) {
     const lines = read(rel(file)).split(/\r?\n/);
@@ -286,28 +286,40 @@ const inventory = {
     utils: gitRev("upstream/opengrow/opengrow-utils"),
   },
   counts: {
-    upstreamRoutes: railsRoutes.length,
+    upstreamRoutes: upstreamAvailable ? railsRoutes.length : null,
     workerRoutes: workerRoutes.length,
-    upstreamTables: railsTableNames.length,
+    upstreamTables: upstreamAvailable ? railsTableNames.length : null,
     d1Tables: d1TableNames.length,
-    upstreamJobs: listUpstream("jobs").length,
-    upstreamServices: listUpstream("services").length,
-    upstreamModels: listUpstream("models").length,
-    upstreamSerializers: listUpstream("serializers").length,
+    upstreamJobs: upstreamAvailable ? listUpstream("jobs").length : null,
+    upstreamServices: upstreamAvailable ? listUpstream("services").length : null,
+    upstreamModels: upstreamAvailable ? listUpstream("models").length : null,
+    upstreamSerializers: upstreamAvailable ? listUpstream("serializers").length : null,
+  },
+  verification: {
+    status: upstreamAvailable ? "verified-against-upstream" : "upstream-unavailable",
+    verified: upstreamAvailable,
+    source: upstreamBackend,
+    detail: upstreamAvailable
+      ? "Route and schema comparisons were computed from the checked-out upstream source."
+      : "Only the local Worker and D1 inventories were computed; upstream parity was not evaluated.",
   },
   routes: {
     upstream: railsRoutes,
     worker: workerRoutes,
-    missingFromWorker: railsRoutes.filter((route) => !workerRouteKeys.has(normalizedRouteKey(route))),
+    missingFromWorker: upstreamAvailable
+      ? railsRoutes.filter((route) => !workerRouteKeys.has(normalizedRouteKey(route)))
+      : null,
     extraInWorker: upstreamAvailable
       ? workerRoutes.filter((route) => !railsRouteKeys.has(normalizedRouteKey(route)))
-      : [],
+      : null,
   },
   schema: {
-    missingTables: railsTableNames.filter((name) => !d1TableNames.includes(name)),
+    missingTables: upstreamAvailable
+      ? railsTableNames.filter((name) => !d1TableNames.includes(name))
+      : null,
     extraTables: upstreamAvailable
       ? d1TableNames.filter((name) => !railsTableNames.includes(name))
-      : [],
+      : null,
     tables: Object.fromEntries(
       railsTableNames.map((name) => [
         name,
@@ -334,17 +346,27 @@ if (process.argv.includes("--summary")) {
   console.log(JSON.stringify({
     generatedAt: inventory.generatedAt,
     upstreamAvailable: inventory.upstreamAvailable,
+    verification: inventory.verification,
     upstream: inventory.upstream,
     counts: inventory.counts,
     missingRoutes: inventory.routes.missingFromWorker,
     extraWorkerRoutes: inventory.routes.extraInWorker,
     missingTables: inventory.schema.missingTables,
     extraTables: inventory.schema.extraTables,
-    tablesWithMissingColumns: Object.entries(inventory.schema.tables)
-      .filter(([, table]) => table.missingColumns.length > 0)
-      .map(([name, table]) => ({ name, missingColumns: table.missingColumns })),
+    tablesWithMissingColumns: upstreamAvailable
+      ? Object.entries(inventory.schema.tables)
+        .filter(([, table]) => table.missingColumns.length > 0)
+        .map(([name, table]) => ({ name, missingColumns: table.missingColumns }))
+      : null,
     implementationMarkers: inventory.implementationMarkers,
   }, null, 2));
 } else {
   console.log(JSON.stringify(inventory, null, 2));
+}
+
+if (process.argv.includes("--require-upstream") && !upstreamAvailable) {
+  console.error(
+    `Upstream parity cannot be verified because ${upstreamBackend} is not available.`,
+  );
+  process.exitCode = 2;
 }

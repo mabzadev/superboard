@@ -271,7 +271,7 @@ const QuickStartGuide = () => {
                 subtitle="CocoaPods, SPM, Flutter, or React Native"
                 checked={getStartedSetup?.ios_sdk}
                 enabled={true}
-                onClick={() => navigate("/developers/ios_setup")}
+                onClick={() => navigate("/app/ios-setup")}
               />
               <ActionRow
                 icon={
@@ -289,7 +289,7 @@ const QuickStartGuide = () => {
                 subtitle="Gradle, Flutter, or React Native"
                 checked={getStartedSetup?.android_sdk}
                 enabled={true}
-                onClick={() => navigate("/developers/android_setup")}
+                onClick={() => navigate("/app/android-setup")}
               />
               <ActionRow
                 icon={<Globe className="h-3.5 w-3.5" />}
@@ -297,7 +297,7 @@ const QuickStartGuide = () => {
                 subtitle="NPM package for web apps"
                 checked={getStartedSetup?.web_sdk}
                 enabled={true}
-                onClick={() => navigate("/developers/web_setup")}
+                onClick={() => navigate("/app/web-setup")}
               />
             </div>
           </div>
@@ -319,7 +319,7 @@ const QuickStartGuide = () => {
                 subtitle="How links open per platform"
                 checked={getStartedSetup?.redirect_fallback}
                 enabled={canConfigure}
-                onClick={() => navigate("/link_behaviour/redirect_rules")}
+                onClick={() => navigate("/dynamic-links/redirect-rules")}
               />
             </div>
           </div>
@@ -341,7 +341,7 @@ const QuickStartGuide = () => {
                 subtitle="Your first dynamic link"
                 checked={getStartedSetup?.has_created_links}
                 enabled={canCreate}
-                onClick={() => navigate("/dynamic_links/links")}
+                onClick={() => navigate("/dynamic-links/links")}
               />
               <ActionRow
                 icon={<Megaphone className="h-3.5 w-3.5" />}
@@ -349,7 +349,7 @@ const QuickStartGuide = () => {
                 subtitle="Group links for marketing"
                 checked={getStartedSetup?.has_created_campaigns}
                 enabled={canCreate}
-                onClick={() => navigate("/dynamic_links/campaigns")}
+                onClick={() => navigate("/dynamic-links/campaigns")}
               />
             </div>
           </div>

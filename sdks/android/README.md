@@ -1,17 +1,17 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mbzadev/opengrow-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/opengrow/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-private-4F46E5?style=flat-square" alt="GitHub Packages"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform/packages"><img src="https://img.shields.io/badge/GitHub%20Packages-private-4F46E5?style=flat-square" alt="GitHub Packages"/></a>
   <a href="#"><img src="https://img.shields.io/badge/API-21%2B-4F46E5?style=flat-square" alt="API 21+"/></a>
   <a href="#"><img src="https://img.shields.io/badge/kotlin-1.9%2B-4F46E5?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/opengrow-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -20,9 +20,9 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.opengrow.io/docs/sdk/android/quick-start">Quick Start</a> ·
-  <a href="https://docs.opengrow.io/docs/sdk/android/api-reference">API Reference</a> ·
-  <a href="https://docs.opengrow.io">Full Docs</a>
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/opengrow-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -81,7 +81,7 @@ class MyApplication : Application() {
 }
 ```
 
-For self-hosted backends, pass the `baseURL` parameter (domain only — the SDK appends the API path):
+Every application must pass its `baseURL` parameter (domain only — the SDK appends the API path):
 
 ```kotlin
 OpenGrow.configure(this, "your-api-key", useTestEnvironment = false, baseURL = "https://your-domain.com")
@@ -295,7 +295,7 @@ dependencies {
 }
 ```
 
-**2. Upload your Firebase credentials** — In the [Firebase Console](https://console.firebase.google.com), go to **Project Settings → Service Accounts** and generate a new private key. Upload the JSON key file and enter your Firebase Project ID in the [OpenGrow dashboard](https://app.opengrow.io) under **Android Setup → Push Notifications**.
+**2. Upload your Firebase credentials** — In the [Firebase Console](https://console.firebase.google.com), go to **Project Settings → Service Accounts** and generate a new private key. Upload the JSON key file and enter your Firebase Project ID in the OpenGrow Dashboard deployed for the active application target, under **Android Setup → Push Notifications**.
 
 **3. Request notification permission** (Android 13+):
 
@@ -368,7 +368,7 @@ lifecycleScope.launch {
 
 ### Setup
 
-1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
 2. Configure Google Play Real-Time Developer Notifications — the OpenGrow dashboard provides an automated setup script under **Developers → Android Setup → Revenue**, or you can configure Pub/Sub manually
 
 ### Google Play purchases
@@ -428,31 +428,30 @@ Use `CANCELLATION` and `REFUND` payment event types for cancellations and refund
 | `logInAppPurchase(originalJson)` | Log a Google Play Billing purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [docs.opengrow.io/docs/sdk/android/api-reference](https://docs.opengrow.io/docs/sdk/android/api-reference)
+Full API reference: [Android SDK API reference](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/android/OpenGrow/app`](https://github.com/mbzadev/opengrow/tree/main/sdks/android/OpenGrow/app).
+A demo project is included in [`sdks/android/OpenGrow/app`](https://github.com/mbzadev/opengrow-platform/tree/main/sdks/android/OpenGrow/app).
 
 ## Setup Guides
 
-- [Adding a Gradle Dependency](https://docs.opengrow.io/docs/how-to-guides/android/gradle) — add the SDK to your project
-- [Getting the Package Name](https://docs.opengrow.io/docs/how-to-guides/android/package-name) — find your application ID
-- [Getting the SHA-256 Fingerprint](https://docs.opengrow.io/docs/how-to-guides/android/sha256-fingerprint) — get your signing certificate fingerprint
-- [Adding an Intent Filter](https://docs.opengrow.io/docs/how-to-guides/android/intent-filter) — set up deep link intent filters
+- Adding a Gradle dependency — see [Installation](#installation)
+- Getting the package name — use your Android application ID
+- Getting the SHA-256 fingerprint — use the certificate registered with the selected target
+- Adding an intent filter — see [Quick Start](#quick-start)
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/android)
-- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/android)
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/opengrow-platform/tree/main/docs).
 
 ## Support
 
-For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
+For technical support, use the support channel configured for the active target or open a repository issue.
 
 ## License
 
