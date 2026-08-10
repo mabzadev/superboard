@@ -342,10 +342,9 @@ test("live Flutter builds require project identity and exact tested revisions", 
 });
 
 test("demo Flutter builds discard credentials and mark unproven revisions local", () => {
-  const defines = buildFlutterDefines(
-    development,
-    { OPENGROW_PROJECT_KEY: "also-must-not-ship" },
-  );
+  const defines = buildFlutterDefines(development, {
+    OPENGROW_PROJECT_KEY: "also-must-not-ship",
+  });
   assert.equal(defines.OPENGROW_LIVE_MODE, "false");
   assert.equal(defines.OPENGROW_PROJECT_KEY, "");
   assert.equal(defines.OPENGROW_PROJECT_ID, "0");
@@ -443,6 +442,23 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /gitleaks\/gitleaks-action@[0-9a-f]{40}/);
   assert.match(
     workflow,
+    /name: Make the root commit scannable for a reviewed history bridge/,
+  );
+  assert.match(
+    workflow,
+    /startsWith\(github\.head_ref, 'history\/bridge-main-dev-'\)/,
+  );
+  assert.match(workflow, /test "\$second_parent" = "\$BRIDGE_BASE_SHA"/);
+  assert.match(
+    workflow,
+    /git replace --graft "\$root_commit" "\$BRIDGE_BASE_SHA"/,
+  );
+  assert.match(
+    workflow,
+    /test "\$\(git rev-parse "\$BRIDGE_HEAD_SHA\^\{tree\}"\)" = "\$\(git rev-parse "\$first_parent\^\{tree\}"\)"/,
+  );
+  assert.match(
+    workflow,
     /if: \$\{\{ github\.event_name != 'repository_dispatch' \}\}/,
   );
   assert.match(
@@ -537,7 +553,10 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.match(workflow, /pull-requests: write/);
   assert.match(workflow, /reference-sdk-promotion\.mjs/);
   assert.match(workflow, /--library all/);
-  assert.match(workflow, /Regenerate the application lockfile from immutable SDK tags/);
+  assert.match(
+    workflow,
+    /Regenerate the application lockfile from immutable SDK tags/,
+  );
   assert.match(workflow, /':!config\/sdk-coverage\.json'/);
   assert.match(workflow, /':!pubspec\.lock'/);
   assert.match(
@@ -563,13 +582,19 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   );
   assert.match(workflow, /npm run sdk:coverage:verify/);
   assert.match(workflow, /npm run sdk:coverage:catalog/);
-  assert.match(workflow, /Verify locked immutable SDK tags before local overrides/);
+  assert.match(
+    workflow,
+    /Verify locked immutable SDK tags before local overrides/,
+  );
   assert.match(workflow, /reference-sdk-lock\.mjs verify-remote/);
   assert.match(workflow, /flutter pub get --enforce-lockfile/);
   assert.match(workflow, /OPENGROW_FLUTTER_VERSION: "3\.44\.9"/);
   assert.equal(
-    (workflow.match(/flutter-version: \$\{\{ env\.OPENGROW_FLUTTER_VERSION \}\}/gu) ?? [])
-      .length,
+    (
+      workflow.match(
+        /flutter-version: \$\{\{ env\.OPENGROW_FLUTTER_VERSION \}\}/gu,
+      ) ?? []
+    ).length,
     3,
   );
   assert.match(
@@ -581,8 +606,12 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
     /git restore --source=HEAD --worktree -- pubspec\.lock/,
   );
   assert.ok(
-    workflow.indexOf("Verify locked immutable SDK tags before local overrides") <
-      workflow.indexOf('dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"'),
+    workflow.indexOf(
+      "Verify locked immutable SDK tags before local overrides",
+    ) <
+      workflow.indexOf(
+        'dart tool/use_local_platform.dart "$GITHUB_WORKSPACE/vendor/opengrow-platform"',
+      ),
   );
 });
 

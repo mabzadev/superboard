@@ -36,6 +36,33 @@ jobs:
           test -n "$DEFAULT_BRANCH"
           git fetch --no-tags origin "refs/heads/$DEFAULT_BRANCH"
           test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+      - name: Make the root commit scannable for a reviewed history bridge
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'history/bridge-main-dev-') }}
+        env:
+          BRIDGE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BRIDGE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          [[ "$BRIDGE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BRIDGE_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          read -r first_parent second_parent unexpected_parent <<< "$(git show -s --format=%P "$BRIDGE_HEAD_SHA")"
+          test -n "$first_parent"
+          test "$second_parent" = "$BRIDGE_BASE_SHA"
+          test -z "${unexpected_parent:-}"
+          test "$(git rev-parse "$BRIDGE_HEAD_SHA^{tree}")" = "$(git rev-parse "$first_parent^{tree}")"
+          test "$(git merge-base "$BRIDGE_BASE_SHA" "$BRIDGE_HEAD_SHA")" = "$BRIDGE_BASE_SHA"
+
+          root_commits=$(git rev-list --first-parent --max-parents=0 "$BRIDGE_HEAD_SHA")
+          test "$(printf '%s\n' "$root_commits" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+          root_commit=$(printf '%s\n' "$root_commits" | sed -n '1p')
+          test -z "$(git show -s --format=%P "$root_commit")"
+
+          # gitleaks-action scans PR commits from the first commit's parent.
+          # A split-history bridge legitimately includes a root commit, whose
+          # parent does not exist. This local-only graft supplies the reviewed
+          # base as that parent so the action scans the complete dev history.
+          git replace --graft "$root_commit" "$BRIDGE_BASE_SHA"
+          test "$(git rev-parse "$root_commit^")" = "$BRIDGE_BASE_SHA"
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         if: ${{ github.event_name != 'repository_dispatch' }}
         env:
