@@ -34,7 +34,7 @@ test("mutable or SSH dependencies are rejected", async () => {
         "https://github.com/mbzadev/opengrow-platform.git",
         "git@github.com:mbzadev/opengrow-platform.git",
       )
-      .replace("ref: sdk-flutterflow-v2.2.4", "ref: main"),
+      .replace("ref: sdk-flutterflow-v2.2.5", "ref: main"),
   });
   assert.equal(result.status, "blocked");
   assert.ok(result.errors.some((error) => error.includes("public HTTPS")));

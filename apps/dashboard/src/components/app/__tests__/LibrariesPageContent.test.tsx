@@ -33,9 +33,9 @@ describe("LibrariesPageContent", () => {
           license: "MIT",
           licensePath: "sdks/flutterflow/LICENSE",
           versionSource: "sdks/flutterflow/pubspec.yaml",
-          sourceVersion: "2.2.4",
-          latestReleaseVersion: "2.1.6",
-          releaseRef: "sdk-flutterflow-v2.1.6",
+          sourceVersion: "2.2.5",
+          latestReleaseVersion: "2.2.4",
+          releaseRef: "sdk-flutterflow-v2.2.4",
           releaseStatus: "pending-release",
           install: "opengrow_flutterflow: immutable",
         },
@@ -69,8 +69,8 @@ describe("LibrariesPageContent", () => {
           {
             catalogId: "flutterflow",
             packageName: "opengrow_flutterflow",
-            sourceVersion: "2.2.4",
-            requiredRef: "sdk-flutterflow-v2.2.4",
+            sourceVersion: "2.2.5",
+            requiredRef: "sdk-flutterflow-v2.2.5",
           },
         ],
         libraryValues: [

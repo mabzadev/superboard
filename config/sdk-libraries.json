@@ -30,11 +30,10 @@
       "license": "MIT",
       "licensePath": "sdks/flutterflow/LICENSE",
       "versionSource": "sdks/flutterflow/pubspec.yaml",
-      "sourceVersion": "2.2.4",
+      "sourceVersion": "2.2.5",
       "latestReleaseVersion": "2.2.4",
       "releaseRef": "sdk-flutterflow-v2.2.4",
-      "releaseStatus": "released",
-      "releaseSha": "e896f8ea91a140419471b02301f0bde48d8d6b13",
+      "releaseStatus": "pending-release",
       "surfaceManifest": "config/flutterflow-custom-code.json",
       "install": "opengrow_flutterflow:\n  git:\n    url: https://github.com/mbzadev/opengrow-platform.git\n    ref: sdk-flutterflow-v2.2.4\n    path: sdks/flutterflow"
     },

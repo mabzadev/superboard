@@ -419,7 +419,7 @@ VocoStar. Le contrat serveur durable est détaillé dans
 
 Cette convergence est validée localement par 35 contrôles de source. La mutation
 du projet FlutterFlow distant reste volontairement bloquée jusqu’à la création
-et la revue du tag immuable `sdk-flutterflow-v2.2.4` (ainsi que du tag Support
+et la revue du tag immuable `sdk-flutterflow-v2.2.5` (ainsi que du tag Support
 requis), puis doit suivre `flutterflow ai test` avant `flutterflow ai run`.
 
 ## Critères de parité avant VocoStar production

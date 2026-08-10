@@ -35,7 +35,7 @@ project, compiles and tests the DSL, verifies immutable OpenGrow SDK tags, then
 pushes the configuration. It is intentionally sequenced after the OpenGrow
 FlutterFlow library sync.
 
-The current migration requires `sdk-flutterflow-v2.2.4`. Until that immutable
+The current migration requires `sdk-flutterflow-v2.2.5`. Until that immutable
 tag and the required Support tag exist in the public platform repository, only
 local tests and remote dry-run validation are allowed; the remote FlutterFlow
 project must not be mutated.

@@ -80,7 +80,7 @@ opération sans créer une nouvelle fuite de données personnelles.
 1. Appliquer toutes les migrations sur les bases de recette MBZA et confirmer
    que l’API attend `0057_application_account_erasure.sql`.
 2. Publier les SDK sous des tags Git immuables. Le client FlutterFlow exige
-   `sdk-flutterflow-v2.2.4`; aucun projet distant ne doit être modifié avant que
+   `sdk-flutterflow-v2.2.5`; aucun projet distant ne doit être modifié avant que
    ce tag et le tag Support requis existent.
 3. Exécuter `flutterflow ai test`, puis la validation dry-run du projet VocoStar.
 4. Tester en recette un compte sans données, puis un compte possédant fichiers,

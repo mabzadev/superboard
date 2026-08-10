@@ -23,8 +23,8 @@
           {
             "catalogId": "flutterflow",
             "packageName": "opengrow_flutterflow",
-            "sourceVersion": "2.2.4",
-            "requiredRef": "sdk-flutterflow-v2.2.4"
+            "sourceVersion": "2.2.5",
+            "requiredRef": "sdk-flutterflow-v2.2.5"
           },
           {
             "catalogId": "flutterflow-support",

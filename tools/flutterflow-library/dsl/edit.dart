@@ -481,7 +481,7 @@ void buildStarterEditFlow(App app) {
         r'''
 git:
   url: https://github.com/mbzadev/opengrow-platform.git
-  ref: sdk-flutterflow-v2.2.4
+  ref: sdk-flutterflow-v2.2.5
   path: sdks/flutterflow
 '''.trim();
     if (pub_dependency_helpers.findPubDependency(

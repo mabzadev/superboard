@@ -113,7 +113,7 @@ void main() {
       sdkDependency.version,
       contains('https://github.com/mbzadev/opengrow-platform.git'),
     );
-    expect(sdkDependency.version, contains('sdk-flutterflow-v2.2.4'));
+    expect(sdkDependency.version, contains('sdk-flutterflow-v2.2.5'));
     expect(sdkDependency.version, isNot(contains('git@github.com')));
     final supportDependency = project
         .customCode
