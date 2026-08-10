@@ -50,15 +50,15 @@ The OpenGrow iOS SDK provides deep linking, universal linking, link generation, 
 ### Swift Package Manager
 
 The published iOS SDK is distributed from public Git with Swift Package
-Manager at the exact release `1.0.2`:
+Manager at the exact release `1.0.3`:
 
 ```swift
-.package(url: "https://github.com/mbzadev/opengrow-platform.git", exact: "1.0.2")
+.package(url: "https://github.com/mbzadev/opengrow-platform.git", exact: "1.0.3")
 ```
 
 In Xcode, use **File → Add Package Dependencies**, enter
 `https://github.com/mbzadev/opengrow-platform.git`, and select exact version
-`1.0.2`. CocoaPods Trunk is not a published or supported
+`1.0.3`. CocoaPods Trunk is not a published or supported
 distribution channel for this SDK.
 
 <!-- opengrow-sdk-documentation:ios:end -->
