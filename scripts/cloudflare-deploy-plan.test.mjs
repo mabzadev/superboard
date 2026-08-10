@@ -162,6 +162,14 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
   assert.match(deployAll, /await verifyIdentityProjectCutover/u);
   assert.match(deployAll, /--identity-cutover-receipt/u);
   assert.match(deployAll, /--identity-cutover-sha256/u);
+  assert.match(
+    deployAll,
+    /const targetCloudflareEnv = cloudflareEnv\(target\)/u,
+  );
+  assert.match(
+    deployService,
+    /const targetCloudflareEnv = cloudflareEnv\(target\)/u,
+  );
   assert.match(deployService, /await readMigrationBatchReceipt/u);
   assert.ok(
     deployService.indexOf("runtimeBridgeDeploymentBlockers") <

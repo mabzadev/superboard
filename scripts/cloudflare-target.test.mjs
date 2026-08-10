@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   cloudflareAccountEnvName,
   cloudflareAccountId,
+  cloudflareEnv,
   environmentFromArgs,
   loadTarget,
   publicApiUrl,
@@ -205,6 +206,28 @@ test("account aliases resolve scoped credentials before the generic fallback", a
     "a".repeat(32),
   );
   assert.equal(cloudflareAccountId(target, {}, { required: false }), undefined);
+});
+
+test("Workers Builds cannot override target-owned Worker names", async () => {
+  const { target } = await loadTarget("mbza-development");
+  const source = {
+    CLOUDFLARE_ACCOUNT_ID: "a".repeat(32),
+    CLOUDFLARE_API_TOKEN: "deployment-token",
+    WRANGLER_CI_OVERRIDE_NAME: target.workers.dashboard.development,
+    WORKERS_CI: "1",
+  };
+
+  const childEnv = cloudflareEnv(target, source);
+
+  assert.equal("WRANGLER_CI_OVERRIDE_NAME" in childEnv, false);
+  assert.equal(
+    source.WRANGLER_CI_OVERRIDE_NAME,
+    target.workers.dashboard.development,
+    "the caller environment remains immutable",
+  );
+  assert.equal(childEnv.CLOUDFLARE_ACCOUNT_ID, "a".repeat(32));
+  assert.equal(childEnv.CLOUDFLARE_API_TOKEN, "deployment-token");
+  assert.equal(childEnv.WORKERS_CI, "1");
 });
 
 test("only development and production environments are accepted", () => {

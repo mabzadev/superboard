@@ -43,10 +43,18 @@ secret of its own.
   That one controller deploys every enabled Worker in dependency order; do not
   connect the other Workers independently, because concurrent controllers can
   race migrations, routes and Queue consumers.
+
 - `vocostar-production` is deployed from `main` by
   `.github/workflows/deploy-cloudflare.yml`, after the successful aggregate CI
   gate. Its protected GitHub Environment supplies the production account,
   least-privilege token and D1 backup encryption key.
+
+Cloudflare Workers Builds injects `WRANGLER_CI_OVERRIDE_NAME` so a conventional
+single-Worker deploy targets the connected Worker. SuperBoard removes that
+variable from every Cloudflare child-process environment: the generated target
+manifest remains the only Worker-name authority for the ordered multi-Worker
+release. The caller environment is not mutated, and account credentials plus
+the other Workers Builds metadata continue to be forwarded.
 
 Cloudflare generates and retains the Workers Builds token. The selected MBZA
 account ID is a non-secret `CLOUDFLARE_ACCOUNT_ID` build variable in Cloudflare,

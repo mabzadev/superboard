@@ -338,7 +338,12 @@ export function cloudflareAccountId(target, env = process.env, options = {}) {
 }
 
 export function cloudflareEnv(target, env = process.env) {
-  return { ...env, CLOUDFLARE_ACCOUNT_ID: cloudflareAccountId(target, env) };
+  const childEnv = { ...env };
+  delete childEnv.WRANGLER_CI_OVERRIDE_NAME;
+  return {
+    ...childEnv,
+    CLOUDFLARE_ACCOUNT_ID: cloudflareAccountId(target, env),
+  };
 }
 
 export function publicApiUrl(target) {
