@@ -16,12 +16,19 @@
     <script src="/dist/opengrow.js"></script>
 
     <script>
-      const APIKey =
-        "opengrowt_06e36086dad3e934289560e3ca59527282030868f8c844629516c6e6c67bbf1f";
+      const runtimeConfig = window.__OPENGROW_CONFIG__;
+      if (!runtimeConfig?.projectKey || !runtimeConfig?.sdkOrigin) {
+        throw new Error("Inject __OPENGROW_CONFIG__ before loading the OpenGrow example");
+      }
 
-      const sdk = new OpenGrow.default(APIKey, false, (data) => {
-        console.log("Link data:", data); // Callback to handle data from OpenGrow
-      });
+      const sdk = new OpenGrow.default(
+        runtimeConfig.projectKey,
+        Boolean(runtimeConfig.testEnvironment),
+        (data) => {
+          console.log("Link data:", data);
+        },
+        runtimeConfig.sdkOrigin,
+      );
 
       sdk.start(() => {
         console.log("started");
@@ -32,7 +39,7 @@
         sdk.createLink(
           "Test Title",
           "Test Subtitle",
-          "https://example.com/image.jpg",
+          runtimeConfig.previewImageUrl,
           { invited_by: "test" },
           (successData) => {
             console.log("Link created successfully:", successData);
@@ -42,12 +49,7 @@
           }
         );
       }
-
-      // Execute setUserDetails after 2 seconds
       setTimeout(getLink, 2000);
-
-      // Set the user attributes
     </script>
-    test test test
   </body>
 </html>

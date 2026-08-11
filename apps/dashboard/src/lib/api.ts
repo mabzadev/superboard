@@ -3,7 +3,7 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import { refreshToken } from "./RefreshTokenHelper";
 import LocalStorage from "./LocalStorage";
-import { ApiError, getErrorMessage } from "./ApiError";
+import { ApiError, getErrorMessage, parseApiErrorPayload } from "./ApiError";
 import { config } from "./config";
 
 const URL = config.apiUrl;
@@ -39,6 +39,7 @@ const buildConfig = (
   url: `${URL}${path}`,
   timeout: timeout ?? DEFAULT_TIMEOUT,
   headers: {
+    ...(method === "GET" ? {} : { "Idempotency-Key": crypto.randomUUID() }),
     ...extraHeaders,
     Authorization: `Bearer ${LocalStorage.getAuthenticationToken()}`,
   },
@@ -110,21 +111,19 @@ const makeRequest = async (
       // Convert to ApiError for better caller ergonomics
       if (axios.isAxiosError(error)) {
         const status = error.response?.status ?? 0;
-        const responseData = error.response?.data as
-          | { error?: unknown; message?: unknown }
-          | undefined;
-        const apiMessage =
-          typeof responseData?.error === "string"
-            ? responseData.error
-            : typeof responseData?.message === "string"
-              ? responseData.message
-              : null;
+        const responseData = error.response?.data;
+        const apiError = parseApiErrorPayload(responseData);
         const message =
           status === 0
             ? "Unable to connect. Check your internet connection."
-            : apiMessage ?? getErrorMessage(status);
+            : apiError.message ?? getErrorMessage(status);
 
-        throw new ApiError(message, status, error.code, error.response?.data);
+        throw new ApiError(
+          message,
+          status,
+          apiError.code ?? error.code,
+          responseData
+        );
       }
 
       throw error;

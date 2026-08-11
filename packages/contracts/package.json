@@ -1,0 +1,19 @@
+{
+  "name": "@superboard/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./project-context": "./src/project-context.ts",
+    "./email": "./src/email.ts",
+    "./custom-worker": "./src/custom-worker.ts",
+    "./observability": "./src/observability.ts",
+    "./health": "./src/health.ts",
+    "./secret": "./src/secret.ts",
+    "./request-body": "./src/request-body.ts",
+    "./url-security": "./src/url-security.ts",
+    "./dead-letter": "./src/dead-letter.ts"
+  }
+}

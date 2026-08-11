@@ -1,0 +1,5 @@
+PRAGMA foreign_keys = ON;
+CREATE TABLE subscribers (id TEXT PRIMARY KEY, project_id INTEGER NOT NULL, email TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('enabled','blocklisted','unsubscribed')), attributes_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(attributes_json)), UNIQUE(project_id,email));
+CREATE TABLE campaigns (id TEXT PRIMARY KEY, project_id INTEGER NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('draft','scheduled','running','paused','cancelled','finished','archived')), tracking_enabled INTEGER NOT NULL DEFAULT 1 CHECK(tracking_enabled IN (0,1)), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE smtp_profiles (id TEXT PRIMARY KEY, project_id INTEGER NOT NULL, name TEXT NOT NULL, encrypted_config TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE audit_events (id TEXT PRIMARY KEY, project_id INTEGER NOT NULL, action TEXT NOT NULL, payload_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(payload_json)), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);

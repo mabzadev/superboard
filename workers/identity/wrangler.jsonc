@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "opengrow-identity-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": false,
+  "vars": {
+    "ENVIRONMENT": "test",
+    "REGISTRATION_MODE": "open",
+    "APPLICATION_AUDIENCE": "reference.application",
+    "OPENGROW_IDENTITY_ISSUER": "https://api.example.test",
+    "OPENGROW_IDENTITY_AUDIENCE": "opengrow",
+    "OPENGROW_IDENTITY_TOKEN_TTL": "300",
+    "ACCESS_TOKEN_TTL": "900",
+    "REFRESH_TOKEN_TTL": "2592000",
+    "GOOGLE_AUDIENCES_JSON": "[]",
+    "APPLE_AUDIENCES_JSON": "[]",
+    "PUBLIC_API_URL": "https://api.example.test"
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "opengrow-identity-test-db",
+    "database_id": "00000000-0000-0000-0000-000000000001",
+    "migrations_dir": "migrations"
+  }]
+}

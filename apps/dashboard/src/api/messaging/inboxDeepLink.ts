@@ -12,7 +12,7 @@ export function inboxDeepLink(search: string): InboxDeepLink {
   const requestedStatus = params.get("status") || "";
   return {
     sourceId: (params.get("id") || "").slice(0, 255),
-    type: ["conversation", "store_review", "refund_case"].includes(requestedType)
+    type: ["conversation", "refund_case"].includes(requestedType)
       ? requestedType as UnifiedInboxItem["source_type"]
       : "all",
     status: ["open", "pending", "closed"].includes(requestedStatus)

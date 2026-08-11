@@ -19,7 +19,11 @@ import io.opengrow.utils.DurationCompat
 import io.opengrow.utils.InstantCompat
 import io.opengrow.utils.LSResult
 import io.opengrow.utils.isValidUrl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -40,6 +44,10 @@ class EventsManager(
     internal var allowedToSendToBackend = false
     internal var firstRequestTime: InstantCompat? = null
     internal var eventsDelaySeconds = 14
+    internal var timeSpentScope: CoroutineScope = CoroutineScope(SupervisorJob() + opengrowContext.serialDispatcher)
+
+    private val backgroundTimeSpentLock = Any()
+    private var pendingBackgroundTimeSpentJob: Job? = null
 
     companion object {
         private const val FIRST_BATCH_EVENTS_SENDING_LEEWAY: Long = 15000
@@ -47,6 +55,7 @@ class EventsManager(
     }
 
     override suspend fun onAppForegrounded() {
+        awaitPendingBackgroundTimeSpent()
         sendNormalEventsToBackend()
         sendPaymentEventsToBackend()
         sendTimeSpentEventsToBackend()
@@ -57,8 +66,27 @@ class EventsManager(
         localCache.resignTimestamp = InstantCompat.now()
         linkForFutureActions = null
 
-        GlobalScope.launch {
-            eventsStorage.markTimeSpentNode(startingNode = false, endingNode = true, link = null)
+        // Keep a handle to the finalization. A foreground transition must not read or
+        // replace the open TIME_SPENT node before the preceding background transition
+        // has completed. Chaining also protects against duplicate lifecycle callbacks.
+        val job = synchronized(backgroundTimeSpentLock) {
+            val previousJob = pendingBackgroundTimeSpentJob
+            timeSpentScope.launch(start = CoroutineStart.LAZY) {
+                previousJob?.join()
+                eventsStorage.markTimeSpentNode(startingNode = false, endingNode = true, link = null)
+            }.also { pendingBackgroundTimeSpentJob = it }
+        }
+        job.start()
+    }
+
+    internal suspend fun awaitPendingBackgroundTimeSpent() {
+        val job = synchronized(backgroundTimeSpentLock) { pendingBackgroundTimeSpentJob }
+        job?.join()
+
+        synchronized(backgroundTimeSpentLock) {
+            if (pendingBackgroundTimeSpentJob === job) {
+                pendingBackgroundTimeSpentJob = null
+            }
         }
     }
 

@@ -68,6 +68,7 @@ describe('Legacy subscription inventory', () => {
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe('https://api.revenuecat.com/v2/projects/provider-project-1/customers?limit=1');
       expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer billing-domain-key');
+      expect(init?.redirect).toBe('manual');
       return new Response(JSON.stringify({ object: 'list', items: [], url: '/v2/projects/provider-project-1/customers' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -83,6 +84,38 @@ describe('Legacy subscription inventory', () => {
       ok: true,
       provider: 'revenuecat',
       customers_sampled: 0,
+    });
+  });
+
+  it('rejects provider redirects without following them', async () => {
+    const encryptionKey = 'legacy-inventory-redirect-key';
+    const source = {
+      id: 'source-redirect',
+      project_id: 'project-1',
+      external_project_id: 'provider-project-1',
+      configuration_encrypted: null,
+      billing_configuration_encrypted: await encryptSecret(
+        JSON.stringify({ api_key: 'billing-domain-key' }),
+        encryptionKey,
+      ),
+    };
+    const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.redirect).toBe('manual');
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'https://example.com/collect' },
+      });
+    };
+
+    await expect(testLegacySourceConnection(source, {
+      DB: {} as D1Database,
+      KV: {} as KVNamespace,
+      ENVIRONMENT: 'test',
+      CREDENTIAL_KEY_SCOPE: 'billing',
+      STORE_CREDENTIALS_ENCRYPTION_KEY: encryptionKey,
+    } as BillingEnv, fetchImpl as typeof fetch)).rejects.toMatchObject({
+      code: 'legacy_provider_redirect_rejected',
+      retryable: false,
     });
   });
 

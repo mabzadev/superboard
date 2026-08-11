@@ -1,19 +1,18 @@
 import type { BillingEnv } from '../types';
-import { decryptCredential, scopedStoreCredential } from './secrets';
 import {
   googlePlayAccess,
   sendAppleConsumptionInformation,
   type AppleConsumptionRequest,
 } from './store-verification';
+import { readTextLimited } from './http-limits';
 
 export type RefundActionType =
   | 'submit_consumption_info'
   | 'refund_google_order'
   | 'revoke_google_subscription'
-  | 'submit_stripe_dispute_evidence'
-  | 'create_stripe_refund';
+  | 'review_google_refund';
 
-type RefundProvider = 'apple' | 'google' | 'stripe';
+type RefundProvider = 'apple' | 'google';
 
 export type RefundActionDefinition = {
   action_type: RefundActionType;
@@ -62,12 +61,19 @@ const ACTION_DEFINITIONS: Record<RefundProvider, RefundActionDefinition[]> = {
     recommended_evidence_type: 'apple_consumption_consent',
   }],
   google: [
+    {
+      action_type: 'review_google_refund',
+      default_payload: {
+        pendingRefundToken: '',
+        sampleContentProvided: false,
+        refundPreference: 'NEUTRAL',
+        consumptionPercentageMilliunits: 0,
+        consumptionUsageEvents: [],
+      },
+      recommended_evidence_type: 'access_activity_log',
+    },
     { action_type: 'refund_google_order', default_payload: { revoke: true }, recommended_evidence_type: 'customer_context' },
     { action_type: 'revoke_google_subscription', default_payload: { refund_type: 'full' }, recommended_evidence_type: 'customer_context' },
-  ],
-  stripe: [
-    { action_type: 'submit_stripe_dispute_evidence', default_payload: { evidence: {} }, recommended_evidence_type: 'access_activity_log' },
-    { action_type: 'create_stripe_refund', default_payload: { reason: 'requested_by_customer' }, recommended_evidence_type: 'customer_context' },
   ],
 };
 
@@ -79,27 +85,16 @@ const APPLE_DELIVERY = new Set([
   'UNDELIVERED_OTHER',
 ]);
 const APPLE_PREFERENCES = new Set(['DECLINE', 'GRANT_FULL', 'GRANT_PRORATED']);
-const STRIPE_TEXT_EVIDENCE = new Set([
-  'access_activity_log',
-  'billing_address',
-  'cancellation_policy_disclosure',
-  'cancellation_rebuttal',
-  'customer_communication',
-  'customer_email_address',
-  'customer_name',
-  'customer_purchase_ip',
-  'duplicate_charge_explanation',
-  'duplicate_charge_id',
-  'product_description',
-  'refund_policy_disclosure',
-  'refund_refusal_explanation',
-  'service_date',
-  'shipping_address',
-  'shipping_carrier',
-  'shipping_date',
-  'shipping_tracking_number',
-  'uncategorized_text',
+const GOOGLE_REFUND_PREFERENCES = new Set(['DECLINE', 'APPROVE', 'NEUTRAL']);
+const GOOGLE_USAGE_EVENT_FIELDS = new Set([
+  'obfuscatedAccountId',
+  'obfuscatedProfileId',
+  'consumptionTime',
+  'ipAddress',
+  'consumptionItemDescription',
+  'location',
 ]);
+const GOOGLE_LOCATION_FIELDS = new Set(['regionCode', 'administrativeArea', 'locality', 'sublocality']);
 
 function objectValue(value: unknown): Record<string, any> {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -161,6 +156,90 @@ export function validateRefundActionPayload(provider: string, actionType: string
   if (actionType === 'refund_google_order') {
     return { revoke: payload.revoke !== false };
   }
+  if (actionType === 'review_google_refund') {
+    const pendingRefundToken = String(payload.pendingRefundToken || '').trim();
+    if (!pendingRefundToken || pendingRefundToken.length > 4096) {
+      throw actionError('google_pending_refund_token_invalid', 'A valid pendingRefundToken is required');
+    }
+    if (typeof payload.sampleContentProvided !== 'boolean') {
+      throw actionError('google_sample_content_invalid', 'sampleContentProvided must be true or false');
+    }
+    const refundPreference = String(payload.refundPreference || '');
+    if (!GOOGLE_REFUND_PREFERENCES.has(refundPreference)) {
+      throw actionError('google_refund_preference_invalid', 'refundPreference must be DECLINE, APPROVE or NEUTRAL');
+    }
+    const result: Record<string, unknown> = {
+      pendingRefundToken,
+      sampleContentProvided: payload.sampleContentProvided,
+      refundPreference,
+    };
+    if (payload.consumptionPercentageMilliunits !== undefined) {
+      const percentage = Number(payload.consumptionPercentageMilliunits);
+      if (!Number.isInteger(percentage) || percentage < 0 || percentage > 100_000) {
+        throw actionError('google_consumption_percentage_invalid', 'consumptionPercentageMilliunits must be an integer from 0 to 100000');
+      }
+      result.consumptionPercentageMilliunits = percentage;
+    }
+    if (payload.consumptionUsageEvents !== undefined) {
+      if (!Array.isArray(payload.consumptionUsageEvents) || payload.consumptionUsageEvents.length > 1000) {
+        throw actionError('google_usage_events_invalid', 'consumptionUsageEvents must contain at most 1000 events');
+      }
+      result.consumptionUsageEvents = payload.consumptionUsageEvents.map((rawEvent, index) => {
+        const event = objectValue(rawEvent);
+        for (const key of Object.keys(event)) {
+          if (!GOOGLE_USAGE_EVENT_FIELDS.has(key)) {
+            throw actionError('google_usage_event_field_invalid', `Google usage event field ${key} is not allowed`);
+          }
+        }
+        const normalized: Record<string, unknown> = {};
+        for (const key of ['obfuscatedAccountId', 'obfuscatedProfileId', 'ipAddress'] as const) {
+          if (event[key] === undefined) continue;
+          const text = String(event[key] || '').trim();
+          if (!text || text.length > 1024) throw actionError('google_usage_event_value_invalid', `consumptionUsageEvents[${index}].${key} is invalid`);
+          normalized[key] = text;
+        }
+        if (event.consumptionTime !== undefined) {
+          const time = String(event.consumptionTime || '').trim();
+          if (!time || !Number.isFinite(Date.parse(time))) {
+            throw actionError('google_consumption_time_invalid', `consumptionUsageEvents[${index}].consumptionTime must be an RFC 3339 timestamp`);
+          }
+          normalized.consumptionTime = new Date(time).toISOString();
+        }
+        if (event.consumptionItemDescription !== undefined) {
+          const description = String(event.consumptionItemDescription || '').trim();
+          if (!description || description.length > 5000) {
+            throw actionError('google_consumption_description_invalid', `consumptionUsageEvents[${index}].consumptionItemDescription is invalid`);
+          }
+          normalized.consumptionItemDescription = description;
+        }
+        if (event.location !== undefined) {
+          const location = objectValue(event.location);
+          for (const key of Object.keys(location)) {
+            if (!GOOGLE_LOCATION_FIELDS.has(key)) {
+              throw actionError('google_location_field_invalid', `Google location field ${key} is not allowed`);
+            }
+          }
+          const regionCode = String(location.regionCode || '').trim().toUpperCase();
+          if (!/^[A-Z]{2}$/.test(regionCode)) {
+            throw actionError('google_location_region_invalid', `consumptionUsageEvents[${index}].location.regionCode is required`);
+          }
+          const normalizedLocation: Record<string, string> = { regionCode };
+          for (const key of ['administrativeArea', 'locality', 'sublocality'] as const) {
+            if (location[key] === undefined) continue;
+            const text = String(location[key] || '').trim();
+            if (!text || text.length > 500) throw actionError('google_location_value_invalid', `consumptionUsageEvents[${index}].location.${key} is invalid`);
+            normalizedLocation[key] = text;
+          }
+          normalized.location = normalizedLocation;
+        }
+        if (!Object.keys(normalized).length) {
+          throw actionError('google_usage_event_empty', `consumptionUsageEvents[${index}] must contain usage evidence`);
+        }
+        return normalized;
+      });
+    }
+    return result;
+  }
   if (actionType === 'revoke_google_subscription') {
     const refundType = String(payload.refund_type || 'full');
     if (!['full', 'prorated', 'item'].includes(refundType)) throw actionError('google_refund_type_invalid', 'Google refund_type must be full, prorated or item');
@@ -172,95 +251,35 @@ export function validateRefundActionPayload(provider: string, actionType: string
     }
     return result;
   }
-  if (actionType === 'submit_stripe_dispute_evidence') {
-    const evidence = objectValue(payload.evidence);
-    const normalized: Record<string, string> = {};
-    for (const [key, raw] of Object.entries(evidence)) {
-      if (!STRIPE_TEXT_EVIDENCE.has(key)) throw actionError('stripe_evidence_field_invalid', `Stripe evidence field ${key} is not allowed`);
-      const text = String(raw || '').trim();
-      if (text.length > 20_000) throw actionError('stripe_evidence_too_large', `Stripe evidence field ${key} exceeds 20000 characters`);
-      if (text) normalized[key] = text;
+  throw actionError('refund_action_unsupported', `${actionType || 'Refund action'} is not supported for ${provider || 'this provider'}`);
+}
+
+async function providerFetch(input: string, init: RequestInit) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) throw actionError('refund_provider_timeout', 'The provider request timed out', true);
+    throw actionError('refund_provider_unavailable', error instanceof Error ? error.message : 'The provider request failed', true);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function boundedProviderJson(response: Response): Promise<Record<string, any>> {
+  let text = '';
+  try {
+    text = await readTextLimited(response, 65_536, 'Provider response is too large');
+  } catch (error) {
+    if ((error as { code?: string })?.code === 'body_too_large') {
+      throw actionError('refund_provider_response_too_large', 'The provider response exceeded 64 KB');
     }
-    if (Object.values(normalized).reduce((total, text) => total + text.length, 0) > 150_000) {
-      throw actionError('stripe_evidence_too_large', 'Combined Stripe evidence exceeds 150000 characters');
-    }
-    return { evidence: normalized };
+    throw actionError('refund_provider_response_unavailable', 'The provider response could not be read', true);
   }
-  const paymentIntent = String(payload.payment_intent || '').trim();
-  const charge = String(payload.charge || '').trim();
-  const result: Record<string, unknown> = {};
-  if (paymentIntent) result.payment_intent = paymentIntent;
-  if (charge) result.charge = charge;
-  if (payload.amount !== undefined) {
-    const amount = Number(payload.amount);
-    if (!Number.isSafeInteger(amount) || amount <= 0) throw actionError('stripe_refund_amount_invalid', 'Stripe refund amount must be a positive integer in the smallest currency unit');
-    result.amount = amount;
-  }
-  if (payload.reason !== undefined) {
-    const reason = String(payload.reason);
-    if (!['duplicate', 'fraudulent', 'requested_by_customer'].includes(reason)) throw actionError('stripe_refund_reason_invalid', 'Stripe refund reason is invalid');
-    result.reason = reason;
-  }
-  return result;
-}
-
-async function stripeConnection(env: BillingEnv, row: ActionRow) {
-  const connection = await env.DB.prepare(`
-    SELECT configuration_encrypted, billing_configuration_encrypted FROM billing_store_connections
-    WHERE project_id = ? AND provider = 'stripe' AND environment = ?
-      AND status IN ('configured','connected')
-    LIMIT 1
-  `).bind(row.project_id, row.environment).first<{
-    configuration_encrypted: string | null;
-    billing_configuration_encrypted: string | null;
-  }>();
-  const encrypted = connection && scopedStoreCredential(connection, env);
-  if (!encrypted) throw actionError('stripe_connection_missing', 'Stripe is not configured for this project and environment');
-  const credentials = objectValue(await decryptCredential(env, encrypted));
-  const secretKey = String(credentials.secret_key || credentials.api_key || '');
-  if (!secretKey.startsWith('sk_')) throw actionError('stripe_secret_invalid', 'Stripe secret key is invalid');
-  return secretKey;
-}
-
-async function stripePost(secretKey: string, path: string, values: Record<string, string>, idempotencyKey: string) {
-  const response = await fetch(`https://api.stripe.com/v1${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${secretKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Idempotency-Key': idempotencyKey.slice(0, 255),
-    },
-    body: new URLSearchParams(values),
-  });
-  const payload = await response.json().catch(() => ({})) as Record<string, any>;
-  if (!response.ok) {
-    throw actionError('stripe_refund_action_failed', String(payload?.error?.message || `Stripe returned HTTP ${response.status}`), response.status === 429 || response.status >= 500);
-  }
-  return payload;
-}
-
-async function approvedStripeEvidence(env: BillingEnv, row: ActionRow, payload: Record<string, unknown>) {
-  const values = objectValue(payload.evidence);
-  const evidenceRows = await env.DB.prepare(`
-    SELECT evidence_type, content FROM billing_refund_evidence
-    WHERE case_id = ? AND review_status = 'approved' AND content IS NOT NULL
-    ORDER BY created_at
-  `).bind(row.case_id).all<{ evidence_type: string; content: string }>();
-  const uncategorized: string[] = [];
-  for (const evidence of evidenceRows.results || []) {
-    const key = String(evidence.evidence_type || '');
-    const content = String(evidence.content || '').slice(0, 20_000);
-    if (STRIPE_TEXT_EVIDENCE.has(key) && !values[key]) values[key] = content;
-    else if (content) uncategorized.push(`${key}: ${content}`);
-  }
-  if (uncategorized.length && !values.uncategorized_text) {
-    values.uncategorized_text = uncategorized.join('\n\n').slice(0, 20_000);
-  }
-  if (!Object.keys(values).length) throw actionError('stripe_evidence_required', 'At least one approved Stripe evidence field is required');
-  if (Object.values(values).reduce((total, text) => total + String(text).length, 0) > 150_000) {
-    throw actionError('stripe_evidence_too_large', 'Combined Stripe evidence exceeds 150000 characters');
-  }
-  return values as Record<string, string>;
+  if (!text) return {};
+  try { return JSON.parse(text) as Record<string, any>; }
+  catch { throw actionError('refund_provider_response_invalid', 'The provider returned invalid JSON', response.status === 429 || response.status >= 500); }
 }
 
 async function runProviderAction(env: BillingEnv, row: ActionRow, payload: Record<string, unknown>) {
@@ -285,15 +304,36 @@ async function runProviderAction(env: BillingEnv, row: ActionRow, payload: Recor
     const orderId = String(row.order_id || row.store_transaction_id || '').trim();
     if (!orderId) throw actionError('google_order_missing', 'Google order ID is unavailable');
     const access = await googlePlayAccess(env, row.project_id);
-    const response = await fetch(
+    const response = await providerFetch(
       `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(access.packageName)}/orders/${encodeURIComponent(orderId)}:refund?revoke=${payload.revoke === false ? 'false' : 'true'}`,
       { method: 'POST', headers: { Authorization: `Bearer ${access.token}`, Accept: 'application/json' } },
     );
     if (!response.ok) {
-      const result = await response.json().catch(() => ({})) as Record<string, any>;
+      const result = await boundedProviderJson(response);
       throw actionError('google_refund_failed', String(result?.error?.message || `Google Play returned HTTP ${response.status}`), response.status === 429 || response.status >= 500);
     }
     return { accepted: true, order_id: orderId, revoked: payload.revoke !== false };
+  }
+  if (row.action_type === 'review_google_refund') {
+    const providerPayload = objectValue(row.provider_payload);
+    const notification = objectValue(providerPayload.pendingRefundReviewNotification);
+    const orderId = String(row.order_id || row.store_transaction_id || notification.orderId || '').trim();
+    if (!orderId) throw actionError('google_order_missing', 'Google order ID is unavailable');
+    const access = await googlePlayAccess(env, row.project_id);
+    const response = await providerFetch(
+      googleRefundReviewUrl(access.packageName, orderId),
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access.token}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!response.ok) {
+      const result = await boundedProviderJson(response);
+      throw actionError('google_refund_review_failed', String(result?.error?.message || `Google Play returned HTTP ${response.status}`), response.status === 408 || response.status === 429 || response.status >= 500);
+    }
+    await boundedProviderJson(response);
+    return { accepted: true, order_id: orderId, refund_preference: payload.refundPreference };
   }
   if (row.action_type === 'revoke_google_subscription') {
     const purchaseToken = String(row.purchase_token || '').trim();
@@ -305,7 +345,7 @@ async function runProviderAction(env: BillingEnv, row: ActionRow, payload: Recor
       : refundType === 'item'
         ? { itemBasedRefund: { productId: String(payload.product_id || row.store_product_id || '') } }
         : { fullRefund: {} };
-    const response = await fetch(
+    const response = await providerFetch(
       `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(access.packageName)}/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}:revoke`,
       {
         method: 'POST',
@@ -314,31 +354,16 @@ async function runProviderAction(env: BillingEnv, row: ActionRow, payload: Recor
       },
     );
     if (!response.ok) {
-      const result = await response.json().catch(() => ({})) as Record<string, any>;
+      const result = await boundedProviderJson(response);
       throw actionError('google_revoke_failed', String(result?.error?.message || `Google Play returned HTTP ${response.status}`), response.status === 429 || response.status >= 500);
     }
     return { accepted: true, refund_type: refundType };
   }
-  const secretKey = await stripeConnection(env, row);
-  if (row.action_type === 'submit_stripe_dispute_evidence') {
-    const disputeId = String(row.provider_case_id || '').trim();
-    if (!disputeId.startsWith('dp_')) throw actionError('stripe_dispute_missing', 'Stripe dispute ID is unavailable');
-    const evidence = await approvedStripeEvidence(env, row, payload);
-    const values: Record<string, string> = { submit: 'true' };
-    for (const [key, value] of Object.entries(evidence)) values[`evidence[${key}]`] = value;
-    const result = await stripePost(secretKey, `/disputes/${encodeURIComponent(disputeId)}`, values, row.idempotency_key);
-    return { id: result.id, status: result.status, submitted: Boolean(result.evidence_details?.has_evidence) };
-  }
-  const providerPayload = objectValue(row.provider_payload);
-  const providerObject = objectValue(objectValue(providerPayload.data).object);
-  const paymentIntent = String(payload.payment_intent || providerObject.payment_intent || '').trim();
-  const charge = String(payload.charge || providerObject.charge || '').trim();
-  if (!paymentIntent && !charge) throw actionError('stripe_payment_reference_missing', 'Stripe payment_intent or charge is required');
-  const values: Record<string, string> = paymentIntent ? { payment_intent: paymentIntent } : { charge };
-  if (payload.amount !== undefined) values.amount = String(payload.amount);
-  if (payload.reason) values.reason = String(payload.reason);
-  const result = await stripePost(secretKey, '/refunds', values, row.idempotency_key);
-  return { id: result.id, status: result.status, amount: result.amount, currency: result.currency };
+  throw actionError('refund_action_unsupported', 'The refund action is not supported for this provider');
+}
+
+export function googleRefundReviewUrl(packageName: string, orderId: string) {
+  return `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/orders/${encodeURIComponent(orderId)}:reviewrefund`;
 }
 
 async function refundActionClaimIsActive(env: BillingEnv, row: ActionRow, claimToken: string) {

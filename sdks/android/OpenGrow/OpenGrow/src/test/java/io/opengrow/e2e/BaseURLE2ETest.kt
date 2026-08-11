@@ -134,31 +134,12 @@ class BaseURLE2ETest {
     }
 
     @Test
-    fun `SDK uses default URL when baseURL is null`() {
+    fun `SDK rejects missing baseURL instead of selecting a global application`() {
         runBlocking {
-            // Arrange - enqueue responses but configure WITHOUT baseURL
-            // The SDK will try to reach the default server (sdk.opengrow.link),
-            // so we configure WITH the mock server URL to verify the null-fallback path
-            E2ETestUtils.enqueueAuthenticationResponse(mockWebServer)
-            E2ETestUtils.enqueueDeviceResponse(mockWebServer, lastSeen = null)
-            E2ETestUtils.enqueueEventResponse(mockWebServer)
-            E2ETestUtils.enqueueEventResponse(mockWebServer)
-            E2ETestUtils.enqueueEventResponse(mockWebServer)
-            E2ETestUtils.enqueueEventResponse(mockWebServer)
-
-            // Act - configure with baseURL = null (should use BuildConfig.SERVER_URL)
-            OpenGrow.configure(application, "test-api-key", useTestEnvironment = true, baseURL = null)
-
-            // Assert - no requests should reach our mock server since the SDK
-            // will try to connect to the default production URL
-            // Give it a moment to attempt connection
-            Thread.sleep(500)
-            assertEqualsWithContext(
-                0,
-                mockWebServer.requestCount,
-                "request count to mock server",
-                "when baseURL is null, SDK should use default URL, not mock server"
-            )
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                OpenGrow.configure(application, "test-api-key", useTestEnvironment = true, baseURL = null)
+            }
+            assertTrue(error.message?.contains("baseURL is required") == true)
         }
     }
 

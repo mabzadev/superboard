@@ -1,11 +1,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const env = (value: string | undefined, fallback: string) =>
-  value && value.trim() !== "" ? value : fallback;
-
-const API_URL = env(process.env.NEXT_PUBLIC_API_URL, "https://go.vocostar.com");
-const CLIENT_ID = env(process.env.NEXT_PUBLIC_CLIENT_ID, "opengrow-vocostar");
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "";
+const CLIENT_ID = process.env.NEXT_PUBLIC_CLIENT_ID?.trim() || "";
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 export async function POST(request: NextRequest) {

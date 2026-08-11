@@ -10,7 +10,7 @@ import type {
 } from './NativeOpenGrowWrapper';
 import { log } from './Logger';
 
-const LINKING_ERROR = `The package '@mbzadev/opengrow-react-native' doesn't seem to be linked. Make sure you properly integrated the native bindings.`;
+const LINKING_ERROR = `The package '@mbzadev/opengrow-react-native-sdk' doesn't seem to be linked. Make sure you properly integrated the native bindings.`;
 
 // Feature detection for Turbo Modules
 const isTurboModuleEnabled = (global as any).RN$Bridgeless === true;

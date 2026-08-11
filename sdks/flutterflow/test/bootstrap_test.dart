@@ -3,18 +3,17 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:opengrow_flutter/opengrow.dart';
-import 'package:opengrow_flutter/opengrow_platform_interface.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 void main() {
   testWidgets('forwards terminal purchase and verified CustomerInfo updates', (
     tester,
   ) async {
-    OpenGrowPlatform.instance = BootstrapPlatform();
-    final purchases = StreamController<OpenGrowPurchaseResult>.broadcast();
-    final customerInfo = StreamController<OpenGrowCustomerInfo>.broadcast();
+    SuperBoardPlatform.instance = BootstrapPlatform();
+    final purchases = StreamController<SuperBoardPurchaseResult>.broadcast();
+    final customerInfo = StreamController<SuperBoardCustomerInfo>.broadcast();
     addTearDown(() async {
       await purchases.close();
       await customerInfo.close();
@@ -24,8 +23,10 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: OpenGrowBootstrap(
+        home: SuperBoardBootstrap(
           projectKey: 'project-key',
+          sdkBaseUrl: 'https://sdk.example.com',
+          experienceApiBaseUrl: 'https://api.example.com/api/v1',
           purchaseResultStream: purchases.stream,
           customerInfoStream: customerInfo.stream,
           onPurchaseResultJson: (value) async {
@@ -39,19 +40,19 @@ void main() {
     );
 
     purchases.add(
-      const OpenGrowPurchaseResult(
-        OpenGrowPurchaseOutcome.purchased,
+      const SuperBoardPurchaseResult(
+        SuperBoardPurchaseOutcome.purchased,
         code: 'purchase_verified',
         productIdentifier: 'premium-weekly',
         transactionIdentifier: 'transaction-1',
       ),
     );
     customerInfo.add(
-      OpenGrowCustomerInfo(
+      SuperBoardCustomerInfo(
         originalAppUserId: 'user-1',
         requestDate: DateTime.utc(2026, 8, 3),
         entitlements: const {
-          'premium': OpenGrowEntitlementInfo(
+          'premium': SuperBoardEntitlementInfo(
             identifier: 'premium',
             isActive: true,
             status: 'active',
@@ -66,14 +67,14 @@ void main() {
       jsonDecode(customerInfoJson!)['entitlements']['premium']['is_active'],
       isTrue,
     );
-    expect(await opengrowGetLastPurchaseResultJson(), purchaseJson);
-    expect(await opengrowGetLastVerifiedCustomerInfoJson(), customerInfoJson);
+    expect(await superboardGetLastPurchaseResultJson(), purchaseJson);
+    expect(await superboardGetLastVerifiedCustomerInfoJson(), customerInfoJson);
   });
 }
 
 class BootstrapPlatform
     with MockPlatformInterfaceMixin
-    implements OpenGrowPlatform {
+    implements SuperBoardPlatform {
   @override
   Stream<DeeplinkDetails> get onDeeplinkReceived => const Stream.empty();
 

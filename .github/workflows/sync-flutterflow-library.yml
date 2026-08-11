@@ -1,0 +1,75 @@
+name: Sync SuperBoard FlutterFlow library
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/flutterflow-library/**
+      - config/flutterflow-library.json
+      - config/flutterflow-applications.json
+      - config/flutterflow-application-bindings.json
+      - config/sdk-libraries.json
+      - scripts/flutterflow-application-config.mjs
+      - scripts/flutterflow-application-dsl.mjs
+      - .github/workflows/sync-flutterflow-library.yml
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      source_ref:
+        description: Exact reviewed platform revision containing the published SDK set
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutterflow-library
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: flutterflow-library
+    env:
+      FF_API_KEY: ${{ secrets.FF_API_KEY }}
+      FF_LIBRARY_PROJECT_ID: ${{ vars.FF_LIBRARY_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1
+        with:
+          sdk: stable
+      - name: Validate Git-owned library contract
+        run: npm ci && npm run flutterflow-library:check
+      - name: Require environment-owned FlutterFlow configuration
+        run: |
+          test -n "$FF_API_KEY"
+          test -n "$FF_LIBRARY_PROJECT_ID"
+      - name: Require reviewed immutable SDK tags
+        run: |
+          node -e 'for (const dependency of require("./config/flutterflow-library.json").dependencies) console.log(dependency.requiredRef)' |
+          while IFS= read -r release_ref; do
+            git ls-remote --exit-code --tags origin "refs/tags/$release_ref"
+          done
+      - name: Install pinned FlutterFlow CLI
+        run: dart pub global activate flutterflow_cli 0.0.39
+      - name: Initialize the Git-owned FlutterFlow workspace
+        run: >-
+          flutterflow ai init tools/flutterflow-library
+          --project "$FF_LIBRARY_PROJECT_ID"
+          --api-key "$FF_API_KEY"
+          --no-save
+      - name: Test the compiled FlutterFlow DSL
+        run: flutterflow ai test
+        working-directory: tools/flutterflow-library
+      - name: Push the reviewed SuperBoard library
+        run: >-
+          flutterflow ai run dsl/edit.dart
+          --project-id "$FF_LIBRARY_PROJECT_ID"
+          --commit-message "Sync SuperBoard library from $GITHUB_SHA"
+        working-directory: tools/flutterflow-library

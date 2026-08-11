@@ -1,5 +1,5 @@
 // Import the OpenGrowDeviceDetails module
-import OpenGrowDeviceDetails from "./opengrow_device_details";
+import OpenGrowDeviceDetails from "./opengrow_device_details.js";
 
 // Define the OpenGrowContext class
 class OpenGrowContext {
@@ -15,6 +15,12 @@ class OpenGrowContext {
    * @type {boolean}
    */
   static testEnvironment = false;
+
+  /**
+   * Application-provided OpenGrow SDK endpoint, including `/api/v1/sdk`.
+   * @type {string|null}
+   */
+  static API_BASE_URL = null;
 
   static get linksquaredID() {
     return OpenGrowDeviceDetails.getValue("linksquared");

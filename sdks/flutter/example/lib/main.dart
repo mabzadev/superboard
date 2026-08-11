@@ -2,26 +2,26 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:opengrow_flutter/opengrow.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize OpenGrow SDK
-  final opengrow = OpenGrow();
+  // Initialize SuperBoard SDK
+  final superboard = SuperBoard();
   try {
-    await opengrow.setDebugLevel('info');
+    await superboard.setDebugLevel('info');
 
     // Set user information (optional)
-    await opengrow.setUserIdentifier('demo-user-123');
-    await opengrow.setUserAttributes({
+    await superboard.setUserIdentifier('demo-user-123');
+    await superboard.setUserAttributes({
       'name': 'Demo User',
       'email': 'demo@example.com',
       'app': 'Flutter Demo',
     });
   } catch (e) {
-    debugPrint('Failed to configure OpenGrow: $e');
+    debugPrint('Failed to configure SuperBoard: $e');
   }
 
   runApp(const MyApp());
@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   String _generatedLink = '';
   String _lastDeeplinkReceived = 'None';
-  final _opengrow = OpenGrow();
+  final _superboard = SuperBoard();
   StreamSubscription<DeeplinkDetails>? _deeplinkSubscription;
   bool _isGenerating = false;
 
@@ -56,7 +56,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   void setupDeeplinkListener() {
-    _deeplinkSubscription = _opengrow.onDeeplinkReceived.listen((deeplinkDetails) {
+    _deeplinkSubscription = _superboard.onDeeplinkReceived.listen((
+      deeplinkDetails,
+    ) {
       setState(() {
         _lastDeeplinkReceived =
             'Link: ${deeplinkDetails.link}\nData: ${deeplinkDetails.data}\nTracking: ${deeplinkDetails.tracking?.toMap()}';
@@ -92,7 +94,7 @@ class _MyAppState extends State<MyApp> {
     String platformVersion;
     try {
       platformVersion =
-          await _opengrow.getPlatformVersion() ?? 'Unknown platform version';
+          await _superboard.getPlatformVersion() ?? 'Unknown platform version';
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
     }
@@ -110,10 +112,10 @@ class _MyAppState extends State<MyApp> {
     });
 
     try {
-      final link = await _opengrow.generateLink(
+      final link = await _superboard.generateLink(
         GenerateLinkParams(
           title: 'Check out this Flutter app!',
-          subtitle: 'Built with OpenGrow SDK',
+          subtitle: 'Built with SuperBoard SDK',
           imageURL:
               'https://flutter.dev/assets/images/shared/brand/flutter/logo/flutter-lockup.png',
           data: {
@@ -156,7 +158,7 @@ class _MyAppState extends State<MyApp> {
           const SnackBar(content: Text('Link generated successfully!')),
         );
       }
-    } on OpenGrowException catch (e) {
+    } on SuperBoardException catch (e) {
       if (mounted) {
         setState(() {
           _isGenerating = false;
@@ -174,7 +176,10 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: Scaffold(
-        appBar: AppBar(title: const Text('OpenGrow Flutter Example'), actions: []),
+        appBar: AppBar(
+          title: const Text('SuperBoard Flutter Example'),
+          actions: [],
+        ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -224,7 +229,7 @@ class _MyAppState extends State<MyApp> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Generate OpenGrow Link'),
+                            : const Text('Generate SuperBoard Link'),
                       ),
                       if (_generatedLink.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -312,7 +317,7 @@ class _MyAppState extends State<MyApp> {
                         onPressed: () async {
                           final messenger = ScaffoldMessenger.of(context);
                           try {
-                            await _opengrow.logCustomPurchase(
+                            await _superboard.logCustomPurchase(
                               type: TransactionType.buy,
                               priceInCents: 999,
                               currency: 'USD',
@@ -325,7 +330,7 @@ class _MyAppState extends State<MyApp> {
                                 ),
                               );
                             }
-                          } on OpenGrowException catch (e) {
+                          } on SuperBoardException catch (e) {
                             if (mounted) {
                               messenger.showSnackBar(
                                 SnackBar(

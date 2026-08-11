@@ -1,16 +1,19 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
-import { hashPassword, signToken, verifyToken } from '../lib/crypto';
+import { hashPassword, verifyToken } from '../lib/crypto';
 import { getOrCreateInstanceForUser } from '../lib/db';
-import { isFullAccess, isRegistrationAllowed, recordSuccessfulRegistration } from '../lib/deployment';
+import { isRegistrationAllowed, recordSuccessfulRegistration } from '../lib/deployment';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
+import { timingSafeEqual } from '../lib/secrets';
+import { readJsonObjectLimited } from '../lib/http-limits';
+import { issueDbBackedTokens } from '../lib/auth';
+import { tokenDigest } from '../lib/token-storage';
 
 const sso = new Hono<{ Bindings: Env }>();
 const STATE_TTL_SECONDS = 10 * 60;
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return Object.fromEntries(Object.entries(await c.req.parseBody().catch(() => ({}))).map(([key, value]) => [key, String(value)]));
+  return readRequestObjectLimited(c.req.raw, 1024 * 1024);
 }
 
 function base64Url(bytes: Uint8Array) {
@@ -45,7 +48,7 @@ async function validState(env: Env, state: string | null, provider?: string) {
   if (!state) return false;
   const [payload, signature] = state.split('.');
   if (!payload || !signature) return false;
-  if (await hmacHex(env.JWT_SECRET, payload) !== signature) return false;
+  if (!await timingSafeEqual(await hmacHex(env.JWT_SECRET, payload), signature)) return false;
   const decoded = JSON.parse(fromBase64Url(payload));
   if (provider && decoded.provider !== provider) return false;
   return Math.floor(Date.now() / 1000) - Number(decoded.ts || 0) <= STATE_TTL_SECONDS;
@@ -127,8 +130,13 @@ async function exchangeCode(c: any, provider: string, code: string) {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body,
+    signal: AbortSignal.timeout(10_000),
   });
-  const payload: any = await response.json().catch(() => ({}));
+  const payload: any = await readJsonObjectLimited(
+    response,
+    262_144,
+    'SSO token response is too large',
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok || !payload.access_token) {
     throw new Error(payload.error_description || payload.error || 'SSO token exchange failed');
   }
@@ -138,8 +146,13 @@ async function exchangeCode(c: any, provider: string, code: string) {
 async function fetchProfile(provider: string, accessToken: string) {
   const response = await fetch(userInfoEndpoint(provider), {
     headers: { authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(10_000),
   });
-  const payload: any = await response.json().catch(() => ({}));
+  const payload: any = await readJsonObjectLimited(
+    response,
+    262_144,
+    'SSO profile response is too large',
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok) throw new Error(payload.error_description || payload.error?.message || 'SSO profile fetch failed');
 
   if (provider === 'google_oauth2') {
@@ -152,19 +165,19 @@ async function fetchProfile(provider: string, accessToken: string) {
   };
 }
 
-async function oauthApplicationId(db: D1Database) {
+async function oauthApplicationId(db: D1Database, clientId: string) {
   const existing = await db.prepare(`
     SELECT id FROM oauth_applications
-    WHERE uid = 'opengrow-vocostar' OR name = 'React'
-    ORDER BY CASE WHEN uid = 'opengrow-vocostar' THEN 0 ELSE 1 END
+    WHERE uid = ? OR name = 'React'
+    ORDER BY CASE WHEN uid = ? THEN 0 ELSE 1 END
     LIMIT 1
-  `).first<{ id: number }>();
+  `).bind(clientId, clientId).first<{ id: number }>();
   if (existing) return existing.id;
   const created = await db.prepare(`
     INSERT INTO oauth_applications (name, uid, secret, redirect_uri, scopes)
-    VALUES ('React', 'opengrow-vocostar', '', 'urn:ietf:wg:oauth:2.0:oob', 'read write')
+    VALUES ('React', ?, ?, 'urn:ietf:wg:oauth:2.0:oob', 'read write')
     RETURNING id
-  `).first<{ id: number }>();
+  `).bind(clientId, await tokenDigest(crypto.randomUUID())).first<{ id: number }>();
   if (!created) throw new Error('Unable to create OAuth application');
   return created.id;
 }
@@ -172,7 +185,7 @@ async function oauthApplicationId(db: D1Database) {
 async function findOrCreateUser(c: any, provider: string, profile: { uid: string; email: string; name: string | null }) {
   if (!profile.email || !profile.uid) throw new Error('SSO provider did not return email or uid');
   if (!await isRegistrationAllowed(c.env, profile.email)) {
-    throw new Error('This email is not authorized for this OpenGrow deployment.');
+    throw new Error('This email is not authorized for this SuperBoard deployment.');
   }
   const existing = await c.env.DB.prepare('SELECT id, provider FROM users WHERE email = ? LIMIT 1').bind(profile.email).first() as any;
   if (existing) {
@@ -196,15 +209,10 @@ async function findOrCreateUser(c: any, provider: string, profile: { uid: string
 }
 
 async function issueDashboardTokens(c: any, userId: number) {
-  const instanceId = await getOrCreateInstanceForUser(c.env.DB, userId, 'sso', isFullAccess(c.env));
-  const appId = await oauthApplicationId(c.env.DB);
-  const token = await signToken({ sub: userId, instanceId, type: 'access', sso: true }, c.env, '2h');
-  const refreshToken = await signToken({ sub: userId, instanceId, type: 'refresh', sso: true }, c.env, '7d');
-  await c.env.DB.prepare(`
-    INSERT INTO oauth_access_tokens (resource_owner_id, application_id, token, refresh_token, expires_in, scopes)
-    VALUES (?, ?, ?, ?, 7200, 'read write')
-  `).bind(userId, appId, token, refreshToken).run();
-  return { token, refresh_token: refreshToken };
+  const instanceId = await getOrCreateInstanceForUser(c.env.DB, userId, 'sso', true);
+  const appId = await oauthApplicationId(c.env.DB, c.env.DASHBOARD_CLIENT_ID);
+  const issued = await issueDbBackedTokens(c.env, userId, instanceId, appId);
+  return { token: issued.access_token, refresh_token: issued.refresh_token };
 }
 
 function redirectWith(c: any, params: Record<string, string>) {
@@ -254,15 +262,16 @@ sso.post('/tokens/refresh', async (c) => {
   const body = await readBody(c);
   const refreshToken = String(body.refresh_token || '');
   if (!refreshToken) return c.json({ error: 'refresh_token is required' }, 400);
+  const refreshDigest = await tokenDigest(refreshToken);
   const stored = await c.env.DB.prepare(`
-    SELECT id, resource_owner_id, refresh_token
+    SELECT id, resource_owner_id
     FROM oauth_access_tokens
-    WHERE refresh_token = ?
+    WHERE (refresh_token = ? OR refresh_token = ?)
       AND revoked_at IS NULL
       AND datetime(created_at) >= datetime('now', '-7 days')
     LIMIT 1
-  `).bind(refreshToken).first<{ id: number; resource_owner_id: number; refresh_token: string }>();
-  if (!stored || !await verifyToken(stored.refresh_token, c.env)) return c.json({ error: 'Token not valid' }, 401);
+  `).bind(refreshDigest, refreshToken).first<{ id: number; resource_owner_id: number }>();
+  if (!stored || !await verifyToken(refreshToken, c.env)) return c.json({ error: 'Token not valid' }, 401);
   await c.env.DB.prepare("UPDATE oauth_access_tokens SET revoked_at = datetime('now') WHERE id = ?").bind(stored.id).run();
   return c.json(await issueDashboardTokens(c, Number(stored.resource_owner_id)));
 });

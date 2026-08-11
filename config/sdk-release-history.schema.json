@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "repository", "immutableFailures"],
+  "properties": {
+    "$schema": { "const": "./sdk-release-history.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "immutableFailures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "libraryId",
+          "version",
+          "releaseTag",
+          "packageRefs",
+          "releaseSha",
+          "workflowRunId",
+          "failedAt",
+          "failureKind"
+        ],
+        "properties": {
+          "libraryId": {
+            "enum": [
+              "flutter",
+              "flutterflow",
+              "flutterflow-support",
+              "ios",
+              "android",
+              "javascript",
+              "react-native"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+          },
+          "releaseTag": { "type": "string", "minLength": 1 },
+          "packageRefs": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "releaseSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "workflowRunId": { "type": "integer", "minimum": 1 },
+          "failedAt": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          },
+          "failureKind": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        }
+      }
+    }
+  }
+}

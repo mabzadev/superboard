@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Looper
 import android.provider.Settings
 import io.opengrow.OpenGrow
+import io.opengrow.handlers.EventsManager
 import io.opengrow.handlers.OpenGrowContext
 import io.opengrow.utils.GlInfo
 import io.opengrow.utils.GlUtils
@@ -53,11 +54,11 @@ object E2ETestUtils {
 
     // ==================== MockWebServer Management ====================
 
-    // Servers kept alive after tests so lingering GlobalScope coroutines
-    // (from onAppBackgrounded/onAppForegrounded) can complete their HTTP requests
-    // against a live server instead of hitting ConnectException + 10s OkHttp timeout
-    // + 5s retry delay. These are never explicitly shut down — the JVM process exit
-    // cleans them up. Keeping ~30 ephemeral ports alive is fine for a test suite.
+    // Servers kept alive after tests so lifecycle and retry coroutines can complete
+    // their HTTP requests against a live server instead of hitting ConnectException +
+    // 10s OkHttp timeout + 5s retry delay. These are never explicitly shut down — the
+    // JVM process exit cleans them up. Keeping ~30 ephemeral ports alive is fine for a
+    // test suite.
     private val drainedServers = mutableListOf<MockWebServer>()
 
     /**
@@ -72,8 +73,8 @@ object E2ETestUtils {
 
     /**
      * Sets up test application with mock Android ID and clears SDK SharedPreferences
-     * to prevent stale data from lingering GlobalScope.launch coroutines (e.g.,
-     * markTimeSpentNode from onAppBackgrounded) contaminating the next test.
+     * after the previous manager's tracked background work has been drained, preventing
+     * stale lifecycle data from contaminating the next test.
      */
     fun setupTestApplication(application: Application) {
         Settings.Secure.putString(
@@ -91,7 +92,7 @@ object E2ETestUtils {
     /**
      * Cleans up MockWebServer and test state.
      * Instead of shutting down immediately, installs a permissive drain dispatcher
-     * that returns 200 OK for all requests. This lets lingering GlobalScope coroutines
+     * that returns 200 OK for all requests. This lets lingering lifecycle coroutines
      * (e.g., sendTimeSpentEventsToBackend retry loops from the previous test) complete
      * their HTTP calls instantly rather than hitting ConnectException → 10s OkHttp
      * connect timeout → 5s delay per event. The server is shut down in the next
@@ -378,6 +379,25 @@ object E2ETestUtils {
             instanceField.isAccessible = true
             val instance = instanceField.get(null)
                 ?: throw IllegalStateException("OpenGrow instance is null")
+
+            // Drain the previous manager's tracked background transition before its
+            // shared storage is cleared. Otherwise an old TIME_SPENT finalizer can
+            // wake up after the next test starts and mutate that test's events.
+            try {
+                val managerField = opengrowClass.getDeclaredField("opengrowManager")
+                managerField.isAccessible = true
+                val manager = managerField.get(instance)
+                if (manager != null) {
+                    val eventsManagerField = manager.javaClass.getDeclaredField("eventsManager")
+                    eventsManagerField.isAccessible = true
+                    val eventsManager = eventsManagerField.get(manager) as? EventsManager
+                    if (eventsManager != null) {
+                        runBlocking { eventsManager.awaitPendingBackgroundTimeSpent() }
+                    }
+                }
+            } catch (e: Exception) {
+                errors.add("Failed to drain pending TIME_SPENT lifecycle work: ${e.message}")
+            }
 
             // Unregister lifecycle callbacks and reset numStarted to prevent
             // accumulation across tests. Each configure() call registers the same

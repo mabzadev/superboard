@@ -78,36 +78,34 @@ export function ProjectSwitcher() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="h-10! p-0! hover:bg-transparent data-[state=open]:bg-transparent group-data-[collapsible=icon]:size-8!"
             >
-              <div className="bg-blue-500/10 text-foreground dark:bg-blue-400/10 flex aspect-square size-8 items-center justify-center rounded-lg">
+              <span className="ds-brand-mark">
                 <GalleryVerticalEnd className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-sm font-semibold tracking-tight">
-                  {selectedInstance?.production?.name}
-                </span>
-                <span className="truncate text-[11px] text-muted-foreground">
-                  Project
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/50" />
+              </span>
+              <span className="ds-workspace-copy flex-1 text-left group-data-[collapsible=icon]:hidden">
+                <strong className="ds-application-name">SuperBoard</strong>
+                <small className="ds-workspace-name">
+                  {selectedInstance?.production?.name ?? "Select project"}
+                </small>
+              </span>
+              <ChevronsUpDown className="ml-auto size-3.5 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="min-w-56 rounded-[var(--radius)] border-[var(--color-border)] bg-[var(--color-card)] shadow-none"
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
             <DropdownMenuItem
-              className="gap-2 p-2"
+              className="ds-picker-item"
               onSelect={() => {
                 setDialogOpen(true);
               }}
             >
-              <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+              <div className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] border bg-transparent">
                 <Plus className="size-4" />
               </div>
               <div className="text-muted-foreground font-medium">
@@ -115,8 +113,8 @@ export function ProjectSwitcher() {
               </div>
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-muted-foreground text-xs">
+            <DropdownMenuSeparator className="ds-divider ds-picker-separator" />
+            <DropdownMenuLabel className="ds-picker-label">
               Projects
             </DropdownMenuLabel>
             {(instances?.length ?? 0) > 10 && (
@@ -148,7 +146,7 @@ export function ProjectSwitcher() {
                   <DropdownMenuItem
                     key={project.id}
                     onClick={() => handleSelectInstance(project)}
-                    className="gap-2 p-2"
+                    className="ds-picker-item"
                   >
                     {project.production.name}
                   </DropdownMenuItem>

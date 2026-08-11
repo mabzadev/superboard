@@ -26,7 +26,7 @@ describe('customer entitlement projection webhook', () => {
         }];
       }
       if (call.sql.startsWith('INSERT INTO billing_webhook_deliveries')) {
-        deliveryPayload = String(call.args[4]);
+        deliveryPayload = String(call.args[5]);
         return true;
       }
       return undefined;
@@ -57,5 +57,50 @@ describe('customer entitlement projection webhook', () => {
       },
     });
     expect(send).toHaveBeenCalledOnce();
+  });
+
+  it('keeps every durable delivery pending when initial queue dispatch fails', async () => {
+    const deliveries: string[] = [];
+    const failures: unknown[][] = [];
+    const db = createFakeD1((call) => {
+      if (call.sql.startsWith('SELECT * FROM billing_customers')) {
+        return { id: 'customer-1', primary_app_user_id: 'user-1' };
+      }
+      if (call.sql.startsWith('SELECT app_user_id FROM billing_customer_aliases')) return [];
+      if (call.sql.includes('FROM billing_customer_entitlements ce')) return [];
+      if (call.sql.includes('FROM billing_subscriptions s')) return [];
+      if (call.sql.includes('FROM billing_balance_ledger')) return [];
+      if (call.sql.includes('FROM billing_webhook_endpoints')) {
+        return [
+          { id: 'endpoint-1', environments: '["production"]', event_types: '["customer.entitlement.changed"]' },
+          { id: 'endpoint-2', environments: '["production"]', event_types: '["customer.entitlement.changed"]' },
+        ];
+      }
+      if (call.sql.startsWith('INSERT INTO billing_webhook_deliveries')) {
+        deliveries.push(String(call.args[1]));
+        return true;
+      }
+      if (call.sql.startsWith('UPDATE billing_webhook_deliveries')) {
+        failures.push(call.args);
+        return true;
+      }
+      return undefined;
+    });
+    const send = vi.fn(async () => {
+      throw new Error('Queue is temporarily unavailable');
+    });
+    const env = { DB: db, BILLING_QUEUE: { send } } as unknown as Env;
+
+    await expect(queueCustomerEntitlementChanged(env, {
+      projectId: 'project-1',
+      customerId: 'customer-1',
+      environment: 'production',
+      reason: 'entitlement_expired',
+    })).resolves.toBeUndefined();
+
+    expect(deliveries.sort()).toEqual(['endpoint-1', 'endpoint-2']);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(failures).toHaveLength(2);
+    expect(failures.every((args) => args[0] === 'Initial queue dispatch failed')).toBe(true);
   });
 });

@@ -544,11 +544,11 @@ class OpenGrowService(val context: Context, val apiKey: String, val opengrowCont
                 .create()
         }
 
-        val baseUrl = if (opengrowContext.settings.baseURL != null) {
-            opengrowContext.settings.baseURL!!.trimEnd('/') + "/api/v1/sdk/"
-        } else {
-            BuildConfig.SERVER_URL
-        }
+        val configuredBaseUrl = opengrowContext.settings.baseURL
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: throw IllegalStateException("OpenGrow baseURL must be configured by the application")
+        val baseUrl = configuredBaseUrl.trimEnd('/') + "/api/v1/sdk/"
 
         return Retrofit.Builder()
             .baseUrl(baseUrl)

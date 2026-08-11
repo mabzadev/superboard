@@ -5,19 +5,68 @@ import XCTest
 /// Register it on a URLSessionConfiguration before creating your URLSession.
 class MockURLProtocol: URLProtocol {
 
+    private static let stateLock = NSLock()
+
+    private static var storedRequestHandlers: [String: (URLRequest) throws -> (HTTPURLResponse, Data?)] = [:]
+    private static var storedRequestedPaths: [String] = []
+    private static var storedPathExpectations: [String: XCTestExpectation] = [:]
+
     /// Map of URL path → handler closure. The handler receives the request and returns (response, data).
-    static var requestHandlers: [String: (URLRequest) throws -> (HTTPURLResponse, Data?)] = [:]
+    static var requestHandlers: [String: (URLRequest) throws -> (HTTPURLResponse, Data?)] {
+        get {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            return storedRequestHandlers
+        }
+        set {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            storedRequestHandlers = newValue
+        }
+    }
 
     /// Tracks all URL paths that were requested, in order.
-    static var requestedPaths: [String] = []
+    static var requestedPaths: [String] {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return storedRequestedPaths
+    }
 
     /// Path → expectation map. When a matching path is requested, the expectation is fulfilled.
-    static var pathExpectations: [String: XCTestExpectation] = [:]
+    static var pathExpectations: [String: XCTestExpectation] {
+        get {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            return storedPathExpectations
+        }
+        set {
+            stateLock.lock()
+            defer { stateLock.unlock() }
+            storedPathExpectations = newValue
+        }
+    }
 
     static func reset() {
-        requestHandlers.removeAll()
-        requestedPaths.removeAll()
-        pathExpectations.removeAll()
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        storedRequestHandlers.removeAll()
+        storedRequestedPaths.removeAll()
+        storedPathExpectations.removeAll()
+    }
+
+    private static func recordRequest(
+        path: String
+    ) -> ((URLRequest) throws -> (HTTPURLResponse, Data?))? {
+        stateLock.lock()
+        let handler = storedRequestHandlers[path]
+        let expectation = storedPathExpectations[path]
+        if !path.isEmpty {
+            storedRequestedPaths.append(path)
+        }
+        stateLock.unlock()
+
+        expectation?.fulfill()
+        return handler
     }
 
     override class func canInit(with request: URLRequest) -> Bool {
@@ -48,12 +97,7 @@ class MockURLProtocol: URLProtocol {
         }
 
         let path = request.url?.path ?? ""
-        if !path.isEmpty {
-            Self.requestedPaths.append(path)
-            Self.pathExpectations[path]?.fulfill()
-        }
-
-        guard let handler = MockURLProtocol.requestHandlers[path] else {
+        guard let handler = Self.recordRequest(path: path) else {
             let response = HTTPURLResponse(url: request.url!, statusCode: 404, httpVersion: nil, headerFields: nil)!
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocolDidFinishLoading(self)

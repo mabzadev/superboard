@@ -14,11 +14,11 @@ const VisitorsEmptyState = () => {
       </div>
 
       <h3 className="text-sm font-semibold text-foreground text-center mb-2">
-        No visitors yet
+        No customers yet
       </h3>
 
       <p className="text-xs text-muted-foreground text-center leading-relaxed max-w-md">
-        Visitors appear here once someone clicks one of your links. Create a
+        Customers appear here once someone clicks one of your links. Create a
         link, share it, and every view, install, and app open will be tracked
         automatically.
       </p>

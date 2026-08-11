@@ -3,7 +3,75 @@ const {
   withInfoPlist,
   withEntitlementsPlist,
   withAppDelegate,
+  withDangerousMod,
 } = require('expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
+const pkg = require('../package.json');
+const nativeContract = require('./native-contract.json');
+
+const OPENGROW_POD_BLOCK_BEGIN = `# ${pkg.name}:native-ios:begin`;
+const OPENGROW_POD_BLOCK_END = `# ${pkg.name}:native-ios:end`;
+
+function openGrowPodDeclaration(indentation = '') {
+  return (
+    `${indentation}pod '${nativeContract.ios.packageName}', ` +
+    `:podspec => '${nativeContract.ios.podspecUrl}'`
+  );
+}
+
+function addOpenGrowPodDependency(contents) {
+  const escapedBegin = OPENGROW_POD_BLOCK_BEGIN.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&'
+  );
+  const escapedEnd = OPENGROW_POD_BLOCK_END.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&'
+  );
+  const managedBlock = new RegExp(
+    `^[ \\t]*${escapedBegin}\\n[\\s\\S]*?^[ \\t]*${escapedEnd}\\n?`,
+    'gm'
+  );
+  const existingPodDeclaration = new RegExp(
+    `^[ \\t]*pod\\s+['"]${nativeContract.ios.packageName}['"][^\\n]*\\n?`,
+    'gm'
+  );
+  const withoutOldDependency = contents
+    .replace(managedBlock, '')
+    .replace(existingPodDeclaration, '');
+  const useNativeModules =
+    /^(\s*)((?:[A-Za-z_]\w*\s*=\s*)?use_native_modules!\s*)$/m;
+  const match = withoutOldDependency.match(useNativeModules);
+  if (!match) return contents;
+
+  const indentation = match[1];
+  const block = [
+    `${indentation}${OPENGROW_POD_BLOCK_BEGIN}`,
+    openGrowPodDeclaration(indentation),
+    `${indentation}${OPENGROW_POD_BLOCK_END}`,
+  ].join('\n');
+  return withoutOldDependency.replace(
+    useNativeModules,
+    `${block}\n${indentation}${match[2]}`
+  );
+}
+
+function withOpenGrowPodDependency(config) {
+  return withDangerousMod(config, [
+    'ios',
+    (config) => {
+      const podfilePath = path.join(
+        config.modRequest.platformProjectRoot,
+        'Podfile'
+      );
+      const contents = fs.readFileSync(podfilePath, 'utf8');
+      const updated = addOpenGrowPodDependency(contents);
+      if (updated !== contents) fs.writeFileSync(podfilePath, updated);
+      return config;
+    },
+  ]);
+}
 
 function withOpenGrowURLScheme(config, { scheme }) {
   return withInfoPlist(config, (config) => {
@@ -63,7 +131,9 @@ function addOpenGrowImport(contents) {
   }
   const endOfLine = contents.indexOf('\n', lastImportIndex + 1);
   return (
-    contents.slice(0, endOfLine) + '\nimport OpenGrow' + contents.slice(endOfLine)
+    contents.slice(0, endOfLine) +
+    '\nimport OpenGrow' +
+    contents.slice(endOfLine)
   );
 }
 
@@ -122,7 +192,9 @@ function addOpenGrowUniversalLinkHandler(contents) {
     const opengrowCall =
       '\n    if OpenGrow.handleAppDelegate(continue: userActivity, restorationHandler: restorationHandler) { return true }';
     return (
-      contents.slice(0, insertPoint) + opengrowCall + contents.slice(insertPoint)
+      contents.slice(0, insertPoint) +
+      opengrowCall +
+      contents.slice(insertPoint)
     );
   }
 
@@ -148,7 +220,9 @@ function addOpenGrowURLHandler(contents) {
     const opengrowCall =
       '\n    if OpenGrow.handleAppDelegate(open: url, options: options) { return true }';
     return (
-      contents.slice(0, insertPoint) + opengrowCall + contents.slice(insertPoint)
+      contents.slice(0, insertPoint) +
+      opengrowCall +
+      contents.slice(insertPoint)
     );
   }
 
@@ -195,7 +269,7 @@ function withOpenGrowAppDelegate(config, props) {
   return withAppDelegate(config, (config) => {
     if (config.modResults.language !== 'swift') {
       throw new Error(
-        '@mbzadev/opengrow-react-native config plugin requires a Swift AppDelegate. ' +
+        `${pkg.name} config plugin requires a Swift AppDelegate. ` +
           'Objective-C AppDelegate is not supported.'
       );
     }
@@ -212,6 +286,7 @@ function withOpenGrowAppDelegate(config, props) {
 }
 
 function withOpenGrowIOS(config, props) {
+  config = withOpenGrowPodDependency(config);
   config = withOpenGrowURLScheme(config, props);
   config = withOpenGrowAssociatedDomains(config, props);
   config = withOpenGrowAppDelegate(config, props);
@@ -223,5 +298,7 @@ module.exports = withOpenGrowIOS;
 // Export helpers for testing
 module.exports.addOpenGrowImport = addOpenGrowImport;
 module.exports.addOpenGrowConfiguration = addOpenGrowConfiguration;
-module.exports.addOpenGrowUniversalLinkHandler = addOpenGrowUniversalLinkHandler;
+module.exports.addOpenGrowUniversalLinkHandler =
+  addOpenGrowUniversalLinkHandler;
 module.exports.addOpenGrowURLHandler = addOpenGrowURLHandler;
+module.exports.addOpenGrowPodDependency = addOpenGrowPodDependency;

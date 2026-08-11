@@ -1,28 +1,31 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { Env } from '../types';
+import { timingSafeEqual } from '../lib/secrets';
+import { readJsonObjectLimited } from '@superboard/contracts/request-body';
 
 const diagnostics = new Hono<{ Bindings: Env }>();
 
 async function params(c: any): Promise<Record<string, any>> {
   const query = Object.fromEntries(new URL(c.req.url).searchParams.entries());
   if (c.req.method === 'GET') return query;
-  const body = await c.req.json().catch(() => ({}));
+  const body = await readJsonObjectLimited(c.req.raw, 1024 * 1024);
   return { ...query, ...body };
 }
 
-function authError(c: any): Response | null {
+type DiagnosticsContext = Context<{ Bindings: Env }>;
+
+async function authError(c: DiagnosticsContext): Promise<Response | null> {
   const expected = c.env.DIAGNOSTICS_API_KEY;
   const provided = c.req.header('x-diagnostics-key')
-    || c.req.header('authorization')?.replace(/^Bearer\s+/i, '')
-    || new URL(c.req.url).searchParams.get('api_key');
-  if (!expected || provided !== expected) {
+    || c.req.header('authorization')?.replace(/^Bearer\s+/i, '');
+  if (!expected || !provided || !await timingSafeEqual(provided, expected)) {
     return c.json({ error: 'Unauthorized', message: 'Invalid or missing API key' }, 401);
   }
   return null;
 }
 
-async function withAuth(c: any, handler: () => Promise<Response> | Response) {
-  const denied = authError(c);
+async function withAuth(c: DiagnosticsContext, handler: () => Promise<Response> | Response) {
+  const denied = await authError(c);
   if (denied) return denied;
   return handler();
 }
@@ -58,8 +61,11 @@ async function recordDiagnosticLog(c: any, level: string, operation: string, mes
     (payload as any)?.test_id || (payload as any)?.test_key || null,
     'cloudflare-worker',
     durationMs,
-  ).run().catch((error: any) => {
-    console.error('diagnostics_log_insert_failed', error?.message || String(error));
+  ).run().catch((error: unknown) => {
+    console.error(JSON.stringify({
+      event: 'diagnostics_log_insert_failed',
+      error: error instanceof Error ? error.message : String(error),
+    }));
   });
 }
 
@@ -203,7 +209,7 @@ async function testDiagnostics(c: any) {
       status: d1Errors.length === 0 && kvErrors.length === 0 ? 'healthy' : 'degraded',
     },
   };
-  console.log('diagnostics_test', results.summary);
+  console.log(JSON.stringify({ event: 'diagnostics_test', summary: results.summary }));
   return c.json(results);
 }
 
@@ -211,7 +217,7 @@ async function testException(c: any): Promise<Response> {
   const body = await params(c);
   const type = String(body.type || 'standard');
   const message = String(body.message || 'Test exception from diagnostics');
-  console.error('diagnostics_test_exception', { type, message, timestamp: nowIso() });
+  console.error(JSON.stringify({ event: 'diagnostics_test_exception', type, message, timestamp: nowIso() }));
   if (type === 'argument') throw new TypeError(message);
   if (type === 'runtime') throw new Error(message);
   throw new Error(message);

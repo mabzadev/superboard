@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import LinkTypeElement from "./LinkTypeElement";
-import QcLinkIcon from "@/assets/icons/ads_platform/opengrow.svg";
+import QcLinkIcon from "@/assets/icons/ads_platform/superboard.svg";
 import GoogleIcon from "@/assets/icons/ads_platform/google.svg";
 import GoogleIconWhite from "@/assets/icons/ads_platform/google_dark_mode.svg";
 import FacebookIcon from "@/assets/icons/ads_platform/facebook.svg";
@@ -75,7 +75,7 @@ const CreateLinkTypeSection = ({
               <CardDescription>
                 These links provide a simple way to connect any campaign or
                 channel, ensuring reliable tracking, smooth user routing, and
-                actionable insights to maximize engagement and growth.
+                actionable insights to improve engagement.
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -28,7 +28,7 @@ type RevenueCatList = { items: Record<string, unknown>[]; next_page: string | nu
 
 export type NormalizedLegacySubscription = {
   externalSubscriptionId: string;
-  provider: 'apple' | 'google' | 'stripe' | 'unsupported';
+  provider: 'apple' | 'google' | 'unsupported';
   environment: 'sandbox' | 'production';
   storeProductId: string | null;
   storeSubscriptionIdentifier: string | null;
@@ -125,9 +125,7 @@ export function normalizeLegacySubscription(value: Record<string, unknown>): Nor
     ? 'apple'
     : store === 'play_store'
       ? 'google'
-      : store === 'stripe'
-        ? 'stripe'
-        : 'unsupported';
+      : 'unsupported';
   return {
     externalSubscriptionId,
     provider,
@@ -326,8 +324,15 @@ async function revenueCatRequest(credentials: RevenueCatCredentials, path: strin
   }
   const response = await fetchImpl(url, {
     headers: { Authorization: `Bearer ${credentials.api_key}`, Accept: 'application/json' },
-    redirect: 'error',
+    redirect: 'manual',
   });
+  if (response.status >= 300 && response.status < 400) {
+    throw legacyError(
+      'legacy_provider_redirect_rejected',
+      'Legacy provider redirects are not allowed',
+      false,
+    );
+  }
   const text = await readTextLimited(response, 1_048_576, 'Legacy provider response is too large');
   let payload: Record<string, unknown> = {};
   try { payload = text ? JSON.parse(text) : {}; } catch {

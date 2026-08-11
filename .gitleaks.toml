@@ -2,5 +2,10 @@
 useDefault = true
 
 [allowlist]
-description = "Vendored, checksummed Yarn 3.6.1 bundle false positive"
-paths = ['''(^|/)\.yarn/releases/yarn-3\.6\.1\.cjs$''']
+description = "Known vendored and runtime-test false positives"
+paths = [
+  '''(^|/)\.yarn/releases/yarn-3\.6\.1\.cjs$''',
+  '''(^|/)(\.backups|\.build|\.dart_tool|\.git|\.next|\.open-next|\.wrangler|build|coverage|node_modules)(/|$)''',
+  '''(^|/)\.yarn/cache(/|$)''',
+]
+regexes = ['''^attachments/foreign$''']

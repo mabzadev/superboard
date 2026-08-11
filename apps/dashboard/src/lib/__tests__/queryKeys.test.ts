@@ -132,27 +132,6 @@ describe("queryKeys", () => {
     });
   });
 
-  describe("payments", () => {
-    it("builds payment keys", () => {
-      expect(queryKeys.payments.subscription("i1")).toEqual([
-        "payments",
-        "subscription",
-        "i1",
-      ]);
-      expect(queryKeys.payments.mau("i1")).toEqual(["payments", "mau", "i1"]);
-      expect(queryKeys.payments.usage("i1")).toEqual([
-        "payments",
-        "usage",
-        "i1",
-      ]);
-      expect(queryKeys.payments.dashboardUrl("i1")).toEqual([
-        "payments",
-        "dashboardUrl",
-        "i1",
-      ]);
-    });
-  });
-
   describe("user", () => {
     it("builds user keys", () => {
       expect(queryKeys.user.current).toEqual(["user", "current"]);

@@ -416,7 +416,7 @@ const GeneratedPageBranch = () => (
     <TreeNode className="w-full">
       <div className="flex items-center justify-center gap-1.5">
         <QrCode className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-[11px] font-medium">OpenGrow page</span>
+        <span className="text-[11px] font-medium">SuperBoard page</span>
       </div>
       <span className="text-[10px] text-muted-foreground block mt-0.5">
         QR code + download links

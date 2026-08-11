@@ -78,23 +78,131 @@ export function formatStatus(data: Obj): string {
     return lines.join("\n");
   }
 
-  lines.push(`| Project | Instance ID | Prod Project ID | Test Project ID | Prod Domain |`);
-  lines.push(`|---------|-------------|-----------------|-----------------|-------------|`);
+  lines.push(`| Instance ID | URI scheme | Projects | Active links |`);
+  lines.push(`|-------------|------------|----------|--------------|`);
 
   for (const inst of instances) {
-    const prod = inst.production as Obj | null;
-    const test = inst.test as Obj | null;
-    const name = prod ? val(prod.name) : val(inst.name);
-    lines.push(`| ${name} | ${val(inst.id)} | ${val(prod?.id)} | ${val(test?.id)} | ${val(prod?.domain)} |`);
+    const projects = Array.isArray(inst.projects) ? (inst.projects as Obj[]) : [];
+    const projectSummary = projects.length
+      ? projects.map((project) => `${val(project.id)} (${val(project.environment)})`).join(", ")
+      : "—";
+    lines.push(
+      `| ${val(inst.id)} | ${val(inst.uri_scheme)} | ${projectSummary} | ${val(inst.links_count)} |`,
+    );
+  }
 
-    const usage = inst.usage as Obj | undefined;
-    if (usage && usage.quota_exceeded && !usage.has_subscription) {
-      lines.push(``);
-      lines.push(`WARNING: Usage exceeded (${val(usage.current_mau)}/${val(usage.mau_limit)} MAU). Your deep links are not working.`);
-      lines.push(`Subscribe to a paid plan to restore service.`);
+  return lines.join("\n");
+}
+
+// ── get_platform_status ──
+
+export function formatPlatformStatus(data: Obj): string {
+  const lines: string[] = [
+    "# SuperBoard Platform Status",
+    "",
+    `Status: ${val(data.status)} · Environment: ${val(data.environment)}`,
+  ];
+  const deployment = expectKey(data, "deployment", lines) ?? {};
+  lines.push(
+    `Target: ${val(deployment.target)} · Release: ${val(deployment.release)}`,
+    `Generated: ${val(data.generatedAt)} · API aggregation: ${val(data.responseTimeMs)} ms`,
+    "",
+  );
+
+  const endpoints = expectKey(data, "endpoints", lines) ?? {};
+  lines.push("## Endpoints");
+  for (const [name, url] of Object.entries(endpoints)) {
+    lines.push(`- ${name}: ${val(url)}`);
+  }
+
+  const surfaces = expectArray(data, "publicSurfaces", lines) ?? [];
+  lines.push("", "## Public availability");
+  if (surfaces.length === 0) lines.push("- No public monitor configured.");
+  for (const surface of surfaces) {
+    lines.push(
+      `- ${val(surface.id)}: ${val(surface.status)} · HTTP ${val(surface.httpStatus)} · ${val(surface.responseTimeMs)} ms · ${val(surface.description)}`,
+    );
+  }
+
+  const services = expectArray(data, "services", lines) ?? [];
+  lines.push("", "## Workers", "", "| Worker | Status | Latency | Purpose |", "|---|---|---:|---|");
+  for (const service of services) {
+    lines.push(
+      `| ${val(service.id)} | ${val(service.status)} | ${val(service.responseTimeMs)} ms | ${val(service.description)} |`,
+    );
+  }
+
+  const runtime = data.runtime && typeof data.runtime === "object" ? (data.runtime as Obj) : null;
+  const runtimeRows = runtime && Array.isArray(runtime.rows) ? (runtime.rows as Obj[]) : [];
+  lines.push("", "## Runtime metrics");
+  if (!runtime) {
+    lines.push("- Observability is disabled.");
+  } else if (runtime.error) {
+    lines.push(`- Unavailable: ${val(runtime.error)}`);
+  } else if (runtimeRows.length === 0) {
+    lines.push("- No invocation recorded in the selected window.");
+  } else {
+    lines.push(
+      "",
+      "| Worker | Event | Outcome | Invocations | Exceptions | Avg CPU ms |",
+      "|---|---|---|---:|---:|---:|",
+    );
+    for (const row of runtimeRows) {
+      lines.push(
+        `| ${val(row.service)} | ${val(row.eventType)} | ${val(row.outcome)} | ${val(row.invocations)} | ${val(row.exceptions)} | ${val(row.averageCpuMs)} |`,
+      );
     }
   }
 
+  const stores = expectArray(data, "dataStores", lines) ?? [];
+  lines.push("", "## Data stores", "", "| Store | Kind | Owner | Status |", "|---|---|---|---|");
+  for (const store of stores) {
+    lines.push(
+      `| ${val(store.id)} | ${val(store.kind)} | ${val(store.owner)} | ${val(store.status)} |`,
+    );
+  }
+
+  const metrics = expectKey(data, "metrics", lines) ?? {};
+  lines.push("", "## Data counters");
+  for (const [name, value] of Object.entries(metrics)) {
+    lines.push(`- ${name}: ${val(value)}`);
+  }
+
+  const jobs = expectKey(data, "jobs", lines) ?? {};
+  lines.push("", "## Background jobs");
+  for (const [name, value] of Object.entries(jobs)) {
+    lines.push(
+      `- ${name}: ${value && typeof value === "object" ? JSON.stringify(value) : val(value)}`,
+    );
+  }
+
+  const api = expectKey(data, "api", lines) ?? {};
+  const capabilities = Array.isArray(api.capabilities) ? (api.capabilities as Obj[]) : [];
+  lines.push("", `## API capabilities (${val(api.status)})`);
+  for (const capability of capabilities) {
+    const entrypoints = Array.isArray(capability.entrypoints)
+      ? capability.entrypoints.join(", ")
+      : "—";
+    lines.push(
+      `- ${val(capability.id)}: ${val(capability.description)} · Access: ${val(capability.access)} · Routes: ${entrypoints}`,
+    );
+  }
+
+  const custom = expectKey(data, "custom", lines) ?? {};
+  const manifest =
+    custom.manifest && typeof custom.manifest === "object" ? (custom.manifest as Obj) : {};
+  lines.push(
+    "",
+    "## Application-specific runtime",
+    `Status: ${val(custom.status)} · Service: ${val(manifest.service)} · Version: ${val(manifest.version)}`,
+    `Purpose: ${val(manifest.description)}`,
+  );
+  const customCapabilities = Array.isArray(manifest.capabilities)
+    ? (manifest.capabilities as Obj[])
+    : [];
+  for (const capability of customCapabilities) {
+    lines.push(`- ${val(capability.id)} (${val(capability.mode)}): ${val(capability.description)}`);
+  }
   return lines.join("\n");
 }
 
@@ -102,7 +210,7 @@ export function formatStatus(data: Obj): string {
 
 export function formatUsage(data: Obj): string {
   const lines: string[] = [];
-  lines.push(`# Usage`);
+  lines.push(`# Activity`);
   lines.push(``);
 
   const usage = expectKey(data, "usage", lines);
@@ -111,15 +219,8 @@ export function formatUsage(data: Obj): string {
     return lines.join("\n");
   }
 
-  lines.push(`Current MAU: ${val(usage.current_mau)} / ${val(usage.mau_limit)}`);
-  lines.push(`Quota exceeded: ${yesNo(usage.quota_exceeded)}`);
-  lines.push(`Has subscription: ${yesNo(usage.has_subscription)}`);
-
-  if (usage.quota_exceeded && !usage.has_subscription) {
-    lines.push(``);
-    lines.push(`WARNING: Usage exceeded. Your deep links are not working.`);
-    lines.push(`Subscribe to a paid plan to restore service.`);
-  }
+  lines.push(`Instance ID: ${val(usage.instance_id)}`);
+  lines.push(`Active users (30 days): ${val(usage.mau)}`);
 
   return lines.join("\n");
 }
@@ -134,11 +235,11 @@ export function formatCreateProject(data: Obj): string {
   const prod = inst.production as Obj | null;
   const test = inst.test as Obj | null;
   lines.push(``);
-  lines.push(`Instance ID: ${val(inst.hash_id)}`);
+  lines.push(`Instance ID: ${val(inst.id)}`);
   lines.push(`URI scheme: ${val(inst.uri_scheme)}`);
   lines.push(``);
-  if (prod) lines.push(`Production project: ${val(prod.name)} (ID: ${val(prod.hash_id)})`);
-  if (test) lines.push(`Test project: ${val(test.name)} (ID: ${val(test.hash_id)})`);
+  if (prod) lines.push(`Production project: ${val(prod.name)} (ID: ${val(prod.id)})`);
+  if (test) lines.push(`Test project: ${val(test.name)} (ID: ${val(test.id)})`);
 
   return lines.join("\n");
 }
@@ -159,9 +260,12 @@ function formatLinkDetail(link: Obj): string {
   }
 
   const redirects: string[] = [];
-  if (link.ios_custom_redirect) redirects.push(`iOS → ${val((link.ios_custom_redirect as Obj).url)}`);
-  if (link.android_custom_redirect) redirects.push(`Android → ${val((link.android_custom_redirect as Obj).url)}`);
-  if (link.desktop_custom_redirect) redirects.push(`Desktop → ${val((link.desktop_custom_redirect as Obj).url)}`);
+  if (link.ios_custom_redirect)
+    redirects.push(`iOS → ${val((link.ios_custom_redirect as Obj).url)}`);
+  if (link.android_custom_redirect)
+    redirects.push(`Android → ${val((link.android_custom_redirect as Obj).url)}`);
+  if (link.desktop_custom_redirect)
+    redirects.push(`Desktop → ${val((link.desktop_custom_redirect as Obj).url)}`);
   if (redirects.length > 0) {
     lines.push(`Custom redirects: ${redirects.join(", ")}`);
   }
@@ -180,7 +284,9 @@ export function formatLink(data: Obj, action: string): string {
   lines.push(formatLinkDetail(link));
   if (link.path) {
     lines.push(``);
-    lines.push(`**Next steps:** Use get_link_analytics with path "${val(link.path)}" to view metrics, or search_links to list all links.`);
+    lines.push(
+      `**Next steps:** Use get_link_analytics with path "${val(link.path)}" to view metrics, or search_links to list all links.`,
+    );
   }
   return lines.join("\n");
 }
@@ -192,7 +298,9 @@ export function formatSearchLinks(data: Obj): string {
   const links = expectArray(data, "links", lines);
   const meta = expectKey(data, "meta", lines) ?? {};
 
-  lines.push(`# Links (${val(meta.total_entries)} total, page ${val(meta.page)}/${val(meta.total_pages)})`);
+  lines.push(
+    `# Links (${val(meta.total_entries)} total, page ${val(meta.page)}/${val(meta.total_pages)})`,
+  );
   lines.push(``);
 
   if (!links || links.length === 0) {
@@ -219,10 +327,14 @@ function formatMetricBlock(m: Obj, label: string): string {
   const lines: string[] = [];
   lines.push(`**${label}:**`);
   lines.push(`  Views: ${val(m.views)} | Opens: ${val(m.opens)} | Installs: ${val(m.installs)}`);
-  lines.push(`  App opens: ${val(m.app_opens)} | New users: ${val(m.new_users)} | Returning: ${val(m.returning_users)} (${pct(m.returning_rate)})`);
+  lines.push(
+    `  App opens: ${val(m.app_opens)} | New users: ${val(m.new_users)} | Returning: ${val(m.returning_users)} (${pct(m.returning_rate)})`,
+  );
   lines.push(`  Reinstalls: ${val(m.reinstalls)} | Referred: ${val(m.referred_users)}`);
   if (Number(m.revenue) > 0 || Number(m.units_sold) > 0) {
-    lines.push(`  Revenue: ${cents(m.revenue)} | Units sold: ${val(m.units_sold)} | Cancellations: ${val(m.cancellations)}`);
+    lines.push(
+      `  Revenue: ${cents(m.revenue)} | Units sold: ${val(m.units_sold)} | Cancellations: ${val(m.cancellations)}`,
+    );
     lines.push(`  ARPU: ${cents(m.arpu)} | ARPPU: ${cents(m.arppu)}`);
   }
   return lines.join("\n");
@@ -276,8 +388,12 @@ export function formatLinkAnalytics(data: Obj): string {
 
   for (const m of entries as Obj[]) {
     lines.push(`Views: ${val(m.view)} | Opens: ${val(m.open)} | Installs: ${val(m.install)}`);
-    lines.push(`Reinstalls: ${val(m.reinstall)} | Reactivations: ${val(m.reactivation)} | App opens: ${val(m.app_open)}`);
-    lines.push(`Referred users: ${val(m.user_referred)} | Avg engagement: ${val(m.avg_engagement_time)}s`);
+    lines.push(
+      `Reinstalls: ${val(m.reinstall)} | Reactivations: ${val(m.reactivation)} | App opens: ${val(m.app_open)}`,
+    );
+    lines.push(
+      `Referred users: ${val(m.user_referred)} | Avg engagement: ${val(m.avg_engagement_time)}s`,
+    );
   }
 
   return lines.join("\n");
@@ -324,7 +440,9 @@ export function formatRedirects(data: Obj): string {
   }
 
   lines.push(`Default fallback: ${val(rc.default_fallback)}`);
-  lines.push(`Show preview (iOS): ${yesNo(rc.show_preview_ios)} | Show preview (Android): ${yesNo(rc.show_preview_android)}`);
+  lines.push(
+    `Show preview (iOS): ${yesNo(rc.show_preview_ios)} | Show preview (Android): ${yesNo(rc.show_preview_android)}`,
+  );
   lines.push(``);
 
   for (const platform of ["ios", "android", "desktop"]) {
@@ -356,7 +474,9 @@ export function formatCampaign(data: Obj, action: string): string {
   if (action === "Archived") {
     lines.push(`**Next steps:** Use list_campaigns to view remaining campaigns.`);
   } else {
-    lines.push(`**Next steps:** Use create_link with campaign_id ${val(campaign.id)} to add links to this campaign, or list_campaigns to view all campaigns.`);
+    lines.push(
+      `**Next steps:** Use create_link with campaign_id ${val(campaign.id)} to add links to this campaign, or list_campaigns to view all campaigns.`,
+    );
   }
   return lines.join("\n");
 }
@@ -366,7 +486,9 @@ export function formatListCampaigns(data: Obj): string {
   const campaigns = expectArray(data, "campaigns", lines);
   const meta = expectKey(data, "meta", lines) ?? {};
 
-  lines.push(`# Campaigns (${val(meta.total_entries)} total, page ${val(meta.page)}/${val(meta.total_pages)})`);
+  lines.push(
+    `# Campaigns (${val(meta.total_entries)} total, page ${val(meta.page)}/${val(meta.total_pages)})`,
+  );
   lines.push(``);
 
   if (!campaigns || campaigns.length === 0) {

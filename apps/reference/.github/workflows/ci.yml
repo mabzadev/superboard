@@ -1,0 +1,472 @@
+name: Reference validation
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  repository_dispatch:
+    types: [platform-dev-updated, sdk-release-set-published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SUPERBOARD_FLUTTER_VERSION: "3.44.9"
+
+concurrency:
+  group: reference-${{ github.workflow }}-${{ github.event_name == 'repository_dispatch' && 'development' || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  security:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      history_bridge_validated: ${{ steps.history-bridge.outputs.validated }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify dispatch starts from the protected default branch head
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          test -n "$DEFAULT_BRANCH"
+          git fetch --no-tags origin "refs/heads/$DEFAULT_BRANCH"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+      - name: Validate the exact reviewed history bridge
+        id: history-bridge
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'history/bridge-') }}
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BRIDGE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BRIDGE_BASE_REF: ${{ github.base_ref }}
+          BRIDGE_HEAD_REF: ${{ github.head_ref }}
+          BRIDGE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BRIDGE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: node scripts/reference-history-bridge.mjs >> "$GITHUB_OUTPUT"
+      - name: Make the root commit scannable for a reviewed history bridge
+        if: ${{ steps.history-bridge.outputs.validated == 'true' }}
+        env:
+          BRIDGE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BRIDGE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEVELOPMENT_SHA: ${{ steps.history-bridge.outputs.development_sha }}
+        run: |
+          [[ "$BRIDGE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BRIDGE_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$DEVELOPMENT_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          root_commits=$(git rev-list --first-parent --max-parents=0 "$BRIDGE_HEAD_SHA")
+          test "$(printf '%s\n' "$root_commits" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+          root_commit=$(printf '%s\n' "$root_commits" | sed -n '1p')
+          test -z "$(git show -s --format=%P "$root_commit")"
+
+          # gitleaks-action scans PR commits from the first commit's parent.
+          # A split-history bridge legitimately includes a root commit, whose
+          # parent does not exist. This local-only graft supplies the reviewed
+          # base as that parent so the action scans the complete dev history.
+          git replace --graft "$root_commit" "$BRIDGE_BASE_SHA"
+          test "$(git rev-parse "$root_commit^")" = "$BRIDGE_BASE_SHA"
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        if: ${{ github.event_name != 'repository_dispatch' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  promote-sdk:
+    needs: security
+    if: ${{ github.event_name == 'repository_dispatch' && github.event.action == 'sdk-release-set-published' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Resolve validated project-owned CI metadata
+        id: metadata
+        run: node scripts/reference-ci-metadata.mjs >> "$GITHUB_OUTPUT"
+      - name: Validate the immutable SDK set payload
+        env:
+          CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: |
+          test "$DEFAULT_BRANCH" = "$DEPLOYMENT_BRANCH"
+          [[ "$CATALOGUE_SHA" =~ ^[0-9a-f]{40}$ ]]
+      - name: Create the isolated reference promotion branch
+        id: branch
+        env:
+          CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
+        run: |
+          branch="automation/sdk-set-${CATALOGUE_SHA:0:12}"
+          if git fetch --no-tags origin "refs/heads/$branch"; then
+            git checkout -B "$branch" FETCH_HEAD
+          else
+            git checkout -b "$branch"
+          fi
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ steps.metadata.outputs.platform_repository }}
+          ref: ${{ github.event.client_payload.catalogue_sha }}
+          path: vendor/superboard-platform
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the official lifecycle catalogue and complete active SDK set
+        working-directory: vendor/superboard-platform
+        env:
+          CATALOGUE_SHA: ${{ github.event.client_payload.catalogue_sha }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$CATALOGUE_SHA"
+          git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
+          git merge-base --is-ancestor "$CATALOGUE_SHA" FETCH_HEAD
+          node scripts/sdk-catalog.mjs check
+          active_libraries="$(node -p "require('./config/sdk-libraries.json').libraries.filter((item) => item.lifecycle === 'active').map((item) => item.id).join(' ')")"
+          test "$active_libraries" = "flutter flutterflow"
+          for library in $active_libraries; do
+            tag="$(node scripts/sdk-catalog.mjs release-tag --library "$library")"
+            git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
+            git merge-base --is-ancestor "refs/tags/$tag^{}" "$CATALOGUE_SHA"
+            gh api "repos/${{ steps.metadata.outputs.platform_repository }}/releases/tags/$tag" >/dev/null
+          done
+      - name: Update the complete active SDK set
+        run: >-
+          node scripts/reference-sdk-promotion.mjs
+          --catalog vendor/superboard-platform/config/sdk-libraries.json
+          --library all
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.SUPERBOARD_FLUTTER_VERSION }}
+          cache: true
+      - name: Regenerate the application lockfile from immutable SDK tags
+        run: flutter pub get
+      - name: Revalidate the complete reference contract
+        run: npm run config:test
+      - name: Propose the immutable SDK set through a protected PR
+        env:
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+          PROMOTION_BRANCH: ${{ steps.branch.outputs.name }}
+        run: |
+          ensure_promotion_pr() {
+            existing="$(gh pr list --state open --base "$DEPLOYMENT_BRANCH" --head "$PROMOTION_BRANCH" --json url --jq '.[0].url // empty')"
+            if test -n "$existing"; then
+              echo "Reference SDK promotion PR already exists: $existing"
+              return 0
+            fi
+            closed="$(gh pr list --state closed --base "$DEPLOYMENT_BRANCH" --head "$PROMOTION_BRANCH" --json number,mergedAt --jq 'map(select(.mergedAt == null))[0].number // empty')"
+            if test -n "$closed"; then
+              gh pr reopen "$closed"
+              return 0
+            fi
+            gh pr create \
+              --base "$DEPLOYMENT_BRANCH" \
+              --head "$PROMOTION_BRANCH" \
+              --title "chore(sdk): promote the published SuperBoard v3 SDK set" \
+              --body "Promotes Flutter and FlutterFlow together after validating catalogue v4. Internal and archived baselines remain historical and immutable."
+          }
+          validate_promotion_branch() {
+            # Branches and pull requests created by GITHUB_TOKEN do not trigger
+            # another workflow automatically. Dispatch the protected validation
+            # explicitly so the promotion PR can never bypass its required gate.
+            gh workflow run ci.yml --ref "$PROMOTION_BRANCH"
+          }
+          unexpected="$(git diff --name-only -- . ':!reference.project.json' ':!pubspec.yaml' ':!pubspec.lock' ':!flutterflow/dependency-snippet.yaml' ':!config/sdk-coverage.json')"
+          test -z "$unexpected"
+          git fetch --no-tags origin \
+            "refs/heads/$DEPLOYMENT_BRANCH:refs/remotes/origin/$DEPLOYMENT_BRANCH"
+          if git diff --quiet -- reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml config/sdk-coverage.json; then
+            if git merge-base --is-ancestor HEAD "origin/$DEPLOYMENT_BRANCH"; then
+              echo "The development branch already consumes the complete published SDK set."
+              exit 0
+            fi
+            ensure_promotion_pr
+            validate_promotion_branch
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reference.project.json pubspec.yaml pubspec.lock flutterflow/dependency-snippet.yaml config/sdk-coverage.json
+          git commit -m "chore(sdk): promote the published SuperBoard v3 SDK set"
+          git push --set-upstream origin "HEAD:refs/heads/$PROMOTION_BRANCH"
+          ensure_promotion_pr
+          validate_promotion_branch
+
+  contract:
+    needs: [security, promote-sdk]
+    if: >-
+      always() &&
+      needs.security.result == 'success' &&
+      (needs.promote-sdk.result == 'success' || needs.promote-sdk.result == 'skipped') &&
+      !(github.event_name == 'repository_dispatch' && github.event.action == 'sdk-release-set-published')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      platform_repository: ${{ steps.metadata.outputs.platform_repository }}
+      deployment_branch: ${{ steps.metadata.outputs.deployment_branch }}
+      deployment_eligible: ${{ steps.deployment-gate.outputs.eligible }}
+      history_bridge_validated: ${{ needs.security.outputs.history_bridge_validated }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.repository.default_branch || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate exact MBZA endpoints and the Dart-define allowlist
+        run: npm run config:test
+      - name: Resolve validated project-owned CI metadata
+        id: metadata
+        run: node scripts/reference-ci-metadata.mjs >> "$GITHUB_OUTPUT"
+      - name: Resolve fail-closed development deployment gate
+        id: deployment-gate
+        env:
+          SUPERBOARD_GITHUB_EVENT_NAME: ${{ github.event_name }}
+          SUPERBOARD_GITHUB_REF_NAME: ${{ github.ref_name }}
+          SUPERBOARD_GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          SUPERBOARD_GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: node scripts/reference-deployment-gate.mjs >> "$GITHUB_OUTPUT"
+      - name: Bind a validated history bridge to the declared development branch
+        if: ${{ needs.security.outputs.history_bridge_validated == 'true' }}
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: |
+          test -n "$DEFAULT_BRANCH"
+          test -n "$DEPLOYMENT_BRANCH"
+          test "$DEFAULT_BRANCH" = "$DEPLOYMENT_BRANCH"
+      - name: Verify immutable published baselines and historical releases
+        run: npm run sdk:coverage:verify
+      - name: Require repository dispatch to use the declared development branch
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEPLOYMENT_BRANCH: ${{ steps.metadata.outputs.deployment_branch }}
+        run: test "$DEFAULT_BRANCH" = "$DEPLOYMENT_BRANCH"
+
+  flutter:
+    needs: contract
+    if: ${{ always() && needs.contract.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      platform_sha: ${{ steps.platform-revision.outputs.sha }}
+      reference_sha: ${{ steps.reference-revision.outputs.sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && needs.contract.outputs.deployment_branch || github.ref }}
+          persist-credentials: false
+      - name: Record tested reference revision
+        id: reference-revision
+        run: |
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Resolve the official Platform validation ref
+        id: platform-ref
+        env:
+          SUPERBOARD_GITHUB_EVENT_NAME: ${{ github.event_name }}
+          SUPERBOARD_GITHUB_REF_NAME: ${{ github.ref_name }}
+          SUPERBOARD_GITHUB_BASE_REF: ${{ github.base_ref }}
+          SUPERBOARD_DISPATCH_PLATFORM_SHA: ${{ github.event.client_payload.platform_sha }}
+          SUPERBOARD_DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
+          SUPERBOARD_PRODUCTION_BRANCH: main
+          SUPERBOARD_HISTORY_BRIDGE_VALIDATED: ${{ needs.contract.outputs.history_bridge_validated }}
+        run: node scripts/reference-platform-ref.mjs >> "$GITHUB_OUTPUT"
+      - name: Validate dispatched platform revision
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        env:
+          SUPERBOARD_PLATFORM_REF: ${{ steps.platform-ref.outputs.ref }}
+        run: '[[ "$SUPERBOARD_PLATFORM_REF" =~ ^[0-9a-f]{40}$ ]]'
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ needs.contract.outputs.platform_repository }}
+          ref: ${{ steps.platform-ref.outputs.ref }}
+          path: vendor/superboard-platform
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a bridge to use the official Platform development head
+        if: ${{ needs.contract.outputs.history_bridge_validated == 'true' }}
+        working-directory: vendor/superboard-platform
+        env:
+          DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
+        run: |
+          git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+      - name: Require dispatched platform revision to belong to official dev
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        working-directory: vendor/superboard-platform
+        env:
+          DEPLOYMENT_BRANCH: ${{ needs.contract.outputs.deployment_branch }}
+          SUPERBOARD_PLATFORM_REF: ${{ steps.platform-ref.outputs.ref }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$SUPERBOARD_PLATFORM_REF"
+          git fetch --no-tags origin "refs/heads/$DEPLOYMENT_BRANCH"
+          git merge-base --is-ancestor "$SUPERBOARD_PLATFORM_REF" FETCH_HEAD
+      - name: Record tested platform revision
+        id: platform-revision
+        working-directory: vendor/superboard-platform
+        run: |
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Match lifecycle coverage to the checked-out catalogue v4
+        run: >-
+          npm run sdk:coverage:catalog --
+          --catalog vendor/superboard-platform/config/sdk-libraries.json
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.SUPERBOARD_FLUTTER_VERSION }}
+          cache: true
+      - name: Compile only against locked immutable SDK baselines
+        run: |
+          node scripts/reference-sdk-lock.mjs verify-remote
+          flutter pub get --enforce-lockfile
+          git diff --exit-code -- pubspec.lock
+      - run: npm ci
+      - run: npm test
+      - run: npm run flutter:web
+
+  validation-gate:
+    name: Reference gate
+    if: >-
+      always() &&
+      !(github.event_name == 'repository_dispatch' &&
+      github.event.action == 'sdk-release-set-published')
+    needs: [security, contract, flutter]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SECURITY_RESULT: ${{ needs.security.result }}
+      CONTRACT_RESULT: ${{ needs.contract.result }}
+      FLUTTER_RESULT: ${{ needs.flutter.result }}
+    steps:
+      - name: Require reference validation to pass
+        run: |
+          test "$SECURITY_RESULT" = "success"
+          test "$CONTRACT_RESULT" = "success"
+          test "$FLUTTER_RESULT" = "success"
+
+  build-development:
+    # A normal push skips promote-sdk, which is an ancestor of this job. The
+    # status function prevents GitHub from injecting success() for that skip;
+    # every direct prerequisite is then checked explicitly below.
+    if: >-
+      !cancelled() &&
+      needs.contract.result == 'success' &&
+      needs.validation-gate.result == 'success' &&
+      needs.flutter.result == 'success' &&
+      needs.contract.outputs.deployment_eligible == 'true'
+    needs: [contract, validation-gate, flutter]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: development
+    env:
+      SUPERBOARD_PLATFORM_REVISION: ${{ needs.flutter.outputs.platform_sha }}
+      SUPERBOARD_REFERENCE_REVISION: ${{ needs.flutter.outputs.reference_sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.flutter.outputs.reference_sha }}
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ needs.contract.outputs.platform_repository }}
+          ref: ${{ needs.flutter.outputs.platform_sha }}
+          path: vendor/superboard-platform
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.SUPERBOARD_FLUTTER_VERSION }}
+          cache: true
+      - name: Require exact tested revisions and reference project identity
+        env:
+          SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.OPENGROW_PROJECT_KEY }}
+          SUPERBOARD_PROJECT_ID: ${{ secrets.SUPERBOARD_PROJECT_ID || secrets.OPENGROW_PROJECT_ID }}
+        run: |
+          [[ "$SUPERBOARD_PLATFORM_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SUPERBOARD_REFERENCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          test -n "$SUPERBOARD_PROJECT_KEY"
+          [[ "$SUPERBOARD_PROJECT_ID" =~ ^[1-9][0-9]*$ ]]
+          test "$(git rev-parse HEAD)" = "$SUPERBOARD_REFERENCE_REVISION"
+          test "$(git -C vendor/superboard-platform rev-parse HEAD)" = "$SUPERBOARD_PLATFORM_REVISION"
+      - run: flutter pub get --enforce-lockfile
+      - run: npm ci
+      - name: Build live MBZA acceptance artifact
+        env:
+          SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.OPENGROW_PROJECT_KEY }}
+          SUPERBOARD_PROJECT_ID: ${{ secrets.SUPERBOARD_PROJECT_ID || secrets.OPENGROW_PROJECT_ID }}
+        run: npm run flutter:web:live
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: reference-web-${{ github.run_id }}
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-development:
+    if: >-
+      !cancelled() &&
+      needs.contract.result == 'success' &&
+      needs.validation-gate.result == 'success' &&
+      needs.flutter.result == 'success' &&
+      needs.build-development.result == 'success' &&
+      needs.contract.outputs.deployment_eligible == 'true'
+    needs: [contract, validation-gate, flutter, build-development]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.flutter.outputs.reference_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate deployment credentials
+        run: |
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: reference-web-${{ github.run_id }}
+          path: build/web
+      - run: npm run cloudflare:deploy:built

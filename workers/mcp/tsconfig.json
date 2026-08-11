@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "WebWorker"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": false
+  },
+  "include": ["src/**/*.ts", "../../apps/mcp/src/**/*.ts", "worker-configuration.d.ts"],
+  "exclude": ["../../apps/mcp/src/__tests__/**"]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "opengrow-marketing-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "test",
+    "PUBLIC_API_URL": "https://api.example.test",
+    "QUEUE_NAME": "marketing-test-delivery",
+    "DLQ_NAME": "marketing-test-delivery-dlq"
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "marketing-test", "database_id": "00000000-0000-0000-0000-000000000012", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "marketing-test" }],
+  "queues": {
+    "producers": [{ "binding": "MARKETING_QUEUE", "queue": "marketing-test-delivery" }],
+    "consumers": [{ "queue": "marketing-test-delivery", "max_batch_size": 10, "max_batch_timeout": 1, "max_retries": 5 }]
+  },
+  "triggers": { "crons": ["* * * * *"] }
+}

@@ -1,3 +1,17 @@
+## 1.3.0
+
+* Made OpenGrow Support the canonical conversation backend
+* Added the complete `opengrowSupport*` FlutterFlow action surface
+* Preserved API gateway path prefixes such as `/api/v1/support-client`
+* Retained the historical Messaging names only as migration aliases
+
+## 1.2.0
+
+* Added remote Chat configuration for FlutterFlow
+* Added Inbox selection and custom attributes when opening a conversation
+* Added customer conversation updates, reply references, interactive message metadata, and CSAT
+* Added message visibility metadata while keeping private notes agent-only
+
 ## 1.1.1
 
 * Added participant-specific unread counts to conversation list results

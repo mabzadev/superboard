@@ -1,10 +1,12 @@
 import { z } from "zod/v4";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
+import { McpServer } from "@modelcontextprotocol/server";
+import type { ServerContext } from "@modelcontextprotocol/server";
+import * as defaultApiClient from "./api-client.js";
+import type { ApiClient } from "./api-client.js";
 
 import {
   handleGetStatus,
+  handleGetPlatformStatus,
   handleGetUsage,
   handleCreateProject,
   handleCreateLink,
@@ -23,10 +25,10 @@ import {
 } from "./tools/handlers.js";
 import { slugify, extractPath } from "./tools/utils.js";
 
-export type ToolExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
+export type ToolExtra = ServerContext;
 
 export function extractToken(extra: ToolExtra): string {
-  const token = extra.authInfo?.token;
+  const token = extra.http?.authInfo?.token;
   if (!token) {
     throw new Error("Not authenticated. Please connect with a valid Bearer token.");
   }
@@ -60,9 +62,9 @@ export async function runWithAuth(
   }
 }
 
-export function createServer(): McpServer {
+export function createServer(client: ApiClient = defaultApiClient): McpServer {
   const server = new McpServer({
-    name: "opengrow-mcp",
+    name: "superboard-mcp",
     version: "1.0.0",
   });
 
@@ -73,9 +75,19 @@ export function createServer(): McpServer {
     {
       title: "Get Account & Projects",
       description:
-        "Returns the authenticated user's account info and all their OpenGrow projects with domains. Call this first to discover available project IDs before using other tools.",
+        "Returns the authenticated user's account info and all their SuperBoard projects with domains. Call this first to discover available project IDs before using other tools.",
     },
-    (extra) => runWithAuth(extra, (token) => handleGetStatus(token)),
+    (extra) => runWithAuth(extra, (token) => handleGetStatus(token, client)),
+  );
+
+  server.registerTool(
+    "get_platform_status",
+    {
+      title: "Get Platform Infrastructure Status",
+      description:
+        "Read the same target, API, public endpoint, Worker, data-store, job and runtime status shown in the SuperBoard Infrastructure back-office. This tool is read-only and restricted to owners and administrators.",
+    },
+    (extra) => runWithAuth(extra, (token) => handleGetPlatformStatus(token, client)),
   );
 
   // --- Usage ---
@@ -85,13 +97,13 @@ export function createServer(): McpServer {
     {
       title: "Get Instance Usage",
       description:
-        "Check usage metrics and subscription status for an instance. Returns current MAU count, MAU limit, and whether the quota is exceeded. Call get_status first to find instance IDs.",
-      inputSchema: {
+        "Read the instance's 30-day active-user metric for back-office visibility. This metric never changes service availability. Call get_status first to find instance IDs.",
+      inputSchema: z.object({
         instance_id: z.string().describe("Instance ID from get_status"),
-      },
+      }),
     },
     ({ instance_id }, extra) =>
-      runWithAuth(extra, (token) => handleGetUsage(token, instance_id)),
+      runWithAuth(extra, (token) => handleGetUsage(token, instance_id, client)),
   );
 
   // --- Projects ---
@@ -101,12 +113,12 @@ export function createServer(): McpServer {
     {
       title: "Create Project",
       description:
-        "Create a new OpenGrow project. This provisions a production and test environment with their own domains for deep links.",
-      inputSchema: {
+        "Create a new SuperBoard project. This provisions a production and test environment with their own domains for deep links.",
+      inputSchema: z.object({
         name: z.string().describe("Project name (e.g. 'My App')"),
-      },
+      }),
     },
-    ({ name }, extra) => runWithAuth(extra, (token) => handleCreateProject(token, name)),
+    ({ name }, extra) => runWithAuth(extra, (token) => handleCreateProject(token, name, client)),
   );
 
   // --- Links ---
@@ -117,10 +129,19 @@ export function createServer(): McpServer {
       title: "Create Deep Link",
       description:
         "Create a deep link in a project. Only 'name' is required — the URL path is auto-generated from the name. Optionally set title/subtitle for link previews, tags for organization, and a data payload that gets passed to the app on open.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         name: z.string().describe("Link name (also used to generate the URL slug)"),
-        path: z.string().optional().describe("Custom URL path slug (e.g. 'summer-sale') — auto-generated from name if omitted"),
+        path: z
+          .string()
+          .optional()
+          .describe(
+            "Custom URL path slug (e.g. 'summer-sale') — auto-generated from name if omitted",
+          ),
         title: z.string().optional().describe("Preview title shown when link is shared"),
         subtitle: z.string().optional().describe("Preview subtitle shown when link is shared"),
         image_url: z.url().optional().describe("Preview image URL shown when link is shared"),
@@ -143,27 +164,49 @@ export function createServer(): McpServer {
           .optional()
           .describe(
             "OPTIONAL per-platform overrides. Omit for the default behavior (open app if installed, else App Store from configure_sdk). " +
-            "Three forms per platform:\n" +
-            "  • Omit entirely → app + App Store fallback (default)\n" +
-            "  • Flat string `{ios: 'https://...'}` → app + custom URL fallback (open app if installed, else this URL)\n" +
-            "  • Object `{ios: {url: 'https://...', open_app_if_installed: false}}` → custom URL ONLY (skip the app-open attempt)",
+              "Three forms per platform:\n" +
+              "  • Omit entirely → app + App Store fallback (default)\n" +
+              "  • Flat string `{ios: 'https://...'}` → app + custom URL fallback (open app if installed, else this URL)\n" +
+              "  • Object `{ios: {url: 'https://...', open_app_if_installed: false}}` → custom URL ONLY (skip the app-open attempt)",
           ),
-        campaign_id: z.number().optional().describe("Campaign ID to add this link to (from list_campaigns or create_campaign)"),
-      },
+        campaign_id: z
+          .number()
+          .optional()
+          .describe("Campaign ID to add this link to (from list_campaigns or create_campaign)"),
+      }),
     },
-    ({ project_id, name, path, title, subtitle, image_url, tags, data, custom_redirects, campaign_id }, extra) =>
+    (
+      {
+        project_id,
+        name,
+        path,
+        title,
+        subtitle,
+        image_url,
+        tags,
+        data,
+        custom_redirects,
+        campaign_id,
+      },
+      extra,
+    ) =>
       runWithAuth(extra, (token) =>
-        handleCreateLink(token, project_id, {
-          name,
-          path: path ?? slugify(name),
-          title,
-          subtitle,
-          image_url,
-          tags,
-          data,
-          custom_redirects,
-          campaign_id,
-        }),
+        handleCreateLink(
+          token,
+          project_id,
+          {
+            name,
+            path: path ?? slugify(name),
+            title,
+            subtitle,
+            image_url,
+            tags,
+            data,
+            custom_redirects,
+            campaign_id,
+          },
+          client,
+        ),
       ),
   );
 
@@ -171,14 +214,21 @@ export function createServer(): McpServer {
     "get_link",
     {
       title: "Get Link Details",
-      description: "Look up a deep link by its path slug or full URL. Returns full link details including preview metadata, tags, data payload, and custom redirects.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
-        path: z.string().describe("Link path slug (e.g. 'summer-sale') or full URL (e.g. 'https://myapp.opengrow.io/summer-sale')"),
-      },
+      description:
+        "Look up a deep link by its path slug or full URL. Returns full link details including preview metadata, tags, data payload, and custom redirects.",
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
+        path: z
+          .string()
+          .describe("Link path slug or a full URL on the selected application's short-link origin"),
+      }),
     },
     ({ project_id, path }, extra) =>
-      runWithAuth(extra, (token) => handleGetLink(token, project_id, extractPath(path))),
+      runWithAuth(extra, (token) => handleGetLink(token, project_id, extractPath(path), client)),
   );
 
   server.registerTool(
@@ -186,8 +236,12 @@ export function createServer(): McpServer {
     {
       title: "Update Deep Link",
       description: "Update an existing deep link. Only include the fields you want to change.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         link_id: z.number().describe("Numeric link ID from search_links or get_link"),
         name: z.string().optional().describe("New link name"),
         path: z.string().optional().describe("New URL path slug"),
@@ -210,29 +264,47 @@ export function createServer(): McpServer {
           .optional()
           .describe(
             "OPTIONAL per-platform overrides. Three forms per platform:\n" +
-            "  • Omit entirely → app + App Store fallback (default)\n" +
-            "  • Flat string `{ios: 'https://...'}` → app + custom URL fallback (open app if installed, else this URL)\n" +
-            "  • Object `{ios: {url: 'https://...', open_app_if_installed: false}}` → custom URL ONLY (skip the app-open attempt)",
+              "  • Omit entirely → app + App Store fallback (default)\n" +
+              "  • Flat string `{ios: 'https://...'}` → app + custom URL fallback (open app if installed, else this URL)\n" +
+              "  • Object `{ios: {url: 'https://...', open_app_if_installed: false}}` → custom URL ONLY (skip the app-open attempt)",
           ),
         campaign_id: z.number().optional().describe("Campaign ID to assign this link to"),
-      },
+      }),
     },
     (
-      { project_id, link_id, name, path, title, subtitle, image_url, tags, data, custom_redirects, campaign_id },
+      {
+        project_id,
+        link_id,
+        name,
+        path,
+        title,
+        subtitle,
+        image_url,
+        tags,
+        data,
+        custom_redirects,
+        campaign_id,
+      },
       extra,
     ) =>
       runWithAuth(extra, (token) =>
-        handleUpdateLink(token, project_id, link_id, {
-          name,
-          path,
-          title,
-          subtitle,
-          image_url,
-          tags,
-          data,
-          custom_redirects,
-          campaign_id,
-        }),
+        handleUpdateLink(
+          token,
+          project_id,
+          link_id,
+          {
+            name,
+            path,
+            title,
+            subtitle,
+            image_url,
+            tags,
+            data,
+            custom_redirects,
+            campaign_id,
+          },
+          client,
+        ),
       ),
   );
 
@@ -242,13 +314,17 @@ export function createServer(): McpServer {
       title: "Archive Deep Link",
       description:
         "Archive (deactivate) a deep link. The link will stop redirecting users. This action cannot be undone. Always confirm with the user before calling.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         link_id: z.number().describe("Numeric link ID from search_links or get_link"),
-      },
+      }),
     },
     ({ project_id, link_id }, extra) =>
-      runWithAuth(extra, (token) => handleArchiveLink(token, project_id, link_id)),
+      runWithAuth(extra, (token) => handleArchiveLink(token, project_id, link_id, client)),
   );
 
   server.registerTool(
@@ -257,18 +333,25 @@ export function createServer(): McpServer {
       title: "Search & List Links",
       description:
         "Search or list all deep links in a project. Returns links with their view/open/install metrics. Supports pagination, search by name, and sorting.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         page: z.number().optional().describe("Page number (default: 1)"),
         limit: z.number().optional().describe("Results per page (default: 20)"),
         search: z.string().optional().describe("Search by link name, title, path, or tags"),
-        sort_by: z.string().optional().describe("Sort by: name, created_at, views, opens, installs"),
+        sort_by: z
+          .string()
+          .optional()
+          .describe("Sort by: name, created_at, views, opens, installs"),
         sort_order: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
-      },
+      }),
     },
     ({ project_id, page, limit, search, sort_by, sort_order }, extra) =>
       runWithAuth(extra, (token) =>
-        handleSearchLinks(token, project_id, { page, limit, search, sort_by, sort_order }),
+        handleSearchLinks(token, project_id, { page, limit, search, sort_by, sort_order }, client),
       ),
   );
 
@@ -280,16 +363,23 @@ export function createServer(): McpServer {
       title: "Project Analytics",
       description:
         "Get aggregated analytics for a project: views, opens, installs, new/returning users, revenue. Compares current period vs previous period. Defaults to last 30 days.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
-        start_date: z.string().optional().describe("Start date (YYYY-MM-DD), defaults to 30 days ago"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
+        start_date: z
+          .string()
+          .optional()
+          .describe("Start date (YYYY-MM-DD), defaults to 30 days ago"),
         end_date: z.string().optional().describe("End date (YYYY-MM-DD), defaults to today"),
         platform: z.string().optional().describe("Filter by platform: ios, android, desktop, web"),
-      },
+      }),
     },
     ({ project_id, start_date, end_date, platform }, extra) =>
       runWithAuth(extra, (token) =>
-        handleGetAnalyticsOverview(token, project_id, { start_date, end_date, platform }),
+        handleGetAnalyticsOverview(token, project_id, { start_date, end_date, platform }, client),
       ),
   );
 
@@ -299,16 +389,27 @@ export function createServer(): McpServer {
       title: "Link Analytics",
       description:
         "Get analytics for a specific link by its path slug or full URL: views, opens, installs, engagement time, referrals. Defaults to last 30 days.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
-        path: z.string().describe("Link path slug (e.g. 'summer-sale') or full URL (e.g. 'https://myapp.opengrow.io/summer-sale')"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
+        path: z
+          .string()
+          .describe("Link path slug or a full URL on the selected application's short-link origin"),
         start_date: z.string().optional().describe("Start date (YYYY-MM-DD)"),
         end_date: z.string().optional().describe("End date (YYYY-MM-DD)"),
-      },
+      }),
     },
     ({ project_id, path, start_date, end_date }, extra) =>
       runWithAuth(extra, (token) =>
-        handleGetLinkAnalytics(token, project_id, { path: extractPath(path), start_date, end_date }),
+        handleGetLinkAnalytics(
+          token,
+          project_id,
+          { path: extractPath(path), start_date, end_date },
+          client,
+        ),
       ),
   );
 
@@ -318,17 +419,21 @@ export function createServer(): McpServer {
       title: "Top Performing Links",
       description:
         "Get the top performing links ranked by views. Returns each link with its view, open, and install counts. Defaults to top 10 over last 30 days.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         start_date: z.string().optional().describe("Start date (YYYY-MM-DD)"),
         end_date: z.string().optional().describe("End date (YYYY-MM-DD)"),
         platform: z.string().optional().describe("Filter by platform: ios, android, desktop, web"),
         limit: z.number().optional().describe("Number of links to return (default: 10)"),
-      },
+      }),
     },
     ({ project_id, start_date, end_date, platform, limit }, extra) =>
       runWithAuth(extra, (token) =>
-        handleGetTopLinks(token, project_id, { start_date, end_date, platform, limit }),
+        handleGetTopLinks(token, project_id, { start_date, end_date, platform, limit }, client),
       ),
   );
 
@@ -340,23 +445,39 @@ export function createServer(): McpServer {
       title: "Configure Redirects",
       description:
         "Set where users are sent when they open a deep link — per platform (iOS App Store, Google Play, desktop website) and a global fallback URL.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         ios_redirect: z.url().optional().describe("iOS redirect URL (e.g. App Store link)"),
-        android_redirect: z.url().optional().describe("Android redirect URL (e.g. Play Store link)"),
+        android_redirect: z
+          .url()
+          .optional()
+          .describe("Android redirect URL (e.g. Play Store link)"),
         desktop_redirect: z.url().optional().describe("Desktop fallback URL"),
         web_redirect: z.url().optional().describe("Web fallback URL"),
         fallback_url: z.url().optional().describe("Global fallback URL for all platforms"),
-      },
+      }),
     },
     (
       { project_id, ios_redirect, android_redirect, desktop_redirect, web_redirect, fallback_url },
       extra,
     ) =>
       runWithAuth(extra, (token) =>
-        handleConfigureRedirects(token, project_id, {
-          ios_redirect, android_redirect, desktop_redirect, web_redirect, fallback_url,
-        }),
+        handleConfigureRedirects(
+          token,
+          project_id,
+          {
+            ios_redirect,
+            android_redirect,
+            desktop_redirect,
+            web_redirect,
+            fallback_url,
+          },
+          client,
+        ),
       ),
   );
 
@@ -366,27 +487,48 @@ export function createServer(): McpServer {
       title: "Configure Platform SDK",
       description:
         "Configure platform-specific SDK settings for an instance — iOS bundle ID, Android package name, desktop app URLs. Required for deep links to open the correct app.",
-      inputSchema: {
+      inputSchema: z.object({
         instance_id: z.string().describe("Instance ID from get_status"),
         ios_bundle_id: z.string().optional().describe("iOS bundle identifier (e.g. com.myapp.ios)"),
         ios_team_id: z.string().optional().describe("Apple Developer Team ID"),
         ios_app_store_id: z.string().optional().describe("iOS App Store ID"),
-        android_package_name: z.string().optional().describe("Android package name (e.g. com.myapp.android)"),
+        android_package_name: z
+          .string()
+          .optional()
+          .describe("Android package name (e.g. com.myapp.android)"),
         android_sha256_fingerprints: z
           .array(z.string())
           .optional()
           .describe("Android SHA256 certificate fingerprints for App Links"),
         desktop_url: z.url().optional().describe("Desktop app download URL"),
-      },
+      }),
     },
     (
-      { instance_id, ios_bundle_id, ios_team_id, ios_app_store_id, android_package_name, android_sha256_fingerprints, desktop_url },
+      {
+        instance_id,
+        ios_bundle_id,
+        ios_team_id,
+        ios_app_store_id,
+        android_package_name,
+        android_sha256_fingerprints,
+        desktop_url,
+      },
       extra,
     ) =>
       runWithAuth(extra, (token) =>
-        handleConfigureSdk(token, instance_id, {
-          ios_bundle_id, ios_team_id, ios_app_store_id, android_package_name, android_sha256_fingerprints, desktop_url,
-        }),
+        handleConfigureSdk(
+          token,
+          instance_id,
+          {
+            ios_bundle_id,
+            ios_team_id,
+            ios_app_store_id,
+            android_package_name,
+            android_sha256_fingerprints,
+            desktop_url,
+          },
+          client,
+        ),
       ),
   );
 
@@ -398,13 +540,17 @@ export function createServer(): McpServer {
       title: "Create Campaign",
       description:
         "Create a campaign to group related deep links. After creating, use create_link with campaign_id to add links to this campaign.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         name: z.string().describe("Campaign name"),
-      },
+      }),
     },
     ({ project_id, name }, extra) =>
-      runWithAuth(extra, (token) => handleCreateCampaign(token, project_id, name)),
+      runWithAuth(extra, (token) => handleCreateCampaign(token, project_id, name, client)),
   );
 
   // Backed by the /campaigns/search endpoint (api.searchCampaigns) under the hood.
@@ -414,8 +560,12 @@ export function createServer(): McpServer {
       title: "List Campaigns",
       description:
         "List campaigns with aggregated metrics (views, opens, installs, revenue). Supports pagination, search by name, date range filtering, and sorting.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         page: z.number().optional().describe("Page number (default: 1)"),
         per_page: z.number().optional().describe("Results per page (default: 20)"),
         term: z.string().optional().describe("Search by campaign name"),
@@ -424,20 +574,50 @@ export function createServer(): McpServer {
           .optional()
           .describe("Sort by: name, created_at, views, opens, installs, revenue"),
         ascendent: z.boolean().optional().describe("Sort ascending (default: false = descending)"),
-        start_date: z.string().optional().describe("Metrics start date (YYYY-MM-DD, default: 30 days ago)"),
+        start_date: z
+          .string()
+          .optional()
+          .describe("Metrics start date (YYYY-MM-DD, default: 30 days ago)"),
         end_date: z.string().optional().describe("Metrics end date (YYYY-MM-DD, default: today)"),
-        platform: z.string().optional().describe("Filter metrics by platform: ios, android, desktop, web"),
+        platform: z
+          .string()
+          .optional()
+          .describe("Filter metrics by platform: ios, android, desktop, web"),
         archived: z.boolean().optional().describe("Filter by archived status"),
-      },
+      }),
     },
     (
-      { project_id, page, per_page, term, sort_by, ascendent, start_date, end_date, platform, archived },
+      {
+        project_id,
+        page,
+        per_page,
+        term,
+        sort_by,
+        ascendent,
+        start_date,
+        end_date,
+        platform,
+        archived,
+      },
       extra,
     ) =>
       runWithAuth(extra, (token) =>
-        handleListCampaigns(token, project_id, {
-          page, per_page, term, sort_by, ascendent, start_date, end_date, platform, archived,
-        }),
+        handleListCampaigns(
+          token,
+          project_id,
+          {
+            page,
+            per_page,
+            term,
+            sort_by,
+            ascendent,
+            start_date,
+            end_date,
+            platform,
+            archived,
+          },
+          client,
+        ),
       ),
   );
 
@@ -447,13 +627,17 @@ export function createServer(): McpServer {
       title: "Archive Campaign",
       description:
         "Archive a campaign and deactivate all its links. This action cannot be undone. Always confirm with the user before calling.",
-      inputSchema: {
-        project_id: z.string().describe("Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)"),
+      inputSchema: z.object({
+        project_id: z
+          .string()
+          .describe(
+            "Prod or Test Project ID from get_status (use the Prod/Test Project ID columns, NOT the instance ID)",
+          ),
         campaign_id: z.number().describe("Campaign ID from list_campaigns"),
-      },
+      }),
     },
     ({ project_id, campaign_id }, extra) =>
-      runWithAuth(extra, (token) => handleArchiveCampaign(token, project_id, campaign_id)),
+      runWithAuth(extra, (token) => handleArchiveCampaign(token, project_id, campaign_id, client)),
   );
 
   return server;

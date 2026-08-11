@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "developmentBranch",
+    "releasePolicy",
+    "libraries"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 4 },
+    "repository": { "type": "string", "format": "uri" },
+    "developmentBranch": { "type": "string", "minLength": 1 },
+    "releasePolicy": { "const": "immutable-tag" },
+    "libraries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "lifecycle": { "enum": ["internal", "archived"] }
+              },
+              "required": ["lifecycle"]
+            },
+            "then": {
+              "properties": { "releaseStatus": { "const": "released" } }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "id": {
+                  "enum": ["android", "javascript", "react-native"]
+                }
+              },
+              "required": ["id"]
+            },
+            "then": {
+              "properties": { "distribution": {} },
+              "required": ["distribution"]
+            }
+          }
+        ],
+        "required": [
+          "id",
+          "lifecycle",
+          "displayName",
+          "ecosystem",
+          "packageName",
+          "sourcePath",
+          "license",
+          "licensePath",
+          "versionSource",
+          "sourceVersion",
+          "latestReleaseVersion",
+          "releaseRef",
+          "releaseStatus",
+          "releaseSha",
+          "install"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "lifecycle": { "enum": ["active", "internal", "archived"] },
+          "displayName": { "type": "string", "minLength": 1 },
+          "ecosystem": { "type": "string", "minLength": 1 },
+          "packageName": { "type": "string", "minLength": 1 },
+          "candidatePackageName": { "type": "string", "minLength": 1 },
+          "sourcePath": { "type": "string", "minLength": 1 },
+          "license": { "const": "MIT" },
+          "licensePath": { "type": "string", "minLength": 1 },
+          "versionSource": { "type": "string", "minLength": 1 },
+          "sourceVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+          },
+          "latestReleaseVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+          },
+          "releaseRef": { "type": "string", "minLength": 1 },
+          "releaseStatus": { "enum": ["released", "pending-release"] },
+          "releaseSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "surfaceManifest": { "type": "string" },
+          "notes": { "type": "string" },
+          "install": { "type": "string", "minLength": 1 },
+          "candidateInstall": { "type": "string", "minLength": 1 },
+          "distribution": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "registryKind",
+              "repository",
+              "registry",
+              "publicMetadata",
+              "anonymousInstallable",
+              "authentication"
+            ],
+            "properties": {
+              "repository": {
+                "const": "mbzadev/superboard-platform"
+              },
+              "registryKind": {
+                "enum": ["github-packages-npm", "github-packages-maven"]
+              },
+              "registry": { "type": "string", "format": "uri" },
+              "publicMetadata": { "type": "boolean" },
+              "anonymousInstallable": { "type": "boolean" },
+              "authentication": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["required", "tokenEnvironmentVariable"],
+                "properties": {
+                  "required": { "type": "boolean" },
+                  "tokenEnvironmentVariable": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]+$"
+                  },
+                  "usernameEnvironmentVariable": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]+$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

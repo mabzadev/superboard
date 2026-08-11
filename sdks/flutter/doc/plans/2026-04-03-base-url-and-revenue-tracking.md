@@ -242,7 +242,7 @@ Add before the `onDeeplinkReceived` stream getter (before line 119):
 
   /// Log a custom purchase for revenue tracking
   ///
-  /// Tracks a non-store purchase (e.g. Stripe, PayPal) for revenue attribution.
+  /// Tracks a non-store purchase for revenue attribution.
   ///
   /// [type] - The transaction type: buy, cancel, or refund
   /// [priceInCents] - The price in cents (e.g. 999 for $9.99)
@@ -518,3 +518,6 @@ Expected: Build succeeds. This confirms the Android native SDK accepts the `base
 ```bash
 git add -A && git commit -m "fix: address build issues"
 ```
+> Historical OpenGrow 2.x implementation plan. Retained for release forensics
+> only; use the SuperBoard 3 API and migration section in `../../README.md` for
+> current integration instructions.

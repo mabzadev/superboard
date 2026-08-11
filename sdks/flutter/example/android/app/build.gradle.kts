@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "io.opengrow.example"
+    namespace = "io.superboard.example"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,15 +20,21 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.opengrow.example"
+        applicationId = "io.superboard.example"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["OPENGROW_API_KEY"] =
-            System.getenv("OPENGROW_API_KEY") ?: "opengrow-example-key"
+        manifestPlaceholders["SUPERBOARD_API_KEY"] =
+            System.getenv("SUPERBOARD_API_KEY")
+                ?: System.getenv("OPENGROW_API_KEY")
+                ?: ""
+        manifestPlaceholders["SUPERBOARD_BASE_URL"] =
+            System.getenv("SUPERBOARD_BASE_URL")
+                ?: System.getenv("OPENGROW_BASE_URL")
+                ?: ""
     }
 
     buildTypes {

@@ -2,14 +2,19 @@
 
 ## Overview
 
-OpenGrow is an iOS SDK library for deep linking, universal linking, in-app messaging, and event tracking. Distributed via SPM and CocoaPods. No external dependencies.
+OpenGrow is an iOS SDK library for deep linking, universal linking, in-app
+messaging, and event tracking. The published SDK is distributed through Swift
+Package Manager. Its podspec is retained for immutable Git-pinned native
+integration such as React Native, not as a CocoaPods Trunk release. No external
+dependencies.
 
 ## Tech Stack
 
 - **Language:** Swift 5.9+
 - **Platform:** iOS 13.0+
 - **UI:** UIKit with XIB files (not SwiftUI)
-- **Package Managers:** SPM (primary), CocoaPods (secondary)
+- **Package Manager:** Swift Package Manager (published); direct podspec only
+  for Git-pinned native integration
 - **Testing:** XCTest with protocol-based mocking
 - **Storage:** Keychain, UserDefaults, NSCoding-based DataCache
 - **Networking:** URLSession with custom BaseService abstraction

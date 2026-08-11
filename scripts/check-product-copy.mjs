@@ -6,7 +6,6 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const sourceRoots = [
   'apps/dashboard/src/app',
   'apps/dashboard/src/components',
-  'docs',
   'sdks/flutterflow/lib',
   'sdks/flutterflow_messaging/lib',
   'sdks/flutter/lib',
@@ -16,9 +15,11 @@ const sourceRoots = [
   'sdks/android/OpenGrow/OpenGrow/src/main',
   'workers/api/src',
   'workers/billing/src',
-  'workers/growth/src',
   'workers/messaging/src',
 ];
+// Engineering documentation and migration runbooks are intentionally excluded:
+// they may be localized and may name the deployment they document. This gate is
+// limited to copy that can ship in a product surface or reusable SDK.
 const extensions = new Set(['.dart', '.html', '.js', '.jsx', '.kt', '.md', '.swift', '.ts', '.tsx', '.xml']);
 const ignoredSegments = new Set(['.dart_tool', '.next', '.open-next', 'build', 'node_modules', 'test', 'tests']);
 const frenchDiacritics = /[àâäçéèêëîïôöùûüÿœæ]/iu;

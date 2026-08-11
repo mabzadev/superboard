@@ -28,7 +28,6 @@ function redirectFixture(overrides: Record<string, unknown> = {}) {
       show_preview_android: null,
       config_show_preview_ios: 0,
       config_show_preview_android: 0,
-      quota_exceeded: 0,
       generic_title: null,
       generic_subtitle: null,
       generic_image_url: null,
@@ -143,19 +142,6 @@ describe('public redirects', () => {
     expect(root.headers.get('location')).toBe('https://dashboard.test');
     expect(unknown.status).toBe(302);
     expect(unknown.headers.get('location')).toBe('https://dashboard.test');
-  });
-
-  it('stops before side effects when quota is exceeded', async () => {
-    const { env, state } = redirectFixture({ quota_exceeded: 1 });
-    const response = await redirectRoutes.request('/promo', {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'CF-Connecting-IP': '203.0.113.10' },
-    }, env);
-
-    expect(response.status).toBe(402);
-    expect(await response.text()).toContain('Link temporarily unavailable');
-    expect(state.devices).toHaveLength(0);
-    expect(state.actions).toHaveLength(0);
-    expect(state.events).toHaveLength(0);
   });
 
   it('creates an action but suppresses view events for bots', async () => {

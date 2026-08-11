@@ -1,8 +1,8 @@
 import { Env } from '../types';
-import { sendMail } from './mail';
-import { isFullAccess } from './deployment';
-import { enqueueStoreReviewResponseRetries } from './store-reviews';
-import { enqueueNegativeReviewRecovery, enqueuePaywallAbandonmentRecovery } from './growth-delivery';
+import { migrateLegacyPushCredentials } from './push-credentials';
+import { migrateLegacyBearerTokenStorage } from './token-storage';
+import { migrateLegacyOtpSecrets } from './auth-credentials';
+import { cleanupDashboardAuthRateLimits } from './auth-rate-limit';
 
 const EVENT_METRICS = {
   views: "SUM(CASE WHEN event = 'view' THEN 1 ELSE 0 END)",
@@ -25,85 +25,6 @@ function recentDates(days: number): string[] {
   const dates: string[] = [];
   for (let i = days - 1; i >= 0; i -= 1) dates.push(dateDaysAgo(i));
   return dates;
-}
-
-function freeMauCount(env: Env): number {
-  const parsed = Number(env.FREE_MAU_COUNT || 5000);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 5000;
-}
-
-function monthStart(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
-}
-
-async function currentMau(db: D1Database, instanceId: number | string, startDate = monthStart()): Promise<number> {
-  const row = await db.prepare(`
-    SELECT COUNT(DISTINCT e.device_id) AS total
-    FROM events e
-    JOIN projects p ON p.id = e.project_id
-    WHERE p.instance_id = ?
-      AND date(e.created_at) >= date(?)
-  `).bind(String(instanceId), startDate).first<{ total: number }>();
-  return Number(row?.total || 0);
-}
-
-async function activeEnterpriseLimit(db: D1Database, instanceId: number | string): Promise<number | null> {
-  const row = await db.prepare(`
-    SELECT total_maus, seats
-    FROM enterprise_subscriptions
-    WHERE instance_id = ?
-      AND COALESCE(active, CASE WHEN status = 'active' THEN 1 ELSE 0 END, 1) = 1
-      AND (start_date IS NULL OR date(start_date) <= date('now'))
-      AND (end_date IS NULL OR date(end_date) >= date('now'))
-    ORDER BY datetime(created_at) DESC
-    LIMIT 1
-  `).bind(String(instanceId)).first<{ total_maus: number | null; seats: number | null }>().catch(() => null);
-  const limit = Number(row?.total_maus || row?.seats || 0);
-  return limit > 0 ? limit : null;
-}
-
-async function hasPaidStripeSubscription(db: D1Database, instanceId: number | string): Promise<boolean> {
-  const row = await db.prepare(`
-    SELECT id
-    FROM stripe_subscriptions
-    WHERE instance_id = ?
-      AND status IN ('active', 'trialing', 'past_due')
-    LIMIT 1
-  `).bind(String(instanceId)).first<{ id: string }>().catch(() => null);
-  return !!row;
-}
-
-async function ownerEmails(db: D1Database, instanceId: number | string): Promise<string[]> {
-  const rows = await db.prepare(`
-    SELECT DISTINCT u.email
-    FROM instance_roles ir
-    JOIN users u ON u.id = ir.user_id
-    WHERE ir.instance_id = ?
-      AND ir.role IN ('owner', 'admin')
-      AND u.email IS NOT NULL
-  `).bind(String(instanceId)).all<{ email: string }>().catch(() => ({ results: [] }));
-  return (rows.results || []).map((row) => row.email).filter(Boolean);
-}
-
-async function sendQuotaEmail(env: Env, instance: any, kind: 'warning' | 'exceeded', current: number, limit: number): Promise<boolean> {
-  const recipients = await ownerEmails(env.DB, instance.id);
-  if (!recipients.length) return false;
-  const subject = kind === 'exceeded' ? 'OpenGrow quota exceeded' : 'OpenGrow quota warning';
-  const text = kind === 'exceeded'
-    ? `Workspace ${instance.uri_scheme} exceeded its monthly active user quota (${current}/${limit}).`
-    : `Workspace ${instance.uri_scheme} is close to its monthly active user quota (${current}/${limit}).`;
-  let sent = false;
-  for (const to of recipients) {
-    await sendMail(env, {
-      to,
-      subject,
-      text,
-      html: `<p>${text}</p>`,
-    });
-    sent = true;
-  }
-  return sent;
 }
 
 export async function cleanupExpiredMcp(db: D1Database): Promise<{ authorizationCodes: number; tokens: number; clients: number }> {
@@ -171,99 +92,6 @@ export async function mergeDuplicateVisitors(db: D1Database): Promise<number> {
     }
   }
   return merged;
-}
-
-export async function updateQuotaStates(env: Env): Promise<{
-  checked: number;
-  exceeded: number;
-  warnings: number;
-  emailsSent: number;
-  emailsSkipped: number;
-}> {
-  const instances = await env.DB.prepare('SELECT id, uri_scheme, quota_exceeded, last_quota_warning_sent_at, last_quota_exceeded_sent_at FROM instances')
-    .all<any>();
-  const result = { checked: 0, exceeded: 0, warnings: 0, emailsSent: 0, emailsSkipped: 0 };
-
-  if (isFullAccess(env)) {
-    await env.DB.prepare(`
-      UPDATE instances
-      SET quota_exceeded = 0,
-          last_quota_warning_sent_at = NULL,
-          last_quota_exceeded_sent_at = NULL,
-          updated_at = datetime('now')
-      WHERE COALESCE(quota_exceeded, 0) != 0
-         OR last_quota_warning_sent_at IS NOT NULL
-         OR last_quota_exceeded_sent_at IS NOT NULL
-    `).run();
-    result.checked = instances.results?.length || 0;
-    return result;
-  }
-
-  for (const instance of instances.results || []) {
-    result.checked += 1;
-    const enterpriseLimit = await activeEnterpriseLimit(env.DB, instance.id);
-    const paidStripe = await hasPaidStripeSubscription(env.DB, instance.id);
-    const limit = enterpriseLimit || freeMauCount(env);
-    const current = await currentMau(env.DB, instance.id);
-    const exceeded = !paidStripe && current > limit;
-    const warning = !exceeded && !paidStripe && current >= Math.floor(limit * 0.8);
-
-    await env.DB.prepare('UPDATE instances SET quota_exceeded = ?, updated_at = datetime("now") WHERE id = ?')
-      .bind(exceeded ? 1 : 0, instance.id).run();
-    if (exceeded) result.exceeded += 1;
-    if (warning) result.warnings += 1;
-
-    const shouldSendExceeded = exceeded && (!instance.last_quota_exceeded_sent_at || Date.parse(instance.last_quota_exceeded_sent_at) < Date.now() - 7 * 86400_000);
-    const shouldSendWarning = warning && (!instance.last_quota_warning_sent_at || Date.parse(instance.last_quota_warning_sent_at) < Date.now() - 7 * 86400_000);
-    const kind = shouldSendExceeded ? 'exceeded' : shouldSendWarning ? 'warning' : null;
-    if (!kind) continue;
-
-    try {
-      if (await sendQuotaEmail(env, instance, kind, current, limit)) {
-        result.emailsSent += 1;
-        const column = kind === 'exceeded' ? 'last_quota_exceeded_sent_at' : 'last_quota_warning_sent_at';
-        await env.DB.prepare(`UPDATE instances SET ${column} = datetime('now'), updated_at = datetime('now') WHERE id = ?`)
-          .bind(instance.id).run();
-      } else {
-        result.emailsSkipped += 1;
-      }
-    } catch (error: any) {
-      result.emailsSkipped += 1;
-      console.warn(JSON.stringify({
-        event: 'quota_email_skipped',
-        instance_id: instance.id,
-        kind,
-        error: error?.message || String(error),
-      }));
-    }
-  }
-
-  return result;
-}
-
-export async function precomputeEnterpriseMau(env: Env): Promise<number> {
-  const rows = await env.DB.prepare(`
-    SELECT id, instance_id, metadata
-    FROM enterprise_subscriptions
-    WHERE COALESCE(active, CASE WHEN status = 'active' THEN 1 ELSE 0 END, 1) = 1
-  `).all<{ id: string; instance_id: string; metadata: string | null }>().catch(() => ({ results: [] }));
-
-  let updated = 0;
-  for (const row of rows.results || []) {
-    const metadata = (() => {
-      try {
-        return row.metadata ? JSON.parse(row.metadata) : {};
-      } catch {
-        return {};
-      }
-    })();
-    metadata.current_maus = await currentMau(env.DB, row.instance_id);
-    metadata.current_maus_computed_at = new Date().toISOString();
-    await env.DB.prepare('UPDATE enterprise_subscriptions SET metadata = ?, updated_at = datetime("now") WHERE id = ?')
-      .bind(JSON.stringify(metadata), row.id).run();
-    updated += 1;
-  }
-  return updated;
 }
 
 export async function cleanupExpiredDownloads(env: Env): Promise<number> {
@@ -504,13 +332,13 @@ export async function runMaintenance(env: Env, days = 3) {
     dates: recentDates(days),
     expiredDownloadsDeleted: await cleanupExpiredDownloads(env),
     expiredMcp: await cleanupExpiredMcp(env.DB),
+    messagingRealtimeTicketsDeleted: await cleanupMessagingRealtimeTickets(env.DB),
     orphanedActionsDeleted: await cleanupOrphanedActions(env.DB),
     duplicateVisitorsMerged: await mergeDuplicateVisitors(env.DB),
-    quotaStates: await updateQuotaStates(env),
-    enterpriseMauRows: await precomputeEnterpriseMau(env),
-    reviewResponsesEnqueued: await enqueueStoreReviewResponseRetries(env),
-    paywallAbandonmentProjectionsEnqueued: await enqueuePaywallAbandonmentRecovery(env),
-    negativeReviewProjectionsEnqueued: await enqueueNegativeReviewRecovery(env),
+    pushCredentialsMigrated: await migrateLegacyPushCredentials(env),
+    bearerTokensMigrated: await migrateLegacyBearerTokenStorage(env),
+    otpSecretsMigrated: await migrateLegacyOtpSecrets(env),
+    authRateLimitKeysDeleted: await cleanupDashboardAuthRateLimits(env.DB),
     visitorDailyRows: 0,
     linkDailyRows: 0,
     projectActiveUserRows: 0,
@@ -525,4 +353,15 @@ export async function runMaintenance(env: Env, days = 3) {
   }
 
   return summary;
+}
+
+export async function cleanupMessagingRealtimeTickets(db: D1Database) {
+  const result = await db.prepare(`
+    DELETE FROM messaging_realtime_tickets
+    WHERE expires_at <= ? OR (consumed_at IS NOT NULL AND consumed_at <= ?)
+  `).bind(
+    new Date().toISOString(),
+    new Date(Date.now() - 86_400_000).toISOString(),
+  ).run().catch(() => ({ meta: { changes: 0 } } as D1Result));
+  return Number(result.meta?.changes || 0);
 }

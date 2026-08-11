@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { readApiJson } from '../lib/request-body';
 import { importPKCS8, importX509, jwtVerify, SignJWT } from 'jose';
 import { Env } from '../types';
 import { getOrCreateProject } from '../lib/db';
@@ -13,7 +14,10 @@ import {
   authenticateGooglePubSub,
   persistGooglePubSubAuthentication,
 } from '../lib/google-pubsub-auth';
+import { ingestBillingProviderEvent } from '../lib/billing-provider-ingress';
 import { classifyGooglePurchaseEnvironment, googlePlayWebhookIdentity } from '../lib/store-verification';
+import { timingSafeEqual } from '../lib/secrets';
+import { readJsonObjectLimited } from '../lib/http-limits';
 
 const iap = new Hono<{ Bindings: Env }>();
 iap.onError((error, c) => providerUnhandledHttpError(c, error));
@@ -90,8 +94,13 @@ async function googlePlayAccessToken(env: Env, serviceAccount: any): Promise<str
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion,
     }),
+    signal: AbortSignal.timeout(10_000),
   });
-  const payload: any = await response.json().catch(() => ({}));
+  const payload: any = await readJsonObjectLimited(
+    response,
+    262_144,
+    'Google OAuth response is too large',
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok) throw new Error(payload.error_description || payload.error || 'Google OAuth token request failed');
   return payload.access_token;
 }
@@ -122,8 +131,15 @@ async function fetchGooglePlayPurchase(env: Env, params: {
   const url = params.purchaseType === 'subscription'
     ? `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${purchaseToken}`
     : `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${encodeURIComponent(params.productId!)}/tokens/${purchaseToken}`;
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  const payload: any = await response.json().catch(() => ({}));
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  const payload: any = await readJsonObjectLimited(
+    response,
+    1_048_576,
+    'Google Play purchase response is too large',
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok) {
     throw new Error(payload?.error?.message || 'Google Play purchase verification failed');
   }
@@ -283,7 +299,7 @@ async function upsertPurchaseEvent(db: D1Database, event: {
 async function handleApple(c: any, test: boolean) {
   const instanceId = Number(c.req.param('path'));
   if (!instanceId) return providerHttpError(c, 'instance_invalid', 'Instance identifier is invalid', 422, false);
-  const body = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   const project = await projectForInstance(c.env.DB, instanceId, test);
   if (typeof body.signedPayload === 'string' && body.signedPayload && c.env.IAP_ALLOW_UNSIGNED_FIXTURES !== 'true') {
     const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.signedPayload)));
@@ -384,7 +400,7 @@ async function handleApple(c: any, test: boolean) {
 async function handleGoogle(c: any) {
   const instanceId = Number(c.req.param('path'));
   if (!instanceId) return providerHttpError(c, 'instance_invalid', 'Instance identifier is invalid', 422, false);
-  const body = await c.req.json().catch(() => ({}));
+  const body = await readApiJson(c.req.raw);
   const productionProject = await projectForInstance(c.env.DB, instanceId, false);
   let expectedEmail: string | null = null;
   if (/^Bearer\s+/i.test(c.req.header('Authorization') || '')) {
@@ -399,7 +415,6 @@ async function handleGoogle(c: any) {
     authentication = await authenticateGooglePubSub(c.env, c.req.raw, {
       instanceId,
       expectedEmail,
-      body,
     });
   } catch (error) {
     return providerTaggedHttpError(c, error, 'Google Pub/Sub authentication failed');
@@ -409,6 +424,53 @@ async function handleGoogle(c: any) {
     data = body.message?.data ? JSON.parse(atob(body.message.data)) : body;
   } catch {
     return providerHttpError(c, 'google_pubsub_payload_invalid', 'Google Pub/Sub payload is invalid', 400, false);
+  }
+  const pendingRefundReview = data.pendingRefundReviewNotification;
+  if (pendingRefundReview && typeof pendingRefundReview === 'object' && !Array.isArray(pendingRefundReview)) {
+    const orderId = String(pendingRefundReview.orderId || '').trim();
+    const pendingRefundToken = String(pendingRefundReview.pendingRefundToken || '').trim();
+    const pubsubMessageId = String(body.message?.messageId || body.message?.message_id || '').trim();
+    if (!orderId || !pendingRefundToken || !pubsubMessageId) {
+      return providerHttpError(c, 'google_refund_review_invalid', 'Google pending refund review data is incomplete', 400, false);
+    }
+    const purchase = await c.env.DB.prepare(`
+      SELECT t.project_id, t.environment
+      FROM billing_transactions t
+      JOIN projects p ON p.id = t.project_id
+      WHERE p.instance_id = ? AND t.store = 'google'
+        AND (t.order_id = ? OR t.store_transaction_id = ?)
+      ORDER BY COALESCE(t.event_occurred_at, t.created_at) DESC
+      LIMIT 1
+    `).bind(instanceId, orderId, orderId).first() as { project_id: string; environment: 'sandbox' | 'production' } | null;
+    const projectId = String(purchase?.project_id || productionProject.id);
+    const environment: 'sandbox' | 'production' = purchase?.environment === 'sandbox' ? 'sandbox' : 'production';
+    const eventOccurredAt = msDate(data.eventTimeMillis) || new Date().toISOString();
+    try {
+      await persistGooglePubSubAuthentication(c.env.DB, productionProject.id, authentication);
+      const request = {
+        projectId,
+        store: 'google' as const,
+        environment,
+        externalEventId: pubsubMessageId,
+        eventType: 'PENDING_REFUND_REVIEW_CHARGEBACK',
+        payload: JSON.stringify(data),
+        job: {
+          type: 'billing.google.refund.review' as const,
+          projectId,
+          eventOccurredAt,
+          environment,
+        },
+      };
+      const result = billingServiceEnabled(c.env)
+        ? await ingestProviderEventWithBillingAuthority(c.env, request)
+        : await ingestBillingProviderEvent(c.env, request);
+      return c.json({
+        message: result.processed ? 'Google refund review already processed' : 'Google refund review accepted',
+        duplicate: result.duplicate,
+      }, result.processed ? 200 : 202);
+    } catch (error) {
+      return providerTaggedHttpError(c, error, 'Google refund review could not be accepted');
+    }
   }
   const notification = data.subscriptionNotification || data.oneTimeProductNotification || data.voidedPurchaseNotification || data;
   const notificationType = String(notification.notificationType || data.notificationType || (data.voidedPurchaseNotification ? 'VOIDED_PURCHASE' : 'PURCHASED'));
@@ -602,7 +664,8 @@ iap.post('/apple/test/:path', (c) => handleApple(c, true));
 iap.post('/google/:path', handleGoogle);
 
 iap.post('/reconcile_subscriptions', async (c) => {
-  if (!c.env.IAP_PROCESS_KEY || c.req.header('X-API-KEY') !== c.env.IAP_PROCESS_KEY) {
+  const provided = c.req.header('X-API-KEY');
+  if (!c.env.IAP_PROCESS_KEY || !provided || !await timingSafeEqual(provided, c.env.IAP_PROCESS_KEY)) {
     return c.json({ error: 'Forbidden' }, 403);
   }
   const rows = await c.env.DB.prepare(`

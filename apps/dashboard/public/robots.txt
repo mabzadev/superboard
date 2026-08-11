@@ -1,15 +1,2 @@
 User-agent: *
-Allow: /
-Disallow: /dashboard
-Disallow: /dynamic_links
-Disallow: /link_behaviour
-Disallow: /messaging
-Disallow: /revenue
-Disallow: /settings
-Disallow: /account
-Disallow: /developers
-Disallow: /audience
-Disallow: /accept-invite
-Disallow: /new_password
-
-Sitemap: https://app.opengrow.io/sitemap.xml
+Disallow: /

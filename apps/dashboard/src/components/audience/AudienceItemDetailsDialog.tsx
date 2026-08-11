@@ -100,7 +100,7 @@ const AudienceItemDetailsDialog = ({
         <DialogHeader>
           <div className="flex items-center gap-4 p-4 w-full">
             <DialogTitle className="font-semibold text-md">
-              Visitor Details
+              Customer details
             </DialogTitle>
             <button
               className="ml-auto"

@@ -1,0 +1,660 @@
+{
+  "$schema": "../../schemas/flutterflow-client-inventory.schema.json",
+  "schemaVersion": 1,
+  "application": "vocostar",
+  "project": { "id": "vocal-transform-z2j7dp", "name": "VocoStar" },
+  "sourceSnapshot": "config/flutterflow-sources/vocostar.json",
+  "migrationPlan": "config/flutterflow-migrations/vocostar.json",
+  "surfaceManifest": "config/flutterflow-custom-code.json",
+  "receipt": {
+    "reviewedExportTimestamp": "2026-08-09T22:47:59.485414Z",
+    "currentStatus": "reviewed-export-receipt-replaced",
+    "reason": "A later successful dry-run replaced .flutterflow/last_run.json; the reviewed export remains the AS-IS inventory but cannot currently claim snapshotVerified=true."
+  },
+  "inventory": {
+    "pages": [
+      {
+        "names": ["index"],
+        "classification": "common",
+        "authority": "identity",
+        "replacementSymbols": ["SuperBoardBootstrap"],
+        "phase": "identity-runtime",
+        "gate": "identity-secure-session-wired"
+      },
+      {
+        "names": [
+          "onboard00",
+          "onboard01",
+          "onboard02",
+          "onboard03",
+          "onboard04",
+          "onboard05"
+        ],
+        "classification": "remove",
+        "authority": "onboardings",
+        "replacementSymbols": ["SuperBoardOnboarding"],
+        "phase": "onboardings-marketing",
+        "gate": "legacy-onboarding-pages-removed"
+      },
+      {
+        "names": [
+          "user_clone",
+          "user_vocals",
+          "user_library",
+          "user_record_audio",
+          "user_record_text",
+          "user_record_video",
+          "user_upload",
+          "user_player_media"
+        ],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": [
+          "superboardApplicationCreateCustomJobJson",
+          "superboardApplicationListCustomJobsJson"
+        ],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      },
+      {
+        "names": ["user_link_account", "user_sign_account", "settings_user"],
+        "classification": "configurable",
+        "authority": "identity",
+        "replacementSymbols": [
+          "superboardApplicationSignInProviderJson",
+          "superboardApplicationLinkProviderJson"
+        ],
+        "phase": "identity-runtime",
+        "gate": "identity-authority-wired"
+      },
+      {
+        "names": ["settings_support", "settings_ticket"],
+        "classification": "common",
+        "authority": "support",
+        "replacementSymbols": ["superboardSupportInitializeAuthenticated"],
+        "phase": "support",
+        "gate": "support-authority-wired"
+      },
+      {
+        "names": ["settings_language", "privacy_policy", "terms_of_use"],
+        "classification": "configurable",
+        "authority": "local-ui",
+        "replacementSymbols": [],
+        "phase": null,
+        "gate": null
+      }
+    ],
+    "components": [
+      {
+        "names": [
+          "ButtonLanguage",
+          "ButtonSettings",
+          "ButtonSettingsLarge",
+          "Header",
+          "HeaderMedia",
+          "HeaderOnBoarding",
+          "MenuBottom"
+        ],
+        "classification": "configurable",
+        "authority": "local-ui",
+        "replacementSymbols": [],
+        "phase": null,
+        "gate": null
+      },
+      {
+        "names": [
+          "CardCloneList",
+          "CardHotReplay",
+          "CardMediaList",
+          "CardVocalList",
+          "CardVocalMedia",
+          "InfoLibrary"
+        ],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": [],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      },
+      {
+        "names": ["CardPaywall", "CardToken", "FeatureItem", "Paycreditv1"],
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": ["SuperBoardPaywall"],
+        "phase": "billing",
+        "gate": "billing-authority-wired"
+      }
+    ],
+    "appState": [
+      {
+        "names": ["appBoard", "appQuestions", "appReponse"],
+        "persisted": true,
+        "classification": "remove",
+        "authority": "onboardings",
+        "replacementSymbols": ["SuperBoardOnboarding"],
+        "phase": "onboardings-marketing",
+        "gate": "legacy-onboarding-loader-removed"
+      },
+      {
+        "names": ["appPaywall"],
+        "persisted": true,
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": ["SuperBoardPaywall"],
+        "phase": "billing",
+        "gate": "billing-authority-wired"
+      },
+      {
+        "names": ["appMenu", "lightMode"],
+        "persisted": true,
+        "classification": "configurable",
+        "authority": "local-ui",
+        "replacementSymbols": [],
+        "phase": null,
+        "gate": null
+      },
+      {
+        "names": [
+          "appVocals",
+          "appUserMedias",
+          "appUserVocals",
+          "userCategories",
+          "userHasMedia",
+          "userHasVocals",
+          "userVocals"
+        ],
+        "persisted": true,
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": ["superboardApplicationListCustomJobsJson"],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      },
+      {
+        "names": [
+          "appRefresh",
+          "appWall",
+          "userBoardingProgress",
+          "uploadProgress"
+        ],
+        "persisted": false,
+        "classification": "configurable",
+        "authority": "local-ui",
+        "replacementSymbols": [],
+        "phase": null,
+        "gate": null
+      },
+      {
+        "names": ["userBoardingView", "userPaywallView"],
+        "persisted": true,
+        "classification": "configurable",
+        "authority": "app",
+        "replacementSymbols": [],
+        "phase": "onboardings-marketing",
+        "gate": "onboardings-authority-wired"
+      },
+      {
+        "names": ["authAccessToken", "authExpiresIn", "authRefreshToken"],
+        "persisted": true,
+        "classification": "remove",
+        "authority": "identity",
+        "replacementSymbols": ["superboardApplicationRestoreSessionJson"],
+        "phase": "identity-runtime",
+        "gate": "persisted-access-token-removed"
+      },
+      {
+        "names": ["authUserData", "authUserId", "userDeviceID"],
+        "persisted": true,
+        "classification": "common",
+        "authority": "identity",
+        "replacementSymbols": ["superboardApplicationProfileJson"],
+        "phase": "identity-runtime",
+        "gate": "identity-authority-wired"
+      },
+      {
+        "names": ["opengrowPurchasesReady"],
+        "persisted": false,
+        "classification": "common",
+        "authority": "billing",
+        "replacementSymbols": ["superboardGetCustomerInfoJson"],
+        "phase": "billing",
+        "gate": "billing-authority-wired"
+      },
+      {
+        "names": ["userCredits", "userPremium"],
+        "persisted": true,
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": [
+          "superboardGetVirtualCurrenciesJson",
+          "superboardGetCustomerInfoJson"
+        ],
+        "phase": "billing",
+        "gate": "client-entitlement-activation-removed"
+      },
+      {
+        "names": [
+          "supportContactId",
+          "supportPubsubToken",
+          "supportUnreadCount"
+        ],
+        "persisted": true,
+        "classification": "remove",
+        "authority": "support",
+        "replacementSymbols": ["superboardSupportInitializeAuthenticated"],
+        "phase": "support",
+        "gate": "legacy-support-init-removed"
+      },
+      {
+        "names": ["supportConversationId", "supportMessages"],
+        "persisted": false,
+        "classification": "remove",
+        "authority": "support",
+        "replacementSymbols": ["superboardSupportMessagesJson"],
+        "phase": "support",
+        "gate": "legacy-support-widget-removed"
+      },
+      {
+        "names": ["userFcmToken"],
+        "persisted": true,
+        "classification": "remove",
+        "authority": "notifications",
+        "replacementSymbols": ["superboardSetPushToken"],
+        "phase": "files-notifications",
+        "gate": "persisted-notification-token-removed"
+      }
+    ],
+    "structs": [
+      {
+        "names": ["appBoard", "appQuestion"],
+        "classification": "remove",
+        "authority": "onboardings",
+        "replacementSymbols": ["SuperBoardOnboarding"],
+        "phase": "onboardings-marketing",
+        "gate": "legacy-onboarding-loader-removed"
+      },
+      {
+        "names": ["appPaywall"],
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": ["SuperBoardPaywall"],
+        "phase": "billing",
+        "gate": "billing-authority-wired"
+      },
+      {
+        "names": ["appSupportMessages"],
+        "classification": "remove",
+        "authority": "support",
+        "replacementSymbols": ["superboardSupportMessagesJson"],
+        "phase": "support",
+        "gate": "legacy-support-widget-removed"
+      },
+      {
+        "names": ["user"],
+        "classification": "common",
+        "authority": "identity",
+        "replacementSymbols": ["superboardApplicationProfileJson"],
+        "phase": "identity-runtime",
+        "gate": "identity-authority-wired"
+      },
+      {
+        "names": ["appCategory"],
+        "classification": "configurable",
+        "authority": "app",
+        "replacementSymbols": [],
+        "phase": "onboardings-marketing",
+        "gate": "onboardings-authority-wired"
+      },
+      {
+        "names": ["appVocals", "userMedias", "userVocals"],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": [],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      }
+    ],
+    "apiCalls": [
+      {
+        "names": ["auth Logout"],
+        "classification": "remove",
+        "authority": "identity",
+        "replacementSymbols": ["superboardApplicationLogoutJson"],
+        "phase": "identity-runtime",
+        "gate": "legacy-auth-logout-endpoint-removed"
+      },
+      {
+        "names": ["Get App Board", "get App Questions"],
+        "classification": "remove",
+        "authority": "onboardings",
+        "replacementSymbols": ["SuperBoardOnboarding"],
+        "phase": "onboardings-marketing",
+        "gate": "legacy-onboarding-loader-removed"
+      },
+      {
+        "names": ["get App Categories"],
+        "classification": "configurable",
+        "authority": "app",
+        "replacementSymbols": [],
+        "phase": "onboardings-marketing",
+        "gate": "onboardings-authority-wired"
+      },
+      {
+        "names": [
+          "get App Vocals",
+          "get User Medias",
+          "post User Media",
+          "get User Vocals",
+          "post User Vocals"
+        ],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": [
+          "superboardApplicationCreateCustomJobJson",
+          "superboardApplicationListCustomJobsJson"
+        ],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      }
+    ],
+    "actionBlocks": [
+      {
+        "names": ["getAppOnBording"],
+        "classification": "remove",
+        "authority": "onboardings",
+        "replacementSymbols": ["SuperBoardOnboarding"],
+        "phase": "onboardings-marketing",
+        "gate": "legacy-onboarding-loader-removed"
+      },
+      {
+        "names": ["getAppPaywall", "paywallR1"],
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": ["SuperBoardPaywall"],
+        "phase": "billing",
+        "gate": "billing-authority-wired"
+      },
+      {
+        "names": ["getAppVocals", "getUserMedia"],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": ["superboardApplicationListCustomJobsJson"],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      },
+      {
+        "names": ["initUp"],
+        "classification": "common",
+        "authority": "identity",
+        "replacementSymbols": ["SuperBoardBootstrap"],
+        "phase": "identity-runtime",
+        "gate": "identity-secure-session-wired"
+      }
+    ],
+    "appEvents": [
+      {
+        "names": ["getAppOnBoarding"],
+        "classification": "remove",
+        "authority": "onboardings",
+        "replacementSymbols": ["SuperBoardOnboarding"],
+        "phase": "onboardings-marketing",
+        "gate": "legacy-onboarding-loader-removed"
+      },
+      {
+        "names": ["getAppPaywall"],
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": ["SuperBoardPaywall"],
+        "phase": "billing",
+        "gate": "billing-authority-wired"
+      },
+      {
+        "names": ["getUserMedia"],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": ["superboardApplicationListCustomJobsJson"],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      },
+      {
+        "names": ["getAppDatabase"],
+        "classification": "common",
+        "authority": "app",
+        "replacementSymbols": ["superboardApplicationRuntimePolicyJson"],
+        "phase": "identity-runtime",
+        "gate": "runtime-policy-wired"
+      }
+    ],
+    "customActions": [
+      {
+        "names": ["appCheckInternet", "userMediaCleanLocal"],
+        "classification": "configurable",
+        "authority": "client-native",
+        "replacementSymbols": [],
+        "phase": null,
+        "gate": null
+      },
+      {
+        "names": ["requestTrackingPermission"],
+        "classification": "configurable",
+        "authority": "marketing",
+        "replacementSymbols": ["superboardApplicationUpdateMarketingConsentJson"],
+        "phase": "onboardings-marketing",
+        "gate": "marketing-authority-wired"
+      },
+      {
+        "names": ["appCheckMaintenance", "appCheckUpdate"],
+        "classification": "common",
+        "authority": "app",
+        "replacementSymbols": ["superboardApplicationRuntimePolicyJson"],
+        "phase": "identity-runtime",
+        "gate": "runtime-policy-wired"
+      },
+      {
+        "names": [
+          "appGetPaywall",
+          "openGrowPaywall",
+          "userCreditsCheck",
+          "userCreditsUpdate"
+        ],
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": [
+          "SuperBoardPaywall",
+          "superboardGetCustomerInfoJson",
+          "superboardGetVirtualCurrenciesJson"
+        ],
+        "phase": "billing",
+        "gate": "billing-authority-wired"
+      },
+      {
+        "names": [
+          "initApp",
+          "signlinkWithApple",
+          "signlinkWithGoogle",
+          "userAuthenticate",
+          "userCleanManager",
+          "userGetMe",
+          "userRefreshAuth",
+          "userUpdateMe"
+        ],
+        "classification": "common",
+        "authority": "identity",
+        "replacementSymbols": [
+          "superboardApplicationRestoreSessionJson",
+          "superboardApplicationSignInProviderJson",
+          "superboardApplicationDeleteAccountJson"
+        ],
+        "phase": "identity-runtime",
+        "gate": "identity-authority-wired"
+      },
+      {
+        "names": ["supportFetchMessages", "supportInit", "supportSendMessage"],
+        "classification": "remove",
+        "authority": "support",
+        "replacementSymbols": [
+          "superboardSupportInitializeAuthenticated",
+          "superboardSupportMessagesJson",
+          "superboardSupportSendAdvanced"
+        ],
+        "phase": "support",
+        "gate": "support-authority-wired"
+      },
+      {
+        "names": ["userFCMToken"],
+        "classification": "remove",
+        "authority": "notifications",
+        "replacementSymbols": ["superboardSetPushToken"],
+        "phase": "files-notifications",
+        "gate": "legacy-notification-action-removed"
+      },
+      {
+        "names": ["userMediaUpload", "userMediaRemove"],
+        "classification": "remove",
+        "authority": "files",
+        "replacementSymbols": [
+          "superboardApplicationUploadFileJson",
+          "superboardApplicationDeleteFileJson"
+        ],
+        "phase": "files-notifications",
+        "gate": "files-authority-wired"
+      },
+      {
+        "names": [
+          "userCustomVocals",
+          "userHasMedias",
+          "userHasVocals",
+          "userMediaConverter",
+          "userMediaIndex",
+          "wsSubscribe",
+          "wsUnsubscribe"
+        ],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": [
+          "superboardApplicationCreateCustomJobJson",
+          "superboardApplicationListCustomJobsJson"
+        ],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      }
+    ],
+    "customFunctions": [
+      {
+        "names": ["appBoard", "appQuestions"],
+        "classification": "remove",
+        "authority": "onboardings",
+        "replacementSymbols": ["SuperBoardOnboarding"],
+        "phase": "onboardings-marketing",
+        "gate": "legacy-onboarding-loader-removed"
+      },
+      {
+        "names": ["appCategories"],
+        "classification": "configurable",
+        "authority": "app",
+        "replacementSymbols": [],
+        "phase": "onboardings-marketing",
+        "gate": "onboardings-authority-wired"
+      },
+      {
+        "names": ["appVocalsMix"],
+        "classification": "vocostar",
+        "authority": "custom-jobs",
+        "replacementSymbols": [],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      },
+      {
+        "names": ["parseDate"],
+        "classification": "common",
+        "authority": "local-ui",
+        "replacementSymbols": [],
+        "phase": null,
+        "gate": null
+      },
+      {
+        "names": ["parseJson", "parseListString"],
+        "classification": "remove",
+        "authority": "app",
+        "replacementSymbols": [],
+        "phase": "identity-runtime",
+        "gate": "runtime-policy-wired"
+      }
+    ],
+    "customWidgets": [
+      {
+        "names": [
+          "AppBarProgress",
+          "AppMediaPlayer",
+          "CenteredScrollMenu",
+          "TextArea"
+        ],
+        "classification": "vocostar",
+        "authority": "local-ui",
+        "replacementSymbols": [],
+        "phase": "custom-jobs",
+        "gate": "custom-jobs-authority-wired"
+      },
+      {
+        "names": ["AudioRecord", "CameraRecord"],
+        "classification": "vocostar",
+        "authority": "client-native",
+        "replacementSymbols": [],
+        "phase": "quality",
+        "gate": "flutterflow-validation-errors-cleared"
+      },
+      {
+        "names": ["SupportChatWidget"],
+        "classification": "remove",
+        "authority": "support",
+        "replacementSymbols": ["superboardSupportInitializeAuthenticated"],
+        "phase": "support",
+        "gate": "legacy-support-widget-removed"
+      }
+    ]
+  },
+  "historicalRemoved": {
+    "customActions": [
+      {
+        "names": ["userLoginRevenueCat"],
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": ["superboardGetCustomerInfoJson"],
+        "phase": "billing",
+        "gate": "direct-revenuecat-login-removed"
+      },
+      {
+        "names": ["userSubscriptionActivate"],
+        "classification": "remove",
+        "authority": "billing",
+        "replacementSymbols": ["superboardGetCustomerInfoJson"],
+        "phase": "billing",
+        "gate": "client-entitlement-activation-removed"
+      }
+    ]
+  },
+  "dslTarget": {
+    "status": "versioned-not-applied-to-reviewed-export",
+    "implemented": [
+      "secure-session-bridge",
+      "provider-identity",
+      "logout-and-account-erasure",
+      "runtime-policy",
+      "push-registration",
+      "onboarding-remap",
+      "file-upload",
+      "custom-job-create",
+      "support-client-replacement",
+      "legacy-list-repair"
+    ],
+    "knownGaps": [
+      "billing-state-and-legacy-paywall-removal",
+      "marketing-consent-wiring",
+      "custom-job-list-detail-and-realtime-ticket",
+      "complete-files-delete-download",
+      "route-guard-audit",
+      "missing-assets-and-release-signing",
+      "typed-struct-name-drift"
+    ]
+  }
+}

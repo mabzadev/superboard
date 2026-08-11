@@ -19,8 +19,8 @@ Stream<String> get opengrowMessagingEventJsonStream => _realtimeEvents.stream;
 Future<bool> opengrowMessagingInitializeAuthenticated({
   required String applicationAccessToken,
   required int projectId,
-  String authGatewayUrl = 'https://api.vocostar.com',
-  String messagingUrl = 'https://messages.vocostar.com',
+  required String authGatewayUrl,
+  required String messagingUrl,
 }) async {
   if (applicationAccessToken.trim().isEmpty) {
     throw const OpenGrowMessagingException(
@@ -102,13 +102,21 @@ Future<bool> opengrowMessagingInitializeAuthenticated({
 Future<String> opengrowMessagingOpenConversation({
   required String clientConversationId,
   String? subject,
+  String? inboxId,
+  String customAttributesJson = '{}',
 }) async {
+  final customAttributes = decodeObject(customAttributesJson);
   final conversation = await _requiredClient.createConversation(
     clientConversationId: clientConversationId,
     subject: subject,
+    inboxId: inboxId,
+    customAttributes: customAttributes,
   );
   return conversation.id;
 }
+
+Future<String> opengrowMessagingGetConfigurationJson() async =>
+    jsonEncode(await _requiredClient.configuration());
 
 Future<String> opengrowMessagingListConversationsJson() async => jsonEncode(
   (await _requiredClient.conversations())
@@ -119,12 +127,39 @@ Future<String> opengrowMessagingListConversationsJson() async => jsonEncode(
           'priority': item.priority,
           'unread_count': item.unreadCount,
           'subject': item.subject,
+          'inbox_id': item.inboxId,
+          'assigned_team_id': item.assignedTeamId,
+          'custom_attributes': item.customAttributes,
+          'snoozed_until': item.snoozedUntil,
           'last_message_preview': item.lastMessagePreview,
           'last_message_at': item.lastMessageAt,
         },
       )
       .toList(growable: false),
 );
+
+Future<String> opengrowMessagingUpdateConversationJson({
+  required String conversationId,
+  String? status,
+  String? customAttributesJson,
+}) async {
+  final conversation = await _requiredClient.updateConversation(
+    conversationId,
+    status: status,
+    customAttributes: customAttributesJson == null
+        ? null
+        : decodeObject(customAttributesJson),
+  );
+  return jsonEncode({
+    'id': conversation.id,
+    'status': conversation.status,
+    'priority': conversation.priority,
+    'inbox_id': conversation.inboxId,
+    'assigned_team_id': conversation.assignedTeamId,
+    'custom_attributes': conversation.customAttributes,
+    'snoozed_until': conversation.snoozedUntil,
+  });
+}
 
 Future<String> opengrowMessagingMessagesJson(
   String conversationId, {
@@ -148,6 +183,34 @@ Future<String> opengrowMessagingSend({
   clientMessageId: clientMessageId,
 )).id;
 
+Future<String> opengrowMessagingSendAdvanced({
+  required String conversationId,
+  required String body,
+  required String clientMessageId,
+  String contentType = 'text',
+  String? replyToMessageId,
+  String metadataJson = '{}',
+}) async => (await _requiredClient.sendMessage(
+  conversationId,
+  body: body,
+  clientMessageId: clientMessageId,
+  contentType: contentType,
+  replyToMessageId: replyToMessageId,
+  metadata: decodeObject(metadataJson),
+)).id;
+
+Future<String> opengrowMessagingSubmitCsatJson({
+  required String conversationId,
+  required int rating,
+  String? feedback,
+}) async => jsonEncode(
+  await _requiredClient.submitCsat(
+    conversationId,
+    rating: rating,
+    feedback: feedback,
+  ),
+);
+
 Future<String> opengrowMessagingUploadAttachmentJson({
   required String conversationId,
   required Uint8List bytes,
@@ -165,7 +228,12 @@ Future<String> opengrowMessagingUploadAttachmentJson({
 Future<Uint8List> opengrowMessagingDownloadAttachment({
   required String conversationId,
   required String messageId,
-}) => _requiredClient.downloadAttachment(conversationId, messageId);
+  String? attachmentId,
+}) => _requiredClient.downloadAttachment(
+  conversationId,
+  messageId,
+  attachmentId: attachmentId,
+);
 
 Future<String> opengrowMessagingSendAttachment({
   required String conversationId,

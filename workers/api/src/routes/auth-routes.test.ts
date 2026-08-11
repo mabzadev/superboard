@@ -6,6 +6,7 @@ import usersRoutes from './users';
 import { Env } from '../types';
 import { hashPassword, signToken, verifyPassword } from '../lib/crypto';
 import { createFakeD1, FakeD1Call } from '../test/fake-d1';
+import { tokenDigest } from '../lib/token-storage';
 
 type UserState = {
   id: number;
@@ -87,7 +88,13 @@ async function authFixture() {
       { user_id: 3, instance_id: 10, role: 'admin' },
       { user_id: 4, instance_id: 10, role: 'member' },
     ],
-    oauthApps: [{ id: 20, uid: 'dashboard-client', secret: 'dashboard-secret' }],
+    oauthApps: [{
+      id: 20,
+      uid: 'dashboard-client',
+      secret: await tokenDigest('dashboard-secret'),
+      previous_secret: null as string | null,
+      previous_secret_valid: 0,
+    }],
     tokens: [] as TokenState[],
   };
 
@@ -99,10 +106,12 @@ async function authFixture() {
     SHORTLINK_DOMAIN: 'go.test',
     API_DOMAIN: 'api.test',
     SDK_DOMAIN: 'sdk.test',
+    APP_URL: 'https://dashboard.example.test',
     CORS_ORIGIN: '*',
     JWT_SECRET: 'auth-routes-secret',
     MAIL_PROVIDER: 'webhook',
     MAIL_WEBHOOK_URL: 'https://mail.test/send',
+    MAIL_FROM: 'OpenGrow <noreply@example.test>',
   } satisfies Env;
 
   return { env, state, db };
@@ -112,6 +121,10 @@ function authD1Handler(call: FakeD1Call, state: Awaited<ReturnType<typeof authFi
   const { op, sql, args } = call;
   const userById = (id: unknown) => state.users.find((user) => user.id === Number(id));
   const userByEmail = (email: unknown) => state.users.find((user) => user.email === String(email).toLowerCase());
+
+  if (op === 'first' && sql.includes('dashboard_auth_rate_limits')) {
+    return { attempt_count: 1 };
+  }
 
   if (op === 'first' && sql.includes('FROM oauth_applications WHERE uid = ? AND secret = ?')) {
     return state.oauthApps.find((app) => app.uid === args[0] && app.secret === args[1]) || null;
@@ -129,12 +142,12 @@ function authD1Handler(call: FakeD1Call, state: Awaited<ReturnType<typeof authFi
     return userByEmail(args[0]) || null;
   }
 
-  if (op === 'first' && sql.includes('FROM users WHERE invitation_token = ?')) {
-    return state.users.find((user) => user.invitation_token === args[0] && !user.invitation_accepted_at) || null;
+  if (op === 'first' && sql.includes('FROM users WHERE invitation_token')) {
+    return state.users.find((user) => args.includes(user.invitation_token || '') && !user.invitation_accepted_at) || null;
   }
 
-  if (op === 'first' && sql.includes('FROM users WHERE reset_password_token = ?')) {
-    const user = state.users.find((candidate) => candidate.reset_password_token === args[0] && candidate.reset_password_sent_at);
+  if (op === 'first' && sql.includes('FROM users WHERE reset_password_token')) {
+    const user = state.users.find((candidate) => args.includes(candidate.reset_password_token || '') && candidate.reset_password_sent_at);
     return user ? { id: user.id } : null;
   }
 
@@ -178,12 +191,12 @@ function authD1Handler(call: FakeD1Call, state: Awaited<ReturnType<typeof authFi
     return state.instances.find((instance) => instance.id === Number(args[0])) || null;
   }
 
-  if (op === 'first' && sql.includes('FROM oauth_access_tokens') && sql.includes('WHERE refresh_token = ?')) {
-    return state.tokens.find((candidate) => candidate.refresh_token === args[0] && !candidate.revoked_at) || null;
+  if (op === 'first' && sql.includes('FROM oauth_access_tokens') && sql.includes('refresh_token = ?')) {
+    return state.tokens.find((candidate) => args.includes(candidate.refresh_token) && !candidate.revoked_at) || null;
   }
 
-  if (op === 'first' && sql.includes('FROM oauth_access_tokens') && (sql.includes('WHERE token = ?') || sql.includes('WHERE oat.token = ?'))) {
-    const token = state.tokens.find((candidate) => candidate.token === args[0]);
+  if (op === 'first' && sql.includes('FROM oauth_access_tokens') && (sql.includes('token = ?') || sql.includes('token IN (?, ?)'))) {
+    const token = state.tokens.find((candidate) => args.includes(candidate.token));
     if (!token) return null;
     const user = userById(token.resource_owner_id);
     return { ...token, email: user?.email, name: user?.name };
@@ -234,7 +247,7 @@ function authD1Handler(call: FakeD1Call, state: Awaited<ReturnType<typeof authFi
       return true;
     }
     for (const token of state.tokens) {
-      if (token.token === args[0] || token.refresh_token === args[1]) token.revoked_at = new Date().toISOString();
+      if (args.includes(token.token) || args.includes(token.refresh_token)) token.revoked_at = new Date().toISOString();
     }
     return true;
   }
@@ -321,8 +334,25 @@ afterEach(() => {
 });
 
 describe('OAuth/dashboard auth routes', () => {
+  it('accepts the previous Dashboard secret only during the rotation overlap', async () => {
+    const { env, state } = await authFixture();
+    state.oauthApps[0].previous_secret = state.oauthApps[0].secret;
+    state.oauthApps[0].secret = await tokenDigest('rotated-dashboard-secret');
+    state.oauthApps[0].previous_secret_valid = 1;
+
+    expect((await passwordGrant(env)).status).toBe(200);
+    state.oauthApps[0].previous_secret_valid = 0;
+    expect((await passwordGrant(env)).status).toBe(401);
+    expect((await passwordGrant(env, {
+      client_secret: 'rotated-dashboard-secret',
+    })).status).toBe(200);
+  });
+
   it('rejects non-allowlisted registration before creating any records', async () => {
     const db = createFakeD1(({ op, sql }) => {
+      if (op === 'first' && sql.includes('dashboard_auth_rate_limits')) {
+        return { attempt_count: 1 };
+      }
       if (op === 'first' && sql.includes('FROM oauth_applications WHERE uid = ?')) {
         return { id: 20, uid: 'dashboard-client' };
       }
@@ -355,32 +385,14 @@ describe('OAuth/dashboard auth routes', () => {
     expect(db.calls.some((call) => call.sql.startsWith('INSERT INTO instances'))).toBe(false);
   });
 
-  it('returns unlimited full-access usage and disables Stripe mutations', async () => {
-    const { env } = await authFixture();
-    env.OPENGROW_ACCESS_MODE = 'full';
-    const tokenBody: any = await (await passwordGrant(env)).json();
-    const headers = { Authorization: `Bearer ${tokenBody.access_token}` };
-
-    const subscription = await instancesRoutes.request('/10/billing/subscription', { headers }, env);
-    expect(subscription.status).toBe(200);
-    await expect(subscription.json()).resolves.toMatchObject({
-      type: 'full',
-      unlimited: true,
-      current_maus: 0,
-      total_available: null,
-    });
-
-    const checkout = await instancesRoutes.request('/10/billing/subscriptions', {
-      method: 'POST',
-      headers,
-    }, env);
-    expect(checkout.status).toBe(409);
-  });
-
   it('rejects a revoked access token even when its JWT remains valid', async () => {
-    const { env } = await authFixture();
+    const { env, state } = await authFixture();
     const tokenResponse = await passwordGrant(env);
     const tokenBody: any = await tokenResponse.json();
+    expect(state.tokens[0].token).not.toBe(tokenBody.access_token);
+    expect(state.tokens[0].refresh_token).not.toBe(tokenBody.refresh_token);
+    expect(state.tokens[0].token).toMatch(/^[a-f0-9]{64}$/);
+    expect(state.tokens[0].refresh_token).toMatch(/^[a-f0-9]{64}$/);
 
     expect((await oauthRoutes.request('/token/info', {
       headers: { Authorization: `Bearer ${tokenBody.access_token}` },
@@ -471,12 +483,20 @@ describe('OAuth/dashboard auth routes', () => {
 
   it('runs password reset request and token-based password change', async () => {
     const { env, state } = await authFixture();
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ id: 'mail-1' }), { status: 200 })));
+    let resetMessage: any = null;
+    vi.stubGlobal('fetch', vi.fn(async (_input, init) => {
+      resetMessage = JSON.parse(String(init?.body || '{}'));
+      return new Response(JSON.stringify({ id: 'mail-1' }), { status: 200 });
+    }));
 
     const resetResponse = await usersRoutes.request('/reset_password', json({ email: 'owner@example.com' }), env);
     expect(resetResponse.status).toBe(200);
-    const resetToken = state.users[0].reset_password_token;
-    expect(resetToken).toBeTruthy();
+    const storedResetToken = state.users[0].reset_password_token;
+    expect(storedResetToken).toMatch(/^[a-f0-9]{64}$/);
+    const resetUrl = String(resetMessage.text).match(/https:\/\/\S+/)?.[0];
+    const resetToken = resetUrl ? new URL(resetUrl).searchParams.get('token') : null;
+    expect(resetToken).toMatch(/^[a-f0-9]{32}$/);
+    expect(storedResetToken).not.toBe(resetToken);
 
     const changeResponse = await usersRoutes.request('/change_password', json({
       reset_password_token: resetToken,

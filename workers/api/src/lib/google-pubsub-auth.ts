@@ -1,6 +1,7 @@
 import { decodeProtectedHeader, importJWK, jwtVerify, type JWK, type JWTPayload } from 'jose';
 import type { Env } from '../types';
 import { readTextLimited } from './http-limits';
+import { constantTimeEqual } from '@superboard/contracts/secret';
 
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 const GOOGLE_ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
@@ -26,7 +27,6 @@ export function googlePubSubAudience(apiDomain: string, instanceId: number | str
 export async function authenticateGooglePubSub(env: Env, request: Request, params: {
   instanceId: number;
   expectedEmail: string | null;
-  body: Record<string, unknown>;
 }): Promise<GooglePubSubAuthentication> {
   const audience = googlePubSubAudience(env.API_DOMAIN, params.instanceId);
   const authorization = request.headers.get('Authorization') || '';
@@ -50,11 +50,8 @@ export async function authenticateGooglePubSub(env: Env, request: Request, param
   }
 
   if (env.GOOGLE_PUBSUB_VERIFICATION_TOKEN) {
-    const url = new URL(request.url);
-    const supplied = url.searchParams.get('token')
-      || request.headers.get('X-Goog-Channel-Token')
-      || (typeof params.body.token === 'string' ? params.body.token : '');
-    if (supplied && timingSafeEqual(supplied, env.GOOGLE_PUBSUB_VERIFICATION_TOKEN)) {
+    const supplied = request.headers.get('X-Goog-Channel-Token') || '';
+    if (supplied && await constantTimeEqual(supplied, env.GOOGLE_PUBSUB_VERIFICATION_TOKEN)) {
       return { mode: 'legacy_token', email: null, audience, subject: null };
     }
   }
@@ -130,7 +127,10 @@ async function googleJwks(env: Env, forceRefresh: boolean): Promise<GoogleJwks> 
     const cached = await env.KV.get(JWKS_CACHE_KEY, 'json').catch(() => null) as GoogleJwks | null;
     if (validJwks(cached)) return cached;
   }
-  const response = await fetch(GOOGLE_JWKS_URL, { headers: { Accept: 'application/json' } });
+  const response = await fetch(GOOGLE_JWKS_URL, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(10_000),
+  });
   const text = await readTextLimited(response, 131_072, 'Google signing key response is too large')
     .catch(() => '');
   let payload: GoogleJwks | null = null;
@@ -146,15 +146,6 @@ async function googleJwks(env: Env, forceRefresh: boolean): Promise<GoogleJwks> 
 
 function validJwks(value: GoogleJwks | null): value is GoogleJwks {
   return Boolean(value && Array.isArray(value.keys) && value.keys.length > 0);
-}
-
-function timingSafeEqual(left: string, right: string) {
-  const a = new TextEncoder().encode(left);
-  const b = new TextEncoder().encode(right);
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let index = 0; index < a.length; index += 1) mismatch |= a[index] ^ b[index];
-  return mismatch === 0;
 }
 
 function authError(code: string, message: string, status = 400, retryable = false) {

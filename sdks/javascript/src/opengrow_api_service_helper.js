@@ -1,12 +1,25 @@
-import OpenGrowContext from "./opengrow_context";
+import OpenGrowContext from "./opengrow_context.js";
+
+function handleResponse(xhr, success, error) {
+  if (xhr.status < 200 || xhr.status >= 300) {
+    error(xhr.statusText || `HTTP ${xhr.status}`);
+    return;
+  }
+  if (!xhr.responseText) {
+    success(null);
+    return;
+  }
+  try {
+    success(JSON.parse(xhr.responseText));
+  } catch {
+    error("OpenGrow API returned invalid JSON");
+  }
+}
 
 /**
  * Helper class for making API requests to OpenGrow service.
  */
 class OpenGrowAPIServiceHelper {
-  // Endpoint URL for the OpenGrow API
-  static ENDPOINT = "https://sdk.sqd.link/api/v1/sdk";
-  // static ENDPOINT = "http://sdk.lvh.me:3000/api/v1/sdk";
 
   /**
    * Constructor for OpenGrowAPIServiceHelper.
@@ -25,7 +38,7 @@ class OpenGrowAPIServiceHelper {
    */
   POST(path, data, success, error) {
     const headers = this.buildHeaders();
-    const endpoint = OpenGrowAPIServiceHelper.ENDPOINT + path;
+    const endpoint = this.endpoint(path);
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", endpoint, true);
@@ -37,21 +50,17 @@ class OpenGrowAPIServiceHelper {
 
     xhr.onreadystatechange = function () {
       if (xhr.readyState === XMLHttpRequest.DONE) {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const response = xhr.responseText;
-          success(JSON.parse(response));
-        } else {
-          error(xhr.statusText);
-        }
+        handleResponse(xhr, success, error);
       }
     };
+    xhr.onerror = () => error("OpenGrow network request failed");
 
     xhr.send(JSON.stringify(data));
   }
 
-  GET(path, data, success, error) {
+  GET(path, success, error) {
     const headers = this.buildHeaders();
-    const endpoint = OpenGrowAPIServiceHelper.ENDPOINT + path;
+    const endpoint = this.endpoint(path);
 
     const xhr = new XMLHttpRequest();
     xhr.open("GET", endpoint, true);
@@ -63,16 +72,21 @@ class OpenGrowAPIServiceHelper {
 
     xhr.onreadystatechange = function () {
       if (xhr.readyState === XMLHttpRequest.DONE) {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const response = xhr.responseText;
-          success(JSON.parse(response));
-        } else {
-          error(xhr.statusText);
-        }
+        handleResponse(xhr, success, error);
       }
     };
+    xhr.onerror = () => error("OpenGrow network request failed");
 
-    xhr.send(JSON.stringify(data));
+    // Sending no argument is required for GET: some runtimes reject or drop a
+    // GET request whose XMLHttpRequest body is non-null.
+    xhr.send();
+  }
+
+  endpoint(path) {
+    if (!OpenGrowContext.API_BASE_URL) {
+      throw new Error("OpenGrow baseURL is not configured");
+    }
+    return OpenGrowContext.API_BASE_URL + path;
   }
 
   /**
@@ -85,12 +99,11 @@ class OpenGrowAPIServiceHelper {
     headers["PLATFORM"] = "web";
 
     // Get identifier
-    const { protocol, hostname, port } = window.location;
-    const portPart = port ? `:${port}` : "";
-    const fullURL = `${protocol}//${hostname}${portPart}`;
-
     // Add domain identifier header
-    if (window && window.location) {
+    if (typeof window !== "undefined" && window.location) {
+      const { protocol, hostname, port } = window.location;
+      const portPart = port ? `:${port}` : "";
+      const fullURL = `${protocol}//${hostname}${portPart}`;
       headers["IDENTIFIER"] = fullURL;
     }
 

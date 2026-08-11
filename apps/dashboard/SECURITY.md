@@ -2,9 +2,11 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in OpenGrow, please report it responsibly.
+If you discover a security vulnerability in SuperBoard, please report it responsibly.
 
-**Email:** [support@opengrow.io](mailto:support@opengrow.io)
+Report privately through the repository's
+[GitHub Security Advisories](https://github.com/mbzadev/superboard-platform/security/advisories/new)
+or the private security channel configured by the repository administrators.
 
 Please include:
 

@@ -1,6 +1,6 @@
+@Deprecated(
+  'Import package:superboard_flutterflow/superboard_flutterflow.dart instead.',
+)
 library opengrow_flutterflow;
 
-export 'src/actions.dart';
-export 'src/bootstrap.dart';
-export 'src/models.dart';
-export 'src/paywall.dart';
+export 'superboard_flutterflow.dart';

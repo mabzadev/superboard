@@ -1,0 +1,38 @@
+{
+  "$schema": "../schemas/superboard-brand.schema.json",
+  "schemaVersion": 2,
+  "brand": {
+    "name": "SuperBoard",
+    "slug": "superboard",
+    "legacyNames": ["OpenGrow"],
+    "compatibilityNamespace": "opengrow"
+  },
+  "repositories": {
+    "canonical": "mbzadev/superboard",
+    "layout": {
+      "platform": ".",
+      "reference": "apps/reference"
+    },
+    "legacyReadOnly": [
+      "mbzadev/superboard-platform",
+      "mbzadev/superboard-reference"
+    ]
+  },
+  "developmentDomains": {
+    "dashboard": "board.mbza.dev",
+    "reference": "reference.mbza.dev",
+    "shortLinks": "in.mbza.dev"
+  },
+  "sdkStrategy": {
+    "active": ["flutter", "flutterflow"],
+    "internal": ["android", "ios"],
+    "archived": ["flutterflow-support", "javascript", "react-native"]
+  },
+  "cloudflareMigration": {
+    "canonicalWorkerPrefix": "superboard",
+    "legacyWorkerPrefix": "opengrow",
+    "persistentResourcePolicy": "retain-physical-name-until-verified-cutover",
+    "canonicalEnvironmentPrefix": "SUPERBOARD_",
+    "legacyEnvironmentPrefix": "OPENGROW_"
+  }
+}

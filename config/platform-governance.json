@@ -1,0 +1,18 @@
+{
+  "$schema": "../schemas/platform-governance.schema.json",
+  "schemaVersion": 2,
+  "product": "SuperBoard",
+  "canonicalRepository": "mbzadev/superboard",
+  "referenceRepository": "mbzadev/superboard",
+  "referencePath": "apps/reference",
+  "legacyRepositories": [
+    "mbzadev/superboard-platform",
+    "mbzadev/superboard-reference"
+  ],
+  "historicalUpstream": {
+    "releasePolicy": "retired",
+    "decision": "docs/ADR-001-CANONICAL-SUPERBOARD-SOURCE.md",
+    "provenance": "docs/HISTORY_MIGRATION.md",
+    "optionalComparisonCommand": "npm run migration:parity:check"
+  }
+}

@@ -1,17 +1,15 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow/releases"><img src="https://img.shields.io/github/v/release/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dswift-versions" alt="Swift versions"/></a>
-  <a href="https://swiftpackageindex.com/mbzadev/opengrow-iOS"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmbzadev%2Fopengrow-iOS%2Fbadge%3Ftype%3Dplatforms" alt="Platforms"/></a>
-  <a href="https://cocoapods.org/pods/OpenGrow"><img src="https://img.shields.io/cocoapods/v/OpenGrow.svg?style=flat-square&color=4F46E5" alt="CocoaPods"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform"><img src="https://img.shields.io/badge/distribution-SwiftPM-4F46E5?style=flat-square&logo=swift&logoColor=white" alt="Swift Package Manager"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -20,9 +18,9 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.opengrow.io/docs/sdk/ios/quick-start">Quick Start</a> ·
-  <a href="https://docs.opengrow.io/docs/sdk/ios/api-reference">API Reference</a> ·
-  <a href="https://docs.opengrow.io">Full Docs</a>
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -45,28 +43,29 @@ The OpenGrow iOS SDK provides deep linking, universal linking, link generation, 
 - Swift 5.0+
 - Xcode 14+
 
-## Installation
+<!-- opengrow-sdk-documentation:ios:start -->
+
+> **Lifecycle: internal.** This standalone coordinate is retained only
+> to reproduce existing integrations. New public releases are disabled;
+> current native development happens inside the active Flutter SDK.
+
+## Historical installation
 
 ### Swift Package Manager
 
-1. In Xcode, go to **File → Swift Packages → Add Package Dependency**
-2. Enter the repository URL: `https://github.com/mbzadev/opengrow.git`
-3. Select the version range that fits your project
-4. Click **Next**, then **Finish**
+The published iOS SDK is distributed from public Git with Swift Package
+Manager at the exact release `1.0.3`:
 
-### CocoaPods
-
-Add the pod to your `Podfile`:
-
-```ruby
-pod 'OpenGrow'
+```swift
+.package(url: "https://github.com/mbzadev/superboard.git", exact: "1.0.3")
 ```
 
-Then run:
+In Xcode, use **File → Add Package Dependencies**, enter
+`https://github.com/mbzadev/superboard.git`, and select exact version
+`1.0.3`. CocoaPods Trunk is not a published or supported
+distribution channel for this SDK.
 
-```bash
-pod install
-```
+<!-- opengrow-sdk-documentation:ios:end -->
 
 ## Quick Start
 
@@ -95,7 +94,7 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 }
 ```
 
-For self-hosted backends, pass the `baseURL` parameter (domain only — the SDK appends the API path):
+Every application must pass its `baseURL` parameter (domain only — the SDK appends the API path):
 
 ```swift
 OpenGrow.configure(APIKey: "your-api-key", useTestEnvironment: false, baseURL: "https://your-domain.com", delegate: self)
@@ -228,7 +227,7 @@ To receive push notifications for messages sent from the OpenGrow dashboard:
 
 **1. Add capabilities** — In Xcode, add the **Push Notifications** capability and enable **Remote notifications** under **Background Modes**.
 
-**2. Upload your APNs key** — In [Apple Developer → Keys](https://developer.apple.com/account/resources/authkeys/list), create a key with APNs enabled. Upload the `.p8` file, Key ID, and Team ID in your [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Push Notifications**.
+**2. Upload your APNs key** — In [Apple Developer → Keys](https://developer.apple.com/account/resources/authkeys/list), create a key with APNs enabled. Upload the `.p8` file, Key ID, and Team ID in the OpenGrow Dashboard deployed for the active application target, under **Settings → Push Notifications**.
 
 **3. Request permission and register:**
 
@@ -275,7 +274,7 @@ OpenGrow.numberOfUnreadMessages { count in
 
 ### Setup
 
-1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
 2. Configure App Store Server Notifications in [App Store Connect](https://appstoreconnect.apple.com) — set the production and sandbox URLs shown in the OpenGrow dashboard under **Developers → iOS Setup → Revenue**
 
 ### App Store purchases (StoreKit 2)
@@ -340,31 +339,30 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionID:completion:)` | Log a StoreKit 2 purchase |
 | `logCustomPurchase(type:priceInCents:currency:productID:startDate:completion:)` | Log a custom purchase |
 
-Full API reference: [docs.opengrow.io/docs/sdk/ios/api-reference](https://docs.opengrow.io/docs/sdk/ios/api-reference)
+Full API reference: [iOS SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/ios`](https://github.com/mbzadev/opengrow/tree/main/sdks/ios).
+A demo project is included in [`sdks/ios`](https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios).
 
 ## Setup Guides
 
-- [Custom URL Scheme](https://docs.opengrow.io/docs/how-to-guides/ios/url-scheme) — configure deep link URL schemes
-- [Associated Domains](https://docs.opengrow.io/docs/how-to-guides/ios/associated-domain) — set up universal links
-- [Apple App Prefix](https://docs.opengrow.io/docs/how-to-guides/ios/apple-app-prefix) — find your Team ID
-- [Bundle Identifier](https://docs.opengrow.io/docs/how-to-guides/ios/bundle-identifier) — find your bundle ID
+- Custom URL scheme — see [Quick Start](#quick-start)
+- Associated Domains — see [Quick Start](#quick-start)
+- Apple App Prefix — use the Team ID registered with the selected target
+- Bundle identifier — use the identifier registered with the selected target
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/ios)
-- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/ios)
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Support
 
-For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
+For technical support, use the support channel configured for the active target or open a repository issue.
 
 ## License
 

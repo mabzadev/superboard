@@ -21,7 +21,10 @@ import io.opengrow.storage.ILocalCache
 import io.opengrow.utils.InstantCompat
 import io.opengrow.utils.LSResult
 import io.mockk.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.*
@@ -150,6 +153,75 @@ class EventsManagerTest {
             "linkForFutureActions",
             "after onAppBackgrounded() with link previously set to 'https://test.link'"
         )
+    }
+
+    @Test
+    fun `EventsManager foreground waits for background TIME_SPENT finalization before sending`() = runTest {
+        val finalizationStarted = CompletableDeferred<Unit>()
+        val allowFinalization = CompletableDeferred<Unit>()
+        var finalizationCompleted = false
+        val finalizedTimeSpent = Event(
+            event = EventType.TIME_SPENT,
+            createdAt = InstantCompat.now(),
+            engagementTime = 2
+        )
+
+        eventsManager = EventsManager(
+            context = context,
+            opengrowContext = opengrowContext,
+            apiKey = testApiKey,
+            opengrowService = mockOpenGrowService,
+            eventsStorage = mockEventsStorage,
+            localCache = mockLocalCache
+        )
+        eventsManager.timeSpentScope = this
+        eventsManager.allowedToSendToBackend = true
+        eventsManager.firstRequestTime = InstantCompat.now()
+
+        coEvery {
+            mockEventsStorage.markTimeSpentNode(
+                startingNode = false,
+                endingNode = true,
+                link = null
+            )
+        } coAnswers {
+            finalizationStarted.complete(Unit)
+            allowFinalization.await()
+            finalizationCompleted = true
+        }
+        coEvery { mockEventsStorage.getEvents() } answers {
+            if (finalizationCompleted) listOf(finalizedTimeSpent) else emptyList()
+        }
+        coEvery { mockOpenGrowService.addEvent(finalizedTimeSpent) } coAnswers {
+            assertTrue("TIME_SPENT must be finalized before it is sent", finalizationCompleted)
+            LSResult.Success(true)
+        }
+
+        eventsManager.onAppBackgrounded()
+        runCurrent()
+        finalizationStarted.await()
+
+        val foreground = async { eventsManager.onAppForegrounded() }
+        runCurrent()
+        coVerify(exactly = 0) { mockOpenGrowService.addEvent(any()) }
+
+        allowFinalization.complete(Unit)
+        foreground.await()
+
+        coVerify(exactly = 1) { mockOpenGrowService.addEvent(finalizedTimeSpent) }
+        coVerifyOrder {
+            mockEventsStorage.markTimeSpentNode(
+                startingNode = false,
+                endingNode = true,
+                link = null
+            )
+            mockOpenGrowService.addEvent(finalizedTimeSpent)
+            mockEventsStorage.markTimeSpentNode(
+                startingNode = true,
+                endingNode = false,
+                link = null
+            )
+        }
     }
 
     // ==================== Launch Events Tests ====================

@@ -5,7 +5,7 @@ import type { ToolExtra } from "../server.js";
 describe("extractToken", () => {
   it("returns token when present", () => {
     const extra = {
-      authInfo: { token: "abc123", clientId: "c", scopes: [] },
+      http: { authInfo: { token: "abc123", clientId: "c", scopes: [] } },
     } as unknown as ToolExtra;
 
     expect(extractToken(extra)).toBe("abc123");
@@ -19,7 +19,7 @@ describe("extractToken", () => {
 
   it("throws when token is empty string", () => {
     const extra = {
-      authInfo: { token: "", clientId: "c", scopes: [] },
+      http: { authInfo: { token: "", clientId: "c", scopes: [] } },
     } as unknown as ToolExtra;
 
     expect(() => extractToken(extra)).toThrow("Not authenticated");

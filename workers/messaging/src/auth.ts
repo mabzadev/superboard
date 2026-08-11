@@ -1,4 +1,5 @@
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { configuredSecrets, constantTimeEqual, matchesAnySecret } from '@superboard/contracts/secret';
 import type { Env } from './types';
 
 const jwksByUrl = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
@@ -19,7 +20,12 @@ function remoteKeys(url: string) {
   return created;
 }
 
-export async function verifyApplicationIdentity(env: Env, authorization?: string): Promise<string> {
+export type ApplicationIdentity = {
+  subject: string;
+  expiresAt: number;
+};
+
+export async function verifyApplicationIdentity(env: Env, authorization?: string): Promise<ApplicationIdentity> {
   const token = bearerToken(authorization);
   if (!token) throw publicError('identity_required', 'Identity token required', 401);
   try {
@@ -28,13 +34,26 @@ export async function verifyApplicationIdentity(env: Env, authorization?: string
       audience: env.AUTH_GATEWAY_AUDIENCE,
       algorithms: ['ES256'],
       clockTolerance: 5,
+      requiredClaims: ['sub', 'iat', 'exp', 'jti'],
     });
-    const subject = verified.payload.sub || '';
-    if (!subject || subject.length > 255) throw new Error('invalid subject');
-    return subject;
+    return validateApplicationIdentityClaims(verified.payload);
   } catch {
     throw publicError('identity_invalid', 'Identity token is invalid or expired', 401);
   }
+}
+
+export function validateApplicationIdentityClaims(payload: JWTPayload): ApplicationIdentity {
+  const subject = payload.sub || '';
+  const issuedAt = Number(payload.iat);
+  const expiresAt = Number(payload.exp);
+  const tokenId = payload.jti || '';
+  if (!subject || subject.length > 255) throw new Error('invalid subject');
+  if (!Number.isInteger(issuedAt) || !Number.isInteger(expiresAt)
+    || expiresAt <= issuedAt || expiresAt - issuedAt > 900) {
+    throw new Error('invalid token lifetime');
+  }
+  if (!tokenId || tokenId.length > 128) throw new Error('invalid token id');
+  return { subject, expiresAt: expiresAt * 1000 };
 }
 
 export function requireProject(env: Env, value: string | undefined): number {
@@ -55,19 +74,13 @@ export function parseAllowedProjectIds(value: string): number[] {
   return [...new Set(parsed)];
 }
 
-export function timingSafeEqual(left: string, right: string): boolean {
-  const a = new TextEncoder().encode(left);
-  const b = new TextEncoder().encode(right);
-  let difference = a.length ^ b.length;
-  const length = Math.max(a.length, b.length);
-  for (let index = 0; index < length; index += 1) {
-    difference |= (a[index % Math.max(a.length, 1)] || 0) ^ (b[index % Math.max(b.length, 1)] || 0);
-  }
-  return difference === 0;
-}
+export const timingSafeEqual = constantTimeEqual;
 
-export function requireInternal(env: Env, token?: string) {
-  if (!env.INTERNAL_API_TOKEN || !token || !timingSafeEqual(env.INTERNAL_API_TOKEN, token)) {
+export async function requireInternal(env: Env, token?: string) {
+  if (!token || !await matchesAnySecret(token, configuredSecrets(
+    env.INTERNAL_API_TOKEN,
+    env.INTERNAL_API_TOKEN_PREVIOUS,
+  ))) {
     throw publicError('internal_auth_invalid', 'Internal service authentication failed', 401);
   }
 }

@@ -27,7 +27,7 @@ test.describe("Settings Page", () => {
     await page.goto("/settings");
 
     await expect(
-      page.getByText(/plan|subscription|growth/i).first()
+      page.getByText(/plan|subscription/i).first()
     ).toBeVisible({ timeout: 10_000 });
   });
 

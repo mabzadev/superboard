@@ -1,4 +1,4 @@
-import OpenGrowAPIService from "./opengrow_api_service";
+import OpenGrowAPIService from "./opengrow_api_service.js";
 
 class OpenGrowUIHelper {
   constructor() {

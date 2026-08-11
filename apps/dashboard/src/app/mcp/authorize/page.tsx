@@ -19,7 +19,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Image from "next/image";
-import OpenGrowIcon from "@/assets/icons/ads_platform/opengrow.svg";
+import SuperBoardIcon from "@/assets/icons/ads_platform/superboard.svg";
 import LocalStorage from "@/lib/LocalStorage";
 import { approveConsentAPICall } from "@/api/mcp/mcpService";
 import { currentUserAPICall } from "@/api/auth/userService";
@@ -162,7 +162,7 @@ function McpAuthorizeContent() {
                 <span className="font-medium text-foreground">
                   {clientDisplayName}
                 </span>{" "}
-                access to your OpenGrow account.
+                access to your SuperBoard account.
               </p>
             </div>
           </CardHeader>
@@ -205,14 +205,14 @@ function McpAuthorizeContent() {
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center w-full p-4">
       <Card className="w-full max-w-[420px] shadow-lg">
         <CardHeader className="flex flex-col items-center gap-3 pb-2">
-          <Image src={OpenGrowIcon} alt="OpenGrow" width={44} height={44} />
+          <Image src={SuperBoardIcon} alt="SuperBoard" width={44} height={44} />
           <div className="flex flex-col items-center gap-1 text-center">
             <h2 className="text-lg font-semibold">Authorize Connection</h2>
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">
                 {clientDisplayName}
               </span>{" "}
-              wants to access your OpenGrow account.
+              wants to access your SuperBoard account.
             </p>
           </div>
         </CardHeader>

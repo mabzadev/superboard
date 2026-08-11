@@ -7,6 +7,7 @@ import { importPKCS8, SignJWT } from 'jose';
 import type { BillingEnv } from '../types';
 import { BillingEnvironment, BillingStatus, VerifiedPurchase } from './billing';
 import { decryptCredential } from './secrets';
+import { readJsonObjectLimited } from './http-limits';
 import {
   googleBasePlanReadiness,
   parseAppleSubscriptionAvailability,
@@ -157,8 +158,13 @@ async function appleServerClient(env: BillingEnv, app: BillingApplication, envir
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(15_000),
     });
-    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+    const payload = await readJsonObjectLimited(
+      response,
+      4_194_304,
+      'App Store Server API response is too large',
+    ).catch((): Record<string, unknown> => ({}));
     if (!response.ok) throw storeApiError('App Store Server API', response.status, payload);
     return payload;
   };
@@ -244,8 +250,14 @@ function appleProductType(type: string | undefined): VerifiedPurchase['productTy
   return 'subscription';
 }
 
-function appleStatus(transaction: JWSTransactionDecodedPayload, eventType = 'PURCHASED'): BillingStatus {
-  if (transaction.revocationDate || /REFUND|REVOKE/i.test(eventType)) return /REFUND/i.test(eventType) ? 'refunded' : 'revoked';
+export function appleStatus(transaction: JWSTransactionDecodedPayload, eventType = 'PURCHASED'): BillingStatus {
+  if (/^REFUND_(DECLINED|REVERSED)$/i.test(eventType)) {
+    if (transaction.expiresDate && Number(transaction.expiresDate) <= Date.now()) return 'expired';
+    return transaction.offerType === 1 ? 'trialing' : 'active';
+  }
+  if (transaction.revocationDate || /^REFUND$/i.test(eventType) || /^REVOKE$/i.test(eventType)) {
+    return /^REFUND$/i.test(eventType) ? 'refunded' : 'revoked';
+  }
   if (/EXPIRED/i.test(eventType)) return 'expired';
   if (/FAIL_TO_RENEW/i.test(eventType)) return 'billing_issue';
   if (/GRACE/i.test(eventType)) return 'grace_period';
@@ -342,6 +354,16 @@ export async function verifyAppleNotification(env: BillingEnv, params: {
   if (!transaction.transactionId || !transaction.productId) throw new Error('Apple notification transaction is incomplete');
   const eventType = String(notification.notificationType || 'PURCHASED');
   const customerId = transaction.appAccountToken || null;
+  const productType = appleProductType(String(transaction.type || ''));
+  let renewal: Record<string, unknown> | null = null;
+  let autoRenews = productType === 'subscription'
+    && !/^(CANCEL|EXPIRED|REFUND|REVOKE)$/i.test(eventType);
+  if (notification.data?.signedRenewalInfo) {
+    renewal = await verifier.verifyAndDecodeRenewalInfo(
+      notification.data.signedRenewalInfo,
+    ) as unknown as Record<string, unknown>;
+    autoRenews = Number(renewal.autoRenewStatus) === 1;
+  }
   return {
     notification,
     purchase: {
@@ -351,7 +373,7 @@ export async function verifyAppleNotification(env: BillingEnv, params: {
       store: 'apple',
       environment: params.environment,
       storeProductId: transaction.productId,
-      productType: appleProductType(String(transaction.type || '')),
+      productType,
       storeTransactionId: transaction.transactionId,
       originalTransactionId: transaction.originalTransactionId || transaction.transactionId,
       orderId: transaction.webOrderLineItemId || null,
@@ -363,9 +385,9 @@ export async function verifyAppleNotification(env: BillingEnv, params: {
       purchasedAt: isoMillis(transaction.purchaseDate),
       eventOccurredAt: isoMillis(notification.signedDate),
       expiresAt: isoMillis(transaction.expiresDate),
-      autoRenews: !/CANCEL|EXPIRED|REFUND|REVOKE/i.test(eventType),
+      autoRenews,
       periodType: transaction.offerType === 1 ? 'trial' : transaction.offerType ? 'intro' : 'normal',
-      rawPayload: { notification, transaction },
+      rawPayload: { notification, transaction, renewal },
     },
   };
 }
@@ -409,8 +431,13 @@ async function googleAccessToken(credentials: GoogleCredentials): Promise<string
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }),
+    signal: AbortSignal.timeout(10_000),
   });
-  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  const payload = await readJsonObjectLimited(
+    response,
+    262_144,
+    'Google OAuth response is too large',
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok || typeof payload.access_token !== 'string') throw new Error('Unable to authenticate with Google Play');
   return payload.access_token;
 }
@@ -431,8 +458,15 @@ function storeApiError(store: string, status: number, payload: Record<string, un
 }
 
 async function fetchStoreJson(url: string, accessToken: string, store: string): Promise<Record<string, unknown>> {
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } });
-  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+    signal: AbortSignal.timeout(10_000),
+  });
+  const payload = await readJsonObjectLimited(
+    response,
+    4_194_304,
+    `${store} response is too large`,
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok) throw storeApiError(store, response.status, payload);
   return payload;
 }
@@ -776,8 +810,15 @@ export async function verifyGooglePurchase(env: BillingEnv, params: {
   const url = productType === 'subscription'
     ? `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${token}`
     : `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${token}`;
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  const verified = await response.json().catch(() => ({})) as Record<string, unknown>;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  const verified = await readJsonObjectLimited(
+    response,
+    1_048_576,
+    'Google Play purchase response is too large',
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok) throw new Error('Google Play purchase verification failed');
 
   const verifiedEnvironment = googlePurchaseEnvironment(verified, productType);
@@ -882,6 +923,7 @@ export async function finalizeGooglePurchase(params: {
     method: 'POST',
     headers: { Authorization: `Bearer ${params.accessToken}`, 'Content-Type': 'application/json' },
     body: '{}',
+    signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error('Google Play purchase acknowledgement failed');
 }

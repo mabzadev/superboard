@@ -2,7 +2,6 @@
 import Account2FADialog from "@/components/account/Account2FADialog";
 import McpTokensSection from "@/components/account/McpTokensSection";
 
-import AppHeader from "@/components/layout/app-header";
 import { Button } from "@/components/ui/button";
 import DeleteConfirm from "@/components/common/delete-confirm";
 import { Input } from "@/components/ui/input";
@@ -107,12 +106,8 @@ const AccountPage = () => {
   }, [user, form]);
 
   return (
-    <div className="flex flex-col relative overflow-hidden h-dvh">
+    <div className="flex min-h-full flex-col overflow-hidden">
       <Account2FADialog open={show2FAModal} onOpenChange={setShow2FAModal} />
-
-      <div className="border-b border-sidebar-border">
-        <AppHeader hideEnvSelect />
-      </div>
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col overflow-hidden min-w-0 w-full">
@@ -164,13 +159,19 @@ const AccountPage = () => {
                       className="max-w-[340px] text-muted-foreground bg-muted/30 cursor-default"
                     />
                     <span className="text-[11px] text-muted-foreground">
-                      To change your email, contact us at{" "}
-                      <a
-                        href={`mailto:${config.supportEmail}`}
-                        className="text-blue-600 dark:text-blue-400 underline underline-offset-4 hover:opacity-80 transition-opacity"
-                      >
-                        {config.supportEmail}
-                      </a>
+                      {config.supportEmail ? (
+                        <>
+                          To change your email, contact{" "}
+                          <a
+                            href={`mailto:${config.supportEmail}`}
+                            className="text-blue-600 dark:text-blue-400 underline underline-offset-4 hover:opacity-80 transition-opacity"
+                          >
+                            {config.supportEmail}
+                          </a>
+                        </>
+                      ) : (
+                        "Email changes are managed by a deployment owner."
+                      )}
                     </span>
                   </div>
                 </form>

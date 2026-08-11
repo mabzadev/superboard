@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    execArgv: ["--no-experimental-webstorage"],
     setupFiles: ["./src/test-setup.ts"],
     include: ["src/**/__tests__/**/*.test.{ts,tsx}"],
     coverage: {
@@ -39,7 +40,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
 });

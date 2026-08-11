@@ -1,0 +1,27 @@
+ALTER TABLE onboardings ADD COLUMN description TEXT;
+ALTER TABLE onboardings ADD COLUMN updated_at TEXT;
+ALTER TABLE onboarding_versions ADD COLUMN published_at TEXT;
+ALTER TABLE placements ADD COLUMN name TEXT NOT NULL DEFAULT 'Placement';
+ALTER TABLE placements ADD COLUMN onboarding_id TEXT REFERENCES onboardings(id) ON DELETE CASCADE;
+ALTER TABLE placements ADD COLUMN priority INTEGER NOT NULL DEFAULT 100;
+ALTER TABLE placements ADD COLUMN created_at TEXT;
+ALTER TABLE placements ADD COLUMN updated_at TEXT;
+ALTER TABLE events ADD COLUMN platform TEXT NOT NULL DEFAULT 'web';
+ALTER TABLE events ADD COLUMN onboarding_id TEXT;
+ALTER TABLE events ADD COLUMN version_id TEXT;
+ALTER TABLE events ADD COLUMN experience_id TEXT;
+ALTER TABLE events ADD COLUMN variant_id TEXT;
+ALTER TABLE events ADD COLUMN step_id TEXT;
+ALTER TABLE events ADD COLUMN customer_id TEXT;
+ALTER TABLE idempotency_keys ADD COLUMN status_code INTEGER NOT NULL DEFAULT 200;
+ALTER TABLE audit_events ADD COLUMN actor_id TEXT;
+ALTER TABLE audit_events ADD COLUMN request_id TEXT;
+
+CREATE TABLE targeting_rules (id TEXT PRIMARY KEY,project_id TEXT NOT NULL,placement_id TEXT NOT NULL REFERENCES placements(id) ON DELETE CASCADE,name TEXT NOT NULL,priority INTEGER NOT NULL DEFAULT 100,conditions_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(conditions_json)),active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX onboarding_targeting ON targeting_rules(project_id,placement_id,priority DESC);
+CREATE TABLE experiences (id TEXT PRIMARY KEY,project_id TEXT NOT NULL,placement_id TEXT NOT NULL REFERENCES placements(id) ON DELETE CASCADE,name TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','running','paused','completed')),traffic_percentage INTEGER NOT NULL DEFAULT 10000 CHECK(traffic_percentage BETWEEN 1 AND 10000),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE experience_variants (id TEXT PRIMARY KEY,project_id TEXT NOT NULL,experience_id TEXT NOT NULL REFERENCES experiences(id) ON DELETE CASCADE,name TEXT NOT NULL,weight INTEGER NOT NULL CHECK(weight BETWEEN 1 AND 10000),version_id TEXT NOT NULL REFERENCES onboarding_versions(id),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX onboarding_experience_variants ON experience_variants(project_id,experience_id);
+CREATE INDEX onboarding_events_dimensions ON events(project_id,occurred_at,platform,placement,version_id,experience_id,variant_id,step_id);
+UPDATE onboardings SET updated_at=COALESCE(created_at,CURRENT_TIMESTAMP);
+UPDATE placements SET created_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE created_at IS NULL OR updated_at IS NULL;

@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mbzadev/superboard/blob/dev/schemas/github-control-plane.schema.json",
+  "title": "SuperBoard GitHub control plane",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "owner", "repositories"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 9 },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["login", "type"],
+      "properties": {
+        "login": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "type": { "enum": ["user", "organization"] }
+      }
+    },
+    "repositories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform"],
+      "properties": {
+        "platform": { "$ref": "#/$defs/repository" }
+      }
+    }
+  },
+  "$defs": {
+    "secretName": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$"
+    },
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredCheck",
+        "requirePullRequest",
+        "requireCodeOwnerReviews",
+        "requiredApprovals"
+      ],
+      "properties": {
+        "requiredCheck": { "type": "string", "minLength": 3, "maxLength": 100 },
+        "requirePullRequest": { "const": true },
+        "requireCodeOwnerReviews": { "const": true },
+        "requiredApprovals": { "type": "integer", "minimum": 1, "maximum": 6 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variables", "secrets"],
+      "properties": {
+        "variables": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "secrets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/secretName" },
+          "uniqueItems": true
+        },
+        "protection": { "$ref": "#/$defs/environmentProtection" }
+      }
+    },
+    "environmentReviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "name"],
+      "properties": {
+        "type": { "enum": ["User", "Team"] },
+        "id": { "type": "integer", "minimum": 1 },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        }
+      }
+    },
+    "environmentDeploymentPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "pattern"],
+      "properties": {
+        "type": { "enum": ["branch", "tag"] },
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[A-Za-z0-9*?._/-]+$"
+        }
+      }
+    },
+    "environmentProtection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enforcement",
+        "pendingReason",
+        "waitTimerMinutes",
+        "preventSelfReview",
+        "allowAdminBypass",
+        "minimumEligibleReviewers",
+        "reviewers",
+        "deploymentPolicies"
+      ],
+      "properties": {
+        "enforcement": { "enum": ["pending-external", "enforced"] },
+        "pendingReason": {
+          "type": ["string", "null"],
+          "minLength": 10,
+          "maxLength": 500
+        },
+        "waitTimerMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 43200
+        },
+        "preventSelfReview": { "type": "boolean" },
+        "allowAdminBypass": { "type": "boolean" },
+        "minimumEligibleReviewers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "reviewers": {
+          "type": "array",
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/environmentReviewer" }
+        },
+        "deploymentPolicies": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/environmentDeploymentPolicy" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enforcement": { "const": "pending-external" } }
+          },
+          "then": {
+            "properties": { "pendingReason": { "type": "string" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "enforcement": { "const": "enforced" } }
+          },
+          "then": {
+            "properties": { "pendingReason": { "type": "null" } }
+          }
+        }
+      ]
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nameWithOwner",
+        "description",
+        "settings",
+        "visibility",
+        "defaultBranch",
+        "workflowPermissions",
+        "security",
+        "releaseProtection",
+        "repositorySecrets",
+        "branches",
+        "environments"
+      ],
+      "properties": {
+        "nameWithOwner": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "description": { "type": "string", "minLength": 10, "maxLength": 350 },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "issues",
+            "projects",
+            "wiki",
+            "downloads",
+            "squashMerge",
+            "mergeCommit",
+            "rebaseMerge",
+            "deleteBranchOnMerge"
+          ],
+          "properties": {
+            "issues": { "type": "boolean" },
+            "projects": { "type": "boolean" },
+            "wiki": { "type": "boolean" },
+            "downloads": { "type": "boolean" },
+            "squashMerge": { "type": "boolean" },
+            "mergeCommit": { "type": "boolean" },
+            "rebaseMerge": { "type": "boolean" },
+            "deleteBranchOnMerge": { "type": "boolean" }
+          }
+        },
+        "visibility": { "enum": ["public", "private"] },
+        "defaultBranch": { "const": "dev" },
+        "workflowPermissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default", "canApprovePullRequestReviews"],
+          "properties": {
+            "default": { "const": "read" },
+            "canApprovePullRequestReviews": { "const": true }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "vulnerabilityAlerts",
+            "dependabotSecurityUpdates"
+          ],
+          "properties": {
+            "vulnerabilityAlerts": { "const": true },
+            "dependabotSecurityUpdates": { "const": true }
+          }
+        },
+        "releaseProtection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["immutableReleases"],
+          "properties": {
+            "immutableReleases": { "const": true },
+            "tagRuleset": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "enforcement", "include", "rules"],
+              "properties": {
+                "name": { "type": "string", "minLength": 5, "maxLength": 100 },
+                "enforcement": { "const": "active" },
+                "include": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^refs/tags/"
+                  }
+                },
+                "rules": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "uniqueItems": true,
+                  "contains": { "const": "update" },
+                  "items": { "enum": ["update", "deletion"] },
+                  "allOf": [
+                    { "contains": { "const": "update" } },
+                    { "contains": { "const": "deletion" } }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "repositorySecrets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/secretName" },
+          "uniqueItems": true
+        },
+        "branches": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dev", "main"],
+          "properties": {
+            "dev": { "$ref": "#/$defs/branch" },
+            "main": { "$ref": "#/$defs/branch" }
+          }
+        },
+        "environments": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[a-z][a-z0-9-]+$" },
+          "additionalProperties": { "$ref": "#/$defs/environment" }
+        }
+      }
+    }
+  }
+}

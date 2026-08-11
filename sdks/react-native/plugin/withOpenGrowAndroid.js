@@ -5,31 +5,57 @@ const {
   withMainActivity,
   withAppBuildGradle,
 } = require('expo/config-plugins');
+const pkg = require('../package.json');
+const nativeContract = require('./native-contract.json');
 
-// Pinned to match the OpenGrow SDK version the wrapper depends on
-// (`@mbzadev/opengrow-react-native@1.0.0` declares `implementation
-// "io.opengrow:OpenGrow:1.1.1"` in its own build.gradle, but uses `implementation`
-// not `api` so the dep isn't transitively visible to the consuming app
-// module — and the plugin injects `import io.opengrow.OpenGrow` into MainActivity /
-// MainApplication, so the app module needs its own dependency to compile.).
-const OPENGROW_ANDROID_DEP = `implementation 'io.opengrow:OpenGrow:1.1.1'`;
-const OPENGROW_ANDROID_DEP_MARKER = '// @mbzadev/opengrow-react-native:dep';
+// The wrapper uses `implementation`, so the app module also needs the native
+// dependency because the plugin injects `io.opengrow.OpenGrow` imports there.
+const OPENGROW_ANDROID_DEP = `implementation '${nativeContract.android.packageName}:${nativeContract.android.version}'`;
+const LEGACY_OPENGROW_ANDROID_DEP_MARKER =
+  '// @mbzadev/opengrow-react-native:dep';
+const OPENGROW_ANDROID_DEP_MARKER = `// ${pkg.name}:dep`;
+const RETIRED_OPENGROW_ANDROID_PACKAGES = [
+  'io.opengrow:OpenGrow',
+  'io.opengrow:opengrow-android',
+];
+const OPENGROW_ANDROID_DEP_LINE = new RegExp(
+  `^([ \\t]*)implementation[ \\t]*(?:\\([ \\t]*)?['"]([^'"\\r\\n]+)['"][ \\t]*\\)?[^\\r\\n]*$`,
+  'gm'
+);
+
+function addOpenGrowAppDependency(contents) {
+  let foundManagedDependency = false;
+  const migratedContents = contents.replace(
+    OPENGROW_ANDROID_DEP_LINE,
+    (line, indentation, coordinate) => {
+      const isManaged =
+        line.includes(OPENGROW_ANDROID_DEP_MARKER) ||
+        line.includes(LEGACY_OPENGROW_ANDROID_DEP_MARKER) ||
+        coordinate.startsWith(`${nativeContract.android.packageName}:`) ||
+        RETIRED_OPENGROW_ANDROID_PACKAGES.some((packageName) =>
+          coordinate.startsWith(`${packageName}:`)
+        );
+      if (!isManaged) return line;
+      if (foundManagedDependency) return '';
+      foundManagedDependency = true;
+      return `${indentation}${OPENGROW_ANDROID_DEP} ${OPENGROW_ANDROID_DEP_MARKER}`;
+    }
+  );
+  if (foundManagedDependency) return migratedContents;
+
+  const depsBlockRegex = /(dependencies\s*\{[\s\S]*?)(\n\s*\})/;
+  if (!depsBlockRegex.test(migratedContents)) return migratedContents;
+  return migratedContents.replace(
+    depsBlockRegex,
+    `$1\n    ${OPENGROW_ANDROID_DEP} ${OPENGROW_ANDROID_DEP_MARKER}$2`
+  );
+}
 
 function withOpenGrowAppDependency(config) {
   return withAppBuildGradle(config, (config) => {
-    if (config.modResults.contents.includes(OPENGROW_ANDROID_DEP_MARKER)) {
-      return config;
-    }
-    // Insert the implementation line just before the closing `}` of the
-    // top-level `dependencies { ... }` block.
-    const depsBlockRegex = /(dependencies\s*\{[\s\S]*?)(\n\s*\})/;
-    const match = config.modResults.contents.match(depsBlockRegex);
-    if (match) {
-      config.modResults.contents = config.modResults.contents.replace(
-        depsBlockRegex,
-        `$1\n    ${OPENGROW_ANDROID_DEP} ${OPENGROW_ANDROID_DEP_MARKER}$2`
-      );
-    }
+    config.modResults.contents = addOpenGrowAppDependency(
+      config.modResults.contents
+    );
     return config;
   });
 }
@@ -122,7 +148,10 @@ function addOpenGrowImportToMainApplication(contents) {
   );
 }
 
-function addOpenGrowConfigure(contents, { apiKey, useTestEnvironment, baseURL }) {
+function addOpenGrowConfigure(
+  contents,
+  { apiKey, useTestEnvironment, baseURL }
+) {
   if (contents.includes('OpenGrow.configure')) {
     return contents;
   }
@@ -149,7 +178,7 @@ function withOpenGrowMainApplication(config, props) {
   return withMainApplication(config, (config) => {
     if (config.modResults.language !== 'kt') {
       throw new Error(
-        '@mbzadev/opengrow-react-native config plugin requires a Kotlin MainApplication. ' +
+        `${pkg.name} config plugin requires a Kotlin MainApplication. ` +
           'Java MainApplication is not supported.'
       );
     }
@@ -235,7 +264,7 @@ function withOpenGrowMainActivity(config) {
   return withMainActivity(config, (config) => {
     if (config.modResults.language !== 'kt') {
       throw new Error(
-        '@mbzadev/opengrow-react-native config plugin requires a Kotlin MainActivity. ' +
+        `${pkg.name} config plugin requires a Kotlin MainActivity. ` +
           'Java MainActivity is not supported.'
       );
     }
@@ -265,7 +294,9 @@ module.exports = withOpenGrowAndroid;
 module.exports.addOpenGrowImportToMainApplication =
   addOpenGrowImportToMainApplication;
 module.exports.addOpenGrowConfigure = addOpenGrowConfigure;
-module.exports.addOpenGrowImportToMainActivity = addOpenGrowImportToMainActivity;
+module.exports.addOpenGrowImportToMainActivity =
+  addOpenGrowImportToMainActivity;
 module.exports.addOpenGrowIntentImport = addOpenGrowIntentImport;
 module.exports.addOpenGrowOnStart = addOpenGrowOnStart;
 module.exports.addOpenGrowOnNewIntent = addOpenGrowOnNewIntent;
+module.exports.addOpenGrowAppDependency = addOpenGrowAppDependency;

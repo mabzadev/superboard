@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "opengrow-custom-reference-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "vars": {
+    "APP_KEY": "mbza-development",
+    "ENVIRONMENT": "development",
+    "CUSTOM_WORKER_CAPABILITIES": "reference.echo,reference.acceptance",
+    "REFERENCE_JOB_RETENTION_DAYS": "30",
+  },
+  "d1_databases": [
+    {
+      "binding": "REFERENCE_DB",
+      "database_name": "opengrow-custom-reference-test",
+      "database_id": "00000000-0000-0000-0000-000000000002",
+    },
+  ],
+}

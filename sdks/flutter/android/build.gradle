@@ -1,4 +1,4 @@
-group = "io.opengrow.wrapper"
+group = "io.superboard.wrapper"
 version = "1.0-SNAPSHOT"
 
 def localProperties = new Properties()
@@ -13,6 +13,21 @@ def flutterRoot = localProperties.getProperty('flutter.sdk')
 if (flutterRoot == null) {
     throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 }
+
+// Keep the native BuildConfig header aligned with the published Flutter
+// package. The pubspec is the canonical version source declared by the SDK
+// catalogue, so a release version is changed in exactly one place.
+def flutterPubspecFile = project.file("../pubspec.yaml")
+if (!flutterPubspecFile.isFile()) {
+    throw new GradleException("SuperBoard Flutter pubspec not found at ${flutterPubspecFile}")
+}
+
+def flutterPubspecVersionMatches = flutterPubspecFile.getText("UTF-8") =~
+        /(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\s*$/
+if (flutterPubspecVersionMatches.count != 1) {
+    throw new GradleException("SuperBoard Flutter pubspec must declare exactly one valid semantic version")
+}
+def flutterSdkVersion = flutterPubspecVersionMatches[0][1]
 
 buildscript {
     ext.kotlin_version = "2.1.0"
@@ -39,8 +54,11 @@ apply plugin: "kotlin-android"
 apply plugin: "kotlin-parcelize"
 
 android {
-    // The native SDK sources are embedded in the Flutter plugin so a private
+    // The native SDK sources are embedded in the Flutter plugin so a separate
     // Maven credential is never required by FlutterFlow's remote builder.
+    // The embedded internal Android SDK imports io.opengrow.R and
+    // io.opengrow.BuildConfig. Keep that physical resource namespace stable;
+    // the public Flutter registrant itself is io.superboard.wrapper.
     namespace = "io.opengrow"
 
     compileSdk = 36
@@ -66,9 +84,7 @@ android {
     defaultConfig {
         minSdk = 24
         consumerProguardFiles "../../android/OpenGrow/OpenGrow/consumer-rules.pro"
-        buildConfigField "String", "SERVER_URL", "\"https://sdk.vocostar.com/api/v1/sdk/\""
-        buildConfigField "String", "TEST_SERVER_URL", "\"http://localhost:8080/\""
-        buildConfigField "String", "SDK_VERSION", "\"1.1.1\""
+        buildConfigField "String", "SDK_VERSION", "\"${flutterSdkVersion}\""
         buildConfigField "boolean", "NETWORK_LOGGING", "false"
     }
 
