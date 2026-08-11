@@ -2,7 +2,7 @@ export type Obj = Record<string, unknown>;
 
 /**
  * Extract the path slug from a full URL or return the input as-is if it's already a slug.
- * "https://myapp.opengrow.io/summer-sale" → "summer-sale"
+ * "https://<short-link-origin>/summer-sale" → "summer-sale"
  * "summer-sale" → "summer-sale"
  * "/summer-sale" → "summer-sale"
  */

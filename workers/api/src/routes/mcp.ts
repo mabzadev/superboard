@@ -4,6 +4,8 @@ import { generateApiKey, generateShortCode } from '../lib/crypto';
 import { getAuthUserId as getStrictAuthUserId } from '../lib/auth';
 import { getOrCreateProject, getOrCreateRedirectConfig, jsonArray, parseJsonObject, resolveProject } from '../lib/db';
 import { createMcpAuthorizationCode, findMcpClient, redirectUriAllowed, tokenDigest } from '../lib/mcp-oauth';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
+import { buildPlatformStatus } from './platform-status';
 
 const mcp = new Hono<{ Bindings: Env }>();
 const MCP_PLATFORMS = ['ios', 'android', 'desktop'] as const;
@@ -61,9 +63,7 @@ async function getMcpUserId(c: any): Promise<number | null> {
 }
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return await c.req.parseBody().catch(() => ({}));
+  return readRequestObjectLimited(c.req.raw, 1024 * 1024);
 }
 
 async function projectForMcp(c: any, userId: number, raw: unknown) {
@@ -351,7 +351,7 @@ mcp.get('/status', async (c) => {
   if (!userId) return c.json({ error: 'invalid_token' }, 401);
   const user = await c.env.DB.prepare('SELECT id, email, name FROM users WHERE id = ?').bind(userId).first<any>();
   const rows = await c.env.DB.prepare(`
-    SELECT i.id, i.api_key, i.uri_scheme,
+    SELECT i.id, i.uri_scheme,
       COUNT(DISTINCT p.id) AS projects_count,
       COUNT(DISTINCT l.id) AS links_count
     FROM instances i
@@ -363,7 +363,41 @@ mcp.get('/status', async (c) => {
     GROUP BY i.id
     ORDER BY i.id ASC
   `).bind(userId).all<any>();
-  return c.json({ user, instances: rows.results || [] });
+  const instances = await Promise.all((rows.results || []).map(async (instance: any) => {
+    const projects = await c.env.DB.prepare(`
+      SELECT id, name, identifier, is_test
+      FROM projects
+      WHERE instance_id = ?
+      ORDER BY is_test ASC, id ASC
+    `).bind(instance.id).all<any>();
+    return {
+      id: String(instance.id),
+      uri_scheme: instance.uri_scheme || null,
+      projects_count: Number(instance.projects_count || 0),
+      links_count: Number(instance.links_count || 0),
+      projects: (projects.results || []).map((project: any) => ({
+        id: `${instance.id}-${project.is_test ? 'test' : 'prod'}`,
+        name: project.name,
+        identifier: project.identifier,
+        environment: project.is_test ? 'test' : 'production',
+      })),
+    };
+  }));
+  return c.json({ user, instances });
+});
+
+mcp.get('/platform-status', async (c) => {
+  const userId = await getMcpUserId(c);
+  if (!userId) return c.json({ error: 'invalid_token' }, 401);
+  const operator = await c.env.DB.prepare(`
+    SELECT role FROM instance_roles
+    WHERE user_id = ? AND role IN ('owner', 'admin')
+    ORDER BY id ASC LIMIT 1
+  `).bind(userId).first<{ role: string }>();
+  if (!operator) return c.json({ error: 'admin_required' }, 403);
+  return c.json(await buildPlatformStatus(c.env), 200, {
+    'cache-control': 'no-store',
+  });
 });
 
 mcp.get('/usage', async (c) => {
@@ -462,9 +496,24 @@ mcp.post('/projects', async (c) => {
   ).bind(generateApiKey(), `${uriBase}${generateShortCode(8).toLowerCase()}`).first<any>();
   await c.env.DB.prepare('INSERT INTO instance_roles (user_id, instance_id, role) VALUES (?, ?, ?)')
     .bind(userId, created.id, 'owner').run();
-  await getOrCreateProject(c.env.DB, created.id, 'production');
-  await getOrCreateProject(c.env.DB, created.id, 'test');
-  return c.json({ instance: created }, 201);
+  const production = await getOrCreateProject(c.env.DB, created.id, 'production');
+  const test = await getOrCreateProject(c.env.DB, created.id, 'test');
+  return c.json({
+    instance: {
+      id: String(created.id),
+      uri_scheme: created.uri_scheme,
+      production: {
+        id: production.externalId,
+        name: production.name,
+        identifier: production.identifier,
+      },
+      test: {
+        id: test.externalId,
+        name: test.name,
+        identifier: test.identifier,
+      },
+    },
+  }, 201);
 });
 
 mcp.post('/links/search', async (c) => {

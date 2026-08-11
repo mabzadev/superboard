@@ -16,7 +16,10 @@ class OpenGrowDeviceDetails {
    * @returns {Object} - Object containing user agent, app version, and build.
    */
   static currentDetails() {
-    const userAgent = navigator.userAgent;
+    const userAgent =
+      typeof navigator !== "undefined" && navigator.userAgent
+        ? navigator.userAgent
+        : "unknown";
 
     // Initialize return values object
     const returnValues = {
@@ -36,7 +39,7 @@ class OpenGrowDeviceDetails {
   static getValue(name) {
     if (this.isElectron()) {
       return localStorage.getItem(name); // Use local storage in Electron
-    } else {
+    } else if (typeof document !== "undefined") {
       const cookies = document.cookie.split(";"); // Split cookies into an array
       for (let cookie of cookies) {
         const [key, value] = cookie.trim().split("="); // Split each cookie into name and value
@@ -46,6 +49,7 @@ class OpenGrowDeviceDetails {
       }
       return null; // Return null if the item is not found
     }
+    return null;
   }
 
   /**
@@ -55,7 +59,7 @@ class OpenGrowDeviceDetails {
   static removeValue(name) {
     if (this.isElectron()) {
       localStorage.removeItem(name); // Remove item from local storage in Electron
-    } else {
+    } else if (typeof document !== "undefined") {
       // Set the cookie's expiration date to the past
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
     }
@@ -69,7 +73,7 @@ class OpenGrowDeviceDetails {
   static setValue(name, value) {
     if (this.isElectron()) {
       localStorage.setItem(name, value); // Set value in local storage in Electron
-    } else {
+    } else if (typeof document !== "undefined") {
       // Set expiration date to a far-future date
       const farFutureDate = new Date("9999-12-31");
       const expires = "expires=" + farFutureDate.toUTCString();
@@ -85,35 +89,34 @@ class OpenGrowDeviceDetails {
    * @returns {string|null} - Value of the "OpenGrow" parameter, or null if not found.
    */
   static getOpenGrowPath() {
-    let urlWithoutFragment = window.location.href.split("#")[0];
-
-    // Remove the trailing slash if it exists
-    if (urlWithoutFragment.endsWith("/")) {
-      urlWithoutFragment = urlWithoutFragment.slice(0, -1);
+    let openGrowValue = null;
+    if (
+      typeof window !== "undefined" &&
+      window.location &&
+      typeof window.location.href === "string"
+    ) {
+      try {
+        // URLSearchParams already percent-decodes once. Calling
+        // decodeURIComponent here would corrupt values containing a literal
+        // percent-encoded sequence such as `a%2Fb`.
+        openGrowValue = new URL(window.location.href).searchParams.get(
+          "OpenGrow",
+        );
+      } catch {
+        // A host can expose a partial Location mock. Treat an invalid href as
+        // absent input instead of breaking SDK initialization.
+      }
     }
 
-    // Create a URL object with the cleaned URL
-    const url = new URL(urlWithoutFragment);
-
-    // Use URLSearchParams to get the 'OpenGrow' parameter
-    const OpenGrowValue = url.searchParams.get("OpenGrow");
-
-    // Decode the parameter value, if it exists
-    const decodedOpenGrowValue = OpenGrowValue
-      ? decodeURIComponent(OpenGrowValue)
-      : null;
-
-    if (decodedOpenGrowValue != null) {
-      this.setValue("OpenGrow_path", decodedOpenGrowValue);
-
-      return decodedOpenGrowValue;
-    } else {
-      // Return it only once
-      const value = this.getValue("OpenGrow_path");
-      this.removeValue("OpenGrow_path");
-
-      return value;
+    if (openGrowValue != null) {
+      this.setValue("OpenGrow_path", openGrowValue);
+      return openGrowValue;
     }
+
+    // Return a persisted attribution only once.
+    const value = this.getValue("OpenGrow_path");
+    this.removeValue("OpenGrow_path");
+    return value;
   }
 }
 

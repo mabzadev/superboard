@@ -111,15 +111,19 @@ describe('Billing service binding', () => {
     const env = { BILLING_EXECUTION_MODE: 'service', BILLING: { fetch } } as any;
 
     await expect(ingestProviderEventWithBillingAuthority(env, {
-      projectId: '11', store: 'stripe', environment: 'sandbox', externalEventId: 'stripe-event-1',
-      eventType: 'checkout.session.completed', payload: '{"id":"stripe-event-1"}',
-      job: { type: 'billing.stripe.notification', connectionId: 'connection-1' },
+      projectId: '11', store: 'google', environment: 'sandbox', externalEventId: 'google-event-1',
+      eventType: 'SUBSCRIPTION_RENEWED', payload: '{"id":"google-event-1"}',
+      job: {
+        type: 'billing.google.notification', projectId: '11', purchaseToken: 'purchase-token',
+        productId: 'product-id', productType: 'subscription', eventType: 'SUBSCRIPTION_RENEWED',
+        eventOccurredAt: '2026-08-04T08:00:00.000Z', environment: 'sandbox',
+      },
     })).resolves.toMatchObject({ event_id: 'event-1', queued: true });
     const request = fetch.mock.calls[0][0] as Request;
     expect(request.url).toBe('https://billing.internal/internal/v1/provider-events/ingest');
     await expect(request.json()).resolves.toMatchObject({
-      project_id: '11', store: 'stripe', external_event_id: 'stripe-event-1',
-      job: { type: 'billing.stripe.notification', connectionId: 'connection-1' },
+      project_id: '11', store: 'google', external_event_id: 'google-event-1',
+      job: { type: 'billing.google.notification', projectId: '11' },
     });
   });
 });

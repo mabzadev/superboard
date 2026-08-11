@@ -17,7 +17,7 @@ export const BILLING_STATUSES = [
 ] as const;
 
 export type BillingStatus = typeof BILLING_STATUSES[number];
-export type BillingStore = 'apple' | 'google' | 'stripe' | 'promotional';
+export type BillingStore = 'apple' | 'google' | 'promotional';
 export type BillingEnvironment = 'sandbox' | 'production';
 
 export type VerifiedPurchase = {
@@ -120,8 +120,6 @@ export async function identifyCustomer(
     db.prepare('UPDATE billing_subscriptions SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
     db.prepare('UPDATE billing_events SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
     db.prepare('UPDATE billing_paywall_events SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
-    db.prepare('UPDATE billing_checkout_sessions SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
-    db.prepare('UPDATE billing_redemptions SET redeemed_by_customer_id = ? WHERE redeemed_by_customer_id = ?').bind(destination.id, merged.id),
     db.prepare('UPDATE OR IGNORE billing_experiment_assignments SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
     db.prepare('DELETE FROM billing_experiment_assignments WHERE customer_id = ?').bind(merged.id),
     db.prepare('UPDATE OR IGNORE billing_customer_entitlements SET customer_id = ? WHERE customer_id = ?').bind(destination.id, merged.id),
@@ -162,40 +160,110 @@ async function getOrCreateProduct(db: D1Database, purchase: VerifiedPurchase) {
   return db.prepare('SELECT * FROM billing_products WHERE id = ?').bind(id).first<Record<string, unknown>>();
 }
 
+type EntitlementCandidate = {
+  product_id: string;
+  status: string;
+  starts_at: string | null;
+  expires_at: string | null;
+  will_renew: number;
+  observed_at: string | null;
+};
+
+async function projectCustomerEntitlement(
+  db: D1Database,
+  params: {
+    projectId: string;
+    customerId: string;
+    entitlementId: string;
+    fallbackProductId: string;
+    fallbackStartsAt?: string | null;
+    fallbackExpiresAt?: string | null;
+  },
+) {
+  const candidates = await db.prepare(`
+    WITH latest_non_consumables AS (
+      SELECT t.product_id, t.status, t.purchased_at AS starts_at, t.expires_at,
+        0 AS will_renew, t.event_occurred_at AS observed_at,
+        ROW_NUMBER() OVER (
+          PARTITION BY t.project_id, t.store, t.environment, t.original_transaction_id
+          ORDER BY datetime(COALESCE(t.event_occurred_at, t.verified_at)) DESC, t.id DESC
+        ) AS event_rank
+      FROM billing_transactions t
+      JOIN billing_products p ON p.id = t.product_id AND p.product_type = 'non_consumable'
+      JOIN billing_product_entitlements pe
+        ON pe.product_id = t.product_id AND pe.entitlement_id = ?
+      WHERE t.project_id = ? AND t.customer_id = ?
+    )
+    SELECT s.product_id, s.status, s.starts_at, s.expires_at, s.will_renew,
+      COALESCE(s.latest_event_at, s.updated_at) AS observed_at
+    FROM billing_subscriptions s
+    JOIN billing_product_entitlements pe
+      ON pe.product_id = s.product_id AND pe.entitlement_id = ?
+    WHERE s.project_id = ? AND s.customer_id = ?
+    UNION ALL
+    SELECT product_id, status, starts_at, expires_at, will_renew, observed_at
+    FROM latest_non_consumables WHERE event_rank = 1
+  `).bind(
+    params.entitlementId,
+    params.projectId,
+    params.customerId,
+    params.entitlementId,
+    params.projectId,
+    params.customerId,
+  ).all<EntitlementCandidate>();
+  const activeCandidates = (candidates.results || [])
+    .filter((candidate) => entitlementIsActive(candidate.status, candidate.expires_at))
+    .sort((left, right) => {
+      const leftExpiry = left.expires_at ? Date.parse(left.expires_at) : Number.POSITIVE_INFINITY;
+      const rightExpiry = right.expires_at ? Date.parse(right.expires_at) : Number.POSITIVE_INFINITY;
+      if (leftExpiry !== rightExpiry) return rightExpiry - leftExpiry;
+      return Date.parse(right.observed_at || '') - Date.parse(left.observed_at || '');
+    });
+  const selected = activeCandidates[0];
+  await db.prepare(`
+    INSERT INTO billing_customer_entitlements (
+      project_id, customer_id, entitlement_id, product_id, source, status,
+      starts_at, expires_at, will_renew, verification
+    ) VALUES (?, ?, ?, ?, 'purchase', ?, COALESCE(?, datetime('now')), ?, ?, 'verified')
+    ON CONFLICT(customer_id, entitlement_id, source) DO UPDATE SET
+      product_id = excluded.product_id,
+      status = excluded.status,
+      starts_at = excluded.starts_at,
+      expires_at = excluded.expires_at,
+      will_renew = excluded.will_renew,
+      verification = 'verified',
+      updated_at = datetime('now')
+  `).bind(
+    params.projectId,
+    params.customerId,
+    params.entitlementId,
+    selected?.product_id || params.fallbackProductId,
+    selected?.status || 'inactive',
+    selected?.starts_at || params.fallbackStartsAt || null,
+    selected?.expires_at || params.fallbackExpiresAt || null,
+    selected ? Number(selected.will_renew || 0) : 0,
+  ).run();
+}
+
 async function syncEntitlements(db: D1Database, purchase: VerifiedPurchase, productId: string) {
-  if (!purchase.customerId || purchase.productType === 'consumable') return;
+  if (!purchase.customerId || purchase.productType === 'consumable') return [] as string[];
   const mappings = await db.prepare(`
     SELECT e.id
     FROM billing_product_entitlements pe
     JOIN billing_entitlements e ON e.id = pe.entitlement_id
     WHERE pe.product_id = ? AND e.active = 1
   `).bind(productId).all<{ id: string }>();
-  const active = entitlementIsActive(purchase.status, purchase.expiresAt);
   for (const entitlement of mappings.results || []) {
-    await db.prepare(`
-      INSERT INTO billing_customer_entitlements (
-        project_id, customer_id, entitlement_id, product_id, source, status,
-        starts_at, expires_at, will_renew, verification
-      ) VALUES (?, ?, ?, ?, 'purchase', ?, COALESCE(?, datetime('now')), ?, ?, 'verified')
-      ON CONFLICT(customer_id, entitlement_id, source) DO UPDATE SET
-        product_id = excluded.product_id,
-        status = excluded.status,
-        starts_at = excluded.starts_at,
-        expires_at = excluded.expires_at,
-        will_renew = excluded.will_renew,
-        verification = 'verified',
-        updated_at = datetime('now')
-    `).bind(
-      String(purchase.projectId),
-      purchase.customerId,
-      entitlement.id,
-      productId,
-      active ? purchase.status : 'inactive',
-      purchase.purchasedAt || null,
-      purchase.expiresAt || null,
-      active && purchase.autoRenews ? 1 : 0,
-    ).run();
+    await projectCustomerEntitlement(db, {
+      projectId: String(purchase.projectId),
+      customerId: purchase.customerId,
+      entitlementId: entitlement.id,
+      fallbackProductId: productId,
+      fallbackStartsAt: purchase.purchasedAt,
+      fallbackExpiresAt: purchase.expiresAt,
+    });
   }
+  return (mappings.results || []).map((entitlement) => entitlement.id);
 }
 
 async function creditProductCurrencies(
@@ -272,6 +340,7 @@ async function queueOutboundWebhookEvent(env: BillingEnv, event: OutboundWebhook
     FROM billing_webhook_endpoints
     WHERE project_id = ? AND active = 1
   `).bind(String(event.projectId)).all<Record<string, unknown>>();
+  const deliveries: Array<{ id: string; endpointId: string; payload: string }> = [];
   for (const endpoint of endpoints.results || []) {
     const environments = Array.isArray(endpoint.environments) ? endpoint.environments : JSON.parse(String(endpoint.environments || '[]'));
     const eventTypes = Array.isArray(endpoint.event_types) ? endpoint.event_types : JSON.parse(String(endpoint.event_types || '[]'));
@@ -288,13 +357,46 @@ async function queueOutboundWebhookEvent(env: BillingEnv, event: OutboundWebhook
       occurred_at: new Date().toISOString(),
       ...event.payload,
     });
-    await env.DB.prepare(`
-      INSERT INTO billing_webhook_deliveries (id, endpoint_id, transaction_id, event_type, payload)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(deliveryId, endpoint.id, event.transactionId || null, event.eventType, payload).run();
-    if (env.BILLING_QUEUE) {
-      await env.BILLING_QUEUE.send({ type: 'billing.webhook.deliver', deliveryId });
-    }
+    deliveries.push({ id: deliveryId, endpointId: String(endpoint.id), payload });
+  }
+  if (deliveries.length === 0) return;
+  const customerId = typeof event.payload.customer_id === 'string'
+    ? event.payload.customer_id
+    : null;
+  await env.DB.batch(deliveries.map((delivery) => env.DB.prepare(`
+    INSERT INTO billing_webhook_deliveries (
+      id, endpoint_id, transaction_id, customer_id, event_type, payload
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(
+    delivery.id,
+    delivery.endpointId,
+    event.transactionId || null,
+    customerId,
+    event.eventType,
+    delivery.payload,
+  )));
+  if (env.BILLING_QUEUE) {
+    await Promise.all(deliveries.map(async (delivery) => {
+      try {
+        await env.BILLING_QUEUE!.send({
+          type: 'billing.webhook.deliver',
+          deliveryId: delivery.id,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        await env.DB.prepare(`
+          UPDATE billing_webhook_deliveries
+          SET error_message = ?, next_attempt_at = datetime('now')
+          WHERE id = ? AND status = 'pending'
+        `).bind('Initial queue dispatch failed', delivery.id).run();
+        console.error(JSON.stringify({
+          event: 'billing_webhook_queue_dispatch_failed',
+          delivery_id: delivery.id,
+          endpoint_id: delivery.endpointId,
+          error: message,
+        }));
+      }
+    }));
   }
 }
 
@@ -396,6 +498,32 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
   ).first<{ id: string }>();
   if (!stored) throw new Error('Unable to persist verified transaction');
 
+  const transferredCustomerIds = purchase.customerId && purchase.transfer === true
+    ? await env.DB.prepare(`
+        SELECT DISTINCT customer_id
+        FROM (
+          SELECT customer_id
+          FROM billing_subscriptions
+          WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
+          UNION ALL
+          SELECT customer_id
+          FROM billing_transactions
+          WHERE project_id = ? AND store = ? AND environment = ? AND original_transaction_id = ?
+        )
+        WHERE customer_id IS NOT NULL AND customer_id <> ?
+      `).bind(
+        String(purchase.projectId),
+        purchase.store,
+        purchase.environment,
+        purchase.originalTransactionId || purchase.storeTransactionId,
+        String(purchase.projectId),
+        purchase.store,
+        purchase.environment,
+        purchase.originalTransactionId || purchase.storeTransactionId,
+        purchase.customerId,
+      ).all<{ customer_id: string }>()
+    : { results: [] as Array<{ customer_id: string }> };
+
   let subscriptionAccepted = true;
   if (purchase.productType === 'subscription') {
     await env.DB.prepare(`
@@ -448,19 +576,42 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
     subscriptionAccepted = current?.latest_transaction_id === stored.id;
   }
 
-  if (purchase.customerId && purchase.transfer === true) {
-    await env.DB.prepare(`
-      DELETE FROM billing_customer_entitlements
-      WHERE product_id = ? AND source = 'purchase' AND customer_id <> ?
-    `).bind(String(product.id), purchase.customerId).run();
+  const transferredFrom: string[] = [];
+  if (purchase.customerId && purchase.transfer === true && subscriptionAccepted) {
+    for (const previous of transferredCustomerIds.results || []) {
+      transferredFrom.push(previous.customer_id);
+    }
   }
-  if (subscriptionAccepted) await syncEntitlements(env.DB, purchase, String(product.id));
+  const mappedEntitlementIds = subscriptionAccepted
+    ? await syncEntitlements(env.DB, purchase, String(product.id))
+    : [];
+  for (const previousCustomerId of transferredFrom) {
+    for (const entitlementId of mappedEntitlementIds) {
+      await projectCustomerEntitlement(env.DB, {
+        projectId: String(purchase.projectId),
+        customerId: previousCustomerId,
+        entitlementId,
+        fallbackProductId: String(product.id),
+        fallbackExpiresAt: purchase.expiresAt,
+      });
+    }
+  }
   await creditProductCurrencies(env.DB, purchase, product, stored.id);
   await recordCanonicalBillingEvent(env, purchase, stored.id);
   await recordRefundCaseForPurchase(env, purchase, stored.id);
   if (insert.meta.changes > 0) {
     await queuePurchaseWebhook(env, purchase, stored.id);
-    if (purchase.customerId) {
+  }
+  if (purchase.customerId) {
+    const existingProjection = insert.meta.changes > 0
+      ? null
+      : await env.DB.prepare(`
+          SELECT id FROM billing_webhook_deliveries
+          WHERE transaction_id = ? AND event_type = 'customer.entitlement.changed'
+            AND customer_id = ?
+          LIMIT 1
+        `).bind(stored.id, purchase.customerId).first<{ id: string }>();
+    if (!existingProjection) {
       await queueCustomerEntitlementChanged(env, {
         projectId: purchase.projectId,
         customerId: purchase.customerId,
@@ -469,6 +620,15 @@ export async function applyVerifiedPurchase(env: BillingEnv, purchase: VerifiedP
         reason: purchase.eventType,
       });
     }
+  }
+  for (const previousCustomerId of transferredFrom) {
+    await queueCustomerEntitlementChanged(env, {
+      projectId: purchase.projectId,
+      customerId: previousCustomerId,
+      environment: purchase.environment,
+      transactionId: stored.id,
+      reason: 'purchase_transferred',
+    });
   }
   return { transactionId: stored.id, duplicate: insert.meta.changes === 0 };
 }
@@ -557,13 +717,12 @@ export async function offeringsForCustomer(
       JOIN billing_products p ON p.id = bpp.product_id
       WHERE bp.offering_id = ? AND p.active = 1
         AND (
-          (? = 'web' AND p.store = 'stripe')
-          OR (? = 'ios' AND p.store = 'apple')
+          (? = 'ios' AND p.store = 'apple')
           OR (? = 'android' AND p.store = 'google')
         )
         AND p.environment = ?
       ORDER BY bp.position ASC
-    `).bind(offering.id, platform, platform, platform, environment).all<Record<string, unknown>>();
+    `).bind(offering.id, platform, platform, environment).all<Record<string, unknown>>();
     result[String(offering.identifier)] = {
       identifier: offering.identifier,
       display_name: offering.display_name,

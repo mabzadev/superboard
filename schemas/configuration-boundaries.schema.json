@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opengrow.local/schemas/configuration-boundaries.schema.json",
+  "title": "OpenGrow configuration ownership boundaries",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "authorities", "injection", "scan"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "authorities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sharedPlatform", "reference", "applications"],
+      "properties": {
+        "sharedPlatform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["serviceRegistry", "projectManifest", "runtimeRoots"],
+          "properties": {
+            "serviceRegistry": { "$ref": "#/$defs/repositoryPath" },
+            "projectManifest": { "$ref": "#/$defs/repositoryPath" },
+            "runtimeRoots": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/repositoryPath" }
+            }
+          }
+        },
+        "reference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "targetSelector",
+            "requiredEnvironment",
+            "domainSuffixPolicy",
+            "requiredMailTransport"
+          ],
+          "properties": {
+            "targetSelector": {
+              "const": "superboard.project.json#/development/target"
+            },
+            "requiredEnvironment": { "const": "development" },
+            "domainSuffixPolicy": { "const": "derive-from-domains.api" },
+            "requiredMailTransport": { "const": "capture" }
+          }
+        },
+        "applications": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "targetDirectory",
+            "targetSchema",
+            "customPackageField",
+            "derivedProjectionPaths"
+          ],
+          "properties": {
+            "targetDirectory": { "const": "deploy/targets" },
+            "targetSchema": { "const": "deploy/targets/schema.json" },
+            "customPackageField": { "const": "customWorker.packagePath" },
+            "derivedProjectionPaths": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/repositoryPath" }
+            }
+          }
+        }
+      }
+    },
+    "injection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accountId",
+        "deploymentCredentialEnvironmentNames",
+        "projectCredentialEnvironmentNames",
+        "secretRegistries"
+      ],
+      "properties": {
+        "accountId": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["defaultEnvironmentName", "scopedEnvironmentPrefix"],
+          "properties": {
+            "defaultEnvironmentName": { "const": "CLOUDFLARE_ACCOUNT_ID" },
+            "scopedEnvironmentPrefix": { "const": "CLOUDFLARE_ACCOUNT_ID_" }
+          }
+        },
+        "deploymentCredentialEnvironmentNames": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/environmentName" },
+          "contains": { "const": "CLOUDFLARE_API_TOKEN" }
+        },
+        "projectCredentialEnvironmentNames": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/environmentName" }
+        },
+        "secretRegistries": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ignoredDirectoryNames",
+        "ignoredFileSuffixes",
+        "portableExtensions",
+        "localOnlyPathSegments",
+        "localOnlyFileMarkers",
+        "localWranglerTemplates"
+      ],
+      "properties": {
+        "ignoredDirectoryNames": { "$ref": "#/$defs/pathList" },
+        "ignoredFileSuffixes": { "$ref": "#/$defs/nonEmptyStringList" },
+        "portableExtensions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^\\.[a-z0-9]+$" }
+        },
+        "localOnlyPathSegments": { "$ref": "#/$defs/nonEmptyStringList" },
+        "localOnlyFileMarkers": { "$ref": "#/$defs/nonEmptyStringList" },
+        "localWranglerTemplates": { "$ref": "#/$defs/pathList" }
+      }
+    }
+  },
+  "$defs": {
+    "environmentName": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "pathList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repositoryPath" }
+    },
+    "nonEmptyStringList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

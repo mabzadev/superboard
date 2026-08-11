@@ -5,6 +5,9 @@ node_modules/
 # Build output
 build/
 .dart_tool/
+**/.flutterflow/
+tools/flutterflow-library/generated_code/
+**/.flutter-plugins-dependencies
 .next/
 .vercel/
 .open-next/
@@ -38,3 +41,4 @@ yarn-error.log*
 # Runtime caches
 .cache/
 .turbo/
+/.ci-reference-contract/

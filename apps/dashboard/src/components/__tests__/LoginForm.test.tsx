@@ -12,11 +12,6 @@ vi.mock("@/lib/config", () => ({
     clientId: "test-client-id",
     docsUrl: "https://docs.example.com",
     supportEmail: "support@example.com",
-    termsUrl: "https://example.com/terms",
-    privacyUrl: "https://example.com/privacy",
-    pricingUrl: "https://example.com/pricing",
-    salesUrl: "https://example.com/sales",
-    appUrl: "https://app.example.com",
   },
 }));
 

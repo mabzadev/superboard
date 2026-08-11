@@ -1,0 +1,1194 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  Activity,
+  Database,
+  ExternalLink,
+  Gauge,
+  RefreshCw,
+  Users,
+} from "lucide-react";
+import {
+  getPlatformAccountErasures,
+  getPlatformCustomJobs,
+  getPlatformEmailOperations,
+  getPlatformStatus,
+  discardPlatformEmailDeadLetter,
+  replayPlatformEmailDeadLetter,
+  retryPlatformCustomJob,
+  type PlatformAccountErasure,
+  type PlatformCustomJob,
+  type PlatformEmailOperations,
+  type PlatformStatus,
+  type RuntimeMetricRow,
+} from "@/api/platform/platformService";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+export default function InfrastructurePage() {
+  const [status, setStatus] = useState<PlatformStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [customJobs, setCustomJobs] = useState<PlatformCustomJob[]>([]);
+  const [accountErasures, setAccountErasures] = useState<
+    PlatformAccountErasure[]
+  >([]);
+  const [emailOperations, setEmailOperations] =
+    useState<PlatformEmailOperations | null>(null);
+  const [emailOperationsError, setEmailOperationsError] = useState<
+    string | null
+  >(null);
+  const [retryingJob, setRetryingJob] = useState<string | null>(null);
+  const [resolvingDeadLetter, setResolvingDeadLetter] = useState<string | null>(
+    null
+  );
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const next = await getPlatformStatus();
+      setStatus(next);
+      const supportsJobInspection =
+        next.custom.status === "ok" && next.custom.manifest != null;
+      const emailEnabled = next.services.some(
+        (service) => service.id === "email" && service.status !== "disabled"
+      );
+      const [nextCustomJobs, nextAccountErasures, nextEmailOperations] =
+        await Promise.all([
+          supportsJobInspection
+            ? getPlatformCustomJobs().then((page) => page.jobs)
+            : Promise.resolve([]),
+          getPlatformAccountErasures(),
+          emailEnabled
+            ? getPlatformEmailOperations()
+                .then((data) => ({ data, error: null }))
+                .catch((reason: unknown) => ({
+                  data: null,
+                  error:
+                    reason instanceof Error
+                      ? reason.message
+                      : "Email operations are unavailable",
+                }))
+            : Promise.resolve({ data: null, error: null }),
+        ]);
+      setCustomJobs(nextCustomJobs);
+      setAccountErasures(nextAccountErasures);
+      setEmailOperations(nextEmailOperations.data);
+      setEmailOperationsError(nextEmailOperations.error);
+      setError(null);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Unable to load infrastructure status"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const resolveDeadLetter = useCallback(
+    async (deadLetterId: string, decision: "replay" | "discard") => {
+      setResolvingDeadLetter(deadLetterId);
+      try {
+        if (decision === "replay") {
+          await replayPlatformEmailDeadLetter(deadLetterId);
+        } else {
+          await discardPlatformEmailDeadLetter(deadLetterId);
+        }
+        setEmailOperations(await getPlatformEmailOperations());
+        setEmailOperationsError(null);
+      } catch (reason) {
+        setEmailOperationsError(
+          reason instanceof Error
+            ? reason.message
+            : "Unable to resolve email dead letter"
+        );
+      } finally {
+        setResolvingDeadLetter(null);
+      }
+    },
+    []
+  );
+
+  const retryJob = useCallback(async (jobId: string) => {
+    setRetryingJob(jobId);
+    try {
+      await retryPlatformCustomJob(jobId);
+      const next = await getPlatformCustomJobs();
+      setCustomJobs(next.jobs);
+      setError(null);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Unable to retry custom job"
+      );
+    } finally {
+      setRetryingJob(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+    const timer = window.setInterval(() => void load(), 30_000);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
+  return (
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Infrastructure</h1>
+          <p className="text-sm text-muted-foreground">
+            Live SuperBoard API, Worker, database, user and background-job status.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => void load()}
+          disabled={loading}
+        >
+          <RefreshCw className={loading ? "animate-spin" : ""} /> Refresh
+        </Button>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Status unavailable</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {status && (
+        <>
+          {status.catalog?.status !== "ok" && (
+            <Alert variant="destructive">
+              <AlertTitle>Worker catalog misconfigured</AlertTitle>
+              <AlertDescription>
+                {status.catalog?.error ??
+                  "The target Worker inventory is unavailable."}
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Metric
+              title="Platform"
+              value={status.status}
+              icon={<Activity />}
+            />
+            <Metric
+              title="Users"
+              value={format(status.metrics.users)}
+              icon={<Users />}
+            />
+            <Metric
+              title="Projects"
+              value={format(status.metrics.projects)}
+              icon={<Database />}
+            />
+            <Metric
+              title="Invocations (60 min)"
+              value={format(totalInvocations(status.runtime?.rows))}
+              icon={<Gauge />}
+            />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Endpoints</CardTitle>
+              <CardDescription>
+                Public surfaces generated by the active target manifest.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              {Object.entries(status.endpoints).map(([name, url]) => (
+                <div
+                  key={name}
+                  className="flex items-center justify-between rounded-md border p-3"
+                >
+                  <span className="capitalize">
+                    {name.replace(/([A-Z])/g, " $1")}
+                  </span>
+                  {url ? (
+                    <a
+                      className="flex items-center gap-1 text-sm text-primary"
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {url}
+                      <ExternalLink className="size-3" />
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">Disabled</span>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Public availability</CardTitle>
+              <CardDescription>
+                DNS and routed HTTPS checks, separate from private Worker
+                service-binding health.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 lg:grid-cols-2">
+              {(status.publicSurfaces ?? []).map((surface) => (
+                <div key={surface.id} className="rounded-md border p-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <strong className="capitalize">
+                      {surface.id.replace(/-/g, " ")}
+                    </strong>
+                    <StatusBadge value={surface.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {surface.description}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    <span>
+                      HTTP {surface.httpStatus ?? "—"} ·{" "}
+                      {surface.responseTimeMs == null
+                        ? "no response"
+                        : `${surface.responseTimeMs} ms`}
+                    </span>
+                    {surface.url && (
+                      <a
+                        className="inline-flex items-center gap-1 text-primary"
+                        href={surface.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open <ExternalLink className="size-3" />
+                      </a>
+                    )}
+                  </div>
+                  {surface.error && (
+                    <p className="mt-2 text-xs text-destructive">
+                      {surface.error}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Data stores</CardTitle>
+              <CardDescription>
+                Logical ownership and live availability. Raw SQL is
+                intentionally not exposed by the control plane.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 lg:grid-cols-2">
+              {status.dataStores.map((store) => (
+                <div key={store.id} className="rounded-md border p-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <div>
+                      <strong>{store.id}</strong>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {store.kind} · {store.owner}
+                      </span>
+                    </div>
+                    <StatusBadge value={store.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {store.description}
+                  </p>
+                  {store.kind === "D1" && (
+                    <div className="mt-3 space-y-1 border-t pt-3 text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between gap-3">
+                        <span>Schema</span>
+                        {store.schema ? (
+                          <StatusBadge value={store.schema.status} />
+                        ) : (
+                          <StatusBadge value="unavailable" />
+                        )}
+                      </div>
+                      {store.schema && (
+                        <>
+                          <p>Expected: {store.schema.expectedMigration}</p>
+                          <p>
+                            Applied: {store.schema.latestMigration ?? "none"} ·{" "}
+                            {format(store.schema.appliedMigrationCount)} total
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>API capabilities</CardTitle>
+                <StatusBadge value={status.api.status} />
+              </div>
+              <CardDescription>{status.api.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 lg:grid-cols-2">
+                {status.api.capabilities.map((capability) => (
+                  <div key={capability.id} className="rounded-md border p-4">
+                    <strong className="capitalize">{capability.id}</strong>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {capability.description}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Access: {capability.access}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {capability.entrypoints.map((entrypoint) => (
+                        <code
+                          key={entrypoint}
+                          className="rounded bg-muted px-1.5 py-0.5 text-xs"
+                        >
+                          {entrypoint}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Target {status.deployment.target} · Environment{" "}
+                {status.environment}
+                {" · "}Release {status.deployment.release}
+                {" · "}Public routing {status.deployment.publicRouting}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Workers</CardTitle>
+              <CardDescription>
+                Target-derived deployment names, responsibilities, health,
+                dependencies and persisted job state.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 lg:grid-cols-2">
+              {status.services.map((service) => (
+                <div key={service.id} className="rounded-md border p-4">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <strong>{service.id}</strong>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {service.workerName ?? "No deployment name"} ·{" "}
+                        {service.kind ?? "legacy"}
+                      </p>
+                    </div>
+                    <StatusBadge value={service.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {service.description}
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Health: {service.health?.mode ?? "legacy"}{" "}
+                    {service.health?.path ?? "unknown"} ·{" "}
+                    {service.responseTimeMs == null
+                      ? "no response"
+                      : `${service.responseTimeMs} ms`}
+                  </p>
+                  <WorkerValues
+                    label="Capabilities"
+                    values={service.capabilities ?? []}
+                  />
+                  <WorkerValues
+                    label="Routes"
+                    values={service.routes ?? []}
+                    code
+                  />
+                  <WorkerValues
+                    label="Services"
+                    values={service.dependencies?.services ?? []}
+                  />
+                  <WorkerValues
+                    label="Stores"
+                    values={service.dependencies?.stores ?? []}
+                  />
+                  <WorkerValues
+                    label="Queues"
+                    values={service.dependencies?.queues ?? []}
+                  />
+                  {(service.dependencies?.externalWorkers ?? []).map(
+                    (dependency) => (
+                      <p
+                        key={dependency.binding}
+                        className="mt-1 text-xs text-muted-foreground"
+                      >
+                        External: {dependency.binding} → {dependency.workerName}
+                      </p>
+                    )
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Jobs:{" "}
+                    {service.jobs == null
+                      ? "unavailable"
+                      : Object.entries(service.jobs)
+                          .map(([name, value]) => `${name}: ${value}`)
+                          .join(" · ") || "none"}
+                  </p>
+                  {service.error && (
+                    <p className="mt-2 text-xs text-destructive">
+                      {service.error}
+                    </p>
+                  )}
+                  {runtimeFor(status.runtime?.rows, service.id) && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {runtimeFor(status.runtime?.rows, service.id)}
+                    </p>
+                  )}
+                  {service.detail != null && (
+                    <details className="mt-3 text-xs">
+                      <summary className="cursor-pointer text-muted-foreground">
+                        Runtime detail
+                      </summary>
+                      <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2">
+                        {JSON.stringify(service.detail, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Cloudflare runtime</CardTitle>
+              <CardDescription>
+                Tail Worker and Analytics Engine metrics for the last{" "}
+                {status.runtime?.windowMinutes ?? 60} minutes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!status.runtime && (
+                <p className="text-sm text-muted-foreground">
+                  Observability binding is disabled.
+                </p>
+              )}
+              {status.runtime?.error && (
+                <Alert variant="destructive">
+                  <AlertTitle>Runtime metrics unavailable</AlertTitle>
+                  <AlertDescription>{status.runtime.error}</AlertDescription>
+                </Alert>
+              )}
+              {status.runtime?.rows.length === 0 && !status.runtime.error && (
+                <p className="text-sm text-muted-foreground">
+                  No invocation has been recorded in this window.
+                </p>
+              )}
+              {status.runtime && status.runtime.rows.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b text-xs text-muted-foreground">
+                      <tr>
+                        <th className="py-2">Worker</th>
+                        <th>Event</th>
+                        <th>Outcome</th>
+                        <th>Invocations</th>
+                        <th>Exceptions</th>
+                        <th>Avg CPU</th>
+                        <th>Avg wall</th>
+                        <th>Max wall</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {status.runtime.rows.map((row) => (
+                        <tr
+                          key={`${row.service}:${row.eventType}:${row.outcome}`}
+                          className="border-b last:border-0"
+                        >
+                          <td className="py-2 font-medium">{row.service}</td>
+                          <td>{row.eventType}</td>
+                          <td>
+                            <StatusBadge value={row.outcome} />
+                          </td>
+                          <td>{format(row.invocations)}</td>
+                          <td>{format(row.exceptions)}</td>
+                          <td>{milliseconds(row.averageCpuMs)}</td>
+                          <td>{milliseconds(row.averageWallMs)}</td>
+                          <td>{milliseconds(row.maximumWallMs)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data</CardTitle>
+                <CardDescription>
+                  Current API database inventory.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {Object.entries(status.metrics).map(([name, value]) => (
+                  <Row key={name} name={name} value={format(value)} />
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Background jobs</CardTitle>
+                <CardDescription>
+                  Persisted job state; Cloudflare Queue backlog remains
+                  available in Cloudflare analytics.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {Object.entries(status.jobs).map(([name, values]) => (
+                  <Row
+                    key={name}
+                    name={name}
+                    value={
+                      values
+                        ? Object.entries(values)
+                            .map(([key, value]) => `${key}: ${value}`)
+                            .join(" · ") || "0"
+                        : "Unavailable"
+                    }
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Email delivery operations</CardTitle>
+                <CardDescription>
+                  Body-free transactional, marketing and test email state from
+                  the target-scoped Email Worker.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {emailOperations?.queue && (
+                  <div className="mb-3 grid gap-2 rounded-md border p-3 text-xs sm:grid-cols-3">
+                    <Row
+                      name="Queue backlog"
+                      value={format(emailOperations.queue.backlogCount)}
+                    />
+                    <Row
+                      name="Backlog bytes"
+                      value={format(emailOperations.queue.backlogBytes)}
+                    />
+                    <Row
+                      name="Oldest queued"
+                      value={
+                        emailOperations.queue.oldestMessageAt
+                          ? new Date(
+                              emailOperations.queue.oldestMessageAt
+                            ).toLocaleString()
+                          : "—"
+                      }
+                    />
+                  </div>
+                )}
+                {emailOperations && !emailOperations.queue && (
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Cloudflare Queue metrics are unavailable for this target.
+                  </p>
+                )}
+                {emailOperationsError && (
+                  <p className="mb-3 text-sm text-destructive" role="alert">
+                    {emailOperationsError}
+                  </p>
+                )}
+                {!emailOperations ? (
+                  <p className="text-sm text-muted-foreground">
+                    Email operations are disabled or unavailable.
+                  </p>
+                ) : emailOperations.messages.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No email operation has been recorded.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b text-xs text-muted-foreground">
+                        <tr>
+                          <th className="py-2">Message</th>
+                          <th>Kind</th>
+                          <th>Status</th>
+                          <th>Recipients</th>
+                          <th>Attempts</th>
+                          <th>Last error</th>
+                          <th>Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emailOperations.messages.map((message) => (
+                          <tr
+                            key={message.id}
+                            className="border-b last:border-0"
+                          >
+                            <td className="max-w-48 py-2">
+                              <p className="truncate" title={message.subject}>
+                                {message.subject}
+                              </p>
+                              <p className="truncate font-mono text-xs text-muted-foreground">
+                                {message.id}
+                              </p>
+                            </td>
+                            <td>{message.kind}</td>
+                            <td>
+                              <StatusBadge value={message.status} />
+                            </td>
+                            <td>
+                              {message.recipientCount}
+                              {message.failedRecipients > 0
+                                ? ` · ${message.failedRecipients} failed`
+                                : ""}
+                            </td>
+                            <td>{message.attempts}</td>
+                            <td
+                              className="max-w-56 truncate text-xs text-destructive"
+                              title={message.lastError ?? undefined}
+                            >
+                              {message.lastError ?? "—"}
+                            </td>
+                            <td>
+                              {new Date(message.updatedAt).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {emailOperations && (
+                  <div className="mt-6 border-t pt-4">
+                    <h3 className="text-sm font-medium">
+                      Delegated SMTP transport
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Project-profile deliveries executed exclusively by the
+                      Email Worker. Unknown outcomes remain blocked for manual
+                      reconciliation and are never retried automatically.
+                    </p>
+                    {(emailOperations.transportDeliveries ?? []).length ===
+                    0 ? (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        No delegated SMTP delivery has been recorded.
+                      </p>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        {(emailOperations.transportDeliveries ?? []).map(
+                          (delivery) => (
+                            <div
+                              key={delivery.id}
+                              className="flex flex-wrap items-start justify-between gap-3 rounded-md border p-3 text-xs"
+                            >
+                              <div>
+                                <p className="font-mono">
+                                  {delivery.referenceId}
+                                </p>
+                                <p className="mt-1 text-muted-foreground">
+                                  {delivery.source} · project{" "}
+                                  {delivery.projectId}
+                                  {" · profile "}
+                                  {delivery.profileId} · {delivery.attempts}{" "}
+                                  attempts
+                                </p>
+                                {delivery.lastError && (
+                                  <p className="mt-1 text-destructive">
+                                    {delivery.lastError}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <StatusBadge value={delivery.status} />
+                                <p className="mt-1 text-muted-foreground">
+                                  {new Date(
+                                    delivery.updatedAt
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Email dead-letter quarantine</CardTitle>
+                <CardDescription>
+                  Audited terminal Queue failures. Only payloads retained
+                  without secret redaction can be replayed.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!emailOperations ? (
+                  <p className="text-sm text-muted-foreground">
+                    Email quarantine is disabled or unavailable.
+                  </p>
+                ) : emailOperations.deadLetters.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Email quarantine is empty.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {emailOperations.deadLetters.map((deadLetter) => (
+                      <div
+                        key={deadLetter.id}
+                        className="rounded-md border p-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-mono text-xs">
+                              {deadLetter.emailMessageId ?? deadLetter.id}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {deadLetter.jobType ?? "unknown job"} · attempts{" "}
+                              {deadLetter.attempts} · {deadLetter.sourceQueue}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {deadLetter.resolution ?? deadLetter.status} ·{" "}
+                              {new Date(
+                                deadLetter.resolvedAt ?? deadLetter.receivedAt
+                              ).toLocaleString()}
+                            </p>
+                          </div>
+                          {deadLetter.status === "quarantined" && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                aria-label={`Replay email dead letter ${deadLetter.id}`}
+                                disabled={
+                                  !deadLetter.replayable ||
+                                  resolvingDeadLetter === deadLetter.id
+                                }
+                                onClick={() =>
+                                  void resolveDeadLetter(
+                                    deadLetter.id,
+                                    "replay"
+                                  )
+                                }
+                              >
+                                Replay
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                aria-label={`Discard email dead letter ${deadLetter.id}`}
+                                disabled={resolvingDeadLetter === deadLetter.id}
+                                onClick={() =>
+                                  void resolveDeadLetter(
+                                    deadLetter.id,
+                                    "discard"
+                                  )
+                                }
+                              >
+                                Discard
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Account erasure operations</CardTitle>
+              <CardDescription>
+                Durable cross-service deletion progress. Subject references are
+                pseudonymized and raw application user identifiers are never
+                exposed here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {accountErasures.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No account-erasure operation has been recorded.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b text-xs text-muted-foreground">
+                      <tr>
+                        <th className="py-2">Operation</th>
+                        <th>Project</th>
+                        <th>Subject ref</th>
+                        <th>Status</th>
+                        <th>Completed steps</th>
+                        <th>Attempts</th>
+                        <th>Last error</th>
+                        <th>Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {accountErasures.map((operation) => (
+                        <tr
+                          key={operation.id}
+                          className="border-b last:border-0"
+                        >
+                          <td
+                            className="max-w-36 truncate py-2 font-mono text-xs"
+                            title={operation.id}
+                          >
+                            {operation.id}
+                          </td>
+                          <td>{operation.projectRef}</td>
+                          <td className="font-mono text-xs">
+                            {operation.subjectReference}
+                          </td>
+                          <td>
+                            <StatusBadge value={operation.status} />
+                          </td>
+                          <td>{operation.completedSteps.join(" → ") || "—"}</td>
+                          <td>{operation.attempts}</td>
+                          <td>
+                            {operation.lastErrorService &&
+                            operation.lastErrorCode
+                              ? `${operation.lastErrorService}: ${operation.lastErrorCode}`
+                              : "—"}
+                          </td>
+                          <td>
+                            {new Date(operation.updatedAt).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {status.custom.status !== "disabled" && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>Application-specific runtime</CardTitle>
+                    <CardDescription>
+                      {status.custom.manifest?.description ??
+                        "Custom Worker unavailable"}
+                    </CardDescription>
+                  </div>
+                  <StatusBadge value={status.custom.status} />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {status.custom.error && (
+                  <p
+                    className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+                    role="alert"
+                  >
+                    {status.custom.error}
+                  </p>
+                )}
+                {status.custom.manifest && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {status.custom.manifest.capabilities.map((capability) => (
+                      <div
+                        key={capability.id}
+                        className="rounded-md border p-3"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <strong className="text-sm">{capability.id}</strong>
+                          <Badge variant="outline">{capability.mode}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {capability.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {status.custom.stats && (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Metric
+                      title="Application users"
+                      value={format(status.custom.stats.users?.total)}
+                      icon={<Users />}
+                    />
+                    <Metric
+                      title="Premium users"
+                      value={format(status.custom.stats.users?.premium)}
+                      icon={<Users />}
+                    />
+                    <Metric
+                      title="Custom jobs"
+                      value={format(
+                        Object.values(status.custom.stats.jobs).reduce(
+                          (sum, value) => sum + value,
+                          0
+                        )
+                      )}
+                      icon={<Gauge />}
+                    />
+                    {status.custom.stats.cancellations && (
+                      <>
+                        <Metric
+                          title="Cancelled jobs"
+                          value={format(status.custom.stats.cancellations.jobs)}
+                          icon={<Gauge />}
+                        />
+                        <Metric
+                          title="Refunds pending"
+                          value={format(
+                            status.custom.stats.cancellations.refundsPending
+                          )}
+                          icon={<Gauge />}
+                        />
+                        <Metric
+                          title="Refunds applied"
+                          value={format(
+                            status.custom.stats.cancellations.refundsApplied
+                          )}
+                          icon={<Gauge />}
+                        />
+                        <Metric
+                          title="Credits refunded"
+                          value={format(
+                            status.custom.stats.cancellations.creditsRefunded
+                          )}
+                          icon={<Gauge />}
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
+                {customJobs.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b text-xs text-muted-foreground">
+                        <tr>
+                          <th className="py-2">Job</th>
+                          <th>Capability</th>
+                          <th>Status</th>
+                          <th>Progress</th>
+                          <th>Attempts</th>
+                          <th>Result</th>
+                          <th>Updated</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customJobs.map((job) => (
+                          <tr key={job.id} className="border-b last:border-0">
+                            <td
+                              className="max-w-36 truncate py-2 font-mono text-xs"
+                              title={job.id}
+                            >
+                              {job.id}
+                            </td>
+                            <td>{job.capability}</td>
+                            <td>
+                              <StatusBadge value={job.status} />
+                            </td>
+                            <td>
+                              {job.progress == null
+                                ? "—"
+                                : `${Math.round(job.progress * 100)}%`}
+                            </td>
+                            <td>{job.attempts ?? 0}</td>
+                            <td>{customJobResult(job)}</td>
+                            <td>
+                              {job.updatedAt
+                                ? new Date(job.updatedAt).toLocaleString()
+                                : "—"}
+                            </td>
+                            <td>
+                              {["failed", "queued"].includes(job.status) ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={retryingJob === job.id}
+                                  onClick={() => void retryJob(job.id)}
+                                >
+                                  {retryingJob === job.id
+                                    ? "Retrying…"
+                                    : "Retry"}
+                                </Button>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No application-specific job has been recorded.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            Updated {new Date(status.generatedAt).toLocaleString()} ·
+            environment {status.environment} · target {status.deployment.target}{" "}
+            · release {status.deployment.release} · public routing{" "}
+            {status.deployment.publicRouting}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function customJobResult(job: PlatformCustomJob): string {
+  if (job.capability !== "reference.acceptance") return "—";
+  const acceptance = job.result?.acceptance;
+  if (
+    !acceptance ||
+    typeof acceptance !== "object" ||
+    Array.isArray(acceptance)
+  ) {
+    return "Invalid acceptance receipt";
+  }
+  const value = acceptance as Record<string, unknown>;
+  const decision =
+    typeof value.decision === "string" ? value.decision : "unknown";
+  const platform = shortRevision(value.platformRevision);
+  const reference = shortRevision(value.referenceRevision);
+  return `${decision} · platform ${platform} · reference ${reference}`;
+}
+
+function shortRevision(value: unknown): string {
+  return typeof value === "string" && /^[0-9a-f]{40}$/.test(value)
+    ? value.slice(0, 12)
+    : "unproven";
+}
+
+function Metric({
+  title,
+  value,
+  icon,
+}: {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between p-5">
+        <div>
+          <p className="text-xs text-muted-foreground">{title}</p>
+          <p className="text-xl font-semibold capitalize">{value}</p>
+        </div>
+        <span className="text-muted-foreground">{icon}</span>
+      </CardContent>
+    </Card>
+  );
+}
+function Row({ name, value }: { name: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-4 border-b py-2 text-sm last:border-0">
+      <span className="capitalize">{name.replace(/([A-Z])/g, " $1")}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+function WorkerValues({
+  label,
+  values,
+  code = false,
+}: {
+  label: string;
+  values: string[];
+  code?: boolean;
+}) {
+  if (values.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+      <span>{label}:</span>
+      {values.map((value) =>
+        code ? (
+          <code key={value} className="rounded bg-muted px-1 py-0.5">
+            {value}
+          </code>
+        ) : (
+          <span key={value} className="rounded border px-1 py-0.5">
+            {value}
+          </span>
+        )
+      )}
+    </div>
+  );
+}
+function StatusBadge({ value }: { value: string }) {
+  const healthy = new Set([
+    "ok",
+    "configured",
+    "current",
+    "declared",
+    "released",
+  ]);
+  const neutral = new Set(["disabled", "pending", "pending-release"]);
+  return (
+    <Badge
+      variant={
+        healthy.has(value)
+          ? "default"
+          : neutral.has(value)
+            ? "secondary"
+            : "destructive"
+      }
+    >
+      {value}
+    </Badge>
+  );
+}
+function format(value: number | null | undefined) {
+  return value == null ? "Unavailable" : new Intl.NumberFormat().format(value);
+}
+function milliseconds(value: number | null | undefined) {
+  return value == null ? "—" : `${value.toFixed(2)} ms`;
+}
+function totalInvocations(rows: RuntimeMetricRow[] | undefined) {
+  return rows?.reduce((total, row) => total + row.invocations, 0) ?? null;
+}
+function runtimeFor(
+  rows: RuntimeMetricRow[] | undefined,
+  serviceId: string
+): string | null {
+  const matching =
+    rows?.filter(
+      (row) => row.service === serviceId || row.service.includes(serviceId)
+    ) ?? [];
+  if (matching.length === 0) return null;
+  const invocations = matching.reduce(
+    (total, row) => total + row.invocations,
+    0
+  );
+  const exceptions = matching.reduce((total, row) => total + row.exceptions, 0);
+  return `${new Intl.NumberFormat().format(invocations)} invocations · ${new Intl.NumberFormat().format(exceptions)} exceptions`;
+}

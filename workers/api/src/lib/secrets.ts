@@ -1,4 +1,5 @@
 import type { BillingEnv } from '../types';
+import { constantTimeEqual } from '@superboard/contracts/secret';
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -88,14 +89,7 @@ export async function decryptSecret(ciphertext: string, keyMaterial: string): Pr
   return new TextDecoder().decode(clear);
 }
 
-export async function timingSafeEqual(left: string, right: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const [leftDigest, rightDigest] = await Promise.all([
-    crypto.subtle.digest('SHA-256', encoder.encode(left)),
-    crypto.subtle.digest('SHA-256', encoder.encode(right)),
-  ]);
-  return crypto.subtle.timingSafeEqual(leftDigest, rightDigest);
-}
+export const timingSafeEqual = constantTimeEqual;
 
 export async function hmacSha256(secret: string, payload: string): Promise<string> {
   const key = await crypto.subtle.importKey(

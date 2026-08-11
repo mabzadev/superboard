@@ -1,0 +1,38 @@
+import {
+  cloudflareTest,
+  readD1Migrations,
+} from "@cloudflare/vitest-pool-workers";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vitest/config";
+import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
+
+const root = fileURLToPath(new URL(".", import.meta.url));
+
+export default defineConfig({
+  root,
+  plugins: [
+    cloudflareTest(async () => {
+      const migrations = await readD1Migrations(
+        fileURLToPath(new URL("./migrations", import.meta.url)),
+      );
+      return {
+        wrangler: {
+          configPath: fileURLToPath(
+            new URL("./wrangler.jsonc", import.meta.url),
+          ),
+        },
+        miniflare: {
+          bindings: {
+            INTERNAL_API_TOKEN: "app-runtime-secret",
+            ...d1RuntimeBindings(migrations),
+          },
+        },
+      };
+    }),
+  ],
+  test: {
+    include: ["runtime-tests/**/*.test.ts"],
+    setupFiles: ["./runtime-tests/apply-migrations.ts"],
+    sequence: { concurrent: false },
+  },
+});

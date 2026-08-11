@@ -3,11 +3,11 @@ import { Env } from '../types';
 import { verifyPassword, hashPassword, generateApiKey } from '../lib/crypto';
 import { ensureDefaultOAuthApplication, getAuthContext, issueDbBackedTokens } from '../lib/auth';
 import {
-  isFullAccess,
   isRegistrationAllowed,
   recordSuccessfulRegistration,
   registrationDeniedBody,
 } from '../lib/deployment';
+import { consumeDashboardAuthAttempt, dashboardAuthRateLimitResponse } from '../lib/auth-rate-limit';
 
 const auth = new Hono<{ Bindings: Env }>();
 
@@ -15,6 +15,8 @@ const auth = new Hono<{ Bindings: Env }>();
 auth.post('/sign_up', async (c) => {
   const { email, password, name } = await c.req.json<{ email: string; password: string; name?: string }>();
   const normalizedEmail = email?.trim().toLowerCase();
+  const rateLimit = await consumeDashboardAuthAttempt(c.env, c.req.raw, 'dashboard.sign_up', normalizedEmail);
+  if (!rateLimit.allowed) return dashboardAuthRateLimitResponse(rateLimit);
 
   if (!normalizedEmail || !password) {
     return c.json({ error: 'Email and password required' }, 422);
@@ -41,7 +43,7 @@ auth.post('/sign_up', async (c) => {
   const uriScheme = normalizedEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString(36);
   const instanceResult = await c.env.DB.prepare(
     'INSERT INTO instances (api_key, uri_scheme, revenue_collection_enabled) VALUES (?, ?, ?) RETURNING id'
-  ).bind(apiKey, uriScheme, isFullAccess(c.env) ? 1 : 0).first<{ id: number }>();
+  ).bind(apiKey, uriScheme, 1).first<{ id: number }>();
 
   // Link user to instance as owner
   await c.env.DB.prepare(
@@ -64,6 +66,8 @@ auth.post('/sign_up', async (c) => {
 auth.post('/sign_in', async (c) => {
   const { email, password } = await c.req.json<{ email: string; password: string }>();
   const normalizedEmail = email?.trim().toLowerCase();
+  const rateLimit = await consumeDashboardAuthAttempt(c.env, c.req.raw, 'dashboard.sign_in', normalizedEmail);
+  if (!rateLimit.allowed) return dashboardAuthRateLimitResponse(rateLimit);
 
   if (!normalizedEmail || !password) {
     return c.json({ error: 'Email and password required' }, 422);

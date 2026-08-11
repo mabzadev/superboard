@@ -348,6 +348,16 @@ describe('SDK auth contract', () => {
     }, env)).status).toBe(401);
   });
 
+  it('rejects API credentials passed in the URL query string', async () => {
+    const { env } = sdkFixture();
+    const response = await probeApp().request('/authenticate?api_key=server-api-key', {
+      method: 'POST',
+    }, env);
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'API key required' });
+  });
+
   it('rejects LINKSQUARED visitors from another project', async () => {
     const { env, state } = sdkFixture();
     const response = await sdkRoutes.request('/event', {

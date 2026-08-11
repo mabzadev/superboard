@@ -37,6 +37,20 @@ export default function McpTokensSection() {
         </span>
       </div>
 
+      <div className="flex flex-col gap-1 rounded-xl border border-sidebar-border px-5 py-4">
+        <span className="text-xs font-medium text-muted-foreground">
+          MCP endpoint for this application
+        </span>
+        <a
+          className="break-all font-mono text-xs text-primary hover:underline"
+          href={`${config.mcpUrl}/mcp`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {config.mcpUrl}/mcp
+        </a>
+      </div>
+
       {isLoading ? (
         <div className="rounded-xl border border-sidebar-border overflow-hidden divide-y divide-sidebar-border">
           {[1, 2].map((i) => (

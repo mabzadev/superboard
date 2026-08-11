@@ -25,8 +25,8 @@ async function json(response: Awaited<ReturnType<APIRequestContext["post"]>>) {
 
 export async function createRealAuthState(page: Page, request: APIRequestContext) {
   const email = process.env.PLAYWRIGHT_E2E_EMAIL || `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@opengrow.local`;
-  const password = process.env.PLAYWRIGHT_E2E_PASSWORD || "OpenGrowE2E123!";
-  const name = process.env.PLAYWRIGHT_E2E_NAME || "OpenGrow E2E";
+  const password = process.env.PLAYWRIGHT_E2E_PASSWORD || "SuperBoardE2E123!";
+  const name = process.env.PLAYWRIGHT_E2E_NAME || "SuperBoard E2E";
   const baseUrl = apiUrl();
 
   let response = await request.post(`${baseUrl}/api/v1/auth/sign_up`, {

@@ -11,11 +11,16 @@ import {
   resolveCustomerFromBillingAuthority,
 } from '../lib/billing-service';
 import { restoreVerifiedPurchases } from '../lib/billing-restore';
+import { readApiJson } from '../lib/request-body';
+
+function brandedHeader(c: any, suffix: string): string | undefined {
+  return c.req.header(`X-SuperBoard-${suffix}`) || c.req.header(`X-OpenGrow-${suffix}`);
+}
 
 const purchases = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
 async function jsonBody(c: any): Promise<Record<string, any>> {
-  return c.req.json().catch(() => ({}));
+  return readApiJson(c.req.raw);
 }
 
 async function context(c: any) {
@@ -29,9 +34,9 @@ async function context(c: any) {
   `).bind(String(projectId)).first() as { id: number; is_test: number; purchases_enabled: number } | null;
   if (!project) throw new Error('Invalid project for SDK credentials');
   if (!isPurchasesEnabled(c.env, project.purchases_enabled)) {
-    throw new Error('OpenGrow Purchases is not enabled for this project');
+    throw new Error('SuperBoard Purchases is not enabled for this project');
   }
-  const anonymousId = c.req.header('X-OpenGrow-Anonymous-ID') || undefined;
+  const anonymousId = brandedHeader(c, 'Anonymous-ID');
   const resolved = await resolveCustomerFromBillingAuthority(c.env, {
     projectId,
     authorization: c.req.header('Authorization'),
@@ -78,7 +83,7 @@ purchases.post('/identify', async (c) => {
     const projectId = c.get('projectId');
     if (!projectId) throw new Error('Invalid project for SDK credentials');
     const body = await jsonBody(c);
-    const currentAppUserId = String(body.current_app_user_id || c.req.header('X-OpenGrow-Anonymous-ID') || '').trim();
+    const currentAppUserId = String(body.current_app_user_id || brandedHeader(c, 'Anonymous-ID') || '').trim();
     if (!currentAppUserId) return c.json({ error: 'current_app_user_id is required' }, 422);
     const info = await identifyCustomerFromBillingAuthority(c.env, {
       projectId,

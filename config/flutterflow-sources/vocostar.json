@@ -1,0 +1,279 @@
+{
+  "$schema": "../../schemas/flutterflow-source-snapshot.schema.json",
+  "schemaVersion": 1,
+  "application": "vocostar",
+  "project": {
+    "id": "vocal-transform-z2j7dp",
+    "name": "VocoStar"
+  },
+  "export": {
+    "timestamp": "2026-08-09T22:47:59.485414Z",
+    "commitId": "RllpTDAzXqy5vRMb1dk4",
+    "commitMessage": "Configure media realtime from API target",
+    "success": true,
+    "pushed": true,
+    "dryRun": false,
+    "generatedAt": "2026-08-09T22:47:59.419460Z",
+    "lastExportedAt": "2026-08-09T22:48:11.716703Z",
+    "projectUpdatedAtMs": 1786315676466
+  },
+  "fingerprints": {
+    ".flutterflow/last_run.json": "bc3371f2a88a7932be7513328aac4ffb40b0b10193948c7dd3791964c2fb52a8",
+    ".flutterflow/generated_code_state.json": "ba777e51f662ea7f33791ce4540e137b42c1f6c8e10ef60059f7fff495017427",
+    ".flutterflow/project_sdk_meta.json": "50732a72497ffd9e7c1b487af3b2f014e7762b1b95ce05638377c63ae3dc64b6"
+  },
+  "inventory": {
+    "pages": 23,
+    "components": 17,
+    "actionBlocks": 6,
+    "appEventsReported": 4,
+    "apiCallsReported": 9,
+    "customActions": 30,
+    "customFunctions": 7,
+    "customWidgets": 7,
+    "dataStructs": 9,
+    "appStateFields": 34
+  },
+  "diagnostics": {
+    "total": 20,
+    "validationErrors": 0,
+    "byCode": {
+      "R15": 3,
+      "R18": 17
+    }
+  },
+  "convergence": {
+    "schemaVersion": 1,
+    "checks": [
+      {
+        "id": "legacy-support-origin-removed",
+        "kind": "literal-absent",
+        "value": "sup.vocostar.com",
+        "paths": [
+          "generated_code/lib/custom_code/actions",
+          "generated_code/lib/custom_code/widgets"
+        ]
+      },
+      {
+        "id": "direct-workers-dev-removed",
+        "kind": "literal-absent",
+        "value": ".workers.dev",
+        "paths": ["generated_code/lib/custom_code/actions"]
+      },
+      {
+        "id": "direct-vocostar-websocket-origin-removed",
+        "kind": "literal-absent",
+        "value": "wss://api.vocostar.com",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "direct-files-origin-removed",
+        "kind": "literal-absent",
+        "value": "file.vocostar.com",
+        "paths": ["generated_code/lib/custom_code/actions"]
+      },
+      {
+        "id": "legacy-support-init-removed",
+        "kind": "symbol-absent",
+        "value": "supportInit",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "legacy-support-fetch-removed",
+        "kind": "symbol-absent",
+        "value": "supportFetchMessages",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "legacy-support-send-removed",
+        "kind": "symbol-absent",
+        "value": "supportSendMessage",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "legacy-support-widget-removed",
+        "kind": "symbol-absent",
+        "value": "SupportChatWidget",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "legacy-media-upload-removed",
+        "kind": "symbol-absent",
+        "value": "userMediaUpload",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "legacy-media-remove-removed",
+        "kind": "symbol-absent",
+        "value": "userMediaRemove",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "direct-revenuecat-login-removed",
+        "kind": "symbol-absent",
+        "value": "userLoginRevenueCat",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "client-entitlement-activation-removed",
+        "kind": "symbol-absent",
+        "value": "userSubscriptionActivate",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "persisted-access-token-removed",
+        "kind": "symbol-absent",
+        "value": "authAccessToken",
+        "paths": ["lib/flutterflow_project/app_state.dart"]
+      },
+      {
+        "id": "persisted-refresh-token-removed",
+        "kind": "symbol-absent",
+        "value": "authRefreshToken",
+        "paths": ["lib/flutterflow_project/app_state.dart"]
+      },
+      {
+        "id": "legacy-token-expiration-removed",
+        "kind": "symbol-absent",
+        "value": "authExpiresIn",
+        "paths": ["lib/flutterflow_project/app_state.dart"]
+      },
+      {
+        "id": "identity-secure-session-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationRestoreSessionJson",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "identity-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationSignInProviderJson",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "logout-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationLogoutJson",
+        "paths": [
+          "generated_code/lib/custom_code/actions/superboard_logout_session.dart"
+        ]
+      },
+      {
+        "id": "account-erasure-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationDeleteAccountJson",
+        "paths": [
+          "generated_code/lib/custom_code/actions/user_clean_manager.dart"
+        ]
+      },
+      {
+        "id": "legacy-auth-logout-endpoint-removed",
+        "kind": "symbol-absent",
+        "value": "AuthLogoutCall",
+        "paths": ["generated_code/lib/backend/api_requests/api_calls.dart"]
+      },
+      {
+        "id": "direct-account-cleanup-removed",
+        "kind": "literal-absent",
+        "value": "/clean/user",
+        "paths": ["generated_code/lib/custom_code/actions"]
+      },
+      {
+        "id": "runtime-policy-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationRuntimePolicyJson",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "notifications-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardSetPushToken",
+        "paths": [
+          "generated_code/lib/custom_code/actions/superboard_register_push_device.dart"
+        ]
+      },
+      {
+        "id": "legacy-notification-action-removed",
+        "kind": "symbol-absent",
+        "value": "userFCMToken",
+        "paths": ["lib/flutterflow_project/schemas.dart"]
+      },
+      {
+        "id": "persisted-notification-token-removed",
+        "kind": "symbol-absent",
+        "value": "userFcmToken",
+        "paths": ["lib/flutterflow_project/app_state.dart"]
+      },
+      {
+        "id": "files-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationUploadFileJson",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "custom-jobs-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationCreateCustomJobJson",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "billing-authority-wired",
+        "kind": "symbol-present",
+        "value": "SuperBoardPaywallPageWidget",
+        "paths": [
+          "generated_code/lib/custom_code/actions/open_grow_paywall.dart"
+        ]
+      },
+      {
+        "id": "support-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardSupportInitializeAuthenticated",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "onboardings-authority-wired",
+        "kind": "symbol-present",
+        "value": "SuperBoardOnboardingPageWidget.routeName",
+        "paths": [
+          "generated_code/lib/pages/main/index",
+          "generated_code/lib/pages/main/user_vocals"
+        ]
+      },
+      {
+        "id": "legacy-onboarding-pages-removed",
+        "kind": "symbol-absent",
+        "value": "Onboard00Widget",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "legacy-onboarding-loader-removed",
+        "kind": "symbol-absent",
+        "value": "getAppOnBording",
+        "paths": [
+          "generated_code/lib/actions",
+          "lib/flutterflow_project/apis.dart"
+        ]
+      },
+      {
+        "id": "marketing-authority-wired",
+        "kind": "symbol-present",
+        "value": "superboardApplicationMarketingPreferencesJson",
+        "paths": ["generated_code/lib"]
+      },
+      {
+        "id": "flutterflow-validation-errors-cleared",
+        "kind": "validation-errors-max",
+        "maximum": 0
+      },
+      {
+        "id": "flutterflow-diagnostics-cleared",
+        "kind": "diagnostics-unwaived-max",
+        "maximum": 0,
+        "allowedByCode": {
+          "R15": 3,
+          "R18": 17
+        }
+      }
+    ]
+  }
+}

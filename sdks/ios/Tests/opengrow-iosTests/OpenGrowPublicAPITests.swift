@@ -3,6 +3,8 @@ import XCTest
 
 final class OpenGrowPublicAPITests: XCTestCase {
 
+    private let baseURL = "https://sdk.example.com"
+
     override func setUp() {
         super.setUp()
         MockURLProtocol.reset()
@@ -32,7 +34,7 @@ final class OpenGrowPublicAPITests: XCTestCase {
     func testGenerateLinkReturnsNilBeforeConfigure() {
         // Reset manager by configuring with empty key (sets manager to nil)
         let setupExp = expectation(description: "setup")
-        OpenGrow.configure(APIKey: "", useTestEnvironment: true, delegate: nil) { _ in
+        OpenGrow.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { _ in
             setupExp.fulfill()
         }
         wait(for: [setupExp], timeout: 5)
@@ -49,7 +51,7 @@ final class OpenGrowPublicAPITests: XCTestCase {
 
     func testConfigureWithEmptyKeyCallsCompletionFalse() {
         let exp = expectation(description: "completion")
-        OpenGrow.configure(APIKey: "", useTestEnvironment: true, delegate: nil) { success in
+        OpenGrow.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { success in
             XCTAssertFalse(success, "Empty API key should fail configuration")
             exp.fulfill()
         }
@@ -60,7 +62,7 @@ final class OpenGrowPublicAPITests: XCTestCase {
         // In the test runner, hasURISchemesConfigured() returns false so authenticate fails.
         // This validates the full configure → checkConfiguration → authenticate chain.
         let exp = expectation(description: "completion")
-        OpenGrow.configure(APIKey: "test-key", useTestEnvironment: true, delegate: nil) { success in
+        OpenGrow.configure(APIKey: "test-key", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { success in
             XCTAssertFalse(success, "Auth should fail without URI schemes in test bundle")
             exp.fulfill()
         }
@@ -72,7 +74,7 @@ final class OpenGrowPublicAPITests: XCTestCase {
     func testAllReceivedPayloadsBeforeConfigureReturnsNil() {
         // Reset manager by configuring with empty key
         let setupExp = expectation(description: "setup")
-        OpenGrow.configure(APIKey: "", useTestEnvironment: true, delegate: nil) { _ in
+        OpenGrow.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { _ in
             setupExp.fulfill()
         }
         wait(for: [setupExp], timeout: 5)
@@ -87,7 +89,7 @@ final class OpenGrowPublicAPITests: XCTestCase {
 
     func testLogInAppPurchaseBeforeConfigureReturnsFalse() {
         let setupExp = expectation(description: "setup")
-        OpenGrow.configure(APIKey: "", useTestEnvironment: true, delegate: nil) { _ in
+        OpenGrow.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { _ in
             setupExp.fulfill()
         }
         wait(for: [setupExp], timeout: 5)
@@ -102,7 +104,7 @@ final class OpenGrowPublicAPITests: XCTestCase {
 
     func testLogCustomPurchaseBeforeConfigureReturnsFalse() {
         let setupExp = expectation(description: "setup")
-        OpenGrow.configure(APIKey: "", useTestEnvironment: true, delegate: nil) { _ in
+        OpenGrow.configure(APIKey: "", useTestEnvironment: true, baseURL: baseURL, delegate: nil) { _ in
             setupExp.fulfill()
         }
         wait(for: [setupExp], timeout: 5)

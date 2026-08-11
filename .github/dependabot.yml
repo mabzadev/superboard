@@ -1,22 +1,72 @@
 version: 2
 updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    groups:
+      compatible-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: npm
+    directory: /apps/reference
+    schedule:
+      interval: weekly
+    groups:
+      compatible-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: pub
+    directory: /apps/reference
+    schedule:
+      interval: weekly
+    groups:
+      compatible-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: pub
     directory: /sdks/flutter
     schedule:
       interval: weekly
+    groups:
+      compatible-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: pub
     directory: /sdks/flutterflow
     schedule:
       interval: weekly
-  - package-ecosystem: gradle
-    directory: /sdks/android/OpenGrow
+    groups:
+      compatible-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: pub
+    directory: /sdks/flutterflow_messaging
     schedule:
-      interval: weekly
-  - package-ecosystem: swift
-    directory: /
-    schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      compatible-updates:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch

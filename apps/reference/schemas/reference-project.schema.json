@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://opengrow.dev/schemas/reference-project.schema.json",
+  "title": "SuperBoard reference application project",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "name",
+    "platformRepository",
+    "referenceRepository",
+    "referencePath",
+    "environment",
+    "target",
+    "sdkApplication",
+    "deployment",
+    "endpoints",
+    "sdkCatalogue",
+    "libraries"
+  ],
+  "properties": {
+    "$schema": { "const": "schemas/reference-project.schema.json" },
+    "schemaVersion": { "const": 4 },
+    "name": { "type": "string", "minLength": 1 },
+    "platformRepository": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[^/]+/[^/]+$"
+    },
+    "referenceRepository": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[^/]+/[^/]+$"
+    },
+    "referencePath": { "const": "apps/reference" },
+    "environment": { "const": "development" },
+    "target": { "const": "mbza-development" },
+    "sdkApplication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "identifier", "projectEnvironment"],
+      "properties": {
+        "platform": { "const": "web" },
+        "identifier": { "const": "reference.mbza.dev" },
+        "projectEnvironment": { "const": "test" }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch",
+        "environment",
+        "logicalName",
+        "workerName",
+        "resourceIdentity",
+        "compatibilityDate"
+      ],
+      "properties": {
+        "branch": { "const": "dev" },
+        "environment": { "const": "development" },
+        "logicalName": { "const": "superboard-reference" },
+        "workerName": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$"
+        },
+        "resourceIdentity": { "const": "legacy-compatible" },
+        "compatibilityDate": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "referenceWeb",
+        "dashboard",
+        "api",
+        "sdk",
+        "shortLinks",
+        "files",
+        "mailPreview",
+        "support"
+      ],
+      "properties": {
+        "referenceWeb": { "const": "https://reference.mbza.dev" },
+        "dashboard": { "const": "https://board.mbza.dev" },
+        "api": { "const": "https://api.mbza.dev" },
+        "sdk": { "const": "https://sdk.mbza.dev" },
+        "shortLinks": { "const": "https://in.mbza.dev" },
+        "files": { "const": "https://files.mbza.dev" },
+        "mailPreview": { "const": "https://mail.mbza.dev" },
+        "support": {
+          "const": "https://api.mbza.dev/api/v1/support-client"
+        }
+      }
+    },
+    "sdkCatalogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "coverageManifest",
+        "promotionPolicy",
+        "active",
+        "internal",
+        "archived"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 4 },
+        "coverageManifest": { "const": "config/sdk-coverage.json" },
+        "promotionPolicy": { "const": "complete-active-set" },
+        "active": {
+          "type": "array",
+          "items": { "enum": ["flutter", "flutterflow"] },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "internal": {
+          "type": "array",
+          "items": { "enum": ["android", "ios"] },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "archived": {
+          "type": "array",
+          "items": {
+            "enum": ["flutterflow-support", "javascript", "react-native"]
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true
+        }
+      }
+    },
+    "libraries": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "developmentRef",
+          "sourceVersion",
+          "releaseVersion",
+          "releaseRef"
+        ],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "developmentRef": { "type": "string", "minLength": 1 },
+          "sourceVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "releaseVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "releaseRef": {
+            "type": "string",
+            "pattern": "^sdk-[a-z0-9-]+-v[0-9]+\\.[0-9]+\\.[0-9]+$"
+          }
+        }
+      }
+    }
+  }
+}

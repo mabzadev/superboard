@@ -7,7 +7,7 @@ import {
   Button,
   Clipboard,
 } from 'react-native';
-import OpenGrow from '@mbzadev/opengrow-react-native';
+import OpenGrow from '@mbzadev/opengrow-react-native-sdk';
 import { useEffect, useState } from 'react';
 
 OpenGrow.setIdentifier('React native id');
@@ -61,15 +61,15 @@ export default function App() {
         undefined,
         {
           android: {
-            link: 'https://www.opengrow.io/android',
+            link: 'https://example.com/android',
             open_if_app_installed: true,
           },
           ios: {
-            link: 'https://www.opengrow.io/ios',
+            link: 'https://example.com/ios',
             open_if_app_installed: true,
           },
           desktop: {
-            link: 'https://www.opengrow.io/desktop',
+            link: 'https://example.com/desktop',
             open_if_app_installed: true,
           },
         },

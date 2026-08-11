@@ -4,17 +4,17 @@ import { providerEventReplayJob } from './provider-event-replay';
 describe('Provider event replay jobs', () => {
   it('restores the immutable event ID without trusting the stored value', () => {
     expect(providerEventReplayJob({
-      eventId: 'event-1', projectId: '11', store: 'stripe', environment: 'sandbox',
+      eventId: 'event-1', projectId: '11', store: 'apple', environment: 'sandbox',
       jobPayload: JSON.stringify({
-        type: 'billing.stripe.notification', eventId: 'untrusted', connectionId: 'connection-1',
+        type: 'billing.apple.notification', eventId: 'untrusted', projectId: '11', environment: 'sandbox', signedPayload: 'signed',
       }),
-    })).toEqual({ type: 'billing.stripe.notification', eventId: 'event-1', connectionId: 'connection-1' });
+    })).toEqual({ type: 'billing.apple.notification', eventId: 'event-1', projectId: '11', environment: 'sandbox', signedPayload: 'signed' });
   });
 
   it('rejects provider and project mismatches', () => {
     expect(() => providerEventReplayJob({
       eventId: 'event-1', projectId: '11', store: 'google', environment: 'production',
-      jobPayload: JSON.stringify({ type: 'billing.stripe.notification', connectionId: 'connection-1' }),
+      jobPayload: JSON.stringify({ type: 'billing.apple.notification', projectId: '11', environment: 'production', signedPayload: 'signed' }),
     })).toThrow('does not match');
     expect(() => providerEventReplayJob({
       eventId: 'event-1', projectId: '11', store: 'apple', environment: 'sandbox',

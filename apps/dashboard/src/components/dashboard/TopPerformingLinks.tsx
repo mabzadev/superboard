@@ -28,7 +28,6 @@ import {
 import { useGlobalLinkDialog } from "@/context/useLinkDialogContext";
 import { Skeleton } from "../ui/skeleton";
 import { useProjectSelection } from "@/context/useProjectSelection";
-import { IS_ENTERPRISE } from "@/lib/edition";
 import { topPerformingLinksColumns as columns } from "./TopPerformingLinksColumns";
 
 import type { DashboardLink } from "@/types";
@@ -88,7 +87,7 @@ const TopPerformingLinks = ({
       { label: "Reinstalls", value: "reinstalls" },
       { label: "Reactivations", value: "reactivations" },
       { label: "Time spent", value: "time_spent" },
-      ...(IS_ENTERPRISE && selectedInstance?.revenue_collection_enabled
+      ...(selectedInstance?.revenue_collection_enabled
         ? [{ label: "Revenue", value: "revenue" }]
         : []),
     ],
@@ -131,10 +130,9 @@ const TopPerformingLinks = ({
       "date",
     ];
 
-    const fullColumns =
-      IS_ENTERPRISE && selectedInstance.revenue_collection_enabled
-        ? [...baseColumns.slice(0, -1), "revenue"]
-        : baseColumns;
+    const fullColumns = selectedInstance.revenue_collection_enabled
+      ? [...baseColumns.slice(0, -1), "revenue", "date"]
+      : baseColumns;
 
     setSelectedColumns(fullColumns);
   }, [selectedInstance]);

@@ -1,193 +1,54 @@
 "use client";
 
 import * as React from "react";
-import {
-  ChartNoAxesCombined,
-  Link2,
-  Users,
-  DollarSign,
-  MessageSquareText,
-  Settings2,
-  PencilRuler,
-  SquareTerminal,
-  ShoppingBag,
-  Star,
-  Inbox,
-  Target,
-} from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
-import { NavProjects } from "@/components/layout/nav-projects";
-import { NavUser } from "@/components/layout/nav-user";
 import { ProjectSwitcher } from "@/components/layout/team-switcher";
+import { DASHBOARD_SECTIONS } from "@/config/navigation";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { IS_ENTERPRISE } from "@/lib/edition";
-
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: ChartNoAxesCombined,
-      itemType: "simple",
-    },
-    {
-      title: "Dynamic Links",
-      url: "#",
-      icon: Link2,
-      itemType: "collapsible",
-      items: [
-        {
-          title: "Links",
-          url: "/dynamic_links/links",
-        },
-        {
-          title: "Campaigns",
-          url: "/dynamic_links/campaigns",
-        },
-      ],
-    },
-    {
-      title: "Audience",
-      url: "#",
-      icon: Users,
-      itemType: "collapsible",
-      items: [
-        {
-          title: "Visitors",
-          url: "/audience/visitors",
-        },
-        {
-          title: "Referrals",
-          url: "/audience/referrals",
-        },
-      ],
-    },
-    ...(IS_ENTERPRISE
-      ? [
-          {
-            title: "Revenue",
-            url: "/revenue",
-            icon: DollarSign,
-            itemType: "simple",
-            badge: "Beta",
-          },
-        ]
-      : []),
-    {
-      title: "Purchases",
-      url: "/purchases",
-      icon: ShoppingBag,
-      itemType: "simple",
-      badge: "New",
-    },
-    {
-      title: "Inbox",
-      url: "/inbox",
-      icon: Inbox,
-      itemType: "simple",
-      badge: "New",
-    },
-    {
-      title: "Messaging",
-      url: "/messaging",
-      icon: MessageSquareText,
-      itemType: "simple",
-    },
-    {
-      title: "Store Reviews",
-      url: "/store-reviews",
-      icon: Star,
-      itemType: "simple",
-      badge: "New",
-    },
-    {
-      title: "Growth",
-      url: "/growth",
-      icon: Target,
-      itemType: "simple",
-      badge: "New",
-    },
-  ],
-
-  projects: [
-    {
-      title: "Links Behaviour",
-      url: "/link_behaviour",
-      icon: PencilRuler,
-      itemType: "collapsible",
-      items: [
-        {
-          title: "Redirect Rules",
-          url: "/link_behaviour/redirect_rules",
-        },
-        {
-          title: "Domain",
-          url: "/link_behaviour/domain",
-        },
-        {
-          title: "Social Media Preview",
-          url: "/link_behaviour/social_media_preview",
-        },
-        {
-          title: "Tracking",
-          url: "/link_behaviour/tracking",
-        },
-      ],
-    },
-    {
-      title: "Developers",
-      url: "/developers",
-      icon: SquareTerminal,
-      itemType: "collapsible",
-      items: [
-        {
-          title: "Access Key",
-          url: "/developers/access_key",
-        },
-        {
-          title: "Android Setup",
-          url: "/developers/android_setup",
-        },
-        {
-          title: "iOS Setup",
-          url: "/developers/ios_setup",
-        },
-        {
-          title: "Web Setup",
-          url: "/developers/web_setup",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      itemType: "simple",
-    },
-  ],
-};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { state, toggleSidebar } = useSidebar();
+  const isExpanded = state === "expanded";
+
   return (
-    <Sidebar collapsible="icon" aria-label="Main navigation" {...props}>
-      <SidebarHeader className="h-[calc(4rem+1px)] border-b border-sidebar-border justify-center">
+    <Sidebar
+      collapsible="icon"
+      aria-label="Main navigation"
+      className="border-[var(--color-border)] bg-[var(--color-sidebar-background)]"
+      {...props}
+    >
+      <SidebarHeader className="ds-sidebar-header flex-row gap-2 p-0">
         <ProjectSwitcher />
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects items={data.projects} />
+      <SidebarContent className="bg-[var(--color-sidebar-background)]">
+        <NavMain items={DASHBOARD_SECTIONS} />
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border">
-        <NavUser />
+      <SidebarFooter className="ds-sidebar-footer gap-0 p-0">
+        <SidebarMenu aria-label="Sidebar display">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="ds-sidebar-link ds-sidebar-collapse"
+              tooltip={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+              aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+              onClick={toggleSidebar}
+            >
+              {isExpanded ? <PanelLeftClose /> : <PanelLeftOpen />}
+              <span className="ds-sidebar-link-label">Collapse</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }

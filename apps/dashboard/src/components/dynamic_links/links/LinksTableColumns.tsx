@@ -21,18 +21,17 @@ import LinkedInIconWhite from "@/assets/icons/ads_platform/linkedIn_dark_mode.sv
 import TikTokIconWhite from "@/assets/icons/ads_platform/tiktok_dark_mode.svg";
 import MetaIconcWhite from "@/assets/icons/ads_platform/meta_dark_mode.svg";
 
-import OpenGrow from "@/assets/icons/ads_platform/opengrow.svg";
+import SuperBoard from "@/assets/icons/ads_platform/superboard.svg";
 import React from "react";
 import Image from "next/image";
 import type { SortType } from "@/types";
-import type { LinkData } from "@/app/(protected)/dynamic_links/links/LinksPageContent";
+import type { LinkData } from "./linkAnalytics";
 import { Badge } from "@/components/ui/badge";
 import { numberFormatter } from "@/utils/numberFormatter";
 import { formatCurrencyFromCents } from "@/utils/formatCurrency";
 import { useTheme } from "next-themes";
 import { Tooltip, TooltipContent } from "@/components/ui/tooltip";
 import { TooltipTrigger } from "@radix-ui/react-tooltip";
-import { IS_ENTERPRISE } from "@/lib/edition";
 
 const headerButtonClass = "font-medium text-foreground";
 
@@ -168,18 +167,18 @@ export const getLinksTableColumns = (
             variant="ghost"
             onClick={() =>
               setSort((prev: SortType) => ({
-                sortKey: "app_opens",
+                sortKey: "opens",
                 ascending: !prev.ascending,
               }))
             }
           >
-            Opens {checkSortDirection("app_opens", sort)}
+            Opens {checkSortDirection("opens", sort)}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            This represents the number of app opens that occurred from a opengrow
-            link.
+            This represents the number of app opens that occurred from a
+            SuperBoard link.
           </p>
         </TooltipContent>
       </Tooltip>
@@ -335,37 +334,100 @@ export const getLinksTableColumns = (
       </div>
     ),
   },
-  ...(IS_ENTERPRISE
-    ? [
-        {
-          accessorKey: "revenue",
-          header: () => (
-            <div className="flex">
-              <Button
-                className={headerButtonClass}
-                variant="ghost"
-                onClick={() =>
-                  setSort((prev: SortType) => ({
-                    sortKey: "revenue",
-                    ascending: !prev.ascending,
-                  }))
-                }
-              >
-                Revenue {checkSortDirection("revenue", sort)}
-              </Button>
-            </div>
-          ),
-
-          cell: ({ row }: { row: { original: LinkData } }) => (
-            <div className="flex py-2 px-3">
-              {row.original.total_revenue ? (
-                <p>{formatCurrencyFromCents(row.original.total_revenue)}</p>
-              ) : null}
-            </div>
-          ),
-        } satisfies AccessorKeyColumnDef<LinkData>,
-      ]
-    : []),
+  {
+    accessorKey: "app_opens",
+    header: () => (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            className={headerButtonClass}
+            variant="ghost"
+            onClick={() =>
+              setSort((prev: SortType) => ({
+                sortKey: "app_opens",
+                ascending: !prev.ascending,
+              }))
+            }
+          >
+            App opens {checkSortDirection("app_opens", sort)}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Application open events attributed to this link.</p>
+        </TooltipContent>
+      </Tooltip>
+    ),
+    cell: ({ row }) => (
+      <div className="flex py-2 px-3">
+        <p>
+          {row.original.total_app_opens
+            ? numberFormatter.format(row.original.total_app_opens)
+            : "-"}
+        </p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "user_referred",
+    header: () => (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            className={headerButtonClass}
+            variant="ghost"
+            onClick={() =>
+              setSort((prev: SortType) => ({
+                sortKey: "user_referred",
+                ascending: !prev.ascending,
+              }))
+            }
+          >
+            Users referred {checkSortDirection("user_referred", sort)}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Customers referred or converted through this link.</p>
+        </TooltipContent>
+      </Tooltip>
+    ),
+    cell: ({ row }) => (
+      <div className="flex py-2 px-3">
+        <p>
+          {row.original.total_user_referred
+            ? numberFormatter.format(row.original.total_user_referred)
+            : "-"}
+        </p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "revenue",
+    header: () => (
+      <div className="flex">
+        <Button
+          className={headerButtonClass}
+          variant="ghost"
+          onClick={() =>
+            setSort((prev: SortType) => ({
+              sortKey: "revenue",
+              ascending: !prev.ascending,
+            }))
+          }
+        >
+          Revenue {checkSortDirection("revenue", sort)}
+        </Button>
+      </div>
+    ),
+    cell: ({ row }: { row: { original: LinkData } }) => (
+      <div className="flex py-2 px-3">
+        {row.original.total_revenue ? (
+          <p>{formatCurrencyFromCents(row.original.total_revenue)}</p>
+        ) : (
+          <p>—</p>
+        )}
+      </div>
+    ),
+  },
   {
     accessorKey: "date",
     header: () => (
@@ -422,7 +484,7 @@ const getPlatformIconSrc = (
       return resolvedTheme === "dark" ? TikTokIconWhite : TikTokIcon;
 
     case QUICK_LINK:
-      return OpenGrow;
+      return SuperBoard;
     default:
       return null;
   }

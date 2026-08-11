@@ -20,7 +20,7 @@ describe('Billing service contracts', () => {
   });
 
   it('rejects unsupported providers and environments', () => {
-    expect(() => parseReceiptRequest({ project_id: '11', customer_id: 'c', store: 'stripe', environment: 'production' })).toThrow(/apple or google/);
+    expect(() => parseReceiptRequest({ project_id: '11', customer_id: 'c', store: 'web', environment: 'production' })).toThrow(/apple or google/);
     expect(() => parseReceiptRequest({ project_id: '11', customer_id: 'c', store: 'apple', environment: 'live', signed_transaction: 'x' })).toThrow(/sandbox or production/);
   });
 

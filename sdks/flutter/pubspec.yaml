@@ -1,9 +1,9 @@
-name: opengrow_flutter
-description: Flutter plugin for OpenGrow SDK - verified iOS/Android purchases, deep links, messaging, and campaign tracking.
-version: 2.1.3
-homepage: https://github.com/mbzadev/opengrow
-repository: https://github.com/mbzadev/opengrow
-issue_tracker: https://github.com/mbzadev/opengrow/issues
+name: superboard_flutter
+description: SuperBoard Flutter SDK for verified purchases, deep links, messaging, attribution, and campaign tracking.
+version: 3.0.0
+homepage: https://github.com/mbzadev/superboard-platform
+repository: https://github.com/mbzadev/superboard-platform
+issue_tracker: https://github.com/mbzadev/superboard-platform/issues
 
 environment:
   sdk: ^3.9.2
@@ -44,10 +44,10 @@ flutter:
   plugin:
     platforms:
       android:
-        package: io.opengrow.wrapper
-        pluginClass: OpenGrowPlugin
+        package: io.superboard.wrapper
+        pluginClass: SuperBoardPlugin
       ios:
-        pluginClass: OpenGrowPlugin
+        pluginClass: SuperBoardPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

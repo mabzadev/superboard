@@ -145,7 +145,7 @@ const CreateLinkSocialMediaPreview = React.memo(
       }
     }, [imageFile, imageType, setImagePreview]);
 
-    const domainUrl = `http://${projectDomain?.subdomain}.${projectDomain?.domain}`;
+    const domainUrl = `https://${projectDomain?.subdomain}.${projectDomain?.domain}`;
 
     const platforms = [
       {

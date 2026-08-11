@@ -1,0 +1,148 @@
+{
+  "$schema": "../schemas/github-control-plane.schema.json",
+  "schemaVersion": 9,
+  "owner": {
+    "login": "mbzadev",
+    "type": "user"
+  },
+  "repositories": {
+    "platform": {
+      "nameWithOwner": "mbzadev/superboard",
+      "description": "Canonical SuperBoard monorepo: back-office, Cloudflare Workers, SDKs and reference application",
+      "settings": {
+        "issues": true,
+        "projects": false,
+        "wiki": false,
+        "downloads": false,
+        "squashMerge": true,
+        "mergeCommit": false,
+        "rebaseMerge": false,
+        "deleteBranchOnMerge": true
+      },
+      "visibility": "public",
+      "defaultBranch": "dev",
+      "workflowPermissions": {
+        "default": "read",
+        "canApprovePullRequestReviews": true
+      },
+      "security": {
+        "vulnerabilityAlerts": true,
+        "dependabotSecurityUpdates": true
+      },
+      "releaseProtection": {
+        "immutableReleases": true,
+        "tagRuleset": {
+          "name": "SuperBoard immutable SDK tags",
+          "enforcement": "active",
+          "include": [
+            "refs/tags/sdk-flutter-v*",
+            "refs/tags/sdk-flutterflow-v*",
+            "refs/tags/sdk-flutterflow-messaging-v*",
+            "refs/tags/sdk-ios-v*",
+            "refs/tags/sdk-android-v*",
+            "refs/tags/sdk-js-v*",
+            "refs/tags/sdk-react-native-v*",
+            "refs/tags/*.*.*"
+          ],
+          "rules": ["update", "deletion"]
+        }
+      },
+      "repositorySecrets": [],
+      "branches": {
+        "dev": {
+          "requiredCheck": "CI gate",
+          "requirePullRequest": true,
+          "requireCodeOwnerReviews": true,
+          "requiredApprovals": 1
+        },
+        "main": {
+          "requiredCheck": "CI gate",
+          "requirePullRequest": true,
+          "requireCodeOwnerReviews": true,
+          "requiredApprovals": 1
+        }
+      },
+      "environments": {
+        "development": {
+          "variables": {
+            "SUPERBOARD_TARGET": "mbza-development"
+          },
+          "secrets": [],
+          "protection": {
+            "enforcement": "pending-external",
+            "pendingReason": "Activate after the current publication sequence is complete and no development deployment is pending.",
+            "waitTimerMinutes": 0,
+            "preventSelfReview": false,
+            "allowAdminBypass": false,
+            "minimumEligibleReviewers": 0,
+            "reviewers": [],
+            "deploymentPolicies": [{ "type": "branch", "pattern": "dev" }]
+          }
+        },
+        "production": {
+          "variables": {
+            "SUPERBOARD_TARGET": "vocostar"
+          },
+          "secrets": [
+            "CLOUDFLARE_ACCOUNT_ID",
+            "CLOUDFLARE_API_TOKEN",
+            "SUPERBOARD_BACKUP_ENCRYPTION_KEY"
+          ],
+          "protection": {
+            "enforcement": "pending-external",
+            "pendingReason": "A second trusted human reviewer must receive repository read access before self-review prevention can be activated safely.",
+            "waitTimerMinutes": 5,
+            "preventSelfReview": true,
+            "allowAdminBypass": false,
+            "minimumEligibleReviewers": 2,
+            "reviewers": [
+              { "type": "User", "id": 95926658, "name": "mbzadev" }
+            ],
+            "deploymentPolicies": [{ "type": "branch", "pattern": "main" }]
+          }
+        },
+        "sdk-release": {
+          "variables": {},
+          "secrets": [],
+          "protection": {
+            "enforcement": "pending-external",
+            "pendingReason": "A second trusted human reviewer must receive repository read access before self-review prevention can be activated safely.",
+            "waitTimerMinutes": 0,
+            "preventSelfReview": true,
+            "allowAdminBypass": false,
+            "minimumEligibleReviewers": 2,
+            "reviewers": [
+              { "type": "User", "id": 95926658, "name": "mbzadev" }
+            ],
+            "deploymentPolicies": [
+              { "type": "branch", "pattern": "dev" },
+              { "type": "tag", "pattern": "sdk-flutter-v*" },
+              { "type": "tag", "pattern": "sdk-flutterflow-v*" },
+              {
+                "type": "tag",
+                "pattern": "sdk-flutterflow-messaging-v*"
+              },
+              { "type": "tag", "pattern": "sdk-ios-v*" },
+              { "type": "tag", "pattern": "sdk-android-v*" },
+              { "type": "tag", "pattern": "sdk-js-v*" },
+              { "type": "tag", "pattern": "sdk-react-native-v*" }
+            ]
+          }
+        },
+        "flutterflow-library": {
+          "variables": {
+            "FF_LIBRARY_PROJECT_ID": "open-grow-private-4m5us1"
+          },
+          "secrets": ["FF_API_KEY"]
+        },
+        "flutterflow-vocostar": {
+          "variables": {
+            "FF_APPLICATION_PROJECT_ID": "vocal-transform-z2j7dp",
+            "FF_LIBRARY_PROJECT_ID": "open-grow-private-4m5us1"
+          },
+          "secrets": ["FF_API_KEY", "SUPERBOARD_PROJECT_KEY"]
+        }
+      }
+    }
+  }
+}

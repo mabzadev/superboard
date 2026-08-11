@@ -10,7 +10,7 @@ const unique = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const pkceChallenge = (verifier: string) =>
   createHash("sha256").update(verifier).digest("base64url");
 
-test.describe.serial("real OpenGrow production flows", () => {
+test.describe.serial("real SuperBoard production flows", () => {
   test("auth, configuration, links, SDK, billing and cleanup run against the Worker", async ({
     page,
     request,
@@ -18,13 +18,13 @@ test.describe.serial("real OpenGrow production flows", () => {
     const baseUrl = apiUrl();
     const suffix = unique();
     const email = `real-${suffix}@opengrow.local`;
-    const password = "OpenGrowE2E123!";
+    const password = "SuperBoardE2E123!";
     const bundleId = `io.opengrow.real.${suffix.replace(/[^a-z0-9]/g, "")}`;
     const packageName = `io.opengrow.real.${suffix.replace(/[^a-z0-9]/g, "")}`;
     const linkPath = `real-${suffix}`.slice(0, 48);
 
     const signup = await request.post(`${baseUrl}/api/v1/auth/sign_up`, {
-      data: { email, password, name: "OpenGrow Real E2E" },
+      data: { email, password, name: "SuperBoard Real E2E" },
     });
     expect(signup.ok()).toBeTruthy();
     const auth = await signup.json();
@@ -115,7 +115,7 @@ test.describe.serial("real OpenGrow production flows", () => {
       },
       data: {
         app_version: "1.0.0",
-        user_agent: "OpenGrowRealE2E/1.0",
+        user_agent: "SuperBoardRealE2E/1.0",
         vendor_id: `vendor-${suffix}`,
       },
     });
@@ -139,7 +139,7 @@ test.describe.serial("real OpenGrow production flows", () => {
         "PROJECT-KEY": projectKey,
         PLATFORM: "ios",
         IDENTIFIER: bundleId,
-        "User-Agent": "OpenGrowRealE2E/1.0",
+        "User-Agent": "SuperBoardRealE2E/1.0",
       },
       data: {
         platform: "ios",
@@ -188,12 +188,8 @@ test.describe.serial("real OpenGrow production flows", () => {
     await page.goto("/messaging");
     await expect(page.getByText(notificationTitle).first()).toBeVisible();
 
-    const billing = await request.get(`${baseUrl}/api/v1/instances/${instance.id}/billing/mau`, {
-      headers: authHeaders,
-    });
-    expect(billing.ok()).toBeTruthy();
     await expect(page.goto("/settings")).resolves.toBeTruthy();
-    await expect(page.getByText(/monthly active users|active users/i).first()).toBeVisible();
+    await expect(page.getByText(/project settings/i).first()).toBeVisible();
 
     const redirectUri = "http://localhost:3001/mcp-callback";
     const mcpClient = await request.post(`${baseUrl}/register`, {

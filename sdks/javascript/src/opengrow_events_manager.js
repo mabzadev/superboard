@@ -30,7 +30,12 @@ class EventsStorage {
    * Loads events from localStorage or initializes as an empty array.
    */
   constructor() {
-    this.events = JSON.parse(localStorage.getItem("OpenGrow-events")) || [];
+    this.storage = typeof localStorage !== "undefined" ? localStorage : null;
+    try {
+      this.events = JSON.parse(this.storage?.getItem("OpenGrow-events")) || [];
+    } catch {
+      this.events = [];
+    }
   }
 
   /**
@@ -45,7 +50,7 @@ class EventsStorage {
    * Store events to localStorage.
    */
   storeEventsLocally() {
-    localStorage.setItem("OpenGrow-events", JSON.stringify(this.events)); // Store events array in localStorage
+    this.storage?.setItem("OpenGrow-events", JSON.stringify(this.events)); // Store events array in localStorage
   }
 
   /**
@@ -91,7 +96,7 @@ class EventsStorage {
    * @param {number} timestamp - The timestamp to set.
    */
   setTimestamp(timestamp) {
-    localStorage.setItem(
+    this.storage?.setItem(
       "OpenGrow-events-timestamp",
       JSON.stringify(timestamp) // Store the timestamp in localStorage
     );
@@ -102,10 +107,14 @@ class EventsStorage {
    * @returns {number|null} The timestamp from localStorage.
    */
   getTimestamp() {
-    const storedTimestamp = localStorage.getItem(
+    const storedTimestamp = this.storage?.getItem(
       "OpenGrow-events-timestamp" // Retrieve timestamp from localStorage
     );
-    return storedTimestamp ? JSON.parse(storedTimestamp) : null; // Return parsed timestamp or null if not found
+    try {
+      return storedTimestamp ? JSON.parse(storedTimestamp) : null; // Return parsed timestamp or null if not found
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -167,6 +176,12 @@ class OpenGrowEventsManager {
    * @private
    */
   handleFocus() {
+    if (
+      typeof window === "undefined" ||
+      typeof window.addEventListener !== "function"
+    ) {
+      return;
+    }
     const self = this;
     window.addEventListener("focus", function () {
       self.setTimeSpent(); // Update time spent when the window gains focus

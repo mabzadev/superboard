@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
@@ -59,7 +60,6 @@ const AddNewMemberDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        aria-describedby="invite-member-description"
         showCloseButton={false}
         className="flex flex-col w-full max-w-[800px] max-h-[90vh] gap-4 my-6"
       >
@@ -77,14 +77,11 @@ const AddNewMemberDialog = ({
         <div className="flex flex-col gap-4 w-full">
           {/* Members */}
           <div className="flex flex-col gap-4 max-w-[800px]">
-            <span
-              id="invite-member-description"
-              className="text-sm text-muted-foreground"
-            >
+            <DialogDescription className="text-sm text-muted-foreground">
               You can add new members to your project, giving them access to
               specific areas based on their assigned role. They will receive an
               email to create an account once invited.
-            </span>
+            </DialogDescription>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-4 w-full max-w-[600px]">
                 <div className="flex w-full relative">

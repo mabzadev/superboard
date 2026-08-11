@@ -1,0 +1,57 @@
+{
+  "$schema": "schemas/reference-project.schema.json",
+  "schemaVersion": 4,
+  "name": "SuperBoard Reference",
+  "platformRepository": "https://github.com/mbzadev/superboard",
+  "referenceRepository": "https://github.com/mbzadev/superboard",
+  "referencePath": "apps/reference",
+  "environment": "development",
+  "target": "mbza-development",
+  "sdkApplication": {
+    "platform": "web",
+    "identifier": "reference.mbza.dev",
+    "projectEnvironment": "test"
+  },
+  "deployment": {
+    "branch": "dev",
+    "environment": "development",
+    "logicalName": "superboard-reference",
+    "workerName": "opengrow-reference-app-dev",
+    "resourceIdentity": "legacy-compatible",
+    "compatibilityDate": "2026-08-08"
+  },
+  "endpoints": {
+    "referenceWeb": "https://reference.mbza.dev",
+    "dashboard": "https://board.mbza.dev",
+    "api": "https://api.mbza.dev",
+    "sdk": "https://sdk.mbza.dev",
+    "shortLinks": "https://in.mbza.dev",
+    "files": "https://files.mbza.dev",
+    "mailPreview": "https://mail.mbza.dev",
+    "support": "https://api.mbza.dev/api/v1/support-client"
+  },
+  "sdkCatalogue": {
+    "schemaVersion": 4,
+    "coverageManifest": "config/sdk-coverage.json",
+    "promotionPolicy": "complete-active-set",
+    "active": ["flutter", "flutterflow"],
+    "internal": ["android", "ios"],
+    "archived": ["flutterflow-support", "javascript", "react-native"]
+  },
+  "libraries": {
+    "opengrow_flutterflow": {
+      "path": "sdks/flutterflow",
+      "developmentRef": "dev",
+      "sourceVersion": "2.2.5",
+      "releaseVersion": "2.2.5",
+      "releaseRef": "sdk-flutterflow-v2.2.5"
+    },
+    "opengrow_flutterflow_messaging": {
+      "path": "sdks/flutterflow_messaging",
+      "developmentRef": "dev",
+      "sourceVersion": "1.3.0",
+      "releaseVersion": "1.3.0",
+      "releaseRef": "sdk-flutterflow-messaging-v1.3.0"
+    }
+  }
+}

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:opengrow_flutter/src/customer_info_verifier.dart';
+import 'package:superboard_flutter/src/customer_info_verifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _publicKey = {
@@ -28,7 +28,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test('uses only the signed CustomerInfo payload', () async {
-    final verifier = OpenGrowCustomerInfoVerifier(
+    final verifier = SuperBoardCustomerInfoVerifier(
       client: MockClient(
         (_) async => http.Response(
           jsonEncode({
@@ -44,7 +44,7 @@ void main() {
         'original_app_user_id': 'forged-user',
         'entitlements': const {},
       },
-      purchasesBaseUrl: 'https://sdk.vocostar.com/purchases/v2',
+      purchasesBaseUrl: 'https://sdk.example.com/purchases/v2',
       preferences: await SharedPreferences.getInstance(),
     );
 
@@ -54,7 +54,7 @@ void main() {
   });
 
   test('rejects a modified signature', () async {
-    final verifier = OpenGrowCustomerInfoVerifier(
+    final verifier = SuperBoardCustomerInfoVerifier(
       client: MockClient(
         (_) async => http.Response(
           jsonEncode({
@@ -69,10 +69,10 @@ void main() {
         envelope: {
           'signature': '${_signature.substring(0, _signature.length - 1)}A',
         },
-        purchasesBaseUrl: 'https://sdk.vocostar.com/purchases/v2',
+        purchasesBaseUrl: 'https://sdk.example.com/purchases/v2',
         preferences: await SharedPreferences.getInstance(),
       ),
-      throwsA(isA<OpenGrowCustomerInfoVerificationException>()),
+      throwsA(isA<SuperBoardCustomerInfoVerificationException>()),
     );
   });
 }

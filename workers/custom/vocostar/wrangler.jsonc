@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "opengrow-custom-vocostar-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "vars": {
+    "APP_KEY": "vocostar",
+    "ENVIRONMENT": "development",
+    "CUSTOM_WORKER_CAPABILITIES": "vocostar.voice.clone,vocostar.media.convert,vocostar.jobs.read,vocostar.jobs.cancel,vocostar.jobs.retry",
+    "MAX_AUTOMATIC_DISPATCH_ATTEMPTS": "5",
+  },
+  "d1_databases": [
+    {
+      "binding": "VOCOSTAR_DB",
+      "database_name": "vocostar-custom-test",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+    },
+  ],
+}

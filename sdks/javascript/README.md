@@ -1,71 +1,114 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
-    <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/types-included-4F46E5?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/opengrow-js?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/opengrow-js/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/opengrow-js?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mbzadev/superboard-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 ## Overview
 
 The OpenGrow SDK is a JavaScript module designed to integrate with the OpenGrow API, providing functionality for creating and managing links, handling user information, and managing authentication. This documentation covers the main methods and usage of the SDK.
 
-## Installation
+<!-- opengrow-sdk-documentation:javascript:start -->
 
-To install the OpenGrow SDK, use the following command to add it as a dependency to your project:
+> **Lifecycle: archived.** This package is frozen for existing clients.
+> Its historical release remains available, but no new version may be
+> published.
+
+## Historical installation
+
+### GitHub Packages registry
+
+Registry: `https://npm.pkg.github.com`.
+
+The GitHub npm package record is public metadata. This does not make the
+registry anonymously installable: unauthenticated downloads are unsupported
+and return `401 Unauthorized`.
+
+Provide a GitHub token with `read:packages` only through
+`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+developer shell or CI secret store; never commit the token to Git or write its
+value into a package-manager configuration file.
+
+Add this environment-variable placeholder to the project `.npmrc`. The
+placeholder is safe to version; its resolved secret value is not:
+
+```ini
+@mbzadev:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${OPENGROW_GITHUB_PACKAGES_TOKEN}
+```
+
+Install only after the secret environment variable is present:
 
 ```bash
-npm install opengrow --save
+test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+  && npm install @mbzadev/opengrow-js-sdk@1.0.2
 ```
 
-This will add the OpenGrow SDK to your dependencies in package.json.
-
-After installation, you can include the SDK in your project:
+Then import the package by its catalogue-owned name:
 
 ```javascript
-import OpenGrow from "OpenGrow";
+import OpenGrow from "@mbzadev/opengrow-js-sdk";
 ```
+
+<!-- opengrow-sdk-documentation:javascript:end -->
 
 ## Documentation
 
 ### Constructor
 
 ```javascript
-constructor(APIKey, linkHandlingCallback);
+constructor(APIKey, testEnvironment, linkHandlingCallback, baseURL);
 ```
 
 Creates a new instance of the opengrow SDK.
 
 - **APIKey** (string): Your API key provided by opengrow for authentication.
+- **testEnvironment** (boolean): Enables the application's test data namespace.
 - **linkHandlingCallback** (Function): A callback function that handles the data received from opengrow.
+- **baseURL** (string): The SDK origin configured for the application, without a hard-coded global fallback.
 
 #### Example
 
 ```javascript
-const APIKey = "your-api-key-here";
+const runtimeConfig = window.__OPENGROW_CONFIG__;
 const handleLinkData = (data) => {
   console.log("Link data received:", data);
 };
 
-const opengrow = new OpenGrow(APIKey, handleLinkData);
+const opengrow = new OpenGrow(
+  runtimeConfig.projectKey,
+  runtimeConfig.testEnvironment,
+  handleLinkData,
+  runtimeConfig.sdkOrigin,
+);
 ```
 
 ## Methods
 
-### start()
+### start(success, error)
 
 Initializes and starts the OpenGrow SDK by authenticating with the provided API key.
 
-- **succesfullAuthenticatedCallback** (Function, optional): Callback to invoke on successful authentication.
+- **success** (Function, optional): Called only after authentication succeeds.
+- **error** (Function, optional): Called when authentication fails. Network-backed SDK methods remain disabled until a later `start()` succeeds.
 
 #### Example
 
 ```javascript
-opengrow.start();
+opengrow.start(
+  () => {
+    console.log("OpenGrow authenticated");
+  },
+  (error) => {
+    console.error("OpenGrow authentication failed:", error);
+  },
+);
 ```
 
 ### createLink(title, subtitle, imageURL, data, success, error)
@@ -97,7 +140,7 @@ opengrow.createLink(
   },
   (err) => {
     console.error("Error creating link:", err);
-  }
+  },
 );
 ```
 
@@ -169,14 +212,16 @@ const isAuthenticated = opengrow.authenticated();
 console.log("Is authenticated:", isAuthenticated);
 ```
 
-### showMessagesList()
+### showMessagesList(error)
 
 Displays the messages list using the manager.
+
+- **error** (Function, optional): Called instead of opening the list when authentication has not succeeded.
 
 #### Example
 
 ```javascript
-opengrow.showMessagesList();
+opengrow.showMessagesList((error) => console.error(error));
 ```
 
 ### getMessages(page, response, error)
@@ -197,7 +242,7 @@ opengrow.getMessages(
   },
   (err) => {
     console.error("Error retrieving messages:", err);
-  }
+  },
 );
 ```
 
@@ -217,36 +262,59 @@ opengrow.getNumberOfUnreadMessages(
   },
   (err) => {
     console.error("Error retrieving unread messages count:", err);
-  }
+  },
 );
 ```
 
 ## Usage Example
 
 ```javascript
-import opengrow from "opengrow";
+import OpenGrow from "@mbzadev/opengrow-js-sdk";
 
-const APIKey = "your-api-key";
-const opengrow = new opengrow(APIKey, (data) => {
-  console.log("Link data:", data);
-});
-
-opengrow.start();
-
-if (opengrow.authenticated()) {
-  opengrow.createLink(
-    "Sample Link",
-    "Subtitle",
-    "https://example.com/image.jpg",
-    { foo: "bar" },
-    (response) => console.log("Link created:", response),
-    (error) => console.error("Error:", error)
-  );
-}
+const runtimeConfig = window.__OPENGROW_CONFIG__;
+const opengrow = new OpenGrow(
+  runtimeConfig.projectKey,
+  runtimeConfig.testEnvironment,
+  (data) => {
+    console.log("Link data:", data);
+  },
+  runtimeConfig.sdkOrigin,
+);
 
 opengrow.setUserIdentifier("user-123");
 opengrow.setUserAttributes({ name: "John Doe", age: 30 });
 
+opengrow.start(
+  () => {
+    opengrow.createLink(
+      "Sample Link",
+      "Subtitle",
+      "https://example.com/image.jpg",
+      { foo: "bar" },
+      (response) => console.log("Link created:", response),
+      (error) => console.error("Error:", error),
+    );
+  },
+  (error) => console.error("Authentication failed:", error),
+);
+
 console.log("User ID:", opengrow.userIdentifier());
 console.log("User Attributes:", opengrow.userAttributes());
 ```
+
+## Development checks
+
+The JavaScript SDK has no runtime npm dependencies. Its complete first-party
+check audits the production package graph and the development toolchain
+separately before running unit tests, producing both bundles, loading the built
+package through ESM and CommonJS, and verifying the publishable archive:
+
+```bash
+npm ci
+npm run check
+```
+
+The development server and current Webpack toolchain require the Node.js 22 LTS
+line used by the repository CI. Do not bypass audit findings with
+`npm audit fix --force`; upgrade the declared toolchain, regenerate the lockfile,
+and re-run the complete check instead.

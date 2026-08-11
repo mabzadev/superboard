@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-source-snapshot.schema.json",
+  "title": "SuperBoard FlutterFlow source snapshot and convergence contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "application",
+    "project",
+    "export",
+    "fingerprints",
+    "inventory",
+    "diagnostics"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "application": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timestamp",
+        "commitId",
+        "commitMessage",
+        "success",
+        "pushed",
+        "dryRun",
+        "generatedAt",
+        "lastExportedAt",
+        "projectUpdatedAtMs"
+      ],
+      "properties": {
+        "timestamp": { "type": "string", "minLength": 1 },
+        "commitId": { "type": "string", "minLength": 1 },
+        "commitMessage": { "type": "string" },
+        "success": { "type": "boolean" },
+        "pushed": { "type": "boolean" },
+        "dryRun": { "type": "boolean" },
+        "generatedAt": { "type": "string", "minLength": 1 },
+        "lastExportedAt": { "type": "string", "minLength": 1 },
+        "projectUpdatedAtMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "fingerprints": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pages",
+        "components",
+        "actionBlocks",
+        "appEventsReported",
+        "apiCallsReported",
+        "customActions",
+        "customFunctions",
+        "customWidgets",
+        "dataStructs",
+        "appStateFields"
+      ],
+      "properties": {
+        "pages": { "$ref": "#/$defs/count" },
+        "components": { "$ref": "#/$defs/count" },
+        "actionBlocks": { "$ref": "#/$defs/count" },
+        "appEventsReported": { "$ref": "#/$defs/count" },
+        "apiCallsReported": { "$ref": "#/$defs/count" },
+        "customActions": { "$ref": "#/$defs/count" },
+        "customFunctions": { "$ref": "#/$defs/count" },
+        "customWidgets": { "$ref": "#/$defs/count" },
+        "dataStructs": { "$ref": "#/$defs/count" },
+        "appStateFields": { "$ref": "#/$defs/count" }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "validationErrors", "byCode"],
+      "properties": {
+        "total": { "$ref": "#/$defs/count" },
+        "validationErrors": { "$ref": "#/$defs/count" },
+        "byCode": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/count" }
+        }
+      }
+    },
+    "convergence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "checks"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/convergenceCheck" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "convergenceCheck": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "maximum"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "kind": { "const": "diagnostics-max" },
+            "maximum": { "$ref": "#/$defs/count" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "maximum", "allowedByCode"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "kind": { "const": "diagnostics-unwaived-max" },
+            "maximum": { "$ref": "#/$defs/count" },
+            "allowedByCode": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "type": "string", "minLength": 1 },
+              "additionalProperties": { "$ref": "#/$defs/count" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "maximum"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "kind": { "const": "validation-errors-max" },
+            "maximum": { "$ref": "#/$defs/count" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "value", "paths"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "kind": {
+              "enum": ["literal-absent", "symbol-absent", "symbol-present"]
+            },
+            "value": { "type": "string", "minLength": 1 },
+            "paths": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/relativePath" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

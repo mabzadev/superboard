@@ -1,0 +1,251 @@
+{
+  "$schema": "./schema.json",
+  "schemaVersion": 12,
+  "target": "mbza-development",
+  "accountAlias": "mbza-development",
+  "resourceIdentity": {
+    "logicalName": "superboard",
+    "physicalName": "superboard",
+    "previousNames": [],
+    "migrationStrategy": "canonical"
+  },
+  "workersDevSubdomain": "mbza",
+  "registrationMode": "allowlist",
+  "ssoEnabled": false,
+  "features": {
+    "billing": true,
+    "messaging": false,
+    "app": true,
+    "products": true,
+    "paywalls": true,
+    "dynamic-links": true,
+    "support": true,
+    "marketing": true,
+    "onboardings": true
+  },
+  "applicationIdentity": {
+    "registrationMode": "open",
+    "applicationAudience": "mbza-development.application",
+    "googleAudiences": [],
+    "appleAudiences": [],
+    "webOrigins": ["https://reference.mbza.dev"]
+  },
+  "filePolicy": {
+    "maxBytes": 10485760,
+    "downloadTicketTtlSeconds": 600,
+    "allowedContentTypes": [
+      "application/json",
+      "application/octet-stream",
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "text/plain"
+    ]
+  },
+  "mail": {
+    "transport": "capture",
+    "fromName": "SuperBoard Development",
+    "fromAddress": "noreply@mbza.dev",
+    "replyToAddress": "support@mbza.dev"
+  },
+  "domains": {
+    "api": "api.mbza.dev",
+    "shortlinks": "in.mbza.dev",
+    "sdk": "sdk.mbza.dev",
+    "dashboard": "board.mbza.dev",
+    "files": "files.mbza.dev",
+    "mcp": "mcp.mbza.dev",
+    "mailPreview": "mail.mbza.dev"
+  },
+  "retiredDomains": [
+    {
+      "hostname": "grow.mbza.dev",
+      "formerSurface": "dashboard",
+      "policy": "must-be-unassigned",
+      "reason": "Previous back-office hostname replaced by board.mbza.dev."
+    }
+  ],
+  "workers": {
+    "api": {
+      "development": "superboard-api-dev"
+    },
+    "dashboard": {
+      "development": "superboard-dashboard-dev"
+    },
+    "billing": {
+      "development": "superboard-billing-dev"
+    },
+    "email": {
+      "development": "superboard-email-dev"
+    },
+    "identity": {
+      "development": "superboard-identity-dev"
+    },
+    "files": {
+      "development": "superboard-files-dev"
+    },
+    "observability": {
+      "development": "superboard-observability-dev"
+    },
+    "mcp": {
+      "development": "superboard-mcp-dev"
+    },
+    "app": {
+      "development": "superboard-app-dev"
+    },
+    "products": {
+      "development": "superboard-products-dev"
+    },
+    "paywalls": {
+      "development": "superboard-paywalls-dev"
+    },
+    "dynamic-links": {
+      "development": "superboard-dynamic-links-dev"
+    },
+    "support": {
+      "development": "superboard-support-dev"
+    },
+    "marketing": {
+      "development": "superboard-marketing-dev"
+    },
+    "onboardings": {
+      "development": "superboard-onboardings-dev"
+    },
+    "custom": {
+      "development": "superboard-custom-reference-dev"
+    }
+  },
+  "customWorker": {
+    "source": "workers/custom/reference/src/index.ts",
+    "packagePath": "workers/custom/reference",
+    "description": "SuperBoard reference extension used to validate the custom Worker protocol on mbza.dev.",
+    "capabilities": ["reference.echo", "reference.acceptance"],
+    "secrets": ["CUSTOM_WORKER_TOKEN"],
+    "vars": {
+      "REFERENCE_JOB_RETENTION_DAYS": "30"
+    },
+    "crons": ["0 3 * * *"],
+    "d1Binding": {
+      "binding": "REFERENCE_DB",
+      "migrationsDir": "workers/custom/reference/migrations"
+    }
+  },
+  "oauth": {
+    "dashboardClientId": "superboard-mbza-development"
+  },
+  "authGateway": {
+    "issuer": "https://api.mbza.dev",
+    "audience": "superboard",
+    "jwksUrl": "https://api.mbza.dev/.well-known/jwks.json"
+  },
+  "publicSurfaceMonitors": [
+    {
+      "id": "reference",
+      "url": "https://reference.mbza.dev",
+      "healthUrl": "https://reference.mbza.dev/",
+      "description": "Executable Flutter Web acceptance application for the common SuperBoard journeys"
+    }
+  ],
+  "operator": {
+    "docsUrl": "https://github.com/mbzadev/superboard-platform/tree/dev/docs",
+    "supportEmail": "support@mbza.dev"
+  },
+  "environments": {
+    "development": {
+      "d1": {
+        "name": "superboard-dev-db",
+        "id": "02001526-c44d-47e5-8b1d-df47a3b68d69"
+      },
+      "kv": {
+        "name": "superboard-dev",
+        "id": "f961a6d6fb3440a4a45bd30d927d675d"
+      },
+      "r2": {
+        "name": "superboard-dev-files"
+      },
+      "dashboardCache": {
+        "name": "superboard-dev-dashboard-cache"
+      },
+      "emailD1": {
+        "name": "superboard-dev-email-db",
+        "id": "aa7ecc13-5f11-4bdd-8505-2fcd921a47df"
+      },
+      "identityD1": {
+        "name": "superboard-dev-identity-db",
+        "id": "0c7e4bf4-a0b3-443b-8da9-159795171aa0"
+      },
+      "filesD1": {
+        "name": "superboard-dev-files-db",
+        "id": "3261931d-8b84-4f04-b923-d20a57b4f9b7"
+      },
+      "customD1": {
+        "name": "superboard-dev-custom-reference-db",
+        "id": "65c7edb8-d3fc-4a26-8317-96c511558679"
+      },
+      "analyticsDataset": "superboard_mbza_development",
+      "supportProjectIds": [],
+      "moduleD1": {
+        "app": {
+          "name": "superboard-dev-app-db",
+          "id": "b9d5a1fe-a783-49f6-82a9-af8bab27d244"
+        },
+        "products": {
+          "name": "superboard-dev-products-db",
+          "id": "0abc5c90-1196-4f4a-8502-ff0a17ca946e"
+        },
+        "paywalls": {
+          "name": "superboard-dev-paywalls-db",
+          "id": "fe34d47d-8b47-4f0b-b137-a02bea886927"
+        },
+        "dynamicLinks": {
+          "name": "superboard-dev-dynamic-links-db",
+          "id": "0b1222e3-e2b5-4a96-a26d-6b9a0ce14116"
+        },
+        "support": {
+          "name": "superboard-dev-support-db",
+          "id": "6f08fb37-c2fc-4f91-beb2-7462f7976463"
+        },
+        "marketing": {
+          "name": "superboard-dev-marketing-db",
+          "id": "5bfda359-fd04-46e4-afc3-2d78b6565233"
+        },
+        "onboardings": {
+          "name": "superboard-dev-onboardings-db",
+          "id": "d7a0389d-52a3-465b-a606-f995fa46202a"
+        }
+      },
+      "moduleR2": {
+        "support": {
+          "name": "superboard-dev-support-attachments"
+        },
+        "marketing": {
+          "name": "superboard-dev-marketing-media"
+        }
+      },
+      "moduleQueues": {
+        "support": {
+          "name": "superboard-dev-support-events",
+          "dlq": "superboard-dev-support-events-dlq"
+        },
+        "marketing": {
+          "name": "superboard-dev-marketing-delivery",
+          "dlq": "superboard-dev-marketing-delivery-dlq"
+        }
+      },
+      "publicRouting": "active",
+      "billingExecutionMode": "local",
+      "queues": {
+        "events": "superboard-dev-events",
+        "eventsDlq": "superboard-dev-events-dlq",
+        "push": "superboard-dev-push",
+        "pushDlq": "superboard-dev-push-dlq",
+        "maintenance": "superboard-dev-maintenance",
+        "maintenanceDlq": "superboard-dev-maintenance-dlq",
+        "billing": "superboard-dev-billing",
+        "billingDlq": "superboard-dev-billing-dlq",
+        "email": "superboard-dev-email-delivery",
+        "emailDlq": "superboard-dev-email-delivery-dlq"
+      }
+    }
+  }
+}

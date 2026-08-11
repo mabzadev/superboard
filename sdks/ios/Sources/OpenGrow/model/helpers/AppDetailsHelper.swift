@@ -6,9 +6,6 @@
 
 import Foundation
 import UIKit
-import WebKit
-
-import WebKit
 
 class AppDetailsHelper {
 
@@ -66,9 +63,6 @@ class AppDetailsHelper {
             return userAgent
         }
 
-        if let userAgent = WKWebView().value(forKey: "userAgent") as? String {
-            return userAgent
-        }
-        return ""
+        return UserAgentHelper.applicationUserAgent()
     }
 }

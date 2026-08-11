@@ -5,7 +5,7 @@ const withOpenGrowAndroid = require('./withOpenGrowAndroid');
 const pkg = require('../package.json');
 
 /**
- * Expo Config Plugin for @mbzadev/opengrow-react-native.
+ * Expo Config Plugin for the OpenGrow React Native SDK.
  *
  * Configures native iOS and Android projects for the OpenGrow SDK.
  *
@@ -19,14 +19,10 @@ const pkg = require('../package.json');
  */
 function withOpenGrow(config, props) {
   if (!props?.apiKey) {
-    throw new Error(
-      '@mbzadev/opengrow-react-native plugin requires an "apiKey" property.'
-    );
+    throw new Error(`${pkg.name} plugin requires an "apiKey" property.`);
   }
   if (!props?.scheme) {
-    throw new Error(
-      '@mbzadev/opengrow-react-native plugin requires a "scheme" property.'
-    );
+    throw new Error(`${pkg.name} plugin requires a "scheme" property.`);
   }
 
   const pluginProps = {

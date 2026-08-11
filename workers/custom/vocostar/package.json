@@ -1,0 +1,20 @@
+{
+  "name": "@superboard/custom-vocostar-worker",
+  "version": "1.2.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.runtime.json",
+    "test": "vitest run && vitest run --config vitest.runtime.config.ts"
+  },
+  "dependencies": {
+    "@superboard/contracts": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.20.3",
+    "@cloudflare/workers-types": "^5.20260808.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10"
+  }
+}

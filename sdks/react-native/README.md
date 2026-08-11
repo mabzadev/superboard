@@ -1,8 +1,8 @@
 <p align="center">
-  <a href="https://github.com/mbzadev/opengrow">
+  <a href="https://github.com/mbzadev/superboard-platform">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-white.svg">
-      <img src="https://s3.eu-north-1.amazonaws.com/opengrow.io/full-black.svg" width="120" alt="OpenGrow">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
+      <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
     </picture>
   </a>
 </p>
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.opengrow.io/docs/sdk/react-native/quick-start">Quick Start</a> ·
-  <a href="https://docs.opengrow.io/docs/sdk/react-native/api-reference">API Reference</a> ·
-  <a href="https://docs.opengrow.io">Full Docs</a>
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#usage">Quick Start</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#api-reference">API Reference</a> ·
+  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -39,29 +39,97 @@ The OpenGrow React Native SDK provides deep linking, universal links, app links,
 - iOS 13.0+
 - Android API 21+ (Android 5.0)
 
-## Installation
+<!-- opengrow-sdk-documentation:react-native:start -->
 
-```bash
-# Using npm
-npm install @mbzadev/opengrow-react-native
+> **Lifecycle: archived.** This package is frozen for existing clients.
+> Its historical release remains available, but no new version may be
+> published.
 
-# Using yarn
-yarn add @mbzadev/opengrow-react-native
+## Historical installation
+
+### GitHub Packages registry
+
+Registry: `https://npm.pkg.github.com`.
+
+The GitHub npm package record is public metadata. This does not make the
+registry anonymously installable: unauthenticated downloads are unsupported
+and return `401 Unauthorized`.
+
+Provide a GitHub token with `read:packages` only through
+`OPENGROW_GITHUB_PACKAGES_TOKEN`. Keep its value in the
+developer shell or CI secret store; never commit the token to Git or write its
+value into a package-manager configuration file.
+
+Add this environment-variable placeholder to the project `.npmrc`. The
+placeholder is safe to version; its resolved secret value is not:
+
+```ini
+@mbzadev:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${OPENGROW_GITHUB_PACKAGES_TOKEN}
 ```
 
-### Android dependency
+Install only after the secret environment variable is present:
 
-Add the OpenGrow Android SDK to `android/app/build.gradle`:
+```bash
+test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+  && npm install @mbzadev/opengrow-react-native-sdk@1.0.2
+```
+
+### Android GitHub Packages registry
+
+The React Native package also consumes the released Android SDK from its
+authenticated Maven registry. Add this contract to the React Native
+project `android/settings.gradle`:
 
 ```groovy
-dependencies {
-    implementation 'io.opengrow:OpenGrow:1.1.1'
+def openGrowPackagesUser = System.getenv("OPENGROW_GITHUB_PACKAGES_USER")
+def openGrowPackagesToken = System.getenv("OPENGROW_GITHUB_PACKAGES_TOKEN")
+if (!openGrowPackagesUser || !openGrowPackagesToken) {
+    throw new GradleException("OPENGROW_GITHUB_PACKAGES_USER and OPENGROW_GITHUB_PACKAGES_TOKEN are required")
 }
+
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            name = "OpenGrowGitHubPackages"
+            url = uri("https://maven.pkg.github.com/mbzadev/superboard-platform")
+            credentials {
+                username = openGrowPackagesUser
+                password = openGrowPackagesToken
+            }
+        }
+    }
+}
+```
+
+Then keep the exact native dependency in `android/app/build.gradle`
+(the OpenGrow config plugin inserts the same coordinate):
+
+```groovy
+implementation("io.opengrow:opengrow-android-sdk:1.0.3")
+```
+
+Before the Android build, require both Maven credentials:
+
+```bash
+test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
+  && test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
+  && cd android && ./gradlew assemble
 ```
 
 ### iOS dependency
 
-The iOS SDK is added automatically via CocoaPods when you run `pod install`.
+The React Native pod consumes the native OpenGrow podspec directly from its
+reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:
+
+```ruby
+pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/superboard/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
+```
+
+The URL is pinned to `sdk-ios-v1.0.3`. Run `pod install` after updating
+the dependency.
+
+<!-- opengrow-sdk-documentation:react-native:end -->
 
 ## Expo Integration
 
@@ -70,7 +138,7 @@ If you're using Expo with a development build, the config plugin automates all n
 ```json
 {
   "plugins": [
-    ["@mbzadev/opengrow-react-native", {
+    ["@mbzadev/opengrow-react-native-sdk", {
       "apiKey": "your-api-key",
       "scheme": "your_app_scheme",
       "useTestEnvironment": false,
@@ -198,7 +266,7 @@ func application(_ app: UIApplication, open url: URL, options: [UIApplication.Op
 ### Handle deep links
 
 ```typescript
-import OpenGrow from '@mbzadev/opengrow-react-native';
+import OpenGrow from '@mbzadev/opengrow-react-native-sdk';
 
 const listener = OpenGrow.onDeeplinkReceived((response) => {
     console.log('Link:', response.link);
@@ -275,7 +343,7 @@ if (token) {
 }
 ```
 
-Upload your Firebase or APNs credentials in the [OpenGrow dashboard](https://app.opengrow.io).
+Upload your Firebase or APNs credentials in the OpenGrow Dashboard deployed for the active application target.
 
 ### Display messages
 
@@ -294,7 +362,7 @@ console.log(`Unread: ${count}`);
 
 ### Setup
 
-1. Enable revenue tracking in the [OpenGrow dashboard](https://app.opengrow.io) under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
 2. Configure platform notifications:
    - **Android** — Set up Google Play Real-Time Developer Notifications
    - **iOS** — Configure App Store Server Notifications in App Store Connect
@@ -340,24 +408,23 @@ Use `'cancel'` and `'refund'` types for cancellations and refunds. For store pur
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [docs.opengrow.io/docs/sdk/react-native/api-reference](https://docs.opengrow.io/docs/sdk/react-native/api-reference)
+Full API reference: [React Native SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/opengrow/tree/main/sdks/react-native/example).
+A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native/example).
 
 ## Migration Guides
 
-- [Migrate from Firebase Dynamic Links](https://docs.opengrow.io/docs/migration-guides/firebase-dynamic-links/android)
-- [Migrate from Branch.io](https://docs.opengrow.io/docs/migration-guides/branch-io/android)
+- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Documentation
 
-Full documentation at [docs.opengrow.io](https://docs.opengrow.io).
+Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
 
 ## Support
 
-For technical support and inquiries, contact [support@opengrow.io](mailto:support@opengrow.io).
+For technical support, use the support channel configured for the active target or open a repository issue.
 
 ## License
 

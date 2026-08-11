@@ -1,6 +1,6 @@
 // Import the helper class for making API requests
-import OpenGrowAPIServiceHelper from "./opengrow_api_service_helper";
-import OpenGrowContext from "./opengrow_context";
+import OpenGrowAPIServiceHelper from "./opengrow_api_service_helper.js";
+import OpenGrowContext from "./opengrow_context.js";
 
 // Define the OpenGrow API service class
 class OpenGrowAPIService {
@@ -128,7 +128,6 @@ class OpenGrowAPIService {
   messagesForAutomaticDisplay(response, error) {
     this.apiService.GET(
       OpenGrowAPIService.ENDPOINTS.NOTIFICATIONS_TO_DISPLAY_AUTOMATICALLY,
-      null,
       response,
       error
     );
@@ -137,7 +136,6 @@ class OpenGrowAPIService {
   numberOfUnreadMessages(response, error) {
     this.apiService.GET(
       OpenGrowAPIService.ENDPOINTS.NUMBER_OF_UNREAD_MESSAGES,
-      null,
       response,
       error
     );

@@ -1,0 +1,14 @@
+name: superboard_flutterflow_library
+description: Git-owned FlutterFlow AI DSL for the SuperBoard reusable library.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.7.0 <4.0.0"
+
+dependencies:
+  flutterflow_ai:
+    path: ./.flutterflow/sdk/flutterflow_ai
+
+dev_dependencies:
+  test: ^1.25.8
