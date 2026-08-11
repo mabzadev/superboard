@@ -1,7 +1,8 @@
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import "./openflow-tokens.css";
 import UserContextProvider from "@/context/useUserContext";
 import { Toaster } from "@/components/ui/sonner";
 import { Suspense } from "react";
@@ -11,8 +12,8 @@ import { WebVitals } from "@/analytics/WebVitals";
 import QueryProvider from "@/lib/QueryProvider";
 import Script from "next/script";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -23,20 +24,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "OpenGrow",
-    template: "%s | OpenGrow",
+    default: "SuperBoard",
+    template: "%s | SuperBoard",
   },
   description:
-    "SaaS dashboard for mobile app growth — deep links, messaging campaigns, revenue tracking, and audience analytics.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://app.opengrow.io"
-  ),
+    "Private operations dashboard for applications, infrastructure, users, jobs, SDKs, support, purchases, and communications.",
+  metadataBase: process.env.NEXT_PUBLIC_APP_URL
+    ? new URL(process.env.NEXT_PUBLIC_APP_URL)
+    : undefined,
   openGraph: {
     type: "website",
-    siteName: "OpenGrow",
-    title: "OpenGrow — App Growth. Solved",
+    siteName: "SuperBoard",
+    title: "SuperBoard — Application Operations",
     description:
-      "Deep links, messaging campaigns, revenue tracking, and audience analytics for mobile apps.",
+      "Private back-office control plane for application operations.",
   },
   robots: {
     index: false,
@@ -51,6 +52,15 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning className="">
+      <head>
+        <script
+          id="esbuild-name-helper"
+          dangerouslySetInnerHTML={{
+            __html:
+              'globalThis.__name ??= (target, value) => Object.defineProperty(target, "name", { value, configurable: true });',
+          }}
+        />
+      </head>
       {GTM_ID && (
         <Script
           id="gtm-script"
@@ -67,7 +77,7 @@ export default function RootLayout({
         />
       )}
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${geistMono.variable} antialiased`}
       >
         {GTM_ID && (
           <noscript>
@@ -79,7 +89,11 @@ export default function RootLayout({
             />
           </noscript>
         )}
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider
+          attribute={["class", "data-theme"]}
+          defaultTheme="system"
+          enableSystem
+        >
           <QueryProvider>
             <Suspense fallback={null}>
               <Toaster />

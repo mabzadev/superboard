@@ -12,7 +12,6 @@ val BOOLEAN = "boolean"
 val STRING = "String"
 val TRUE = "true"
 val FALSE = "false"
-val SERVER_URL = "SERVER_URL"
 val SDK_VERSION = "SDK_VERSION"
 val NETWORK_LOGGING = "NETWORK_LOGGING"
 
@@ -20,12 +19,12 @@ private val libraryGroupId = "io.opengrow"
 private val libraryArtifactId = if (project.hasProperty("artifactId")) {
     project.property("artifactId").toString()
 } else {
-    "opengrow-android"
+    "opengrow-android-sdk"
 }
 private val libraryVersion = if (project.hasProperty("libraryVersion")) {
     project.property("libraryVersion").toString()
 } else {
-    "1.0.0"
+    "1.0.3"
 }
 val NETWORK_LOGGING_VALUE = if (project.hasProperty("networkLogging")) {
     project.property("networkLogging").toString()
@@ -42,19 +41,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-        
-        // Default test server URL - will be overridden by MockWebServer in tests
-        // Tests should set this via OpenGrowTestRule which injects the mock server URL
-        buildConfigField(STRING, "TEST_SERVER_URL", "\"http://localhost:8080/\"")
     }
 
     buildTypes {
-
-        val SERVER_URL_PRODUCTION = if (project.hasProperty("serverUrl")) {
-            "\"${project.property("serverUrl")}/api/v1/sdk/\""
-        } else {
-            "\"https://sdk.sqd.link/api/v1/sdk/\""
-        }
 
         debug {
             isMinifyEnabled = false
@@ -65,7 +54,6 @@ android {
                 "proguard-rules.pro"
             )
 
-            buildConfigField(STRING, SERVER_URL, SERVER_URL_PRODUCTION)
             buildConfigField(STRING, SDK_VERSION, "\"" + libraryVersion + "\"")
             buildConfigField(BOOLEAN, NETWORK_LOGGING, NETWORK_LOGGING_VALUE)
         }
@@ -77,28 +65,10 @@ android {
                 "proguard-rules.pro"
             )
 
-            buildConfigField(STRING, SERVER_URL, SERVER_URL_PRODUCTION)
             buildConfigField(STRING, SDK_VERSION, "\"" + libraryVersion + "\"")
             buildConfigField(BOOLEAN, NETWORK_LOGGING, NETWORK_LOGGING_VALUE)
         }
     }
-
-//    productFlavors {
-//        val SERVER_URL_DEVELOPMENT = "\"https://sdk.sqd.link/api/v1/sdk/\""
-//        val SERVER_URL_PRODUCTION = "\"https://sdk.sqd.link/api/v1/sdk/\""
-//
-//        create("envDevelopment") {
-//            buildConfigField(STRING, SERVER_URL, SERVER_URL_DEVELOPMENT)
-//            dimension = "default"
-//        }
-//
-//        create("envProd") {
-//            buildConfigField(STRING, SERVER_URL, SERVER_URL_PRODUCTION)
-//            dimension = "default"
-//        }
-//    }
-//
-//    flavorDimensions.add("default")
 
     buildFeatures {
         buildConfig = true
@@ -381,8 +351,8 @@ project.afterEvaluate {
     publishing {
         repositories {
             maven {
-                name = "GithubPackagesPrivate"
-                url = uri("https://maven.pkg.github.com/mbzadev/opengrow")
+                name = "GithubPackages"
+                url = uri("https://maven.pkg.github.com/mbzadev/superboard-platform")
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")

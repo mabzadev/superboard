@@ -462,7 +462,7 @@ class OpenGrowManager {
     }
 
     private func handleUserAgent(completion: @escaping OpenGrowEmptyClosure) {
-        UserAgentHelper.getSafariUserAgent { userAgent in
+        UserAgentHelper.getApplicationUserAgent { userAgent in
             Context.userAgent = userAgent
             completion()
         }

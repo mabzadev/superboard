@@ -1,0 +1,53 @@
+import groovy.json.JsonSlurper
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+
+plugins {
+    alias(openGrowAndroidLibs.plugins.android.library)
+}
+
+def repositoryRoot = file('../../..')
+def nativeContract = new JsonSlurper().parse(
+    new File(repositoryRoot, 'sdks/react-native/plugin/native-contract.json')
+)
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+android {
+    namespace 'io.opengrow.contract.fixture'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 21
+    }
+}
+
+dependencies {
+    implementation "${nativeContract.android.packageName}:${nativeContract.android.version}"
+}
+
+tasks.register('verifyOpenGrowSubstitution') {
+    doLast {
+        def requestedCoordinate = "${nativeContract.android.packageName}:${nativeContract.android.version}"
+        def dependency = configurations.releaseRuntimeClasspath.incoming
+            .resolutionResult.root.dependencies.find {
+                it.requested.displayName == requestedCoordinate
+            }
+        if (dependency == null) {
+            throw new GradleException("Missing native dependency ${requestedCoordinate}")
+        }
+        if (!(dependency.selected.id instanceof ProjectComponentIdentifier)) {
+            throw new GradleException(
+                "${requestedCoordinate} resolved from a registry instead of sdks/android"
+            )
+        }
+        if (dependency.selected.id.projectName != 'OpenGrow') {
+            throw new GradleException(
+                "${requestedCoordinate} resolved to unexpected project ${dependency.selected.id.displayName}"
+            )
+        }
+        println "${requestedCoordinate} -> ${dependency.selected.id.displayName} (local composite build)"
+    }
+}

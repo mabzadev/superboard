@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 void main() {
   test('FlutterFlow package serializes stable field names', () {
-    const value = OpenGrowFlutterFlowPackage(
+    const value = SuperBoardFlutterFlowPackage(
       identifier: 'monthly',
       productId: 'premium_monthly',
       productType: 'subscription',

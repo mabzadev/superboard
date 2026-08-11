@@ -1,6 +1,6 @@
-export const integrateWebSdkValue = `import OpenGrow from 'opengrow';
+export const integrateWebSdkValue = `import SuperBoard from 'opengrow';
 const APIKey = "_OPENGROW_API_KEY_"
-const opengrow = new OpenGrow(APIKey, (data) => {
+const opengrow = new SuperBoard(APIKey, (data) => {
 })
 
 // Start the SDK

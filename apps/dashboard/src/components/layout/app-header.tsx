@@ -1,19 +1,11 @@
 "use client";
 
-import React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTheme } from "next-themes";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { Check, Earth, TestTubeDiagonal } from "lucide-react";
+import { usePathname } from "next/navigation";
+
+import { NavUser } from "@/components/layout/nav-user";
+import { SectionNavigation } from "@/components/layout/section-navigation";
 import {
   Select,
   SelectContent,
@@ -22,296 +14,93 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, Earth, TestTubeDiagonal } from "lucide-react";
-import { useProjectSelection } from "@/context/useProjectSelection";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { PRODUCTION, TEST } from "@/constants/OptionsConstants";
-import {
-  useSubscriptionQuery,
-  useMauQuery,
-} from "@/hooks/queries/usePaymentsQueries";
-import { config } from "@/lib/config";
+import { useProjectSelection } from "@/context/useProjectSelection";
 
 type AppHeaderProps = {
-  titleOverride?: string;
-  rightContent?: React.ReactNode;
   hideEnvSelect?: boolean;
 };
 
-export default function AppHeader({
-  titleOverride,
-  rightContent,
-  hideEnvSelect,
-}: AppHeaderProps) {
-  const { projectType, setProjectType, selectedInstance } =
-    useProjectSelection();
-  const { resolvedTheme } = useTheme();
-
-  const subscriptionQuery = useSubscriptionQuery(selectedInstance?.id);
-  const subscription = subscriptionQuery.data?.subscription ?? null;
-  const isEnterprise = subscriptionQuery.data?.isEnterprise ?? false;
-  const isFullAccess = subscription?.type === "full";
-  const planLoaded =
-    !subscriptionQuery.isLoading && subscriptionQuery.isFetched;
-
-  const mauQuery = useMauQuery(selectedInstance?.id);
-  const mau = mauQuery.data ?? { current_quantity: 0, total_available: 1 };
+export default function AppHeader({ hideEnvSelect = false }: AppHeaderProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const query = searchParams.toString();
-
-  // Automatically build breadcrumbs from URL
-  const breadcrumbLabelOverrides: Record<string, string> = {
-    ios_setup: "iOS Setup",
-    android_setup: "Android Setup",
-    web_setup: "Web Setup",
-  };
-
-  const pathSegments = pathname
-    .split("/")
-    .filter(Boolean)
-    .map((slug) => ({
-      slug, // original, like "dynamic_links"
-      label: breadcrumbLabelOverrides[slug] ?? slug.replace(/_/g, " "), // display label
-    }));
-
-  const router = useRouter();
-  const returnUrlWithParams = (url: string) => {
-    const urlWithParams = `${url}${query ? `?${query}` : ""}`;
-    return urlWithParams;
-  };
-
-  const getCurrentMauValue = () => {
-    if (isEnterprise) {
-      return subscription?.current_maus ?? 0;
-    } else {
-      return mau.current_quantity;
-    }
-  };
-
-  const getCurrentTotalMauValue = () => {
-    if (isEnterprise) {
-      return subscription?.total_maus ?? 0;
-    } else {
-      return mau.total_available ?? Number.POSITIVE_INFINITY;
-    }
-  };
-
-  const displayLimitReach = () => {
-    if (!planLoaded) {
-      return;
-    }
-    if (isFullAccess) {
-      return;
-    }
-    // Paid Stripe subscribers — don't show the banner (Stripe handles billing)
-    if (subscription && !isEnterprise) {
-      return;
-    }
-    // Enterprise accounts — show a contact-sales banner only if over limit
-    if (isEnterprise) {
-      if (
-        getCurrentTotalMauValue() > 0 &&
-        getCurrentMauValue() > getCurrentTotalMauValue()
-      ) {
-        return (
-          <div className="w-full bg-destructive-secondary dark:bg-destructive p-2 flex items-center justify-center">
-            <p className="text-sm text-destructive text-center dark:text-foreground">
-              Monthly usage limit reached.{" "}
-              <label
-                className="underline underline-offset-3 cursor-pointer"
-                onClick={() => {
-                  window.location.href = `mailto:${config.supportEmail}?subject=Enterprise%20MAU%20limit`;
-                }}
-              >
-                Contact sales
-              </label>{" "}
-              to increase your plan.
-            </p>
-          </div>
-        );
-      }
-      return;
-    }
-    // Free tier — show upgrade banner if over limit
-    if (getCurrentTotalMauValue() - getCurrentMauValue() < 0) {
-      return (
-        <div
-          className="w-full bg-destructive-secondary dark:bg-destructive p-2 flex items-center justify-center cursor-pointer"
-          onClick={() => {
-            router.replace(returnUrlWithParams("/settings"));
-          }}
-        >
-          <p className="text-sm text-destructive text-center dark:text-foreground">
-            Monthly usage limit reached.{" "}
-            <label className="underline underline-offset-3 cursor-pointer">
-              Upgrade now
-            </label>{" "}
-            to avoid service disruption.
-          </p>
-        </div>
-      );
-    }
-  };
-
-  const showTestStyle = projectType === TEST && !hideEnvSelect;
+  const { projectType, setProjectType } = useProjectSelection();
+  const isAccountPage =
+    pathname === "/account" || pathname.startsWith("/project-settings") || pathname.startsWith("/infrastructure");
+  const showEnvironment = !hideEnvSelect && !isAccountPage;
 
   return (
-    <div
-      className={cn(
-        "flex flex-col sticky top-[0px] z-25 backdrop-blur-md",
-        !showTestStyle && "bg-background/80"
-      )}
-      style={
-        showTestStyle
-          ? {
-              background:
-                resolvedTheme === "dark"
-                  ? "linear-gradient(270deg, rgba(80, 160, 255, 0.08) 0%, rgba(80, 160, 255, 0.02) 100%)"
-                  : "linear-gradient(270deg, rgba(42, 134, 255, 0.08) 0%, rgba(42, 134, 255, 0.02) 100%)",
-            }
-          : undefined
-      }
-    >
-      {displayLimitReach()}
-      <div className="flex flex-row items-center h-16 px-6 gap-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" />
-        <div className="flex-1 flex items-center overflow-x-auto">
-          <Breadcrumb className="flex items-center">
-            <BreadcrumbList>
-              {pathSegments.map((segment, idx) => {
-                const { label } = segment;
-                const href =
-                  "/" +
-                  pathSegments
-                    .slice(0, idx + 1)
-                    .map((s) => s.slug)
-                    .join("/");
-                const isLast = idx === pathSegments.length - 1;
-                const isSecondLast = idx === pathSegments.length - 2;
+    <header className="ds-header sticky top-0 w-full shrink-0">
+      <SidebarTrigger
+        className="ds-button ds-button-ghost ds-button-icon ds-mobile-menu size-8 md:hidden"
+        aria-label="Open navigation"
+        title="Navigation"
+      />
 
-                const lastSegment =
-                  pathSegments[pathSegments.length - 1]?.slug ?? "";
-                const shouldLink = isSecondLast && /^[0-9]/.test(lastSegment);
+      <SectionNavigation />
 
-                const currentSearch = searchParams.toString();
-                const hrefWithParams = currentSearch
-                  ? `${href}/?${currentSearch}`
-                  : `${href}/`;
-
-                const hasOverride = segment.slug in breadcrumbLabelOverrides;
-                const computedLabel = label;
-
-                const displayLabel =
-                  isLast && titleOverride ? titleOverride : computedLabel;
-
-                return (
-                  <React.Fragment key={href}>
-                    <BreadcrumbItem>
-                      {shouldLink ? (
-                        <BreadcrumbLink
-                          href={hrefWithParams}
-                          className={hasOverride ? undefined : "capitalize"}
-                        >
-                          {displayLabel}
-                        </BreadcrumbLink>
-                      ) : (
-                        <BreadcrumbPage
-                          className={hasOverride ? undefined : "capitalize"}
-                        >
-                          {displayLabel}
-                        </BreadcrumbPage>
-                      )}
-                    </BreadcrumbItem>
-                    {!isLast && <BreadcrumbSeparator />}
-                  </React.Fragment>
-                );
-              })}
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-
-        <div className="flex items-center gap-4 ml-auto">
-          {!hideEnvSelect && (
-            <Select
-              value={projectType}
-              onValueChange={(value) => setProjectType(value)}
+      <div className="ds-header-actions">
+        {showEnvironment && (
+          <Select value={projectType} onValueChange={setProjectType}>
+            <SelectTrigger
+              aria-label="Environment"
+              className="h-8 w-auto min-w-0 rounded-[var(--radius-sm)] border-transparent bg-transparent px-2 shadow-none hover:bg-[var(--color-accent)] focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[var(--color-focus)]"
             >
-              <SelectTrigger
-                className={cn(
-                  "w-auto border-none shadow-none",
-                  showTestStyle
-                    ? "bg-blue-500/10 text-foreground dark:bg-blue-400/10"
-                    : "bg-secondary text-secondary-foreground"
+              <span className="flex items-center gap-2">
+                {projectType === PRODUCTION ? (
+                  <Earth className="size-4" />
+                ) : (
+                  <TestTubeDiagonal className="size-4" />
                 )}
-              >
-                <div className="flex items-center gap-2">
-                  {projectType === PRODUCTION && <Earth className="w-4 h-4" />}
-                  {projectType === TEST && (
-                    <TestTubeDiagonal className="w-4 h-4" />
-                  )}
-                  <span>{projectType}</span>
-                </div>
-                <Separator orientation="vertical" className="ml-auto" />
-                {!projectType && <SelectValue placeholder="Select Env" />}
-              </SelectTrigger>
-              <SelectContent className="bg-secondary border-none p-1 min-w-[240px]">
-                <SelectGroup>
-                  <SelectLabel className="text-xs text-muted-foreground px-2 pb-1">
-                    Environment
-                  </SelectLabel>
-                  <SelectPrimitive.Item
-                    value={PRODUCTION}
-                    className="relative flex w-full cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-hidden select-none focus:bg-background data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                  >
-                    <Earth className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <SelectPrimitive.ItemText>
-                      <div className="flex flex-col">
-                        <span>Production</span>
-                        <span className="text-xs text-muted-foreground font-normal">
-                          Live data from real users
-                        </span>
-                      </div>
-                    </SelectPrimitive.ItemText>
-                    <SelectPrimitive.ItemIndicator className="ml-auto shrink-0">
-                      <div className="flex items-center justify-center h-5 w-5 rounded-full bg-muted-foreground/20">
-                        <Check
-                          className="h-3 w-3 text-foreground"
-                          strokeWidth={2.5}
-                        />
-                      </div>
-                    </SelectPrimitive.ItemIndicator>
-                  </SelectPrimitive.Item>
-                  <SelectPrimitive.Item
-                    value={TEST}
-                    className="relative flex w-full cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-hidden select-none focus:bg-background data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                  >
-                    <TestTubeDiagonal className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <SelectPrimitive.ItemText>
-                      <div className="flex flex-col">
-                        <span>Test</span>
-                        <span className="text-xs text-muted-foreground font-normal">
-                          Sandbox for testing and development
-                        </span>
-                      </div>
-                    </SelectPrimitive.ItemText>
-                    <SelectPrimitive.ItemIndicator className="ml-auto shrink-0">
-                      <div className="flex items-center justify-center h-5 w-5 rounded-full bg-muted-foreground/20">
-                        <Check
-                          className="h-3 w-3 text-foreground"
-                          strokeWidth={2.5}
-                        />
-                      </div>
-                    </SelectPrimitive.ItemIndicator>
-                  </SelectPrimitive.Item>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          )}
-          {rightContent}
-        </div>
+                <SelectValue placeholder="Select environment" />
+              </span>
+            </SelectTrigger>
+            <SelectContent className="min-w-60 border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-none">
+              <SelectGroup>
+                <SelectLabel className="ds-picker-label">
+                  Environment
+                </SelectLabel>
+                <EnvironmentOption
+                  value={PRODUCTION}
+                  icon={<Earth className="size-4" />}
+                  description="Live data from real users"
+                />
+                <EnvironmentOption
+                  value={TEST}
+                  icon={<TestTubeDiagonal className="size-4" />}
+                  description="Sandbox for testing and development"
+                />
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+        <NavUser />
       </div>
-    </div>
+    </header>
+  );
+}
+
+function EnvironmentOption({
+  value,
+  icon,
+  description,
+}: {
+  value: string;
+  icon: React.ReactNode;
+  description: string;
+}) {
+  return (
+    <SelectPrimitive.Item value={value} className="ds-picker-item outline-none">
+      {icon}
+      <span className="ds-workspace-copy">
+        <SelectPrimitive.ItemText>
+          <span className="text-sm font-medium">{value}</span>
+        </SelectPrimitive.ItemText>
+        <span className="ds-workspace-name">{description}</span>
+      </span>
+      <SelectPrimitive.ItemIndicator className="ml-auto">
+        <Check className="size-4" />
+      </SelectPrimitive.ItemIndicator>
+    </SelectPrimitive.Item>
   );
 }

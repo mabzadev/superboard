@@ -1,0 +1,12 @@
+{
+  "name": "SuperBoard Reference",
+  "short_name": "SuperBoard",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f7f7fb",
+  "theme_color": "#5667e8",
+  "description": "Executable SuperBoard Flutter and FlutterFlow reference application.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": []
+}

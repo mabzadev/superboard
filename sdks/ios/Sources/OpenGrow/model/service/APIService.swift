@@ -42,9 +42,7 @@ class APIService: BaseService, APIServiceProtocol {
 
     private struct Constants {
         struct URLs {
-            static let baseDomain = "https://sdk.sqd.link"
             static let apiPath = "/api/v1/sdk"
-            static let endpoint = baseDomain + apiPath
 
             static let authenticate = "/authenticate"
             static let dataForDevice = "/data_for_device"
@@ -102,13 +100,11 @@ class APIService: BaseService, APIServiceProtocol {
     ///   - apiKey: The API key for authentication.
     ///   - bundleID: The bundle ID of the app.
     init(apiKey: String, bundleID: String, useTestEnvironment: Bool, baseURL: String? = nil) {
-        let endpoint: String
-        if let baseURL = baseURL {
-            let domain = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
-            endpoint = domain + Constants.URLs.apiPath
-        } else {
-            endpoint = Constants.URLs.endpoint
+        guard let baseURL, !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            preconditionFailure("OpenGrow baseURL must be configured by the application")
         }
+        let domain = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        let endpoint = domain + Constants.URLs.apiPath
         guard let url = URL(string: endpoint) else {
             preconditionFailure("Invalid API endpoint URL: \(endpoint)")
         }

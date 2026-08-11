@@ -1,6 +1,7 @@
 import type { BillingEnv } from '../types';
 import { applyVerifiedPurchase, type VerifiedPurchase } from './billing';
 import { googlePlayAccess } from './store-verification';
+import { readJsonObjectLimited } from './http-limits';
 
 type VoidedPurchase = {
   orderId?: string;
@@ -96,8 +97,13 @@ export async function reconcileGoogleVoidedPurchases(
       seenTokens.add(pageToken);
       const response = await fetch(googleVoidedPurchasesUrl(access.packageName, { startTime, endTime }, pageToken), {
         headers: { Authorization: `Bearer ${access.token}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(10_000),
       });
-      const payload = await response.json().catch(() => ({})) as Record<string, any>;
+      const payload = await readJsonObjectLimited(
+        response,
+        4_194_304,
+        'Google Voided Purchases response is too large',
+      ).catch(() => ({})) as Record<string, any>;
       if (!response.ok) {
         const retryAfter = Number(response.headers.get('retry-after') || 0);
         throw reconciliationError(

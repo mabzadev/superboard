@@ -1,6 +1,19 @@
+import groovy.json.JsonSlurper
+
 pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
 plugins { id("com.facebook.react.settings") }
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
 rootProject.name = 'opengrowwrapper.example'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
+
+// Resolve the released coordinate through the local Android SDK build when
+// validating this monorepo example. The package name stays catalog-driven, so
+// this substitution fails closed if the native contract changes.
+def openGrowNativeContract = new JsonSlurper().parse(file('../../plugin/native-contract.json'))
+def openGrowAndroidSource = file('../../../android/OpenGrow')
+includeBuild(openGrowAndroidSource) {
+    dependencySubstitution {
+        substitute module(openGrowNativeContract.android.packageName) using project(':OpenGrow')
+    }
+}

@@ -1,6 +1,10 @@
 "use client";
 
-import { BadgeCheck, ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react";
+import { Activity, LogOut, Moon, Settings2, Sun, UserRound } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -12,145 +16,121 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { useUserContext } from "@/context/useUserContext";
 import LocalStorage from "@/lib/LocalStorage";
-import { useRouter, useSearchParams } from "next/navigation";
 import { showGenericError } from "@/lib/Notifications";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
-import Link from "next/link";
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "OG";
+  if (parts.length === 1) return (parts[0]?.[0] ?? "O").toUpperCase();
+  return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+}
 
 export function NavUser() {
-  const { userRef } = useUserContext();
-  const { isMobile } = useSidebar();
-  const { logoutUser } = useUserContext();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { userRef, logoutUser } = useUserContext();
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  function getInitials(name: string): string {
-    if (!name) return "";
+  useEffect(() => setMounted(true), []);
 
-    const parts = name.trim().split(/\s+/);
+  if (!mounted) return <span className="ds-avatar" aria-hidden="true">OG</span>;
 
-    if (parts.length === 1) {
-      return (parts[0]?.[0] ?? "").toUpperCase();
-    }
+  const name = userRef.current?.name ?? "SuperBoard user";
+  const email = userRef.current?.email ?? "";
+  const isDark = resolvedTheme === "dark";
 
-    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
-  }
-
-  const router = useRouter();
   const handleLogout = async () => {
-    // setIsLoading(true);
     try {
       await logoutUser(LocalStorage.getAuthenticationToken());
-      // setIsLoading(false);
       router.replace("/login");
     } catch {
-      // setIsLoading(false);
       showGenericError();
     }
   };
-  const searchParams = useSearchParams();
-  const query = searchParams.toString();
-
-  const returnUrlWithParams = (url: string) => {
-    const urlWithParams = `${url}${query ? `?${query}` : ""}`;
-    return urlWithParams;
-  };
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  const isDark = resolvedTheme === "dark";
-
-  const toggleTheme = () => {
-    setTheme(isDark ? "light" : "dark");
-  };
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="ds-account-trigger"
+          aria-label={`Open ${name} account menu`}
+        >
+          <Avatar className="ds-avatar">
+            <AvatarFallback className="bg-transparent text-inherit">
+              {getInitials(name)}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        className="ds-account-popover relative! top-auto! right-auto! w-60 border-[var(--color-border)] bg-[var(--color-card)] shadow-none!"
+      >
+        <DropdownMenuLabel className="ds-account-profile font-normal">
+          <Avatar className="ds-avatar">
+            <AvatarFallback className="bg-transparent text-inherit">
+              {getInitials(name)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="ds-account-copy">
+            <strong>{name}</strong>
+            <span>{email}</span>
+          </span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="ds-divider ds-account-divider" />
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild className="ds-picker-item">
+            <Link
+              href="/account"
+              aria-current={pathname === "/account" ? "page" : undefined}
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-blue-500/10 text-foreground dark:bg-blue-400/10 text-xs font-semibold">
-                  {getInitials(userRef.current?.name ?? "")}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-sm font-semibold tracking-tight">
-                  {userRef.current?.name}
-                </span>
-                <span className="truncate text-[11px] text-muted-foreground">
-                  {userRef.current?.email}
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/50" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
+              <UserRound />
+              Account
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="ds-picker-item">
+            <Link
+              href="/infrastructure"
+              aria-current={pathname.startsWith("/infrastructure") ? "page" : undefined}
+            >
+              <Activity />
+              Infrastructure
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="ds-picker-item">
+            <Link
+              href="/project-settings"
+              aria-current={
+                pathname.startsWith("/project-settings") ? "page" : undefined
+              }
+            >
+              <Settings2 />
+              Project Settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="ds-picker-item"
+            onSelect={() => setTheme(isDark ? "light" : "dark")}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">
-                    {getInitials(userRef.current?.name ?? "")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">
-                    {userRef.current?.name}
-                  </span>
-                  <span className="truncate text-xs">
-                    {userRef.current?.email}
-                  </span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <Link href={returnUrlWithParams("/account")}>
-                <DropdownMenuItem>
-                  <BadgeCheck />
-                  Account
-                </DropdownMenuItem>
-              </Link>
-              <DropdownMenuItem onClick={() => toggleTheme()}>
-                {resolvedTheme === "dark" ? (
-                  <Sun className="w-4 h-4" />
-                ) : (
-                  <Moon className="w-4 h-4" />
-                )}
-                Toggle theme
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+            {isDark ? <Sun /> : <Moon />}
+            {isDark ? "Light mode" : "Dark mode"}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator className="ds-divider ds-account-divider" />
+        <DropdownMenuItem
+          className="ds-picker-item ds-account-logout"
+          onSelect={() => void handleLogout()}
+        >
+          <LogOut />
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

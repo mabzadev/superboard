@@ -22,7 +22,7 @@ const AudienceDetailsAttributes = ({
       <div className="flex flex-col gap-4">
         <AttributeField
           label="ID"
-          description="OpenGrow generated ID for your project"
+          description="SuperBoard generated ID for your project"
           value={visitorInfo?.uuid ?? ""}
         />
         {visitorInfo?.inviter && (

@@ -1,29 +1,35 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { Env } from '../types';
 import { runMaintenance } from '../lib/maintenance';
 import { parseJsonObject } from '../lib/db';
+import { timingSafeEqual } from '../lib/secrets';
+import { readJsonObjectLimited, readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const automation = new Hono<{ Bindings: Env }>();
 
-function requireAdminKey(c: any): Response | null {
+type AutomationContext = Context<{ Bindings: Env }>;
+
+async function requireAdminKey(c: AutomationContext): Promise<Response | null> {
   const expected = c.env.ADMIN_API_KEY;
   const provided = c.req.header('X-AUTH') || c.req.header('x-auth');
-  if (!expected || provided !== expected) return c.json({ error: 'Invalid credentials' }, 403);
+  if (!expected || !provided || !await timingSafeEqual(provided, expected)) {
+    return c.json({ error: 'Invalid credentials' }, 403);
+  }
   return null;
 }
 
-function requireMaintenanceKey(c: any): Response | null {
+async function requireMaintenanceKey(c: AutomationContext): Promise<Response | null> {
   const expected = c.env.MAINTENANCE_PROCESS_KEY;
   if (!expected) return c.json({ error: 'Maintenance key is not configured' }, 503);
-  const provided = c.req.header('x-maintenance-key') || c.req.query('key');
-  if (provided !== expected) return c.json({ error: 'Forbidden' }, 403);
+  const provided = c.req.header('x-maintenance-key');
+  if (!provided || !await timingSafeEqual(provided, expected)) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
   return null;
 }
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return await c.req.parseBody().catch(() => ({}));
+  return readRequestObjectLimited(c.req.raw, 1024 * 1024);
 }
 
 function toBool(value: unknown): boolean {
@@ -138,7 +144,7 @@ async function linkMetrics(db: D1Database, linkId: number, projectId: number) {
 }
 
 automation.post('/metrics_for_user', async (c) => {
-  const denied = requireAdminKey(c);
+  const denied = await requireAdminKey(c);
   if (denied) return denied;
   const body = await readBody(c);
   const instance = await c.env.DB.prepare('SELECT * FROM instances WHERE api_key = ? LIMIT 1')
@@ -170,7 +176,7 @@ automation.post('/metrics_for_user', async (c) => {
 });
 
 automation.post('/details_for_link', async (c) => {
-  const denied = requireAdminKey(c);
+  const denied = await requireAdminKey(c);
   if (denied) return denied;
   const body = await readBody(c);
   const instance = await c.env.DB.prepare('SELECT * FROM instances WHERE api_key = ? LIMIT 1')
@@ -189,9 +195,9 @@ automation.post('/details_for_link', async (c) => {
 });
 
 automation.post('/run_maintenance', async (c) => {
-  const denied = requireMaintenanceKey(c);
+  const denied = await requireMaintenanceKey(c);
   if (denied) return denied;
-  const body: any = await c.req.json().catch(() => ({}));
+  const body = await readJsonObjectLimited(c.req.raw, 64 * 1024);
   const days = Math.max(1, Math.min(14, Number(body.days || 3)));
   return c.json(await runMaintenance(c.env, days));
 });

@@ -1,5 +1,11 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
+import { encryptCredential, timingSafeEqual } from '../lib/secrets';
+import { readJsonObjectLimited } from '../lib/http-limits';
+import {
+  migrateLegacyPushCredentials,
+  requirePushCredential,
+} from '../lib/push-credentials';
 
 const push = new Hono<{ Bindings: Env }>();
 
@@ -39,10 +45,13 @@ async function signJwt(header: Record<string, unknown>, claims: Record<string, u
 
 async function fcmAccessToken(env: Env, app: any) {
   const expiresAt = Date.parse(app.access_token_expiration || '');
-  if (app.access_token && Number.isFinite(expiresAt) && expiresAt > Date.now() + 60000) {
-    return app.access_token;
+  if (app.encrypted_access_token && Number.isFinite(expiresAt) && expiresAt > Date.now() + 60000) {
+    return requirePushCredential(env, app.encrypted_access_token, 'FCM');
   }
-  const json = JSON.parse(app.json_key || '{}');
+  const json = JSON.parse(await requirePushCredential(env, app.encrypted_json_key, 'FCM'));
+  if (!json.client_email || !json.private_key) {
+    throw new Error('FCM service account is invalid');
+  }
   const now = Math.floor(Date.now() / 1000);
   const assertion = await signJwt(
     { alg: 'RS256', typ: 'JWT' },
@@ -64,14 +73,22 @@ async function fcmAccessToken(env: Env, app: any) {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
+    signal: AbortSignal.timeout(10_000),
   });
-  const payload: any = await response.json().catch(() => ({}));
+  const payload: any = await readJsonObjectLimited(
+    response,
+    262_144,
+    'FCM OAuth response is too large',
+  ).catch((): Record<string, unknown> => ({}));
   if (!response.ok) throw new Error(payload.error_description || payload.error || 'FCM OAuth token request failed');
+  if (!payload.access_token) throw new Error('FCM OAuth token response is invalid');
+  const encryptedAccessToken = await encryptCredential(env, String(payload.access_token));
   await env.DB.prepare(`
     UPDATE rpush_apps
-    SET access_token = ?, access_token_expiration = ?, updated_at = datetime('now')
+    SET encrypted_access_token = ?, access_token = NULL,
+        access_token_expiration = ?, updated_at = datetime('now')
     WHERE id = ?
-  `).bind(payload.access_token, new Date(Date.now() + Number(payload.expires_in || 3600) * 1000).toISOString(), app.id).run();
+  `).bind(encryptedAccessToken, new Date(Date.now() + Number(payload.expires_in || 3600) * 1000).toISOString(), app.id).run();
   return payload.access_token;
 }
 
@@ -101,19 +118,24 @@ async function deliverFcm(env: Env, app: any, row: any) {
         data,
       },
     }),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    const payload: any = await response.json().catch(() => ({}));
+    const payload: any = await readJsonObjectLimited(
+      response,
+      262_144,
+      'FCM error response is too large',
+    ).catch((): Record<string, unknown> => ({}));
     throw new Error(payload?.error?.message || 'FCM send failed');
   }
 }
 
-async function deliverApns(app: any, row: any) {
+async function deliverApns(env: Env, app: any, row: any) {
   const now = Math.floor(Date.now() / 1000);
   const jwt = await signJwt(
     { alg: 'ES256', kid: app.apn_key_id },
     { iss: app.team_id, iat: now },
-    app.apn_key,
+    await requirePushCredential(env, app.encrypted_apn_key, 'APNs'),
     'ES256',
   );
   const alert = parseJson(row.alert, {});
@@ -128,24 +150,34 @@ async function deliverApns(app: any, row: any) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ aps: { alert } }),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    const payload: any = await response.json().catch(() => ({}));
+    const payload: any = await readJsonObjectLimited(
+      response,
+      262_144,
+      'APNs error response is too large',
+    ).catch((): Record<string, unknown> => ({}));
     throw new Error(payload.reason || 'APNs send failed');
   }
 }
 
 export async function processPushNotifications(env: Env, limit = 25) {
   const boundedLimit = Math.max(1, Math.min(100, Number(limit || 25)));
+  await migrateLegacyPushCredentials(env, 100);
   const rows = await env.DB.prepare(`
     SELECT rn.*, ra.type AS app_type, ra.name AS app_name, ra.environment,
-           ra.apn_key, ra.apn_key_id, ra.team_id, ra.bundle_id,
-           ra.json_key, ra.firebase_project_id, ra.access_token, ra.access_token_expiration
+           ra.encrypted_apn_key, ra.apn_key_id, ra.team_id, ra.bundle_id,
+           ra.encrypted_json_key, ra.firebase_project_id,
+           ra.encrypted_access_token, ra.access_token_expiration
     FROM rpush_notifications rn
     JOIN rpush_apps ra ON ra.id = rn.app_id
     WHERE COALESCE(rn.delivered, 0) = 0
       AND COALESCE(rn.failed, 0) = 0
-      AND COALESCE(rn.processing, 0) = 0
+      AND (
+        COALESCE(rn.processing, 0) = 0
+        OR datetime(rn.updated_at) <= datetime('now', '-15 minutes')
+      )
       AND (rn.deliver_after IS NULL OR datetime(rn.deliver_after) <= datetime('now'))
     ORDER BY rn.created_at ASC
     LIMIT ?
@@ -153,13 +185,21 @@ export async function processPushNotifications(env: Env, limit = 25) {
 
   const results = [];
   for (const row of rows.results || []) {
-    await env.DB.prepare('UPDATE rpush_notifications SET processing = 1, updated_at = datetime("now") WHERE id = ?')
-      .bind(row.id).run();
+    const claim = await env.DB.prepare(`
+      UPDATE rpush_notifications
+      SET processing = 1, updated_at = datetime('now')
+      WHERE id = ?
+        AND COALESCE(delivered, 0) = 0
+        AND COALESCE(failed, 0) = 0
+        AND (COALESCE(processing, 0) = 0 OR datetime(updated_at) <= datetime('now', '-15 minutes'))
+        AND (deliver_after IS NULL OR datetime(deliver_after) <= datetime('now'))
+    `).bind(row.id).run();
+    if (Number(claim.meta?.changes || 0) !== 1) continue;
     try {
       if (row.type === 'Rpush::Fcm::Notification') {
         await deliverFcm(env, row, row);
       } else if (row.type === 'Rpush::Apnsp8::Notification') {
-        await deliverApns(row, row);
+        await deliverApns(env, row, row);
       } else {
         throw new Error(`Unsupported push type: ${row.type}`);
       }
@@ -206,7 +246,8 @@ export async function processPushNotifications(env: Env, limit = 25) {
 }
 
 push.post('/process', async (c) => {
-  if (!c.env.PUSH_PROCESS_KEY || c.req.header('X-API-KEY') !== c.env.PUSH_PROCESS_KEY) {
+  const provided = c.req.header('X-API-KEY');
+  if (!c.env.PUSH_PROCESS_KEY || !provided || !await timingSafeEqual(provided, c.env.PUSH_PROCESS_KEY)) {
     return c.json({ error: 'Forbidden' }, 403);
   }
   const limit = Math.max(1, Math.min(100, Number(c.req.query('limit') || 25)));

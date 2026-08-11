@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:opengrow_flutter/opengrow.dart';
+import 'package:superboard_flutter/superboard_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'models.dart';
@@ -9,7 +10,7 @@ import 'models.dart';
 /// Ephemeral values emitted by native callbacks for no-code action flows.
 ///
 /// Deep-link payloads are deliberately kept in memory and are never persisted.
-abstract final class OpenGrowFlutterFlowState {
+abstract final class SuperBoardFlutterFlowState {
   static String lastDeepLinkJson = '';
   static String lastPurchaseResultJson = '';
   static String lastVerifiedCustomerInfoJson = '';
@@ -19,27 +20,27 @@ abstract final class OpenGrowFlutterFlowState {
 /// Emits only CustomerInfo payloads that have already passed SDK JWS
 /// verification. Hosts can use this stream to update no-code application
 /// state when a pending or recovered purchase resolves asynchronously.
-Stream<String> get opengrowVerifiedCustomerInfoJsonStream => OpenGrowPurchases
-    .instance
-    .customerInfoStream
-    .map((customerInfo) => jsonEncode(customerInfo.toJson()));
+Stream<String> get superboardVerifiedCustomerInfoJsonStream =>
+    SuperBoardPurchases.instance.customerInfoStream.map(
+      (customerInfo) => jsonEncode(customerInfo.toJson()),
+    );
 
 /// Emits structured terminal and pending purchase results for host bridges.
-Stream<String> get opengrowPurchaseResultJsonStream => OpenGrowPurchases
+Stream<String> get superboardPurchaseResultJsonStream => SuperBoardPurchases
     .instance
     .purchaseResultStream
     .map((result) => jsonEncode(result.toJson()));
 
-Future<bool> opengrowInitialize({
+Future<bool> superboardInitialize({
   required String projectKey,
   required String platformIdentifier,
-  String purchasesBaseUrl = 'https://sdk.vocostar.com/purchases/v2',
+  required String purchasesBaseUrl,
   String identityToken = '',
   String appVersion = '',
   String buildNumber = '',
-  String sdkVersion = '2.1.3',
+  String sdkVersion = '3.0.0',
 }) async {
-  await OpenGrowPurchases.instance.configure(
+  await SuperBoardPurchases.instance.configure(
     projectKey: projectKey,
     platformIdentifier: platformIdentifier,
     baseUrl: purchasesBaseUrl,
@@ -51,28 +52,22 @@ Future<bool> opengrowInitialize({
   return true;
 }
 
-/// Initializes OpenGrow Purchases using the Bundle ID/package name reported by
-/// the native app. The native OpenGrow SDK itself is configured automatically
+/// Initializes SuperBoard Purchases using the Bundle ID/package name reported by
+/// the native app. The native SuperBoard SDK itself is configured automatically
 /// from Info.plist/AndroidManifest.xml before this action runs.
-Future<bool> opengrowInitializeAuto({
+Future<bool> superboardInitializeAuto({
   required String projectKey,
-  String sdkBaseUrl = 'https://sdk.vocostar.com',
+  required String sdkBaseUrl,
   String identityToken = '',
   String appVersion = '',
   String buildNumber = '',
-  String sdkVersion = '2.1.3',
+  String sdkVersion = '3.0.0',
 }) async {
-  final platformIdentifier = await OpenGrow().getPlatformIdentifier();
-  final trimmedBaseUrl = sdkBaseUrl
-      .replaceFirst(RegExp(r'/+$'), '')
-      .replaceFirst(RegExp(r'/purchases/v\d+$'), '');
-  final purchasesBaseUrl = trimmedBaseUrl.endsWith('/purchases/v2')
-      ? trimmedBaseUrl
-      : '$trimmedBaseUrl/purchases/v2';
-  return opengrowInitialize(
+  final platformIdentifier = await SuperBoard().getPlatformIdentifier();
+  return superboardInitialize(
     projectKey: projectKey,
     platformIdentifier: platformIdentifier,
-    purchasesBaseUrl: purchasesBaseUrl,
+    purchasesBaseUrl: _purchasesBaseUrl(sdkBaseUrl),
     identityToken: identityToken,
     appVersion: appVersion,
     buildNumber: buildNumber,
@@ -82,17 +77,17 @@ Future<bool> opengrowInitializeAuto({
 
 /// Initializes Purchases only after the application authentication gateway has
 /// exchanged its existing access token for a short-lived ES256 identity token.
-Future<bool> opengrowInitializeAuthenticated({
+Future<bool> superboardInitializeAuthenticated({
   required String projectKey,
   required String applicationAccessToken,
-  String sdkBaseUrl = 'https://sdk.vocostar.com',
-  String authGatewayBaseUrl = 'https://api.vocostar.com',
+  required String sdkBaseUrl,
+  required String authGatewayBaseUrl,
   String appVersion = '',
   String buildNumber = '',
-  String sdkVersion = '2.1.3',
+  String sdkVersion = '3.0.0',
 }) async {
   if (applicationAccessToken.trim().isEmpty) {
-    throw const OpenGrowPurchasesException(
+    throw const SuperBoardPurchasesException(
       'Application authentication is required before Purchases initialization',
       code: 'identity_required',
     );
@@ -100,39 +95,71 @@ Future<bool> opengrowInitializeAuthenticated({
   Future<String?> tokenProvider() async {
     final client = http.Client();
     try {
-      final response = await client
-          .post(
-            Uri.parse(
-              '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
-            ),
-            headers: {
-              'Authorization': 'Bearer ${applicationAccessToken.trim()}',
-              'Accept': 'application/json',
-            },
-          )
-          .timeout(const Duration(seconds: 10));
-      final body = response.body.isEmpty ? const {} : jsonDecode(response.body);
-      final token = body is Map ? body['access_token']?.toString() : null;
-      if (response.statusCode != 200 || token == null || token.isEmpty) {
-        throw OpenGrowPurchasesException(
-          'Identity synchronization failed',
-          code: 'identity_sync_failed',
-          retryable: response.statusCode >= 500,
+      try {
+        final response = await client
+            .post(
+              Uri.parse(
+                '${authGatewayBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/auth/opengrow-token',
+              ),
+              headers: {
+                'Authorization': 'Bearer ${applicationAccessToken.trim()}',
+                'Accept': 'application/json',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
+        dynamic body;
+        try {
+          body = response.body.isEmpty ? const {} : jsonDecode(response.body);
+        } catch (_) {
+          throw const SuperBoardPurchasesException(
+            'Identity synchronization returned an invalid response',
+            code: 'identity_response_invalid',
+            retryable: true,
+          );
+        }
+        final token = body is Map ? body['access_token']?.toString() : null;
+        if (response.statusCode != 200 || token == null || token.isEmpty) {
+          final error = body is Map && body['error'] is Map
+              ? body['error'] as Map
+              : null;
+          throw SuperBoardPurchasesException(
+            'Identity synchronization failed',
+            code: error?['code']?.toString() ?? 'identity_sync_failed',
+            retryable:
+                response.statusCode == 408 ||
+                response.statusCode == 429 ||
+                response.statusCode >= 500,
+            requestId:
+                error?['request_id']?.toString() ??
+                response.headers['x-request-id'],
+          );
+        }
+        return token;
+      } on TimeoutException {
+        throw const SuperBoardPurchasesException(
+          'Identity synchronization timed out',
+          code: 'identity_timeout',
+          retryable: true,
+        );
+      } on http.ClientException {
+        throw const SuperBoardPurchasesException(
+          'Identity synchronization is unavailable',
+          code: 'identity_network_unavailable',
+          retryable: true,
         );
       }
-      return token;
     } finally {
       client.close();
     }
   }
 
   final initialToken = await tokenProvider();
-  final platformIdentifier = await OpenGrow().getPlatformIdentifier();
+  final platformIdentifier = await SuperBoard().getPlatformIdentifier();
   final base = sdkBaseUrl.replaceFirst(RegExp(r'/+$'), '');
-  await OpenGrowPurchases.instance.configure(
+  await SuperBoardPurchases.instance.configure(
     projectKey: projectKey,
     platformIdentifier: platformIdentifier,
-    baseUrl: '$base/purchases/v2',
+    baseUrl: _purchasesBaseUrl(base),
     identityToken: initialToken,
     identityTokenProvider: tokenProvider,
     appVersion: appVersion,
@@ -142,10 +169,17 @@ Future<bool> opengrowInitializeAuthenticated({
   return true;
 }
 
+String _purchasesBaseUrl(String sdkBaseUrl) {
+  final base = sdkBaseUrl
+      .replaceFirst(RegExp(r'/+$'), '')
+      .replaceFirst(RegExp(r'/purchases/v\d+$'), '');
+  return '$base/purchases/v2';
+}
+
 /// Submits structured evidence from the authenticated FlutterFlow build to an
 /// active Purchases certification run. The challenge is issued from the
 /// dashboard and is never persisted by this wrapper.
-Future<String> opengrowRecordCertificationResultJson({
+Future<String> superboardRecordCertificationResultJson({
   required String runId,
   required String deviceChallenge,
   required String checkKey,
@@ -161,7 +195,7 @@ Future<String> opengrowRecordCertificationResultJson({
       'Certification assertions must be a JSON object',
     );
   }
-  final result = await OpenGrowPurchases.instance.submitCertificationResult(
+  final result = await SuperBoardPurchases.instance.submitCertificationResult(
     runId: runId,
     challenge: deviceChallenge,
     checkKey: checkKey,
@@ -174,46 +208,46 @@ Future<String> opengrowRecordCertificationResultJson({
   return jsonEncode(result.toJson());
 }
 
-/// Associates both OpenGrow attribution and verified purchases with a user.
+/// Associates both SuperBoard attribution and verified purchases with a user.
 ///
-/// Pass the server-issued OpenGrow identity JWT when purchase identity should
+/// Pass the server-issued SuperBoard identity JWT when purchase identity should
 /// be merged. The JWT is never persisted by this wrapper.
-Future<bool> opengrowIdentify({
+Future<bool> superboardIdentify({
   required String userIdentifier,
   String identityToken = '',
 }) async {
-  await OpenGrow().setUserIdentifier(userIdentifier);
+  await SuperBoard().setUserIdentifier(userIdentifier);
   if (identityToken.isNotEmpty) {
-    await OpenGrowPurchases.instance.logIn(identityToken);
+    await SuperBoardPurchases.instance.logIn(identityToken);
   }
   return true;
 }
 
-Future<bool> opengrowPurchaseLogin(String identityToken) async {
-  await OpenGrowPurchases.instance.logIn(identityToken);
+Future<bool> superboardPurchaseLogin(String identityToken) async {
+  await SuperBoardPurchases.instance.logIn(identityToken);
   return true;
 }
 
-Future<bool> opengrowPurchaseLogout() async {
-  await OpenGrowPurchases.instance.logOut();
+Future<bool> superboardPurchaseLogout() async {
+  await SuperBoardPurchases.instance.logOut();
   return true;
 }
 
-Future<bool> opengrowSetUserAttributesJson(String attributesJson) async {
+Future<bool> superboardSetUserAttributesJson(String attributesJson) async {
   final decoded = jsonDecode(attributesJson);
   if (decoded is! Map) {
     throw const FormatException('User attributes must be a JSON object');
   }
-  await OpenGrow().setUserAttributes(decoded.cast<String, dynamic>());
+  await SuperBoard().setUserAttributes(decoded.cast<String, dynamic>());
   return true;
 }
 
-Future<bool> opengrowSetPushToken(String token) async {
-  await OpenGrow().setPushToken(token);
+Future<bool> superboardSetPushToken(String token) async {
+  await SuperBoard().setPushToken(token);
   return true;
 }
 
-Future<String> opengrowGenerateLinkJson(String paramsJson) async {
+Future<String> superboardGenerateLinkJson(String paramsJson) async {
   final decoded = jsonDecode(paramsJson);
   if (decoded is! Map) {
     throw const FormatException('Link parameters must be a JSON object');
@@ -245,7 +279,7 @@ Future<String> opengrowGenerateLinkJson(String paramsJson) async {
       ? (params['data'] as Map).cast<String, dynamic>()
       : null;
 
-  return OpenGrow().generateLink(
+  return SuperBoard().generateLink(
     GenerateLinkParams(
       title: title,
       subtitle: params['subtitle']?.toString(),
@@ -277,52 +311,52 @@ Future<String> opengrowGenerateLinkJson(String paramsJson) async {
   );
 }
 
-Future<int> opengrowGetUnreadMessageCount() {
-  return OpenGrow().getUnreadMessageCount();
+Future<int> superboardGetUnreadMessageCount() {
+  return SuperBoard().getUnreadMessageCount();
 }
 
-Future<bool> opengrowDisplayMessages() async {
-  await OpenGrow().displayMessages();
+Future<bool> superboardDisplayMessages() async {
+  await SuperBoard().displayMessages();
   return true;
 }
 
-Future<String> opengrowGetLastDeepLinkJson() async {
-  return OpenGrowFlutterFlowState.lastDeepLinkJson;
+Future<String> superboardGetLastDeepLinkJson() async {
+  return SuperBoardFlutterFlowState.lastDeepLinkJson;
 }
 
 /// Returns the latest purchase result emitted by the native store listener.
 ///
 /// This includes terminal results that resolve after an action first returned
 /// `pending` and results recovered after an application restart.
-Future<String> opengrowGetLastPurchaseResultJson() async {
-  return OpenGrowFlutterFlowState.lastPurchaseResultJson;
+Future<String> superboardGetLastPurchaseResultJson() async {
+  return SuperBoardFlutterFlowState.lastPurchaseResultJson;
 }
 
 /// Returns the latest CustomerInfo received from the verified SDK stream.
-Future<String> opengrowGetLastVerifiedCustomerInfoJson() async {
-  return OpenGrowFlutterFlowState.lastVerifiedCustomerInfoJson;
+Future<String> superboardGetLastVerifiedCustomerInfoJson() async {
+  return SuperBoardFlutterFlowState.lastVerifiedCustomerInfoJson;
 }
 
-Future<String> opengrowPurchase({
+Future<String> superboardPurchase({
   required String packageIdentifier,
   String offeringIdentifier = '',
 }) async {
   String? productIdentifier;
   try {
-    final offerings = await OpenGrowPurchases.instance.getOfferings();
+    final offerings = await SuperBoardPurchases.instance.getOfferings();
     final offering = offeringIdentifier.isEmpty
         ? offerings.current
         : offerings.all[offeringIdentifier];
     if (offering == null) {
       return jsonEncode(
-        const OpenGrowPurchaseResult(
-          OpenGrowPurchaseOutcome.failed,
+        const SuperBoardPurchaseResult(
+          SuperBoardPurchaseOutcome.failed,
           code: 'offering_not_found',
           error: 'Offering not found',
         ).toJson(),
       );
     }
-    OpenGrowPackage? selected;
+    SuperBoardPackage? selected;
     for (final package in offering.packages) {
       if (package.identifier == packageIdentifier) {
         selected = package;
@@ -331,8 +365,8 @@ Future<String> opengrowPurchase({
     }
     if (selected == null) {
       return jsonEncode(
-        OpenGrowPurchaseResult(
-          OpenGrowPurchaseOutcome.failed,
+        SuperBoardPurchaseResult(
+          SuperBoardPurchaseOutcome.failed,
           code: 'package_not_found',
           error: 'Package not found',
           productIdentifier: packageIdentifier,
@@ -341,12 +375,12 @@ Future<String> opengrowPurchase({
     }
     productIdentifier = selected.product.identifier;
     return jsonEncode(
-      (await OpenGrowPurchases.instance.purchasePackage(selected)).toJson(),
+      (await SuperBoardPurchases.instance.purchasePackage(selected)).toJson(),
     );
-  } on OpenGrowPurchasesException catch (error) {
+  } on SuperBoardPurchasesException catch (error) {
     return jsonEncode(
-      OpenGrowPurchaseResult(
-        OpenGrowPurchaseOutcome.failed,
+      SuperBoardPurchaseResult(
+        SuperBoardPurchaseOutcome.failed,
         code: error.code,
         error: error.message,
         retryable: error.retryable,
@@ -356,8 +390,8 @@ Future<String> opengrowPurchase({
     );
   } catch (_) {
     return jsonEncode(
-      OpenGrowPurchaseResult(
-        OpenGrowPurchaseOutcome.failed,
+      SuperBoardPurchaseResult(
+        SuperBoardPurchaseOutcome.failed,
         code: 'purchase_failed',
         error: 'Purchase could not start',
         retryable: true,
@@ -367,22 +401,22 @@ Future<String> opengrowPurchase({
   }
 }
 
-Future<bool> opengrowRestore() async {
-  await OpenGrowPurchases.instance.restorePurchases();
+Future<bool> superboardRestore() async {
+  await SuperBoardPurchases.instance.restorePurchases();
   return true;
 }
 
-Future<bool> opengrowSync() async {
-  await OpenGrowPurchases.instance.syncPurchases();
+Future<bool> superboardSync() async {
+  await SuperBoardPurchases.instance.syncPurchases();
   return true;
 }
 
-Future<bool> opengrowHasEntitlement(String entitlementIdentifier) {
-  return OpenGrowPurchases.instance.isEntitled(entitlementIdentifier);
+Future<bool> superboardHasEntitlement(String entitlementIdentifier) {
+  return SuperBoardPurchases.instance.isEntitled(entitlementIdentifier);
 }
 
-Future<String> opengrowGetOfferings({String placement = 'default'}) async {
-  final offerings = await OpenGrowPurchases.instance.getOfferings(
+Future<String> superboardGetOfferings({String placement = 'default'}) async {
+  final offerings = await SuperBoardPurchases.instance.getOfferings(
     placement: placement,
   );
   return jsonEncode({
@@ -390,16 +424,16 @@ Future<String> opengrowGetOfferings({String placement = 'default'}) async {
     'all': offerings.all.map(
       (key, value) => MapEntry(
         key,
-        OpenGrowFlutterFlowOffering.fromOpenGrow(value).toMap(),
+        SuperBoardFlutterFlowOffering.fromSuperBoard(value).toMap(),
       ),
     ),
   });
 }
 
-Future<String> opengrowGetPurchaseConfigurationJson({
+Future<String> superboardGetPurchaseConfigurationJson({
   String placement = 'default',
 }) async {
-  final configuration = await OpenGrowPurchases.instance
+  final configuration = await SuperBoardPurchases.instance
       .getPurchaseConfiguration(placement: placement);
   return jsonEncode({
     'placement': configuration.placement.identifier,
@@ -418,13 +452,13 @@ Future<String> opengrowGetPurchaseConfigurationJson({
   });
 }
 
-Future<String> opengrowGetCustomerInfoJson() async {
-  final info = await OpenGrowPurchases.instance.getCustomerInfo();
+Future<String> superboardGetCustomerInfoJson() async {
+  final info = await SuperBoardPurchases.instance.getCustomerInfo();
   return jsonEncode(info.toJson());
 }
 
-Future<String> opengrowGetVirtualCurrenciesJson() async {
-  final currencies = await OpenGrowPurchases.instance.getVirtualCurrencies();
+Future<String> superboardGetVirtualCurrenciesJson() async {
+  final currencies = await SuperBoardPurchases.instance.getVirtualCurrencies();
   return jsonEncode({
     'fetched_at': currencies.fetchedAt.toIso8601String(),
     'all': currencies.all.map(
@@ -439,12 +473,12 @@ Future<String> opengrowGetVirtualCurrenciesJson() async {
   });
 }
 
-Future<String> opengrowGetCustomerCenterJson() async {
-  return jsonEncode(await OpenGrowPurchases.instance.getCustomerCenter());
+Future<String> superboardGetCustomerCenterJson() async {
+  return jsonEncode(await SuperBoardPurchases.instance.getCustomerCenter());
 }
 
-Future<bool> opengrowOpenSubscriptionManagement() async {
-  final info = await OpenGrowPurchases.instance.getCustomerInfo();
+Future<bool> superboardOpenSubscriptionManagement() async {
+  final info = await SuperBoardPurchases.instance.getCustomerInfo();
   final value = info.managementUrl;
   if (value == null || value.isEmpty) return false;
   final uri = Uri.tryParse(value);
@@ -452,9 +486,10 @@ Future<bool> opengrowOpenSubscriptionManagement() async {
   return launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
-Future<List<OpenGrowFlutterFlowEntitlement>> opengrowGetEntitlements() async {
-  final info = await OpenGrowPurchases.instance.getCustomerInfo();
+Future<List<SuperBoardFlutterFlowEntitlement>>
+superboardGetEntitlements() async {
+  final info = await SuperBoardPurchases.instance.getCustomerInfo();
   return info.entitlements.values
-      .map(OpenGrowFlutterFlowEntitlement.fromOpenGrow)
+      .map(SuperBoardFlutterFlowEntitlement.fromSuperBoard)
       .toList();
 }

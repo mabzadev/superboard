@@ -1458,8 +1458,8 @@ class EventTrackingE2ETest {
     //
     // The SDK's onAppForegrounded() runs on serialDispatcher (IO.limitedParallelism(1)),
     // serialized behind handleIntent from onStart. onAppBackgrounded() finalizes
-    // TIME_SPENT via GlobalScope.launch (Dispatchers.Default). Both are async, so tests
-    // must allow sufficient time for the full chain to complete.
+    // TIME_SPENT on a tracked job. The next foreground awaits that job before reading
+    // storage, so lifecycle ordering does not depend on dispatcher timing.
 
     private fun assertTimeSpentEventSent() {
         val body = synchronized(capturedEventBodies) {
@@ -1512,9 +1512,8 @@ class EventTrackingE2ETest {
     }
 
     /**
-     * Perform a full background→foreground cycle with sufficient waits for async SDK
-     * operations. onAppBackgrounded() finalizes TIME_SPENT via GlobalScope.launch, and
-     * onAppForegrounded() sends it via serialDispatcher — both are async.
+     * Perform a full background→foreground cycle. The production lifecycle contract
+     * guarantees that foreground sending awaits the preceding background finalization.
      */
     private fun performBackgroundForegroundCycle(
         activityController: org.robolectric.android.controller.ActivityController<TestActivity>
@@ -1526,8 +1525,6 @@ class EventTrackingE2ETest {
         // Reset numStarted after resume to ensure the next stop() correctly
         // decrements to 0 and fires onAppBackgrounded.
         activityController.pause().stop()
-        // Give GlobalScope.launch in onAppBackgrounded time to finalize TIME_SPENT node
-        Thread.sleep(2000)
 
         activityController.start().resume()
         E2ETestUtils.setNumStarted(1) // correct for Robolectric double-dispatch

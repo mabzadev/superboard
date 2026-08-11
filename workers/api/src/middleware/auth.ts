@@ -136,7 +136,7 @@ async function mobileProject(c: Context<{ Bindings: Env; Variables: AppVariables
 }
 
 export async function sdkMiddleware(c: Context<{ Bindings: Env; Variables: AppVariables }>, next: Next) {
-  const apiKey = c.req.header('X-Api-Key') || c.req.query('api_key');
+  const apiKey = c.req.header('X-Api-Key');
   const projectKey = c.req.header('PROJECT-KEY') || c.req.header('project-key');
   if (!apiKey && !projectKey) {
     return c.json({ error: 'API key required' }, 401);

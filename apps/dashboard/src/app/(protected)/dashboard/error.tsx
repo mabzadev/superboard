@@ -1,10 +1,10 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
+import Link from "next/link";
 import { capturePosthog } from "@/analytics/posthog";
+import { Button } from "@/components/ui/button";
 import { categorizeError } from "@/lib/errorUtils";
-import { useRouter } from "next/navigation";
 
 export default function DashboardError({
   error,
@@ -13,10 +13,7 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const router = useRouter();
-
   useEffect(() => {
-    console.error("Caught in dashboard/error.tsx:", error);
     capturePosthog("error_boundary_triggered", {
       error_message: error.message,
       error_digest: error.digest,
@@ -25,23 +22,16 @@ export default function DashboardError({
   }, [error]);
 
   const { title, description } = categorizeError(error);
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
       <h2 className="text-xl font-semibold text-destructive">{title}</h2>
-      <p className="my-3 text-sm text-muted-foreground max-w-md">
+      <p className="my-3 max-w-md text-sm text-muted-foreground">
         {description}
       </p>
       <div className="flex items-center gap-3">
-        <Button onClick={() => reset()} size="sm">
-          Try Again
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push("/dashboard")}
-        >
-          Go to Dashboard
+        <Button onClick={reset} size="sm">Try again</Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/app/customers">Open App module</Link>
         </Button>
       </div>
     </div>

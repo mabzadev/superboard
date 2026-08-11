@@ -1,0 +1,106 @@
+{
+  "$schema": "../schemas/flutterflow-application-bindings.schema.json",
+  "schemaVersion": 2,
+  "owner": "superboard",
+  "generatedFrom": "config/flutterflow-applications.json",
+  "applications": [
+    {
+      "id": "vocostar",
+      "displayName": "VocoStar",
+      "target": "vocostar",
+      "environment": "production",
+      "sourceSnapshot": "config/flutterflow-sources/vocostar.json",
+      "migrationPlan": "config/flutterflow-migrations/vocostar.json",
+      "remoteProject": {
+        "githubEnvironment": "flutterflow-vocostar",
+        "projectIdVariable": "FF_APPLICATION_PROJECT_ID",
+        "apiKeySecret": "FF_API_KEY",
+        "libraryProjectIdVariable": "FF_LIBRARY_PROJECT_ID"
+      },
+      "library": {
+        "displayName": "SuperBoard",
+        "dependencies": [
+          {
+            "catalogId": "flutterflow",
+            "packageName": "superboard_flutterflow",
+            "sourceVersion": "3.0.0",
+            "requiredRef": "sdk-flutterflow-v3.0.0"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectKey",
+            "key": "superboard_project_key",
+            "type": "string"
+          },
+          {
+            "name": "uriScheme",
+            "key": "superboard_uri_scheme",
+            "type": "string"
+          },
+          {
+            "name": "useTestEnvironment",
+            "key": "superboard_use_test_environment",
+            "type": "boolean"
+          },
+          {
+            "name": "sdkBaseUrl",
+            "key": "superboard_sdk_base_url",
+            "type": "string"
+          },
+          {
+            "name": "authGatewayBaseUrl",
+            "key": "superboard_auth_gateway_base_url",
+            "type": "string"
+          },
+          {
+            "name": "filesBaseUrl",
+            "key": "superboard_files_base_url",
+            "type": "string"
+          },
+          {
+            "name": "applicationIdentifier",
+            "key": "superboard_application_identifier",
+            "type": "string"
+          },
+          {
+            "name": "applicationEnvironment",
+            "key": "superboard_application_environment",
+            "type": "string"
+          },
+          {
+            "name": "supportBaseUrl",
+            "key": "superboard_support_base_url",
+            "type": "string"
+          },
+          {
+            "name": "supportProjectId",
+            "key": "superboard_support_project_id",
+            "type": "integer"
+          },
+          {
+            "name": "shortLinkHost",
+            "key": "superboard_short_link_host",
+            "type": "string"
+          }
+        ]
+      },
+      "values": {
+        "projectKey": {
+          "source": "github-environment-secret",
+          "name": "SUPERBOARD_PROJECT_KEY"
+        },
+        "uriScheme": "vocostar",
+        "useTestEnvironment": false,
+        "sdkBaseUrl": "https://sdk.vocostar.com",
+        "authGatewayBaseUrl": "https://api.vocostar.com",
+        "filesBaseUrl": "https://files.vocostar.com",
+        "applicationIdentifier": "com.createurs.vocostar",
+        "applicationEnvironment": "production",
+        "supportBaseUrl": "https://api.vocostar.com/api/v1/support-client",
+        "supportProjectId": 12,
+        "shortLinkHost": "go.vocostar.com"
+      }
+    }
+  ]
+}

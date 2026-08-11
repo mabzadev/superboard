@@ -16,7 +16,7 @@ final class APIServiceTests: XCTestCase {
     }
 
     private func makeService(useTestEnvironment: Bool = false) -> APIService {
-        return APIService(apiKey: "test-api-key", bundleID: "com.test.bundle", useTestEnvironment: useTestEnvironment)
+        return APIService(apiKey: "test-api-key", bundleID: "com.test.bundle", useTestEnvironment: useTestEnvironment, baseURL: "https://sdk.example.com")
     }
 
     // MARK: - addEvent

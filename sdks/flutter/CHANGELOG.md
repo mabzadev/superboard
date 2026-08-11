@@ -1,4 +1,14 @@
-## Unreleased
+## 3.0.0
+
+* Renamed the public Flutter package and API to SuperBoard
+* Added one-major-version deprecated aliases for OpenGrow 2.x Dart symbols and files
+* Renamed the Android and iOS Flutter plugin registrants atomically
+* Added canonical native configuration keys with OpenGrow 2.x fallbacks
+* Added canonical method and event channels with stale-build fallback support
+* Preserved the encrypted `opengrow.*` storage namespace for lossless upgrades and rollbacks
+* Accepted both SuperBoard and OpenGrow purchase JWT audiences and issuers during migration
+
+## 2.1.4
 
 * Resolve Google Play product contracts from the trusted server catalog instead of client timing
 * Bound Purchases API requests and response bodies with retryable timeout errors
@@ -46,7 +56,7 @@
 
 ## 1.0.0
 
-* Initial release of OpenGrow Flutter Plugin
+* Initial release of SuperBoard Flutter Plugin
 * Deep linking support for iOS and Android
 * Link generation with custom redirects and tracking parameters
 * UTM campaign tracking (utm_campaign, utm_source, utm_medium)

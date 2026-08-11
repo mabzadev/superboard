@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-application-bindings.schema.json",
+  "title": "Resolved SuperBoard FlutterFlow application bindings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "owner", "generatedFrom", "applications"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 2 },
+    "owner": { "const": "superboard" },
+    "generatedFrom": { "const": "config/flutterflow-applications.json" },
+    "applications": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "displayName",
+          "target",
+          "environment",
+          "sourceSnapshot",
+          "migrationPlan",
+          "remoteProject",
+          "library",
+          "values"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "displayName": { "type": "string" },
+          "target": { "type": "string" },
+          "environment": { "enum": ["development", "production"] },
+          "sourceSnapshot": { "type": "string" },
+          "migrationPlan": { "type": "string" },
+          "remoteProject": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "githubEnvironment",
+              "projectIdVariable",
+              "apiKeySecret",
+              "libraryProjectIdVariable"
+            ],
+            "properties": {
+              "githubEnvironment": { "type": "string" },
+              "projectIdVariable": { "type": "string" },
+              "apiKeySecret": { "type": "string" },
+              "libraryProjectIdVariable": { "type": "string" }
+            }
+          },
+          "library": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["displayName", "dependencies", "parameters"],
+            "properties": {
+              "displayName": { "type": "string" },
+              "dependencies": { "type": "array", "minItems": 1 },
+              "parameters": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "key", "type"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+                    },
+                    "key": {
+                      "type": "string",
+                      "pattern": "^superboard_[a-z0-9_]+$"
+                    },
+                    "type": { "enum": ["string", "boolean", "integer"] }
+                  }
+                }
+              }
+            }
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "projectKey",
+              "uriScheme",
+              "useTestEnvironment",
+              "sdkBaseUrl",
+              "authGatewayBaseUrl",
+              "filesBaseUrl",
+              "applicationIdentifier",
+              "applicationEnvironment",
+              "supportBaseUrl",
+              "supportProjectId",
+              "shortLinkHost"
+            ],
+            "properties": {
+              "projectKey": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["source", "name"],
+                "properties": {
+                  "source": { "const": "github-environment-secret" },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]+$"
+                  }
+                }
+              },
+              "uriScheme": { "type": "string" },
+              "useTestEnvironment": { "type": "boolean" },
+              "sdkBaseUrl": { "type": "string", "pattern": "^https://" },
+              "authGatewayBaseUrl": {
+                "type": "string",
+                "pattern": "^https://"
+              },
+              "filesBaseUrl": { "type": "string", "pattern": "^https://" },
+              "applicationIdentifier": { "type": "string" },
+              "applicationEnvironment": {
+                "enum": ["development", "production"]
+              },
+              "supportBaseUrl": { "type": "string", "pattern": "^https://" },
+              "supportProjectId": { "type": "integer", "minimum": 1 },
+              "shortLinkHost": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

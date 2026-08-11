@@ -4,16 +4,16 @@ import 'package:http/http.dart' as http;
 import 'package:jose/jose.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class OpenGrowCustomerInfoVerificationException implements Exception {
-  const OpenGrowCustomerInfoVerificationException(this.message);
+class SuperBoardCustomerInfoVerificationException implements Exception {
+  const SuperBoardCustomerInfoVerificationException(this.message);
   final String message;
 
   @override
-  String toString() => 'OpenGrowCustomerInfoVerificationException: $message';
+  String toString() => 'SuperBoardCustomerInfoVerificationException: $message';
 }
 
-class OpenGrowCustomerInfoVerifier {
-  OpenGrowCustomerInfoVerifier({http.Client? client}) : _client = client;
+class SuperBoardCustomerInfoVerifier {
+  SuperBoardCustomerInfoVerifier({http.Client? client}) : _client = client;
 
   final http.Client? _client;
 
@@ -25,20 +25,20 @@ class OpenGrowCustomerInfoVerifier {
   }) async {
     final compact = envelope['signature']?.toString() ?? '';
     if (compact.isEmpty) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo signature is missing',
       );
     }
     final parts = compact.split('.');
     if (parts.length != 3) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo signature is malformed',
       );
     }
     final header = _decodePart(parts[0]);
     if (header['alg'] != 'ES256' ||
         (header['kid']?.toString().isEmpty ?? true)) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo signature algorithm is not allowed',
       );
     }
@@ -67,7 +67,7 @@ class OpenGrowCustomerInfoVerifier {
   }) async {
     final rawKeys = jwks['keys'];
     if (rawKeys is! List || rawKeys.isEmpty) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'Purchases verification keys are unavailable',
       );
     }
@@ -79,13 +79,13 @@ class OpenGrowCustomerInfoVerifier {
     }
     final jws = JsonWebSignature.fromCompactSerialization(compact);
     if (!await jws.verify(store)) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo signature is invalid',
       );
     }
     final claims = jsonDecode(jws.unverifiedPayload.stringContent);
     if (claims is! Map) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo claims are invalid',
       );
     }
@@ -94,35 +94,37 @@ class OpenGrowCustomerInfoVerifier {
     final expiresAt = (values['exp'] as num?)?.toInt() ?? 0;
     final issuedAt = (values['iat'] as num?)?.toInt() ?? 0;
     final audience = values['aud'];
+    const acceptedAudiences = {'superboard-sdk', 'opengrow-sdk'};
+    const acceptedIssuers = {'superboard-purchases', 'opengrow-purchases'};
     final audienceMatches =
-        audience == 'opengrow-sdk' ||
-        (audience is List && audience.contains('opengrow-sdk'));
-    if (values['iss'] != 'opengrow-purchases' ||
+        acceptedAudiences.contains(audience) ||
+        (audience is List && audience.any(acceptedAudiences.contains));
+    if (!acceptedIssuers.contains(values['iss']) ||
         !audienceMatches ||
         expiresAt == 0 ||
         issuedAt == 0 ||
         issuedAt > now + 30) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo claims are invalid or expired',
       );
     }
     final customerInfo = values['customer_info'];
     if (customerInfo is! Map) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'Signed CustomerInfo payload is missing',
       );
     }
     final verified = customerInfo.cast<String, dynamic>();
     if (values['sub']?.toString() !=
         verified['original_app_user_id']?.toString()) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo subject does not match the customer',
       );
     }
     if (expiresAt < now - 5 &&
         (!allowExpiredSignatureForOfflineEntitlements ||
             !_hasOnlyFiniteUnexpiredActiveEntitlements(verified, now))) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo claims are invalid or expired',
       );
     }
@@ -176,13 +178,13 @@ class OpenGrowCustomerInfoVerifier {
           .get(uri, headers: const {'Accept': 'application/json'})
           .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200 || response.bodyBytes.length > 256000) {
-        throw const OpenGrowCustomerInfoVerificationException(
+        throw const SuperBoardCustomerInfoVerificationException(
           'Purchases verification keys could not be loaded',
         );
       }
       final value = jsonDecode(response.body);
       if (value is! Map || value['keys'] is! List) {
-        throw const OpenGrowCustomerInfoVerificationException(
+        throw const SuperBoardCustomerInfoVerificationException(
           'Purchases verification keys are invalid',
         );
       }
@@ -198,10 +200,16 @@ class OpenGrowCustomerInfoVerifier {
     final normalized = base64Url.normalize(value);
     final decoded = jsonDecode(utf8.decode(base64Url.decode(normalized)));
     if (decoded is! Map) {
-      throw const OpenGrowCustomerInfoVerificationException(
+      throw const SuperBoardCustomerInfoVerificationException(
         'CustomerInfo signature header is invalid',
       );
     }
     return decoded.cast<String, dynamic>();
   }
 }
+
+@Deprecated('Use SuperBoardCustomerInfoVerificationException.')
+typedef OpenGrowCustomerInfoVerificationException =
+    SuperBoardCustomerInfoVerificationException;
+@Deprecated('Use SuperBoardCustomerInfoVerifier.')
+typedef OpenGrowCustomerInfoVerifier = SuperBoardCustomerInfoVerifier;

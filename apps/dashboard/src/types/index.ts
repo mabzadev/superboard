@@ -35,7 +35,6 @@ export type {
   NotificationCampaign,
   CreateNotificationPayload,
 } from "./notification";
-export type { Subscription, StripeSubscription, MAU } from "./payment";
 export type {
   Visitor,
   AggregatedVisitor,

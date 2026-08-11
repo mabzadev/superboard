@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "../api-client.js";
 import {
   statusEmpty,
+  platformStatus,
   createdLink,
   minimalLink,
   archivedLink,
@@ -10,10 +11,7 @@ import {
   archivedCampaign,
   campaignListPage,
   campaignListEmpty,
-  usageWithinLimits,
-  usageExceededNoSubscription,
-  statusWithUsageWarning,
-  statusWithSubscription,
+  usageActivity,
 } from "./fixtures.js";
 
 vi.mock("../api-client.js", () => ({
@@ -27,6 +25,7 @@ vi.mock("../api-client.js", () => ({
     }
   },
   getStatus: vi.fn(),
+  getPlatformStatus: vi.fn(),
   getUsage: vi.fn(),
   createProject: vi.fn(),
   createLink: vi.fn(),
@@ -47,6 +46,7 @@ vi.mock("../api-client.js", () => ({
 const api = await import("../api-client.js");
 const {
   handleGetStatus,
+  handleGetPlatformStatus,
   handleGetUsage,
   handleCreateProject,
   handleCreateLink,
@@ -68,15 +68,15 @@ import type { ToolExtra } from "../server.js";
 
 function fakeExtra(token?: string): ToolExtra {
   return {
-    authInfo: token ? { token, clientId: "test", scopes: [] } : undefined,
-    signal: new AbortController().signal,
-    sendNotification: vi.fn(),
-    sendRequest: vi.fn(),
+    http: {
+      authInfo: token ? { token, clientId: "test", scopes: [] } : undefined,
+    },
   } as unknown as ToolExtra;
 }
 
 beforeEach(() => {
   vi.mocked(api.getStatus).mockReset();
+  vi.mocked(api.getPlatformStatus).mockReset();
   vi.mocked(api.getUsage).mockReset();
   vi.mocked(api.createProject).mockReset();
   vi.mocked(api.createLink).mockReset();
@@ -139,9 +139,7 @@ describe("handlers propagate errors", () => {
 
   it("handleGetLinkAnalytics throws on failure", async () => {
     vi.mocked(api.getLinkAnalytics).mockRejectedValueOnce(new Error("Bad request"));
-    await expect(handleGetLinkAnalytics("tok", "p1", { path: "x" })).rejects.toThrow(
-      "Bad request",
-    );
+    await expect(handleGetLinkAnalytics("tok", "p1", { path: "x" })).rejects.toThrow("Bad request");
   });
 
   it("handleGetTopLinks throws on failure", async () => {
@@ -178,7 +176,6 @@ describe("handlers propagate errors", () => {
     vi.mocked(api.archiveCampaign).mockRejectedValueOnce(new ApiError(404, "Campaign not found"));
     await expect(handleArchiveCampaign("tok", "p1", 999)).rejects.toThrow("Campaign not found");
   });
-
 });
 
 // --- runWithAuth: single error boundary ---
@@ -280,10 +277,10 @@ describe("format()", () => {
 
   it("appends _warning when present in response", () => {
     const result = format(
-      { key: "val", _warning: "Quota exceeded" },
+      { key: "val", _warning: "Background synchronization is delayed" },
       (d) => `formatted:${d.key}`,
     );
-    expect(result).toBe("formatted:val\n\nQuota exceeded");
+    expect(result).toBe("formatted:val\n\nBackground synchronization is delayed");
   });
 
   it("does not append warning when _warning is absent", () => {
@@ -304,6 +301,16 @@ describe("handler success", () => {
     expect(result.isError).toBeUndefined();
     expect(result.content[0].text).toContain("Account Overview");
     expect(result.content[0].text).toContain("Bob");
+  });
+
+  it("handleGetPlatformStatus returns infrastructure text", async () => {
+    vi.mocked(api.getPlatformStatus).mockResolvedValueOnce(platformStatus);
+
+    const result = await handleGetPlatformStatus("tok");
+
+    expect(result.isError).toBeUndefined();
+    expect(result.content[0].text).toContain("SuperBoard Platform Status");
+    expect(result.content[0].text).toContain("Transactional email");
   });
 
   it("handleCreateLink passes all fields to API", async () => {
@@ -376,7 +383,10 @@ describe("handler success", () => {
     expect(text).toContain("$2500.00");
     expect(text).toContain("Empty Campaign");
     expect(text).toContain("$0.00");
-    expect(vi.mocked(api.searchCampaigns)).toHaveBeenCalledWith("tok", "p1", { page: 2, per_page: 10 });
+    expect(vi.mocked(api.searchCampaigns)).toHaveBeenCalledWith("tok", "p1", {
+      page: 2,
+      per_page: 10,
+    });
   });
 
   it("handleListCampaigns shows empty state", async () => {
@@ -428,9 +438,13 @@ describe("handler success", () => {
       campaign_id: 42,
     });
 
-    expect(vi.mocked(api.createLink)).toHaveBeenCalledWith("tok", "p1", expect.objectContaining({
-      campaign_id: 42,
-    }));
+    expect(vi.mocked(api.createLink)).toHaveBeenCalledWith(
+      "tok",
+      "p1",
+      expect.objectContaining({
+        campaign_id: 42,
+      }),
+    );
   });
 
   it("handleUpdateLink passes campaign_id through to API", async () => {
@@ -438,68 +452,26 @@ describe("handler success", () => {
 
     await handleUpdateLink("tok", "p1", 1, { campaign_id: 42 });
 
-    expect(vi.mocked(api.updateLink)).toHaveBeenCalledWith("tok", "p1", 1, expect.objectContaining({
-      campaign_id: 42,
-    }));
+    expect(vi.mocked(api.updateLink)).toHaveBeenCalledWith(
+      "tok",
+      "p1",
+      1,
+      expect.objectContaining({
+        campaign_id: 42,
+      }),
+    );
   });
 
-  it("handleGetUsage renders usage within limits", async () => {
-    vi.mocked(api.getUsage).mockResolvedValueOnce(usageWithinLimits);
+  it("handleGetUsage renders operational activity", async () => {
+    vi.mocked(api.getUsage).mockResolvedValueOnce(usageActivity);
 
     const result = await handleGetUsage("tok", "inst1");
     const text = result.content[0].text;
 
     expect(result.isError).toBeUndefined();
-    expect(text).toContain("5000 / 10000");
-    expect(text).toContain("Quota exceeded: No");
-    expect(text).not.toContain("WARNING");
+    expect(text).toContain("Active users (30 days): 5000");
+    expect(text).not.toMatch(/quota|subscription|paid plan/iu);
     expect(vi.mocked(api.getUsage)).toHaveBeenCalledWith("tok", "inst1");
-  });
-
-  it("handleGetUsage shows warning when exceeded without subscription", async () => {
-    vi.mocked(api.getUsage).mockResolvedValueOnce(usageExceededNoSubscription);
-
-    const result = await handleGetUsage("tok", "inst1");
-    const text = result.content[0].text;
-
-    expect(text).toContain("12000 / 10000");
-    expect(text).toContain("WARNING: Usage exceeded");
-    expect(text).toContain("Subscribe to a paid plan");
-  });
-});
-
-// --- End-to-end: usage warnings surface through handleGetStatus ---
-
-describe("usage warnings in get_status", () => {
-  it("surfaces usage warning when quota exceeded and no subscription", async () => {
-    vi.mocked(api.getStatus).mockResolvedValueOnce(statusWithUsageWarning);
-
-    const result = await handleGetStatus("tok");
-    const text = result.content[0].text;
-
-    expect(result.isError).toBeUndefined();
-    expect(text).toContain("WARNING: Usage exceeded (12000/10000 MAU)");
-    expect(text).toContain("deep links are not working");
-    expect(text).toContain("Subscribe to a paid plan");
-  });
-
-  it("no usage warning when subscription is active", async () => {
-    vi.mocked(api.getStatus).mockResolvedValueOnce(statusWithSubscription);
-
-    const result = await handleGetStatus("tok");
-    const text = result.content[0].text;
-
-    expect(result.isError).toBeUndefined();
-    expect(text).not.toContain("WARNING");
-  });
-
-  it("no usage warning when status has no usage data", async () => {
-    vi.mocked(api.getStatus).mockResolvedValueOnce(statusEmpty);
-
-    const result = await handleGetStatus("tok");
-    const text = result.content[0].text;
-
-    expect(text).not.toContain("WARNING");
   });
 });
 

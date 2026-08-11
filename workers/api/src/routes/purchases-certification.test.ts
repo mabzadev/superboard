@@ -48,16 +48,16 @@ describe('purchase certification references', () => {
     )).rejects.toMatchObject({ code: 'certification_reference_scenario_mismatch' });
 
     const wrongEvent = createFakeD1((call) => call.op === 'first' ? {
-      id: 'event-1', provider: 'stripe', environment: 'sandbox', status: 'processed',
-      event_type: 'invoice.payment_succeeded', occurred_at: '2026-08-03T10:01:00.000Z',
+      id: 'event-1', provider: 'apple', environment: 'sandbox', status: 'processed',
+      event_type: 'DID_RENEW', occurred_at: '2026-08-03T10:01:00.000Z',
     } : undefined);
     await expect(certificationReferenceSnapshot(
       wrongEvent,
-      { ...run, platform: 'web' },
-      'stripe',
+      run,
+      'apple',
       'billing_event',
       'event-1',
-      'stripe.payment_failed',
+      'apple.refund',
     )).rejects.toMatchObject({ code: 'certification_reference_scenario_mismatch' });
   });
 

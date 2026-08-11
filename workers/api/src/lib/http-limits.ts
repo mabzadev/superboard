@@ -31,3 +31,15 @@ export async function readTextLimited(
   }
   return new TextDecoder().decode(combined);
 }
+
+export async function readJsonObjectLimited(
+  source: Request | Response,
+  maxBytes: number,
+  tooLargeMessage = 'JSON body is too large',
+): Promise<Record<string, unknown>> {
+  const text = await readTextLimited(source, maxBytes, tooLargeMessage);
+  if (!text.trim()) return {};
+  const value: unknown = JSON.parse(text);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}

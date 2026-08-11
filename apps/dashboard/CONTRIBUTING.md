@@ -1,4 +1,4 @@
-# Contributing to OpenGrow
+# Contributing to SuperBoard
 
 ## Setup
 

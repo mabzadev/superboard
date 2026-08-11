@@ -96,7 +96,7 @@ function env(): Env {
   const db = createFakeD1((call) => {
     if (call.op === 'first' && call.sql.includes('FROM projects p')) return {
       id: 11, is_test: 1, purchases_enabled: 1, purchases_core: 1,
-      paywalls: 1, growth: 1, web_billing: 0, virtual_currencies: 1,
+      paywalls: 1, virtual_currencies: 1,
     };
     return undefined;
   });

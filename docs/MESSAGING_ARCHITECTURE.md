@@ -1,34 +1,72 @@
-# OpenGrow Messaging
+# SuperBoard Support and legacy Messaging
 
-## Identity authority
+This filename is retained for old links. SuperBoard Support is the canonical
+conversation implementation. `workers/messaging` is disabled by default and is
+kept only to read/migrate installations created before target schema version 5.
 
-`api-auth-gateway` is the only application authentication authority. Messaging creates no account, session, or identity token. The client exchanges its existing application access token through `POST /auth/opengrow-token`. Messaging then verifies the short-lived ES256 JWT against the gateway JWKS, issuer, and `opengrow` audience.
+## Identity and public access
 
-## Isolation
+The Identity Worker is the application authentication authority. Support never
+creates an account or long-lived application session. Flutter/FlutterFlow calls
+the API gateway at `/api/v1/support-client`; the gateway forwards only the
+application bearer token and the allowlisted `X-SuperBoard-Project-Id` through the
+private `SUPPORT_MODULE` binding. No standalone public Messaging domain is
+required.
 
-- Worker: `opengrow-messaging`
-- D1: `opengrow-messaging-db`
-- R2: `opengrow-messaging`
-- Durable Object: one `ConversationRoom` instance per conversation
-- Dashboard access: private service binding with a rotating internal capability
+## Canonical isolation
 
-Billing does not depend on any Messaging component.
+- Worker: target-defined Support Worker, for example `opengrow-support`;
+- D1: target `moduleD1.support`;
+- R2: target `moduleR2.support`;
+- Queue + DLQ: target `moduleQueues.support`;
+- Durable Object: one `ConversationRoom` instance per conversation;
+- API/dashboard access: private Service Binding and signed project context;
+- mobile access: authenticated API gateway proxy;
+- project allowlist: target `supportProjectIds`, enforced fail-closed.
+
+Billing does not depend on Support. Support cannot mutate entitlements,
+purchases, refunds or financial jobs.
 
 ## Guarantees
 
-- `client_conversation_id` and `client_message_id` make retries idempotent.
-- Reusing a message ID with a different payload returns `idempotency_conflict`.
-- The Durable Object assigns a persistent sequence and broadcasts through hibernating WebSockets.
-- An R2 attachment can be associated only with its original conversation.
-- Status, priority, labels, assignment, and actions are recorded in an immutable audit log.
-- Public failures expose stable `code`, `message`, `retryable`, and `request_id` fields.
+- client conversation/message IDs make retries idempotent;
+- Durable Objects assign persistent sequences and broadcast through hibernating
+  WebSockets;
+- one-use short-lived realtime tickets prevent dashboard credentials from being
+  forwarded to a Durable Object;
+- attachments are ownership-checked, streamed and normalized in
+  `support_message_attachments`, including multiple attachments per message;
+- private notes are excluded from customer history, unread counts and public
+  WebSocket broadcasts;
+- contacts, companies, notes, participants, drafts, CSAT and agent
+  notifications have dedicated tables;
+- status, priority, assignment, configuration and secret rotations are audited;
+- webhook secrets use authenticated encryption and are never returned;
+- outbound events use a dedicated Queue/DLQ with idempotent delivery records;
+- public failures expose bounded stable error contracts;
+- `/internal/v1/health` exposes only aggregate operational counters.
 
-## Runtime certification
+## FlutterFlow compatibility
 
-`npm run messaging:test:runtime` executes the Messaging D1 migrations and `ConversationRoom` inside Cloudflare's Workers runtime. The suite certifies per-conversation isolation, concurrent message ordering, attachment ownership, WebSocket hibernation, and reconnection. `npm run messaging:check` also runs the Node unit tests, both TypeScript checks, and a Wrangler deployment dry run.
+`superboard_flutterflow` 3.0 integrates Support/Messaging directly and exposes
+the canonical `superboardSupport*` action names. The frozen
+`opengrow_flutterflow_messaging` 1.3 package and its `opengrowSupport*` /
+`opengrowMessaging*` symbols exist only for rollback and compatibility; new
+projects must not add that second package.
 
-## FlutterFlow
+The package covers configuration, conversations, messages, multiple
+attachments, download, read state, typing, realtime reconnect and CSAT. Its
+`supportUrl` should be the API gateway prefix, for example
+`https://api.mbza.dev/api/v1/support-client`.
 
-`sdks/flutterflow_messaging` is separate from Purchases. Its initialization talks only to the existing authentication gateway, then exposes conversations, messages, attachments, read receipts, typing state, and WebSocket updates without increasing the financial SDK surface. The configured project ID is required and identity tokens are refreshed through the same gateway before expiry or after an authentication rejection.
+## Chatwoot and legacy retirement
 
-The unified Inbox exposes agent assignment, labels, priority, status, read receipts, typing state, and attachment transfer through the Messaging service binding. Durable Object sequence state is reconciled with D1 history so a database restoration cannot restart a conversation at sequence one.
+Chatwoot export, deterministic conversion, attachment transfer, D1 upserts,
+checkpoint verification and retirement are defined in
+`CHATWOOT_SUPPORT_CUTOVER.md`. Legacy Messaging-to-Support module backfill is
+defined in `MODULE_CUTOVER_RUNBOOK.md`.
+
+Do not delete the old Worker, database, bucket, Chatwoot service or DNS based on
+a successful build alone. Deletion requires protected backups, test and
+production cutovers, row/evidence verification, an observation window and an
+explicit production approval.

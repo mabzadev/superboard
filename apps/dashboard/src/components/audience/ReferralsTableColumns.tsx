@@ -7,7 +7,6 @@ import { renderSortableHeader } from "./VisitorsTableColumns";
 import { formatSlashDate } from "@/lib/dateUtils";
 import { parseSecondsInDaysHoursMinutesSeconds } from "@/lib/utils";
 import { numberFormatter } from "@/utils/numberFormatter";
-import { formatCurrencyFromCents } from "@/utils/formatCurrency";
 
 export const getReferralsTableColumns = (
   sort: SortType,
@@ -167,20 +166,6 @@ export const getReferralsTableColumns = (
     },
   },
   {
-    accessorKey: "revenue",
-    header: () => renderSortableHeader("Revenue", "revenue", setSort, sort),
-    cell: ({ row }) => {
-      return (
-        <div>
-          {row.original?.total_revenue
-            ? formatCurrencyFromCents(row.original.total_revenue)
-            : "-"}
-        </div>
-      );
-    },
-  },
-
-  {
     accessorKey: "last_access",
     header: () =>
       renderSortableHeader("Last access", "updated_at", setSort, sort),
@@ -210,5 +195,4 @@ export interface RefferalMetrics {
   time_spent: number;
   invited_by: string;
   updated_at: string;
-  total_revenue?: number;
 }

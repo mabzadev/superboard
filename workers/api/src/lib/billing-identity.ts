@@ -8,6 +8,7 @@ import {
   type JWK,
 } from 'jose';
 import type { BillingEnv } from '../types';
+import { readJsonObjectLimited } from './http-limits';
 import { customerInfo, findCustomerByAppUserId, getOrCreateCustomer } from './billing';
 
 type OidcConfig = {
@@ -93,11 +94,16 @@ async function loadJwks(env: BillingEnv, uri: string, forceRefresh = false): Pro
   const cacheKey = `billing:jwks:${await sha256(uri)}`;
   const cached = forceRefresh ? null : await env.KV.get(cacheKey, 'json').catch(() => null);
   if (isJwks(cached)) return cached;
-  const response = await fetch(uri, { headers: { Accept: 'application/json' } });
+  const response = await fetch(uri, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!response.ok) throw new Error('Unable to fetch identity provider keys');
-  const contentLength = Number(response.headers.get('content-length') || 0);
-  if (contentLength > 256_000) throw new Error('Identity provider key set is too large');
-  const payload: unknown = await response.json();
+  const payload: unknown = await readJsonObjectLimited(
+    response,
+    256_000,
+    'Identity provider key set is too large',
+  );
   if (!isJwks(payload)) throw new Error('Identity provider returned an invalid JWKS');
   await env.KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 3600 });
   return payload;

@@ -12,6 +12,21 @@ public typealias JSONClosure = (_ success: Bool, _ json: [String: Any]?) -> Void
 /// Base service class for making network requests
 open class BaseService: NSObject {
 
+    /// Injectable foreground transport used by unit tests. Keeping the retry
+    /// policy above the URL loading system avoids asking CFNetwork to interpret
+    /// synthetic connectivity failures before the policy can observe them.
+    typealias ForegroundRequestExecutor = (
+        _ request: URLRequest,
+        _ completion: @escaping (Data?, URLResponse?, Error?) -> Void
+    ) -> URLSessionTask?
+
+    /// Injectable retry scheduler used by unit tests to execute retries without
+    /// wall-clock sleeps while production retains exponential backoff.
+    typealias RetryScheduler = (
+        _ delay: TimeInterval,
+        _ operation: @escaping () -> Void
+    ) -> Void
+
     // MARK: - Properties
 
     /// URLProtocol classes to prepend to the session configuration (used for testing).
@@ -42,6 +57,16 @@ open class BaseService: NSObject {
     /// Serial queue protecting cachedCompletions from concurrent access
     private let completionsQueue = DispatchQueue(label: "com.opengrow.completionsQueue")
 
+    /// Dedicated scheduler for retries. Network recovery is user-visible work, so
+    /// avoid utility QoS: it can be deferred for tens of seconds while the process
+    /// is busy and make a short exponential backoff miss its intended window.
+    private let retryQueue = DispatchQueue(label: "io.opengrow.sdk.retry", qos: .userInitiated)
+
+    /// Optional transport and scheduler seams. Production uses URLSession and
+    /// the dedicated retry queue; tests inject deterministic implementations.
+    private var foregroundRequestExecutor: ForegroundRequestExecutor?
+    private var retryScheduler: RetryScheduler?
+
     /// Maximum number of retries per request before giving up
     private static let maxRetryCount = 5
 
@@ -49,6 +74,9 @@ open class BaseService: NSObject {
     // MARK: - Initialization
 
     override init() {
+        foregroundRequestExecutor = nil
+        retryScheduler = nil
+
         delegateQueue.name = "background-queue-opengrow"
         config.sessionSendsLaunchEvents = true
 
@@ -69,6 +97,15 @@ open class BaseService: NSObject {
         session = URLSession(configuration: config, delegate: nil, delegateQueue: delegateQueue)
         backgroundSession = URLSession(configuration: bgConfig, delegate: self, delegateQueue: delegateQueue)
 
+    }
+
+    convenience init(
+        foregroundRequestExecutor: ForegroundRequestExecutor?,
+        retryScheduler: RetryScheduler?
+    ) {
+        self.init()
+        self.foregroundRequestExecutor = foregroundRequestExecutor
+        self.retryScheduler = retryScheduler
     }
 
     // MARK: - Request Methods
@@ -93,6 +130,26 @@ open class BaseService: NSObject {
         return base + jitter
     }
 
+    private func scheduleRetry(after delay: TimeInterval, operation: @escaping () -> Void) {
+        if let retryScheduler {
+            retryScheduler(delay, operation)
+            return
+        }
+
+        retryQueue.asyncAfter(deadline: .now() + delay, execute: operation)
+    }
+
+    private static func isRetryableTransportError(_ error: Error?) -> Bool {
+        guard let code = (error as? URLError)?.code else { return false }
+
+        switch code {
+        case .networkConnectionLost, .notConnectedToInternet, .timedOut:
+            return true
+        default:
+            return false
+        }
+    }
+
     @discardableResult
     private func makeRequest(background: Bool, URLRequest: URLRequest, retryCount: Int, completion: @escaping JSONClosure) -> URLSessionTask? {
         if background {
@@ -104,17 +161,17 @@ open class BaseService: NSObject {
 
         } else {
 
-            let task = session.dataTask(with: URLRequest) { (data, urlResponse, error) in
-                if let error = error as? URLError,
-                   error.code == .networkConnectionLost || error.code == .notConnectedToInternet || error.code == .timedOut {
+            let responseHandler: (Data?, URLResponse?, Error?) -> Void = { data, urlResponse, error in
+                if Self.isRetryableTransportError(error) {
                     guard retryCount < Self.maxRetryCount else {
-                        DebugLogger.shared.log(.error, "Request failed after \(Self.maxRetryCount) retries: \(error.code.rawValue)")
+                        let errorCode = (error as? URLError)?.code.rawValue ?? URLError.unknown.rawValue
+                        DebugLogger.shared.log(.error, "Request failed after \(Self.maxRetryCount) retries: \(errorCode)")
                         DispatchQueue.main.async { completion(false, nil) }
                         return
                     }
 
                     let delay = self.retryDelay(for: retryCount)
-                    DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + delay) {
+                    self.scheduleRetry(after: delay) {
                         self.makeRequest(background: background, URLRequest: URLRequest, retryCount: retryCount + 1, completion: completion)
                     }
 
@@ -137,7 +194,7 @@ open class BaseService: NSObject {
 
                     let retryAfter = (http.value(forHTTPHeaderField: "Retry-After") as NSString?)?.doubleValue
                     let delay = retryAfter ?? self.retryDelay(for: retryCount)
-                    DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + delay) {
+                    self.scheduleRetry(after: delay) {
                         self.makeRequest(background: background, URLRequest: URLRequest, retryCount: retryCount + 1, completion: completion)
                     }
                     return
@@ -164,6 +221,12 @@ open class BaseService: NSObject {
                     completion(false, nil)
                 }
             }
+
+            if let foregroundRequestExecutor {
+                return foregroundRequestExecutor(URLRequest, responseHandler)
+            }
+
+            let task = session.dataTask(with: URLRequest, completionHandler: responseHandler)
 
             task.resume()
 
@@ -200,4 +263,3 @@ extension BaseService: URLSessionDownloadDelegate {
         completion?(false, nil)
     }
 }
-

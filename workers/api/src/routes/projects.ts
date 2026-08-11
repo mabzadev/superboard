@@ -10,6 +10,7 @@ import {
 import { generateShortCode } from '../lib/crypto';
 import { readCsvDownload, storeCsvDownload } from '../lib/files';
 import { downloadFileMessage, sendMail } from '../lib/mail';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const projects = new Hono<{ Bindings: Env }>();
 
@@ -18,9 +19,7 @@ async function currentUserId(c: any): Promise<number | null> {
 }
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return await c.req.parseBody().catch(() => ({}));
+  return readRequestObjectLimited(c.req.raw, 1024 * 1024);
 }
 
 function field(body: Record<string, any>, ...names: string[]): any {
@@ -262,7 +261,7 @@ async function metricsForRange(db: D1Database, projectId: number, startDate: str
   return metrics;
 }
 
-function buildLink(row: any, redirects: any[] = []) {
+function buildLink(row: any, redirects: any[] = [], shortlinkDomain = "") {
   const tags = typeof row.tags === 'string' ? JSON.parse(row.tags || '[]') : [];
   const data = parseJsonObject(row.data) || {};
   const ios = redirects.find((r) => r.platform === 'ios');
@@ -295,7 +294,7 @@ function buildLink(row: any, redirects: any[] = []) {
     total_reactivations: 0,
     total_time_spent: 0,
     total_revenue: 0,
-    access_path: `https://go.vocostar.com/${row.path}`,
+    access_path: shortlinkDomain ? `https://${shortlinkDomain}/${row.path}` : undefined,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -321,7 +320,7 @@ async function loadLinks(c: any, projectExternalId: string, limit = 50, offset =
     const redirects: { results?: any[] } = await c.env.DB.prepare(
       'SELECT * FROM custom_redirects WHERE link_id = ?'
     ).bind(row.id).all();
-    return buildLink(row, redirects.results || []);
+    return buildLink(row, redirects.results || [], c.env.SHORTLINK_DOMAIN);
   }));
 }
 
@@ -397,7 +396,7 @@ projects.post('/:id/links', async (c) => {
     }
   }
 
-  return c.json({ link: buildLink(link), short_url: `https://${c.env.SHORTLINK_DOMAIN}/${path}` }, 201);
+  return c.json({ link: buildLink(link, [], c.env.SHORTLINK_DOMAIN), short_url: `https://${c.env.SHORTLINK_DOMAIN}/${path}` }, 201);
 });
 
 projects.post('/:id/links/search_v2', async (c) => {
@@ -446,7 +445,7 @@ projects.post('/:id/links/by_ids', async (c) => {
   if (ids.length === 0) return c.json({ links: [] });
   const placeholders = ids.map(() => '?').join(',');
   const rows = await c.env.DB.prepare(`SELECT * FROM links WHERE id IN (${placeholders})`).bind(...ids).all<any>();
-  return c.json({ links: (rows.results || []).map((row: any) => buildLink(row)) });
+  return c.json({ links: (rows.results || []).map((row: any) => buildLink(row, [], c.env.SHORTLINK_DOMAIN)) });
 });
 
 projects.patch('/:id/links/:linkId', async (c) => {
@@ -495,7 +494,7 @@ projects.patch('/:id/links/:linkId', async (c) => {
 
   const row = await c.env.DB.prepare('SELECT * FROM links WHERE id = ?').bind(linkId).first<any>();
   if (!row) return c.json({ error: 'Not found' }, 404);
-  return c.json({ link: buildLink(row) });
+  return c.json({ link: buildLink(row, [], c.env.SHORTLINK_DOMAIN) });
 });
 
 projects.delete('/:id/links/:linkId', async (c) => {
@@ -516,7 +515,7 @@ projects.get('/:id/domain', async (c) => {
   if (!domain) {
     domain = await c.env.DB.prepare(
       'INSERT INTO domains (domain, subdomain, project_id, generic_title, generic_subtitle) VALUES (?, ?, ?, ?, ?) RETURNING *'
-    ).bind(c.env.SHORTLINK_DOMAIN, '', project.id, 'OpenGrow', 'Share & discover').first<any>();
+    ).bind(c.env.SHORTLINK_DOMAIN, '', project.id, 'SuperBoard', 'Share & discover').first<any>();
   }
   return c.json({
     domain: {
@@ -524,7 +523,7 @@ projects.get('/:id/domain', async (c) => {
       subdomain: domain.subdomain || '',
       domain: domain.domain || c.env.SHORTLINK_DOMAIN,
       google_tracking_id: domain.google_tracking_id || null,
-      generic_title: domain.generic_title || 'OpenGrow',
+      generic_title: domain.generic_title || 'SuperBoard',
       generic_subtitle: domain.generic_subtitle || 'Share & discover',
       generic_image_url: domain.generic_image_url || null,
     },
@@ -547,7 +546,7 @@ projects.put('/:id/domain', async (c) => {
     c.env.SHORTLINK_DOMAIN,
     body.subdomain || '',
     project.id,
-    body.generic_title || 'OpenGrow',
+    body.generic_title || 'SuperBoard',
     body.generic_subtitle || '',
     body.generic_image_url || null,
   ).run();
@@ -558,7 +557,7 @@ projects.put('/:id/domain', async (c) => {
       subdomain: domain.subdomain || '',
       domain: domain.domain || c.env.SHORTLINK_DOMAIN,
       google_tracking_id: domain.google_tracking_id || null,
-      generic_title: domain.generic_title || 'OpenGrow',
+      generic_title: domain.generic_title || 'SuperBoard',
       generic_subtitle: domain.generic_subtitle || '',
       generic_image_url: domain.generic_image_url || null,
     },
@@ -566,7 +565,7 @@ projects.put('/:id/domain', async (c) => {
 });
 
 projects.get('/:id/domain/defaults', async (c) => {
-  return c.json({ generic_title: 'OpenGrow', generic_subtitle: 'Share & discover', generic_image_url: null });
+  return c.json({ generic_title: 'SuperBoard', generic_subtitle: 'Share & discover', generic_image_url: null });
 });
 
 projects.post('/:id/domain/check_availability', async (c) => {

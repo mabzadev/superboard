@@ -10,7 +10,6 @@ import { Badge } from "../ui/badge";
 import { numberFormatter } from "../../utils/numberFormatter";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { formatPlatformName } from "@/lib/utils";
-import { formatCurrencyFromCents } from "@/utils/formatCurrency";
 import { formatCountry } from "@/lib/country";
 
 const renderToolTipContent = (key: string) => {
@@ -25,7 +24,7 @@ const renderToolTipContent = (key: string) => {
       break;
     case "Installs":
       text =
-        "This represents the number of times your app was installed on the device. This can be 0 or 1. If 0, the visitor did not install your app.";
+        "This represents the number of times your app was installed on the device. This can be 0 or 1. If 0, the customer did not install your app.";
       break;
     case "Reinstalls":
       text =
@@ -40,7 +39,7 @@ const renderToolTipContent = (key: string) => {
       break;
     case "Invited users":
       text =
-        "The total number of users who installed your app after being invited by the visitor.";
+        "The total number of users who installed your app after being invited by the customer.";
       break;
     case "Time spent":
       text = "Time spent in the app.";
@@ -241,21 +240,6 @@ export const getVisitorsTableColumns = (
     },
   },
   {
-    accessorKey: "total_revenue",
-    header: () =>
-      renderSortableHeader("Revenue", "total_revenue", setSort, sort),
-    cell: ({ row }) => {
-      return (
-        <div>
-          {row.original?.total_revenue
-            ? formatCurrencyFromCents(row.original.total_revenue)
-            : "-"}
-        </div>
-      );
-    },
-  },
-
-  {
     accessorKey: "date",
     header: () => renderSortableHeader("Date", "updated_at", setSort, sort),
     cell: ({ row }) => {
@@ -283,7 +267,6 @@ export interface VisitorMetrics {
   country_code?: string | null;
   total_reactivations: number;
   total_time_spent: number;
-  total_revenue: number;
 }
 
 export const renderSortableHeader = (

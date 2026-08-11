@@ -1,0 +1,197 @@
+{
+  "$schema": "../schemas/flutterflow-library.schema.json",
+  "schemaVersion": 1,
+  "owner": "superboard",
+  "displayName": "SuperBoard",
+  "source": {
+    "path": "tools/flutterflow-library/dsl/edit.dart",
+    "testPath": "tools/flutterflow-library/test/app_test.dart",
+    "workflow": ".github/workflows/sync-flutterflow-library.yml"
+  },
+  "remoteProject": {
+    "projectIdVariable": "FF_LIBRARY_PROJECT_ID",
+    "apiKeySecret": "FF_API_KEY",
+    "githubEnvironment": "flutterflow-library"
+  },
+  "releasePolicy": "immutable-tag-only",
+  "dependencies": [
+    {
+      "catalogId": "flutterflow",
+      "packageName": "superboard_flutterflow",
+      "sourceVersion": "3.0.0",
+      "requiredRef": "sdk-flutterflow-v3.0.0"
+    }
+  ],
+  "libraryValues": [
+    {
+      "name": "projectKey",
+      "key": "superboard_project_key",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "uriScheme",
+      "key": "superboard_uri_scheme",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "useTestEnvironment",
+      "key": "superboard_use_test_environment",
+      "type": "boolean",
+      "required": true,
+      "defaultValue": false
+    },
+    {
+      "name": "sdkBaseUrl",
+      "key": "superboard_sdk_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "authGatewayBaseUrl",
+      "key": "superboard_auth_gateway_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "filesBaseUrl",
+      "key": "superboard_files_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "applicationIdentifier",
+      "key": "superboard_application_identifier",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "applicationEnvironment",
+      "key": "superboard_application_environment",
+      "type": "string",
+      "required": true,
+      "defaultValue": "production"
+    },
+    {
+      "name": "supportBaseUrl",
+      "key": "superboard_support_base_url",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "supportProjectId",
+      "key": "superboard_support_project_id",
+      "type": "integer",
+      "required": true
+    },
+    {
+      "name": "shortLinkHost",
+      "key": "superboard_short_link_host",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "widgets": [
+    "SuperBoardBootstrap",
+    "SuperBoardPaywall",
+    "SuperBoardOnboarding",
+    "SuperBoardRestorePurchasesButton",
+    "SuperBoardCustomerCenter"
+  ],
+  "pages": [
+    "SuperBoardPaywallPage",
+    "SuperBoardOnboardingPage",
+    "SuperBoardCustomerCenterPage"
+  ],
+  "actions": {
+    "bootstrap": [
+      "superboardInitializeAuthenticated",
+      "superboardApplicationInitialize",
+      "superboardInitializeAuthenticatedFromApplicationSession"
+    ],
+    "identity": [
+      "superboardApplicationRestoreSessionJson",
+      "superboardApplicationCurrentSessionJson",
+      "superboardApplicationAccessToken",
+      "superboardApplicationRegisterJson",
+      "superboardApplicationSignInPasswordJson",
+      "superboardApplicationSignInProviderJson",
+      "superboardApplicationLinkProviderJson",
+      "superboardApplicationSignInAnonymousJson",
+      "superboardApplicationRefreshJson",
+      "superboardApplicationLogoutJson",
+      "superboardApplicationDeleteAccountJson",
+      "superboardApplicationProfileJson",
+      "superboardApplicationUpdateProfileJson",
+      "superboardApplicationRequestPasswordResetJson",
+      "superboardApplicationResetPasswordJson"
+    ],
+    "application": [
+      "superboardApplicationRuntimePolicyJson",
+      "superboardApplicationMarketingPreferencesJson",
+      "superboardApplicationUpdateMarketingConsentJson"
+    ],
+    "analyticsAndLinks": [
+      "superboardSetAnalyticsUser",
+      "superboardSetAnalyticsUserFromLibraryState",
+      "superboardSetUserAttributesJson",
+      "superboardSetPushToken",
+      "superboardGenerateLinkJson",
+      "superboardGetUnreadMessageCount",
+      "superboardDisplayMessages",
+      "superboardGetLastDeepLinkJson"
+    ],
+    "purchases": [
+      "superboardPurchaseLogout",
+      "superboardPurchase",
+      "superboardPurchaseFromLibraryState",
+      "superboardRestore",
+      "superboardSync",
+      "superboardHasEntitlement",
+      "superboardGetCustomerInfoJson",
+      "superboardOpenSubscriptionManagement",
+      "superboardGetOfferings"
+    ],
+    "files": [
+      "superboardApplicationListFilesJson",
+      "superboardApplicationUploadFileJson",
+      "superboardApplicationDownloadFile",
+      "superboardApplicationDeleteFileJson"
+    ],
+    "customJobs": [
+      "superboardApplicationCreateCustomJobJson",
+      "superboardApplicationListCustomJobsJson",
+      "superboardApplicationGetCustomJobJson",
+      "superboardApplicationCancelCustomJobJson"
+    ],
+    "support": [
+      "superboardSupportInitializeAuthenticated",
+      "superboardSupportGetConfigurationJson",
+      "superboardSupportListConversationsJson",
+      "superboardSupportOpenConversation",
+      "superboardSupportUpdateConversationJson",
+      "superboardSupportMessagesJson",
+      "superboardSupportSend",
+      "superboardSupportSendAdvanced",
+      "superboardSupportSubmitCsatJson",
+      "superboardSupportUploadAttachmentJson",
+      "superboardSupportDownloadAttachment",
+      "superboardSupportSendAttachment",
+      "superboardSupportMarkRead",
+      "superboardSupportSetTyping",
+      "superboardSupportConnectRealtime",
+      "superboardSupportDisconnectRealtime",
+      "superboardSupportGetLastRealtimeEventJson",
+      "superboardSupportDispose"
+    ]
+  },
+  "forbiddenAppState": [
+    "superboardApplicationAccessToken",
+    "superboardIdentityToken",
+    "superboardVocostarAccessToken",
+    "opengrowApplicationAccessToken",
+    "opengrowIdentityToken",
+    "opengrowVocostarAccessToken"
+  ]
+}

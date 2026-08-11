@@ -1,0 +1,27 @@
+{
+  "$schema": "./sdk-release-history.schema.json",
+  "schemaVersion": 1,
+  "repository": "mbzadev/superboard",
+  "immutableFailures": [
+    {
+      "libraryId": "ios",
+      "version": "1.0.1",
+      "releaseTag": "sdk-ios-v1.0.1",
+      "packageRefs": ["1.0.1"],
+      "releaseSha": "e896f8ea91a140419471b02301f0bde48d8d6b13",
+      "workflowRunId": 31358601380,
+      "failedAt": "2026-08-10T05:30:49Z",
+      "failureKind": "package-tests-failed"
+    },
+    {
+      "libraryId": "android",
+      "version": "1.0.1",
+      "releaseTag": "sdk-android-v1.0.1",
+      "packageRefs": [],
+      "releaseSha": "cc0f6b7ddcc871b3cc50426bc005c03fca64e2d5",
+      "workflowRunId": 31365219132,
+      "failedAt": "2026-08-10T07:19:55Z",
+      "failureKind": "artifact-publish-http-422"
+    }
+  ]
+}

@@ -376,10 +376,13 @@ public class OpenGrow: ActivityProvider {
     }
 
     fun configure(application: Application, apiKey: String, useTestEnvironment: Boolean, baseURL: String? = null) {
+        val configuredBaseURL = requireNotNull(baseURL?.trim()?.takeIf { it.isNotEmpty() }) {
+            "baseURL is required. Configure it from the application environment (for example https://sdk.example.com)."
+        }
         this.apiKey = apiKey
         this.application = application
         this.opengrowContext.settings.useTestEnvironment = useTestEnvironment
-        this.opengrowContext.settings.baseURL = baseURL
+        this.opengrowContext.settings.baseURL = configuredBaseURL.trimEnd('/')
 
         opengrowManager = OpenGrowManager(context = application.applicationContext,
             application = application,

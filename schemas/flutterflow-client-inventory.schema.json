@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-client-inventory.schema.json",
+  "title": "SuperBoard FlutterFlow client inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "application",
+    "project",
+    "sourceSnapshot",
+    "migrationPlan",
+    "surfaceManifest",
+    "receipt",
+    "inventory",
+    "historicalRemoved",
+    "dslTarget"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "application": { "$ref": "#/$defs/identifier" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "sourceSnapshot": { "$ref": "#/$defs/repositoryPath" },
+    "migrationPlan": { "$ref": "#/$defs/repositoryPath" },
+    "surfaceManifest": { "$ref": "#/$defs/repositoryPath" },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewedExportTimestamp", "currentStatus", "reason"],
+      "properties": {
+        "reviewedExportTimestamp": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T.+Z$"
+        },
+        "currentStatus": { "const": "reviewed-export-receipt-replaced" },
+        "reason": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pages",
+        "components",
+        "appState",
+        "structs",
+        "apiCalls",
+        "actionBlocks",
+        "appEvents",
+        "customActions",
+        "customFunctions",
+        "customWidgets"
+      ],
+      "properties": {
+        "pages": { "$ref": "#/$defs/groups" },
+        "components": { "$ref": "#/$defs/groups" },
+        "appState": { "$ref": "#/$defs/appStateGroups" },
+        "structs": { "$ref": "#/$defs/groups" },
+        "apiCalls": { "$ref": "#/$defs/groups" },
+        "actionBlocks": { "$ref": "#/$defs/groups" },
+        "appEvents": { "$ref": "#/$defs/groups" },
+        "customActions": { "$ref": "#/$defs/groups" },
+        "customFunctions": { "$ref": "#/$defs/groups" },
+        "customWidgets": { "$ref": "#/$defs/groups" }
+      }
+    },
+    "historicalRemoved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["customActions"],
+      "properties": { "customActions": { "$ref": "#/$defs/groups" } }
+    },
+    "dslTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "implemented", "knownGaps"],
+      "properties": {
+        "status": { "const": "versioned-not-applied-to-reviewed-export" },
+        "implemented": { "$ref": "#/$defs/stringList" },
+        "knownGaps": { "$ref": "#/$defs/stringList" }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "stringList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "classification": {
+      "enum": ["common", "configurable", "vocostar", "remove"]
+    },
+    "authority": {
+      "enum": [
+        "identity",
+        "app",
+        "billing",
+        "files",
+        "notifications",
+        "support",
+        "marketing",
+        "onboardings",
+        "custom-jobs",
+        "local-ui",
+        "client-native"
+      ]
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "names",
+        "classification",
+        "authority",
+        "replacementSymbols",
+        "phase",
+        "gate"
+      ],
+      "properties": {
+        "names": { "$ref": "#/$defs/stringList" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "authority": { "$ref": "#/$defs/authority" },
+        "replacementSymbols": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "phase": {
+          "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+        },
+        "gate": {
+          "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+        }
+      }
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/group" }
+    },
+    "appStateGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "names",
+        "persisted",
+        "classification",
+        "authority",
+        "replacementSymbols",
+        "phase",
+        "gate"
+      ],
+      "properties": {
+        "names": { "$ref": "#/$defs/stringList" },
+        "persisted": { "type": "boolean" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "authority": { "$ref": "#/$defs/authority" },
+        "replacementSymbols": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "phase": {
+          "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+        },
+        "gate": {
+          "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+        }
+      }
+    },
+    "appStateGroups": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/appStateGroup" }
+    }
+  }
+}

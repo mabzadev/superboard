@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mbzadev/superboard/blob/dev/schemas/superboard-brand.schema.json",
+  "title": "SuperBoard brand and compatibility contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "brand",
+    "repositories",
+    "developmentDomains",
+    "sdkStrategy",
+    "cloudflareMigration"
+  ],
+  "properties": {
+    "$schema": { "const": "../schemas/superboard-brand.schema.json" },
+    "schemaVersion": { "const": 2 },
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "slug", "legacyNames", "compatibilityNamespace"],
+      "properties": {
+        "name": { "const": "SuperBoard" },
+        "slug": { "const": "superboard" },
+        "legacyNames": { "type": "array", "const": ["OpenGrow"] },
+        "compatibilityNamespace": { "const": "opengrow" }
+      }
+    },
+    "repositories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical", "layout", "legacyReadOnly"],
+      "properties": {
+        "canonical": { "const": "mbzadev/superboard" },
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["platform", "reference"],
+          "properties": {
+            "platform": { "const": "." },
+            "reference": { "const": "apps/reference" }
+          }
+        },
+        "legacyReadOnly": {
+          "const": [
+            "mbzadev/superboard-platform",
+            "mbzadev/superboard-reference"
+          ]
+        }
+      }
+    },
+    "developmentDomains": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dashboard", "reference", "shortLinks"],
+      "properties": {
+        "dashboard": { "const": "board.mbza.dev" },
+        "reference": { "const": "reference.mbza.dev" },
+        "shortLinks": { "const": "in.mbza.dev" }
+      }
+    },
+    "sdkStrategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active", "internal", "archived"],
+      "properties": {
+        "active": { "const": ["flutter", "flutterflow"] },
+        "internal": { "const": ["android", "ios"] },
+        "archived": {
+          "const": ["flutterflow-support", "javascript", "react-native"]
+        }
+      }
+    },
+    "cloudflareMigration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonicalWorkerPrefix",
+        "legacyWorkerPrefix",
+        "persistentResourcePolicy",
+        "canonicalEnvironmentPrefix",
+        "legacyEnvironmentPrefix"
+      ],
+      "properties": {
+        "canonicalWorkerPrefix": { "const": "superboard" },
+        "legacyWorkerPrefix": { "const": "opengrow" },
+        "persistentResourcePolicy": {
+          "const": "retain-physical-name-until-verified-cutover"
+        },
+        "canonicalEnvironmentPrefix": { "const": "SUPERBOARD_" },
+        "legacyEnvironmentPrefix": { "const": "OPENGROW_" }
+      }
+    }
+  }
+}

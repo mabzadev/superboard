@@ -6,62 +6,26 @@
 
 
 import Foundation
-import WebKit
-
-// MARK: - WebViewNavigationDelegate
-
-/// A delegate class for handling WKWebView navigation events.
-class WebViewNavigationDelegate: NSObject, WKNavigationDelegate {
-    private let didFinish: () -> Void
-
-    /// Initializes the delegate with a completion handler for when navigation finishes.
-    ///
-    /// - Parameter didFinish: A closure to be called when navigation finishes.
-    init(didFinish: @escaping () -> Void) {
-        self.didFinish = didFinish
-    }
-
-    /// Called when the web view finishes loading.
-    ///
-    /// - Parameter webView: The web view that finished loading.
-    /// - Parameter navigation: The navigation object that finished loading.
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        didFinish()
-    }
-}
 
 // MARK: - UserAgentHelper
 
-/// A utility class for retrieving the Safari user agent string.
+/// A utility class for building an application-scoped SDK user agent.
 class UserAgentHelper {
 
-    // Held alive only during the async user-agent fetch, then released.
-    private static var activeWebView: WKWebView?
-    private static var activeDelegate: WebViewNavigationDelegate?
-
-    /// Retrieves the Safari user agent string by loading a minimal HTML page in a WKWebView.
+    /// Builds a deterministic user agent without launching a WebKit process.
     ///
-    /// - Parameter completion: A closure to be called with the user agent string or nil if retrieval fails.
-    static func getSafariUserAgent(completion: @escaping (String?) -> Void) {
-        let webView = WKWebView(frame: .zero)
-        activeWebView = webView
+    /// - Returns: A stable value containing the host bundle, version and OS.
+    static func applicationUserAgent() -> String {
+        let bundle = Bundle.main.bundleIdentifier ?? "unknown-bundle"
+        let version = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleShortVersionString"
+        ) as? String ?? "unknown-version"
+        let operatingSystem = ProcessInfo.processInfo.operatingSystemVersionString
+        return "\(bundle)/\(version) OpenGrow-iOS (\(operatingSystem))"
+    }
 
-        webView.loadHTMLString("<html></html>", baseURL: nil)
-
-        let delegate = WebViewNavigationDelegate {
-            webView.evaluateJavaScript("navigator.userAgent") { result, error in
-                activeWebView = nil
-                activeDelegate = nil
-
-                if let userAgent = result as? String {
-                    completion(userAgent)
-                } else {
-                    completion(nil)
-                }
-            }
-        }
-
-        activeDelegate = delegate
-        webView.navigationDelegate = delegate
+    /// Preserves the asynchronous manager contract without a separate process.
+    static func getApplicationUserAgent(completion: @escaping (String) -> Void) {
+        completion(applicationUserAgent())
     }
 }

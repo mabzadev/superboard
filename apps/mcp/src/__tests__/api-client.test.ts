@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   ApiError,
+  configuredApiBaseUrl,
   getStatus,
+  getPlatformStatus,
   createProject,
   createLink,
   getLink,
@@ -32,11 +34,49 @@ function jsonResponse(data: unknown, status = 200, statusText = "OK") {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  process.env.OPENGROW_API_URL = "https://api.test.com";
+  process.env.SUPERBOARD_API_URL = "https://api.test.com";
 });
 
 afterEach(() => {
+  delete process.env.SUPERBOARD_API_URL;
   delete process.env.OPENGROW_API_URL;
+});
+
+describe("target-owned API configuration", () => {
+  it("fails closed when no application API origin is selected", () => {
+    expect(() => configuredApiBaseUrl({})).toThrow(/SUPERBOARD_API_URL is required/u);
+  });
+
+  it("rejects credentials and non-HTTP origins", () => {
+    expect(() => configuredApiBaseUrl({ SUPERBOARD_API_URL: "file:///tmp/api" })).toThrow(
+      /HTTP\(S\)/u,
+    );
+    expect(() =>
+      configuredApiBaseUrl({ SUPERBOARD_API_URL: "https://user:secret@example.test" }),
+    ).toThrow(/without credentials/u);
+  });
+
+  it("normalizes only a trailing slash", () => {
+    expect(configuredApiBaseUrl({ SUPERBOARD_API_URL: "https://api.example.test/" })).toBe(
+      "https://api.example.test",
+    );
+  });
+
+  it("accepts the legacy variable only as a migration fallback", () => {
+    expect(configuredApiBaseUrl({ OPENGROW_API_URL: "https://legacy.example.test" })).toBe(
+      "https://legacy.example.test",
+    );
+  });
+
+  it("rejects paths, queries, and fragments so requests cannot escape the selected origin", () => {
+    for (const value of [
+      "https://api.example.test/v1",
+      "https://api.example.test?target=other",
+      "https://api.example.test/#fragment",
+    ]) {
+      expect(() => configuredApiBaseUrl({ SUPERBOARD_API_URL: value })).toThrow(/origin only/u);
+    }
+  });
 });
 
 // --- request() core behavior ---
@@ -51,6 +91,16 @@ describe("request: success", () => {
     const [url, opts] = mockFetch.mock.calls[0];
     expect(url).toBe("https://api.test.com/api/v1/mcp/status");
     expect(opts.headers.Authorization).toBe("Bearer tok123");
+  });
+
+  it("requests the administrator platform status through the MCP boundary", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ status: "ok" }));
+
+    await getPlatformStatus("operator-token");
+
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url).toBe("https://api.test.com/api/v1/mcp/platform-status");
+    expect(opts.headers.Authorization).toBe("Bearer operator-token");
   });
 
   it("serializes body as JSON for POST requests", async () => {

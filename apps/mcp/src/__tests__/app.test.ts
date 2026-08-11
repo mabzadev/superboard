@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import { createApp, _ipRequests, _tokenCache } from "../app.js";
 
-const app = createApp("https://api.opengrow.io", "https://mcp.opengrow.io");
+const app = createApp("https://api.example.test", "https://mcp.example.test");
 
 // Build a Response-like object for mocking global fetch.
 function mockFetchResponse(status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -40,8 +40,8 @@ describe("GET /.well-known/oauth-protected-resource", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      resource: "https://mcp.opengrow.io",
-      authorization_servers: ["https://api.opengrow.io"],
+      resource: "https://mcp.example.test",
+      authorization_servers: ["https://api.example.test"],
       scopes_supported: ["mcp:full"],
     });
   });
@@ -65,7 +65,7 @@ describe("auth middleware", () => {
     const res = await request(app).post("/mcp").send({});
 
     expect(res.headers["www-authenticate"]).toBe(
-      'Bearer resource_metadata="https://mcp.opengrow.io/.well-known/oauth-protected-resource"',
+      'Bearer resource_metadata="https://mcp.example.test/.well-known/oauth-protected-resource"',
     );
   });
 
@@ -97,7 +97,7 @@ describe("auth middleware", () => {
         { error: "Invalid, revoked, or expired token" },
         {
           "WWW-Authenticate":
-            'Bearer resource_metadata="https://api.opengrow.io/.well-known/oauth-protected-resource", scope="mcp:full", error="invalid_token", error_description="Invalid, revoked, or expired token"',
+            'Bearer resource_metadata="https://api.example.test/.well-known/oauth-protected-resource", scope="mcp:full", error="invalid_token", error_description="Invalid, revoked, or expired token"',
         },
       ),
     );
@@ -134,7 +134,7 @@ describe("auth middleware", () => {
 
     expect(fetchSpy).toHaveBeenCalled();
     const [url, opts] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe("https://api.opengrow.io/api/v1/mcp/validate");
+    expect(String(url)).toBe("https://api.example.test/api/v1/mcp/validate");
     expect((opts as RequestInit).headers).toMatchObject({ Authorization: "Bearer some-token" });
   });
 
@@ -173,20 +173,18 @@ describe("auth middleware", () => {
 });
 
 describe("GET /mcp", () => {
-  it("returns 405 — SSE resumption not supported in stateless mode", async () => {
-    const res = await request(app).get("/mcp");
+  it("authenticates then returns the stateless SDK response", async () => {
+    const res = await request(app).get("/mcp").set("Authorization", "Bearer valid-token");
 
     expect(res.status).toBe(405);
-    expect(res.body.error).toContain("not supported");
   });
 });
 
 describe("DELETE /mcp", () => {
-  it("returns 405 — session cleanup not supported in stateless mode", async () => {
-    const res = await request(app).delete("/mcp");
+  it("authenticates then returns the stateless SDK response", async () => {
+    const res = await request(app).delete("/mcp").set("Authorization", "Bearer valid-token");
 
     expect(res.status).toBe(405);
-    expect(res.body.error).toContain("not supported");
   });
 });
 

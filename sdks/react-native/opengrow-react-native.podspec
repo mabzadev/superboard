@@ -1,6 +1,7 @@
 require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
+native_contract = JSON.parse(File.read(File.join(__dir__, "plugin", "native-contract.json")))
 folly_compiler_flags = '-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 -Wno-comma -Wno-shorten-64-to-32'
 
 Pod::Spec.new do |s|
@@ -12,7 +13,7 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => min_ios_version_supported }
-  s.source       = { :git => "https://github.com/mbzadev/opengrow.git", :tag => "sdk-react-native-v#{s.version}" }
+  s.source       = { :git => "https://github.com/mbzadev/superboard-platform.git", :tag => "sdk-react-native-v#{s.version}" }
 
   s.swift_version = '5.0'
   if ENV['RCT_NEW_ARCH_ENABLED'] == '1'
@@ -22,7 +23,10 @@ Pod::Spec.new do |s|
       s.source_files = "ios/code/**/*.{h,m,mm,cpp,swift}"
   end
 
-  s.dependency "OpenGrow", '~> 1.0'
+  # CocoaPods podspecs cannot attach an external source to a dependency. The
+  # app Podfile (injected by the Expo plugin, or configured manually) pins the
+  # reviewed podspec from native_contract["ios"]["releaseRef"].
+  s.dependency native_contract["ios"]["packageName"], "= #{native_contract["ios"]["version"]}"
   
   # Use install_modules_dependencies helper to install the dependencies if React Native version >=0.71.0.
   # See https://github.com/facebook/react-native/blob/febf6b7f33fdb4904669f99d795eba4c0f95d7bf/scripts/cocoapods/new_architecture.rb#L79.

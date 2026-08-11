@@ -1,0 +1,320 @@
+{
+  "$schema": "../../schemas/flutterflow-migration-plan.schema.json",
+  "schemaVersion": 1,
+  "application": "vocostar",
+  "target": "vocostar",
+  "environment": "production",
+  "sourceEnvironment": "SUPERBOARD_CLIENT_SOURCE_VOCOSTAR",
+  "snapshotManifest": "config/flutterflow-sources/vocostar.json",
+  "surfaceManifest": "config/flutterflow-custom-code.json",
+  "phases": [
+    {
+      "id": "identity-runtime",
+      "order": 1,
+      "title": "Identity session and application runtime policy",
+      "dependsOn": []
+    },
+    {
+      "id": "files-notifications",
+      "order": 2,
+      "title": "Common file and notification authorities",
+      "dependsOn": ["identity-runtime"]
+    },
+    {
+      "id": "billing",
+      "order": 3,
+      "title": "Server-verified purchases and entitlements",
+      "dependsOn": ["identity-runtime"]
+    },
+    {
+      "id": "onboardings-marketing",
+      "order": 4,
+      "title": "Versioned onboarding and marketing consent",
+      "dependsOn": ["identity-runtime", "billing"]
+    },
+    {
+      "id": "custom-jobs",
+      "order": 5,
+      "title": "VocoStar voice and media custom jobs",
+      "dependsOn": ["files-notifications", "billing"]
+    },
+    {
+      "id": "support",
+      "order": 6,
+      "title": "SuperBoard Support client cutover",
+      "dependsOn": ["identity-runtime", "files-notifications"]
+    },
+    {
+      "id": "quality",
+      "order": 7,
+      "title": "FlutterFlow diagnostics and native acceptance",
+      "dependsOn": ["onboardings-marketing", "custom-jobs", "support"]
+    }
+  ],
+  "workItems": [
+    {
+      "id": "identity-session",
+      "phase": "identity-runtime",
+      "scope": "common-adoption",
+      "authority": "identity",
+      "title": "Replace persisted VocoStar tokens with the common Identity session",
+      "convergenceChecks": [
+        "persisted-access-token-removed",
+        "persisted-refresh-token-removed",
+        "legacy-token-expiration-removed",
+        "identity-secure-session-wired",
+        "identity-authority-wired",
+        "logout-authority-wired",
+        "account-erasure-authority-wired",
+        "legacy-auth-logout-endpoint-removed",
+        "direct-account-cleanup-removed"
+      ],
+      "legacy": [
+        "authAccessToken",
+        "authRefreshToken",
+        "authExpiresIn",
+        "userAuthenticate and userRefreshAuth"
+      ],
+      "replacementSymbols": [
+        "superboardApplicationInitialize",
+        "superboardApplicationRestoreSessionJson",
+        "superboardApplicationCurrentSessionJson",
+        "superboardApplicationAccessToken",
+        "superboardApplicationSignInProviderJson",
+        "superboardApplicationSignInPasswordJson",
+        "superboardApplicationSignInAnonymousJson",
+        "superboardApplicationRefreshJson",
+        "superboardApplicationLogoutJson",
+        "superboardApplicationDeleteAccountJson",
+        "superboardPurchaseLogout"
+      ],
+      "acceptance": [
+        "Anonymous, email, Google and Apple sessions survive restart through secure native storage",
+        "No access or refresh token is declared in persistent FlutterFlow App State",
+        "Logout invalidates the server session and clears Purchases plus every transient FlutterFlow bridge",
+        "Account deletion enters the durable multi-module erasure workflow before local credentials are cleared",
+        "The legacy auth Logout endpoint and direct /clean/user call are absent"
+      ]
+    },
+    {
+      "id": "runtime-policy",
+      "phase": "identity-runtime",
+      "scope": "common-adoption",
+      "authority": "app",
+      "title": "Replace application maintenance and update checks with App runtime policy",
+      "convergenceChecks": ["runtime-policy-wired"],
+      "legacy": ["appCheckMaintenance", "appCheckUpdate", "/settings/active"],
+      "replacementSymbols": ["superboardApplicationRuntimePolicyJson"],
+      "acceptance": [
+        "Minimum and recommended versions are loaded before protected navigation",
+        "Maintenance and update URLs come from the selected SuperBoard target"
+      ]
+    },
+    {
+      "id": "files",
+      "phase": "files-notifications",
+      "scope": "common-adoption",
+      "authority": "files",
+      "title": "Move uploads, downloads and deletion to the common Files authority",
+      "convergenceChecks": [
+        "direct-files-origin-removed",
+        "legacy-media-upload-removed",
+        "legacy-media-remove-removed",
+        "files-authority-wired"
+      ],
+      "legacy": ["file.vocostar.com", "userMediaUpload", "userMediaRemove"],
+      "replacementSymbols": [
+        "superboardApplicationListFilesJson",
+        "superboardApplicationUploadFileJson",
+        "superboardApplicationDownloadFile",
+        "superboardApplicationDeleteFileJson"
+      ],
+      "acceptance": [
+        "Upload, download, list and delete use only the target Files origin",
+        "Configured MIME and byte limits are enforced before object persistence",
+        "Custom jobs reference only owner-scoped uploaded file identifiers"
+      ]
+    },
+    {
+      "id": "notifications",
+      "phase": "files-notifications",
+      "scope": "common-adoption",
+      "authority": "notifications",
+      "title": "Register push devices through the common authenticated notification contract",
+      "convergenceChecks": [
+        "notifications-authority-wired",
+        "legacy-notification-action-removed",
+        "persisted-notification-token-removed"
+      ],
+      "legacy": ["userFCMToken", "userFcmToken"],
+      "replacementSymbols": ["superboardSetPushToken"],
+      "acceptance": [
+        "APNs and FCM device registration is project and user scoped",
+        "The device token remains transient and the legacy registration action is absent",
+        "A real notification is delivered, displayed and marked read on device"
+      ]
+    },
+    {
+      "id": "billing",
+      "phase": "billing",
+      "scope": "common-adoption",
+      "authority": "billing",
+      "title": "Remove direct RevenueCat and client entitlement authority",
+      "convergenceChecks": [
+        "direct-revenuecat-login-removed",
+        "client-entitlement-activation-removed",
+        "billing-authority-wired"
+      ],
+      "legacy": [
+        "userLoginRevenueCat",
+        "userSubscriptionActivate",
+        "locally authoritative userPremium and userCredits"
+      ],
+      "replacementSymbols": [
+        "superboardPurchaseLogin",
+        "superboardPurchase",
+        "superboardRestore",
+        "superboardGetCustomerInfoJson",
+        "superboardGetVirtualCurrenciesJson"
+      ],
+      "acceptance": [
+        "Apple and Google sandbox purchases are durably verified before Store completion",
+        "Restore and entitlement state come from signed server CustomerInfo",
+        "Job credit consumption is atomic on the server"
+      ]
+    },
+    {
+      "id": "onboardings",
+      "phase": "onboardings-marketing",
+      "scope": "common-adoption",
+      "authority": "onboardings",
+      "title": "Load and measure the VocoStar onboarding through the common engine",
+      "convergenceChecks": [
+        "onboardings-authority-wired",
+        "legacy-onboarding-pages-removed",
+        "legacy-onboarding-loader-removed"
+      ],
+      "legacy": [
+        "getAppOnBording",
+        "getAppOnBoarding",
+        "appBoard",
+        "appQuestions"
+      ],
+      "replacementSymbols": ["SuperBoardOnboarding"],
+      "acceptance": [
+        "Screens 00 through 05 resolve from one versioned onboarding definition",
+        "Every legacy entry navigation targets the reusable SuperBoard onboarding page and the six copied pages are absent",
+        "Progression and completion events are visible in the back office",
+        "The final paywall resolves through Paywalls and Billing"
+      ]
+    },
+    {
+      "id": "marketing",
+      "phase": "onboardings-marketing",
+      "scope": "common-adoption",
+      "authority": "marketing",
+      "title": "Use the authenticated common marketing preference and consent contract",
+      "convergenceChecks": ["marketing-authority-wired"],
+      "legacy": ["application-local consent and notification preference state"],
+      "replacementSymbols": [
+        "superboardApplicationMarketingPreferencesJson",
+        "superboardApplicationUpdateMarketingConsentJson"
+      ],
+      "acceptance": [
+        "Consent and suppression are project and user scoped",
+        "Newsletter opt-in, opt-out and transactional mail remain independently observable"
+      ]
+    },
+    {
+      "id": "custom-jobs",
+      "phase": "custom-jobs",
+      "scope": "application-custom",
+      "authority": "custom-jobs",
+      "title": "Route VocoStar voice and media processing through authenticated custom jobs",
+      "convergenceChecks": [
+        "direct-workers-dev-removed",
+        "direct-vocostar-websocket-origin-removed",
+        "custom-jobs-authority-wired"
+      ],
+      "legacy": [
+        "direct workers.dev URL",
+        "direct api.vocostar.com WebSocket URL",
+        "post User Vocals",
+        "post User Media",
+        "userMediaConverter",
+        "userMediaIndex"
+      ],
+      "replacementSymbols": [
+        "superboardApplicationCreateCustomJobJson",
+        "superboardApplicationListCustomJobsJson",
+        "superboardApplicationGetCustomJobJson",
+        "superboardApplicationCancelCustomJobJson"
+      ],
+      "acceptance": [
+        "vocostar.voice.clone and vocostar.media.convert are capability allowlisted",
+        "Project and owner identity are derived server-side",
+        "Create, list, detail, owner-scoped cancellation, idempotency and progress are proven in the application",
+        "Failed-job retry is restricted to authenticated Grow back-office administrators"
+      ]
+    },
+    {
+      "id": "support",
+      "phase": "support",
+      "scope": "common-adoption",
+      "authority": "support",
+      "title": "Replace the complete legacy Chatwoot client group with SuperBoard Support",
+      "convergenceChecks": [
+        "legacy-support-origin-removed",
+        "legacy-support-init-removed",
+        "legacy-support-fetch-removed",
+        "legacy-support-send-removed",
+        "legacy-support-widget-removed",
+        "support-authority-wired"
+      ],
+      "legacy": [
+        "sup.vocostar.com",
+        "supportInit",
+        "supportFetchMessages",
+        "supportSendMessage",
+        "SupportChatWidget",
+        "persistent Chatwoot contact, conversation and pubsub state"
+      ],
+      "replacementSymbols": [
+        "superboardSupportInitializeAuthenticated",
+        "superboardSupportListConversationsJson",
+        "superboardSupportMessagesJson",
+        "superboardSupportSendAdvanced",
+        "superboardSupportUploadAttachmentJson",
+        "superboardSupportConnectRealtime",
+        "superboardSupportMarkRead"
+      ],
+      "acceptance": [
+        "Contacts, conversations, messages and attachments reconcile with the exported source",
+        "Realtime reconnect, unread state, typing and CSAT work without a Chatwoot token",
+        "Rollback and retention are proven before the legacy source is retired"
+      ]
+    },
+    {
+      "id": "flutterflow-quality",
+      "phase": "quality",
+      "scope": "client-quality",
+      "authority": "flutterflow",
+      "title": "Clear FlutterFlow validation errors and run native acceptance",
+      "convergenceChecks": [
+        "flutterflow-validation-errors-cleared",
+        "flutterflow-diagnostics-cleared"
+      ],
+      "legacy": [
+        "R15 and R18 diagnostics",
+        "disabled critical actions",
+        "invalid widget and local-state configuration"
+      ],
+      "replacementSymbols": [],
+      "acceptance": [
+        "FlutterFlow validation errors are zero and remaining SDK warnings are reviewed",
+        "CameraRecord and AudioRecord compile on iOS and Android",
+        "The complete production acceptance matrix passes on physical or hosted devices"
+      ]
+    }
+  ]
+}

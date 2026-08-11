@@ -24,7 +24,7 @@ const RedirectRulesGateDialog = ({
   const handleGoToRules = () => {
     onOpenChange(false);
     const query = searchParams.toString();
-    router.push(`/link_behaviour/redirect_rules${query ? `?${query}` : ""}`);
+    router.push(`/dynamic-links/redirect-rules${query ? `?${query}` : ""}`);
   };
 
   return (

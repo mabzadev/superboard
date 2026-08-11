@@ -13,7 +13,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { IS_ENTERPRISE } from "@/lib/edition";
 
 const renderToolTipContent = (key: string) => {
   let text = "";
@@ -194,26 +193,22 @@ export const createCampaignsTableColumns = (
       );
     },
   },
-  ...(IS_ENTERPRISE
-    ? [
-        {
-          accessorKey: "revenue",
-          header: () =>
-            renderSortableHeader("Revenue", "revenue", setSort, sort),
-          cell: ({ row }: { row: { original: Campaign } }) => {
-            return (
-              <div>
-                <p>
-                  {row.original.total_revenue
-                    ? formatCurrencyFromCents(row.original.total_revenue)
-                    : "-"}
-                </p>
-              </div>
-            );
-          },
-        } satisfies AccessorKeyColumnDef<Campaign>,
-      ]
-    : []),
+  {
+    accessorKey: "revenue",
+    header: () =>
+      renderSortableHeader("Revenue", "revenue", setSort, sort),
+    cell: ({ row }: { row: { original: Campaign } }) => {
+      return (
+        <div>
+          <p>
+            {row.original.total_revenue
+              ? formatCurrencyFromCents(row.original.total_revenue)
+              : "-"}
+          </p>
+        </div>
+      );
+    },
+  },
   {
     accessorKey: "date",
     header: () => renderSortableHeader("Date", "created_at", setSort, sort),

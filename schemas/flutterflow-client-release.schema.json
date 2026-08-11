@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://board.mbza.dev/schemas/flutterflow-client-release.schema.json",
+  "title": "SuperBoard FlutterFlow client convergence release receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "status",
+    "application",
+    "project",
+    "flutterflowCommitId",
+    "sourceSnapshotSha256",
+    "convergencePolicySha256",
+    "sourceEvidence",
+    "checks",
+    "diagnostics",
+    "issuedAt"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "status": { "const": "accepted" },
+    "application": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "flutterflowCommitId": { "type": "string", "minLength": 1 },
+    "sourceSnapshotSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "convergencePolicySha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "sha256"],
+      "properties": {
+        "files": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "passed", "blocked"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 1 },
+        "passed": { "type": "integer", "minimum": 1 },
+        "blocked": { "const": 0 }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "validationErrors"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "validationErrors": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "issuedAt": { "type": "string", "minLength": 1 }
+  }
+}

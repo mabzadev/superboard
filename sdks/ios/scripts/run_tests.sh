@@ -64,6 +64,7 @@ fi
 xcodebuild test \
     -scheme OpenGrow \
     -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+    -parallel-testing-enabled NO \
     $ONLY_TESTING \
     2>&1 | tee /dev/stderr | tail -5
 

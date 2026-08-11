@@ -40,7 +40,6 @@ describe('Google Pub/Sub authenticated push', () => {
     }), {
       instanceId: 10,
       expectedEmail: 'push@example.iam.gserviceaccount.com',
-      body: {},
     })).resolves.toEqual({
       mode: 'oidc',
       email: 'push@example.iam.gserviceaccount.com',
@@ -68,11 +67,21 @@ describe('Google Pub/Sub authenticated push', () => {
     }), {
       instanceId: 10,
       expectedEmail: 'push@example.iam.gserviceaccount.com',
-      body: {},
     })).rejects.toMatchObject({ code: 'google_pubsub_oidc_invalid', status: 401 });
   });
 
-  it('keeps the URL token as a migration-only compatibility path', async () => {
+  it('keeps the legacy token header-only during migration', async () => {
+    const env = environment(new Map(), { GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'migration-token' });
+    await expect(authenticateGooglePubSub(env, new Request(
+      'https://api.example.test/api/v1/iap/google/10',
+      { method: 'POST', headers: { 'X-Goog-Channel-Token': 'migration-token' } },
+    ), {
+      instanceId: 10,
+      expectedEmail: null,
+    })).resolves.toMatchObject({ mode: 'legacy_token', email: null });
+  });
+
+  it('rejects a legacy verification token placed in the URL', async () => {
     const env = environment(new Map(), { GOOGLE_PUBSUB_VERIFICATION_TOKEN: 'migration-token' });
     await expect(authenticateGooglePubSub(env, new Request(
       'https://api.example.test/api/v1/iap/google/10?token=migration-token',
@@ -80,8 +89,7 @@ describe('Google Pub/Sub authenticated push', () => {
     ), {
       instanceId: 10,
       expectedEmail: null,
-      body: {},
-    })).resolves.toMatchObject({ mode: 'legacy_token', email: null });
+    })).rejects.toMatchObject({ code: 'google_pubsub_authentication_invalid', status: 401 });
   });
 
   it('records release readiness only after OIDC authentication', async () => {

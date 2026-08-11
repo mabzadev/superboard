@@ -1,0 +1,21 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "opengrow-support-test",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "test",
+    "CORS_ORIGIN": "https://dashboard.example.test",
+    "QUEUE_NAME": "support-test-events",
+    "DLQ_NAME": "support-test-events-dlq",
+    "AUTH_GATEWAY_ISSUER": "https://identity.invalid",
+    "AUTH_GATEWAY_AUDIENCE": "opengrow-test",
+    "AUTH_GATEWAY_JWKS_URL": "https://identity.invalid/.well-known/jwks.json"
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "support-test", "database_id": "00000000-0000-0000-0000-000000000011", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "ATTACHMENTS", "bucket_name": "support-test" }],
+  "queues": { "producers": [{ "binding": "SUPPORT_QUEUE", "queue": "support-test-events" }] },
+  "durable_objects": { "bindings": [{ "name": "CONVERSATIONS", "class_name": "ConversationRoom" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ConversationRoom"] }]
+}

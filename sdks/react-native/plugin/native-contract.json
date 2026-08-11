@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "android": {
+    "packageName": "io.opengrow:opengrow-android-sdk",
+    "version": "1.0.3"
+  },
+  "ios": {
+    "packageName": "OpenGrow",
+    "repository": "https://github.com/mbzadev/superboard.git",
+    "releaseRef": "sdk-ios-v1.0.3",
+    "podspecUrl": "https://raw.githubusercontent.com/mbzadev/superboard/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec",
+    "version": "1.0.3"
+  }
+}

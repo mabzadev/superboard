@@ -240,7 +240,7 @@ export async function resolvePurchaseConfiguration(
   customerId: string,
   placementIdentifier: string,
   context: TargetingContext,
-  options: { growthEnabled?: boolean; paywallsEnabled?: boolean } = {},
+  options: { paywallsEnabled?: boolean } = {},
 ): Promise<ConfigurationResult> {
   let placement = await db.prepare(`
     SELECT * FROM billing_placements
@@ -264,7 +264,7 @@ export async function resolvePurchaseConfiguration(
 
   let offeringId = placement.default_offering_id ? String(placement.default_offering_id) : null;
   let ruleId: string | null = null;
-  const rules = options.growthEnabled === false ? { results: [] } : await db.prepare(`
+  const rules = await db.prepare(`
     SELECT * FROM billing_targeting_rules
     WHERE project_id = ? AND placement_id = ? AND state = 'live'
       AND (starts_at IS NULL OR datetime(starts_at) <= datetime('now'))
@@ -280,7 +280,7 @@ export async function resolvePurchaseConfiguration(
   }
 
   let assignment: Record<string, unknown> | null = null;
-  const experiments = options.growthEnabled === false ? { results: [] } : await db.prepare(`
+  const experiments = await db.prepare(`
     SELECT * FROM billing_experiments
     WHERE project_id = ? AND placement_id = ? AND state = 'running'
       AND (starts_at IS NULL OR datetime(starts_at) <= datetime('now'))

@@ -3,6 +3,11 @@ import XCTest
 
 final class EventsStorageTests: XCTestCase {
 
+    /// Disk-backed checks are intentionally slower on shared CI simulators.
+    /// Give the serial persistence queue enough time to drain so a timeout
+    /// cannot leak writes into the next test.
+    private let storageTimeout: TimeInterval = 60
+
     private var eventsCachePath: String {
         let appSupport = NSSearchPathForDirectoriesInDomains(.applicationSupportDirectory, .userDomainMask, true).first!
         return (appSupport as NSString).appendingPathComponent("com.opengrow.cache.opengrow-events-cache")
@@ -92,7 +97,7 @@ final class EventsStorageTests: XCTestCase {
 
         let addExp = expectation(description: "add")
         storage.addEvent(event: event) { addExp.fulfill() }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         let getExp = expectation(description: "get")
         storage.getEvents { events in
@@ -100,7 +105,7 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertTrue(found, "Added event should be retrievable")
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     func testTwoEventsAtSameTimestampAreBothStored() {
@@ -115,7 +120,7 @@ final class EventsStorageTests: XCTestCase {
                 addExp.fulfill()
             }
         }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         let getExp = expectation(description: "get events")
         storage.getEvents { events in
@@ -123,7 +128,7 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertEqual(ours.count, 2, "Both events at the same timestamp should be stored")
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     // MARK: - Storage: Remove
@@ -139,13 +144,13 @@ final class EventsStorageTests: XCTestCase {
                 addExp.fulfill()
             }
         }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         let removeExp = expectation(description: "remove")
         storage.removeEvent(event: event1) {
             removeExp.fulfill()
         }
-        wait(for: [removeExp], timeout: 10)
+        wait(for: [removeExp], timeout: storageTimeout)
 
         let getExp = expectation(description: "get")
         storage.getEvents { events in
@@ -155,7 +160,7 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertTrue(hasEvent2, "event2 should still exist")
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     func testRemoveNonExistentEventDoesNotCrash() {
@@ -166,7 +171,7 @@ final class EventsStorageTests: XCTestCase {
         storage.removeEvent(event: event) {
             removeExp.fulfill()
         }
-        wait(for: [removeExp], timeout: 10)
+        wait(for: [removeExp], timeout: storageTimeout)
     }
 
     // MARK: - Storage: Add or Replace
@@ -177,12 +182,12 @@ final class EventsStorageTests: XCTestCase {
 
         let addExp = expectation(description: "add")
         storage.addEvent(event: event) { addExp.fulfill() }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         event.engagementTime = 99
         let replaceExp = expectation(description: "replace")
         storage.addOrReplaceEvents(events: [event]) { replaceExp.fulfill() }
-        wait(for: [replaceExp], timeout: 10)
+        wait(for: [replaceExp], timeout: storageTimeout)
 
         let getExp = expectation(description: "get")
         storage.getEvents { events in
@@ -191,7 +196,7 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertEqual(matching.first?.engagementTime, 99)
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     // MARK: - transformEvents
@@ -202,21 +207,21 @@ final class EventsStorageTests: XCTestCase {
 
         let addExp = expectation(description: "add")
         storage.addEvent(event: event) { addExp.fulfill() }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         let transformExp = expectation(description: "transform")
         storage.transformEvents({ e in
             e.engagementTime = 55
             return e
         }) { transformExp.fulfill() }
-        wait(for: [transformExp], timeout: 10)
+        wait(for: [transformExp], timeout: storageTimeout)
 
         let getExp = expectation(description: "get")
         storage.getEvents { events in
             XCTAssertEqual(events?.first(where: { $0.id == event.id })?.engagementTime, 55)
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     func testTransformEventsDoesNotResurrectDeletedEvents() {
@@ -231,7 +236,7 @@ final class EventsStorageTests: XCTestCase {
                 addExp.fulfill()
             }
         }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         // Remove event1, then transform. Both go through the serial queue
         // so the remove completes before the transform reads.
@@ -243,7 +248,7 @@ final class EventsStorageTests: XCTestCase {
             e.link = "patched"
             return e
         }) { transformExp.fulfill() }
-        wait(for: [removeExp, transformExp], timeout: 10, enforceOrder: true)
+        wait(for: [removeExp, transformExp], timeout: storageTimeout, enforceOrder: true)
 
         let getExp = expectation(description: "get")
         storage.getEvents { events in
@@ -254,7 +259,7 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertEqual(events?.first(where: { $0.id == event2.id })?.link, "patched")
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     // MARK: - Corrupt Data Recovery
@@ -272,7 +277,7 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertNil(events, "Corrupted cache should return nil, not crash")
             exp.fulfill()
         }
-        wait(for: [exp], timeout: 10)
+        wait(for: [exp], timeout: storageTimeout)
     }
 
     func testAddEventAfterCorruptedCacheRecoversByOverwriting() {
@@ -287,7 +292,7 @@ final class EventsStorageTests: XCTestCase {
 
         let addExp = expectation(description: "add")
         storage.addEvent(event: event) { addExp.fulfill() }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         let getExp = expectation(description: "get")
         storage.getEvents { events in
@@ -295,7 +300,7 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertTrue(found, "New event should be retrievable after overwriting corrupted cache")
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     // MARK: - Concurrency
@@ -316,8 +321,9 @@ final class EventsStorageTests: XCTestCase {
                 storage.addEvent(event: event) { addGroup.leave() }
             }
         }
-        let addResult = addGroup.wait(timeout: .now() + 15)
+        let addResult = addGroup.wait(timeout: .now() + storageTimeout)
         XCTAssertEqual(addResult, .success, "All concurrent adds should complete")
+        guard addResult == .success else { return }
 
         // Verify all events are stored
         let getExp = expectation(description: "get")
@@ -328,7 +334,7 @@ final class EventsStorageTests: XCTestCase {
             }
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 
     func testConcurrentAddAndRemoveDoesNotCrash() {
@@ -341,7 +347,7 @@ final class EventsStorageTests: XCTestCase {
         storage.addEvent(event: event1) {
             storage.addEvent(event: event2) { setupExp.fulfill() }
         }
-        wait(for: [setupExp], timeout: 10)
+        wait(for: [setupExp], timeout: storageTimeout)
 
         // Concurrently: remove event1, add event3, transform all
         let event3 = Event(type: .timeSpent, createdAt: Date())
@@ -363,7 +369,7 @@ final class EventsStorageTests: XCTestCase {
             }) { group.leave() }
         }
 
-        let result = group.wait(timeout: .now() + 15)
+        let result = group.wait(timeout: .now() + storageTimeout)
         XCTAssertEqual(result, .success, "Concurrent operations should all complete")
     }
 
@@ -376,11 +382,11 @@ final class EventsStorageTests: XCTestCase {
 
         let addExp = expectation(description: "add existing")
         storage.addEvent(event: existing) { addExp.fulfill() }
-        wait(for: [addExp], timeout: 10)
+        wait(for: [addExp], timeout: storageTimeout)
 
         let replaceExp = expectation(description: "add new via replace")
         storage.addOrReplaceEvents(events: [new]) { replaceExp.fulfill() }
-        wait(for: [replaceExp], timeout: 10)
+        wait(for: [replaceExp], timeout: storageTimeout)
 
         let getExp = expectation(description: "get")
         storage.getEvents { events in
@@ -390,6 +396,6 @@ final class EventsStorageTests: XCTestCase {
             XCTAssertTrue(hasNew)
             getExp.fulfill()
         }
-        wait(for: [getExp], timeout: 10)
+        wait(for: [getExp], timeout: storageTimeout)
     }
 }

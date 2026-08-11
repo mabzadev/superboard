@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://superboard.local/schemas/platform-governance.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "product",
+    "canonicalRepository",
+    "referenceRepository",
+    "referencePath",
+    "legacyRepositories",
+    "historicalUpstream"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 2 },
+    "product": { "const": "SuperBoard" },
+    "canonicalRepository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "referenceRepository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "referencePath": { "const": "apps/reference" },
+    "legacyRepositories": {
+      "const": [
+        "mbzadev/superboard-platform",
+        "mbzadev/superboard-reference"
+      ]
+    },
+    "historicalUpstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "releasePolicy",
+        "decision",
+        "provenance",
+        "optionalComparisonCommand"
+      ],
+      "properties": {
+        "releasePolicy": { "const": "retired" },
+        "decision": { "const": "docs/ADR-001-CANONICAL-SUPERBOARD-SOURCE.md" },
+        "provenance": { "const": "docs/HISTORY_MIGRATION.md" },
+        "optionalComparisonCommand": {
+          "const": "npm run migration:parity:check"
+        }
+      }
+    }
+  }
+}

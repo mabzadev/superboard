@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { ApiError, getErrorMessage } from "../ApiError";
+import {
+  ApiError,
+  getErrorMessage,
+  parseApiErrorPayload,
+} from "../ApiError";
 
 describe("ApiError", () => {
   it("creates an error with message and status", () => {
@@ -48,5 +52,41 @@ describe("getErrorMessage", () => {
 
   it("returns default message for unknown status codes", () => {
     expect(getErrorMessage(418)).toContain("unexpected error");
+  });
+});
+
+describe("parseApiErrorPayload", () => {
+  it("reads the stable nested public error contract", () => {
+    expect(
+      parseApiErrorPayload({
+        error: {
+          code: "legacy_project_id_invalid",
+          message: "A valid legacy project ID is required",
+          retryable: false,
+          request_id: "request-1",
+        },
+      })
+    ).toEqual({
+      code: "legacy_project_id_invalid",
+      message: "A valid legacy project ID is required",
+    });
+  });
+
+  it("keeps compatibility with flat API errors", () => {
+    expect(
+      parseApiErrorPayload({
+        code: "invalid_request",
+        message: "Invalid request",
+      })
+    ).toEqual({ code: "invalid_request", message: "Invalid request" });
+    expect(parseApiErrorPayload({ error: "Unauthorized" })).toEqual({
+      code: undefined,
+      message: "Unauthorized",
+    });
+  });
+
+  it("fails safely for non-object responses", () => {
+    expect(parseApiErrorPayload(null)).toEqual({});
+    expect(parseApiErrorPayload("invalid")).toEqual({});
   });
 });

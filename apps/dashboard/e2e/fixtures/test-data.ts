@@ -5,20 +5,34 @@ export const TEST_USER = {
   id: "user-test-id-001",
 };
 
+const TEST_INSTANCE_ID = "inst-test-001";
+
+export const TEST_PROJECT = {
+  id: "proj-test-001",
+  name: "Test Project",
+  domain: "test.opengrow.io",
+  instance_id: TEST_INSTANCE_ID,
+  environment: "production",
+};
+
 export const TEST_INSTANCE = {
-  id: "inst-test-001",
+  id: TEST_INSTANCE_ID,
   name: "Test Project",
   updated_at: new Date().toISOString(),
   created_at: new Date().toISOString(),
   revenue_collection_enabled: false,
   get_started_dismissed: true,
-};
-
-export const TEST_PROJECT = {
-  id: "proj-test-001",
-  name: "production",
-  instance_id: TEST_INSTANCE.id,
-  environment: "production",
+  projects: [TEST_PROJECT],
+  production: TEST_PROJECT,
+  test: {
+    ...TEST_PROJECT,
+    id: "proj-test-002",
+    name: "Test Project (Test)",
+    environment: "test",
+  },
+  api_key: "e2e-api-key",
+  hash_id: "e2e-project",
+  uri_scheme: "opengrow-e2e",
 };
 
 export const TEST_LINK = {
@@ -40,14 +54,6 @@ export const TEST_CAMPAIGN = {
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   archived: false,
-};
-
-export const TEST_SUBSCRIPTION = {
-  id: "sub-test-001",
-  plan_name: "Growth",
-  status: "active",
-  current_maus: 500,
-  total_maus: 10000,
 };
 
 export const MOCK_TOKENS = {

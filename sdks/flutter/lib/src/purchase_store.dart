@@ -1,6 +1,6 @@
 import 'package:in_app_purchase/in_app_purchase.dart';
 
-abstract interface class OpenGrowPurchaseStore {
+abstract interface class SuperBoardPurchaseStore {
   Stream<List<PurchaseDetails>> get purchaseStream;
 
   Future<bool> isAvailable();
@@ -19,8 +19,8 @@ abstract interface class OpenGrowPurchaseStore {
   Future<void> restorePurchases({String? applicationUserName});
 }
 
-class FlutterOpenGrowPurchaseStore implements OpenGrowPurchaseStore {
-  FlutterOpenGrowPurchaseStore([InAppPurchase? purchases])
+class FlutterSuperBoardPurchaseStore implements SuperBoardPurchaseStore {
+  FlutterSuperBoardPurchaseStore([InAppPurchase? purchases])
     : _purchases = purchases ?? InAppPurchase.instance;
 
   final InAppPurchase _purchases;
@@ -56,3 +56,8 @@ class FlutterOpenGrowPurchaseStore implements OpenGrowPurchaseStore {
   Future<void> restorePurchases({String? applicationUserName}) =>
       _purchases.restorePurchases(applicationUserName: applicationUserName);
 }
+
+@Deprecated('Use SuperBoardPurchaseStore.')
+typedef OpenGrowPurchaseStore = SuperBoardPurchaseStore;
+@Deprecated('Use FlutterSuperBoardPurchaseStore.')
+typedef FlutterOpenGrowPurchaseStore = FlutterSuperBoardPurchaseStore;

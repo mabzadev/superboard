@@ -101,8 +101,8 @@ export const topPerformingLinksColumns: AccessorKeyColumnDef<DashboardLink>[] =
           </TooltipTrigger>
           <TooltipContent>
             <p>
-              This represents the number of app opens that occurred from a opengrow
-              link.
+              This represents the number of app opens that occurred from a
+              SuperBoard link.
             </p>
           </TooltipContent>
         </Tooltip>

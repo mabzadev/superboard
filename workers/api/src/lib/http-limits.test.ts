@@ -1,24 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { readTextLimited } from './http-limits';
+import { readJsonObjectLimited, readTextLimited } from './http-limits';
 
-describe('readTextLimited', () => {
-  it('reads a bounded response body', async () => {
-    await expect(readTextLimited(new Response('billing-ok'), 64)).resolves.toBe('billing-ok');
+describe('bounded HTTP body readers', () => {
+  it('reads a bounded JSON object', async () => {
+    await expect(readJsonObjectLimited(
+      Response.json({ status: 'ok' }),
+      128,
+    )).resolves.toEqual({ status: 'ok' });
   });
 
-  it('rejects streamed bodies after crossing the limit', async () => {
-    const stream = new ReadableStream<Uint8Array>({
+  it('rejects a chunked body after the byte limit even without content-length', async () => {
+    const response = new Response(new ReadableStream({
       start(controller) {
         controller.enqueue(new TextEncoder().encode('1234'));
         controller.enqueue(new TextEncoder().encode('5678'));
         controller.close();
       },
+    }));
+    await expect(readTextLimited(response, 7)).rejects.toMatchObject({
+      code: 'body_too_large',
+      status: 413,
     });
-    await expect(readTextLimited(new Response(stream), 6)).rejects.toThrow(/too large/);
   });
 
-  it('rejects an announced oversized body without reading it', async () => {
-    const response = new Response('x', { headers: { 'Content-Length': '100' } });
-    await expect(readTextLimited(response, 10)).rejects.toMatchObject({ status: 413 });
+  it('does not treat arrays or primitives as provider response objects', async () => {
+    await expect(readJsonObjectLimited(new Response('[1,2,3]'), 128))
+      .resolves.toEqual({});
+    await expect(readJsonObjectLimited(new Response('null'), 128))
+      .resolves.toEqual({});
   });
 });

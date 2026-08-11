@@ -3,6 +3,8 @@ import { Env } from '../types';
 import { getOrCreateRedirectConfig, parseJsonObject, resolveProject } from '../lib/db';
 import { runMaintenance } from '../lib/maintenance';
 import { decryptCredential, encryptSecret, timingSafeEqual } from '../lib/secrets';
+import { domainError } from '../lib/domain-modules';
+import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const admin = new Hono<{ Bindings: Env }>();
 
@@ -22,29 +24,7 @@ async function adminDenied(c: any): Promise<Response | null> {
 }
 
 async function readBody(c: any): Promise<Record<string, any>> {
-  const type = c.req.header('content-type') || '';
-  if (type.includes('multipart/form-data')) return await c.req.parseBody().catch(() => ({}));
-  if (type.includes('application/json')) return await c.req.json().catch(() => ({}));
-  return await c.req.parseBody().catch(() => ({}));
-}
-
-function toBool(value: unknown, fallback = true): boolean {
-  if (value === undefined || value === null || value === '') return fallback;
-  return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true';
-}
-
-function serializeSubscription(row: any) {
-  return {
-    id: row.id,
-    instance_id: Number(row.instance_id),
-    start_date: row.start_date || row.starts_at,
-    end_date: row.end_date || row.ends_at,
-    total_maus: Number(row.total_maus || 0),
-    active: toBool(row.active, row.status !== 'inactive'),
-    status: row.status || (toBool(row.active, true) ? 'active' : 'inactive'),
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
+  return readRequestObjectLimited(c.req.raw, 10 * 1024 * 1024);
 }
 
 function csvRows(csv: string): Record<string, string>[] {
@@ -100,80 +80,95 @@ async function projectByAdminParam(db: D1Database, raw: unknown): Promise<Projec
   return db.prepare('SELECT * FROM projects WHERE id = ? LIMIT 1').bind(value).first<ProjectRecord>();
 }
 
-async function domainForProject(db: D1Database, projectId: number): Promise<number> {
+function requestId(c: any): string {
+  const provided = String(c.req.header('X-Request-Id') || '').trim();
+  return /^[A-Za-z0-9._:-]{1,128}$/.test(provided) ? provided : crypto.randomUUID();
+}
+
+async function cutoverDenied(c: any): Promise<Response | null> {
+  const expected = c.env.OPENGROW_CUTOVER_TOKEN;
+  const authorization = String(c.req.header('Authorization') || '').trim();
+  const bearer = /^Bearer\s+(.+)$/i.exec(authorization)?.[1]?.trim();
+  if (!expected || !bearer || !await timingSafeEqual(expected, bearer)) {
+    return domainError(requestId(c), 403, 'cutover_forbidden', 'Invalid cutover credentials');
+  }
+  return null;
+}
+
+async function cutoverProject(db: D1Database, raw: string): Promise<ProjectRecord | null> {
+  const match = /^(\d+)-(prod|test)$/.exec(raw);
+  if (!match) return null;
+  return db.prepare(
+    'SELECT id, instance_id, is_test, name, identifier FROM projects WHERE instance_id = ? AND is_test = ? LIMIT 1'
+  ).bind(Number(match[1]), match[2] === 'test' ? 1 : 0).first<ProjectRecord>();
+}
+
+admin.get('/module-cutover/maintenance/:projectRef', async (c) => {
+  const denied = await cutoverDenied(c);
+  if (denied) return denied;
+  const id = requestId(c);
+  const project = await cutoverProject(c.env.DB, c.req.param('projectRef'));
+  if (!project) return domainError(id, 404, 'project_not_found', 'Project was not found');
+  const state = await c.env.DB.prepare(
+    'SELECT enabled, window_id, reason, updated_by, updated_at FROM module_cutover_maintenance WHERE project_id = ? LIMIT 1'
+  ).bind(project.id).first<Record<string, unknown>>();
+  return c.json({
+    data: {
+      project_ref: c.req.param('projectRef'),
+      project_id: project.id,
+      enabled: Number(state?.enabled ?? 0) === 1,
+      window_id: state?.window_id ?? null,
+      reason: state?.reason ?? null,
+      updated_by: state?.updated_by ?? null,
+      updated_at: state?.updated_at ?? null,
+    },
+  }, 200, { 'X-Request-Id': id, 'Cache-Control': 'no-store' });
+});
+
+admin.put('/module-cutover/maintenance/:projectRef', async (c) => {
+  const denied = await cutoverDenied(c);
+  if (denied) return denied;
+  const id = requestId(c);
+  const project = await cutoverProject(c.env.DB, c.req.param('projectRef'));
+  if (!project) return domainError(id, 404, 'project_not_found', 'Project was not found');
+  const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+  if (!body || typeof body.enabled !== 'boolean') {
+    return domainError(id, 422, 'maintenance_state_invalid', 'enabled must be a boolean');
+  }
+  const windowId = String(body.window_id ?? '').trim();
+  const reason = String(body.reason ?? '').trim();
+  if (body.enabled && (!windowId || !reason)) {
+    return domainError(id, 422, 'maintenance_context_required', 'window_id and reason are required when enabling maintenance');
+  }
+  if (windowId.length > 128 || reason.length > 1_000) {
+    return domainError(id, 422, 'maintenance_context_invalid', 'Maintenance context is too long');
+  }
+  const actor = 'admin_api';
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      INSERT INTO module_cutover_maintenance (project_id, enabled, window_id, reason, updated_by, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(project_id) DO UPDATE SET enabled=excluded.enabled, window_id=excluded.window_id,
+        reason=excluded.reason, updated_by=excluded.updated_by, updated_at=excluded.updated_at
+    `).bind(project.id, body.enabled ? 1 : 0, windowId || null, reason || null, actor),
+    c.env.DB.prepare(`
+      INSERT INTO module_cutover_audit (id, project_id, action, actor, details_json)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(crypto.randomUUID(), project.id, body.enabled ? 'maintenance.enabled' : 'maintenance.disabled', actor, JSON.stringify({ window_id: windowId || null, reason: reason || null, request_id: id })),
+  ]);
+  return c.json({ data: { project_ref: c.req.param('projectRef'), project_id: project.id, enabled: body.enabled, window_id: windowId || null, reason: reason || null } }, 200, { 'X-Request-Id': id, 'Cache-Control': 'no-store' });
+});
+
+async function domainForProject(db: D1Database, projectId: number, shortlinkDomain: string): Promise<number> {
   const existing = await db.prepare('SELECT id FROM domains WHERE project_id = ? ORDER BY id ASC LIMIT 1')
     .bind(projectId).first<{ id: number }>();
   if (existing) return existing.id;
   const created = await db.prepare(
     'INSERT INTO domains (domain, project_id) VALUES (?, ?) RETURNING id'
-  ).bind('go.vocostar.com', projectId).first<{ id: number }>();
+  ).bind(shortlinkDomain, projectId).first<{ id: number }>();
   if (!created) throw new Error('Unable to create project domain');
   return created.id;
 }
-
-admin.post('/create_enterprise_subscription', async (c) => {
-  const denied = await adminDenied(c);
-  if (denied) return denied;
-  const body = await readBody(c);
-  const missing = ['start_date', 'end_date', 'total_maus'].filter((key) => body[key] === undefined || body[key] === null || body[key] === '');
-  if (missing.length) return c.json({ error: `Missing required fields: ${missing.join(', ')}` }, 422);
-
-  const instance = await c.env.DB.prepare('SELECT id FROM instances WHERE id = ? LIMIT 1').bind(body.instance_id).first<{ id: number }>();
-  if (!instance) return c.json({ error: 'Instance not found' }, 404);
-
-  const existing = await c.env.DB.prepare(
-    "SELECT id FROM enterprise_subscriptions WHERE instance_id = ? AND (active = 1 OR status = 'active') LIMIT 1"
-  ).bind(instance.id).first();
-  if (existing) return c.json({ error: 'Instance already has an active subscription' }, 422);
-
-  const active = toBool(body.active, true);
-  const row = await c.env.DB.prepare(`
-    INSERT INTO enterprise_subscriptions (
-      instance_id, start_date, end_date, total_maus, active,
-      starts_at, ends_at, status, metadata, created_at, updated_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', datetime('now'), datetime('now'))
-    RETURNING *
-  `).bind(
-    instance.id,
-    String(body.start_date),
-    String(body.end_date),
-    Number(body.total_maus),
-    active ? 1 : 0,
-    String(body.start_date),
-    String(body.end_date),
-    active ? 'active' : 'inactive',
-  ).first<any>();
-
-  return c.json({ message: 'Enterprise Subscription created successfully', subscription: serializeSubscription(row) }, 201);
-});
-
-admin.patch('/update_enterprise_subscription', async (c) => {
-  const denied = await adminDenied(c);
-  if (denied) return denied;
-  const body = await readBody(c);
-  const current = await c.env.DB.prepare('SELECT * FROM enterprise_subscriptions WHERE id = ? LIMIT 1').bind(body.id).first<any>();
-  if (!current) return c.json({ error: 'Enterprise Subscription not found' }, 404);
-  const active = body.active === undefined ? toBool(current.active, current.status !== 'inactive') : toBool(body.active, true);
-  await c.env.DB.prepare(`
-    UPDATE enterprise_subscriptions
-    SET active = ?, status = ?, start_date = COALESCE(?, start_date), end_date = COALESCE(?, end_date),
-        total_maus = COALESCE(?, total_maus), starts_at = COALESCE(?, starts_at), ends_at = COALESCE(?, ends_at),
-        updated_at = datetime('now')
-    WHERE id = ?
-  `).bind(
-    active ? 1 : 0,
-    active ? 'active' : 'inactive',
-    body.start_date || null,
-    body.end_date || null,
-    body.total_maus === undefined ? null : Number(body.total_maus),
-    body.start_date || null,
-    body.end_date || null,
-    body.id,
-  ).run();
-  const row = await c.env.DB.prepare('SELECT * FROM enterprise_subscriptions WHERE id = ?').bind(body.id).first<any>();
-  return c.json({ message: 'Enterprise Subscription updated successfully', subscription: serializeSubscription(row) });
-});
 
 admin.post('/migrate_firebase_links', async (c) => {
   const denied = await adminDenied(c);
@@ -187,7 +182,7 @@ admin.post('/migrate_firebase_links', async (c) => {
 
   const project = await projectByAdminParam(c.env.DB, body.project_id);
   if (!project) return c.json({ error: 'Project not found' }, 404);
-  const domainId = await domainForProject(c.env.DB, project.id);
+  const domainId = await domainForProject(c.env.DB, project.id, c.env.SHORTLINK_DOMAIN);
   const redirectConfigId = await getOrCreateRedirectConfig(c.env.DB, project.id);
   const text = typeof file === 'string' ? file : await file.text();
   const created: any[] = [];

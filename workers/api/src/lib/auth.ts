@@ -1,5 +1,6 @@
 import { Env } from '../types';
 import { signToken, verifyToken } from './crypto';
+import { tokenDigest } from './token-storage';
 
 export type AuthContext = {
   token: string;
@@ -34,8 +35,9 @@ export function oauthTokenExpired(row: { expires_in?: number | null; created_at?
 
 export async function ensureDefaultOAuthApplication(
   db: D1Database,
-  clientId = 'opengrow-vocostar',
+  clientId: string,
 ): Promise<number> {
+  if (!clientId?.trim()) throw new Error('DASHBOARD_CLIENT_ID is required');
   const existing = await db.prepare(
     'SELECT id FROM oauth_applications WHERE uid = ? LIMIT 1'
   ).bind(clientId).first<{ id: number }>();
@@ -43,9 +45,9 @@ export async function ensureDefaultOAuthApplication(
 
   const created = await db.prepare(`
     INSERT INTO oauth_applications (name, uid, secret, redirect_uri, scopes)
-    VALUES ('OpenGrow Dashboard', ?, ?, 'urn:ietf:wg:oauth:2.0:oob', 'read write')
+    VALUES ('SuperBoard Dashboard', ?, ?, 'urn:ietf:wg:oauth:2.0:oob', 'read write')
     RETURNING id
-  `).bind(clientId, crypto.randomUUID()).first<{ id: number }>();
+  `).bind(clientId, await tokenDigest(crypto.randomUUID())).first<{ id: number }>();
   if (!created) throw new Error('Unable to create OAuth application');
   return created.id;
 }
@@ -56,15 +58,25 @@ export async function issueDbBackedTokens(
   instanceId: number | null | undefined,
   applicationId: number,
   scopes = 'read write',
+  previousRefreshToken?: string | null,
 ) {
   const accessToken = await signToken({ sub: userId, instanceId: instanceId ?? null, type: 'access' }, env, '2h');
   const refreshToken = await signToken({ sub: userId, instanceId: instanceId ?? null, type: 'refresh' }, env, '7d');
 
   await env.DB.prepare(`
     INSERT INTO oauth_access_tokens (
-      resource_owner_id, application_id, token, refresh_token, expires_in, scopes
-    ) VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(userId, applicationId, accessToken, refreshToken, 7200, scopes).run();
+      resource_owner_id, application_id, token, refresh_token,
+      previous_refresh_token, expires_in, scopes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    userId,
+    applicationId,
+    await tokenDigest(accessToken),
+    await tokenDigest(refreshToken),
+    previousRefreshToken ? await tokenDigest(previousRefreshToken) : '',
+    7200,
+    scopes,
+  ).run();
 
   return {
     access_token: accessToken,
@@ -90,13 +102,14 @@ export async function getAuthContext(
 ): Promise<AuthContext | null> {
   const token = bearerToken(authHeader);
   if (!token) return null;
+  const digest = await tokenDigest(token);
 
   const stored = await env.DB.prepare(`
     SELECT resource_owner_id, application_id, expires_in, revoked_at, scopes, created_at
     FROM oauth_access_tokens
-    WHERE token = ?
+    WHERE token = ? OR token = ?
     LIMIT 1
-  `).bind(token).first<StoredOAuthToken>().catch(() => null);
+  `).bind(digest, token).first<StoredOAuthToken>().catch(() => null);
 
   if (stored) {
     if (stored.revoked_at || oauthTokenExpired(stored)) return null;

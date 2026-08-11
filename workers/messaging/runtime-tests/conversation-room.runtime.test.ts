@@ -104,6 +104,23 @@ describe('ConversationRoom in the Workers runtime', () => {
     await expect(response.json()).resolves.toMatchObject({ data: { sequence: 8 } });
   });
 
+  it('returns a stable 413 response for an oversized room message body', async () => {
+    const testEnv = env as unknown as Env;
+    await seedConversation(testEnv.DB, 'bounded-room', 11, 'user-a');
+    const room = testEnv.CONVERSATIONS.get(testEnv.CONVERSATIONS.idFromName('bounded-room'));
+    const response = await room.fetch(roomRequest('https://room.internal/messages', 'bounded-room', 'user-a', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: 'x'.repeat(16_384), client_message_id: 'oversized' }),
+    }));
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'request_too_large',
+      retryable: false,
+    });
+  });
+
   it('keeps a hibernatable WebSocket usable after Durable Object eviction', async () => {
     const testEnv = env as unknown as Env;
     await seedConversation(testEnv.DB, 'socket-room', 11, 'user-a');
@@ -139,6 +156,25 @@ describe('ConversationRoom in the Workers runtime', () => {
       conversation_id: 'socket-room',
     });
     reconnected.close(1000, 'done');
+  });
+
+  it('rejects a WebSocket whose identity token is already expired', async () => {
+    const testEnv = env as unknown as Env;
+    await seedConversation(testEnv.DB, 'expired-socket-room', 11, 'user-a');
+    const room = testEnv.CONVERSATIONS.get(testEnv.CONVERSATIONS.idFromName('expired-socket-room'));
+    const response = await room.fetch(roomRequest(
+      'https://room.internal/connect',
+      'expired-socket-room',
+      'user-a',
+      {
+        headers: {
+          Upgrade: 'websocket',
+          'x-identity-expires-at': String(Date.now() - 1_000),
+        },
+      },
+    ));
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ code: 'identity_expired' });
   });
 
   it('supports agent receipts, typing, and owned attachments through internal routes', async () => {
@@ -226,6 +262,9 @@ function roomRequest(url: string, conversationId: string, actorId: string, init:
   headers.set('x-conversation-id', conversationId);
   headers.set('x-actor-id', actorId);
   headers.set('x-actor-kind', 'user');
+  if (!headers.has('x-identity-expires-at')) {
+    headers.set('x-identity-expires-at', String(Date.now() + 60_000));
+  }
   return new Request(url, { ...init, headers });
 }
 

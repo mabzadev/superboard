@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 
-abstract interface class OpenGrowPurchaseStorage {
+abstract interface class SuperBoardPurchaseStorage {
   Future<String?> read({required String key});
 
   Future<void> write({required String key, required String? value});
@@ -12,8 +12,8 @@ abstract interface class OpenGrowPurchaseStorage {
   Future<void> delete({required String key});
 }
 
-class FlutterOpenGrowPurchaseStorage implements OpenGrowPurchaseStorage {
-  const FlutterOpenGrowPurchaseStorage([
+class FlutterSuperBoardPurchaseStorage implements SuperBoardPurchaseStorage {
+  const FlutterSuperBoardPurchaseStorage([
     this._storage = const FlutterSecureStorage(),
   ]);
 
@@ -30,8 +30,8 @@ class FlutterOpenGrowPurchaseStorage implements OpenGrowPurchaseStorage {
   Future<void> delete({required String key}) => _storage.delete(key: key);
 }
 
-class OpenGrowPurchaseOutboxEntry {
-  const OpenGrowPurchaseOutboxEntry({
+class SuperBoardPurchaseOutboxEntry {
+  const SuperBoardPurchaseOutboxEntry({
     required this.id,
     required this.store,
     required this.productId,
@@ -59,12 +59,12 @@ class OpenGrowPurchaseOutboxEntry {
 
   String get fingerprint => '$store\u0000$productId\u0000$verificationData';
 
-  OpenGrowPurchaseOutboxEntry copyWith({
+  SuperBoardPurchaseOutboxEntry copyWith({
     int? attempts,
     DateTime? nextAttemptAt,
     bool? serverValidated,
     String? transactionId,
-  }) => OpenGrowPurchaseOutboxEntry(
+  }) => SuperBoardPurchaseOutboxEntry(
     id: id,
     store: store,
     productId: productId,
@@ -92,8 +92,8 @@ class OpenGrowPurchaseOutboxEntry {
     'server_validated': serverValidated,
   };
 
-  factory OpenGrowPurchaseOutboxEntry.fromJson(Map<String, dynamic> json) =>
-      OpenGrowPurchaseOutboxEntry(
+  factory SuperBoardPurchaseOutboxEntry.fromJson(Map<String, dynamic> json) =>
+      SuperBoardPurchaseOutboxEntry(
         id: json['id'].toString(),
         store: json['store'].toString(),
         productId: json['product_id'].toString(),
@@ -109,14 +109,14 @@ class OpenGrowPurchaseOutboxEntry {
         serverValidated: json['server_validated'] == true,
       );
 
-  static OpenGrowPurchaseOutboxEntry create({
+  static SuperBoardPurchaseOutboxEntry create({
     required String store,
     required String productId,
     required String productType,
     required String verificationData,
     required bool restoring,
     String? transactionId,
-  }) => OpenGrowPurchaseOutboxEntry(
+  }) => SuperBoardPurchaseOutboxEntry(
     id: const Uuid().v4(),
     store: store,
     productId: productId,
@@ -128,17 +128,21 @@ class OpenGrowPurchaseOutboxEntry {
   );
 }
 
-class OpenGrowPurchaseOutbox {
-  OpenGrowPurchaseOutbox(this._storage);
+class SuperBoardPurchaseOutbox {
+  SuperBoardPurchaseOutbox(this._storage);
 
+  // This physical key is a compatibility boundary, not a product label. It is
+  // retained through 3.x so upgrades and rollbacks share the same durable
+  // outbox and cannot duplicate or lose an unverified purchase.
   static const _storageKey = 'opengrow.purchases.outbox.v1';
-  final OpenGrowPurchaseStorage _storage;
+  final SuperBoardPurchaseStorage _storage;
   Future<void> _tail = Future.value();
 
-  Future<List<OpenGrowPurchaseOutboxEntry>> readAll() => _locked(_readUnlocked);
+  Future<List<SuperBoardPurchaseOutboxEntry>> readAll() =>
+      _locked(_readUnlocked);
 
-  Future<OpenGrowPurchaseOutboxEntry> upsert(
-    OpenGrowPurchaseOutboxEntry entry,
+  Future<SuperBoardPurchaseOutboxEntry> upsert(
+    SuperBoardPurchaseOutboxEntry entry,
   ) => _locked(() async {
     final entries = await _readUnlocked();
     final index = entries.indexWhere(
@@ -176,7 +180,7 @@ class OpenGrowPurchaseOutbox {
     }
   }
 
-  Future<List<OpenGrowPurchaseOutboxEntry>> _readUnlocked() async {
+  Future<List<SuperBoardPurchaseOutboxEntry>> _readUnlocked() async {
     final serialized = await _storage.read(key: _storageKey);
     if (serialized == null || serialized.isEmpty) return [];
     try {
@@ -185,7 +189,7 @@ class OpenGrowPurchaseOutbox {
       return decoded
           .whereType<Map>()
           .map(
-            (value) => OpenGrowPurchaseOutboxEntry.fromJson(
+            (value) => SuperBoardPurchaseOutboxEntry.fromJson(
               value.cast<String, dynamic>(),
             ),
           )
@@ -195,9 +199,18 @@ class OpenGrowPurchaseOutbox {
     }
   }
 
-  Future<void> _writeUnlocked(List<OpenGrowPurchaseOutboxEntry> entries) =>
+  Future<void> _writeUnlocked(List<SuperBoardPurchaseOutboxEntry> entries) =>
       _storage.write(
         key: _storageKey,
         value: jsonEncode(entries.map((entry) => entry.toJson()).toList()),
       );
 }
+
+@Deprecated('Use SuperBoardPurchaseStorage.')
+typedef OpenGrowPurchaseStorage = SuperBoardPurchaseStorage;
+@Deprecated('Use FlutterSuperBoardPurchaseStorage.')
+typedef FlutterOpenGrowPurchaseStorage = FlutterSuperBoardPurchaseStorage;
+@Deprecated('Use SuperBoardPurchaseOutboxEntry.')
+typedef OpenGrowPurchaseOutboxEntry = SuperBoardPurchaseOutboxEntry;
+@Deprecated('Use SuperBoardPurchaseOutbox.')
+typedef OpenGrowPurchaseOutbox = SuperBoardPurchaseOutbox;

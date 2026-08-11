@@ -1,0 +1,116 @@
+name: Sync SuperBoard FlutterFlow applications
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Sync SuperBoard FlutterFlow library]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate application manifests and Git-owned DSL
+        run: npm run flutterflow-applications:check
+      - name: Build the application matrix from the registry
+        id: matrix
+        run: echo "value=$(node scripts/flutterflow-application-dsl.mjs --github-matrix)" >> "$GITHUB_OUTPUT"
+
+  sync:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ matrix.githubEnvironment }}
+    concurrency:
+      group: flutterflow-application-${{ matrix.id }}
+      cancel-in-progress: false
+    env:
+      FF_API_KEY: ${{ secrets.FF_API_KEY }}
+      FF_APPLICATION_PROJECT_ID: ${{ vars.FF_APPLICATION_PROJECT_ID }}
+      FF_LIBRARY_PROJECT_ID: ${{ vars.FF_LIBRARY_PROJECT_ID }}
+      SUPERBOARD_PROJECT_KEY: ${{ secrets.SUPERBOARD_PROJECT_KEY || secrets.OPENGROW_PROJECT_KEY }}
+      WORKSPACE: ${{ matrix.workspace }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1
+        with:
+          sdk: stable
+      - run: npm ci
+      - name: Revalidate application configuration
+        run: npm run flutterflow-applications:check
+      - name: Require environment-owned FlutterFlow configuration
+        run: |
+          test -n "$FF_API_KEY"
+          test -n "$FF_APPLICATION_PROJECT_ID"
+          test -n "$FF_LIBRARY_PROJECT_ID"
+          test -n "$SUPERBOARD_PROJECT_KEY"
+      - name: Require reviewed immutable SDK tags
+        run: |
+          node -e 'for (const dependency of require("./config/flutterflow-library.json").dependencies) console.log(dependency.requiredRef)' |
+          while IFS= read -r release_ref; do
+            git ls-remote --exit-code --tags origin "refs/tags/$release_ref"
+          done
+      - name: Install pinned FlutterFlow CLI
+        run: dart pub global activate flutterflow_cli 0.0.39
+      - name: Initialize the existing FlutterFlow application
+        run: >-
+          flutterflow ai init "$WORKSPACE"
+          --project "$FF_APPLICATION_PROJECT_ID"
+          --api-key "$FF_API_KEY"
+          --no-save
+      - name: Resolve immutable reusable page identifiers from the synced library
+        run: |
+          page_dir="$RUNNER_TEMP/superboard-library-pages"
+          mkdir -p "$page_dir"
+          node -e 'for (const page of require("./config/flutterflow-library.json").pages) console.log(page)' |
+          while IFS= read -r page; do
+            (
+              cd "$WORKSPACE"
+              flutterflow ai inspect "$FF_LIBRARY_PROJECT_ID" \
+                --page "$page" \
+                --dsl-json \
+                --output "$page_dir/$page.json"
+            )
+          done
+          node scripts/flutterflow-library-pages.mjs \
+            --input-dir "$page_dir" \
+            --github-env "$GITHUB_ENV"
+      - name: Test the compiled application DSL
+        run: flutterflow ai test
+        working-directory: ${{ matrix.workspace }}
+      - name: Push the reviewed application configuration
+        run: >-
+          flutterflow ai run dsl/edit.dart
+          --project-id "$FF_APPLICATION_PROJECT_ID"
+          --commit-message "Sync SuperBoard configuration from $GITHUB_SHA"
+        working-directory: ${{ matrix.workspace }}

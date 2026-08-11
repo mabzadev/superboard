@@ -6,10 +6,6 @@ import { TEST } from "@/constants/OptionsConstants";
 import { useProjectSelection } from "@/context/useProjectSelection";
 import { useInstancesQuery } from "@/hooks/queries/useInstanceQueries";
 import { useCreateInstanceMutation } from "@/hooks/mutations/useInstanceMutations";
-import {
-  useSubscriptionQuery,
-  useMauQuery,
-} from "@/hooks/queries/usePaymentsQueries";
 import { showErrorNotification, showGenericError } from "@/lib/Notifications";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Instance } from "@/types";
@@ -37,10 +33,6 @@ export default function ClientLayout({
   // TanStack Query hooks
   const instancesQuery = useInstancesQuery();
   const createInstanceMutation = useCreateInstanceMutation();
-
-  // TanStack Query hooks auto-fetch when selectedInstance changes
-  useSubscriptionQuery(selectedInstance?.id);
-  useMauQuery(selectedInstance?.id);
 
   const firstLoginRef = useRef(false);
   const hasInitializedRef = useRef(false);

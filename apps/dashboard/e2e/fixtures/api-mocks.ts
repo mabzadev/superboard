@@ -5,7 +5,6 @@ import {
   TEST_PROJECT,
   TEST_LINK,
   TEST_CAMPAIGN,
-  TEST_SUBSCRIPTION,
   MOCK_TOKENS,
 } from "./test-data";
 
@@ -14,6 +13,20 @@ import {
  * Call this in beforeEach or in a fixture to mock the API layer.
  */
 export async function setupApiMocks(page: Page) {
+  // Register the fallback first: Playwright evaluates matching routes in
+  // reverse registration order, so every specific handler below takes
+  // precedence over this catch-all.
+  await page.route("**/api/v1/**", async (route) => {
+    console.warn(
+      `Unhandled API route: ${route.request().method()} ${route.request().url()}`
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({}),
+    });
+  });
+
   // Auth endpoints
   await page.route("**/oauth/token", async (route) => {
     const request = route.request();
@@ -26,7 +39,7 @@ export async function setupApiMocks(page: Page) {
     }
   });
 
-  await page.route("**/api/v1/me", async (route) => {
+  await page.route("**/api/v1/users/me", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -220,29 +233,27 @@ export async function setupApiMocks(page: Page) {
     }
   );
 
-  // Subscription
   await page.route(
-    `**/api/v1/instances/${TEST_INSTANCE.id}/subscription`,
-    async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ subscription: TEST_SUBSCRIPTION }),
-      });
-    }
-  );
-
-  // MAU
-  await page.route(
-    `**/api/v1/instances/${TEST_INSTANCE.id}/mau`,
+    `**/api/v1/app/projects/${TEST_PROJECT.id}/customers*`,
     async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          current_quantity: 500,
-          total_available: 10000,
+          data: [],
+          meta: { total: 0, limit: 50, offset: 0 },
         }),
+      });
+    }
+  );
+
+  await page.route(
+    `**/api/v1/dynamic-links/projects/${TEST_PROJECT.id}/campaigns*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [TEST_CAMPAIGN], meta: { total: 1 } }),
       });
     }
   );
@@ -360,16 +371,4 @@ export async function setupApiMocks(page: Page) {
       });
     }
   );
-
-  // Catch-all for unhandled API routes
-  await page.route("**/api/v1/**", async (route) => {
-    console.warn(
-      `Unhandled API route: ${route.request().method()} ${route.request().url()}`
-    );
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({}),
-    });
-  });
 }

@@ -79,14 +79,12 @@ export const WINDOWS = "windows" as const;
 
 export const MEMBER = "member" as const;
 export const ARCHIVE = "archive" as const;
-export const CANCEL_PLAN = "cancel_plan" as const;
 export const REMOVE_ACCOUNT = "remove_account" as const;
 export const ARCHIVE_LINK = "archive_link" as const;
 export const DELETE_PROJECT = "delete_project" as const;
 export const REMOVE_MESSAGE = "remove_message" as const;
 
 //SETTINGS OPTIONS
-export const PLAN_OPTION = "planSettings" as const;
 export const MEMBERS_OPTION = "membersSettings" as const;
 
 export const DEFAULT_PLACEHOLDER_LINK =

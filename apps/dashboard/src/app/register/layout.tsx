@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Register",
-  description: "Create a OpenGrow account to start growing your mobile app.",
+  description: "Create a SuperBoard account to start growing your mobile app.",
 };
 
 export default function RegisterLayout({

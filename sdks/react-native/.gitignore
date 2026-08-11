@@ -43,6 +43,9 @@ android.iml
 # Cocoapods
 #
 example/ios/Pods
+# The example resolves the catalog-pinned native pod during validation. Do not
+# retain a lockfile from an older package/tag as if it described this release.
+example/ios/Podfile.lock
 
 # Ruby
 example/vendor/

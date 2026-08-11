@@ -119,15 +119,6 @@ export const queryKeys = {
       ] as const,
   },
 
-  payments: {
-    subscription: (instanceId: string) =>
-      ["payments", "subscription", instanceId] as const,
-    mau: (instanceId: string) => ["payments", "mau", instanceId] as const,
-    usage: (instanceId: string) => ["payments", "usage", instanceId] as const,
-    dashboardUrl: (instanceId: string) =>
-      ["payments", "dashboardUrl", instanceId] as const,
-  },
-
   user: {
     current: ["user", "current"] as const,
     otpEnabled: (email: string) => ["user", "otpEnabled", email] as const,

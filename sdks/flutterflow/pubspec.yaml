@@ -1,6 +1,6 @@
-name: opengrow_flutterflow
-description: FlutterFlow-ready actions and paywall widgets for OpenGrow Purchases.
-version: 2.1.6
+name: superboard_flutterflow
+description: Unified FlutterFlow actions, experiences, purchases, and support for SuperBoard.
+version: 3.0.0
 publish_to: none
 
 environment:
@@ -10,10 +10,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_secure_storage: ">=9.2.2 <11.0.0"
   http: ">=1.2.0 <2.0.0"
-  opengrow_flutter:
+  superboard_flutter:
     path: ../flutter
   url_launcher: ">=6.3.1 <7.0.0"
+  web_socket_channel: ">=3.0.1 <4.0.0"
 
 dev_dependencies:
   flutter_test:

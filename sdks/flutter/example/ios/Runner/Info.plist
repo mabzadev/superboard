@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>OpenGrow</string>
+	<string>SuperBoard</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>opengrow_example</string>
+	<string>superboard_example</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -31,14 +31,16 @@
             <string>Editor</string>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>opengrowt5abed1b0fdf8</string>
+                <string>superboardexample</string>
             </array>
         </dict>
     </array>
-    <key>OpenGrowApiKey</key>
-    <string>$(OPENGROW_API_KEY)</string>
-    <key>OpenGrowUseTestEnvironment</key>
+    <key>SuperBoardApiKey</key>
+    <string>$(SUPERBOARD_API_KEY)</string>
+    <key>SuperBoardUseTestEnvironment</key>
     <true/>
+    <key>SuperBoardBaseURL</key>
+    <string>$(SUPERBOARD_BASE_URL)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated build and dependency directories"
+paths = [
+  '''(^|/)(\.dart_tool|\.git|build|coverage|node_modules)(/|$)''',
+]

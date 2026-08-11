@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="opengrow_example"
+        android:label="SuperBoard"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -50,11 +50,14 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <meta-data
-            android:name="opengrow_api_key"
-            android:value="${OPENGROW_API_KEY}" />
+            android:name="superboard_api_key"
+            android:value="${SUPERBOARD_API_KEY}" />
         <meta-data
-            android:name="opengrow_use_test_environment"
+            android:name="superboard_use_test_environment"
             android:value="true" />
+        <meta-data
+            android:name="superboard_base_url"
+            android:value="${SUPERBOARD_BASE_URL}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

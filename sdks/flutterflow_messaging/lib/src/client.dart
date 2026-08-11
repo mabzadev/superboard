@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -33,10 +34,12 @@ class OpenGrowMessagingClient {
     required String identityToken,
     OpenGrowIdentityTokenProvider? identityTokenProvider,
     http.Client? httpClient,
+    Duration requestTimeout = const Duration(seconds: 15),
   }) : _baseUri = baseUri,
        _projectId = projectId,
        _identityToken = identityToken,
        _identityTokenProvider = identityTokenProvider,
+       _requestTimeout = requestTimeout,
        _http = httpClient ?? http.Client() {
     if (projectId <= 0) {
       throw ArgumentError.value(
@@ -52,6 +55,13 @@ class OpenGrowMessagingClient {
         'Identity token cannot be empty',
       );
     }
+    if (requestTimeout <= Duration.zero) {
+      throw ArgumentError.value(
+        requestTimeout,
+        'requestTimeout',
+        'Request timeout must be positive',
+      );
+    }
     _identityToken = identityToken.trim();
   }
 
@@ -59,6 +69,7 @@ class OpenGrowMessagingClient {
   final int _projectId;
   String _identityToken;
   final OpenGrowIdentityTokenProvider? _identityTokenProvider;
+  final Duration _requestTimeout;
   final http.Client _http;
   Future<String>? _refreshFuture;
 
@@ -79,9 +90,26 @@ class OpenGrowMessagingClient {
     'Content-Type': 'application/json',
   };
 
+  Future<Map<String, dynamic>> configuration() async {
+    final response = await _authorized(
+      (headers) => _http.get(_url('/v1/configuration'), headers: headers),
+    );
+    final payload = _payload(response);
+    final data = payload['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const OpenGrowMessagingException(
+        'configuration_response_invalid',
+        'Messaging returned an invalid configuration response',
+      );
+    }
+    return data;
+  }
+
   Future<OpenGrowConversation> createConversation({
     required String clientConversationId,
     String? subject,
+    String? inboxId,
+    Map<String, dynamic>? customAttributes,
   }) async {
     final response = await _authorized(
       (headers) => _http.post(
@@ -90,6 +118,8 @@ class OpenGrowMessagingClient {
         body: jsonEncode({
           'client_conversation_id': clientConversationId,
           if (subject != null) 'subject': subject,
+          if (inboxId != null) 'inbox_id': inboxId,
+          if (customAttributes != null) 'custom_attributes': customAttributes,
         }),
       ),
     );
@@ -109,6 +139,27 @@ class OpenGrowMessagingClient {
           (item) => OpenGrowConversation.fromJson(item as Map<String, dynamic>),
         )
         .toList(growable: false);
+  }
+
+  Future<OpenGrowConversation> updateConversation(
+    String conversationId, {
+    String? status,
+    Map<String, dynamic>? customAttributes,
+  }) async {
+    final response = await _authorized(
+      (headers) => _http.patch(
+        _url('/v1/conversations/${Uri.encodeComponent(conversationId)}'),
+        headers: headers,
+        body: jsonEncode({
+          if (status != null) 'status': status,
+          if (customAttributes != null) 'custom_attributes': customAttributes,
+        }),
+      ),
+    );
+    final payload = _payload(response);
+    return OpenGrowConversation.fromJson(
+      payload['data'] as Map<String, dynamic>,
+    );
   }
 
   Future<List<OpenGrowMessage>> messages(
@@ -136,10 +187,16 @@ class OpenGrowMessagingClient {
     String conversationId, {
     required String body,
     required String clientMessageId,
+    String contentType = 'text',
+    String? replyToMessageId,
+    Map<String, dynamic>? metadata,
   }) => _sendMessage(
     conversationId,
     clientMessageId: clientMessageId,
     body: body,
+    contentType: contentType,
+    replyToMessageId: replyToMessageId,
+    metadata: metadata,
   );
 
   Future<OpenGrowMessage> sendAttachment(
@@ -165,6 +222,9 @@ class OpenGrowMessagingClient {
     String? attachmentKey,
     String? attachmentName,
     String? attachmentContentType,
+    String contentType = 'text',
+    String? replyToMessageId,
+    Map<String, dynamic>? metadata,
   }) async {
     final response = await _authorized(
       (headers) => _http.post(
@@ -179,11 +239,33 @@ class OpenGrowMessagingClient {
           if (attachmentContentType != null)
             'attachment_content_type': attachmentContentType,
           'client_message_id': clientMessageId,
+          'content_type': contentType,
+          if (replyToMessageId != null) 'reply_to_message_id': replyToMessageId,
+          if (metadata != null) 'metadata': metadata,
         }),
       ),
     );
     final payload = _payload(response);
     return OpenGrowMessage.fromJson(payload['data'] as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> submitCsat(
+    String conversationId, {
+    required int rating,
+    String? feedback,
+  }) async {
+    final response = await _authorized(
+      (headers) => _http.post(
+        _url('/v1/conversations/${Uri.encodeComponent(conversationId)}/csat'),
+        headers: headers,
+        body: jsonEncode({
+          'rating': rating,
+          if (feedback != null && feedback.trim().isNotEmpty)
+            'feedback': feedback.trim(),
+        }),
+      ),
+    );
+    return _payload(response)['data'] as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> uploadAttachment(
@@ -192,6 +274,12 @@ class OpenGrowMessagingClient {
     required String filename,
     required String contentType,
   }) async {
+    if (bytes.isEmpty || bytes.length > maxAttachmentBytes) {
+      throw const OpenGrowMessagingException(
+        'attachment_invalid',
+        'Attachment must contain between 1 byte and 10 MB',
+      );
+    }
     final response = await _authorized((headers) {
       final attachmentHeaders = Map<String, String>.from(headers)
         ..['Content-Type'] = contentType
@@ -209,18 +297,26 @@ class OpenGrowMessagingClient {
 
   Future<Uint8List> downloadAttachment(
     String conversationId,
-    String messageId,
-  ) async {
+    String messageId, {
+    String? attachmentId,
+  }) async {
+    final base = _url(
+      '/v1/conversations/${Uri.encodeComponent(conversationId)}/attachments/${Uri.encodeComponent(messageId)}',
+    );
+    final uri = attachmentId == null
+        ? base
+        : base.replace(queryParameters: {'attachment_id': attachmentId});
     final response = await _authorized(
-      (headers) => _http.get(
-        _url(
-          '/v1/conversations/${Uri.encodeComponent(conversationId)}/attachments/${Uri.encodeComponent(messageId)}',
-        ),
-        headers: headers,
-      ),
+      (headers) => _http.get(uri, headers: headers),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       _payload(response);
+    }
+    if (response.bodyBytes.length > maxAttachmentBytes) {
+      throw const OpenGrowMessagingException(
+        'attachment_response_too_large',
+        'Attachment response exceeds 10 MB',
+      );
     }
     return response.bodyBytes;
   }
@@ -288,12 +384,34 @@ class OpenGrowMessagingClient {
     Future<http.Response> Function(Map<String, String> headers) request,
   ) async {
     await _refreshIfExpiring();
-    var response = await request(_headers);
+    var response = await _timedRequest(request);
     if (response.statusCode == 401 && _identityTokenProvider != null) {
       await _refreshIdentityToken();
-      response = await request(_headers);
+      response = await _timedRequest(request);
     }
     return response;
+  }
+
+  Future<http.Response> _timedRequest(
+    Future<http.Response> Function(Map<String, String> headers) request,
+  ) async {
+    try {
+      return await request(_headers).timeout(_requestTimeout);
+    } on TimeoutException {
+      throw const OpenGrowMessagingException(
+        'request_timeout',
+        'Messaging request timed out',
+        retryable: true,
+      );
+    } on OpenGrowMessagingException {
+      rethrow;
+    } catch (_) {
+      throw const OpenGrowMessagingException(
+        'request_unavailable',
+        'Messaging is temporarily unavailable',
+        retryable: true,
+      );
+    }
   }
 
   Future<void> _refreshIfExpiring() async {
@@ -323,7 +441,11 @@ class OpenGrowMessagingClient {
     }
   }
 
-  Uri _url(String path) => _baseUri.resolve(path);
+  Uri _url(String path) {
+    final base = _baseUri.toString().replaceFirst(RegExp(r'/+$'), '');
+    final suffix = path.replaceFirst(RegExp(r'^/+'), '');
+    return Uri.parse('$base/$suffix');
+  }
 
   Map<String, dynamic> _payload(http.Response response) {
     Map<String, dynamic> decoded;
@@ -350,6 +472,8 @@ class OpenGrowMessagingClient {
     return decoded;
   }
 }
+
+const int maxAttachmentBytes = 10 * 1024 * 1024;
 
 DateTime? _tokenExpiration(String token) {
   final segments = token.split('.');
