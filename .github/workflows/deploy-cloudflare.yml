@@ -37,7 +37,7 @@ jobs:
             *) exit 64 ;;
           esac
           test -n "$DEPLOY_SHA"
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.DEPLOY_SHA }}
           fetch-depth: 1
@@ -109,7 +109,7 @@ jobs:
           test -n "$SUPERBOARD_EXPECTED_TARGET"
           test "$SUPERBOARD_DEPLOYMENT_AUTHORITY" = "github-actions"
           test "$SUPERBOARD_TARGET" = "$SUPERBOARD_EXPECTED_TARGET"
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.DEPLOY_SHA }}
           fetch-depth: 1
