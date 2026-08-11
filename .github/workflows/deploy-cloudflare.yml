@@ -234,7 +234,7 @@ jobs:
           fi
       - name: Retain production D1 migration backups
         if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.encrypt-backups.outcome == 'success' }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: superboard-d1-backups-${{ matrix.id }}-${{ github.run_id }}
           path: |
@@ -244,7 +244,7 @@ jobs:
           retention-days: 30
       - name: Retain any recoverable encrypted backup after encryption failure
         if: ${{ always() && matrix.cloudflareEnvironment == 'production' && steps.encrypt-backups.outcome == 'failure' }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: superboard-d1-recovery-${{ matrix.id }}-${{ github.run_id }}
           path: |
