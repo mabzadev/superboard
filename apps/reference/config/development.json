@@ -1,0 +1,18 @@
+{
+  "SUPERBOARD_ENVIRONMENT": "development",
+  "SUPERBOARD_TARGET": "mbza-development",
+  "SUPERBOARD_API_URL": "https://api.mbza.dev",
+  "SUPERBOARD_SDK_URL": "https://sdk.mbza.dev",
+  "SUPERBOARD_SUPPORT_URL": "https://api.mbza.dev/api/v1/support-client",
+  "SUPERBOARD_SHORT_LINKS_URL": "https://in.mbza.dev",
+  "SUPERBOARD_FILES_URL": "https://files.mbza.dev",
+  "SUPERBOARD_MAIL_PREVIEW_URL": "https://mail.mbza.dev",
+  "SUPERBOARD_PROJECT_KEY": "",
+  "SUPERBOARD_PROJECT_ID": "0",
+  "SUPERBOARD_SDK_PLATFORM": "web",
+  "SUPERBOARD_SDK_IDENTIFIER": "reference.mbza.dev",
+  "SUPERBOARD_PROJECT_ENVIRONMENT": "test",
+  "SUPERBOARD_LIVE_MODE": "false",
+  "SUPERBOARD_PLATFORM_REVISION": "local",
+  "SUPERBOARD_REFERENCE_REVISION": "local"
+}

@@ -1,0 +1,134 @@
+# SuperBoard FlutterFlow Reference
+
+Canonical FlutterFlow reference application for the SuperBoard platform.
+
+- Platform and library source: <https://github.com/mbzadev/superboard-platform>
+- This repository: <https://github.com/mbzadev/superboard-reference>
+- Development reference app: <https://reference.mbza.dev>
+- Development back office: <https://board.mbza.dev>
+- Development API: <https://api.mbza.dev>
+- Development short links: <https://in.mbza.dev>
+- Development mail preview: <https://mail.mbza.dev>
+
+This repository contains an executable Flutter reference shell and the
+FlutterFlow import contract. It demonstrates integration without copying
+SuperBoard SDK or custom-action implementations. FlutterFlow and Flutter compile
+only from immutable published Git tags. Platform `dev` may advertise the v3
+candidates, but an unpublished source tree is never injected into a deployable
+Reference build.
+
+The application exposes all 16 baseline journeys in demo mode and can switch to
+live mode only through build configuration. `reference.project.json`,
+`flutterflow/custom-code-catalog.json` and the validation matrix remain the
+source of truth when reproducing the same screens inside FlutterFlow.
+After the live journeys, the same public custom-job facade records a strict
+`reference.acceptance` receipt bound to the exact platform/reference revisions;
+the SuperBoard Infrastructure page can inspect it without exposing a private
+Worker token to the client. The journey also calls the public cancellation
+action and requires the exact terminal `job_not_cancellable` response because
+reference receipts complete synchronously; failed-job retry remains available
+only to Grow administrators.
+The library versions and complete public action/widget surface are referenced
+from `superboard-platform/config/sdk-libraries.json` and
+`superboard-platform/config/flutterflow-custom-code.json`; this repository
+contains no copied network implementation or Marketing adapter.
+The complete platform data-store and duplicate inventory is maintained in
+[`superboard-platform/docs/REFERENCE_DATA_INVENTORY.md`](https://github.com/mbzadev/superboard-platform/blob/dev/docs/REFERENCE_DATA_INVENTORY.md).
+
+For a local checkout, generate an ignored dependency override without storing a
+machine path in Git:
+
+```bash
+dart tool/use_local_platform.dart /path/to/superboard-platform
+flutter pub get
+npm run check
+flutter run -d chrome --dart-define-from-file=config/development.json
+```
+
+`pubspec.lock` is versioned because this repository is an application. It pins
+each released Git dependency to the commit behind its immutable SDK tag. The
+FlutterFlow 2.2.5 release still references Flutter 2.1.3 transitively, so the
+reviewed root override converges it to the separately published Flutter 2.1.4
+tag and exact commit. The Flutter, FlutterFlow, messaging/support, iOS, Android,
+JavaScript and React Native lifecycle contract is documented in
+[`docs/SDK_COVERAGE.md`](docs/SDK_COVERAGE.md) and enforced from
+`config/sdk-coverage.json`. Flutter and FlutterFlow are active, Android and iOS
+are internal, and messaging/support, JavaScript and React Native are archived.
+The optional local override changes working-copy resolution to paths; never
+commit that local resolution.
+Remove `pubspec_overrides.yaml` and run `flutter pub get` again before proposing
+a dependency update.
+
+`config/development.json` contains public `mbza.dev` endpoints only. Live mode
+requires a SuperBoard client project key and ID supplied by a separate ignored
+config or CI environment. The client key is necessarily embedded in the Web
+application, but it is never hardcoded in Git; server authorization continues
+to rely on the application identity token and private Worker bindings. Its SDK
+platform, identifier and test/production project must match an application
+registered in the SuperBoard back office. Server secrets and user tokens never
+belong in this file. GitHub CI checks out the public platform repository without
+a repository read token.
+
+The MBZA development endpoint contract is closed: `reference.mbza.dev`,
+`board.mbza.dev`, `api.mbza.dev`, `sdk.mbza.dev`, `in.mbza.dev`,
+`files.mbza.dev`, `mail.mbza.dev`, and the single Support path
+`api.mbza.dev/api/v1/support-client`. The project schema, build tooling and
+runtime validation reject HTTP, embedded URL credentials, query strings,
+fragments and every other path. `config/development.json` is also a strict
+allowlist of reviewed Dart defines; adding a key or changing an endpoint fails
+CI even if `reference.project.json` is changed at the same time.
+
+Reference CI follows the same promotion boundary as the platform: pushes and
+pull requests targeting `dev` validate against `superboard-platform/dev`; `main`
+validates against an exact `superboard-platform` revision. After a complete SDK
+release set succeeds, the platform dispatches its promoted catalogue SHA. This
+repository verifies catalogue v4, immutable baseline and historical tags,
+peeled commits, public GitHub Releases and the exact checked-out catalogue. A
+protected promotion PR is created only after Flutter and FlutterFlow v3 are both
+fully published. It updates the two active coordinates together and archives
+the standalone Support dependency; partial promotion is rejected. All coverage
+reads are public and secretless.
+
+After validation, a push to `dev` publishes the Flutter Web acceptance app to
+`https://reference.mbza.dev` as a Cloudflare Static Assets Worker. Deployment
+configuration is generated from `reference.project.json`; no account ID, API
+token or project identity is committed. The GitHub `development` environment
+provides `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`,
+`SUPERBOARD_PROJECT_KEY` and `SUPERBOARD_PROJECT_ID` as encrypted values. The
+old `OPENGROW_*` names remain fallback-only during migration. Pull
+requests and `main` never deploy this MBZA test application. To verify the exact
+Worker bundle without publishing it, run `npm run cloudflare:dry-run`.
+Before a real publish, the script reads the zone, DNS and Worker custom-domain
+state. It proceeds only when `reference.mbza.dev` is unused or already attached
+to `opengrow-reference-app-dev`; it never adopts or removes an occupied record.
+`superboard-reference` is the logical deployment name; the existing
+`opengrow-reference-app-dev` Worker resource is retained only to avoid replacing
+the remotely deployed state during the brand migration.
+
+For a first account bootstrap, `npm run cloudflare:deploy:private` uploads the
+same tested Static Assets Worker with `workers.dev` and preview URLs disabled
+and with no route at all. `npm run cloudflare:dry-run:private` proves that
+configuration without writing. This private bootstrap does not replace the
+GitHub deployment flow and cannot make `reference.mbza.dev` public.
+
+A successful `superboard-platform/dev` deployment sends the
+`platform-dev-updated` repository dispatch event. The reference workflow then
+checks out the exact platform commit from `client_payload.platform_sha`, reruns
+the complete acceptance validation from `opengrow-reference/dev`, records the
+exact tested platform and reference SHAs, and builds the live artifact from
+those two immutable revisions inside the protected `development` Environment.
+The application displays both short SHAs and includes the complete values in
+sanitized diagnostics. This keeps MBZA synchronized without using a mutable
+platform ref during that cross-repository build.
+
+The complete sixteen-journey manual acceptance procedure is in
+[`docs/ACCEPTANCE_RUNBOOK.md`](docs/ACCEPTANCE_RUNBOOK.md). It defines exact
+operation inputs, evidence, provider-only checks and the promotion receipt used
+before VocoStar adoption.
+
+## License
+
+SuperBoard Reference is released under the [MIT License](./LICENSE).
+
+Contributions follow [CONTRIBUTING.md](./CONTRIBUTING.md). Report security
+issues through the private process documented in [SECURITY.md](./SECURITY.md).

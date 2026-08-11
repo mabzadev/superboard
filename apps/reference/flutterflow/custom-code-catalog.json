@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 3,
+  "source": "https://github.com/mbzadev/superboard-platform/blob/dev/config/flutterflow-custom-code.json",
+  "sourceManifestVersion": 1,
+  "policy": "reference-only-no-copied-implementation",
+  "referenceAdapters": {}
+}

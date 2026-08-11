@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://opengrow.dev/schemas/sdk-coverage.schema.json",
+  "title": "SuperBoard reference SDK lifecycle coverage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "catalogueSchemaVersion",
+    "platformRepository",
+    "promotionPolicy",
+    "libraries"
+  ],
+  "properties": {
+    "$schema": { "const": "../schemas/sdk-coverage.schema.json" },
+    "schemaVersion": { "const": 2 },
+    "catalogueSchemaVersion": { "const": 4 },
+    "platformRepository": {
+      "const": "https://github.com/mbzadev/superboard-platform"
+    },
+    "promotionPolicy": { "const": "complete-active-set" },
+    "libraries": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "lifecycle",
+          "packageName",
+          "sourcePath",
+          "sourceVersion",
+          "baselineVersion",
+          "baselineRef",
+          "baselineTag",
+          "baselineSha",
+          "catalogueStatus",
+          "coverageMode"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "flutter",
+              "flutterflow",
+              "flutterflow-support",
+              "ios",
+              "android",
+              "javascript",
+              "react-native"
+            ]
+          },
+          "lifecycle": { "enum": ["active", "internal", "archived"] },
+          "packageName": { "type": "string", "minLength": 1 },
+          "candidatePackageName": { "type": "string", "minLength": 1 },
+          "sourcePath": {
+            "type": "string",
+            "pattern": "^sdks/[A-Za-z0-9_./-]+$"
+          },
+          "sourceVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "baselineVersion": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "baselineRef": {
+            "type": "string",
+            "pattern": "^(sdk-[a-z0-9-]+-v)?[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "baselineTag": {
+            "type": "string",
+            "pattern": "^sdk-[a-z0-9-]+-v[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "baselineSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "catalogueStatus": { "enum": ["released", "pending-release"] },
+          "candidateRef": {
+            "type": "string",
+            "pattern": "^sdk-[a-z0-9-]+-v[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "coverageMode": {
+            "enum": [
+              "dart-direct",
+              "dart-transitive-override",
+              "dart-legacy-direct",
+              "historical-release"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
