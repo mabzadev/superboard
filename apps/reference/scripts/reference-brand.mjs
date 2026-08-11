@@ -47,8 +47,8 @@ export function checkReferenceBrand({ repositoryRoot = root } = {}) {
   }
   return {
     name: "SuperBoard Reference",
-    repository: "mbzadev/superboard-reference",
-    platformRepository: "mbzadev/superboard-platform",
+    repository: "mbzadev/superboard",
+    platformRepository: "mbzadev/superboard",
     dashboard: "board.mbza.dev",
     shortLinks: "in.mbza.dev",
   };

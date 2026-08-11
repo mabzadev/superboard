@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/flutterflow-applications.schema.json",
   "schemaVersion": 2,
-  "owner": "superboard-platform",
+  "owner": "superboard",
   "applications": [
     {
       "id": "vocostar",

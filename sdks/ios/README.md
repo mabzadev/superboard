@@ -57,11 +57,11 @@ The published iOS SDK is distributed from public Git with Swift Package
 Manager at the exact release `1.0.3`:
 
 ```swift
-.package(url: "https://github.com/mbzadev/superboard-platform.git", exact: "1.0.3")
+.package(url: "https://github.com/mbzadev/superboard.git", exact: "1.0.3")
 ```
 
 In Xcode, use **File → Add Package Dependencies**, enter
-`https://github.com/mbzadev/superboard-platform.git`, and select exact version
+`https://github.com/mbzadev/superboard.git`, and select exact version
 `1.0.3`. CocoaPods Trunk is not a published or supported
 distribution channel for this SDK.
 

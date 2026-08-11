@@ -1,19 +1,22 @@
 {
-  "name": "superboard-platform",
+  "name": "superboard",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "description": "SuperBoard multi-application back-office, Cloudflare Workers platform, Flutter SDK, and short links.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mbzadev/superboard-platform.git"
+    "url": "https://github.com/mbzadev/superboard.git"
   },
-  "homepage": "https://github.com/mbzadev/superboard-platform",
+  "homepage": "https://github.com/mbzadev/superboard",
   "bugs": {
-    "url": "https://github.com/mbzadev/superboard-platform/issues"
+    "url": "https://github.com/mbzadev/superboard/issues"
   },
   "scripts": {
     "brand:check": "node scripts/superboard-brand.mjs && node --test scripts/superboard-brand.test.mjs",
+    "reference:install": "npm --prefix apps/reference ci",
+    "reference:test": "npm --prefix apps/reference test",
+    "reference:check": "npm --prefix apps/reference run check",
     "dashboard:dev": "npm --prefix apps/dashboard run dev",
     "dashboard:build": "npm --prefix apps/dashboard run build",
     "dashboard:cf-build": "node scripts/dashboard-cloudflare.mjs",

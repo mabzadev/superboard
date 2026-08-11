@@ -8,7 +8,11 @@ import { checkSuperBoardBrand, validateSuperBoardBrand } from "./superboard-bran
 test("canonical SuperBoard brand contract is strict and valid", async () => {
   const manifest = await checkSuperBoardBrand();
   assert.equal(manifest.brand.name, "SuperBoard");
-  assert.equal(manifest.repositories.platform, "mbzadev/superboard-platform");
+  assert.equal(manifest.repositories.canonical, "mbzadev/superboard");
+  assert.deepEqual(manifest.repositories.layout, {
+    platform: ".",
+    reference: "apps/reference",
+  });
   assert.equal(manifest.developmentDomains.dashboard, "board.mbza.dev");
   assert.equal(manifest.developmentDomains.shortLinks, "in.mbza.dev");
   assert.deepEqual(manifest.sdkStrategy.active, ["flutter", "flutterflow"]);

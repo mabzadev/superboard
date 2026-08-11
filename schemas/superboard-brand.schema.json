@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/mbzadev/superboard-platform/blob/dev/schemas/superboard-brand.schema.json",
+  "$id": "https://github.com/mbzadev/superboard/blob/dev/schemas/superboard-brand.schema.json",
   "title": "SuperBoard brand and compatibility contract",
   "type": "object",
   "additionalProperties": false,
@@ -15,7 +15,7 @@
   ],
   "properties": {
     "$schema": { "const": "../schemas/superboard-brand.schema.json" },
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "brand": {
       "type": "object",
       "additionalProperties": false,
@@ -30,11 +30,24 @@
     "repositories": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["platform", "reference", "historicalPredecessor"],
+      "required": ["canonical", "layout", "legacyReadOnly"],
       "properties": {
-        "platform": { "const": "mbzadev/superboard-platform" },
-        "reference": { "const": "mbzadev/superboard-reference" },
-        "historicalPredecessor": { "const": "mbzadev/superboard" }
+        "canonical": { "const": "mbzadev/superboard" },
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["platform", "reference"],
+          "properties": {
+            "platform": { "const": "." },
+            "reference": { "const": "apps/reference" }
+          }
+        },
+        "legacyReadOnly": {
+          "const": [
+            "mbzadev/superboard-platform",
+            "mbzadev/superboard-reference"
+          ]
+        }
       }
     },
     "developmentDomains": {

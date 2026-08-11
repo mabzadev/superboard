@@ -359,7 +359,9 @@ function packageDescriptor(library) {
 function inspectGitHubPackageArtifact(library, repository, run) {
   const descriptor = packageDescriptor(library);
   if (!descriptor) return null;
-  const [owner] = repository.split("/");
+  const artifactRepository =
+    library.distribution?.repository || repository;
+  const [owner] = artifactRepository.split("/");
   let selected = null;
   let packageResult = null;
   for (const scope of ["users", "orgs"]) {
@@ -373,7 +375,7 @@ function inspectGitHubPackageArtifact(library, repository, run) {
     if (result.notFound !== true) {
       return {
         ...descriptor,
-        expectedRepository: repository,
+        expectedRepository: artifactRepository,
         exists: false,
         valid: false,
         visibility: null,
@@ -385,7 +387,7 @@ function inspectGitHubPackageArtifact(library, repository, run) {
   if (!selected) {
     return {
       ...descriptor,
-      expectedRepository: repository,
+      expectedRepository: artifactRepository,
       exists: false,
       valid: true,
       visibility: null,
@@ -398,7 +400,7 @@ function inspectGitHubPackageArtifact(library, repository, run) {
   const versionsData = responseData(versionsResult);
   return {
     ...descriptor,
-    expectedRepository: repository,
+    expectedRepository: artifactRepository,
     exists: true,
     valid: versionsResult.ok && Array.isArray(versionsData),
     visibility: details?.visibility ?? null,
@@ -572,8 +574,9 @@ export function referenceReadiness(
     ),
     check(
       "reference_repository",
-      project.referenceRepository === repositoryUrl(repositories?.reference),
+      project.referenceRepository === repositoryUrl(repositories?.platform),
     ),
+    check("reference_path", project.referencePath === "apps/reference"),
     check("sdk_platform", project.sdkApplication?.platform === "web"),
     check(
       "sdk_identifier",
@@ -931,8 +934,7 @@ export async function buildReadiness({
       referenceAcceptance: deployment.referenceAcceptance,
     })),
   };
-  const referenceRepositoryName =
-    controlPlane.repositories.reference.nameWithOwner.split("/").at(-1);
+  const referenceRepositoryName = "reference";
   const resolvedReferenceRoot = resolveReferenceRepositoryRoot({
     referenceRoot,
     referenceRepositoryName,
@@ -991,7 +993,8 @@ export async function buildReadiness({
     governance.canonicalRepository !==
       controlPlane.repositories.platform.nameWithOwner ||
     governance.referenceRepository !==
-      controlPlane.repositories.reference.nameWithOwner
+      controlPlane.repositories.platform.nameWithOwner ||
+    governance.referencePath !== "apps/reference"
   ) {
     throw new Error(
       "Platform governance repositories must match the GitHub control plane",
@@ -1020,7 +1023,7 @@ export async function buildReadiness({
     platform: inspectGit(root, controlPlane.repositories.platform),
     reference: inspectGit(
       resolvedReferenceRoot,
-      controlPlane.repositories.reference,
+      controlPlane.repositories.platform,
     ),
   };
   const repositories = remote
@@ -1336,13 +1339,14 @@ export function resolveReferenceRepositoryRoot({
     const configuredRoot = String(referenceRoot).trim();
     if (!configuredRoot || !isAbsolute(configuredRoot)) {
       throw new Error(
-        "OpenGrow reference root must be a non-empty absolute path",
+        "SuperBoard reference root must be a non-empty absolute path",
       );
     }
     return resolve(configuredRoot);
   }
 
   const candidates = [
+    resolve(platformRoot, "apps/reference"),
     resolve(platformRoot, `../${referenceRepositoryName}`),
     resolve(platformRoot, "../grow-reference"),
   ];

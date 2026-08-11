@@ -96,7 +96,7 @@ test("deployment matrix selects GitHub Environments without embedding accounts",
   assert.equal(JSON.stringify(configuration).includes("8706f1b6"), false);
 });
 
-test("development uses one Cloudflare Workers Builds controller while production remains on GitHub Actions", async () => {
+test("development uses one native Git connection per Worker while production remains on GitHub Actions", async () => {
   const configuration = await loadDeploymentMatrix();
   const development = configuration.deployments.find(
     ({ id }) => id === "mbza-development",
@@ -107,14 +107,33 @@ test("development uses one Cloudflare Workers Builds controller while production
 
   assert.deepEqual(development.automaticDeployment, {
     authority: "cloudflare-workers-builds",
-    controllerService: "dashboard",
+    mode: "per-service",
+    services: [
+      "observability",
+      "email",
+      "files",
+      "identity",
+      "app",
+      "products",
+      "paywalls",
+      "dynamic-links",
+      "support",
+      "marketing",
+      "onboardings",
+      "billing",
+      "custom",
+      "api",
+      "mcp",
+      "dashboard",
+    ],
     buildCommand:
-      "git clone --depth 1 --branch dev https://github.com/mbzadev/superboard-reference.git ../superboard-reference && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check",
+      "npm ci && npm --prefix apps/reference ci && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test",
     deployCommand:
-      'npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"',
+      'npm run cloudflare:deploy -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT" --service "$SUPERBOARD_SERVICE"',
     buildVariables: [
       "CLOUDFLARE_ACCOUNT_ID",
       "SUPERBOARD_ENVIRONMENT",
+      "SUPERBOARD_SERVICE",
       "SUPERBOARD_TARGET",
     ],
     nonProductionBranchBuilds: false,
@@ -157,7 +176,7 @@ test("every deployment is backed by a target-selecting GitHub Environment", asyn
 
 test("production environments require deployment and encrypted-backup credentials", () => {
   const configuration = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     deployments: [
       {
         id: "example-production",
@@ -190,7 +209,7 @@ test("production environments require deployment and encrypted-backup credential
 
 test("a GitHub Environment cannot redirect a deployment to another target", () => {
   const configuration = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     deployments: [
       {
         id: "example-production",
@@ -230,7 +249,7 @@ test("a branch cannot select two reference acceptance environments", () => {
     () =>
       selectDeployments(
         {
-          schemaVersion: 3,
+          schemaVersion: 4,
           deployments: [
             {
               id: "one",
@@ -266,7 +285,7 @@ test("branch and Cloudflare environment cannot cross development and production"
   assert.throws(
     () =>
       validateDeploymentConfiguration({
-        schemaVersion: 3,
+        schemaVersion: 4,
         deployments: [
           {
             id: "unsafe",

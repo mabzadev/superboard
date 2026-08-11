@@ -10,6 +10,7 @@
     "name",
     "platformRepository",
     "referenceRepository",
+    "referencePath",
     "environment",
     "target",
     "sdkApplication",
@@ -30,6 +31,7 @@
       "type": "string",
       "pattern": "^https://github\\.com/[^/]+/[^/]+$"
     },
+    "referencePath": { "const": "apps/reference" },
     "environment": { "const": "development" },
     "target": { "const": "mbza-development" },
     "sdkApplication": {

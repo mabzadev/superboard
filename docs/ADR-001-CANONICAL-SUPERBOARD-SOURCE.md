@@ -1,6 +1,6 @@
 # ADR-001 — Canonical SuperBoard source
 
-Status: accepted on 9 August 2026.
+Status: superseded by the monorepo consolidation on 11 August 2026.
 
 ## Context
 
@@ -19,10 +19,10 @@ that cannot be reproduced.
 
 ## Decision
 
-`mbzadev/superboard-platform` is the canonical product source. Its checked-in target
+`mbzadev/superboard` is the canonical product source. Its checked-in target
 schemas, Worker contracts, D1 migrations, SDK catalogues, tests and protected Git
-history are the release authority. `mbzadev/superboard-reference` is the independent
-acceptance application; it does not become a second platform authority.
+history are the release authority. The acceptance application lives at
+`apps/reference`; it does not become a second platform authority.
 
 Historical upstream parity is retired as a release gate. The source revisions
 already recorded in `docs/HISTORY_MIGRATION.md` remain provenance evidence. If
@@ -33,7 +33,7 @@ or override the current SuperBoard contracts.
 
 ## Consequences
 
-- new applications reuse `superboard-platform` and a target manifest;
+- new applications reuse `superboard` and a target manifest;
 - fixes are made once in the canonical source and promoted through `dev` and
   `main`;
 - Cloudflare account IDs and secrets remain outside source;

@@ -93,7 +93,7 @@ jobs:
     env:
       DEPLOY_BRANCH: ${{ needs.plan.outputs.branch }}
       DEPLOY_SHA: ${{ needs.plan.outputs.sha }}
-      SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
+      SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/apps/reference
     steps:
       - name: Restrict deployments to successful long-lived branch revisions
         env:
@@ -132,18 +132,6 @@ jobs:
             echo "deploy=false" >> "$GITHUB_OUTPUT"
             echo "Revision $DEPLOY_SHA was superseded on $DEPLOY_BRANCH; deployment skipped."
           fi
-      - name: Resolve reference contract source
-        if: steps.revision.outputs.deploy == 'true'
-        id: reference-contract
-        run: node .github/scripts/ci-reference-contract.mjs
-      - name: Check out reference contract
-        if: steps.revision.outputs.deploy == 'true'
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          repository: ${{ steps.reference-contract.outputs.repository }}
-          ref: ${{ steps.reference-contract.outputs.ref }}
-          path: .ci-reference-contract
-          persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         if: steps.revision.outputs.deploy == 'true'
         with:

@@ -65,11 +65,11 @@ function repositoryPayload(name, overrides = {}) {
 test("GitHub control-plane manifest is strict and contains names, never secret values", async () => {
   const manifest = await loadGitHubControlPlane();
   const serialized = JSON.stringify(manifest);
-  assert.equal(manifest.schemaVersion, 8);
+  assert.equal(manifest.schemaVersion, 9);
   assert.deepEqual(manifest.owner, { login: "mbzadev", type: "user" });
   assert.equal(
     manifest.repositories.platform.nameWithOwner,
-    "mbzadev/superboard-platform",
+    "mbzadev/superboard",
   );
   assert.match(manifest.repositories.platform.description, /SuperBoard/u);
   assert.deepEqual(manifest.repositories.platform.settings, settings());
@@ -86,20 +86,11 @@ test("GitHub control-plane manifest is strict and contains names, never secret v
     manifest.repositories.platform.releaseProtection.tagRuleset.rules,
     ["update", "deletion"],
   );
-  assert.equal(
-    manifest.repositories.reference.nameWithOwner,
-    "mbzadev/superboard-reference",
-  );
   assert.equal(manifest.repositories.platform.visibility, "public");
-  assert.equal(manifest.repositories.reference.visibility, "public");
-  assert.deepEqual(manifest.repositories.reference.repositorySecrets, []);
+  assert.deepEqual(Object.keys(manifest.repositories), ["platform"]);
   assert.equal(
     manifest.repositories.platform.branches.dev.requiredCheck,
     "CI gate",
-  );
-  assert.equal(
-    manifest.repositories.reference.branches.dev.requiredCheck,
-    "Reference gate",
   );
   assert.deepEqual(
     manifest.repositories.platform.environments.development.protection
@@ -137,7 +128,7 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
   const plan = readinessPlan(await loadGitHubControlPlane());
   assert.equal(
     plan.repositories.platform.description,
-    "SuperBoard multi-application back-office, Cloudflare Workers platform and reusable Flutter/FlutterFlow libraries",
+    "Canonical SuperBoard monorepo: back-office, Cloudflare Workers, SDKs and reference application",
   );
   assert.deepEqual(plan.repositories.platform.settings, settings());
   assert.deepEqual(plan.repositories.platform.security, securityPolicy());
@@ -158,27 +149,16 @@ test("offline GitHub readiness plan exposes no secret values and includes protec
   const sdkRelease = plan.repositories.platform.environments.find(
     ({ name }) => name === "sdk-release",
   );
-  assert.deepEqual(sdkRelease.variables, ["SUPERBOARD_REFERENCE_REPOSITORY"]);
-  assert.deepEqual(sdkRelease.secrets, ["SUPERBOARD_REFERENCE_DISPATCH_TOKEN"]);
+  assert.deepEqual(sdkRelease.variables, []);
+  assert.deepEqual(sdkRelease.secrets, []);
   assert.equal(sdkRelease.protection.enforcement, "pending-external");
   assert.equal(sdkRelease.protection.preventSelfReview, true);
   assert.equal(sdkRelease.protection.allowAdminBypass, false);
   assert.deepEqual(sdkRelease.protection.reviewers, [
     { type: "User", name: "mbzadev" },
   ]);
-  const referenceDevelopment = plan.repositories.reference.environments.find(
-    ({ name }) => name === "development",
-  );
-  assert.deepEqual(referenceDevelopment.variables, []);
-  assert.deepEqual(referenceDevelopment.secrets, [
-    "CLOUDFLARE_ACCOUNT_ID",
-    "CLOUDFLARE_API_TOKEN",
-    "SUPERBOARD_PROJECT_ID",
-    "SUPERBOARD_PROJECT_KEY",
-  ]);
   assert.equal("values" in development, false);
   assert.equal("values" in flutterFlowLibrary, false);
-  assert.equal("values" in referenceDevelopment, false);
 });
 
 test("enforced self-review protection fails closed until two reviewers are declared", () => {

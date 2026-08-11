@@ -2,8 +2,8 @@
 
 Canonical FlutterFlow reference application for the SuperBoard platform.
 
-- Platform and library source: <https://github.com/mbzadev/superboard-platform>
-- This repository: <https://github.com/mbzadev/superboard-reference>
+- Platform and library source: <https://github.com/mbzadev/superboard>
+- This repository: <https://github.com/mbzadev/superboard>
 - Development reference app: <https://reference.mbza.dev>
 - Development back office: <https://board.mbza.dev>
 - Development API: <https://api.mbza.dev>
@@ -33,7 +33,7 @@ from `superboard-platform/config/sdk-libraries.json` and
 `superboard-platform/config/flutterflow-custom-code.json`; this repository
 contains no copied network implementation or Marketing adapter.
 The complete platform data-store and duplicate inventory is maintained in
-[`superboard-platform/docs/REFERENCE_DATA_INVENTORY.md`](https://github.com/mbzadev/superboard-platform/blob/dev/docs/REFERENCE_DATA_INVENTORY.md).
+[`superboard-platform/docs/REFERENCE_DATA_INVENTORY.md`](https://github.com/mbzadev/superboard/blob/dev/docs/REFERENCE_DATA_INVENTORY.md).
 
 For a local checkout, generate an ignored dependency override without storing a
 machine path in Git:

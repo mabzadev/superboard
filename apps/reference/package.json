@@ -6,7 +6,8 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mbzadev/superboard-reference.git"
+    "url": "https://github.com/mbzadev/superboard.git",
+    "directory": "apps/reference"
   },
   "scripts": {
     "brand:check": "node scripts/reference-brand.mjs && node --test scripts/reference-brand.test.mjs",

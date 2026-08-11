@@ -341,13 +341,6 @@ async function main() {
   const manifest = await loadGitHubControlPlane();
   const paths = {
     platform: resolve(optionValue("--platform-path", root)),
-    reference: resolve(
-      optionValue(
-        "--reference-path",
-        process.env.OPENGROW_REFERENCE_PATH ||
-          resolve(root, "../grow-reference"),
-      ),
-    ),
   };
   if (process.argv.includes("--fetch")) {
     for (const path of Object.values(paths)) {

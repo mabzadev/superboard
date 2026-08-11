@@ -40,6 +40,13 @@ test("MCP runtime and plugin changes select the MCP Worker checks", () => {
   }
 });
 
+test("reference changes validate only the embedded reference application", () => {
+  const plan = runPlan(["apps/reference/lib/src/app.dart"]);
+  assert.equal(plan.reference, "true");
+  assert.equal(plan.workers, "false");
+  assert.equal(plan.dashboard, "false");
+});
+
 test("documentation changes keep heavy jobs disabled", () => {
   const plan = runPlan(["docs/DEPLOYMENT.md"]);
   assert.equal(plan.workers, "false");
@@ -47,6 +54,7 @@ test("documentation changes keep heavy jobs disabled", () => {
   assert.equal(plan.flutter_packages, "false");
   assert.equal(plan.node_sdks, "false");
   assert.equal(plan.native_sdks, "false");
+  assert.equal(plan.reference, "false");
 });
 
 test("each standalone SDK selects its maintained validation job", () => {
@@ -70,6 +78,7 @@ test("an unclassified production path fails safe with the supported matrix", () 
   assert.equal(plan.workers, "true");
   assert.equal(plan.dashboard, "true");
   assert.equal(plan.flutter_packages, "true");
+  assert.equal(plan.reference, "true");
   assert.equal(plan.node_sdks, "true");
   assert.equal(plan.native_sdks, "true");
 });

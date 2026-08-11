@@ -5,7 +5,7 @@ journeys. Security fixes are developed on `dev` and promoted through the
 protected workflow.
 
 Report vulnerabilities with GitHub's private vulnerability reporting for
-`mbzadev/superboard-reference`. Do not publish credentials, user data, access
+`mbzadev/superboard`. Do not publish credentials, user data, access
 tokens or exploit details in a public issue. If private reporting is
 unavailable, open a non-sensitive issue requesting a private contact channel.
 

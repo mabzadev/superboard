@@ -20,7 +20,7 @@ test("schema v4 records the SuperBoard transition without rewriting releases", a
   assert.equal(catalog.schemaVersion, 4);
   assert.equal(
     catalog.repository,
-    "https://github.com/mbzadev/superboard-platform",
+    "https://github.com/mbzadev/superboard",
   );
   assert.equal(result.libraries, 7);
   assert.deepEqual(
@@ -57,7 +57,7 @@ test("schema v4 records the SuperBoard transition without rewriting releases", a
   assert.equal(flutter.candidatePackageName, "superboard_flutter");
   assert.equal(
     flutter.install,
-    "opengrow_flutter:\n  git:\n    url: https://github.com/mbzadev/superboard-platform.git\n    ref: sdk-flutter-v2.1.4\n    path: sdks/flutter",
+    "opengrow_flutter:\n  git:\n    url: https://github.com/mbzadev/superboard.git\n    ref: sdk-flutter-v2.1.4\n    path: sdks/flutter",
   );
   assert.match(flutter.candidateInstall, /sdk-flutter-v3\.0\.0/u);
 
@@ -79,7 +79,7 @@ test("schema v4 records the SuperBoard transition without rewriting releases", a
   );
   assert.equal(
     flutterflow.install,
-    "opengrow_flutterflow:\n  git:\n    url: https://github.com/mbzadev/superboard-platform.git\n    ref: sdk-flutterflow-v2.2.5\n    path: sdks/flutterflow",
+    "opengrow_flutterflow:\n  git:\n    url: https://github.com/mbzadev/superboard.git\n    ref: sdk-flutterflow-v2.2.5\n    path: sdks/flutterflow",
   );
 
   const immutableCoordinates = Object.fromEntries(
@@ -128,11 +128,11 @@ test("schema v4 records the SuperBoard transition without rewriting releases", a
   );
   assert.match(
     catalog.libraries.find(({ id }) => id === "flutterflow-support").install,
-    /github\.com\/mbzadev\/superboard-platform\.git/u,
+    /github\.com\/mbzadev\/superboard\.git/u,
   );
   assert.equal(
     catalog.libraries.find(({ id }) => id === "ios").install,
-    '.package(url: "https://github.com/mbzadev/superboard-platform.git", exact: "1.0.3")',
+    '.package(url: "https://github.com/mbzadev/superboard.git", exact: "1.0.3")',
   );
 });
 
@@ -294,7 +294,7 @@ test("minimal brand guard protects active names and candidate installs", async (
   result = await validateSdkCatalog(wrongRepository);
   assert.ok(
     result.errors.includes(
-      "repository must be https://github.com/mbzadev/superboard-platform",
+      "repository must be https://github.com/mbzadev/superboard",
     ),
   );
 });
@@ -308,6 +308,7 @@ test("registry history stays honest, authenticated and secret-free", async () =>
   );
   for (const id of ["android", "javascript", "react-native"]) {
     const library = catalog.libraries.find((item) => item.id === id);
+    assert.equal(library.distribution.repository, "mbzadev/superboard-platform");
     assert.equal(library.distribution.publicMetadata, true);
     assert.equal(library.distribution.anonymousInstallable, false);
     assert.equal(library.distribution.authentication.required, true);

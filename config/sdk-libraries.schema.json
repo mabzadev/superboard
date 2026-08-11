@@ -99,12 +99,16 @@
             "additionalProperties": false,
             "required": [
               "registryKind",
+              "repository",
               "registry",
               "publicMetadata",
               "anonymousInstallable",
               "authentication"
             ],
             "properties": {
+              "repository": {
+                "const": "mbzadev/superboard-platform"
+              },
               "registryKind": {
                 "enum": ["github-packages-npm", "github-packages-maven"]
               },

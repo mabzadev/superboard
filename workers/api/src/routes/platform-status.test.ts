@@ -735,7 +735,7 @@ describe("platform status", () => {
       "sdks/flutterflow/lib/superboard_flutterflow.dart",
     );
     expect(body.data.flutterFlowLibrary).toMatchObject({
-      owner: "superboard-platform",
+      owner: "superboard",
       displayName: "SuperBoard",
       releasePolicy: "immutable-tag-only",
       remoteProject: {

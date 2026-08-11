@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/superboard-brand.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "brand": {
     "name": "SuperBoard",
     "slug": "superboard",
@@ -8,9 +8,15 @@
     "compatibilityNamespace": "opengrow"
   },
   "repositories": {
-    "platform": "mbzadev/superboard-platform",
-    "reference": "mbzadev/superboard-reference",
-    "historicalPredecessor": "mbzadev/superboard"
+    "canonical": "mbzadev/superboard",
+    "layout": {
+      "platform": ".",
+      "reference": "apps/reference"
+    },
+    "legacyReadOnly": [
+      "mbzadev/superboard-platform",
+      "mbzadev/superboard-reference"
+    ]
   },
   "developmentDomains": {
     "dashboard": "board.mbza.dev",

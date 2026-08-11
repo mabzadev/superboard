@@ -1,7 +1,7 @@
 {
   "$schema": "./sdk-libraries.schema.json",
   "schemaVersion": 4,
-  "repository": "https://github.com/mbzadev/superboard-platform",
+  "repository": "https://github.com/mbzadev/superboard",
   "developmentBranch": "dev",
   "releasePolicy": "immutable-tag",
   "libraries": [
@@ -20,9 +20,9 @@
       "releaseRef": "sdk-flutter-v2.1.4",
       "releaseStatus": "pending-release",
       "releaseSha": "1cddb333ff3330fd6ffa507d780821121bd7273a",
-      "install": "opengrow_flutter:\n  git:\n    url: https://github.com/mbzadev/superboard-platform.git\n    ref: sdk-flutter-v2.1.4\n    path: sdks/flutter",
+      "install": "opengrow_flutter:\n  git:\n    url: https://github.com/mbzadev/superboard.git\n    ref: sdk-flutter-v2.1.4\n    path: sdks/flutter",
       "candidatePackageName": "superboard_flutter",
-      "candidateInstall": "superboard_flutter:\n  git:\n    url: https://github.com/mbzadev/superboard-platform.git\n    ref: sdk-flutter-v3.0.0\n    path: sdks/flutter",
+      "candidateInstall": "superboard_flutter:\n  git:\n    url: https://github.com/mbzadev/superboard.git\n    ref: sdk-flutter-v3.0.0\n    path: sdks/flutter",
       "notes": "SuperBoard 3.0.0 is staged as a breaking package rename. The OpenGrow 2.1.4 coordinate, tag and commit remain the published rollback baseline."
     },
     {
@@ -40,10 +40,10 @@
       "releaseRef": "sdk-flutterflow-v2.2.5",
       "releaseStatus": "pending-release",
       "surfaceManifest": "config/flutterflow-custom-code.json",
-      "install": "opengrow_flutterflow:\n  git:\n    url: https://github.com/mbzadev/superboard-platform.git\n    ref: sdk-flutterflow-v2.2.5\n    path: sdks/flutterflow",
+      "install": "opengrow_flutterflow:\n  git:\n    url: https://github.com/mbzadev/superboard.git\n    ref: sdk-flutterflow-v2.2.5\n    path: sdks/flutterflow",
       "releaseSha": "b90e7e0ede12cf6321a7a8d104baf1fd8f564867",
       "candidatePackageName": "superboard_flutterflow",
-      "candidateInstall": "superboard_flutterflow:\n  git:\n    url: https://github.com/mbzadev/superboard-platform.git\n    ref: sdk-flutterflow-v3.0.0\n    path: sdks/flutterflow",
+      "candidateInstall": "superboard_flutterflow:\n  git:\n    url: https://github.com/mbzadev/superboard.git\n    ref: sdk-flutterflow-v3.0.0\n    path: sdks/flutterflow",
       "notes": "SuperBoard 3.0.0 is staged as the single FlutterFlow package, including the support surface after its source migration. OpenGrow 2.2.5 remains the published rollback baseline."
     },
     {
@@ -63,7 +63,7 @@
       "releaseSha": "e896f8ea91a140419471b02301f0bde48d8d6b13",
       "surfaceManifest": "config/flutterflow-custom-code.json",
       "notes": "Frozen at 1.3.0 for existing OpenGrow clients. Its support surface is scheduled to move into the active SuperBoard FlutterFlow package; no new standalone release is allowed.",
-      "install": "opengrow_flutterflow_messaging:\n  git:\n    url: https://github.com/mbzadev/superboard-platform.git\n    ref: sdk-flutterflow-messaging-v1.3.0\n    path: sdks/flutterflow_messaging"
+      "install": "opengrow_flutterflow_messaging:\n  git:\n    url: https://github.com/mbzadev/superboard.git\n    ref: sdk-flutterflow-messaging-v1.3.0\n    path: sdks/flutterflow_messaging"
     },
     {
       "id": "ios",
@@ -81,7 +81,7 @@
       "releaseStatus": "released",
       "releaseSha": "f57894c886956f4043c0c3899c35250548937463",
       "notes": "The 1.0.3 coordinate remains reproducible for existing clients. Native iOS code is now maintained only as an internal implementation of the active Flutter SDK.",
-      "install": ".package(url: \"https://github.com/mbzadev/superboard-platform.git\", exact: \"1.0.3\")"
+      "install": ".package(url: \"https://github.com/mbzadev/superboard.git\", exact: \"1.0.3\")"
     },
     {
       "id": "android",
@@ -101,6 +101,7 @@
       "notes": "The 1.0.3 coordinate remains reproducible for existing clients. Native Android code is now maintained only as an internal implementation of the active Flutter SDK.",
       "install": "implementation(\"io.opengrow:opengrow-android-sdk:1.0.3\")",
       "distribution": {
+        "repository": "mbzadev/superboard-platform",
         "registryKind": "github-packages-maven",
         "registry": "https://maven.pkg.github.com/mbzadev/superboard-platform",
         "publicMetadata": true,
@@ -130,6 +131,7 @@
       "notes": "Frozen at 1.0.2 for reproducibility. SuperBoard does not publish or maintain a JavaScript SDK.",
       "install": "npm install @mbzadev/opengrow-js-sdk@1.0.2",
       "distribution": {
+        "repository": "mbzadev/superboard-platform",
         "registryKind": "github-packages-npm",
         "registry": "https://npm.pkg.github.com",
         "publicMetadata": true,
@@ -158,6 +160,7 @@
       "notes": "Frozen at 1.0.2 for reproducibility. SuperBoard does not publish or maintain a React Native SDK.",
       "install": "npm install @mbzadev/opengrow-react-native-sdk@1.0.2",
       "distribution": {
+        "repository": "mbzadev/superboard-platform",
         "registryKind": "github-packages-npm",
         "registry": "https://npm.pkg.github.com",
         "publicMetadata": true,

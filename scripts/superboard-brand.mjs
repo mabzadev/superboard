@@ -90,6 +90,6 @@ export async function checkSuperBoardBrand({ repositoryRoot = root } = {}) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const manifest = await checkSuperBoardBrand();
   process.stdout.write(
-    `${manifest.brand.name} brand contract valid: ${manifest.repositories.platform}, https://${manifest.developmentDomains.dashboard}\n`,
+    `${manifest.brand.name} brand contract valid: ${manifest.repositories.canonical}, https://${manifest.developmentDomains.dashboard}\n`,
   );
 }

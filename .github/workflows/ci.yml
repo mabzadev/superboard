@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/.ci-reference-contract
+      SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/apps/reference
     outputs:
       api: ${{ steps.changes.outputs.api }}
       billing: ${{ steps.changes.outputs.billing }}
@@ -37,20 +37,11 @@ jobs:
       react_native: ${{ steps.changes.outputs.react_native }}
       node_sdks: ${{ steps.changes.outputs.node_sdks }}
       native_sdks: ${{ steps.changes.outputs.native_sdks }}
+      reference: ${{ steps.changes.outputs.reference }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
-          persist-credentials: false
-      - name: Resolve reference contract source
-        id: reference-contract
-        run: node .github/scripts/ci-reference-contract.mjs
-      - name: Check out reference contract
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          repository: ${{ steps.reference-contract.outputs.repository }}
-          ref: ${{ steps.reference-contract.outputs.ref }}
-          path: .ci-reference-contract
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -292,6 +283,36 @@ jobs:
         run: ./gradlew :OpenGrow:testDebugUnitTest
         working-directory: sdks/android/OpenGrow
 
+  reference:
+    name: Reference application
+    needs: plan
+    if: needs.plan.outputs.reference == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/reference/package-lock.json
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: "3.44.9"
+          cache: true
+      - name: Install the reference contract
+        run: npm ci
+        working-directory: apps/reference
+      - name: Resolve immutable Flutter dependencies
+        run: flutter pub get --enforce-lockfile
+        working-directory: apps/reference
+      - name: Validate the embedded reference application
+        run: npm run check
+        working-directory: apps/reference
+
   validation-gate:
     name: CI gate
     if: ${{ always() }}
@@ -305,6 +326,7 @@ jobs:
         node_sdks,
         ios_sdk,
         android_sdk,
+        reference,
       ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -317,12 +339,13 @@ jobs:
       NODE_SDKS_RESULT: ${{ needs.node_sdks.result }}
       IOS_SDK_RESULT: ${{ needs.ios_sdk.result }}
       ANDROID_SDK_RESULT: ${{ needs.android_sdk.result }}
+      REFERENCE_RESULT: ${{ needs.reference.result }}
     steps:
       - name: Require every selected validation to pass
         run: |
           test "$PLAN_RESULT" = "success"
           test "$NON_NODE_SECURITY_RESULT" = "success"
-          for result in "$WORKERS_RESULT" "$DASHBOARD_RESULT" "$FLUTTER_RESULT" "$NODE_SDKS_RESULT" "$IOS_SDK_RESULT" "$ANDROID_SDK_RESULT"; do
+          for result in "$WORKERS_RESULT" "$DASHBOARD_RESULT" "$FLUTTER_RESULT" "$NODE_SDKS_RESULT" "$IOS_SDK_RESULT" "$ANDROID_SDK_RESULT" "$REFERENCE_RESULT"; do
             case "$result" in
               success|skipped) ;;
               *) exit 1 ;;

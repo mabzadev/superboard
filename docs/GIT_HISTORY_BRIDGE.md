@@ -1,8 +1,11 @@
 # Protected `main`/`dev` history bridge
 
-This runbook repairs the one-time repository initialization split in which
-`main` and `dev` exist but GitHub cannot compute a merge base. It applies to
-both canonical public repositories:
+Status: historical. The monorepo consolidation replaces both legacy source
+repositories. `mbzadev/superboard` already shares ancestry with the Platform
+history and does not require this bridge.
+
+This runbook records the earlier one-time repository initialization split in
+which `main` and `dev` had no merge base. It applies only to these legacy repos:
 
 | Repository                   | Preserved pre-SuperBoard `main`                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------------ |

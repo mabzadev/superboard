@@ -33,28 +33,22 @@ secret of its own.
 
 `config/cloudflare-deployments.json` enforces one automatic deployment authority per target:
 
-- `mbza-development` is deployed from `dev` by Cloudflare Workers Builds. Only
-  the target's Dashboard Worker is connected to `mbzadev/superboard-platform`.
-  Cloudflare installs dependencies, then the build command clones the public
-  `superboard-reference` contract and runs the deployment-policy, service,
-  typecheck, application and Custom Worker gates before its versioned
-  `cloudflare:deploy:all` deploy command can run. Non-production branch builds
-  are disabled.
-  That one controller deploys every enabled Worker in dependency order; do not
-  connect the other Workers independently, because concurrent controllers can
-  race migrations, routes and Queue consumers.
+- `mbza-development` is deployed from `dev` by Cloudflare Workers Builds. Each
+  declared Worker has its own native Git connection to `mbzadev/superboard`.
+  Every connection uses the same source and build gate, but receives one exact
+  `SUPERBOARD_SERVICE` value and runs only `cloudflare:deploy --service`. This
+  matches Cloudflare's Worker-scoped build token and prevents one connected
+  Worker from overwriting another. Non-production branch builds are disabled.
 
 - `vocostar-production` is deployed from `main` by
   `.github/workflows/deploy-cloudflare.yml`, after the successful aggregate CI
   gate. Its protected GitHub Environment supplies the production account,
   least-privilege token and D1 backup encryption key.
 
-Cloudflare Workers Builds injects `WRANGLER_CI_OVERRIDE_NAME` so a conventional
-single-Worker deploy targets the connected Worker. SuperBoard removes that
-variable from every Cloudflare child-process environment: the generated target
-manifest remains the only Worker-name authority for the ordered multi-Worker
-release. The caller environment is not mutated, and account credentials plus
-the other Workers Builds metadata continue to be forwarded.
+Cloudflare Workers Builds injects a connected Worker identity. The generated
+target manifest and `SUPERBOARD_SERVICE` must resolve to that same Worker. The
+deploy command is deliberately mono-service; multi-Worker production rollout
+remains owned by the protected GitHub Actions workflow.
 
 Cloudflare generates and retains the Workers Builds token. The selected MBZA
 account ID is a non-secret `CLOUDFLARE_ACCOUNT_ID` build variable in Cloudflare,
@@ -63,13 +57,17 @@ the platform `development` GitHub Environment contains no Cloudflare deployment
 credential. The exact source-owned Workers Builds contract is:
 
 ```text
-repository: mbzadev/superboard-platform
+repository: mbzadev/superboard
 production branch: dev
-build command: git clone --depth 1 --branch dev https://github.com/mbzadev/superboard-reference.git ../superboard-reference && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check
-deploy command: npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"
-build variables: CLOUDFLARE_ACCOUNT_ID, SUPERBOARD_TARGET=mbza-development, SUPERBOARD_ENVIRONMENT=development
+build command: npm ci && npm --prefix apps/reference ci && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test
+deploy command: npm run cloudflare:deploy -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT" --service "$SUPERBOARD_SERVICE"
+build variables: CLOUDFLARE_ACCOUNT_ID, SUPERBOARD_TARGET=mbza-development, SUPERBOARD_ENVIRONMENT=development, SUPERBOARD_SERVICE=<one declared service>
 non-production branch builds: disabled
 ```
+
+Create the same connection for: `observability`, `email`, `files`, `identity`,
+`app`, `products`, `paywalls`, `dynamic-links`, `support`, `marketing`,
+`onboardings`, `billing`, `custom`, `api`, `mcp`, and `dashboard`.
 
 ## Private back-office registration
 

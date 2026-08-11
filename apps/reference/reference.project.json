@@ -2,8 +2,9 @@
   "$schema": "schemas/reference-project.schema.json",
   "schemaVersion": 4,
   "name": "SuperBoard Reference",
-  "platformRepository": "https://github.com/mbzadev/superboard-platform",
-  "referenceRepository": "https://github.com/mbzadev/superboard-reference",
+  "platformRepository": "https://github.com/mbzadev/superboard",
+  "referenceRepository": "https://github.com/mbzadev/superboard",
+  "referencePath": "apps/reference",
   "environment": "development",
   "target": "mbza-development",
   "sdkApplication": {

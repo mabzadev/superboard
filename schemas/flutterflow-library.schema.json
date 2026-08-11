@@ -21,7 +21,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
-    "owner": { "const": "superboard-platform" },
+    "owner": { "const": "superboard" },
     "displayName": { "type": "string", "minLength": 1 },
     "source": {
       "type": "object",

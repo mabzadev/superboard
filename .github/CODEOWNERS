@@ -1,5 +1,6 @@
 * @mbzadev
 
 /deploy/ @mbzadev
+/apps/reference/ @mbzadev
 /workers/api/migrations/ @mbzadev
 /.github/workflows/ @mbzadev

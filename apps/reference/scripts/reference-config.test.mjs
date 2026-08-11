@@ -169,17 +169,17 @@ test("coordinated project and development drift still fails closed", () => {
   );
 });
 
-test("libraries come from superboard-platform and custom code is not copied", async () => {
+test("libraries come from the SuperBoard monorepo and custom code is not copied", async () => {
   assert.equal(
     project.platformRepository,
-    "https://github.com/mbzadev/superboard-platform",
+    "https://github.com/mbzadev/superboard",
   );
   assert.equal(catalog.policy, "reference-only-no-copied-implementation");
   assert.equal(catalog.schemaVersion, 3);
   assert.equal(catalog.sourceManifestVersion, 1);
   assert.match(
     catalog.source,
-    /superboard-platform\/blob\/dev\/config\/flutterflow-custom-code\.json$/,
+    /superboard\/blob\/dev\/config\/flutterflow-custom-code\.json$/,
   );
   assert.equal(catalog.widgets, undefined);
   assert.equal(catalog.actions, undefined);
@@ -709,7 +709,7 @@ test("reference changes require the declared owner review", () => {
 
 test("GitHub CI metadata is derived from the strict project manifest", () => {
   assert.deepEqual(buildReferenceCiMetadata(project), {
-    platform_repository: "mbzadev/superboard-platform",
+    platform_repository: "mbzadev/superboard",
     deployment_branch: "dev",
   });
   assert.equal(

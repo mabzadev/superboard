@@ -20,6 +20,7 @@ ios=false
 android=false
 javascript=false
 react_native=false
+reference=false
 mark_all() {
   api=true
   billing=true
@@ -33,6 +34,7 @@ mark_all() {
   android=true
   javascript=true
   react_native=true
+  reference=true
 }
 
 mark_root_node_workspaces() {
@@ -90,6 +92,10 @@ plan_path() {
       dashboard=true
       return
       ;;
+    apps/reference/*)
+      reference=true
+      return
+      ;;
     sdks/flutter/ios/*)
       flutter=true
       flutterflow=true
@@ -104,10 +110,12 @@ plan_path() {
       flutter=true
       # FlutterFlow consumes the Flutter package through a path dependency.
       flutterflow=true
+      reference=true
       return
       ;;
     sdks/flutterflow/*)
       flutterflow=true
+      reference=true
       return
       ;;
     sdks/flutterflow_messaging/*)
@@ -182,6 +190,7 @@ fi
 
 for name in \
   api billing messaging mcp workers dashboard \
+  reference \
   flutter flutterflow flutterflow_messaging flutter_packages \
   ios android javascript react_native node_sdks native_sdks; do
   printf '%s=%s\n' "$name" "${!name}" >> "$output_file"

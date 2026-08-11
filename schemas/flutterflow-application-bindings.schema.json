@@ -8,7 +8,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 2 },
-    "owner": { "const": "superboard-platform" },
+    "owner": { "const": "superboard" },
     "generatedFrom": { "const": "config/flutterflow-applications.json" },
     "applications": {
       "type": "array",

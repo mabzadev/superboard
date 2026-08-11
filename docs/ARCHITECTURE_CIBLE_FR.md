@@ -7,9 +7,9 @@ déployer; l'ancien inventaire de VocoStar reste disponible uniquement comme
 ## Décision d'architecture
 
 SuperBoard devient le back-office et le plan de contrôle commun à toutes les
-applications. Il n'est plus un SaaS autonome. Le code commun vit dans le dépôt
-`mbzadev/superboard-platform`; l'application d'acceptation FlutterFlow vit dans
-`mbzadev/superboard-reference`. `mbza.dev` est seulement l'environnement de
+applications. Il n'est plus un SaaS autonome. Tout le code commun vit dans le
+monorepo `mbzadev/superboard`; l'application d'acceptation FlutterFlow vit dans
+`apps/reference`. `mbza.dev` est seulement l'environnement de
 développement et de recette de cette plateforme.
 
 Une application n'obtient jamais une copie modifiée des Workers communs. Elle
@@ -20,8 +20,8 @@ ajouter au maximum un Worker custom pour ses traitements véritablement uniques.
 flowchart TB
   app["Application Flutter / FlutterFlow"]
   admin["Administrateurs SuperBoard"]
-  git["GitHub : superboard-platform"]
-  gitref["GitHub : superboard-reference"]
+  git["GitHub : superboard monorepo"]
+  gitref["apps/reference"]
   gha["GitHub Actions + Environments"]
   cfdev["Compte Cloudflare développement"]
   cfprod["Compte Cloudflare production"]

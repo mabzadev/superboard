@@ -15,7 +15,7 @@ at the immutable release `sdk-flutterflow-v2.2.5`:
 ```yaml
 opengrow_flutterflow:
   git:
-    url: https://github.com/mbzadev/superboard-platform.git
+    url: https://github.com/mbzadev/superboard.git
     ref: sdk-flutterflow-v2.2.5
     path: sdks/flutterflow
 ```

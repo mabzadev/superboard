@@ -2,12 +2,12 @@
 # Replace `dev` with immutable SDK tags before a production release.
 opengrow_flutterflow:
   git:
-    url: https://github.com/mbzadev/superboard-platform.git
+    url: https://github.com/mbzadev/superboard.git
     ref: sdk-flutterflow-v2.2.5
     path: sdks/flutterflow
 
 opengrow_flutterflow_messaging:
   git:
-    url: https://github.com/mbzadev/superboard-platform.git
+    url: https://github.com/mbzadev/superboard.git
     ref: sdk-flutterflow-messaging-v1.3.0
     path: sdks/flutterflow_messaging

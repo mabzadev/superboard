@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/flutterflow-library.schema.json",
   "schemaVersion": 1,
-  "owner": "superboard-platform",
+  "owner": "superboard",
   "displayName": "SuperBoard",
   "source": {
     "path": "tools/flutterflow-library/dsl/edit.dart",

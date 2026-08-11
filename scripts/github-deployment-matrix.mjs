@@ -21,7 +21,7 @@ export function validateDeploymentConfiguration(configuration) {
     !configuration ||
     typeof configuration !== "object" ||
     Array.isArray(configuration) ||
-    configuration.schemaVersion !== 3 ||
+    configuration.schemaVersion !== 4 ||
     !Array.isArray(configuration.deployments) ||
     configuration.deployments.length === 0
   ) {
@@ -92,28 +92,49 @@ export function validateDeploymentConfiguration(configuration) {
     }
     if (authority === "cloudflare-workers-builds") {
       const expectedBuildCommand =
-        "git clone --depth 1 --branch dev https://github.com/mbzadev/superboard-reference.git ../superboard-reference && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check";
+        "npm ci && npm --prefix apps/reference ci && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test";
       const expectedDeployCommand =
-        'npm run cloudflare:deploy:all -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT"';
+        'npm run cloudflare:deploy -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT" --service "$SUPERBOARD_SERVICE"';
       const expectedBuildVariables = [
         "CLOUDFLARE_ACCOUNT_ID",
         "SUPERBOARD_ENVIRONMENT",
+        "SUPERBOARD_SERVICE",
         "SUPERBOARD_TARGET",
+      ];
+      const expectedServices = [
+        "observability",
+        "email",
+        "files",
+        "identity",
+        "app",
+        "products",
+        "paywalls",
+        "dynamic-links",
+        "support",
+        "marketing",
+        "onboardings",
+        "billing",
+        "custom",
+        "api",
+        "mcp",
+        "dashboard",
       ];
       if (
         deployment.branch !== "dev" ||
         deployment.cloudflareEnvironment !== "development" ||
-        deployment.automaticDeployment.controllerService !== "dashboard" ||
+        deployment.automaticDeployment.mode !== "per-service" ||
+        JSON.stringify(deployment.automaticDeployment.services) !==
+          JSON.stringify(expectedServices) ||
         deployment.automaticDeployment.buildCommand !== expectedBuildCommand ||
         deployment.automaticDeployment.deployCommand !==
           expectedDeployCommand ||
         JSON.stringify(deployment.automaticDeployment.buildVariables) !==
           JSON.stringify(expectedBuildVariables) ||
         deployment.automaticDeployment.nonProductionBranchBuilds !== false ||
-        Object.keys(deployment.automaticDeployment).length !== 6
+        Object.keys(deployment.automaticDeployment).length !== 7
       ) {
         throw new Error(
-          "Cloudflare Workers Builds must be the single dashboard-controlled development authority",
+          "Cloudflare Workers Builds must use one monorepo connection per declared development service",
         );
       }
     } else if (Object.keys(deployment.automaticDeployment).length !== 1) {

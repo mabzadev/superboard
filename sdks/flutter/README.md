@@ -108,7 +108,7 @@ at the immutable release `sdk-flutter-v2.1.4`:
 ```yaml
 opengrow_flutter:
   git:
-    url: https://github.com/mbzadev/superboard-platform.git
+    url: https://github.com/mbzadev/superboard.git
     ref: sdk-flutter-v2.1.4
     path: sdks/flutter
 ```

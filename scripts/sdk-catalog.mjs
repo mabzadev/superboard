@@ -13,7 +13,7 @@ const catalogPath = resolve(root, "config/sdk-libraries.json");
 const catalogSchemaPath = resolve(root, "config/sdk-libraries.schema.json");
 const catalogSchemaVersion = 4;
 const canonicalRepository =
-  "https://github.com/mbzadev/superboard-platform";
+  "https://github.com/mbzadev/superboard";
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
 const commitSha = /^[0-9a-f]{40}$/;
 const lifecycles = new Set(["active", "internal", "archived"]);
@@ -290,13 +290,18 @@ function validateDistributionContract(catalog, library, prefix, errors) {
     : "github-packages-maven";
   const expectedRegistry = isNpm
     ? "https://npm.pkg.github.com"
-    : githubMavenRegistry(catalog?.repository);
+    : githubMavenRegistry(`https://github.com/${distribution.repository}`);
   const expectedInstall = isNpm
     ? `npm install ${library.packageName}@${library.latestReleaseVersion}`
     : `implementation("${library.packageName}:${library.latestReleaseVersion}")`;
 
   if (distribution.registryKind !== expectedKind) {
     errors.push(`${prefix}.distribution.registryKind must be ${expectedKind}`);
+  }
+  if (distribution.repository !== "mbzadev/superboard-platform") {
+    errors.push(
+      `${prefix}.distribution.repository must preserve the historical package owner mbzadev/superboard-platform`,
+    );
   }
   if (distribution.registry !== expectedRegistry) {
     errors.push(`${prefix}.distribution.registry must be ${expectedRegistry}`);
@@ -481,7 +486,7 @@ async function validateFlutterFlowSurface(catalog, errors, manifestOverride) {
         "utf8",
       ),
     );
-  if (manifest.schemaVersion !== 1 || manifest.owner !== "superboard-platform")
+  if (manifest.schemaVersion !== 1 || manifest.owner !== "superboard")
     errors.push("FlutterFlow custom code manifest ownership is invalid");
   const sourceFiles = [
     ...(await readTree(resolve(root, "sdks/flutterflow/lib"))),

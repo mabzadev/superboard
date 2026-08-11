@@ -1,14 +1,14 @@
 {
   "$schema": "../schemas/github-control-plane.schema.json",
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "owner": {
     "login": "mbzadev",
     "type": "user"
   },
   "repositories": {
     "platform": {
-      "nameWithOwner": "mbzadev/superboard-platform",
-      "description": "SuperBoard multi-application back-office, Cloudflare Workers platform and reusable Flutter/FlutterFlow libraries",
+      "nameWithOwner": "mbzadev/superboard",
+      "description": "Canonical SuperBoard monorepo: back-office, Cloudflare Workers, SDKs and reference application",
       "settings": {
         "issues": true,
         "projects": false,
@@ -102,10 +102,8 @@
           }
         },
         "sdk-release": {
-          "variables": {
-            "SUPERBOARD_REFERENCE_REPOSITORY": "mbzadev/superboard-reference"
-          },
-          "secrets": ["SUPERBOARD_REFERENCE_DISPATCH_TOKEN"],
+          "variables": {},
+          "secrets": [],
           "protection": {
             "enforcement": "pending-external",
             "pendingReason": "A second trusted human reviewer must receive repository read access before self-review prevention can be activated safely.",
@@ -143,59 +141,6 @@
             "FF_LIBRARY_PROJECT_ID": "open-grow-private-4m5us1"
           },
           "secrets": ["FF_API_KEY", "SUPERBOARD_PROJECT_KEY"]
-        }
-      }
-    },
-    "reference": {
-      "nameWithOwner": "mbzadev/superboard-reference",
-      "description": "Reference application validating SuperBoard common journeys on the MBZA development environment",
-      "settings": {
-        "issues": true,
-        "projects": false,
-        "wiki": false,
-        "downloads": false,
-        "squashMerge": true,
-        "mergeCommit": false,
-        "rebaseMerge": false,
-        "deleteBranchOnMerge": true
-      },
-      "visibility": "public",
-      "defaultBranch": "dev",
-      "workflowPermissions": {
-        "default": "read",
-        "canApprovePullRequestReviews": true
-      },
-      "security": {
-        "vulnerabilityAlerts": true,
-        "dependabotSecurityUpdates": true
-      },
-      "releaseProtection": {
-        "immutableReleases": true
-      },
-      "repositorySecrets": [],
-      "branches": {
-        "dev": {
-          "requiredCheck": "Reference gate",
-          "requirePullRequest": true,
-          "requireCodeOwnerReviews": true,
-          "requiredApprovals": 1
-        },
-        "main": {
-          "requiredCheck": "Reference gate",
-          "requirePullRequest": true,
-          "requireCodeOwnerReviews": true,
-          "requiredApprovals": 1
-        }
-      },
-      "environments": {
-        "development": {
-          "variables": {},
-          "secrets": [
-            "CLOUDFLARE_ACCOUNT_ID",
-            "CLOUDFLARE_API_TOKEN",
-            "SUPERBOARD_PROJECT_KEY",
-            "SUPERBOARD_PROJECT_ID"
-          ]
         }
       }
     }

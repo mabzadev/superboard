@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/cloudflare-deployments.schema.json",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "deployments": [
     {
       "id": "mbza-development",
@@ -10,12 +10,31 @@
       "cloudflareEnvironment": "development",
       "automaticDeployment": {
         "authority": "cloudflare-workers-builds",
-        "controllerService": "dashboard",
-        "buildCommand": "git clone --depth 1 --branch dev https://github.com/mbzadev/superboard-reference.git ../superboard-reference && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check",
-        "deployCommand": "npm run cloudflare:deploy:all -- --target \"$SUPERBOARD_TARGET\" --environment \"$SUPERBOARD_ENVIRONMENT\"",
+        "mode": "per-service",
+        "services": [
+          "observability",
+          "email",
+          "files",
+          "identity",
+          "app",
+          "products",
+          "paywalls",
+          "dynamic-links",
+          "support",
+          "marketing",
+          "onboardings",
+          "billing",
+          "custom",
+          "api",
+          "mcp",
+          "dashboard"
+        ],
+        "buildCommand": "npm ci && npm --prefix apps/reference ci && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test",
+        "deployCommand": "npm run cloudflare:deploy -- --target \"$SUPERBOARD_TARGET\" --environment \"$SUPERBOARD_ENVIRONMENT\" --service \"$SUPERBOARD_SERVICE\"",
         "buildVariables": [
           "CLOUDFLARE_ACCOUNT_ID",
           "SUPERBOARD_ENVIRONMENT",
+          "SUPERBOARD_SERVICE",
           "SUPERBOARD_TARGET"
         ],
         "nonProductionBranchBuilds": false

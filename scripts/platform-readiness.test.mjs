@@ -490,8 +490,8 @@ test("governance schema accepts repositories owned by another GitHub account", a
   const governance = JSON.parse(
     await readFile(resolve(root, "config/platform-governance.json"), "utf8"),
   );
-  governance.canonicalRepository = "example/superboard-platform";
-  governance.referenceRepository = "example/superboard-reference";
+  governance.canonicalRepository = "example/superboard";
+  governance.referenceRepository = "example/superboard";
 
   const validate = new Ajv2020({ allErrors: true }).compile(schema);
   assert.equal(validate(governance), true, JSON.stringify(validate.errors));
@@ -500,12 +500,12 @@ test("governance schema accepts repositories owned by another GitHub account", a
 test("reference readiness binds short links and source versions to the target", async () => {
   const { target } = await loadTarget("mbza-development");
   const repositories = {
-    platform: { nameWithOwner: "mbzadev/superboard-platform" },
-    reference: { nameWithOwner: "mbzadev/superboard-reference" },
+    platform: { nameWithOwner: "mbzadev/superboard" },
   };
   const project = {
-    platformRepository: "https://github.com/mbzadev/superboard-platform",
-    referenceRepository: "https://github.com/mbzadev/superboard-reference",
+    platformRepository: "https://github.com/mbzadev/superboard",
+    referenceRepository: "https://github.com/mbzadev/superboard",
+    referencePath: "apps/reference",
     target: "mbza-development",
     environment: "development",
     sdkApplication: {
@@ -591,7 +591,8 @@ test("reference readiness derives application URLs and repositories from manifes
   ];
   const project = {
     platformRepository: "https://github.com/example/platform",
-    referenceRepository: "https://github.com/example/reference",
+    referenceRepository: "https://github.com/example/platform",
+    referencePath: "apps/reference",
     target: "sample-development",
     environment: "development",
     sdkApplication: {
@@ -647,7 +648,6 @@ test("reference readiness derives application URLs and repositories from manifes
   assert.equal(
     referenceReadiness(project, target, catalogue, {
       platform: { nameWithOwner: "example/platform" },
-      reference: { nameWithOwner: "example/reference" },
     }).ready,
     true,
   );
@@ -789,7 +789,7 @@ test("current offline report is fail-closed and contains actionable blockers", a
   assert.equal(report.stages.historicalParity.sourceAvailable, false);
   assert.equal(
     report.governance.canonicalRepository,
-    "mbzadev/superboard-platform",
+    "mbzadev/superboard",
   );
   assert.equal(report.stages.localContracts.ready, false);
   assert.deepEqual(report.stages.flutterFlowLibrary, { ready: true });

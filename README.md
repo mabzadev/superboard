@@ -4,8 +4,8 @@ Public canonical monorepo for the SuperBoard platform and SDKs. The repository i
 the only source of truth; Cloudflare targets are isolated by declarative manifests
 and never fork this code.
 
-- Platform repository: <https://github.com/mbzadev/superboard-platform>
-- FlutterFlow reference application: <https://github.com/mbzadev/superboard-reference>
+- Canonical repository: <https://github.com/mbzadev/superboard>
+- FlutterFlow reference application: [`apps/reference`](apps/reference)
 - Development reference app: <https://reference.mbza.dev>
 - Development dashboard: <https://board.mbza.dev>
 - Development API: <https://api.mbza.dev>
@@ -18,6 +18,7 @@ and never fork this code.
 | Path                         | Purpose                                                               |
 | ---------------------------- | --------------------------------------------------------------------- |
 | `apps/dashboard`             | SuperBoard back-office deployed with OpenNext on Workers              |
+| `apps/reference`             | Executable Flutter/FlutterFlow reference application and its tests    |
 | `workers/api`                | Hono API, OAuth, short links, purchases and queues                    |
 | `workers/mcp`                | Target-deployed stateless MCP Worker with a private API binding       |
 | `apps/mcp`                   | Local MCP adapter, reusable tool catalogue and editor plugin          |
@@ -67,9 +68,10 @@ The application migration plan groups every authenticated FlutterFlow
 convergence gate into ordered work items, verifies all replacement symbols
 against the public SDK catalogue and is embedded in the same readiness report.
 
-The GitHub control plane is also fail-closed. `npm run github:bootstrap` plans
-creation of the two declared repositories with their exact public/private
-visibility without changing GitHub;
+The GitHub control plane is also fail-closed. The canonical repository contains
+the platform, back-office, Workers, SDKs and reference application. The former
+`superboard-platform` and `superboard-reference` repositories are retained only
+as read-only migration sources until their final archive;
 `npm run github:history:plan -- --fetch` verifies both canonical remotes,
 detects unrelated or divergent histories and derives exact audit refs without
 committing or pushing;

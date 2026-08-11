@@ -1,10 +1,9 @@
 # SuperBoard reference architecture
 
 The source-of-truth boundary is governed by
-[ADR-001](./ADR-001-CANONICAL-SUPERBOARD-SOURCE.md): `superboard-platform` is the single
-canonical platform repository and `superboard-reference` is its independent acceptance
-consumer. Historical upstream trees are provenance, not a second release
-authority.
+[ADR-001](./ADR-001-CANONICAL-SUPERBOARD-SOURCE.md): `superboard` is the single
+canonical monorepo and `apps/reference` is its independently testable acceptance
+application. Historical upstream trees are provenance, not a second release authority.
 
 ## Objective
 
@@ -18,12 +17,12 @@ The Dashboard receives API, SDK, short-link, MCP, documentation and optional sup
 origins from that same target during its Cloudflare build. Copyable integration
 snippets never contain an MBZA, VocoStar or generic example hostname.
 
-The two canonical repositories are:
+The canonical source layout is:
 
-- `mbzadev/superboard-platform`: this monorepo, containing the dashboard, common
-  Workers, deployment automation, contracts, and SDKs;
-- `mbzadev/superboard-reference`: the FlutterFlow reference application consuming
-  released SuperBoard libraries without copying their implementation.
+- `mbzadev/superboard`: dashboard, common Workers, deployment automation,
+  contracts, SDKs and the shared control plane;
+- `apps/reference`: FlutterFlow reference application consuming released
+  SuperBoard libraries without copying their implementation.
 
 The reusable FlutterFlow library project named `SuperBoard` is also owned by the
 platform repository: its Git source is `tools/flutterflow-library`, its

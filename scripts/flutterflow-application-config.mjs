@@ -70,7 +70,7 @@ export async function resolveFlutterFlowApplications({
   const output = {
     $schema: "../schemas/flutterflow-application-bindings.schema.json",
     schemaVersion: 2,
-    owner: "superboard-platform",
+    owner: "superboard",
     generatedFrom: "config/flutterflow-applications.json",
     applications,
   };

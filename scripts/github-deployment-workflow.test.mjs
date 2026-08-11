@@ -129,16 +129,12 @@ test("production Cloudflare deployment is restricted, preflighted and target-dri
   );
   assert.match(
     workflow,
-    /SUPERBOARD_REFERENCE_ROOT: \$\{\{ github\.workspace \}\}\/\.ci-reference-contract/,
+    /SUPERBOARD_REFERENCE_ROOT: \$\{\{ github\.workspace \}\}\/apps\/reference/,
   );
-  assert.match(
-    workflow,
-    /Resolve reference contract source[\s\S]*?node \.github\/scripts\/ci-reference-contract\.mjs/,
-  );
-  assert.match(
-    workflow,
-    /Check out reference contract[\s\S]*?repository: \$\{\{ steps\.reference-contract\.outputs\.repository \}\}[\s\S]*?ref: \$\{\{ steps\.reference-contract\.outputs\.ref \}\}[\s\S]*?path: \.ci-reference-contract/,
-  );
+  assert.doesNotMatch(workflow, /ci-reference-contract|\.ci-reference-contract/u);
+  assert.doesNotMatch(ciWorkflow, /ci-reference-contract|\.ci-reference-contract/u);
+  assert.match(ciWorkflow, /working-directory: apps\/reference/u);
+  assert.match(ciWorkflow, /name: Reference application/u);
   assert.match(workflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
   assert.match(workflow, /secrets\.CLOUDFLARE_API_TOKEN/);
   assert.match(workflow, /persist-credentials: false/);
@@ -280,7 +276,7 @@ test("branch protection can require one stable aggregate CI check", () => {
   assert.match(ciWorkflow, /if: \$\{\{ always\(\) \}\}/);
   assert.match(
     ciWorkflow,
-    /needs:\s*\[\s*plan,\s*non_node_security,\s*workers,\s*dashboard,\s*flutter,\s*node_sdks,\s*ios_sdk,\s*android_sdk,?\s*\]/u,
+    /needs:\s*\[\s*plan,\s*non_node_security,\s*workers,\s*dashboard,\s*flutter,\s*node_sdks,\s*ios_sdk,\s*android_sdk,\s*reference,?\s*\]/u,
   );
   assert.match(ciWorkflow, /success\|skipped/);
   assert.match(ciWorkflow, /Validate Cloudflare and GitHub control planes/);
@@ -746,11 +742,9 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
     promoteReferenceSdkWorkflow,
     /Validate the complete SDK catalogue[\s\S]*?sdk-catalog\.mjs check[\s\S]*?sdk-documentation\.mjs check/,
   );
-  assert.match(
-    promoteReferenceSdkWorkflow,
-    /event_type=sdk-release-set-published/,
-  );
-  assert.match(promoteReferenceSdkWorkflow, /client_payload\[catalogue_sha\]/);
+  assert.match(promoteReferenceSdkWorkflow, /Promote the embedded reference application/);
+  assert.match(promoteReferenceSdkWorkflow, /apps\/reference\/scripts\/reference-sdk-promotion\.mjs/);
+  assert.match(promoteReferenceSdkWorkflow, /gh pr create/);
   assert.doesNotMatch(promoteReferenceSdkWorkflow, /gh pr (?:merge|review)/);
   assert.match(syncFlutterFlowWorkflow, /workflow_call:/);
   assert.match(syncFlutterFlowWorkflow, /inputs\.source_ref/);
@@ -760,7 +754,7 @@ test("SDK publication proposes protected catalogue and reference promotions", ()
   );
 });
 
-test("reference promotion separates repository reads from cross-repository credentials", () => {
+test("reference promotion is local to the monorepo and requires no cross-repository credential", () => {
   const dispatchJobHeader = workflowSection(
     promoteReferenceSdkWorkflow,
     "\n  dispatch:",
@@ -775,7 +769,7 @@ test("reference promotion separates repository reads from cross-repository crede
   const releaseVerification = workflowSection(
     promoteReferenceSdkWorkflow,
     "      - name: Verify every immutable SDK tag and GitHub release",
-    "      - name: Validate cross-repository dispatch destination",
+    "      - uses: subosito/flutter-action@",
   );
   assert.match(
     releaseVerification,
@@ -786,25 +780,15 @@ test("reference promotion separates repository reads from cross-repository crede
     /SUPERBOARD_REFERENCE_DISPATCH_TOKEN/u,
   );
 
-  const crossRepositoryDispatch = workflowSection(
+  const embeddedPromotion = workflowSection(
     promoteReferenceSdkWorkflow,
-    "      - name: Dispatch the verified SDK set",
+    "      - name: Promote the embedded reference application",
     "\n\n  sync-development-library:",
   );
-  assert.match(
-    crossRepositoryDispatch,
-    /GH_TOKEN: \$\{\{ secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN \|\| secrets\.OPENGROW_REFERENCE_DISPATCH_TOKEN \}\}/u,
-  );
-  assert.match(
-    crossRepositoryDispatch,
-    /::error::SUPERBOARD_REFERENCE_DISPATCH_TOKEN is required in the sdk-release Environment for cross-repository dispatch\./u,
-  );
-  assert.equal(
-    (
-      promoteReferenceSdkWorkflow.match(
-        /secrets\.SUPERBOARD_REFERENCE_DISPATCH_TOKEN/gu,
-      ) ?? []
-    ).length,
-    1,
+  assert.match(embeddedPromotion, /git add apps\/reference/u);
+  assert.match(embeddedPromotion, /gh pr create/u);
+  assert.doesNotMatch(
+    promoteReferenceSdkWorkflow,
+    /SUPERBOARD_REFERENCE_(?:REPOSITORY|DISPATCH_TOKEN)|OPENGROW_REFERENCE_/u,
   );
 });

@@ -123,7 +123,7 @@ The React Native pod consumes the native OpenGrow podspec directly from its
 reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:
 
 ```ruby
-pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/superboard-platform/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
+pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/superboard/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
 ```
 
 The URL is pinned to `sdk-ios-v1.0.3`. Run `pod install` after updating
