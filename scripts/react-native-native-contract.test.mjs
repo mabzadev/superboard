@@ -36,12 +36,19 @@ test("React Native native contract is derived from published SDK baselines", asy
     packageName: android.packageName,
     version: android.latestReleaseVersion,
   });
+  const repository = ios.install.match(
+    /\.package\(url: "([^"]+)", exact:/u,
+  )?.[1];
+  assert.ok(repository, "the iOS catalogue exposes its immutable repository");
+  const repositoryPath = new URL(repository).pathname
+    .replace(/^\//, "")
+    .replace(/\.git$/, "");
   assert.deepEqual(contract.ios, {
     packageName: ios.packageName,
-    repository: "https://github.com/mbzadev/superboard-platform.git",
+    repository,
     releaseRef: `sdk-ios-v${ios.latestReleaseVersion}`,
     podspecUrl:
-      `https://raw.githubusercontent.com/mbzadev/superboard-platform/` +
+      `https://raw.githubusercontent.com/${repositoryPath}/` +
       `sdk-ios-v${ios.latestReleaseVersion}/${ios.versionSource}`,
     version: ios.latestReleaseVersion,
   });
