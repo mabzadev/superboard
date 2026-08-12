@@ -120,7 +120,7 @@ mais pas leur autorité métier :
 | --------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------- |
 | Application Vocostar              | `api.vocostar.com`                                                       | utilisateurs, JWT, crédits, contenus, voix, médias           | D1 `vocostar-db`, R2 `app-vocostar`, deux Durable Objects WebSocket |
 | SuperBoard                          | `sdk.vocostar.com`, `go.vocostar.com`                                    | achats vérifiés, entitlements, paywalls, liens et croissance | D1/KV/R2 centraux et bases D1 de domaine                            |
-| Support référencé par FlutterFlow | `sup.vocostar.com` ne résout plus ; runtime trouvé à `chat.vocostar.com` | contacts et conversations Chatwoot/OpenChat                  | fork `mbzadev/openchat`, trois Workers, D1/R2/Queues/Vectorize      |
+| Support référencé par FlutterFlow | `sup.vocostar.com` ne résout plus ; runtime trouvé à `chat.vocostar.com` | contacts et conversations Chatwoot/OpenChat                  | fork `mabzadev/openchat`, trois Workers, D1/R2/Queues/Vectorize      |
 
 `api-auth-gateway` est le pont d'identité et de projection entre les deux plans : il
 émet un JWT ES256 SuperBoard à partir du JWT HS256 de Vocostar et reçoit le webhook

@@ -20,7 +20,7 @@ describe("LibrariesPageContent", () => {
     vi.clearAllMocks();
     mocks.getPlatformLibraries.mockResolvedValue({
       schemaVersion: 4,
-      repository: "https://github.com/mbzadev/superboard-platform",
+      repository: "https://github.com/mabzadev/superboard",
       developmentBranch: "dev",
       releasePolicy: "immutable-tag",
       libraries: [
@@ -73,7 +73,7 @@ describe("LibrariesPageContent", () => {
       ],
       customCode: {
         schemaVersion: 1,
-        owner: "superboard-platform",
+        owner: "superboard",
         policy: "canonical-source",
         sourceFiles: {},
         widgets: [],
@@ -83,7 +83,7 @@ describe("LibrariesPageContent", () => {
       },
       flutterFlowLibrary: {
         schemaVersion: 1,
-        owner: "superboard-platform",
+        owner: "superboard",
         displayName: "SuperBoard",
         source: {
           path: "tools/flutterflow-library/dsl/edit.dart",
@@ -127,22 +127,22 @@ describe("LibrariesPageContent", () => {
       .find(
         (link) =>
           link.getAttribute("href") ===
-          "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/LICENSE"
+          "https://github.com/mabzadev/superboard/blob/dev/sdks/flutterflow/LICENSE"
       );
     expect(licenseLink).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/LICENSE"
+      "https://github.com/mabzadev/superboard/blob/dev/sdks/flutterflow/LICENSE"
     );
     const versionLink = screen
       .getAllByRole("link", { name: /Version authority/i })
       .find(
         (link) =>
           link.getAttribute("href") ===
-          "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
+          "https://github.com/mabzadev/superboard/blob/dev/sdks/flutterflow/pubspec.yaml"
       );
     expect(versionLink).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/superboard-platform/blob/dev/sdks/flutterflow/pubspec.yaml"
+      "https://github.com/mabzadev/superboard/blob/dev/sdks/flutterflow/pubspec.yaml"
     );
   });
 
@@ -157,13 +157,13 @@ describe("LibrariesPageContent", () => {
       screen.getByRole("link", { name: "Open Git-owned DSL" })
     ).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/superboard-platform/blob/dev/tools/flutterflow-library/dsl/edit.dart"
+      "https://github.com/mabzadev/superboard/blob/dev/tools/flutterflow-library/dsl/edit.dart"
     );
     expect(
       screen.getByRole("link", { name: "Open controlled update workflow" })
     ).toHaveAttribute(
       "href",
-      "https://github.com/mbzadev/superboard-platform/actions/workflows/sync-flutterflow-library.yml"
+      "https://github.com/mabzadev/superboard/actions/workflows/sync-flutterflow-library.yml"
     );
   });
 

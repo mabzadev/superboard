@@ -238,7 +238,7 @@ void _ensureSdkDependencies(FFProject project) {
     version:
         r'''
 git:
-  url: https://github.com/mbzadev/superboard-platform.git
+  url: https://github.com/mabzadev/superboard.git
   ref: sdk-flutterflow-v3.0.0
   path: sdks/flutterflow
 '''

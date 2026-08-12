@@ -13,8 +13,8 @@ test("canonical SuperBoard variables take precedence over legacy fallbacks", () 
     OPENGROW_ENVIRONMENT: "development",
     SUPERBOARD_RELEASE: "new-release",
     OPENGROW_RELEASE: "old-release",
-    SUPERBOARD_REFERENCE_REPOSITORY: "mbzadev/superboard-reference",
-    OPENGROW_REFERENCE_REPOSITORY: "mbzadev/opengrow-reference",
+    SUPERBOARD_REFERENCE_REPOSITORY: "mabzadev/superboard-reference",
+    OPENGROW_REFERENCE_REPOSITORY: "mabzadev/opengrow-reference",
     SUPERBOARD_REFERENCE_ROOT: "/contracts/superboard-reference",
     OPENGROW_REFERENCE_ROOT: "/contracts/opengrow-reference",
     SUPERBOARD_REFERENCE_DISPATCH_TOKEN: "new-dispatch-token",
@@ -36,7 +36,7 @@ test("canonical SuperBoard variables take precedence over legacy fallbacks", () 
   );
   assert.equal(
     superboardEnvironmentValue("SUPERBOARD_REFERENCE_REPOSITORY", env),
-    "mbzadev/superboard-reference",
+    "mabzadev/superboard-reference",
   );
   assert.equal(
     superboardEnvironmentValue("SUPERBOARD_REFERENCE_ROOT", env),
@@ -57,7 +57,7 @@ test("legacy OpenGrow variables remain read-only fallbacks", () => {
     OPENGROW_TARGET: "mbza-development",
     OPENGROW_ENVIRONMENT: "development",
     OPENGROW_RELEASE: "legacy-release",
-    OPENGROW_REFERENCE_REPOSITORY: "mbzadev/opengrow-reference",
+    OPENGROW_REFERENCE_REPOSITORY: "mabzadev/opengrow-reference",
     OPENGROW_REFERENCE_ROOT: "/contracts/opengrow-reference",
     OPENGROW_REFERENCE_DISPATCH_TOKEN: "old-dispatch-token",
     OPENGROW_BACKUP_ENCRYPTION_KEY: "old-backup-key",
@@ -76,7 +76,7 @@ test("legacy OpenGrow variables remain read-only fallbacks", () => {
   );
   assert.equal(
     superboardEnvironmentValue("SUPERBOARD_REFERENCE_REPOSITORY", env),
-    "mbzadev/opengrow-reference",
+    "mabzadev/opengrow-reference",
   );
   assert.equal(
     superboardEnvironmentValue("SUPERBOARD_REFERENCE_ROOT", env),

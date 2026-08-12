@@ -50,7 +50,7 @@ function catalogueFixture() {
 function legacyCatalogueFixture() {
   return {
     schemaVersion: 3,
-    repository: `https://github.com/mbzadev/${"opengrow"}-platform`,
+    repository: `https://github.com/mabzadev/${"opengrow"}-platform`,
     libraries: manifest.libraries.map((library) => ({
       id: library.id,
       packageName: library.packageName,

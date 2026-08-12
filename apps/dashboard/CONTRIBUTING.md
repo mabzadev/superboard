@@ -2,7 +2,7 @@
 
 ## Setup
 
-1. Fork and clone the repo (`mbzadev/dashboard`)
+1. Fork and clone the repo (`mabzadev/dashboard`)
 2. `npm install`
 3. `cp .env.example .env.local` and configure
 4. `npm run dev`

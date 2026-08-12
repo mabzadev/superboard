@@ -29,12 +29,13 @@ that environment. A pull request from `dev` to `main` promotes the same Git
 commit; merging it deploys production. There is no persistent staging or
 preview Cloudflare environment.
 
-Protect `dev` and `main` in `superboard-platform` with the single required status
+Protect `dev` and `main` in `mabzadev/superboard` with the single required status
 check `CI gate`, one CODEOWNERS approval, stale-review dismissal and linear
 history. It aggregates the always-required security/change plan and all
 conditional Worker, Dashboard and Flutter jobs, rejecting any selected job that
-failed or was cancelled. Protect `dev` and `main` in `superboard-reference` with
-`Reference gate` and the same CODEOWNERS requirement. Requiring these stable aggregate checks avoids a branch rule
+failed or was cancelled. The same root `CI gate` validates `apps/reference`;
+there is no second active SuperBoard repository or separate Reference gate.
+Requiring this stable aggregate check avoids a branch rule
 that silently misses a conditional job or waits forever for a job that was
 correctly skipped.
 
@@ -242,14 +243,11 @@ For the production GitHub Actions environment:
 - production secret `SUPERBOARD_BACKUP_ENCRYPTION_KEY`: base64 encoding of 32
   random bytes, retained independently for D1 recovery.
 
-The separate `superboard-reference` repository also uses a `development`
-Environment. It contains the scoped Cloudflare account/token plus
-`SUPERBOARD_PROJECT_KEY` and `SUPERBOARD_PROJECT_ID`. The latter two select the
-registered MBZA test application at build time and never appear in the Git
-tree. Reference CI first validates demo mode, records the exact tested platform
-and reference SHAs, then rebuilds the live Web artifact from those immutable
-revisions inside this protected Environment. Installation steps never receive
-the project values.
+The reference application is versioned under `apps/reference` and validated by
+the root CI against the same commit as the platform. Its future live build
+requires `SUPERBOARD_PROJECT_KEY` and `SUPERBOARD_PROJECT_ID` from a protected
+environment; neither value belongs in the Git tree. `reference.mbza.dev` is not
+yet published, so these values are not currently configured on GitHub.
 
 Recommended values are `mbza-development` for development and `vocostar` only
 while VocoStar remains the selected production migration target. Other
@@ -257,11 +255,12 @@ applications add one matrix entry, target manifest and GitHub Environment. They
 do not copy the workflow or edit Worker source constants.
 
 Cloudflare Workers Builds is the automatic deployment authority for
-`mbza-development` on `dev`. The Dashboard Worker is the sole connected
-controller, non-production branch builds are disabled, Cloudflare manages the
-build token, and the non-secret account ID is supplied in the Cloudflare build
-environment. No `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` is required in
-the platform `development` GitHub Environment.
+`mbza-development` on `dev`. Each of the sixteen declared Workers owns one
+connection to `mabzadev/superboard`, one exact `SUPERBOARD_SERVICE` value and a
+mono-service deploy command. Non-production branch builds are disabled,
+Cloudflare manages each build token, and the non-secret account ID is supplied
+in the Cloudflare build environment. No `CLOUDFLARE_API_TOKEN` or
+`CLOUDFLARE_ACCOUNT_ID` is required in the `development` GitHub Environment.
 
 `.github/workflows/deploy-cloudflare.yml` remains the automatic deployment
 authority for VocoStar production only. It starts after successful `CI` on
@@ -275,25 +274,12 @@ MCP, then dashboard. The dashboard is always last because it depends on the API.
 production deployment encrypts all pre-migration D1 backups before artifact
 retention; a missing encryption key blocks that release evidence.
 
-`superboard-reference/.github/workflows/ci.yml` is the separate publication authority
-for the acceptance application. Pull requests and both long-lived branches run
-the manifest, Dart and Flutter tests. A push to `dev` additionally builds Flutter
-Web, stores the build as a short-lived artifact and deploys the exact artifact
-to `https://reference.mbza.dev` with a generated Static Assets configuration.
-It reuses the `development` Environment Cloudflare secrets but never reads
-`OPENGROW_TARGET`; its own non-secret deployment contract is
-`reference.project.json`. The reference `main` branch does not deploy to MBZA.
-The workflow derives the Platform repository and its development branch from
-that schema-validated project file through `reference-ci-metadata.mjs`; neither
-value is duplicated as an application-specific workflow constant.
-
-After a successful platform `dev` deployment, a separate job sends
-`platform-dev-updated` with the exact platform commit SHA. The reference
-workflow first proves that GitHub's default branch still equals the declared
-development branch, then checks out that branch and the immutable Platform SHA
-before testing and publishing. The dispatch token is distinct from Cloudflare
-credentials. Because both canonical repositories are public, the reference
-checkout uses no repository read token.
+The root CI is the validation authority for the acceptance application under
+`apps/reference`. Pull requests and both long-lived branches run its manifest,
+Dart, Flutter and Web-build checks from the same repository revision. Its
+non-secret deployment contract is `apps/reference/reference.project.json`.
+Publication to `reference.mbza.dev` is not active yet and must be added as a
+reviewed, mono-repository deployment before the domain is attached.
 
 ## Local procedure
 
@@ -323,7 +309,7 @@ npm run target:register -- \
   --mail-from-address noreply@sample.dev \
   --max-file-bytes 20971520 \
   --allowed-file-content-types application/pdf,image/png,text/plain \
-  --operator-docs-url https://github.com/example/superboard-platform/tree/dev/docs \
+  --operator-docs-url https://github.com/example/superboard/tree/dev/docs \
   --operator-support-email support@sample.dev \
   --application-web-origins https://reference.sample.dev \
   --auth-gateway-issuer https://api.sample.dev \
@@ -610,7 +596,7 @@ Before merging `dev` to `main`:
 3. transactional mail appears in `mail.mbza.dev` and never reaches external
    recipients in capture mode;
 4. upload, notification, Google/Apple authentication, paywall and support flows
-   pass in `superboard-reference`;
+   pass in `apps/reference`;
 5. D1 migrations have a backup/rollback plan;
 6. production target resources and secrets are complete;
 7. VocoStar-specific conversion jobs pass through the authenticated
@@ -699,7 +685,7 @@ Après une modification de bibliothèque :
    met à jour `latestReleaseVersion`, `releaseRef` et `releaseStatus`;
 5. fusionner les PR de catalogue après CI. Dès que FlutterFlow et Support sont
    tous deux publiés, GitHub vérifie leurs tags/releases et ouvre une PR unique
-   qui épingle les deux dépendances immuables dans `superboard-reference`.
+   qui épingle les deux dépendances immuables dans `apps/reference`.
 
 Le Dashboard `/app/libraries` est une vue de cet état Git. Il n'accepte ni
 édition directe du code ni jeton de dépôt. Les écrans de configuration SDK ne

@@ -12,12 +12,12 @@ function manifest() {
   return {
     schemaVersion: 8,
     owner: {
-      login: "mbzadev",
+      login: "mabzadev",
       type: "user",
     },
     repositories: {
       platform: {
-        nameWithOwner: "mbzadev/superboard-platform",
+        nameWithOwner: "mabzadev/superboard-platform",
         description: "OpenGrow platform",
         settings: {
           issues: true,
@@ -32,7 +32,7 @@ function manifest() {
         visibility: "public",
       },
       reference: {
-        nameWithOwner: "mbzadev/superboard-reference",
+        nameWithOwner: "mabzadev/superboard-reference",
         description: "OpenGrow reference application",
         settings: {
           issues: true,
@@ -53,12 +53,12 @@ function manifest() {
 test("bootstrap plans only unavailable declared repositories", () => {
   const plan = buildGitHubBootstrapPlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "missing-or-inaccessible",
       ready: false,
     },
     {
-      nameWithOwner: "mbzadev/superboard-reference",
+      nameWithOwner: "mabzadev/superboard-reference",
       status: "present",
     },
   ]);
@@ -68,7 +68,7 @@ test("bootstrap plans only unavailable declared repositories", () => {
     [
       {
         type: "create-repository",
-        nameWithOwner: "mbzadev/superboard-platform",
+        nameWithOwner: "mabzadev/superboard-platform",
         description: "OpenGrow platform",
         visibility: "public",
         settings: manifest().repositories.platform.settings,
@@ -98,10 +98,10 @@ test("bootstrap confirmation changes with declarative repository settings", () =
 test("bootstrap is ready when every declared repository exists", () => {
   const plan = buildGitHubBootstrapPlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "present",
     },
-    { nameWithOwner: "mbzadev/superboard-reference", status: "present" },
+    { nameWithOwner: "mabzadev/superboard-reference", status: "present" },
   ]);
   assert.equal(plan.ready, true);
   assert.equal(
@@ -113,7 +113,7 @@ test("bootstrap is ready when every declared repository exists", () => {
 test("bootstrap blocks absent or invalid inspection state", () => {
   const plan = buildGitHubBootstrapPlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "inspection-failed",
     },
   ]);
@@ -192,10 +192,10 @@ test("bootstrap refuses mutation without its plan-specific confirmation", () => 
   const configuration = manifest();
   const plan = buildGitHubBootstrapPlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "missing-or-inaccessible",
     },
-    { nameWithOwner: "mbzadev/superboard-reference", status: "present" },
+    { nameWithOwner: "mabzadev/superboard-reference", status: "present" },
   ]);
   let calls = 0;
   assert.throws(
@@ -216,10 +216,10 @@ test("confirmed bootstrap creates only the planned repositories", () => {
   const configuration = manifest();
   const plan = buildGitHubBootstrapPlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "missing-or-inaccessible",
     },
-    { nameWithOwner: "mbzadev/superboard-reference", status: "present" },
+    { nameWithOwner: "mabzadev/superboard-reference", status: "present" },
   ]);
   const calls = [];
   const applied = applyGitHubBootstrapPlan(plan, configuration, {
@@ -231,7 +231,7 @@ test("confirmed bootstrap creates only the planned repositories", () => {
   });
   assert.deepEqual(applied, [
     {
-      repository: "mbzadev/superboard-platform",
+      repository: "mabzadev/superboard-platform",
       type: "create-repository",
     },
   ]);
@@ -244,7 +244,7 @@ test("bootstrap rejects an owner mismatch", () => {
     () =>
       repositoryCreationRequest(
         {
-          nameWithOwner: "mbzadev/public-project",
+          nameWithOwner: "mabzadev/public-project",
           description: "Unsafe",
           visibility: "public",
         },

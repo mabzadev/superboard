@@ -31,8 +31,8 @@ test("mutable or SSH dependencies are rejected", async () => {
   const result = await validateFlutterFlowLibraryContract({
     sourceOverride: source
       .replace(
-        "https://github.com/mbzadev/superboard-platform.git",
-        "git@github.com:mbzadev/superboard-platform.git",
+        "https://github.com/mabzadev/superboard.git",
+        "git@github.com:mabzadev/superboard.git",
       )
       .replace("ref: sdk-flutterflow-v3.0.0", "ref: main"),
   });

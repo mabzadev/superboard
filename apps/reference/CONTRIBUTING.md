@@ -18,7 +18,7 @@ flutter test
 
 The reference repository contains screens, acceptance journeys and UI glue
 only. Reusable widgets, custom actions, authentication, files, purchases,
-Marketing and Support behavior belong in `superboard-platform`. Never copy the
+Marketing and Support behavior belong in the SuperBoard monorepo root. Never copy the
 network protocol or SDK implementation into this application.
 
 Keep public endpoints in `reference.project.json` and

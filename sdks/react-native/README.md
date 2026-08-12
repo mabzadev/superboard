@@ -1,21 +1,21 @@
 <p align="center">
-  <a href="https://github.com/mbzadev/superboard-platform">
+  <a href="https://github.com/mabzadev/superboard">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
-      <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mabzadev/superboard/dev/.github/logo.svg">
+      <img src="https://raw.githubusercontent.com/mabzadev/superboard/dev/.github/logo.svg" width="120" alt="SuperBoard">
     </picture>
   </a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for React Native.<br/>
-  Part of the <a href="https://github.com/mbzadev">OpenGrow</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mabzadev">OpenGrow</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#usage">Quick Start</a> ·
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#api-reference">API Reference</a> ·
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
+  <a href="https://github.com/mabzadev/superboard/tree/dev/sdks/react-native#usage">Quick Start</a> ·
+  <a href="https://github.com/mabzadev/superboard/tree/dev/sdks/react-native#api-reference">API Reference</a> ·
+  <a href="https://github.com/mabzadev/superboard/tree/dev/docs">Full Docs</a>
 </p>
 
 ---
@@ -92,7 +92,7 @@ dependencyResolutionManagement {
     repositories {
         maven {
             name = "OpenGrowGitHubPackages"
-            url = uri("https://maven.pkg.github.com/mbzadev/superboard-platform")
+            url = uri("https://maven.pkg.github.com/mabzadev/superboard-platform")
             credentials {
                 username = openGrowPackagesUser
                 password = openGrowPackagesToken
@@ -123,7 +123,7 @@ The React Native pod consumes the native OpenGrow podspec directly from its
 reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:
 
 ```ruby
-pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mbzadev/superboard/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
+pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mabzadev/superboard/sdk-ios-v1.0.3/sdks/ios/OpenGrow.podspec'
 ```
 
 The URL is pinned to `sdk-ios-v1.0.3`. Run `pod install` after updating
@@ -408,19 +408,19 @@ Use `'cancel'` and `'refund'` types for cancellations and refunds. For store pur
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [React Native SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native#api-reference)
+Full API reference: [React Native SDK API reference](https://github.com/mabzadev/superboard/tree/dev/sdks/react-native#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/react-native/example`](https://github.com/mbzadev/superboard-platform/tree/main/sdks/react-native/example).
+A demo project is included in [`sdks/react-native/example`](https://github.com/mabzadev/superboard/tree/dev/sdks/react-native/example).
 
 ## Migration Guides
 
-- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
+- Migration procedures are maintained in the [canonical SuperBoard documentation](https://github.com/mabzadev/superboard/tree/dev/docs).
 
 ## Documentation
 
-Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
+Full documentation is maintained in the [canonical repository](https://github.com/mabzadev/superboard/tree/dev/docs).
 
 ## Support
 

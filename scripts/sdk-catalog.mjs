@@ -13,7 +13,7 @@ const catalogPath = resolve(root, "config/sdk-libraries.json");
 const catalogSchemaPath = resolve(root, "config/sdk-libraries.schema.json");
 const catalogSchemaVersion = 4;
 const canonicalRepository =
-  "https://github.com/mbzadev/superboard";
+  "https://github.com/mabzadev/superboard";
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
 const commitSha = /^[0-9a-f]{40}$/;
 const lifecycles = new Set(["active", "internal", "archived"]);
@@ -298,9 +298,9 @@ function validateDistributionContract(catalog, library, prefix, errors) {
   if (distribution.registryKind !== expectedKind) {
     errors.push(`${prefix}.distribution.registryKind must be ${expectedKind}`);
   }
-  if (distribution.repository !== "mbzadev/superboard-platform") {
+  if (distribution.repository !== "mabzadev/superboard-platform") {
     errors.push(
-      `${prefix}.distribution.repository must preserve the historical package owner mbzadev/superboard-platform`,
+      `${prefix}.distribution.repository must preserve the historical package owner mabzadev/superboard-platform`,
     );
   }
   if (distribution.registry !== expectedRegistry) {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/mbzadev/superboard/blob/dev/schemas/superboard-brand.schema.json",
+  "$id": "https://github.com/mabzadev/superboard/blob/dev/schemas/superboard-brand.schema.json",
   "title": "SuperBoard brand and compatibility contract",
   "type": "object",
   "additionalProperties": false,
@@ -32,7 +32,7 @@
       "additionalProperties": false,
       "required": ["canonical", "layout", "legacyReadOnly"],
       "properties": {
-        "canonical": { "const": "mbzadev/superboard" },
+        "canonical": { "const": "mabzadev/superboard" },
         "layout": {
           "type": "object",
           "additionalProperties": false,
@@ -44,8 +44,8 @@
         },
         "legacyReadOnly": {
           "const": [
-            "mbzadev/superboard-platform",
-            "mbzadev/superboard-reference"
+            "mabzadev/superboard-platform",
+            "mabzadev/superboard-reference"
           ]
         }
       }

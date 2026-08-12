@@ -1,28 +1,28 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
-    <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="SuperBoard">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg" width="120" alt="SuperBoard">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/superboard-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/superboard-platform"><img src="https://img.shields.io/badge/distribution-public%20Git-4F46E5?style=flat-square" alt="Public Git"/></a>
+  <a href="https://github.com/mabzadev/superboard/releases"><img src="https://img.shields.io/github/v/release/mabzadev/superboard?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mabzadev/superboard"><img src="https://img.shields.io/badge/distribution-public%20Git-4F46E5?style=flat-square" alt="Public Git"/></a>
   <a href="#"><img src="https://img.shields.io/badge/platforms-iOS%20%7C%20Android-4F46E5?style=flat-square" alt="Platforms"/></a>
   <a href="#"><img src="https://img.shields.io/badge/flutter-3.0%2B-4F46E5?style=flat-square&logo=flutter&logoColor=white" alt="Flutter"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/superboard-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mabzadev/superboard?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mabzadev/superboard/stargazers"><img src="https://img.shields.io/github/stars/mabzadev/superboard?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for Flutter.<br/>
-  Part of the <a href="https://github.com/mbzadev">SuperBoard</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mabzadev">SuperBoard</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/flutter#quick-start">Quick Start</a> ·
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/flutter#api-reference">API Reference</a> ·
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
+  <a href="https://github.com/mabzadev/superboard/tree/main/sdks/flutter#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mabzadev/superboard/tree/main/sdks/flutter#api-reference">API Reference</a> ·
+  <a href="https://github.com/mabzadev/superboard/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -108,7 +108,7 @@ at the immutable release `sdk-flutter-v2.1.4`:
 ```yaml
 opengrow_flutter:
   git:
-    url: https://github.com/mbzadev/superboard.git
+    url: https://github.com/mabzadev/superboard.git
     ref: sdk-flutter-v2.1.4
     path: sdks/flutter
 ```
@@ -420,7 +420,7 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionId)` | Log a store purchase |
 | `logCustomPurchase(type, priceInCents, currency, productId, startDate)` | Log a custom purchase |
 
-Full API reference: [Flutter SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/flutter#api-reference)
+Full API reference: [Flutter SDK API reference](https://github.com/mabzadev/superboard/tree/main/sdks/flutter#api-reference)
 
 ## Example App
 
@@ -428,11 +428,11 @@ A demo project is included in the [`example/`](example/) directory.
 
 ## Migration Guides
 
-- Migration procedures are maintained in the [canonical SuperBoard documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
+- Migration procedures are maintained in the [canonical SuperBoard documentation](https://github.com/mabzadev/superboard/tree/main/docs).
 
 ## Documentation
 
-Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
+Full documentation is maintained in the [canonical repository](https://github.com/mabzadev/superboard/tree/main/docs).
 
 ## Support
 

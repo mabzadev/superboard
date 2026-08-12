@@ -424,7 +424,7 @@ export function verifyCatalogueCoverage(manifest, catalogue) {
 }
 
 function verifyLegacyCatalogueTransition(manifest, catalogue, libraries) {
-  const legacyRepository = `https://github.com/mbzadev/${"opengrow"}-platform`;
+  const legacyRepository = `https://github.com/mabzadev/${"opengrow"}-platform`;
   if (
     !new Set([
       normalizedRepository(manifest.platformRepository),

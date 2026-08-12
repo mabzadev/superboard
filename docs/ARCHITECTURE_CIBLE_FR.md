@@ -8,7 +8,7 @@ déployer; l'ancien inventaire de VocoStar reste disponible uniquement comme
 
 SuperBoard devient le back-office et le plan de contrôle commun à toutes les
 applications. Il n'est plus un SaaS autonome. Tout le code commun vit dans le
-monorepo `mbzadev/superboard`; l'application d'acceptation FlutterFlow vit dans
+monorepo `mabzadev/superboard`; l'application d'acceptation FlutterFlow vit dans
 `apps/reference`. `mbza.dev` est seulement l'environnement de
 développement et de recette de cette plateforme.
 
@@ -64,14 +64,15 @@ flowchart TB
 Les services de plateforme sont déclarés dans
 `deploy/targets/mbza-development.json`. L'adresse de l'application de référence
 et son Worker Static Assets sont déclarés dans
-`superboard-reference/reference.project.json`. Ces manifestes ne contiennent ni ID de
+`apps/reference/reference.project.json`. Ces manifestes ne contiennent ni ID de
 compte Cloudflare ni secret et leurs valeurs ne deviennent jamais des valeurs
 par défaut du code réutilisable.
 
-État public revérifié le 9 août 2026 : `in.mbza.dev` pointe encore directement
-vers `94.130.22.22`, sans réponse HTTP ni HTTPS. `api.mbza.dev` résout sur le
-réseau Cloudflare mais répond `522`, sans API attachée utilisable. Les noms
-`reference`, `grow`, `sdk`, `files`, `mcp` et `mail` ne résolvent pas encore.
+État public revérifié le 12 août 2026 : `board.mbza.dev` et
+`api.mbza.dev/health` répondent en HTTP 200; `in.mbza.dev`, `sdk.mbza.dev` et
+`files.mbza.dev` sont servis par la façade API, tandis que `mcp.mbza.dev` est
+servi par le Worker MCP. `grow.mbza.dev` est retiré. `reference.mbza.dev` et
+`mail.mbza.dev` ne sont pas encore publiés.
 Le pipeline lit les zones, records DNS et domaines Workers avant de publier,
 avec un token de déploiement explicitement fourni par GitHub Environment. Il
 bloque ces conflits et ne remplacera ni l'ancien record de liens courts ni le
@@ -128,10 +129,10 @@ Ordre de déploiement : Observability, Email, Files, Identity, modules activés,
 Billing, Custom, API, MCP, puis Dashboard. Le Dashboard est publié en dernier, car
 il décrit l'API effectivement déployée.
 
-L'application `reference.mbza.dev` est publiée séparément depuis
-`superboard-reference/dev`, une fois ses tests et ceux de la bibliothèque terminés.
-C'est un Worker d'assets statiques servant la recette, pas un Worker métier et
-il n'entre donc pas dans les seize rôles ci-dessus.
+La source de l'application `reference.mbza.dev` vit dans `apps/reference` et ses
+tests font partie de la CI du monorepo. Son futur Worker d'assets statiques sert
+la recette, pas un rôle métier, et n'entre donc pas dans les seize rôles
+ci-dessus. Le domaine n'est pas encore publié au 12 août 2026.
 
 ## Ce qui est commun, configurable ou custom
 
@@ -383,19 +384,15 @@ La CI des pull requests effectue les typechecks, tests et dry-runs de tous les
 Workers communs, modules et implémentations custom. Le workflow de déploiement
 protégé est la seule autorité de publication automatique.
 
-Le dépôt `superboard-reference` applique la même frontière : une pull request ne fait
-que valider; un push sur `dev` compile Flutter Web, transfère l'artefact entre
-jobs puis publie `superboard-reference-app-dev` sur
-`https://reference.mbza.dev`. Le compte et le jeton proviennent exclusivement
-de l'Environment GitHub `development`. `main` ne publie pas ce site de test.
-Après chaque déploiement réussi de `superboard-platform/dev`, un événement
-`platform-dev-updated` transmet en plus le SHA exact au dépôt de référence : la
-recette est donc reconstruite contre le code réellement déployé, sans dépendre
-d'une branche mutable pendant ce run.
+`apps/reference` applique la même frontière dans le monorepo : chaque pull
+request valide son manifeste, ses dépendances et Flutter Web contre le même SHA
+SuperBoard. La publication de `reference.mbza.dev` reste un cutover distinct et
+n'est pas encore active; aucun dépôt ni événement cross-repository n'intervient
+plus dans cette validation.
 
 ## Référence FlutterFlow
 
-`superboard-reference`, publié en recette sur `https://reference.mbza.dev`, contient
+`apps/reference`, destiné à être publié sur `https://reference.mbza.dev`, contient
 exactement seize parcours d'acceptation : bootstrap,
 connexion, création de compte, récupération de mot de passe, accueil, profil,
 notifications, fichiers, produits, paywall, liens dynamiques, support, consentement
@@ -406,7 +403,7 @@ La bibliothèque SuperBoard fournit les widgets Bootstrap, Paywall et Onboarding
 les boutons Restore Purchases et Customer Center, ainsi que les actions communes
 d'identité, fichiers, achats, événements, liens, consentement Marketing,
 Support et jobs custom authentifiés.
-L'application consomme des références Git immuables vers `superboard-platform`; elle ne
+L'application consomme des références Git immuables vers `mabzadev/superboard`; elle ne
 copie pas les protocoles réseau dans du custom code FlutterFlow. Le catalogue
 exhaustif des pages, états, Dart defines, actions et tables est dans
 [REFERENCE_DATA_INVENTORY.md](./REFERENCE_DATA_INVENTORY.md).
@@ -457,7 +454,7 @@ son dry-run de publication sont également validés.
 
 La bibliothèque FlutterFlow `SuperBoard` n'est plus un workspace local orphelin :
 son DSL, ses tests et son manifeste (11 Library Values, 64 Custom Actions) sont
-maintenant dans `superboard-platform`. Le workflow GitHub protégé vérifie les tags
+maintenant dans le monorepo `mabzadev/superboard`. Le workflow GitHub protégé vérifie les tags
 immuables, teste le DSL puis met à jour le projet distant avec une variable et un
 secret d'Environment; aucun ID de projet ni credential n'est codé dans la source.
 

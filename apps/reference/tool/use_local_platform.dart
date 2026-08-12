@@ -3,7 +3,7 @@ import 'dart:io';
 void main(List<String> arguments) {
   if (arguments.length != 1) {
     stderr.writeln(
-      'Usage: dart run tool/use_local_platform.dart /path/to/superboard-platform',
+      'Usage: dart run tool/use_local_platform.dart /path/to/superboard',
     );
     exitCode = 64;
     return;
@@ -13,7 +13,7 @@ void main(List<String> arguments) {
   final messaging = Directory('${platform.path}/sdks/flutterflow_messaging');
   if (!flutterFlow.existsSync() || !messaging.existsSync()) {
     stderr.writeln(
-      'The selected directory is not a superboard-platform checkout.',
+      'The selected directory is not a SuperBoard monorepo checkout.',
     );
     exitCode = 66;
     return;

@@ -305,7 +305,7 @@ export type PlatformLibraryCatalog = {
 
 export type PlatformFlutterFlowLibrary = {
   schemaVersion: number;
-  owner: "superboard-platform";
+  owner: "superboard";
   displayName: string;
   source: {
     path: string;

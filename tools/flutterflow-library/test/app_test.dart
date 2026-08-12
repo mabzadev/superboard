@@ -124,7 +124,7 @@ void main() {
         );
     expect(
       sdkDependency.version,
-      contains('https://github.com/mbzadev/superboard-platform.git'),
+      contains('https://github.com/mabzadev/superboard.git'),
     );
     expect(sdkDependency.version, contains('sdk-flutterflow-v3.0.0'));
     expect(sdkDependency.version, isNot(contains('git@github.com')));

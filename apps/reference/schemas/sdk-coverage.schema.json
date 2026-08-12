@@ -17,7 +17,7 @@
     "schemaVersion": { "const": 2 },
     "catalogueSchemaVersion": { "const": 4 },
     "platformRepository": {
-      "const": "https://github.com/mbzadev/superboard"
+      "const": "https://github.com/mabzadev/superboard"
     },
     "promotionPolicy": { "const": "complete-active-set" },
     "libraries": {

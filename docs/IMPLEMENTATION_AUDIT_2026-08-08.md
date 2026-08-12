@@ -27,7 +27,7 @@ the DNS ownership gate cannot inspect records with the current short-lived
 OAuth grant and `in.mbza.dev` is known to have an externally managed record.
 
 The two configured GitHub repositories exist publicly under the authenticated
-`mbzadev` user. Their reviewed histories are pushed to `dev`, both `dev` and
+`mabzadev` user. Their reviewed histories are pushed to `dev`, both `dev` and
 `main` are protected, the declared GitHub Environments and non-secret variables
 are reconciled, and all repository settings match the versioned control-plane
 manifest. Protected CI has published Flutter `2.1.3`, FlutterFlow `2.2.4`,
@@ -56,7 +56,7 @@ The last local pass completed the public, reusable repository boundary:
   reference workflow or documentation;
 - reference URLs and GitHub repositories in readiness checks and the
   cross-repository acceptance workflow are derived from target/project and
-  control-plane manifests, not from MBZA or `mbzadev` workflow constants;
+  control-plane manifests, not from MBZA or `mabzadev` workflow constants;
 - governance and target schema identifiers are neutral, while the current
   owner/repository values remain explicit versioned configuration;
 - deployment validates the current target's custom Worker dynamically, and CI
@@ -200,7 +200,7 @@ The last local pass completed the public, reusable repository boundary:
 This update supersedes the pre-publication wording retained in the detailed
 baseline narrative below:
 
-- `mbzadev/superboard-platform` and `mbzadev/superboard-reference` are public MIT
+- `mabzadev/superboard-platform` and `mabzadev/superboard-reference` are public MIT
   repositories with `dev` as the default branch and protected `dev`/`main`
   branches. Repository settings, workflow permissions, CODEOWNERS, aggregate
   checks, Environments, non-secret variables, security updates and release
@@ -219,7 +219,7 @@ baseline narrative below:
 - Android `1.0.2` is published under the collision-free public coordinate
   `io.opengrow:opengrow-android-sdk`. JavaScript and React Native `1.0.1`
   remain pending under new collision-free candidate package names; their legacy
-  `1.0.0` packages remain associated with `mbzadev/opengrow` for compatibility.
+  `1.0.0` packages remain associated with `mabzadev/opengrow` for compatibility.
 - Remote FlutterFlow synchronization remains gated by `FF_API_KEY`; VocoStar
   client convergence remains gated by a fresh reviewed export and its project
   credential. Neither gate is represented as completed.
@@ -438,7 +438,7 @@ runner, so both checks remain mandatory release gates rather than being waived.
 
 - GitHub CLI is authenticated as the expected user account with
   repository access scope.
-- `mbzadev/superboard-platform` and `mbzadev/superboard-reference` both exist and
+- `mabzadev/superboard-platform` and `mabzadev/superboard-reference` both exist and
   are public. They currently expose only `main`, use GitHub's initial repository
   defaults and have no SuperBoard history on `dev`. Each `main` contains one
   independently initialized README commit, so it must be preserved on an audit
@@ -524,7 +524,7 @@ runner, so both checks remain mandatory release gates rather than being waived.
   previously missed live source `chat.vocostar.com` returns HTTP 200 from both
   `/ready` and `/health`. The VocoStar target-owned `legacy-chatwoot` monitor now
   points to that real `/ready` endpoint. The source is the public
-  `mbzadev/openchat` fork with three deployed Workers, D1 `openchat-db`, R2
+  `mabzadev/openchat` fork with three deployed Workers, D1 `openchat-db`, R2
   `openchat`, four Queue/DLQ resources and one Vectorize index.
 - Read-only, aggregate inspection found 93 D1 tables, 12 contacts, 11
   conversations, 15 messages, one attachment, five web-widget rows and two

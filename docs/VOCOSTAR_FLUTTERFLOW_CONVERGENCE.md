@@ -37,7 +37,7 @@ exécution GitHub autorisée, suivie d'un nouvel export authentifié.
 
 Ce dépôt n'importe pas le code VocoStar dans la base commune. Il en conserve le
 contrat de migration; les capacités réutilisables sont implémentées dans
-`superboard-platform` et exercées par `superboard-reference`.
+le monorepo `mabzadev/superboard` et exercées par `apps/reference`.
 
 La fraîcheur de cette analyse et son contrat de convergence sont matérialisés
 dans `config/flutterflow-sources/vocostar.json`, tandis que l'inventaire nommé,
@@ -192,7 +192,7 @@ synchronisation puis d'application n'est pas autorisé.
 | Réglages       | `settings_user`, `settings_language`, `settings_support`, `settings_ticket`  | Profil via Identity, préférences via App, support via Support. Aucun accès Chatwoot direct.                                                             |
 | Documents      | `privacy_policy`, `terms_of_use`                                             | Contenu et URL configurés par application; présentation FlutterFlow locale.                                                                             |
 
-Il n'est pas souhaitable de copier ces pages dans `superboard-reference`. La référence
+Il n'est pas souhaitable de copier ces pages dans `apps/reference`. La référence
 teste les quinze parcours fonctionnels communs et un seizième parcours
 `reference.echo` pour certifier le protocole custom et `reference.acceptance`
 pour figer la preuve MBZA liée aux deux révisions Git; VocoStar garde sa

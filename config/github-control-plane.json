@@ -2,12 +2,12 @@
   "$schema": "../schemas/github-control-plane.schema.json",
   "schemaVersion": 9,
   "owner": {
-    "login": "mbzadev",
+    "login": "mabzadev",
     "type": "user"
   },
   "repositories": {
     "platform": {
-      "nameWithOwner": "mbzadev/superboard",
+      "nameWithOwner": "mabzadev/superboard",
       "description": "Canonical SuperBoard monorepo: back-office, Cloudflare Workers, SDKs and reference application",
       "settings": {
         "issues": true,
@@ -96,7 +96,7 @@
             "allowAdminBypass": false,
             "minimumEligibleReviewers": 2,
             "reviewers": [
-              { "type": "User", "id": 95926658, "name": "mbzadev" }
+              { "type": "User", "id": 95926658, "name": "mabzadev" }
             ],
             "deploymentPolicies": [{ "type": "branch", "pattern": "main" }]
           }
@@ -112,7 +112,7 @@
             "allowAdminBypass": false,
             "minimumEligibleReviewers": 2,
             "reviewers": [
-              { "type": "User", "id": 95926658, "name": "mbzadev" }
+              { "type": "User", "id": 95926658, "name": "mabzadev" }
             ],
             "deploymentPolicies": [
               { "type": "branch", "pattern": "dev" },

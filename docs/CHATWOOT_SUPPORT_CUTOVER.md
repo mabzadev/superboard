@@ -14,7 +14,7 @@ webhook, realtime, D1 and R2 bindings present. This is not a complete readiness
 proof: the `openchat-jobs` Worker has no `RESEND_API_KEY`, so transactional
 e-mail is not operational even though `/ready` is green.
 
-The live source is the public `mbzadev/openchat` fork. It deploys Workers
+The live source is the public `mabzadev/openchat` fork. It deploys Workers
 `openchat`, `openchat-jobs` and `openchat-realtime`, D1 `openchat-db`, R2
 `openchat`, four webhook/e-mail Queue/DLQ resources and Vectorize
 `openchat-captain-responses`. Aggregate, non-personal reads found 12 contacts,

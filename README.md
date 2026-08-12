@@ -4,7 +4,8 @@ Public canonical monorepo for the SuperBoard platform and SDKs. The repository i
 the only source of truth; Cloudflare targets are isolated by declarative manifests
 and never fork this code.
 
-- Canonical repository: <https://github.com/mbzadev/superboard>
+- Canonical repository: <https://github.com/mabzadev/superboard>
+- Archived-repository record: [`docs/LEGACY_REPOSITORIES.md`](docs/LEGACY_REPOSITORIES.md)
 - FlutterFlow reference application: [`apps/reference`](apps/reference)
 - Development reference app: <https://reference.mbza.dev>
 - Development dashboard: <https://board.mbza.dev>
@@ -70,8 +71,10 @@ against the public SDK catalogue and is embedded in the same readiness report.
 
 The GitHub control plane is also fail-closed. The canonical repository contains
 the platform, back-office, Workers, SDKs and reference application. The former
-`superboard-platform` and `superboard-reference` repositories are retained only
-as read-only migration sources until their final archive;
+`superboard-platform` and `superboard-reference` repositories are archived,
+read-only migration sources. Their immutable tags, releases and package
+coordinates remain available, but all code, issues, releases and Cloudflare Git
+connections now belong to `mabzadev/superboard`;
 `npm run github:history:plan -- --fetch` verifies both canonical remotes,
 detects unrelated or divergent histories and derives exact audit refs without
 committing or pushing;

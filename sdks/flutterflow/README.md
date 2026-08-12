@@ -15,7 +15,7 @@ at the immutable release `sdk-flutterflow-v2.2.5`:
 ```yaml
 opengrow_flutterflow:
   git:
-    url: https://github.com/mbzadev/superboard.git
+    url: https://github.com/mabzadev/superboard.git
     ref: sdk-flutterflow-v2.2.5
     path: sdks/flutterflow
 ```
@@ -44,7 +44,7 @@ before the tag exists.
 ```yaml
 superboard_flutterflow:
   git:
-    url: https://github.com/mbzadev/superboard-platform.git
+    url: https://github.com/mabzadev/superboard.git
     ref: <immutable-v3-ref-from-the-release-catalogue>
     path: sdks/flutterflow
 ```
