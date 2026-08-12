@@ -34,7 +34,7 @@ secret of its own.
 `config/cloudflare-deployments.json` enforces one automatic deployment authority per target:
 
 - `mbza-development` is deployed from `dev` by Cloudflare Workers Builds. Each
-  declared Worker has its own native Git connection to `mbzadev/superboard`.
+  declared Worker has its own native Git connection to `mabzadev/superboard`.
   Every connection uses the same source and build gate, but receives one exact
   `SUPERBOARD_SERVICE` value and runs only `cloudflare:deploy --service`. This
   matches Cloudflare's Worker-scoped build token and prevents one connected
@@ -57,7 +57,7 @@ the platform `development` GitHub Environment contains no Cloudflare deployment
 credential. The exact source-owned Workers Builds contract is:
 
 ```text
-repository: mbzadev/superboard
+repository: mabzadev/superboard
 production branch: dev
 build command: npm ci && npm --prefix apps/reference ci && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test
 deploy command: npm run cloudflare:deploy -- --target "$SUPERBOARD_TARGET" --environment "$SUPERBOARD_ENVIRONMENT" --service "$SUPERBOARD_SERVICE"

@@ -126,7 +126,7 @@ test("all package coordinates and versions are derived state-independently", asy
   ios.latestReleaseVersion = "6.5.4";
   ios.releaseRef = "6.5.4";
   ios.install =
-    '.package(url: "https://github.com/mbzadev/superboard-platform.git", exact: "6.5.4")';
+    '.package(url: "https://github.com/mabzadev/superboard-platform.git", exact: "6.5.4")';
   const sections = renderSdkDocumentationSections(catalog);
 
   assert.match(
@@ -179,7 +179,7 @@ test("registry documentation separates public metadata from authenticated instal
   for (const source of [android, reactNative]) {
     assert.match(
       source,
-      /https:\/\/maven\.pkg\.github\.com\/mbzadev\/superboard-platform/u,
+      /https:\/\/maven\.pkg\.github\.com\/mabzadev\/superboard-platform/u,
     );
     assert.match(source, /OPENGROW_GITHUB_PACKAGES_USER/u);
     assert.match(source, /OPENGROW_GITHUB_PACKAGES_TOKEN/u);

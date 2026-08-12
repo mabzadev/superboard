@@ -9,7 +9,7 @@ OpenGrow and SuperBoard packages together.
 ```yaml
 superboard_flutter:
   git:
-    url: https://github.com/mbzadev/superboard-platform.git
+    url: https://github.com/mabzadev/superboard.git
     ref: sdk-flutter-v3.0.0
     path: sdks/flutter
 ```

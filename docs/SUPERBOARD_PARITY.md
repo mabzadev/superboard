@@ -8,7 +8,7 @@ tests remain authoritative for the new reference platform, but an empty
 upstream inventory must never be presented as proof of Rails parity.
 
 [ADR-001](./ADR-001-CANONICAL-SUPERBOARD-SOURCE.md) retires that historical
-comparison as a release gate. `superboard-platform` is now the canonical product
+comparison as a release gate. `mabzadev/superboard` is now the canonical product
 source; the fail-closed comparison remains available only as an optional
 forensic tool when immutable historical sources are supplied.
 

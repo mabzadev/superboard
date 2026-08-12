@@ -1,7 +1,7 @@
 {
   "$schema": "./sdk-release-history.schema.json",
   "schemaVersion": 1,
-  "repository": "mbzadev/superboard",
+  "repository": "mabzadev/superboard",
   "immutableFailures": [
     {
       "libraryId": "ios",

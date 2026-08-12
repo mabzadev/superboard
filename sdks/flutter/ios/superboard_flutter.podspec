@@ -26,9 +26,9 @@ Pod::Spec.new do |s|
   s.description      = <<-DESC
 SuperBoard Flutter SDK for links, messaging, attribution, and purchases.
                        DESC
-  s.homepage         = 'https://github.com/mbzadev/superboard-platform'
+  s.homepage         = 'https://github.com/mabzadev/superboard'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'SuperBoard' => 'https://github.com/mbzadev/superboard-platform' }
+  s.author           = { 'SuperBoard' => 'https://github.com/mabzadev/superboard' }
   s.source           = { :path => '.' }
   # Embed the internal native SDK in the Flutter pod. EmbeddedOpenGrow contains
   # repository-relative file symlinks to the canonical sdks/ios sources. Files,

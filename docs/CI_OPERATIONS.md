@@ -42,8 +42,8 @@ SHA, not only to the later catalogue proposal. The workflow then proposes the
 released catalogue state through a PR; it never pushes through branch
 protection. Once
 the complete FlutterFlow/Support set is merged into `dev`, a separate workflow
-verifies all tags and GitHub releases before dispatching one protected PR to
-`superboard-reference`.
+verifies all tags and GitHub releases before opening one protected PR for
+`apps/reference` in `mabzadev/superboard`.
 
 Release concurrency is isolated by immutable tag. Publishing several different
 SDKs therefore cannot cancel queued releases, while a repeated event for the
@@ -71,9 +71,9 @@ reference installable while the changed source is marked `pending-release` with
 the next semantic version. This applies equally to SwiftPM tags, Maven
 coordinates and npm packages, even when the former repository remains public.
 
-Both repositories keep the default `GITHUB_TOKEN` permission at read-only.
-Their declared workflow policy enables GitHub Actions to create PRs only so the
-two promotion workflows can request `contents: write` and
+The canonical repository keeps the default `GITHUB_TOKEN` permission at
+read-only. Its declared workflow policy enables GitHub Actions to create PRs
+only so the promotion workflows can request `contents: write` and
 `pull-requests: write` explicitly. No workflow approves or merges its own PR;
 the required human review and `CI gate`/`Reference gate` remain authoritative.
 
@@ -109,7 +109,7 @@ The current activation contract is:
 `production` and `sdk-release` require at least two eligible human identities.
 GitHub needs only one approval, but `preventSelfReview` guarantees that the
 approver is not the run initiator. The repository currently declares only
-`mbzadev`; therefore those protections stay `pending-external` until a second
+`mabzadev`; therefore those protections stay `pending-external` until a second
 trusted human has repository read access and is added by stable GitHub user ID.
 Do not weaken `minimumEligibleReviewers` or temporarily enable administrator
 bypass to work around that prerequisite.

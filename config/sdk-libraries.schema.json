@@ -107,7 +107,7 @@
             ],
             "properties": {
               "repository": {
-                "const": "mbzadev/superboard-platform"
+                "const": "mabzadev/superboard-platform"
               },
               "registryKind": {
                 "enum": ["github-packages-npm", "github-packages-maven"]

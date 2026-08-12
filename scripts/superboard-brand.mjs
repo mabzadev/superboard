@@ -57,8 +57,8 @@ export async function checkSuperBoardBrand({ repositoryRoot = root } = {}) {
     violations.push("the retired MBZA dashboard domain is not fail-closed");
   }
   for (const pattern of [
-    "mbzadev/" + "opengrow-platform",
-    "mbzadev/" + "opengrow-reference",
+    "mabzadev/" + "opengrow-platform",
+    "mabzadev/" + "opengrow-reference",
   ]) {
     const matches = gitGrep(repositoryRoot, pattern, [
       ".",

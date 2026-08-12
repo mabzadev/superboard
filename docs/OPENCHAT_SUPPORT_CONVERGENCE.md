@@ -21,7 +21,7 @@ données personnelles.
 
 ### Dépôt
 
-- dépôt : `mbzadev/openchat`, fork public de `chatwoot/chatwoot` ;
+- dépôt : `mabzadev/openchat`, fork public de `chatwoot/chatwoot` ;
 - branche locale : `codex/cloudflare-complete-migration-foundation` ;
 - dernier commit local : `0ea73ad7191d6da480b728621774ca1ead53d2bb` ;
 - la couche Cloudflare est très largement modifiée ou non suivie localement ;
@@ -189,7 +189,7 @@ d'alimenter le stockage Messaging que l'architecture veut précisément supprime
 
 ### Phase 1 — préparer Support en développement MBZA
 
-1. utiliser `superboard-platform/dev` comme unique source ;
+1. utiliser `mabzadev/superboard/dev` comme unique source ;
 2. déployer les Workers privés contre les ressources MBZA development ;
 3. exécuter l'export OpenChat avec un token Chatwoot en lecture seule ;
 4. transformer contacts, conversations, messages, labels et pièces jointes ;

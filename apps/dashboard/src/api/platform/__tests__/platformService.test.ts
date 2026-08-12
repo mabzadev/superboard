@@ -20,7 +20,7 @@ describe("platform library catalogue service", () => {
       data: {
         data: {
           schemaVersion: 4,
-          repository: "https://github.com/mbzadev/superboard-platform",
+          repository: "https://github.com/mabzadev/superboard",
           developmentBranch: "dev",
           releasePolicy: "immutable-tag",
           libraries: [

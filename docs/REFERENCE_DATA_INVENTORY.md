@@ -1,7 +1,7 @@
 # SuperBoard reference data and FlutterFlow inventory
 
-This inventory is the implementation map for `superboard-platform` and
-`superboard-reference`. It distinguishes the reusable baseline from the legacy data
+This inventory is the implementation map for the `mabzadev/superboard`
+monorepo, including `apps/reference`. It distinguishes the reusable baseline from the legacy data
 that still has to be migrated out of the central VocoStar database.
 
 ## Reference FlutterFlow pages
@@ -31,7 +31,7 @@ FlutterFlow project. It does not copy VocoStar pages and has no direct Chatwoot
 client.
 
 Its deployment contract is the strict, versioned
-`superboard-reference/reference.project.json` manifest. It binds the `dev` branch to
+`apps/reference/reference.project.json` manifest. It binds the `dev` branch to
 the GitHub `development` Environment, the assets-only Worker
 `superboard-reference-app-dev` and `https://reference.mbza.dev`. Account ID and API
 token remain GitHub Environment secrets and are intentionally absent from the
@@ -161,7 +161,7 @@ the published v2 rollback coordinate; new FlutterFlow work uses only
 `superboardSupport*` and the canonical `superboard*` actions.
 
 App-specific FlutterFlow custom code is allowed only as a thin UI adapter. A
-network protocol, business rule or reusable widget belongs in `superboard-platform`.
+network protocol, business rule or reusable widget belongs in the SuperBoard monorepo root.
 
 ## Reference application state
 

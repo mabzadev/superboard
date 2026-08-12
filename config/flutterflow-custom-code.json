@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "owner": "superboard",
-  "repository": "https://github.com/mbzadev/superboard",
+  "repository": "https://github.com/mabzadev/superboard",
   "policy": "library-owned-no-copied-network-protocol",
   "sourceFiles": {
     "flutterflow": [

@@ -148,8 +148,10 @@ bindings Worker réels.
 
 ## GitHub et comptes Cloudflare
 
-Les dépôts `superboard-platform` et `superboard-reference` restent publics. Les
-secrets de déploiement sont attachés aux GitHub Environments, pas au dépôt :
+Le dépôt actif `mabzadev/superboard` reste public. Les anciens dépôts
+`superboard-platform` et `superboard-reference` sont archivés sans secret. Les
+secrets de déploiement actifs sont attachés aux GitHub Environments ou aux
+Workers Cloudflare, pas au dépôt :
 
 - `development` sélectionne `mbza-development` et le compte Cloudflare MBZA ;
 - `production` sélectionne `vocostar` et le compte Cloudflare VocoStar ;

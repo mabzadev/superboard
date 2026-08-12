@@ -9,7 +9,7 @@ revisions are supported.
 ## Reporting a vulnerability
 
 Use GitHub's private vulnerability reporting for
-`mbzadev/superboard-platform`. Include the affected service or SDK, the impact,
+`mabzadev/superboard`. Include the affected service or SDK, the impact,
 reproduction steps and a proposed mitigation when available. Do not publish
 credentials, personal data, exploit details or a working proof of concept in a
 public issue.

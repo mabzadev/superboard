@@ -172,7 +172,7 @@ test("coordinated project and development drift still fails closed", () => {
 test("libraries come from the SuperBoard monorepo and custom code is not copied", async () => {
   assert.equal(
     project.platformRepository,
-    "https://github.com/mbzadev/superboard",
+    "https://github.com/mabzadev/superboard",
   );
   assert.equal(catalog.policy, "reference-only-no-copied-implementation");
   assert.equal(catalog.schemaVersion, 3);
@@ -597,7 +597,7 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
     workflow,
     /repository: \$\{\{ needs\.contract\.outputs\.platform_repository \}\}/,
   );
-  assert.doesNotMatch(workflow, /repository:\s*mbzadev\/superboard-platform/);
+  assert.doesNotMatch(workflow, /repository:\s*mabzadev\/superboard-platform/);
   assert.ok((workflow.match(/persist-credentials: false/g) ?? []).length >= 6);
   assert.doesNotMatch(workflow, /environment: production/);
   assert.match(workflow, /validation-gate:/);
@@ -700,16 +700,16 @@ function pubspecDependencyRef(source, packageName) {
 }
 
 test("reference changes require the declared owner review", () => {
-  assert.match(codeowners, /^\* @mbzadev$/mu);
-  assert.match(codeowners, /^\/\.github\/workflows\/ @mbzadev$/mu);
-  assert.match(codeowners, /^\/reference\.project\.json @mbzadev$/mu);
-  assert.match(codeowners, /^\/pubspec\.yaml @mbzadev$/mu);
-  assert.match(codeowners, /^\/pubspec\.lock @mbzadev$/mu);
+  assert.match(codeowners, /^\* @mabzadev$/mu);
+  assert.match(codeowners, /^\/\.github\/workflows\/ @mabzadev$/mu);
+  assert.match(codeowners, /^\/reference\.project\.json @mabzadev$/mu);
+  assert.match(codeowners, /^\/pubspec\.yaml @mabzadev$/mu);
+  assert.match(codeowners, /^\/pubspec\.lock @mabzadev$/mu);
 });
 
 test("GitHub CI metadata is derived from the strict project manifest", () => {
   assert.deepEqual(buildReferenceCiMetadata(project), {
-    platform_repository: "mbzadev/superboard",
+    platform_repository: "mabzadev/superboard",
     deployment_branch: "dev",
   });
   assert.equal(

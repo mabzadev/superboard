@@ -5,14 +5,14 @@
     "slug": "superboard",
     "legacySlugs": ["opengrow"]
   },
-  "repository": "https://github.com/mbzadev/superboard",
+  "repository": "https://github.com/mabzadev/superboard",
   "layout": {
     "platform": ".",
     "reference": "apps/reference"
   },
   "legacyRepositories": [
-    "https://github.com/mbzadev/superboard-platform",
-    "https://github.com/mbzadev/superboard-reference"
+    "https://github.com/mabzadev/superboard-platform",
+    "https://github.com/mabzadev/superboard-reference"
   ],
   "development": {
     "target": "mbza-development"

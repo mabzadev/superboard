@@ -141,7 +141,7 @@ describe('OpenGrowWrapper', () => {
 
   describe('generateLink', () => {
     it('generates a link with all parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/superboard-platform/abc123');
+      mockGenerateLink.mockResolvedValue('https://github.com/mabzadev/superboard-platform/abc123');
 
       const customRedirects = {
         ios: { link: 'https://ios.example.com', open_if_app_installed: true },
@@ -172,7 +172,7 @@ describe('OpenGrowWrapper', () => {
         tracking
       );
 
-      expect(link).toBe('https://github.com/mbzadev/superboard-platform/abc123');
+      expect(link).toBe('https://github.com/mabzadev/superboard-platform/abc123');
       expect(mockGenerateLink).toHaveBeenCalledWith(
         'Title',
         'Subtitle',
@@ -187,10 +187,10 @@ describe('OpenGrowWrapper', () => {
     });
 
     it('generates a link with minimal parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://github.com/mbzadev/superboard-platform/minimal');
+      mockGenerateLink.mockResolvedValue('https://github.com/mabzadev/superboard-platform/minimal');
 
       const link = await OpenGrow.generateLink('Title');
-      expect(link).toBe('https://github.com/mbzadev/superboard-platform/minimal');
+      expect(link).toBe('https://github.com/mabzadev/superboard-platform/minimal');
     });
 
     it('throws on native error', async () => {
@@ -263,7 +263,7 @@ describe('OpenGrowWrapper', () => {
       OpenGrow.onDeeplinkReceived(callback);
 
       const deeplinkData = {
-        link: 'https://github.com/mbzadev/superboard-platform/deep',
+        link: 'https://github.com/mabzadev/superboard-platform/deep',
         data: { screen: 'profile' },
       };
       // Simulate the NativeEventEmitter firing — triggerDeeplink fans out to listeners
@@ -277,7 +277,7 @@ describe('OpenGrowWrapper', () => {
       const subscription = OpenGrow.onDeeplinkReceived(callback);
       subscription.remove();
 
-      const deeplinkData = { link: 'https://github.com/mbzadev/superboard-platform/after-remove' };
+      const deeplinkData = { link: 'https://github.com/mabzadev/superboard-platform/after-remove' };
       // Trigger on any remaining listeners — callback should not be in set
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
@@ -290,7 +290,7 @@ describe('OpenGrowWrapper', () => {
       OpenGrow.onDeeplinkReceived(cb1);
       OpenGrow.onDeeplinkReceived(cb2);
 
-      const deeplinkData = { link: 'https://github.com/mbzadev/superboard-platform/multi' };
+      const deeplinkData = { link: 'https://github.com/mabzadev/superboard-platform/multi' };
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).toHaveBeenCalledWith(deeplinkData);
@@ -305,7 +305,7 @@ describe('OpenGrowWrapper', () => {
 
       sub1.remove();
 
-      const deeplinkData = { link: 'https://github.com/mbzadev/superboard-platform/partial' };
+      const deeplinkData = { link: 'https://github.com/mabzadev/superboard-platform/partial' };
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).not.toHaveBeenCalled();

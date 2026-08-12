@@ -302,7 +302,7 @@
     }
   ],
   "operator": {
-    "docsUrl": "https://github.com/mbzadev/superboard-platform/tree/main/docs"
+    "docsUrl": "https://github.com/mabzadev/superboard/tree/main/docs"
   },
   "environments": {
     "production": {

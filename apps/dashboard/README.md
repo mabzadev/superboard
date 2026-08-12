@@ -2,7 +2,7 @@
 
 **Open-source mobile app operations dashboard** — deep links, messaging, purchases, and audience analytics.
 
-SuperBoard gives mobile developers one dashboard for deep links, messaging, purchases, and audience analytics. Self-host it or connect it to the [SuperBoard](https://github.com/mbzadev/superboard-platform) managed backend.
+SuperBoard gives mobile developers one dashboard for deep links, messaging, purchases, and audience analytics. Self-host it or connect it to the [SuperBoard](https://github.com/mabzadev/superboard) managed backend.
 
 ## Tech Stack
 
@@ -22,8 +22,8 @@ SuperBoard gives mobile developers one dashboard for deep links, messaging, purc
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/mbzadev/superboard-platform.git
-   cd superboard-platform/apps/dashboard
+   git clone https://github.com/mabzadev/superboard.git
+   cd superboard/apps/dashboard
    ```
 
 2. Install dependencies:

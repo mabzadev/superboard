@@ -4,7 +4,7 @@ Manage deep links, analytics, and app configuration for your mobile apps — dir
 
 ## What is SuperBoard?
 
-[SuperBoard](https://github.com/mbzadev/superboard-platform) is a self-hosted
+[SuperBoard](https://github.com/mabzadev/superboard) is a self-hosted
 application operations control plane. Its MCP tools cover projects, Universal
 Links (iOS), App Links (Android), deferred deep linking, analytics, campaigns
 and SDK configuration for the selected deployment target.
@@ -80,6 +80,6 @@ The plugin connects to the SuperBoard MCP server which provides these tools:
 
 ## Links
 
-- [SuperBoard platform documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs)
+- [SuperBoard platform documentation](https://github.com/mabzadev/superboard/tree/main/docs)
 - Dashboard: use the `domains.dashboard` origin from the selected target manifest
-- [MCP Server Source](https://github.com/mbzadev/superboard-platform/tree/main/apps/mcp)
+- [MCP Server Source](https://github.com/mabzadev/superboard/tree/main/apps/mcp)
