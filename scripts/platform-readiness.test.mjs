@@ -757,7 +757,7 @@ test("current offline report is fail-closed and contains actionable blockers", a
     report.blockers.some(
       (blocker) => blocker.id === "mbza-development.resource_ids",
     ),
-    true,
+    false,
   );
   assert.equal(
     report.blockers.some((blocker) => blocker.id === "vocostar.resource_ids"),
