@@ -58,7 +58,7 @@ function testSafety(projectRef = "10-test") {
     maintenance: { enabled: true, window_id: "window-1234" },
     backup_receipt: {
       completed_at: "2026-08-07T09:10:00Z",
-      artifacts: ["legacy-api", "legacy-messaging", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
+      artifacts: ["legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
         .map((name) => ({ name, bytes: 100, sha256: "a".repeat(64) })),
     },
   };
@@ -187,7 +187,7 @@ test("production apply fails closed without explicit approval, maintenance and b
 function testSafetyWindowReceipt() {
   return {
     completed_at: "2026-08-07T09:10:00Z",
-    artifacts: ["legacy-api", "legacy-messaging", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
+    artifacts: ["legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
       .map((name) => ({ name, bytes: 100, sha256: "a".repeat(64) })),
   };
 }

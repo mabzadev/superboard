@@ -1253,6 +1253,7 @@ function workerCatalog(managedWorkers: unknown[] = []) {
     "paywalls",
     "dynamic-links",
     "support",
+    "analytics",
     "marketing",
     "onboardings",
   ];

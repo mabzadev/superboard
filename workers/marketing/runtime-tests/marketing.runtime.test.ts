@@ -925,4 +925,183 @@ describe("Marketing in the Workers runtime", () => {
         .first(),
     ).resolves.toMatchObject({ total: 1 });
   });
+
+  it("deduplicates Analytics signals and advances a versioned event journey exactly once", async () => {
+    const projectId = 14;
+    const preferences = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/application/preferences",
+        projectId,
+        "PUT",
+        {
+          consented: true,
+          attributes: { plan: "starter" },
+          list_ids: [],
+        },
+        "journey-application-preferences",
+        "application",
+      ),
+    );
+    expect(preferences.status).toBe(200);
+    const identity = await env.DB.prepare(
+      `SELECT subscriber.id subscriber_id, alias.identity_hash
+       FROM subscribers subscriber
+       JOIN subscriber_identity_aliases alias
+         ON alias.project_id = subscriber.project_id
+        AND alias.subscriber_id = subscriber.id
+        AND alias.identity_kind = 'user'
+        AND alias.key_position = 0
+       WHERE subscriber.project_id = ?`,
+    )
+      .bind(projectId)
+      .first<{ subscriber_id: string; identity_hash: string }>();
+    expect(identity?.identity_hash).toMatch(/^[a-f0-9]{64}$/u);
+
+    const created = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/journeys",
+        projectId,
+        "POST",
+        {
+          name: "Paid conversion lifecycle",
+          trigger: {
+            event_name: "purchase.completed",
+            conditions: [
+              {
+                field: "properties.amount",
+                operator: "greater_than",
+                value: 5,
+              },
+            ],
+          },
+          reentry_policy: "once",
+          definition: {
+            start_node_id: "promote",
+            nodes: [
+              {
+                id: "promote",
+                type: "update_attribute",
+                attributes: { plan: "paid", lifecycle: "converted" },
+              },
+              { id: "complete", type: "exit" },
+            ],
+            edges: [
+              { from: "promote", to: "complete", outcome: "default" },
+            ],
+          },
+        },
+        "journey-create-runtime",
+      ),
+    );
+    expect(created.status).toBe(201);
+    const journey = await created.json<{ data: { id: string } }>();
+    const activated = await SELF.fetch(
+      await signedRequest(
+        `/internal/v1/journeys/${journey.data.id}/activate`,
+        projectId,
+        "POST",
+        {},
+        "journey-activate-runtime",
+      ),
+    );
+    expect(activated.status).toBe(200);
+
+    const signalBody = {
+      schema_version: 1,
+      event_id: "journey-signal-runtime-1",
+      event_name: "purchase.completed",
+      application_id: "runtime-app",
+      subject_hash: identity!.identity_hash,
+      properties: { amount: 49, currency: "CHF" },
+      occurred_at: new Date().toISOString(),
+    };
+    const signal = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/signals",
+        projectId,
+        "POST",
+        signalBody,
+        signalBody.event_id,
+        "system",
+      ),
+    );
+    expect(signal.status).toBe(202);
+    await expect(signal.json()).resolves.toMatchObject({
+      data: { duplicate: false, matched_journeys: 1 },
+    });
+    const replay = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/signals",
+        projectId,
+        "POST",
+        signalBody,
+        signalBody.event_id,
+        "system",
+      ),
+    );
+    expect(replay.headers.get("idempotency-replayed")).toBe("true");
+
+    const enrollment = await env.DB.prepare(
+      `SELECT id FROM marketing_journey_enrollments
+       WHERE project_id = ? AND journey_id = ?`,
+    )
+      .bind(projectId, journey.data.id)
+      .first<{ id: string }>();
+    expect(enrollment?.id).toBeTruthy();
+    for (const [messageId, attempts] of [
+      ["journey-advance-runtime-1", 1],
+      ["journey-advance-runtime-2", 1],
+      ["journey-advance-runtime-replay", 2],
+    ] as const) {
+      const batch = createMessageBatch("marketing-test-delivery", [
+        {
+          id: messageId,
+          timestamp: new Date(),
+          attempts,
+          body: {
+            type: "marketing.journey.advance",
+            projectId,
+            enrollmentId: enrollment!.id,
+          },
+        },
+      ]);
+      const execution = createExecutionContext();
+      await handleMarketingQueue(batch, env);
+      expect((await getQueueResult(batch, execution)).explicitAcks).toEqual([
+        messageId,
+      ]);
+    }
+    await expect(
+      env.DB.prepare(
+        `SELECT status FROM marketing_journey_enrollments WHERE id = ?`,
+      )
+        .bind(enrollment!.id)
+        .first(),
+    ).resolves.toMatchObject({ status: "completed" });
+    const updated = await env.DB.prepare(
+      `SELECT attributes_json FROM subscribers WHERE id = ?`,
+    )
+      .bind(identity!.subscriber_id)
+      .first<{ attributes_json: string }>();
+    expect(JSON.parse(updated!.attributes_json)).toMatchObject({
+      plan: "paid",
+      lifecycle: "converted",
+    });
+    await expect(
+      env.DB.prepare(
+        `SELECT COUNT(*) total FROM marketing_signal_receipts
+         WHERE project_id = ? AND event_id = ?`,
+      )
+        .bind(projectId, signalBody.event_id)
+        .first(),
+    ).resolves.toMatchObject({ total: 1 });
+    await expect(
+      env.DB.prepare(
+        `SELECT COUNT(*) total FROM marketing_journey_step_executions
+         WHERE project_id = ? AND enrollment_id = ?`,
+      )
+        .bind(projectId, enrollment!.id)
+        .first(),
+    ).resolves.toMatchObject({ total: 2 });
+  });
 });

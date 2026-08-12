@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "target": "mbza-development",
   "accountAlias": "mbza-development",
   "resourceIdentity": {
@@ -20,6 +20,7 @@
     "paywalls": true,
     "dynamic-links": true,
     "support": true,
+    "analytics": true,
     "marketing": true,
     "onboardings": true
   },
@@ -104,6 +105,9 @@
     },
     "support": {
       "development": "superboard-support-dev"
+    },
+    "analytics": {
+      "development": "superboard-analytics-dev"
     },
     "marketing": {
       "development": "superboard-marketing-dev"
@@ -201,11 +205,15 @@
           "name": "superboard-dev-dynamic-links-db",
           "id": "0b1222e3-e2b5-4a96-a26d-6b9a0ce14116"
         },
-        "support": {
-          "name": "superboard-dev-support-db",
-          "id": "6f08fb37-c2fc-4f91-beb2-7462f7976463"
-        },
-        "marketing": {
+      "support": {
+        "name": "superboard-dev-support-db",
+        "id": "6f08fb37-c2fc-4f91-beb2-7462f7976463"
+      },
+      "analytics": {
+        "name": "superboard-dev-analytics-db",
+        "id": null
+      },
+      "marketing": {
           "name": "superboard-dev-marketing-db",
           "id": "5bfda359-fd04-46e4-afc3-2d78b6565233"
         },
@@ -215,19 +223,26 @@
         }
       },
       "moduleR2": {
-        "support": {
-          "name": "superboard-dev-support-attachments"
-        },
-        "marketing": {
+      "support": {
+        "name": "superboard-dev-support-attachments"
+      },
+      "analytics": {
+        "name": "superboard-dev-analytics-events"
+      },
+      "marketing": {
           "name": "superboard-dev-marketing-media"
         }
       },
       "moduleQueues": {
-        "support": {
-          "name": "superboard-dev-support-events",
-          "dlq": "superboard-dev-support-events-dlq"
-        },
-        "marketing": {
+      "support": {
+        "name": "superboard-dev-support-events",
+        "dlq": "superboard-dev-support-events-dlq"
+      },
+      "analytics": {
+        "name": "superboard-dev-analytics-ingest",
+        "dlq": "superboard-dev-analytics-ingest-dlq"
+      },
+      "marketing": {
           "name": "superboard-dev-marketing-delivery",
           "dlq": "superboard-dev-marketing-delivery-dlq"
         }

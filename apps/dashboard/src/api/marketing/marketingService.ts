@@ -132,6 +132,93 @@ export type SubscriberExport = {
   deliveries: Array<Record<string, unknown>>;
   events: Array<Record<string, unknown>>;
 };
+export type JourneyCondition = {
+  field: string;
+  operator:
+    | "equals"
+    | "not_equals"
+    | "contains"
+    | "starts_with"
+    | "exists"
+    | "in"
+    | "greater_than"
+    | "greater_or_equal"
+    | "less_than"
+    | "less_or_equal";
+  value?: unknown;
+};
+export type JourneyTrigger = {
+  event_name: string;
+  conditions: JourneyCondition[];
+};
+export type JourneyNode = {
+  id: string;
+  type: "email" | "channel" | "delay" | "branch" | "update_attribute" | "exit";
+  template_id?: string;
+  smtp_profile_id?: string;
+  connector_id?: string;
+  delay_seconds?: number;
+  condition?: JourneyCondition;
+  attributes?: Record<string, unknown>;
+};
+export type JourneyDefinition = {
+  start_node_id: string;
+  nodes: JourneyNode[];
+  edges: Array<{
+    from: string;
+    to: string;
+    outcome: "default" | "true" | "false";
+  }>;
+};
+export type MarketingJourney = {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: "draft" | "active" | "paused" | "archived";
+  trigger_event_name: string;
+  trigger: JourneyTrigger;
+  definition: JourneyDefinition;
+  current_version: number;
+  reentry_policy: "once" | "after_completion" | "every_event";
+  entry_segment_id?: string | null;
+  enrollments_total?: number;
+  enrollments_active?: number;
+  enrollments_completed?: number;
+  created_at: string;
+  updated_at: string;
+};
+export type JourneyEnrollment = {
+  id: string;
+  journey_id: string;
+  journey_version: number;
+  subscriber_id: string;
+  email?: string;
+  name?: string | null;
+  current_node_id: string;
+  status: string;
+  context: Record<string, unknown>;
+  enrolled_at: string;
+  completed_at?: string | null;
+};
+export type JourneyStatistics = {
+  enrollments: number;
+  active: number;
+  completed: number;
+  failed: number;
+  steps_completed: number;
+  messages_sent: number;
+};
+export type MarketingChannelConnector = {
+  id: string;
+  name: string;
+  channel: "webhook" | "sms" | "push" | "whatsapp" | "slack";
+  endpoint_url: string;
+  headers: Record<string, string>;
+  enabled: boolean;
+  secret_configured: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export async function getEmailSubscribers(projectRef: string, query = "") {
   return data<EmailSubscriber[]>(
@@ -482,5 +569,120 @@ export async function discardMarketingDeadLetter(
 export async function getMarketingAudit(projectRef: string) {
   return data<Array<Record<string, unknown>>>(
     await GET(path(projectRef, "/audit"))
+  );
+}
+
+export async function getMarketingJourneys(projectRef: string) {
+  return data<MarketingJourney[]>(await GET(path(projectRef, "/journeys")));
+}
+
+export async function getMarketingJourney(projectRef: string, id: string) {
+  return data<MarketingJourney & { versions: Array<Record<string, unknown>> }>(
+    await GET(path(projectRef, `/journeys/${id}`))
+  );
+}
+
+export type MarketingJourneyInput = Pick<
+  MarketingJourney,
+  "name" | "trigger" | "definition" | "reentry_policy"
+> & {
+  description?: string | null;
+  entry_segment_id?: string | null;
+};
+
+export async function createMarketingJourney(
+  projectRef: string,
+  payload: MarketingJourneyInput
+) {
+  return data<MarketingJourney>(
+    await POST(path(projectRef, "/journeys"), payload)
+  );
+}
+
+export async function updateMarketingJourney(
+  projectRef: string,
+  id: string,
+  payload: MarketingJourneyInput
+) {
+  return data<MarketingJourney>(
+    await PATCH(path(projectRef, `/journeys/${id}`), payload)
+  );
+}
+
+export async function transitionMarketingJourney(
+  projectRef: string,
+  id: string,
+  transition: "activate" | "pause" | "resume" | "archive"
+) {
+  return data<MarketingJourney>(
+    await POST(path(projectRef, `/journeys/${id}/${transition}`), {})
+  );
+}
+
+export async function getJourneyEnrollments(projectRef: string, id: string) {
+  return data<JourneyEnrollment[]>(
+    await GET(path(projectRef, `/journeys/${id}/enrollments`))
+  );
+}
+
+export async function enrollJourneySubscribers(
+  projectRef: string,
+  id: string,
+  subscriberIds: string[],
+  context: Record<string, unknown> = {}
+) {
+  return data<{ requested: number; enrolled: number }>(
+    await POST(path(projectRef, `/journeys/${id}/enrollments`), {
+      subscriber_ids: subscriberIds,
+      context,
+    })
+  );
+}
+
+export async function getJourneyStatistics(projectRef: string, id: string) {
+  return data<JourneyStatistics>(
+    await GET(path(projectRef, `/journeys/${id}/statistics`))
+  );
+}
+
+export async function getMarketingChannelConnectors(projectRef: string) {
+  return data<MarketingChannelConnector[]>(
+    await GET(path(projectRef, "/channel-connectors"))
+  );
+}
+
+export type MarketingChannelConnectorInput = Pick<
+  MarketingChannelConnector,
+  "name" | "channel" | "endpoint_url" | "enabled"
+> & {
+  headers: Record<string, string>;
+  secret?: string;
+};
+
+export async function createMarketingChannelConnector(
+  projectRef: string,
+  payload: MarketingChannelConnectorInput
+) {
+  return data<MarketingChannelConnector>(
+    await POST(path(projectRef, "/channel-connectors"), payload)
+  );
+}
+
+export async function updateMarketingChannelConnector(
+  projectRef: string,
+  id: string,
+  payload: Partial<MarketingChannelConnectorInput>
+) {
+  return data<MarketingChannelConnector>(
+    await PATCH(path(projectRef, `/channel-connectors/${id}`), payload)
+  );
+}
+
+export async function deleteMarketingChannelConnector(
+  projectRef: string,
+  id: string
+) {
+  return data<{ deleted: boolean }>(
+    await DELETE(path(projectRef, `/channel-connectors/${id}`))
   );
 }

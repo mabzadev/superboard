@@ -99,12 +99,17 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
     ),
     moduleR2: {
       support: { name: `${resourcePrefix()}-support-attachments` },
+      analytics: { name: `${resourcePrefix()}-analytics-events` },
       marketing: { name: `${resourcePrefix()}-marketing-media` },
     },
     moduleQueues: {
       support: {
         name: `${resourcePrefix()}-support-events`,
         dlq: `${resourcePrefix()}-support-events-dlq`,
+      },
+      analytics: {
+        name: `${resourcePrefix()}-analytics-ingest`,
+        dlq: `${resourcePrefix()}-analytics-ingest-dlq`,
       },
       marketing: {
         name: `${resourcePrefix()}-marketing-delivery`,
@@ -123,7 +128,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 
   return {
     $schema: "./schema.json",
-    schemaVersion: 12,
+    schemaVersion: 13,
     target,
     accountAlias: args["account-alias"],
     resourceIdentity: {

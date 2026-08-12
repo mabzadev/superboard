@@ -13,11 +13,15 @@ vi.mock("@/lib/config", () => ({ config: { apiPath: "/api/v1" } }));
 
 import {
   addSubscriberToList,
+  createMarketingChannelConnector,
+  createMarketingJourney,
   downloadMarketingMedia,
   getEmailSubscriber,
   getEmailSubscriberExport,
   getEmailSubscribers,
+  getMarketingJourneys,
   removeSubscriberFromList,
+  transitionMarketingJourney,
   updateEmailCampaign,
   updateEmailSubscriber,
   updateEmailTemplate,
@@ -131,6 +135,51 @@ describe("Marketing dashboard service contracts", () => {
     expect(api.GET).toHaveBeenCalledWith(
       "/api/v1/marketing/projects/10-test/media/media-1",
       { responseType: "blob" }
+    );
+  });
+
+  it("maps versioned journeys and omnichannel connectors", async () => {
+    api.GET.mockResolvedValue({ data: { data: [] } });
+    api.POST.mockResolvedValue({ data: { data: { id: "resource-1" } } });
+
+    await expect(getMarketingJourneys("10-test")).resolves.toEqual([]);
+    await createMarketingJourney("10-test", {
+      name: "Activation",
+      reentry_policy: "once",
+      trigger: { event_name: "account.created", conditions: [] },
+      definition: {
+        start_node_id: "exit",
+        nodes: [{ id: "exit", type: "exit" }],
+        edges: [],
+      },
+    });
+    await transitionMarketingJourney("10-test", "journey-1", "activate");
+    await createMarketingChannelConnector("10-test", {
+      name: "SMS",
+      channel: "sms",
+      endpoint_url: "https://provider.example/messages",
+      headers: {},
+      enabled: true,
+      secret: "secret",
+    });
+
+    expect(api.GET).toHaveBeenCalledWith(
+      "/api/v1/marketing/projects/10-test/journeys"
+    );
+    expect(api.POST).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/marketing/projects/10-test/journeys",
+      expect.objectContaining({ name: "Activation" })
+    );
+    expect(api.POST).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/marketing/projects/10-test/journeys/journey-1/activate",
+      {}
+    );
+    expect(api.POST).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/marketing/projects/10-test/channel-connectors",
+      expect.objectContaining({ channel: "sms" })
     );
   });
 });

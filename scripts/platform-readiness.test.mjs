@@ -51,8 +51,8 @@ test("target readiness distinguishes unresolved fixtures from provisioned target
   const mbzaResult = targetReadiness(mbza, "development");
   const vocostarResult = targetReadiness(vocostar, "production");
 
-  assert.equal(requiredResourceIds(mbza, "development").length, 13);
-  assert.equal(mbzaResult.resourceIds.missing.length, 13);
+  assert.equal(requiredResourceIds(mbza, "development").length, 14);
+  assert.equal(mbzaResult.resourceIds.missing.length, 14);
   assert.equal(mbzaResult.resourceIdentity.logicalName, "superboard");
   assert.equal(mbzaResult.resourceIdentity.physicalName, "superboard");
   assert.equal(
@@ -757,7 +757,7 @@ test("current offline report is fail-closed and contains actionable blockers", a
     report.blockers.some(
       (blocker) => blocker.id === "mbza-development.resource_ids",
     ),
-    false,
+    true,
   );
   assert.equal(
     report.blockers.some((blocker) => blocker.id === "vocostar.resource_ids"),

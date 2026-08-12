@@ -74,6 +74,15 @@ test("generated assignments satisfy every private cross-service contract without
     assignments.billing.INTERNAL_API_TOKEN,
   );
   assert.equal(
+    assignments.api.MODULE_INTERNAL_TOKEN,
+    assignments.analytics.INTERNAL_API_TOKEN,
+  );
+  assert.equal(typeof assignments.analytics.ANALYTICS_ID_HASH_KEY, "string");
+  assert.equal(
+    assignments.analytics.ANALYTICS_ID_HASH_KEY,
+    assignments.marketing.ANALYTICS_ID_HASH_KEY,
+  );
+  assert.equal(
     assignments.api.EMAIL_INTERNAL_TOKEN,
     assignments.email.EMAIL_INTERNAL_TOKEN,
   );

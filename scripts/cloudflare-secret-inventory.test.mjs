@@ -132,7 +132,7 @@ test("shared production contracts identify both ends and environment-specific bi
       .members.map(({ service }) => service),
     ["api", "email", "identity", "marketing"],
   );
-  assert.equal(productionPlan.summary.overlapCapableContracts, 5);
+  assert.equal(productionPlan.summary.overlapCapableContracts, 6);
   assert.equal(
     productionPlan.contracts
       .find(({ id }) => id === "module-internal-token")

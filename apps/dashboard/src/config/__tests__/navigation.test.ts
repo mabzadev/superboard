@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DASHBOARD_SECTIONS, pageForPath, sectionForPath } from "../navigation";
 
 describe("dashboard navigation", () => {
-  it("defines Dashboard followed by the seven product sections", () => {
+  it("defines Dashboard followed by the eight product sections", () => {
     expect(DASHBOARD_SECTIONS.map(({ label }) => label)).toEqual([
       "Dashboard",
       "App",
@@ -11,6 +11,7 @@ describe("dashboard navigation", () => {
       "Dynamic Links",
       "Support",
       "Marketing",
+      "Analytics",
       "Onboardings",
     ]);
   });
@@ -52,7 +53,26 @@ describe("dashboard navigation", () => {
       ["Support", ["Inbox", "Configuration", "Contacts", "Quality"]],
       [
         "Marketing",
-        ["In-app Messages", "Email", "Campaigns", "Statistics", "Settings"],
+        [
+          "In-app Messages",
+          "Email",
+          "Campaigns",
+          "Journeys",
+          "Channels",
+          "Statistics",
+          "Settings",
+        ],
+      ],
+      [
+        "Analytics",
+        [
+          "Overview",
+          "Events",
+          "Installations",
+          "Verified Purchases",
+          "Funnels & Retention",
+          "Reports",
+        ],
       ],
       ["Onboardings", ["Onboardings", "Statistics"]],
     ]);
@@ -81,9 +101,9 @@ describe("dashboard navigation", () => {
     expect(pageForPath("/onboardings/statistics")?.label).toBe("Statistics");
   });
 
-  it("defines Dashboard and exactly 31 physical module pages", () => {
+  it("defines Dashboard and exactly 39 physical module pages", () => {
     expect(DASHBOARD_SECTIONS.flatMap((section) => section.pages)).toHaveLength(
-      32
+      40
     );
   });
 

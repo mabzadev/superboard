@@ -12,6 +12,7 @@ import { decryptJson } from "./secrets";
 import { isEmailTransportInProgress, sendSmtpMessage } from "./email-service";
 import { parseStoredJson } from "./validation";
 import { instrumentHtml, unsubscribeUrl } from "./tracking";
+import { advanceJourneyEnrollment } from "./journeys";
 
 type Delivery = {
   id: string;
@@ -92,7 +93,9 @@ export async function handleMarketingQueue(
         await dispatchCampaign(env, message.body);
       else if (message.body.type === "marketing.email.deliver")
         await deliverEmail(env, message.body, message.attempts);
-      else await deliverOptin(env, message.body);
+      else if (message.body.type === "marketing.optin.deliver")
+        await deliverOptin(env, message.body);
+      else await advanceJourneyEnrollment(env, message.body);
       message.ack();
     } catch (error) {
       console.error(
@@ -710,6 +713,10 @@ export function isMarketingQueueJob(
       job.outboxId.length > 0 &&
       typeof job.token === "string" &&
       job.token.length >= 20 &&
-      job.token.length <= 512)
+      job.token.length <= 512) ||
+    (job.type === "marketing.journey.advance" &&
+      Number.isSafeInteger(job.projectId) &&
+      typeof job.enrollmentId === "string" &&
+      job.enrollmentId.length > 0)
   );
 }
