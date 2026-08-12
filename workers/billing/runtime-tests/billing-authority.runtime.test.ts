@@ -68,6 +68,54 @@ describe("Billing authority in the Workers runtime", () => {
     expect(keySet.keys[0]).not.toHaveProperty("d");
   });
 
+  it("publishes one durable Analytics fact for a repeated verified purchase", async () => {
+    const testEnv = env as BillingRuntimeEnv;
+    const purchase = {
+      projectId,
+      applicationId: null,
+      customerId: null,
+      store: "apple" as const,
+      environment: "sandbox" as const,
+      storeProductId: "analytics-runtime-premium",
+      productType: "non_consumable" as const,
+      storeTransactionId: "analytics-runtime-transaction",
+      eventType: "PURCHASED",
+      status: "active" as const,
+      priceMicros: 4_990_000,
+      currency: "CHF",
+      purchasedAt: "2026-08-12T10:00:00.000Z",
+      rawPayload: { verified: true },
+    };
+    const first = await applyVerifiedPurchase(testEnv, purchase);
+    const duplicate = await applyVerifiedPurchase(testEnv, purchase);
+    expect(first.duplicate).toBe(false);
+    expect(duplicate).toMatchObject({
+      transactionId: first.transactionId,
+      duplicate: true,
+    });
+
+    const row = await testEnv.DB.prepare(
+      `SELECT COUNT(*) AS total, MIN(status) AS status,
+        MIN(json_extract(payload_json, '$.event_name')) AS event_name,
+        MIN(json_extract(payload_json, '$.properties.store_transaction_id')) AS store_transaction_id
+       FROM analytics_fact_outbox
+       WHERE project_id = ? AND fact_key LIKE 'purchase:%'`,
+    )
+      .bind(projectId)
+      .first<{
+        total: number;
+        status: string;
+        event_name: string;
+        store_transaction_id: string;
+      }>();
+    expect(row).toEqual({
+      total: 1,
+      status: "delivered",
+      event_name: "superboard.analytics.purchase.verified.v1",
+      store_transaction_id: purchase.storeTransactionId,
+    });
+  });
+
   it("resolves one durable anonymous customer and signs its CustomerInfo", async () => {
     const first = await resolveCustomer();
     const second = await resolveCustomer();

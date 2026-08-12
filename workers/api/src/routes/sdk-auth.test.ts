@@ -34,6 +34,15 @@ function sdkFixture() {
       { message_id: 902, notification_id: 802, visitor_id: 'visitor-101', read: 1, updated_at: '2026-01-01T00:00:00.000Z', title: 'Read', subtitle: 'Done', auto_display: 0, notification_updated_at: '2026-01-01T00:00:00.000Z' },
     ],
     events: [] as any[],
+    analyticsFacts: [] as Array<{
+      id: string;
+      project_id: string;
+      fact_key: string;
+      event_id: string;
+      payload_json: string;
+      status: string;
+      attempt_count: number;
+    }>,
   };
   const db = createFakeD1((call) => sdkD1Handler(call, state));
   const env = {
@@ -45,6 +54,10 @@ function sdkFixture() {
     SDK_DOMAIN: 'sdk.test',
     CORS_ORIGIN: '*',
     JWT_SECRET: 'sdk-secret',
+    MODULE_INTERNAL_TOKEN: 'analytics-internal-secret',
+    ANALYTICS_MODULE: {
+      fetch: async () => Response.json({ data: { accepted: 1, rejected: 0 } }, { status: 202 }),
+    } as unknown as Fetcher,
   } satisfies Env;
   return { env, state };
 }
@@ -200,6 +213,37 @@ function sdkD1Handler(call: FakeD1Call, state: ReturnType<typeof sdkFixture>['st
       engagement_time: args[5],
     });
     return true;
+  }
+
+  if (op === 'run' && sql.startsWith('INSERT OR IGNORE INTO analytics_fact_outbox')) {
+    if (!state.analyticsFacts.some((row) => row.project_id === String(args[1]) && row.fact_key === String(args[2]))) {
+      state.analyticsFacts.push({
+        id: String(args[0]),
+        project_id: String(args[1]),
+        fact_key: String(args[2]),
+        event_id: String(args[3]),
+        payload_json: String(args[4]),
+        status: 'pending',
+        attempt_count: 0,
+      });
+    }
+    return true;
+  }
+
+  if (op === 'first' && sql.includes('FROM analytics_fact_outbox')) {
+    return state.analyticsFacts.find((row) =>
+      row.project_id === String(args[0]) && row.fact_key === String(args[1]) && row.status !== 'delivered'
+    ) || null;
+  }
+
+  if (op === 'run' && sql.startsWith('UPDATE analytics_fact_outbox')) {
+    const row = state.analyticsFacts.find((candidate) => candidate.id === String(args.at(-1)));
+    if (row) row.status = sql.includes("status = 'delivered'") ? 'delivered' : 'delivering';
+    return true;
+  }
+
+  if (op === 'first' && sql.includes('SELECT id, instance_id, is_test FROM projects WHERE id = ?')) {
+    return state.projects.find((project) => project.id === Number(args[0])) || null;
   }
 
   return undefined;

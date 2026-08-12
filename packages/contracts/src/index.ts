@@ -7,3 +7,4 @@ export * from "./secret";
 export * from "./request-body";
 export * from "./url-security";
 export * from "./dead-letter";
+export * from "./analytics";

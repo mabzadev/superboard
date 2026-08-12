@@ -66,7 +66,7 @@ non-production branch builds: disabled
 ```
 
 Create the same connection for: `observability`, `email`, `files`, `identity`,
-`app`, `products`, `paywalls`, `dynamic-links`, `support`, `marketing`,
+`app`, `products`, `paywalls`, `dynamic-links`, `support`, `analytics`, `marketing`,
 `onboardings`, `billing`, `custom`, `api`, `mcp`, and `dashboard`.
 
 ## Private back-office registration

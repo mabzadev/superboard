@@ -18,6 +18,16 @@ import {
   RequestBodyError,
   readRequestObjectLimited,
 } from "@superboard/contracts/request-body";
+import {
+  ANALYTICS_CANONICAL_EVENTS,
+  ANALYTICS_RESERVED_EVENT_PREFIX,
+  type AnalyticsEventV1,
+} from "@superboard/contracts/analytics";
+import {
+  canonicalAnalyticsEventId,
+  deliverAnalyticsFact,
+  enqueueAnalyticsFactStatement,
+} from "../lib/analytics-facts";
 
 const sdk = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 sdk.get("/.well-known/purchases-jwks.json", async (c) =>
@@ -43,6 +53,12 @@ sdk.onError((error, c) => {
   }
   if (error?.message === "Invalid project for SDK credentials") {
     return c.json({ error: error.message }, 403);
+  }
+  if (error instanceof SdkAnalyticsInputError) {
+    return c.json(
+      { error: { code: error.code, message: error.message } },
+      error.status,
+    );
   }
   console.error("sdk_route_failed", error);
   return c.json({ error: "Internal server error" }, 500);
@@ -774,13 +790,14 @@ sdk.post("/attribution", async (c) => {
     SELECT a.id, a.link_id, l.path, l.data, l.title, l.tracking_source, l.tracking_medium, l.tracking_campaign
     FROM actions a
     JOIN links l ON l.id = a.link_id
+    JOIN redirect_configs rc ON rc.id = l.redirect_config_id
     JOIN devices d ON d.id = a.device_id
-    WHERE d.ip = ? AND a.handled = 0
+    WHERE d.ip = ? AND rc.project_id = ? AND a.handled = 0
     AND a.created_at > datetime('now', '-7 days')
     ORDER BY a.created_at DESC LIMIT 1
   `,
   )
-    .bind(ip)
+    .bind(ip, project.id)
     .first<{
       id: number;
       link_id: number;
@@ -792,53 +809,89 @@ sdk.post("/attribution", async (c) => {
       tracking_campaign: string | null;
     }>();
 
-  if (!action) {
-    // Register install as organic
-    await c.env.DB.prepare(
-      "INSERT OR IGNORE INTO installed_apps (device_id, project_id) VALUES (?, ?)",
-    )
-      .bind(body.device_id, project.id)
-      .run();
-    await ensureVisitor(c.env.DB, Number(project.id), body.device_id);
-
-    // Track install event
-    await c.env.DB.prepare(
-      "INSERT INTO events (device_id, project_id, event, platform) VALUES (?, ?, 'install', 'organic')",
-    )
-      .bind(body.device_id, project.id)
-      .run();
-
-    return c.json({ attributed: false, install_type: "organic" });
+  const applicationId = sdkAnalyticsApplicationId(c, project.id);
+  const appInstanceId = analyticsIdentifier(
+    body.install_id,
+    `dev_${body.device_id}`,
+  );
+  const factKey = `installation:${project.id}:${applicationId}:${body.device_id}`;
+  const eventId = await canonicalAnalyticsEventId("installation", factKey);
+  const occurredAt = new Date().toISOString();
+  const installType = action ? "attributed" : "organic";
+  const analyticsEvent: AnalyticsEventV1 = {
+    schema_version: 1,
+    event_id: eventId,
+    event_name: ANALYTICS_CANONICAL_EVENTS.installationCreated,
+    occurred_at: occurredAt,
+    source: "system",
+    application_id: applicationId,
+    app_instance_id: appInstanceId,
+    properties: {
+      install_type: installType,
+      ...(action
+        ? {
+            attribution_id: String(action.id),
+            link_id: String(action.link_id),
+          }
+        : {}),
+    },
+    context: {
+      platform: sdkAnalyticsPlatform(c),
+    },
+  };
+  const statements: D1PreparedStatement[] = [];
+  if (action) {
+    statements.push(
+      c.env.DB.prepare(
+        "UPDATE actions SET handled = 1, updated_at = datetime('now') WHERE id = ?",
+      ).bind(action.id),
+    );
   }
-
-  // Mark action as handled
-  await c.env.DB.prepare(
-    "UPDATE actions SET handled = 1, updated_at = datetime('now') WHERE id = ?",
-  )
-    .bind(action.id)
-    .run();
-
-  // Register install
-  await c.env.DB.prepare(
-    "INSERT OR IGNORE INTO installed_apps (device_id, project_id) VALUES (?, ?)",
-  )
-    .bind(body.device_id, project.id)
-    .run();
+  const installStatementIndex = statements.length;
+  statements.push(
+    c.env.DB.prepare(
+      "INSERT OR IGNORE INTO installed_apps (device_id, project_id) VALUES (?, ?)",
+    ).bind(body.device_id, project.id),
+    enqueueAnalyticsFactStatement(c.env.DB, {
+      projectId: project.id,
+      factKey,
+      event: analyticsEvent,
+    }),
+  );
+  const persisted = await c.env.DB.batch(statements);
+  const installationCreated =
+    Number(persisted[installStatementIndex].meta.changes ?? 0) > 0;
   await ensureVisitor(c.env.DB, Number(project.id), body.device_id);
 
-  // Track attributed install event
-  await c.env.DB.prepare(
-    `
-    INSERT INTO events (device_id, project_id, link_id, event, platform)
-    VALUES (?, ?, ?, 'install', 'attributed')
-  `,
-  )
-    .bind(body.device_id, project.id, action.link_id)
-    .run();
+  // Keep the legacy link metrics during the transition, but only for a newly
+  // persisted installation. Analytics is the canonical counter.
+  if (installationCreated) {
+    await c.env.DB.prepare(
+      `INSERT INTO events (device_id, project_id, link_id, event, platform)
+       VALUES (?, ?, ?, 'install', ?)`,
+    )
+      .bind(
+        body.device_id,
+        project.id,
+        action?.link_id ?? null,
+        installType,
+      )
+      .run();
+  }
+  await deliverAnalyticsFact(c.env, project.id, factKey);
+
+  if (!action) {
+    return c.json({
+      attributed: false,
+      install_type: "organic",
+      installation_created: installationCreated,
+    });
+  }
 
   return c.json({
     attributed: true,
     install_type: "attributed",
+    installation_created: installationCreated,
     link: {
       id: action.link_id,
       path: action.path,
@@ -860,6 +913,12 @@ sdk.post("/events", async (c) => {
     device_id: number;
     project_id: number;
     event: string;
+    event_id?: string;
+    occurred_at?: string;
+    install_id?: string;
+    session_id?: string;
+    anonymous_id?: string;
+    user_id?: string;
     platform?: string;
     data?: Record<string, unknown>;
     app_version?: string;
@@ -872,6 +931,11 @@ sdk.post("/events", async (c) => {
   if (Number(body.project_id) !== Number(project.id)) {
     return c.json({ error: "Invalid project for SDK credentials" }, 403);
   }
+  const eventName = analyticsEventName(body.event);
+  const eventId = analyticsIdentifier(body.event_id, crypto.randomUUID());
+  const occurredAt = analyticsTimestamp(body.occurred_at);
+  const applicationId = sdkAnalyticsApplicationId(c, project.id);
+  const factKey = `sdk-event:${project.id}:${applicationId}:${eventId}`;
 
   await ensureVisitor(
     c.env.DB,
@@ -881,24 +945,66 @@ sdk.post("/events", async (c) => {
     body.sdk_attributes,
   );
 
-  await c.env.DB.prepare(
-    `
-    INSERT INTO events (device_id, project_id, link_id, event, platform, data, app_version)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `,
-  )
-    .bind(
+  const analyticsEvent: AnalyticsEventV1 = {
+    schema_version: 1,
+    event_id: eventId,
+    event_name: eventName,
+    occurred_at: occurredAt,
+    source: "sdk",
+    application_id: applicationId,
+    app_instance_id: analyticsIdentifier(
+      body.install_id,
+      `dev_${body.device_id}`,
+    ),
+    ...(body.session_id
+      ? { session_id: analyticsIdentifier(body.session_id, eventId) }
+      : {}),
+    ...(body.anonymous_id
+      ? { anonymous_id: analyticsIdentifier(body.anonymous_id, eventId) }
+      : {}),
+    ...(body.user_id
+      ? { user_id: analyticsIdentifier(body.user_id, eventId) }
+      : {}),
+    properties: body.data ?? {},
+    context: {
+      platform: body.platform || sdkAnalyticsPlatform(c),
+      ...(body.app_version ? { app_version: body.app_version } : {}),
+    },
+  };
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO events
+        (device_id, project_id, link_id, event, platform, data, app_version, created_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE NOT EXISTS (
+         SELECT 1 FROM analytics_fact_outbox
+         WHERE project_id = ? AND fact_key = ?
+       )`,
+    ).bind(
       body.device_id,
       project.id,
       body.link_id || null,
-      body.event,
+      eventName,
       body.platform || null,
       body.data ? JSON.stringify(body.data) : null,
       body.app_version || null,
-    )
-    .run();
+      occurredAt,
+      String(project.id),
+      factKey,
+    ),
+    enqueueAnalyticsFactStatement(c.env.DB, {
+      projectId: project.id,
+      factKey,
+      event: analyticsEvent,
+    }),
+  ]);
+  await deliverAnalyticsFact(c.env, project.id, factKey);
 
-  return c.json({ success: true });
+  return c.json({
+    success: true,
+    event_id: eventId,
+    duplicate: Number(results[0].meta.changes ?? 0) === 0,
+  });
 });
 
 // Upstream SDK event alias: authenticated by PROJECT-KEY headers and LINKSQUARED.
@@ -921,26 +1027,83 @@ sdk.post("/event", async (c) => {
     const link = await findProjectLink(c.env.DB, Number(project.id), urlPath);
     linkId = link?.id || null;
   }
-  await c.env.DB.prepare(
-    `
-    INSERT INTO events (device_id, project_id, link_id, event, platform, engagement_time, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
-  `,
-  )
-    .bind(
+  const eventName = analyticsEventName(body.event || "app_open");
+  const eventId = analyticsIdentifier(body.event_id, crypto.randomUUID());
+  const occurredAt = analyticsTimestamp(body.created_at);
+  const applicationId = sdkAnalyticsApplicationId(c, project.id);
+  const factKey = `sdk-event:${project.id}:${applicationId}:${eventId}`;
+  const platform =
+    c.req.header("PLATFORM") ||
+    c.req.header("platform") ||
+    visitor.platform ||
+    "unknown";
+  const properties = {
+    ...(body.data && typeof body.data === "object" && !Array.isArray(body.data)
+      ? body.data
+      : {}),
+    ...(body.engagement_time == null
+      ? {}
+      : { engagement_time: Number(body.engagement_time) }),
+    ...(linkId == null ? {} : { link_id: String(linkId) }),
+  };
+  const analyticsEvent: AnalyticsEventV1 = {
+    schema_version: 1,
+    event_id: eventId,
+    event_name: eventName,
+    occurred_at: occurredAt,
+    source: "sdk",
+    application_id: applicationId,
+    app_instance_id: analyticsIdentifier(
+      body.install_id,
+      `dev_${visitor.device_id}`,
+    ),
+    ...(body.session_id
+      ? { session_id: analyticsIdentifier(body.session_id, eventId) }
+      : {}),
+    ...(body.anonymous_id
+      ? { anonymous_id: analyticsIdentifier(body.anonymous_id, eventId) }
+      : {}),
+    ...(body.user_id
+      ? { user_id: analyticsIdentifier(body.user_id, eventId) }
+      : {}),
+    properties,
+    context: {
+      platform: String(platform),
+      ...(body.app_version ? { app_version: String(body.app_version) } : {}),
+    },
+  };
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO events
+        (device_id, project_id, link_id, event, platform, engagement_time, created_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?
+       WHERE NOT EXISTS (
+         SELECT 1 FROM analytics_fact_outbox
+         WHERE project_id = ? AND fact_key = ?
+       )`,
+    ).bind(
       visitor.device_id,
       project.id,
       linkId,
-      body.event || "app_open",
-      c.req.header("PLATFORM") ||
-        c.req.header("platform") ||
-        visitor.platform ||
-        null,
+      eventName,
+      platform,
       body.engagement_time || null,
-      body.created_at || null,
-    )
-    .run();
-  return c.json({ message: "Event added" });
+      occurredAt,
+      String(project.id),
+      factKey,
+    ),
+    enqueueAnalyticsFactStatement(c.env.DB, {
+      projectId: project.id,
+      factKey,
+      event: analyticsEvent,
+    }),
+  ]);
+  await deliverAnalyticsFact(c.env, project.id, factKey);
+  return c.json({
+    message: "Event added",
+    event_id: eventId,
+    duplicate: Number(results[0].meta.changes ?? 0) === 0,
+  });
 });
 
 sdk.post("/data_for_device", async (c) => {
@@ -1338,5 +1501,83 @@ sdk.get("/notifications_to_display_automatically", async (c) => {
 sdk.get("/notifications", async (c) => {
   return notificationsForRequest(c, {}, true);
 });
+
+class SdkAnalyticsInputError extends Error {
+  readonly status = 422 as const;
+
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "SdkAnalyticsInputError";
+  }
+}
+
+const ANALYTICS_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
+const ANALYTICS_EVENT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9._:-]{0,127}$/u;
+
+function analyticsIdentifier(value: unknown, fallback: string): string {
+  const candidate =
+    value === undefined || value === null || value === ""
+      ? fallback
+      : String(value).trim();
+  if (!ANALYTICS_IDENTIFIER_PATTERN.test(candidate)) {
+    throw new SdkAnalyticsInputError(
+      "analytics_identifier_invalid",
+      "Analytics identifiers must contain at most 128 safe characters",
+    );
+  }
+  return candidate;
+}
+
+function analyticsEventName(value: unknown): string {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (!ANALYTICS_EVENT_NAME_PATTERN.test(candidate)) {
+    throw new SdkAnalyticsInputError(
+      "analytics_event_name_invalid",
+      "event must be a valid analytics event name",
+    );
+  }
+  if (candidate.startsWith(ANALYTICS_RESERVED_EVENT_PREFIX)) {
+    throw new SdkAnalyticsInputError(
+      "analytics_event_reserved",
+      `Event names beginning with ${ANALYTICS_RESERVED_EVENT_PREFIX} are reserved`,
+    );
+  }
+  return candidate;
+}
+
+function analyticsTimestamp(value: unknown): string {
+  if (value === undefined || value === null || value === "") {
+    return new Date().toISOString();
+  }
+  const parsed = Date.parse(String(value));
+  if (!Number.isFinite(parsed)) {
+    throw new SdkAnalyticsInputError(
+      "analytics_timestamp_invalid",
+      "occurred_at must be a valid ISO 8601 timestamp",
+    );
+  }
+  return new Date(parsed).toISOString();
+}
+
+function sdkAnalyticsApplicationId(c: any, projectId: unknown): string {
+  const candidate =
+    c.get("sdkIdentifier") ||
+    c.req.header("IDENTIFIER") ||
+    c.req.header("identifier") ||
+    `project-${projectId}`;
+  return analyticsIdentifier(candidate, `project-${projectId}`);
+}
+
+function sdkAnalyticsPlatform(c: any): string {
+  const value =
+    c.get("sdkPlatform") ||
+    c.req.header("PLATFORM") ||
+    c.req.header("platform") ||
+    "unknown";
+  return String(value).trim().slice(0, 255) || "unknown";
+}
 
 export default sdk;

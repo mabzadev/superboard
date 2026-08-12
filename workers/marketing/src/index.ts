@@ -26,6 +26,11 @@ import {
 import { handleMarketingQueue, isMarketingQueueJob } from "./queue";
 import { verifyTrackingToken } from "./tracking";
 import { verifyEmailAuthentication } from "./email-authentication";
+import { marketingIdentityHashCandidates } from "./identity";
+import {
+  dispatchDueJourneyEnrollments,
+  journeyRoutes,
+} from "./journeys";
 
 const app = new Hono<{
   Bindings: Env;
@@ -93,6 +98,10 @@ export async function marketingHealth(db: D1Database) {
       (SELECT COUNT(*) FROM campaigns WHERE status = 'running') AS campaigns_running,
       (SELECT COUNT(*) FROM campaigns WHERE status = 'paused') AS campaigns_paused,
       (SELECT COUNT(*) FROM campaigns WHERE status = 'finished') AS campaigns_finished,
+      (SELECT COUNT(*) FROM marketing_journeys) AS journeys_total,
+      (SELECT COUNT(*) FROM marketing_journeys WHERE status = 'active') AS journeys_active,
+      (SELECT COUNT(*) FROM marketing_journey_enrollments WHERE status IN ('active', 'waiting', 'processing')) AS journey_enrollments_active,
+      (SELECT COUNT(*) FROM marketing_signal_receipts) AS signals_total,
       (SELECT COUNT(*) FROM email_deliveries) AS deliveries_total,
       (SELECT COUNT(*) FROM email_deliveries WHERE status = 'pending') AS deliveries_pending,
       (SELECT COUNT(*) FROM email_deliveries WHERE status = 'sending') AS deliveries_sending,
@@ -128,6 +137,10 @@ export async function marketingHealth(db: D1Database) {
     content: {
       templates: value("templates_total"),
       campaigns: value("campaigns_total"),
+      journeys: value("journeys_total"),
+      activeJourneys: value("journeys_active"),
+      activeJourneyEnrollments: value("journey_enrollments_active"),
+      analyticsSignals: value("signals_total"),
       scheduled: value("campaigns_scheduled"),
       running: value("campaigns_running"),
       paused: value("campaigns_paused"),
@@ -285,9 +298,14 @@ app.use("/internal/v1/*", async (c, next) => {
     project.role.toLowerCase() === "application" &&
     /^\/internal\/v1\/application\/users\/[^/]+$/u.test(path) &&
     c.req.method === "DELETE";
+  const analyticsSignalMutation =
+    project.role.toLowerCase() === "system" &&
+    path === "/internal/v1/signals" &&
+    c.req.method === "POST";
   if (
     !applicationPreferenceMutation &&
     !applicationErasureMutation &&
+    !analyticsSignalMutation &&
     !["owner", "admin"].includes(project.role.toLowerCase())
   ) {
     throw failure(
@@ -380,6 +398,8 @@ app.use("/internal/v1/*", async (c, next) => {
   }
 });
 
+app.route("/internal/v1", journeyRoutes);
+
 app.get("/internal/v1", (c) =>
   c.json({
     data: {
@@ -390,6 +410,9 @@ app.get("/internal/v1", (c) =>
         "segments",
         "templates",
         "campaigns",
+        "journeys",
+        "event_triggers",
+        "omnichannel_connectors",
         "smtp",
         "deliveries",
         "feedback",
@@ -477,6 +500,12 @@ app.put("/internal/v1/application/preferences", async (c) => {
   }
 
   const subscriberId = byUser?.id || byEmail?.id || crypto.randomUUID();
+  const identityHashes = await marketingIdentityHashCandidates(
+    c.env,
+    projectId,
+    "user",
+    identity.userId,
+  );
   const now = new Date().toISOString();
   const consented = body.consented;
   const statements = [
@@ -537,6 +566,17 @@ app.put("/internal/v1/application/preferences", async (c) => {
            VALUES (?, ?, ?, 'unsubscribe', 'application', '{}')
            ON CONFLICT(project_id, email) DO NOTHING`,
         ).bind(crypto.randomUUID(), projectId, identity.email),
+    c.env.DB.prepare(
+      `DELETE FROM subscriber_identity_aliases
+       WHERE project_id = ? AND subscriber_id = ? AND identity_kind = 'user'`,
+    ).bind(projectId, subscriberId),
+    ...identityHashes.map((identityHash, keyPosition) =>
+      c.env.DB.prepare(
+        `INSERT INTO subscriber_identity_aliases
+          (project_id, subscriber_id, identity_kind, identity_hash, key_position)
+         VALUES (?, ?, 'user', ?, ?)`,
+      ).bind(projectId, subscriberId, identityHash, keyPosition),
+    ),
   ];
   await c.env.DB.batch(statements);
   return c.json({
@@ -606,6 +646,10 @@ app.delete("/internal/v1/application/users/:userId", async (c) => {
          updated_at = ?
        WHERE project_id = ? AND id = ?`,
     ).bind(erasedAddress, now, now, projectId, subscriber.id),
+    c.env.DB.prepare(
+      `DELETE FROM subscriber_identity_aliases
+       WHERE project_id = ? AND subscriber_id = ?`,
+    ).bind(projectId, subscriber.id),
   ]);
   return c.json({
     data: {
@@ -3149,6 +3193,7 @@ async function scheduled(
           campaignId: row.id,
         } satisfies MarketingQueueJob);
       }
+      await dispatchDueJourneyEnrollments(env);
     })(),
   );
 }

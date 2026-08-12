@@ -26,7 +26,7 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 12 },
+    "schemaVersion": { "const": 13 },
     "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "accountAlias": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "resourceIdentity": { "$ref": "#/$defs/resourceIdentity" },
@@ -44,6 +44,7 @@
         "paywalls",
         "dynamic-links",
         "support",
+        "analytics",
         "marketing",
         "onboardings"
       ],
@@ -55,6 +56,7 @@
         "paywalls": { "type": "boolean" },
         "dynamic-links": { "type": "boolean" },
         "support": { "type": "boolean" },
+        "analytics": { "type": "boolean" },
         "marketing": { "type": "boolean" },
         "onboardings": { "type": "boolean" }
       }
@@ -192,6 +194,7 @@
         "paywalls": { "$ref": "#/$defs/workerNames" },
         "dynamic-links": { "$ref": "#/$defs/workerNames" },
         "support": { "$ref": "#/$defs/workerNames" },
+        "analytics": { "$ref": "#/$defs/workerNames" },
         "marketing": { "$ref": "#/$defs/workerNames" },
         "onboardings": { "$ref": "#/$defs/workerNames" }
       }
@@ -650,6 +653,7 @@
         "paywalls",
         "dynamicLinks",
         "support",
+        "analytics",
         "marketing",
         "onboardings"
       ],
@@ -659,6 +663,7 @@
         "paywalls": { "$ref": "#/$defs/namedResource" },
         "dynamicLinks": { "$ref": "#/$defs/namedResource" },
         "support": { "$ref": "#/$defs/namedResource" },
+        "analytics": { "$ref": "#/$defs/namedResource" },
         "marketing": { "$ref": "#/$defs/namedResource" },
         "onboardings": { "$ref": "#/$defs/namedResource" }
       }
@@ -666,9 +671,10 @@
     "moduleR2": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["support", "marketing"],
+      "required": ["support", "analytics", "marketing"],
       "properties": {
         "support": { "$ref": "#/$defs/namedResource" },
+        "analytics": { "$ref": "#/$defs/namedResource" },
         "marketing": { "$ref": "#/$defs/namedResource" }
       }
     },
@@ -684,9 +690,10 @@
     "moduleQueues": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["support", "marketing"],
+      "required": ["support", "analytics", "marketing"],
       "properties": {
         "support": { "$ref": "#/$defs/moduleQueue" },
+        "analytics": { "$ref": "#/$defs/moduleQueue" },
         "marketing": { "$ref": "#/$defs/moduleQueue" }
       }
     },

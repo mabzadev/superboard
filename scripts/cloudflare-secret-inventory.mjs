@@ -290,6 +290,25 @@ export function secretCoordinationPlan(target, environment) {
     ],
   });
   addContract({
+    id: "analytics-identity-hash-key",
+    scope: "platform-common",
+    source: "generated-shared-random",
+    sameValueRequired: true,
+    rotation: "publish-the-new-key-with-the-previous-key-before-rehashing-identities",
+    members: [
+      exactMember(
+        "analytics",
+        "ANALYTICS_ID_HASH_KEY",
+        "ANALYTICS_ID_HASH_KEY_PREVIOUS",
+      ),
+      exactMember(
+        "marketing",
+        "ANALYTICS_ID_HASH_KEY",
+        "ANALYTICS_ID_HASH_KEY_PREVIOUS",
+      ),
+    ],
+  });
+  addContract({
     id: "files-internal-token",
     scope: "platform-common",
     source: "generated-shared-random",

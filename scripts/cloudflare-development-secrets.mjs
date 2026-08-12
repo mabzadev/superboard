@@ -111,6 +111,7 @@ export async function generateDevelopmentSecretAssignments({
   const observabilityToken = token();
   const customToken = token();
   const entitlementToken = token();
+  const analyticsHashKey = token();
   const storeKeyVersion = "development-v1";
   const storeKeys = JSON.stringify({
     [storeKeyVersion]: randomBytes(32).toString("base64url"),
@@ -178,9 +179,14 @@ export async function generateDevelopmentSecretAssignments({
       INTERNAL_API_TOKEN: moduleToken,
       SUPPORT_WEBHOOK_ENCRYPTION_KEY: token(),
     },
+    analytics: {
+      INTERNAL_API_TOKEN: moduleToken,
+      ANALYTICS_ID_HASH_KEY: analyticsHashKey,
+    },
     marketing: {
       INTERNAL_API_TOKEN: moduleToken,
       EMAIL_INTERNAL_TOKEN: emailToken,
+      ANALYTICS_ID_HASH_KEY: analyticsHashKey,
       SMTP_ENCRYPTION_KEY: token(),
       TRACKING_SIGNING_KEY: token(),
     },

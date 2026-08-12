@@ -66,7 +66,7 @@ function validateProductionPrerequisites(project, window, allowProduction) {
     const declaredRequired = window.backup_receipt?.required_artifacts;
     const requiredArtifacts = new Set(Array.isArray(declaredRequired) && declaredRequired.length > 0
       ? declaredRequired
-      : ["legacy-api", "legacy-messaging", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]);
+      : ["legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]);
     const validArtifacts = Array.isArray(artifacts) && artifacts.every((artifact) =>
       artifact && typeof artifact.name === "string" && Number(artifact.bytes) > 0 && /^[a-f0-9]{64}$/u.test(String(artifact.sha256 || "")));
     const observedArtifacts = new Set(Array.isArray(artifacts) ? artifacts.map((artifact) => artifact?.name) : []);

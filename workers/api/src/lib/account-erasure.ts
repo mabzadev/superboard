@@ -218,6 +218,7 @@ async function runClaimedErasure(
 
 const ERASURE_STEPS: readonly Step[] = Object.freeze([
   domainStep("app", "APP_MODULE"),
+  domainStep("analytics", "ANALYTICS_MODULE"),
   domainStep("marketing", "MARKETING_MODULE"),
   domainStep("support", "SUPPORT_MODULE"),
   {
@@ -324,7 +325,11 @@ const ERASURE_STEPS: readonly Step[] = Object.freeze([
 
 function domainStep(
   module: DomainModuleName,
-  binding: "APP_MODULE" | "MARKETING_MODULE" | "SUPPORT_MODULE",
+  binding:
+    | "APP_MODULE"
+    | "ANALYTICS_MODULE"
+    | "MARKETING_MODULE"
+    | "SUPPORT_MODULE",
 ): Step {
   return {
     id: module,

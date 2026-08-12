@@ -75,8 +75,11 @@ flowchart LR
   modules --> paywalls["Paywalls"]
   modules --> links["Dynamic Links"]
   modules --> support["Support"]
+  modules --> analytics["Analytics"]
   modules --> marketing["Marketing"]
   modules --> onboardings["Onboardings"]
+  billing -->|"verified fact outbox"| analytics
+  analytics -->|"pseudonymous event signals"| marketing
   email --> capture["mail.mbza.dev in development"]
   email --> smtp["Per-app SMTP in production"]
   support -. replaces .-> chatwoot["Temporary OpenChat source / chat.vocostar.com"]
@@ -98,7 +101,7 @@ pending; pull requests never publish the MBZA test site.
 | Worker          | Scope                        | Purpose                                                                                               | Primary state                                  |
 | --------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `api`           | common, mandatory            | OAuth/JWT gateway, users, projects, notifications, file orchestration, SDK routes, health aggregation | central D1, KV, R2, Queues                     |
-| `dashboard`     | common, mandatory            | SuperBoard administrator UI, including `/infrastructure`                                                | OpenNext assets and cache R2                   |
+| `dashboard`     | common, mandatory            | SuperBoard administrator UI, including `/infrastructure`                                              | OpenNext assets and cache R2                   |
 | `email`         | common, mandatory            | transactional/test delivery, SMTP dispatch, retries, capture and preview                              | email D1, Email Queue + DLQ                    |
 | `billing`       | optional feature             | store verification, purchases, subscriptions, entitlements, refunds and billing jobs                  | central D1/KV/R2, Billing Queue + DLQ          |
 | `identity`      | common, mandatory            | application accounts, email/password, Google/Apple federation, sessions and JWT exchange              | Identity D1                                    |
@@ -111,7 +114,8 @@ pending; pull requests never publish the MBZA test site.
 | `paywalls`      | optional feature             | paywall definitions, versions, placements and events                                                  | module D1                                      |
 | `dynamic-links` | optional feature             | links, campaigns, domains, redirect rules and attribution                                             | module D1                                      |
 | `support`       | optional feature             | unified inbox, contacts, attachments, webhooks and workflows                                          | module D1/R2, Queue + DLQ, Durable Object      |
-| `marketing`     | optional feature             | subscribers, consent, lists, segments, templates, newsletters and campaign analytics                  | module D1/R2, Marketing Queue + DLQ            |
+| `analytics`     | optional feature             | pseudonymous events, sessions, installations, verified purchases, funnels, retention and reports      | module D1/R2, Analytics Queue + DLQ, Workflow  |
+| `marketing`     | optional feature             | consent, audiences, templates, campaigns, versioned journeys and omnichannel delivery                 | module D1/R2, Marketing Queue + DLQ            |
 | `onboardings`   | optional feature             | onboarding flows, placements and completion analytics                                                 | module D1                                      |
 | `custom`        | optional, one per app        | jobs/integrations that are genuinely unique to one application                                        | only resources declared by that app            |
 
@@ -141,8 +145,9 @@ Cloudflare secrets and support overlap rotation.
 | Users/roles                   | common owner/admin/member model       | initial allowlist and operators                     |
 | Paywalls/products             | reusable feature Workers              | catalogue and application/store identifiers         |
 | Marketing/newsletters         | reusable marketing Worker             | contacts, consent, SMTP profile and campaigns       |
+| Product analytics             | reusable analytics Worker             | event vocabulary, retention and reporting policy    |
 | Transactional email           | common email Worker                   | sender identity and SMTP secret                     |
-| Support                       | reusable SuperBoard support Worker      | inbox configuration and webhooks                    |
+| Support                       | reusable SuperBoard support Worker    | inbox configuration and webhooks                    |
 | Unique conversions/AI jobs    | custom Worker contract                | implementation, queues, model/provider credentials  |
 | Domains/resources             | deployment generator                  | target manifest values                              |
 
@@ -164,7 +169,7 @@ Cloudflare secrets and support overlap rotation.
 - the per-application upload ceiling, processor-ticket lifetime and
   exact/wildcard MIME allowlist enforced by the common Files Worker.
 
-The current contract is `schemaVersion: 12`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
+The current contract is `schemaVersion: 13`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
 provider secrets, signing keys or preview tokens. Account selection resolves in
 this order:
 

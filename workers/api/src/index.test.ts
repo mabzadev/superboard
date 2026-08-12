@@ -19,6 +19,11 @@ function env(overrides: Partial<Env> = {}): Env {
       call.sql.includes("FROM application_account_erasures")
     )
       return [];
+    if (
+      call.op === "all" &&
+      call.sql.includes("FROM analytics_fact_outbox")
+    )
+      return [];
     if (call.op === "all" && call.sql.includes("FROM projects production"))
       return [];
     if (
@@ -360,7 +365,7 @@ describe("Worker scheduled and queue handlers", () => {
 
     await worker.scheduled?.({} as any, testEnv, { waitUntil } as any);
 
-    expect(waitUntil).toHaveBeenCalledTimes(3);
+    expect(waitUntil).toHaveBeenCalledTimes(4);
     await Promise.all(waitUntil.mock.results.map((result) => result.value));
     expect(sent).toEqual([{ type: "maintenance.run", days: 3 }]);
   });

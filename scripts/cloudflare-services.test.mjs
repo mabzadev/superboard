@@ -20,17 +20,18 @@ import { loadTarget } from "./cloudflare-target.mjs";
 
 const execFileAsync = promisify(execFile);
 
-test("the declarative registry exposes exactly seven domain services", () => {
+test("the declarative registry exposes exactly eight domain services", () => {
   assert.deepEqual(DOMAIN_SERVICES, [
     "app",
     "products",
     "paywalls",
     "dynamic-links",
     "support",
+    "analytics",
     "marketing",
     "onboardings",
   ]);
-  assert.equal(Object.keys(DOMAIN_SERVICE_REGISTRY).length, 7);
+  assert.equal(Object.keys(DOMAIN_SERVICE_REGISTRY).length, 8);
   for (const service of DOMAIN_SERVICES) {
     const definition = DOMAIN_SERVICE_REGISTRY[service];
     assert.match(definition.binding, /^[A-Z_]+_MODULE$/);
@@ -117,6 +118,7 @@ test("every D1 Worker receives the reviewed latest migration automatically", asy
         targetName,
         "--environment",
         environment,
+        "--allow-unprovisioned",
       ],
       { cwd: new URL("..", import.meta.url), stdio: "pipe" },
     );
@@ -141,6 +143,64 @@ test("every D1 Worker receives the reviewed latest migration automatically", asy
       descriptor.service,
     );
   }
+});
+
+test("generated Analytics config declares its complete durable pipeline", () => {
+  execFileSync(
+    process.execPath,
+    [
+      "scripts/cloudflare-config.mjs",
+      "--service",
+      "analytics",
+      "--target",
+      "mbza-development",
+      "--environment",
+      "development",
+      "--allow-unprovisioned",
+    ],
+    { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+  );
+  const config = JSON.parse(
+    readFileSync(
+      new URL(
+        "../deploy/generated/mbza-development-analytics-development.jsonc",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  assert.equal(config.workers_dev, false);
+  assert.equal(config.vars.SERVICE_NAME, "analytics");
+  assert.deepEqual(config.r2_buckets, [
+    {
+      binding: "EVENT_ARCHIVE",
+      bucket_name: "superboard-dev-analytics-events",
+    },
+  ]);
+  assert.deepEqual(config.queues.producers, [
+    {
+      binding: "ANALYTICS_INGEST_QUEUE",
+      queue: "superboard-dev-analytics-ingest",
+    },
+  ]);
+  assert.equal(
+    config.queues.consumers[0].dead_letter_queue,
+    "superboard-dev-analytics-ingest-dlq",
+  );
+  assert.deepEqual(config.workflows, [
+    {
+      name: "superboard-analytics-dev-operations",
+      binding: "ANALYTICS_OPERATIONS_WORKFLOW",
+      class_name: "AnalyticsOperationsWorkflow",
+    },
+  ]);
+  assert.deepEqual(config.triggers, { crons: ["* * * * *"] });
+  assert.deepEqual(DOMAIN_SERVICE_REGISTRY.analytics.secrets, [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_API_TOKEN_PREVIOUS",
+    "ANALYTICS_ID_HASH_KEY",
+    "ANALYTICS_ID_HASH_KEY_PREVIOUS",
+  ]);
 });
 
 test("generated domain config is private and has no static project allowlist", () => {
@@ -187,6 +247,8 @@ test("generated domain config is private and has no static project allowlist", (
     "INTERNAL_API_TOKEN",
     "INTERNAL_API_TOKEN_PREVIOUS",
     "EMAIL_INTERNAL_TOKEN",
+    "ANALYTICS_ID_HASH_KEY",
+    "ANALYTICS_ID_HASH_KEY_PREVIOUS",
     "SMTP_ENCRYPTION_KEY",
     "TRACKING_SIGNING_KEY",
   ]);
@@ -363,6 +425,7 @@ test("generated Email and Marketing configs quarantine terminal queue failures",
   assert.equal(marketing.queues.consumers[1].queue, marketing.vars.DLQ_NAME);
   assert.equal(marketing.queues.consumers[1].dead_letter_queue, undefined);
   assert.deepEqual(marketing.secrets.required, [
+    "ANALYTICS_ID_HASH_KEY",
     "EMAIL_INTERNAL_TOKEN",
     "INTERNAL_API_TOKEN",
     "SMTP_ENCRYPTION_KEY",

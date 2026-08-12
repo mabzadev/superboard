@@ -39,6 +39,13 @@ export default defineConfig({
             fileURLToPath(new URL("../api/migrations", import.meta.url)),
           ),
         },
+        serviceBindings: {
+          ANALYTICS_MODULE: async () =>
+            Response.json(
+              { data: { accepted: 1, duplicates: 0, rejected: 0 } },
+              { status: 202 },
+            ),
+        },
       },
     })),
   ],
