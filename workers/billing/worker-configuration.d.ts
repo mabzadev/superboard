@@ -22,6 +22,7 @@ interface __BaseEnv_Env {
 	PURCHASES_SIGNING_KEYSET: string;
 	STORE_CREDENTIALS_ACTIVE_KEY_VERSION: string;
 	STORE_CREDENTIALS_ENCRYPTION_KEYS: string;
+	ANALYTICS_MODULE: Fetcher;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

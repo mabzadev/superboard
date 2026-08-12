@@ -23,6 +23,7 @@ describe("application account erasure coordinator", () => {
       status: "completed",
       completedSteps: [
         "app",
+        "analytics",
         "marketing",
         "support",
         "custom",
@@ -36,7 +37,7 @@ describe("application account erasure coordinator", () => {
     expect(calls[0].request.headers.get("x-context-signature")).toMatch(
       /^[A-Za-z0-9_-]+$/u,
     );
-    expect(calls[3].request.headers.get("x-custom-worker-subject")).toBe(
+    expect(calls[4].request.headers.get("x-custom-worker-subject")).toBe(
       "application-user-1",
     );
     expect(database.row?.application_user_id).toBeNull();
@@ -79,6 +80,7 @@ describe("application account erasure coordinator", () => {
     expect(database.row?.status).toBe("failed");
     expect(JSON.parse(database.row?.completed_steps_json || "[]")).toEqual([
       "app",
+      "analytics",
     ]);
 
     marketingAvailable = true;
@@ -127,6 +129,7 @@ function erasureEnv(
     MODULE_INTERNAL_TOKEN: "module-secret",
     CUSTOM_WORKER_TOKEN: "custom-secret",
     APP_MODULE: fetcher("app"),
+    ANALYTICS_MODULE: fetcher("analytics"),
     MARKETING_MODULE: fetcher("marketing"),
     SUPPORT_MODULE: fetcher("support"),
     CUSTOM_WORKER: fetcher("custom"),

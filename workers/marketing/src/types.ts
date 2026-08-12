@@ -19,4 +19,9 @@ export type MarketingQueueJob =
       subscriberId: string;
       token: string;
       outboxId: string;
+    }
+  | {
+      type: "marketing.journey.advance";
+      projectId: number;
+      enrollmentId: string;
     };

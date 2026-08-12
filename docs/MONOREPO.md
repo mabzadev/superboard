@@ -5,18 +5,25 @@ SuperBoard foundation.
 
 ## Source layout
 
-| Path | Ownership |
-| --- | --- |
-| `/apps/dashboard` | SuperBoard back-office at `board.mbza.dev` |
-| `/apps/reference` | MBZA reference application and acceptance contract |
-| `/workers` | Common Cloudflare Workers and application extensions |
-| `/sdks/flutter` | Active Flutter SDK |
-| `/sdks/flutterflow` | Active unified FlutterFlow library |
-| `/deploy/targets` | Non-secret deployment manifests for every account |
+| Path                  | Ownership                                                                        |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `/apps/dashboard`     | SuperBoard back-office at `board.mbza.dev`                                       |
+| `/apps/reference`     | MBZA reference application and acceptance contract                               |
+| `/workers`            | Common Cloudflare Workers and application extensions                             |
+| `/packages/contracts` | Versioned envelopes and trust-boundary contracts shared by producers and Workers |
+| `/sdks/flutter`       | Active Flutter SDK                                                               |
+| `/sdks/flutterflow`   | Active unified FlutterFlow library                                               |
+| `/deploy/targets`     | Non-secret deployment manifests for every account                                |
 
 VocoStar remains a separate product repository. It consumes published
 SuperBoard libraries and the shared Cloudflare platform; its application code
 is not copied into this foundation repository.
+
+Feature boundaries are directories and independently deployable Workers inside
+this monorepo, not additional source repositories. Analytics and Marketing own
+their D1 migrations and queues while sharing only versioned contracts through
+`packages/contracts`; neither Worker imports another Worker's implementation or
+opens another module's D1 directly.
 
 ## Legacy repositories
 

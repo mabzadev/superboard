@@ -23,11 +23,38 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
       { tag: "v1", newSqliteClasses: ["ConversationRoom"] },
     ],
   }),
+  analytics: domainService("ANALYTICS_MODULE", "analytics", {
+    secrets: [
+      "INTERNAL_API_TOKEN",
+      "INTERNAL_API_TOKEN_PREVIOUS",
+      "ANALYTICS_ID_HASH_KEY",
+      "ANALYTICS_ID_HASH_KEY_PREVIOUS",
+    ],
+    r2: [{ binding: "EVENT_ARCHIVE", resourceKey: "analytics" }],
+    queue: {
+      binding: "ANALYTICS_INGEST_QUEUE",
+      resourceKey: "analytics",
+      maxBatchSize: 25,
+      maxBatchTimeout: 5,
+      maxRetries: 8,
+    },
+    crons: ["* * * * *"],
+    workflows: [
+      {
+        binding: "ANALYTICS_OPERATIONS_WORKFLOW",
+        className: "AnalyticsOperationsWorkflow",
+        nameSuffix: "operations",
+      },
+    ],
+    services: [{ binding: "MARKETING_MODULE", service: "marketing" }],
+  }),
   marketing: domainService("MARKETING_MODULE", "marketing", {
     secrets: [
       "INTERNAL_API_TOKEN",
       "INTERNAL_API_TOKEN_PREVIOUS",
       "EMAIL_INTERNAL_TOKEN",
+      "ANALYTICS_ID_HASH_KEY",
+      "ANALYTICS_ID_HASH_KEY_PREVIOUS",
       "SMTP_ENCRYPTION_KEY",
       "TRACKING_SIGNING_KEY",
     ],
@@ -256,6 +283,7 @@ function domainService(binding, resourceKey, options = {}) {
     crons: Object.freeze(options.crons ?? []),
     durableObjects: Object.freeze(options.durableObjects ?? []),
     services: Object.freeze(options.services ?? []),
+    workflows: Object.freeze(options.workflows ?? []),
     durableObjectMigrations: Object.freeze(
       options.durableObjectMigrations ?? [],
     ),

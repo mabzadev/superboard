@@ -4,6 +4,7 @@ export const DOMAIN_MODULE_NAMES = [
   "paywalls",
   "dynamic-links",
   "support",
+  "analytics",
   "marketing",
   "onboardings",
 ] as const;

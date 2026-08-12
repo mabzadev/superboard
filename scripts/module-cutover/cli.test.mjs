@@ -13,7 +13,7 @@ const targetArgs = ["--target", "vocostar", "--environment", "production"];
 test("backup-receipt hashes every required local export and attaches evidence to the window", () => {
   const directory = mkdtempSync(join(tmpdir(), "opengrow-cutover-cli-"));
   try {
-    const names = ["legacy-api", "legacy-messaging", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"];
+    const names = ["legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"];
     const databaseExports = names.map((name) => {
       const output = join(directory, `${name}.sql`);
       writeFileSync(output, `-- ${name}\nSELECT 1;\n`, { mode: 0o600 });
@@ -29,7 +29,7 @@ test("backup-receipt hashes every required local export and attaches evidence to
     });
     const receipt = JSON.parse(readFileSync(reportPath, "utf8"));
     const window = JSON.parse(readFileSync(windowPath, "utf8"));
-    assert.equal(receipt.artifacts.length, 9);
+    assert.equal(receipt.artifacts.length, 10);
     assert.deepEqual(receipt.required_artifacts, names);
     assert.equal(receipt.artifacts.every((artifact) => artifact.bytes > 0 && /^[a-f0-9]{64}$/u.test(artifact.sha256)), true);
     assert.deepEqual(window.backup_receipt, receipt);
@@ -79,13 +79,13 @@ test("static plans can be restricted to explicit analytics entities", () => {
   assert.deepEqual(report.entities.map((entity) => entity.id), report.entity_ids);
 });
 
-test("backup-plan covers both legacy D1s, all seven module D1s and every deployed Worker", () => {
+test("backup-plan covers both legacy D1s, all eight module D1s and every deployed Worker", () => {
   const output = execFileSync(process.execPath, [cli, "backup-plan", "--project-ref", "10-test", "--output-directory", "/secure/backups", ...targetArgs], {
     cwd: repositoryRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
   });
   const report = JSON.parse(output);
   assert.deepEqual(report.database_exports.map((item) => item.name).sort(), [
-    "legacy-api", "legacy-messaging", "module-app", "module-dynamicLinks", "module-marketing",
+    "legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-dynamicLinks", "module-marketing",
     "module-onboardings", "module-paywalls", "module-products", "module-support",
   ]);
   assert.equal(new Set(report.worker_versions.map((item) => item.service)).has("dashboard"), true);

@@ -5,6 +5,8 @@ export interface BillingEnv {
   KV: KVNamespace;
   R2?: R2Bucket;
   BILLING_QUEUE?: Queue;
+  ANALYTICS_MODULE?: Fetcher;
+  INTERNAL_API_TOKEN?: string;
   ENVIRONMENT: string;
   IAP_ALLOW_UNSIGNED_FIXTURES?: string;
   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON?: string;

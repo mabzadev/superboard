@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   AppWindow,
   Boxes,
+  ChartNoAxesCombined,
   CreditCard,
   Link2,
   LayoutDashboard,
@@ -18,6 +19,7 @@ export type SectionSlug =
   | "dynamic-links"
   | "support"
   | "marketing"
+  | "analytics"
   | "onboardings";
 
 export type SectionPage = Readonly<{
@@ -119,8 +121,24 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
       page("In-app Messages", "/marketing/in-app-messages"),
       page("Email", "/marketing/email"),
       page("Campaigns", "/marketing/campaigns"),
+      page("Journeys", "/marketing/journeys"),
+      page("Channels", "/marketing/channels"),
       page("Statistics", "/marketing/statistics"),
       page("Settings", "/marketing/settings"),
+    ],
+  },
+  {
+    slug: "analytics",
+    label: "Analytics",
+    icon: ChartNoAxesCombined,
+    href: "/analytics",
+    pages: [
+      page("Overview", "/analytics"),
+      page("Events", "/analytics/events"),
+      page("Installations", "/analytics/installations"),
+      page("Verified Purchases", "/analytics/purchases"),
+      page("Funnels & Retention", "/analytics/insights"),
+      page("Reports", "/analytics/reports"),
     ],
   },
   {

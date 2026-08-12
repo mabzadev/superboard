@@ -191,15 +191,26 @@ const WORKERS = [
     ["webhooks", "deadLetters"],
   ),
   worker(
+    "analytics",
+    "feature",
+    "ANALYTICS_MODULE",
+    "binding",
+    "/internal/v1/health",
+    "Events, sessions, installations, verified purchases, funnels and retention",
+    ["analytics", "analytics-archive"],
+    ["ANALYTICS_INGEST_QUEUE"],
+    ["projections", "marketingSignals", "operations"],
+  ),
+  worker(
     "marketing",
     "feature",
     "MARKETING_MODULE",
     "binding",
     "/internal/v1/health",
-    "Contacts, consent, templates and campaigns",
+    "Contacts, consent, templates, campaigns and event-triggered journeys",
     ["marketing", "marketing-media"],
     ["MARKETING_QUEUE"],
-    ["campaigns", "deliveries", "outbox", "deadLetters"],
+    ["campaigns", "journeys", "deliveries", "outbox", "deadLetters"],
   ),
   worker(
     "onboardings",
@@ -297,6 +308,16 @@ const API_CAPABILITIES = [
     description: "Purchases, subscriptions, entitlements, restores and refunds",
     access: "Application SDK, provider webhook, or project administrator",
     entrypoints: ["/api/v1/iap/*", "/api/v1/billing/*", "/api/v2/purchases/*"],
+  },
+  {
+    id: "analytics",
+    description:
+      "Pseudonymized product events, canonical installations, verified purchases, funnels, retention, reports and data operations",
+    access: "Application SDK or authenticated project administrator",
+    entrypoints: [
+      "/api/v1/sdk/modules/analytics/events",
+      "/api/v1/analytics/projects/*",
+    ],
   },
   {
     id: "custom-jobs",

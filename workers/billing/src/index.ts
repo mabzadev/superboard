@@ -38,6 +38,7 @@ import {
 } from "@superboard/contracts/secret";
 import purchasesAdminRoutes from "../../api/src/routes/purchases-admin";
 import purchasesV2AdminRoutes from "../../api/src/routes/purchases-v2-admin";
+import { drainAnalyticsFactOutbox } from "../../api/src/lib/analytics-facts";
 
 type Bindings = Env & BillingEnv;
 const app = new Hono<{ Bindings: Bindings }>();
@@ -473,6 +474,15 @@ async function sha256Hex(value: string): Promise<string> {
 export default {
   fetch: app.fetch,
   async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(
+      drainAnalyticsFactOutbox(env).then((summary) => {
+        if (summary.inspected > 0) {
+          console.log(
+            JSON.stringify({ event: "analytics_fact_outbox_drained", summary }),
+          );
+        }
+      }),
+    );
     if (!env.BILLING_QUEUE) return;
     ctx.waitUntil(env.BILLING_QUEUE.send({ type: "billing.reconcile" }));
   },

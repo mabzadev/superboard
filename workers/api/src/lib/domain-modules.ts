@@ -15,6 +15,7 @@ export const DOMAIN_MODULES = {
   paywalls: "PAYWALLS_MODULE",
   "dynamic-links": "DYNAMIC_LINKS_MODULE",
   support: "SUPPORT_MODULE",
+  analytics: "ANALYTICS_MODULE",
   marketing: "MARKETING_MODULE",
   onboardings: "ONBOARDINGS_MODULE",
 } as const;
@@ -27,12 +28,13 @@ export const DOMAIN_SDK_ROUTES = Object.freeze([
   sdkRoute("products", "/offerings/resolve", "/offerings/resolve", false),
   sdkRoute("paywalls", "/resolve", "/placements/resolve", false),
   sdkRoute("paywalls", "/events", "/events", true),
+  sdkRoute("analytics", "/events", "/events", true),
   sdkRoute("onboardings", "/resolve", "/placements/resolve", false),
   sdkRoute("onboardings", "/events", "/events", true),
 ]);
 
 export interface DomainSdkRoute {
-  moduleName: "app" | "products" | "paywalls" | "onboardings";
+  moduleName: "app" | "products" | "paywalls" | "analytics" | "onboardings";
   bindingName: DomainModuleBinding;
   publicPath: string;
   internalPath: string;

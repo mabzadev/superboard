@@ -25,6 +25,7 @@ export default defineConfig({
             EMAIL_INTERNAL_TOKEN: "marketing-runtime-email-secret",
             SMTP_ENCRYPTION_KEY: "marketing-encryption-secret",
             TRACKING_SIGNING_KEY: "marketing-tracking-secret",
+            ANALYTICS_ID_HASH_KEY: "marketing-runtime-hash-key",
             ...d1RuntimeBindings(migrations),
           },
         },

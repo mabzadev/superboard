@@ -71,6 +71,7 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	PAYWALLS_MODULE: Fetcher;
 	DYNAMIC_LINKS_MODULE: Fetcher;
 	SUPPORT_MODULE: Fetcher;
+	ANALYTICS_MODULE: Fetcher;
 	MARKETING_MODULE: Fetcher;
 	ONBOARDINGS_MODULE: Fetcher;
 }

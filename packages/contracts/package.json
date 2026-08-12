@@ -14,6 +14,7 @@
     "./secret": "./src/secret.ts",
     "./request-body": "./src/request-body.ts",
     "./url-security": "./src/url-security.ts",
-    "./dead-letter": "./src/dead-letter.ts"
+    "./dead-letter": "./src/dead-letter.ts",
+    "./analytics": "./src/analytics.ts"
   }
 }

@@ -17,7 +17,6 @@ import projectsRoutes from "./routes/projects";
 import mcpRoutes from "./routes/mcp";
 import mcpOauthRoutes from "./routes/mcp-oauth";
 import sdkRoutes from "./routes/sdk";
-import analyticsRoutes from "./routes/analytics";
 import pushRoutes from "./routes/push";
 import iapRoutes from "./routes/iap";
 import identitySsoRoutes from "./routes/identity-sso";
@@ -57,6 +56,7 @@ import {
 } from "./lib/domain-modules";
 import { quarantinePlatformDeadLetter } from "./lib/platform-dead-letters";
 import { resumePendingAccountErasures } from "./lib/account-erasure";
+import { drainAnalyticsFactOutbox } from "./lib/analytics-facts";
 
 export const app = new Hono<{ Bindings: Env }>();
 
@@ -329,7 +329,6 @@ app.route("/api/v1/instances", instancesRoutes);
 app.route("/api/v1/projects", projectsRoutes);
 app.route("/api/v1/mcp", mcpRoutes);
 app.route("/api/v1/links", linksRoutes);
-app.route("/api/v1/analytics", analyticsRoutes);
 app.route("/api/v1/sdk", sdkRoutes);
 app.route("/api/v1/push", pushRoutes);
 app.route("/api/v1/iap", iapRoutes);
@@ -595,6 +594,18 @@ async function proxyBillingAdmin(
 export default {
   fetch: app.fetch,
   async scheduled(_event, env, ctx) {
+    ctx.waitUntil(
+      drainAnalyticsFactOutbox(env).then((summary) => {
+        if (summary.inspected > 0) {
+          console.log(
+            JSON.stringify({
+              event: "analytics_fact_outbox_drained",
+              summary,
+            }),
+          );
+        }
+      }),
+    );
     ctx.waitUntil(
       resumePendingAccountErasures(env).then((summary) => {
         if (summary.inspected > 0) {

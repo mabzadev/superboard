@@ -418,6 +418,13 @@ function domainConfig() {
       service: target.workers[binding.service][environment],
     }));
   }
+  if (definition.workflows.length) {
+    config.workflows = definition.workflows.map((workflow) => ({
+      name: `${workerNameForService(target, service, environment)}-${workflow.nameSuffix}`,
+      binding: workflow.binding,
+      class_name: workflow.className,
+    }));
+  }
   if (definition.queue) {
     const queue = resources.moduleQueues[definition.queue.resourceKey];
     config.queues = {
@@ -486,6 +493,16 @@ function billingConfig() {
         { binding: "BILLING_QUEUE", queue: resources.queues.billing },
       ],
     },
+    ...(target.features.analytics
+      ? {
+          services: [
+            {
+              binding: "ANALYTICS_MODULE",
+              service: target.workers.analytics[environment],
+            },
+          ],
+        }
+      : {}),
   };
   if (!preflight) {
     config.queues.consumers = [
