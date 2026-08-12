@@ -372,7 +372,7 @@ class SuperBoardPurchases {
         '/configuration?placement=${Uri.encodeQueryComponent(placement)}',
       );
       await _preferences?.setString(cacheKey, jsonEncode(response));
-      return _purchaseConfigurationFromJson(response);
+      return await _purchaseConfigurationFromJson(response);
     } catch (_) {
       final cached = _preferences?.getString(cacheKey);
       if (cached == null) rethrow;
@@ -467,7 +467,7 @@ class SuperBoardPurchases {
 
   Future<SuperBoardCustomerInfo> getCustomerInfo() async {
     try {
-      return _storeCustomerInfo(await _request('GET', '/customer-info'));
+      return await _storeCustomerInfo(await _request('GET', '/customer-info'));
     } catch (_) {
       final cached = _lastCustomerInfo;
       if (cached != null &&
