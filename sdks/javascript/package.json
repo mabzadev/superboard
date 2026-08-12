@@ -36,7 +36,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mbzadev/superboard-platform.git",
+    "url": "git+https://github.com/mabzadev/superboard.git",
     "directory": "sdks/javascript"
   },
   "publishConfig": {

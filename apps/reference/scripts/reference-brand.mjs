@@ -20,8 +20,8 @@ function gitGrep(repositoryRoot, pattern, paths) {
 export function checkReferenceBrand({ repositoryRoot = root } = {}) {
   const violations = [];
   for (const pattern of [
-    "mbzadev/" + "opengrow-platform",
-    "mbzadev/" + "opengrow-reference",
+    "mabzadev/" + "opengrow-platform",
+    "mabzadev/" + "opengrow-reference",
     "grow" + ".mbza" + ".dev",
     "opengrow-platform",
   ]) {
@@ -47,8 +47,8 @@ export function checkReferenceBrand({ repositoryRoot = root } = {}) {
   }
   return {
     name: "SuperBoard Reference",
-    repository: "mbzadev/superboard",
-    platformRepository: "mbzadev/superboard",
+    repository: "mabzadev/superboard",
+    platformRepository: "mabzadev/superboard",
     dashboard: "board.mbza.dev",
     shortLinks: "in.mbza.dev",
   };

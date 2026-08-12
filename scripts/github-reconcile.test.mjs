@@ -12,7 +12,7 @@ function manifest() {
     schemaVersion: 8,
     repositories: {
       platform: {
-        nameWithOwner: "mbzadev/superboard-platform",
+        nameWithOwner: "mabzadev/superboard-platform",
         description: "OpenGrow platform",
         settings: {
           issues: true,
@@ -90,7 +90,7 @@ function releaseState() {
 test("reconciliation blocks a missing repository and never invents a creation mutation", () => {
   const plan = buildGitHubReconcilePlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "missing-or-inaccessible",
       ready: false,
     },
@@ -107,7 +107,7 @@ test("reconciliation blocks a missing repository and never invents a creation mu
 test("reconciliation plans structure but leaves every secret value manual", () => {
   const plan = buildGitHubReconcilePlan(manifest(), [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -152,7 +152,7 @@ test("reconciliation converges declarative repository settings", () => {
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -210,7 +210,7 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -244,7 +244,7 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
   });
   assert.equal(
     request.args.includes(
-      "repos/mbzadev/superboard-platform/actions/permissions/workflow",
+      "repos/mabzadev/superboard-platform/actions/permissions/workflow",
     ),
     true,
   );
@@ -257,7 +257,7 @@ test("reconciliation enables least-privilege workflow PR creation explicitly", (
 test("reconciliation plans security and future immutable-release hardening without moving tags", () => {
   const configuration = manifest();
   const state = {
-    nameWithOwner: "mbzadev/superboard-platform",
+    nameWithOwner: "mabzadev/superboard-platform",
     status: "incomplete",
     ready: false,
     visibility: "public",
@@ -313,7 +313,7 @@ test("reconciliation plans security and future immutable-release hardening witho
   assert.equal(rulesetRequest.args.includes("--method"), true);
   assert.equal(rulesetRequest.args.includes("POST"), true);
   assert.equal(
-    rulesetRequest.args.includes("repos/mbzadev/superboard-platform/rulesets"),
+    rulesetRequest.args.includes("repos/mabzadev/superboard-platform/rulesets"),
     true,
   );
   assert.deepEqual(rulesetRequest.body.bypass_actors, []);
@@ -330,7 +330,7 @@ test("reconciliation fails closed when Dependabot security updates are paused", 
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -373,7 +373,7 @@ test("reconciliation fails closed on drifted tag rules or legacy mutable assets"
   const configuration = manifest();
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -420,7 +420,7 @@ test("reconciliation refuses every mutation without its exact confirmation", () 
     schemaVersion: 1,
     repositories: [
       {
-        nameWithOwner: "mbzadev/superboard-platform",
+        nameWithOwner: "mabzadev/superboard-platform",
         blockers: [],
         operations: [{ type: "put-environment", environment: "development" }],
       },
@@ -451,7 +451,7 @@ test("confirmed reconciliation uses JSON stdin and never mutates secrets", () =>
     schemaVersion: 1,
     repositories: [
       {
-        nameWithOwner: "mbzadev/superboard-platform",
+        nameWithOwner: "mabzadev/superboard-platform",
         blockers: [],
         manual: [
           {
@@ -512,7 +512,7 @@ test("GitHub mutation requests use the current versioned REST contract", () => {
   assert.deepEqual(request.body, { default_branch: "dev" });
   assert.equal(request.args.includes("X-GitHub-Api-Version: 2026-03-10"), true);
   assert.equal(
-    request.args.includes("repos/mbzadev/superboard-platform"),
+    request.args.includes("repos/mabzadev/superboard-platform"),
     true,
   );
 });
@@ -531,7 +531,7 @@ test("pending external Environment hardening is reported but never planned as a 
   };
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -601,7 +601,7 @@ test("enforced Environment hardening plans reviewers, timer and missing branch-t
   };
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",
@@ -730,7 +730,7 @@ test("enforcement is structurally blocked when declared reviewers lack verified 
   };
   const plan = buildGitHubReconcilePlan(configuration, [
     {
-      nameWithOwner: "mbzadev/superboard-platform",
+      nameWithOwner: "mabzadev/superboard-platform",
       status: "incomplete",
       ready: false,
       visibility: "public",

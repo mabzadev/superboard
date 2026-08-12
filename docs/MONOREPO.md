@@ -1,6 +1,6 @@
 # SuperBoard monorepo
 
-`mbzadev/superboard` is the only active source repository for the reusable
+`mabzadev/superboard` is the only active source repository for the reusable
 SuperBoard foundation.
 
 ## Source layout
@@ -20,10 +20,14 @@ is not copied into this foundation repository.
 
 ## Legacy repositories
 
-`mbzadev/superboard-platform` and `mbzadev/superboard-reference` are migration
-sources only. New code, issues, releases and Cloudflare Git connections must
-target `mbzadev/superboard`. Historical package coordinates and immutable tags
-are retained until consumers have moved to SuperBoard v3.
+`mabzadev/superboard-platform` and `mabzadev/superboard-reference` are archived
+migration sources. Their immutable tags, releases and historical package
+coordinates are retained for existing clients, but their workflows and
+Dependabot automation are disabled. New code, issues, releases and Cloudflare
+Git connections must target `mabzadev/superboard`.
+
+The verified cutover inventory and the narrow historical-package exception are
+recorded in [`LEGACY_REPOSITORIES.md`](LEGACY_REPOSITORIES.md).
 
 ## Development
 

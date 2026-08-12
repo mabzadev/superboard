@@ -315,7 +315,7 @@ export default function LibrariesPageContent() {
             <CardHeader>
               <CardTitle>FlutterFlow custom code</CardTitle>
               <CardDescription>
-                The canonical reusable surface belongs to superboard-platform;
+                The canonical reusable surface belongs to the SuperBoard monorepo;
                 application projects keep only thin UI adapters.{" "}
                 {catalog.customCode.widgets.length} widgets ·{" "}
                 {surfaceCount(catalog.customCode.actions)} actions ·{" "}

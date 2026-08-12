@@ -56,7 +56,7 @@ Reference bridge migration is included through a separately reviewed change.
 npm run sdk:coverage:check
 npm run sdk:coverage:verify
 npm run sdk:coverage:catalog -- \
-  --catalog /path/to/superboard-platform/config/sdk-libraries.json
+  --catalog /path/to/superboard/config/sdk-libraries.json
 flutter pub get --enforce-lockfile
 git diff --exit-code -- pubspec.lock
 ```

@@ -19,7 +19,7 @@ that cannot be reproduced.
 
 ## Decision
 
-`mbzadev/superboard` is the canonical product source. Its checked-in target
+`mabzadev/superboard` is the canonical product source. Its checked-in target
 schemas, Worker contracts, D1 migrations, SDK catalogues, tests and protected Git
 history are the release authority. The acceptance application lives at
 `apps/reference`; it does not become a second platform authority.

@@ -16,7 +16,7 @@ at the immutable release `sdk-flutterflow-messaging-v1.3.0`:
 ```yaml
 opengrow_flutterflow_messaging:
   git:
-    url: https://github.com/mbzadev/superboard.git
+    url: https://github.com/mabzadev/superboard.git
     ref: sdk-flutterflow-messaging-v1.3.0
     path: sdks/flutterflow_messaging
 ```

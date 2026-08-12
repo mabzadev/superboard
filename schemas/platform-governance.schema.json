@@ -27,8 +27,8 @@
     "referencePath": { "const": "apps/reference" },
     "legacyRepositories": {
       "const": [
-        "mbzadev/superboard-platform",
-        "mbzadev/superboard-reference"
+        "mabzadev/superboard-platform",
+        "mabzadev/superboard-reference"
       ]
     },
     "historicalUpstream": {

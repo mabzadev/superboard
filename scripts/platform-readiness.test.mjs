@@ -199,7 +199,7 @@ test("remote SDK readiness peels lightweight, annotated and SwiftPM tags", () =>
   const run = githubSdkFixture(fixture);
   const remote = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     run,
   );
   assert.equal(remote.ready, true);
@@ -208,7 +208,7 @@ test("remote SDK readiness peels lightweight, annotated and SwiftPM tags", () =>
   assert.equal(remote.publications[1].packageRefSha, iosSha);
   assert.equal(sdkReadiness(catalogue, remote).ready, true);
   assert.deepEqual(
-    inspectGitHubTag("mbzadev/superboard-platform", "sdk-flutter-v2.1.3", run),
+    inspectGitHubTag("mabzadev/superboard-platform", "sdk-flutter-v2.1.3", run),
     {
       ref: "sdk-flutter-v2.1.3",
       exists: true,
@@ -220,7 +220,7 @@ test("remote SDK readiness peels lightweight, annotated and SwiftPM tags", () =>
 
   const aliasMismatch = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture({
       ...fixture,
       tags: {
@@ -274,19 +274,19 @@ test("package-backed SDK readiness verifies public ownership and exact versions"
     packages: {
       "maven/io.opengrow.opengrow-android-sdk": {
         visibility: "public",
-        repository: "mbzadev/superboard-platform",
+        repository: "mabzadev/superboard-platform",
         versions: ["1.0.2"],
       },
       "npm/opengrow-js-sdk": {
         visibility: "public",
-        repository: "mbzadev/superboard-platform",
+        repository: "mabzadev/superboard-platform",
         versions: ["1.0.1"],
       },
     },
   };
   const ready = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture(fixture),
   );
   assert.equal(ready.ready, true);
@@ -298,7 +298,7 @@ test("package-backed SDK readiness verifies public ownership and exact versions"
   occupiedCandidate.packages["npm/opengrow-js-sdk"].versions.push("1.0.2");
   const occupied = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture(occupiedCandidate),
   );
   assert.equal(occupied.ready, false);
@@ -310,10 +310,10 @@ test("package-backed SDK readiness verifies public ownership and exact versions"
 
   const wrongOwner = structuredClone(fixture);
   wrongOwner.packages["maven/io.opengrow.opengrow-android-sdk"].repository =
-    "mbzadev/opengrow";
+    "mabzadev/opengrow";
   const mismatched = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture(wrongOwner),
   );
   assert.ok(
@@ -346,7 +346,7 @@ test("pending SDK readiness checks both the baseline and unused candidate", () =
   });
   const remote = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     run,
   );
   assert.equal(remote.ready, true);
@@ -356,7 +356,7 @@ test("pending SDK readiness checks both the baseline and unused candidate", () =
 
   const missingBaseline = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture(),
   );
   assert.equal(missingBaseline.ready, false);
@@ -395,7 +395,7 @@ test("remote SDK readiness verifies every immutable failed ref and no release", 
   };
   const remote = inspectSdkRemoteState(
     { libraries: [] },
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture(fixture),
     history,
   );
@@ -404,7 +404,7 @@ test("remote SDK readiness verifies every immutable failed ref and no release", 
 
   const unexpectedRelease = inspectSdkRemoteState(
     { libraries: [] },
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture({
       ...fixture,
       releases: ["sdk-ios-v1.0.1"],
@@ -455,7 +455,7 @@ test("remote readiness distinguishes a recorded failure from an unknown occupied
   };
   const recorded = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture({ refs, releases: ["sdk-ios-v1.0.0"] }),
     history,
   );
@@ -470,7 +470,7 @@ test("remote readiness distinguishes a recorded failure from an unknown occupied
 
   const unknown = inspectSdkRemoteState(
     catalogue,
-    "mbzadev/superboard-platform",
+    "mabzadev/superboard-platform",
     githubSdkFixture({ refs, releases: ["sdk-ios-v1.0.0"] }),
   );
   assert.equal(unknown.publications[0].failedCandidate, null);
@@ -500,11 +500,11 @@ test("governance schema accepts repositories owned by another GitHub account", a
 test("reference readiness binds short links and source versions to the target", async () => {
   const { target } = await loadTarget("mbza-development");
   const repositories = {
-    platform: { nameWithOwner: "mbzadev/superboard" },
+    platform: { nameWithOwner: "mabzadev/superboard" },
   };
   const project = {
-    platformRepository: "https://github.com/mbzadev/superboard",
-    referenceRepository: "https://github.com/mbzadev/superboard",
+    platformRepository: "https://github.com/mabzadev/superboard",
+    referenceRepository: "https://github.com/mabzadev/superboard",
     referencePath: "apps/reference",
     target: "mbza-development",
     environment: "development",
@@ -655,7 +655,7 @@ test("reference readiness derives application URLs and repositories from manifes
 
 test("git readiness requires a clean committed declared branch and remote", () => {
   const expected = {
-    nameWithOwner: "mbzadev/superboard-platform",
+    nameWithOwner: "mabzadev/superboard-platform",
     branches: { dev: {}, main: {} },
   };
   assert.equal(
@@ -663,7 +663,7 @@ test("git readiness requires a clean committed declared branch and remote", () =
       {
         branch: "dev",
         head: "a".repeat(40),
-        remote: "https://github.com/mbzadev/superboard-platform.git",
+        remote: "https://github.com/mabzadev/superboard-platform.git",
         status: "",
       },
       expected,
@@ -674,7 +674,7 @@ test("git readiness requires a clean committed declared branch and remote", () =
     {
       branch: "dev",
       head: "a".repeat(40),
-      remote: "https://github.com/mbzadev/superboard-platform.git",
+      remote: "https://github.com/mabzadev/superboard-platform.git",
       status: " M file.ts\n?? new.ts\n",
     },
     expected,
@@ -789,7 +789,7 @@ test("current offline report is fail-closed and contains actionable blockers", a
   assert.equal(report.stages.historicalParity.sourceAvailable, false);
   assert.equal(
     report.governance.canonicalRepository,
-    "mbzadev/superboard",
+    "mabzadev/superboard",
   );
   assert.equal(report.stages.localContracts.ready, false);
   assert.deepEqual(report.stages.flutterFlowLibrary, { ready: true });

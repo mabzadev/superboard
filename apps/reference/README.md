@@ -2,8 +2,8 @@
 
 Canonical FlutterFlow reference application for the SuperBoard platform.
 
-- Platform and library source: <https://github.com/mbzadev/superboard>
-- This repository: <https://github.com/mbzadev/superboard>
+- Platform and library source: <https://github.com/mabzadev/superboard>
+- This repository: <https://github.com/mabzadev/superboard>
 - Development reference app: <https://reference.mbza.dev>
 - Development back office: <https://board.mbza.dev>
 - Development API: <https://api.mbza.dev>
@@ -29,17 +29,17 @@ action and requires the exact terminal `job_not_cancellable` response because
 reference receipts complete synchronously; failed-job retry remains available
 only to Grow administrators.
 The library versions and complete public action/widget surface are referenced
-from `superboard-platform/config/sdk-libraries.json` and
-`superboard-platform/config/flutterflow-custom-code.json`; this repository
+from `config/sdk-libraries.json` and
+`config/flutterflow-custom-code.json` at the monorepo root; this application
 contains no copied network implementation or Marketing adapter.
 The complete platform data-store and duplicate inventory is maintained in
-[`superboard-platform/docs/REFERENCE_DATA_INVENTORY.md`](https://github.com/mbzadev/superboard/blob/dev/docs/REFERENCE_DATA_INVENTORY.md).
+[`docs/REFERENCE_DATA_INVENTORY.md`](https://github.com/mabzadev/superboard/blob/dev/docs/REFERENCE_DATA_INVENTORY.md).
 
 For a local checkout, generate an ignored dependency override without storing a
 machine path in Git:
 
 ```bash
-dart tool/use_local_platform.dart /path/to/superboard-platform
+dart tool/use_local_platform.dart /path/to/superboard
 flutter pub get
 npm run check
 flutter run -d chrome --dart-define-from-file=config/development.json
@@ -78,11 +78,10 @@ fragments and every other path. `config/development.json` is also a strict
 allowlist of reviewed Dart defines; adding a key or changing an endpoint fails
 CI even if `reference.project.json` is changed at the same time.
 
-Reference CI follows the same promotion boundary as the platform: pushes and
-pull requests targeting `dev` validate against `superboard-platform/dev`; `main`
-validates against an exact `superboard-platform` revision. After a complete SDK
-release set succeeds, the platform dispatches its promoted catalogue SHA. This
-repository verifies catalogue v4, immutable baseline and historical tags,
+Reference CI is part of the platform promotion boundary: pushes and pull
+requests validate `apps/reference` against the same exact SuperBoard commit.
+After a complete SDK release set succeeds, the protected promotion updates this
+application in the monorepo. It verifies catalogue v4, immutable baseline and historical tags,
 peeled commits, public GitHub Releases and the exact checked-out catalogue. A
 protected promotion PR is created only after Flutter and FlutterFlow v3 are both
 fully published. It updates the two active coordinates together and archives
@@ -111,15 +110,10 @@ and with no route at all. `npm run cloudflare:dry-run:private` proves that
 configuration without writing. This private bootstrap does not replace the
 GitHub deployment flow and cannot make `reference.mbza.dev` public.
 
-A successful `superboard-platform/dev` deployment sends the
-`platform-dev-updated` repository dispatch event. The reference workflow then
-checks out the exact platform commit from `client_payload.platform_sha`, reruns
-the complete acceptance validation from `opengrow-reference/dev`, records the
-exact tested platform and reference SHAs, and builds the live artifact from
-those two immutable revisions inside the protected `development` Environment.
-The application displays both short SHAs and includes the complete values in
-sanitized diagnostics. This keeps MBZA synchronized without using a mutable
-platform ref during that cross-repository build.
+The root CI records the exact monorepo SHA used for the platform and reference
+application, then builds both from that immutable revision. The application
+displays the short revision and includes it in sanitized diagnostics. No
+cross-repository dispatch or mutable platform checkout remains.
 
 The complete sixteen-journey manual acceptance procedure is in
 [`docs/ACCEPTANCE_RUNBOOK.md`](docs/ACCEPTANCE_RUNBOOK.md). It defines exact

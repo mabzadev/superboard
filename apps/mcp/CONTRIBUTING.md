@@ -3,8 +3,8 @@
 ## Setup
 
 ```bash
-git clone https://github.com/mbzadev/superboard-platform.git
-cd superboard-platform
+git clone https://github.com/mabzadev/superboard.git
+cd superboard
 npm ci
 cd apps/mcp
 ```
@@ -61,7 +61,7 @@ plugin/
 
 ## Reporting issues
 
-Use [GitHub Issues](https://github.com/mbzadev/superboard-platform/issues). Include steps to reproduce, expected behavior, and actual behavior.
+Use [GitHub Issues](https://github.com/mabzadev/superboard/issues). Include steps to reproduce, expected behavior, and actual behavior.
 
 ## License
 

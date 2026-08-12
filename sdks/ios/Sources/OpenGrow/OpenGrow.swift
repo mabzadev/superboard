@@ -70,7 +70,7 @@ public class OpenGrow {
     /// Configures the OpenGrow SDK with the provided API key.
     ///
     /// - Parameters:
-    ///   - APIKey: The API key obtained from the web console at https://github.com/mbzadev/superboard-platform.
+    ///   - APIKey: The API key obtained from the web console at https://github.com/mabzadev/superboard.
     ///   - useTestEnvironment: If this is enabled the test environment will be used.
     ///   - baseURL: Required application API domain. The SDK appends the API path automatically.
     ///   - delegate: The delegate to receive payload from the SDK.

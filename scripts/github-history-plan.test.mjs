@@ -9,7 +9,7 @@ import {
 } from "./github-history-plan.mjs";
 
 const platform = {
-  nameWithOwner: "mbzadev/superboard-platform",
+  nameWithOwner: "mabzadev/superboard-platform",
 };
 
 test("history inspection detects unrelated remote main and its audit ref", () => {
@@ -20,7 +20,7 @@ test("history inspection detects unrelated remote main and its audit ref", () =>
     ["rev-parse --verify HEAD", ok(head)],
     [
       "remote get-url origin",
-      ok("https://github.com/mbzadev/superboard-platform.git"),
+      ok("https://github.com/mabzadev/superboard-platform.git"),
     ],
     ["rev-parse --verify refs/remotes/origin/main", ok(remoteMain)],
     ["rev-parse --verify refs/remotes/origin/dev", fail()],
@@ -50,7 +50,7 @@ test("plan preserves remote main before publishing dev", () => {
       nameWithOwner: platform.nameWithOwner,
       branch: "dev",
       head,
-      remoteUrl: "https://github.com/mbzadev/superboard-platform.git",
+      remoteUrl: "https://github.com/mabzadev/superboard-platform.git",
       remoteMatches: true,
       remoteMain,
       remoteDev: null,
@@ -81,7 +81,7 @@ test("published remote main and dev without a merge base block readiness and emi
       nameWithOwner: platform.nameWithOwner,
       branch: "dev",
       head,
-      remoteUrl: "https://github.com/mbzadev/superboard-platform.git",
+      remoteUrl: "https://github.com/mabzadev/superboard-platform.git",
       remoteMatches: true,
       remoteMain,
       remoteDev: head,
@@ -153,7 +153,7 @@ test("dirty or unborn local histories block publication", () => {
       nameWithOwner: platform.nameWithOwner,
       branch: "dev",
       head: null,
-      remoteUrl: "git@github.com:mbzadev/superboard-platform.git",
+      remoteUrl: "git@github.com:mabzadev/superboard-platform.git",
       remoteMatches: true,
       remoteMain: "b".repeat(40),
       remoteDev: null,
@@ -204,14 +204,14 @@ test("a blocked repository never emits a push command", () => {
 test("origin matching accepts canonical HTTPS and SSH forms only", () => {
   assert.equal(
     remoteMatches(
-      "https://github.com/mbzadev/superboard-platform.git",
+      "https://github.com/mabzadev/superboard-platform.git",
       platform.nameWithOwner,
     ),
     true,
   );
   assert.equal(
     remoteMatches(
-      "git@github.com:mbzadev/superboard-platform.git",
+      "git@github.com:mabzadev/superboard-platform.git",
       platform.nameWithOwner,
     ),
     true,
@@ -235,7 +235,7 @@ test("an occupied audit ref or divergent remote dev blocks publication", () => {
       nameWithOwner: platform.nameWithOwner,
       branch: "dev",
       head,
-      remoteUrl: "git@github.com:mbzadev/superboard-platform.git",
+      remoteUrl: "git@github.com:mabzadev/superboard-platform.git",
       remoteMatches: true,
       remoteMain,
       remoteDev,

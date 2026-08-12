@@ -19,7 +19,7 @@ snippets never contain an MBZA, VocoStar or generic example hostname.
 
 The canonical source layout is:
 
-- `mbzadev/superboard`: dashboard, common Workers, deployment automation,
+- `mabzadev/superboard`: dashboard, common Workers, deployment automation,
   contracts, SDKs and the shared control plane;
 - `apps/reference`: FlutterFlow reference application consuming released
   SuperBoard libraries without copying their implementation.
@@ -50,7 +50,7 @@ the product name and must not appear as a default inside reusable runtime code.
 The API and short-link origins are deliberately distinct. Platform endpoints
 come from `deploy/targets/mbza-development.json`; the acceptance application's
 own URL and Static Assets Worker come from
-`superboard-reference/reference.project.json`. Neither manifest contains a
+`apps/reference/reference.project.json`. Neither manifest contains a
 Cloudflare account ID or credential.
 
 ## Runtime topology
@@ -89,10 +89,9 @@ both pass through the API gateway.
 
 The reference application is not a seventeenth business service. It is a
 separately deployed, assets-only Worker whose sole role is end-to-end acceptance
-of the public SDK contracts. A push to `superboard-reference/dev` builds Flutter Web
-and publishes it to `reference.mbza.dev` through the protected GitHub
-`development` Environment. Pull requests and `main` validate it but do not
-publish the MBZA test site.
+of the public SDK contracts. Root CI builds and validates it from the same
+SuperBoard commit. Publication to `reference.mbza.dev` is intentionally still
+pending; pull requests never publish the MBZA test site.
 
 ## Worker catalogue
 

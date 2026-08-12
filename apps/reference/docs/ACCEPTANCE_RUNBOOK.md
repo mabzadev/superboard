@@ -7,7 +7,7 @@ revisions under review.
 
 The reference application contains UI and orchestration only. Every network or
 business operation below is implemented by the public SuperBoard FlutterFlow
-packages from `superboard-platform`; the application does not reproduce API
+packages from the SuperBoard monorepo; the application does not reproduce API
 paths, private Worker tokens, signatures, retry rules or business policy.
 
 ## Safety preconditions
@@ -115,7 +115,7 @@ the application.
 
 ## Automated proof before browser acceptance
 
-Run from `superboard-platform`:
+Run from the `superboard` monorepo root:
 
 ```bash
 npm --prefix workers/api run typecheck

@@ -65,15 +65,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mbzadev/superboard-platform.git",
+    "url": "git+https://github.com/mabzadev/superboard.git",
     "directory": "sdks/react-native"
   },
-  "author": "OpenGrow <razvan@appssemble.com> (https://github.com/mbzadev/superboard-platform)",
+  "author": "OpenGrow <razvan@appssemble.com> (https://github.com/mabzadev/superboard)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mbzadev/superboard-platform/issues"
+    "url": "https://github.com/mabzadev/superboard/issues"
   },
-  "homepage": "https://github.com/mbzadev/superboard-platform",
+  "homepage": "https://github.com/mabzadev/superboard",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },

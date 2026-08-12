@@ -1,26 +1,26 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg">
-    <img src="https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg" width="120" alt="OpenGrow">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg">
+    <img src="https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg" width="120" alt="OpenGrow">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/superboard-platform/releases"><img src="https://img.shields.io/github/v/release/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="Latest release"/></a>
-  <a href="https://github.com/mbzadev/superboard-platform"><img src="https://img.shields.io/badge/distribution-SwiftPM-4F46E5?style=flat-square&logo=swift&logoColor=white" alt="Swift Package Manager"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="MIT License"/></a>
-  <a href="https://github.com/mbzadev/superboard-platform/stargazers"><img src="https://img.shields.io/github/stars/mbzadev/superboard-platform?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
+  <a href="https://github.com/mabzadev/superboard/releases"><img src="https://img.shields.io/github/v/release/mabzadev/superboard?style=flat-square&color=4F46E5" alt="Latest release"/></a>
+  <a href="https://github.com/mabzadev/superboard"><img src="https://img.shields.io/badge/distribution-SwiftPM-4F46E5?style=flat-square&logo=swift&logoColor=white" alt="Swift Package Manager"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mabzadev/superboard?style=flat-square&color=4F46E5" alt="MIT License"/></a>
+  <a href="https://github.com/mabzadev/superboard/stargazers"><img src="https://img.shields.io/github/stars/mabzadev/superboard?style=flat-square&color=4F46E5" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
   Deep linking, attribution, and smart links for iOS.<br/>
-  Part of the <a href="https://github.com/mbzadev">OpenGrow</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mabzadev">OpenGrow</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#quick-start">Quick Start</a> ·
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#api-reference">API Reference</a> ·
-  <a href="https://github.com/mbzadev/superboard-platform/tree/main/docs">Full Docs</a>
+  <a href="https://github.com/mabzadev/superboard/tree/main/sdks/ios#quick-start">Quick Start</a> ·
+  <a href="https://github.com/mabzadev/superboard/tree/main/sdks/ios#api-reference">API Reference</a> ·
+  <a href="https://github.com/mabzadev/superboard/tree/main/docs">Full Docs</a>
 </p>
 
 ---
@@ -57,11 +57,11 @@ The published iOS SDK is distributed from public Git with Swift Package
 Manager at the exact release `1.0.3`:
 
 ```swift
-.package(url: "https://github.com/mbzadev/superboard.git", exact: "1.0.3")
+.package(url: "https://github.com/mabzadev/superboard.git", exact: "1.0.3")
 ```
 
 In Xcode, use **File → Add Package Dependencies**, enter
-`https://github.com/mbzadev/superboard.git`, and select exact version
+`https://github.com/mabzadev/superboard.git`, and select exact version
 `1.0.3`. CocoaPods Trunk is not a published or supported
 distribution channel for this SDK.
 
@@ -339,11 +339,11 @@ Use `.cancel` and `.refund` transaction types for cancellations and refunds. For
 | `logInAppPurchase(transactionID:completion:)` | Log a StoreKit 2 purchase |
 | `logCustomPurchase(type:priceInCents:currency:productID:startDate:completion:)` | Log a custom purchase |
 
-Full API reference: [iOS SDK API reference](https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios#api-reference)
+Full API reference: [iOS SDK API reference](https://github.com/mabzadev/superboard/tree/main/sdks/ios#api-reference)
 
 ## Example App
 
-A demo project is included in [`sdks/ios`](https://github.com/mbzadev/superboard-platform/tree/main/sdks/ios).
+A demo project is included in [`sdks/ios`](https://github.com/mabzadev/superboard/tree/main/sdks/ios).
 
 ## Setup Guides
 
@@ -354,11 +354,11 @@ A demo project is included in [`sdks/ios`](https://github.com/mbzadev/superboard
 
 ## Migration Guides
 
-- Migration procedures are maintained in the [canonical OpenGrow documentation](https://github.com/mbzadev/superboard-platform/tree/main/docs).
+- Migration procedures are maintained in the [canonical SuperBoard documentation](https://github.com/mabzadev/superboard/tree/main/docs).
 
 ## Documentation
 
-Full documentation is maintained in the [canonical repository](https://github.com/mbzadev/superboard-platform/tree/main/docs).
+Full documentation is maintained in the [canonical repository](https://github.com/mabzadev/superboard/tree/main/docs).
 
 ## Support
 

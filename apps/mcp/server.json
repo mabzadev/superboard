@@ -5,13 +5,13 @@
   "description": "Operate projects, links, attribution, analytics, campaigns, and SDK configuration on a target-owned SuperBoard deployment.",
   "version": "1.0.0",
   "repository": {
-    "url": "https://github.com/mbzadev/superboard-platform/tree/main/apps/mcp",
+    "url": "https://github.com/mabzadev/superboard/tree/main/apps/mcp",
     "source": "github"
   },
-  "websiteUrl": "https://github.com/mbzadev/superboard-platform",
+  "websiteUrl": "https://github.com/mabzadev/superboard",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/mbzadev/superboard-platform/main/.github/logo.svg",
+      "src": "https://raw.githubusercontent.com/mabzadev/superboard/main/.github/logo.svg",
       "type": "image/svg+xml"
     }
   ]

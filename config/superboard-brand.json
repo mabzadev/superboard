@@ -8,14 +8,14 @@
     "compatibilityNamespace": "opengrow"
   },
   "repositories": {
-    "canonical": "mbzadev/superboard",
+    "canonical": "mabzadev/superboard",
     "layout": {
       "platform": ".",
       "reference": "apps/reference"
     },
     "legacyReadOnly": [
-      "mbzadev/superboard-platform",
-      "mbzadev/superboard-reference"
+      "mabzadev/superboard-platform",
+      "mabzadev/superboard-reference"
     ]
   },
   "developmentDomains": {

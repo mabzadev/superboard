@@ -2,7 +2,7 @@
   "$schema": "../schemas/sdk-coverage.schema.json",
   "schemaVersion": 2,
   "catalogueSchemaVersion": 4,
-  "platformRepository": "https://github.com/mbzadev/superboard",
+  "platformRepository": "https://github.com/mabzadev/superboard",
   "promotionPolicy": "complete-active-set",
   "libraries": [
     {

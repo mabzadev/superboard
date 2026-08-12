@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/mbzadev/superboard/blob/dev/schemas/github-control-plane.schema.json",
+  "$id": "https://github.com/mabzadev/superboard/blob/dev/schemas/github-control-plane.schema.json",
   "title": "SuperBoard GitHub control plane",
   "type": "object",
   "additionalProperties": false,

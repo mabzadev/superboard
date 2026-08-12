@@ -2,7 +2,7 @@
   "name": "superboard",
   "owner": {
     "name": "SuperBoard",
-    "url": "https://github.com/mbzadev/superboard-platform"
+    "url": "https://github.com/mabzadev/superboard-platform"
   },
   "plugins": [
     {
@@ -12,10 +12,10 @@
       "version": "1.0.0",
       "author": {
         "name": "SuperBoard",
-        "url": "https://github.com/mbzadev/superboard-platform"
+        "url": "https://github.com/mabzadev/superboard-platform"
       },
-      "homepage": "https://github.com/mbzadev/superboard-platform/tree/dev/apps/mcp",
-      "repository": "https://github.com/mbzadev/superboard-platform",
+      "homepage": "https://github.com/mabzadev/superboard-platform/tree/dev/apps/mcp",
+      "repository": "https://github.com/mabzadev/superboard-platform",
       "license": "MIT",
       "keywords": [
         "deep-links",

@@ -38,7 +38,8 @@ SDK automation follows the same protection boundary. A successful immutable
 tag release opens a catalogue PR instead of pushing `dev`. Once the complete
 FlutterFlow and Support set is reviewed and merged, GitHub verifies every tag
 and GitHub release, synchronizes the MBZA FlutterFlow library from the exact
-catalogue SHA, and opens one dependency PR in `superboard-reference`. The
+catalogue SHA, and opens one dependency PR for `apps/reference` in the
+canonical monorepo. The
 workflows can create PRs but contain no approval or merge operation.
 
 ## Services

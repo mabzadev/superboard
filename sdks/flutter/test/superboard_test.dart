@@ -13,7 +13,7 @@ class MockSuperBoardPlatform
 
   @override
   Future<String> generateLink(GenerateLinkParams params) =>
-      Future.value('https://github.com/mbzadev/superboard-platform/test-link');
+      Future.value('https://github.com/mabzadev/superboard/test-link');
 
   @override
   Future<void> setPushToken(String token) => Future.value();
@@ -74,6 +74,6 @@ void main() {
       GenerateLinkParams(title: 'Test'),
     );
 
-    expect(link, 'https://github.com/mbzadev/superboard-platform/test-link');
+    expect(link, 'https://github.com/mabzadev/superboard/test-link');
   });
 }
