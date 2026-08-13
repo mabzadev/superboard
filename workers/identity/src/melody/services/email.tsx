@@ -28,6 +28,10 @@ import {
   localeConfig, messageConfig, typeConfig,
 } from '../configs'
 import { systemConfig } from '../configs/variable'
+import {
+  resolveProjectId,
+  type DeliveryLogScope,
+} from './logScope'
 
 const checkEmailSetup = (c: Context<typeConfig.Context>) => {
   const {
@@ -110,6 +114,7 @@ export const sendEmail = async (
   receiverEmail: string,
   subject: string,
   emailBody: string,
+  logScope: DeliveryLogScope = {},
 ) => {
   const {
     ENVIRONMENT: environment,
@@ -152,6 +157,10 @@ export const sendEmail = async (
         receiver,
         response: cryptoUtil.redactMessageBody(JSON.stringify(response)),
         content: cryptoUtil.redactMessageBody(emailBody),
+        projectId: await resolveProjectId(
+          c,
+          { ...logScope, receiver: receiverEmail },
+        ),
       },
     )
   }
@@ -164,6 +173,7 @@ export const sendEmailVerification = async (
   email: string,
   user: userModel.Record,
   locale: typeConfig.Locale,
+  appId?: number,
 ) => {
   const {
     AUTH_SERVER_URL: serverUrl,
@@ -206,6 +216,7 @@ export const sendEmailVerification = async (
       ? localeConfig.welcomeEmail.subject[locale]
       : localeConfig.emailVerificationEmail.subject[locale],
     content,
+    { appId, userId: user.id },
   )
 
   return res ? verificationCode : null
@@ -216,6 +227,7 @@ export const sendPasswordReset = async (
   email: string,
   orgSlug: string,
   locale: typeConfig.Locale,
+  userId?: number,
 ) => {
   checkEmailSetup(c)
 
@@ -234,6 +246,7 @@ export const sendPasswordReset = async (
     email,
     localeConfig.passwordResetEmail.subject[locale],
     content,
+    { userId },
   )
 
   return res ? resetCode : null
@@ -244,6 +257,7 @@ export const sendChangeEmailVerificationCode = async (
   email: string,
   locale: typeConfig.Locale,
   org?: string,
+  logScope: DeliveryLogScope = {},
 ) => {
   checkEmailSetup(c)
 
@@ -262,6 +276,7 @@ export const sendChangeEmailVerificationCode = async (
     email,
     localeConfig.changeEmailVerificationEmail.subject[locale],
     content,
+    logScope,
   )
 
   return res ? verificationCode : null
@@ -273,6 +288,7 @@ export const sendMagicLinkEmail = async (
   orgSlug: string,
   locale: typeConfig.Locale,
   magicLinkBaseUrl: string,
+  logScope: DeliveryLogScope = {},
 ) => {
   checkEmailSetup(c)
   const { SUPPORTED_LOCALES: locales } = env(c)
@@ -294,6 +310,7 @@ export const sendMagicLinkEmail = async (
     email,
     localeConfig.magicLinkEmail.subject[displayLocale],
     content,
+    logScope,
   )
 
   return res ? mfaCode : null
@@ -334,6 +351,7 @@ export const sendEmailMfa = async (
   email: string,
   orgSlug: string,
   locale: typeConfig.Locale,
+  logScope: DeliveryLogScope = {},
 ) => {
   checkEmailSetup(c)
   const { SUPPORTED_LOCALES: locales } = env(c)
@@ -354,6 +372,7 @@ export const sendEmailMfa = async (
     email,
     localeConfig.emailMfaEmail.subject[displayLocale],
     content,
+    logScope,
   )
 
   return res ? mfaCode : null

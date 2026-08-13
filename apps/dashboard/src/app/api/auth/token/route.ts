@@ -15,7 +15,9 @@ export async function POST(request: NextRequest) {
       );
     }
     const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+      request.headers.get("cf-connecting-ip")?.trim() ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
     if (isRateLimited(ip)) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -41,6 +43,12 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Email and password are required" },
+        { status: 400 }
+      );
+    }
+    if (body.otp_code !== undefined && typeof body.otp_code !== "string") {
+      return NextResponse.json(
+        { error: "OTP code must be a string" },
         { status: 400 }
       );
     }
@@ -71,29 +79,53 @@ export async function POST(request: NextRequest) {
       unknown
     >;
 
-    if (!tokenResponse.ok || !tokenData.access_token) {
+    if (!tokenResponse.ok) {
       return NextResponse.json(tokenData, { status: tokenResponse.status });
     }
-
-    let user: Record<string, unknown> | null = null;
-    try {
-      const meResponse = await fetch(`${API_URL}/api/v1/users/me`, {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` },
-      });
-      if (meResponse.ok) {
-        const meData = (await meResponse.json()) as {
-          user?: Record<string, unknown>;
-        };
-        user = meData.user ?? null;
-      }
-    } catch {
-      user = null;
+    if (
+      typeof tokenData.access_token !== "string" ||
+      !tokenData.access_token
+    ) {
+      return NextResponse.json(
+        { error: "Authentication service returned an invalid response" },
+        { status: 502 }
+      );
     }
 
-    return NextResponse.json({ ...tokenData, user }, { status: 200 });
-  } catch (error) {
+    let meResponse: Response;
+    try {
+      meResponse = await fetch(`${API_URL}/api/v1/users/me`, {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Unable to load authenticated user" },
+        { status: 502 }
+      );
+    }
+
+    const meData = (await meResponse.json().catch(() => ({}))) as {
+      user?: unknown;
+    };
+    if (
+      !meResponse.ok ||
+      !meData.user ||
+      typeof meData.user !== "object" ||
+      Array.isArray(meData.user)
+    ) {
+      return NextResponse.json(
+        { error: "Unable to load authenticated user" },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Authentication proxy failed", detail: String(error) },
+      { ...tokenData, user: meData.user },
+      { status: 200 }
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Authentication proxy failed" },
       { status: 500 }
     );
   }

@@ -18,9 +18,9 @@ describe("Identity Worker with D1", () => {
       status: "ok",
       schema: {
         status: "current",
-        expectedMigration: "0148_superboard_identity_resource_scope.sql",
-        latestMigration: "0148_superboard_identity_resource_scope.sql",
-        appliedMigrationCount: 50,
+        expectedMigration: "0149_superboard_identity_log_scope.sql",
+        latestMigration: "0149_superboard_identity_log_scope.sql",
+        appliedMigrationCount: 51,
       },
       project_scope: { ready: true, unscoped_rows: 0 },
     });
@@ -699,6 +699,145 @@ describe("Identity Worker with D1", () => {
     expect(ownProject.status).toBe(200);
   });
 
+  it("isolates Melody audit logs and scoped deletion between projects", async () => {
+    const database = env as unknown as { DB: D1Database };
+    await database.DB.batch([
+      database.DB.prepare(
+        `INSERT INTO email_log
+           (success,receiver,response,content,"projectId")
+         VALUES (1,?,?,?,?)`,
+      ).bind(
+        "project-one@example.test",
+        "runtime-project-one-email",
+        "project one email",
+        101,
+      ),
+      database.DB.prepare(
+        `INSERT INTO email_log
+           (success,receiver,response,content,"projectId")
+         VALUES (1,?,?,?,?)`,
+      ).bind(
+        "project-two@example.test",
+        "runtime-project-two-email",
+        "project two email",
+        202,
+      ),
+      database.DB.prepare(
+        `INSERT INTO sms_log
+           (success,receiver,response,content,"projectId")
+         VALUES (1,?,?,?,?)`,
+      ).bind(
+        "+1555010101",
+        "runtime-project-one-sms",
+        "project one sms",
+        101,
+      ),
+      database.DB.prepare(
+        `INSERT INTO sms_log
+           (success,receiver,response,content,"projectId")
+         VALUES (1,?,?,?,?)`,
+      ).bind(
+        "+1555020202",
+        "runtime-project-two-sms",
+        "project two sms",
+        202,
+      ),
+      database.DB.prepare(
+        `INSERT INTO sign_in_log
+           ("userId",ip,detail,"projectId") VALUES (0,?,?,?)`,
+      ).bind(
+        "192.0.2.101",
+        "runtime-project-one-sign-in",
+        101,
+      ),
+      database.DB.prepare(
+        `INSERT INTO sign_in_log
+           ("userId",ip,detail,"projectId") VALUES (0,?,?,?)`,
+      ).bind(
+        "192.0.2.202",
+        "runtime-project-two-sign-in",
+        202,
+      ),
+    ]);
+
+    const emailIds = await logIds(database.DB, "email_log", "response");
+    const smsIds = await logIds(database.DB, "sms_log", "response");
+    const signInIds = await logIds(database.DB, "sign_in_log", "detail");
+    const resources = [
+      { route: "email", ids: emailIds },
+      { route: "sms", ids: smsIds },
+      { route: "sign-in", ids: signInIds },
+    ];
+
+    const projectOneService = await melodyAdminJson<{
+      app: { clientId: string; secret: string };
+    }>("POST", "/api/v1/apps", {
+      name: "Project one audit reader",
+      type: "s2s",
+      scopes: ["root"],
+      redirectUris: [],
+    });
+    const directToken = await melodyServiceToken(projectOneService.app);
+
+    for (const resource of resources) {
+      const projectOne = await melodyAdminJson<{
+        logs: Array<{ id: number }>;
+      }>("GET", `/api/v1/logs/${resource.route}`);
+      expect(projectOne.logs.map(({ id }) => id)).toContain(resource.ids.one);
+      expect(projectOne.logs.map(({ id }) => id)).not.toContain(resource.ids.two);
+
+      const projectTwo = await melodyAdminJson<{
+        logs: Array<{ id: number }>;
+      }>(
+        "GET",
+        `/api/v1/logs/${resource.route}`,
+        undefined,
+        secondProject,
+      );
+      expect(projectTwo.logs.map(({ id }) => id)).toContain(resource.ids.two);
+      expect(projectTwo.logs.map(({ id }) => id)).not.toContain(resource.ids.one);
+
+      const directResponse = await SELF.fetch(
+        `https://identity.test/api/v1/logs/${resource.route}`,
+        {
+          headers: {
+            authorization: `Bearer ${directToken}`,
+            "x-superboard-auth-gateway": "1",
+          },
+        },
+      );
+      const directLogs = await json<{ logs: Array<{ id: number }> }>(directResponse);
+      expect(directLogs.logs.map(({ id }) => id)).toContain(resource.ids.one);
+      expect(directLogs.logs.map(({ id }) => id)).not.toContain(resource.ids.two);
+
+      expect((await melodyAdmin(
+        "GET",
+        `/api/v1/logs/${resource.route}/${resource.ids.two}`,
+      )).status).toBe(404);
+      expect((await melodyAdmin(
+        "GET",
+        `/api/v1/logs/${resource.route}/${resource.ids.two}`,
+        undefined,
+        secondProject,
+      )).status).toBe(200);
+
+      expect((await melodyAdmin(
+        "DELETE",
+        `/api/v1/logs/${resource.route}?before=2099-01-01T00:00:00.000Z`,
+      )).status).toBe(204);
+      expect((await melodyAdmin(
+        "GET",
+        `/api/v1/logs/${resource.route}/${resource.ids.one}`,
+      )).status).toBe(404);
+      expect((await melodyAdmin(
+        "GET",
+        `/api/v1/logs/${resource.route}/${resource.ids.two}`,
+        undefined,
+        secondProject,
+      )).status).toBe(200);
+    }
+  });
+
   it("reuses the canonical application user id instead of duplicating an invited user", async () => {
     const database = env as unknown as { DB: D1Database };
     const canonicalId = "44444444-4444-4444-8444-444444444444";
@@ -957,4 +1096,42 @@ async function melodyAdminJson<T>(
   project?: TestProject,
 ): Promise<T> {
   return json<T>(await melodyAdmin(method, suffix, body, project));
+}
+
+async function logIds(
+  database: D1Database,
+  table: "email_log" | "sms_log" | "sign_in_log",
+  markerColumn: "response" | "detail",
+): Promise<{ one: number; two: number }> {
+  const rows = await database.prepare(
+    `SELECT id,"projectId" projectId FROM ${table}
+     WHERE ${markerColumn} IN (?,?) ORDER BY "projectId"`,
+  ).bind(
+    `runtime-project-one-${table === "sign_in_log" ? "sign-in" : table === "email_log" ? "email" : "sms"}`,
+    `runtime-project-two-${table === "sign_in_log" ? "sign-in" : table === "email_log" ? "email" : "sms"}`,
+  ).all<{ id: number; projectId: number }>();
+  const one = rows.results.find(({ projectId }) => projectId === 101)?.id;
+  const two = rows.results.find(({ projectId }) => projectId === 202)?.id;
+  expect(one).toBeTypeOf("number");
+  expect(two).toBeTypeOf("number");
+  return { one: Number(one), two: Number(two) };
+}
+
+async function melodyServiceToken(app: {
+  clientId: string;
+  secret: string;
+}): Promise<string> {
+  const response = await SELF.fetch("https://identity.test/oauth2/v1/token", {
+    method: "POST",
+    headers: {
+      authorization: `Basic ${btoa(`${app.clientId}:${app.secret}`)}`,
+      "content-type": "application/x-www-form-urlencoded",
+      "x-superboard-auth-gateway": "1",
+    },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      scope: "root",
+    }),
+  });
+  return (await json<{ access_token: string }>(response)).access_token;
 }
