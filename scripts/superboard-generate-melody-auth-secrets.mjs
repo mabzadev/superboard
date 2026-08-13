@@ -13,6 +13,7 @@ const RSA_ALGORITHM = Object.freeze({
   publicExponent: new Uint8Array([1, 0, 1]),
   modulusLength: 2048,
 });
+const CLOUDFLARE_SECRET_MAX_BYTES = 5 * 1024;
 
 export async function generateMelodyAuthSecrets(now = new Date()) {
   x509.cryptoProvider.set(webcrypto);
@@ -71,12 +72,42 @@ function pem(label, bytes) {
   return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----`;
 }
 
+export function serializeMelodyAuthSecrets(secrets) {
+  const value = JSON.stringify({
+    v: 1,
+    jp: pemBody(secrets.jwtPrivateKeyPem, "PRIVATE KEY"),
+    ju: pemBody(secrets.jwtPublicKeyPem, "PUBLIC KEY"),
+    ss: secrets.sessionSecret,
+    sp: pemBody(secrets.samlPrivateKeyPem, "PRIVATE KEY"),
+    sc: pemBody(secrets.samlCertificatePem, "CERTIFICATE"),
+  });
+  if (Buffer.byteLength(value) > CLOUDFLARE_SECRET_MAX_BYTES) {
+    throw new Error("Compact Melody Auth material exceeds the Cloudflare secret limit");
+  }
+  return value;
+}
+
+function pemBody(value, label) {
+  const prefix = `-----BEGIN ${label}-----`;
+  const suffix = `-----END ${label}-----`;
+  if (
+    typeof value !== "string" ||
+    !value.includes(prefix) ||
+    !value.includes(suffix)
+  ) {
+    throw new Error(`Invalid ${label} material`);
+  }
+  return value.replace(prefix, "").replace(suffix, "").replace(/\s/gu, "");
+}
+
 export async function writeMelodyAuthSecrets(output) {
   const destination = assertSafeOutputPath(output);
   const secrets = await generateMelodyAuthSecrets();
   const file = await open(destination, "wx", 0o600);
   try {
-    await file.writeFile(`${JSON.stringify(secrets)}\n`, { encoding: "utf8" });
+    await file.writeFile(`${serializeMelodyAuthSecrets(secrets)}\n`, {
+      encoding: "utf8",
+    });
   } finally {
     await file.close();
   }

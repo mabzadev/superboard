@@ -11,7 +11,10 @@ import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { generateIdentityKeyset } from "./superboard-generate-identity-keyset.mjs";
-import { generateMelodyAuthSecrets } from "./superboard-generate-melody-auth-secrets.mjs";
+import {
+  generateMelodyAuthSecrets,
+  serializeMelodyAuthSecrets,
+} from "./superboard-generate-melody-auth-secrets.mjs";
 import { requiredSecretInventory } from "./cloudflare-secret-inventory.mjs";
 import {
   cloudflareAccountId,
@@ -125,7 +128,9 @@ export async function generateDevelopmentSecretAssignments({
   });
   const purchasesKeyset = JSON.stringify(await generatePurchasesKeyset());
   const identityKeyset = JSON.stringify(await generateIdentityKeyset());
-  const melodyAuthSecrets = JSON.stringify(await generateMelodyAuthSecrets());
+  const melodyAuthSecrets = serializeMelodyAuthSecrets(
+    await generateMelodyAuthSecrets(),
+  );
   const appleRoots = JSON.stringify([appleRootBase64]);
   const assignments = {
     api: {
