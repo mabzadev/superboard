@@ -23,6 +23,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (
+    typeof body.refresh_token !== "string" ||
+    !body.refresh_token.trim()
+  ) {
+    return NextResponse.json(
+      { error: "Missing or invalid refresh token" },
+      { status: 400 }
+    );
+  }
+
   let response: Response;
   try {
     response = await fetch(`${API_URL}/oauth/token`, {
@@ -42,6 +52,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const data = await response.json().catch(() => ({}));
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
+  if (
+    response.ok &&
+    (typeof data.access_token !== "string" ||
+      !data.access_token ||
+      typeof data.refresh_token !== "string" ||
+      !data.refresh_token)
+  ) {
+    return NextResponse.json(
+      { error: "Authentication service returned an invalid response" },
+      { status: 502 }
+    );
+  }
   return NextResponse.json(data, { status: response.status });
 }

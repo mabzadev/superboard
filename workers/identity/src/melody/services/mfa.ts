@@ -197,6 +197,7 @@ export const handleSendEmailMfa = async (
       authCodeBody.user.orgSlug,
       locale,
       magicLinkBaseUrl,
+      { appId: authCodeBody.appId, userId: authCodeBody.user.id },
     )
   } else {
     mfaCode = await emailService.sendEmailMfa(
@@ -204,6 +205,7 @@ export const handleSendEmailMfa = async (
       authCodeBody.user.email,
       authCodeBody.user.orgSlug,
       locale,
+      { appId: authCodeBody.appId, userId: authCodeBody.user.id },
     )
   }
 
@@ -475,6 +477,7 @@ export const handleSendSmsMfa = async (
     c,
     phoneNumber,
     locale,
+    { appId: authCodeBody.appId, userId: authCodeBody.user.id },
   )
   if (mfaCode) {
     await kvService.storeSmsMfaCode(

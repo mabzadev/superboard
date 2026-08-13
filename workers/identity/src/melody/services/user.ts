@@ -1040,6 +1040,7 @@ export const sendPasswordReset = async (
     email,
     user.orgSlug,
     locale,
+    user.id,
   )
 
   if (resetCode) {

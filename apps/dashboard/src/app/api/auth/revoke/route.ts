@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (response.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
   const data = await response.json().catch(() => ({}));
   return NextResponse.json(data, { status: response.status });
 }
