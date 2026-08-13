@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-green: #008000;
+  --color-layoutColor: var(--layout-color);
+  --color-labelColor: var(--label-color);
+  --font-default: var(--font-default);
+  --color-primaryButtonColor: var(--primary-button-color);
+  --color-primaryButtonLabelColor: var(--primary-button-label-color);
+  --color-primaryButtonBorderColor: var(--primary-button-border-color);
+  --color-secondaryButtonColor: var(--secondary-button-color);
+  --color-secondaryButtonLabelColor: var(--secondary-button-label-color);
+  --color-secondaryButtonBorderColor: var(--secondary-button-border-color);
+  --color-criticalIndicatorColor: var(--critical-indicator-color);
+  --text-width: 280px;
+}
+
+body {
+  @apply p-0 m-0 font-(family-name:--font-default) text-base;
+}

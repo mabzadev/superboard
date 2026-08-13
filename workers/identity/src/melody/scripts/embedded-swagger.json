@@ -1,0 +1,2219 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Melody Auth Embedded Auth API",
+    "version": "0.0.1"
+  },
+  "components": {
+    "schemas": {
+      "AppBannersRes": {
+        "type": "object",
+        "properties": {
+          "banners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Banner"
+            }
+          }
+        },
+        "required": [
+          "banners"
+        ]
+      },
+      "Banner": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "text",
+          "isActive",
+          "locales",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "PostInitiateReq": {
+        "type": "object",
+        "properties": {
+          "redirectUri": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "codeChallenge": {
+            "type": "string"
+          },
+          "codeChallengeMethod": {
+            "type": "string",
+            "enum": [
+              "S256"
+            ]
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "locale": {
+            "type": "string"
+          },
+          "org": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirectUri",
+          "clientId",
+          "codeChallenge",
+          "codeChallengeMethod",
+          "scopes",
+          "locale"
+        ]
+      },
+      "PostSignInReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "PostSignInWithRecoveryCodeReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "recoveryCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recoveryCode"
+        ]
+      },
+      "GetSignUpInfoRes": {
+        "type": "object",
+        "properties": {
+          "userAttributes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "includeInSignUpForm": {
+                  "type": "boolean"
+                },
+                "requiredInSignUpForm": {
+                  "type": "boolean"
+                },
+                "includeInIdTokenBody": {
+                  "type": "boolean"
+                },
+                "includeInUserInfo": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "deletedAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": null
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "userAttributes"
+        ]
+      },
+      "PostSignUpReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "1": "value for attributeId 1",
+              "2": "value for attributeId 2"
+            }
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "TokenExchangeReq": {
+        "type": "object",
+        "properties": {
+          "codeVerifier": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "codeVerifier",
+          "sessionId"
+        ]
+      },
+      "MfaEnrollmentInfoRes": {
+        "type": "object",
+        "properties": {
+          "mfaTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "otp",
+                "email",
+                "sms"
+              ]
+            }
+          }
+        },
+        "required": [
+          "mfaTypes"
+        ]
+      },
+      "PostMfaEnrollmentReq": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "otp",
+              "email",
+              "sms"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "MfaCodeReq": {
+        "type": "object",
+        "properties": {
+          "mfaCode": {
+            "type": "string"
+          },
+          "rememberDevice": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mfaCode"
+        ]
+      },
+      "OtpMfaSetupRes": {
+        "type": "object",
+        "properties": {
+          "otpUri": {
+            "type": "string"
+          },
+          "otpSecret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "otpUri",
+          "otpSecret"
+        ]
+      },
+      "OtpMfaConfigRes": {
+        "type": "object",
+        "properties": {
+          "couldFallbackToEmailMfa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "couldFallbackToEmailMfa"
+        ]
+      },
+      "SmsMfaSetupReq": {
+        "type": "object",
+        "properties": {
+          "phoneNumber": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phoneNumber"
+        ]
+      },
+      "SmsMfaConfigRes": {
+        "type": "object",
+        "properties": {
+          "allowFallbackToEmailMfa": {
+            "type": "boolean"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowFallbackToEmailMfa",
+          "countryCode",
+          "phoneNumber"
+        ]
+      },
+      "PasskeyEnrollInfoRes": {
+        "type": "object",
+        "properties": {
+          "enrollOptions": {
+            "type": "object",
+            "description": "PublicKeyCredentialCreationOptions suitable for JSON transmission to navigator.credentials.create()",
+            "required": [
+              "rp",
+              "user",
+              "challenge",
+              "pubKeyCredParams"
+            ],
+            "properties": {
+              "rp": {
+                "type": "object",
+                "description": "Relying Party entity",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "user": {
+                "type": "object",
+                "description": "User entity JSON",
+                "required": [
+                  "id",
+                  "name",
+                  "displayName"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "challenge": {
+                "type": "string",
+                "format": "base64url",
+                "description": "Base64URL-encoded challenge"
+              },
+              "pubKeyCredParams": {
+                "type": "array",
+                "description": "Public key credential parameters",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "alg"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "public-key"
+                      ]
+                    },
+                    "alg": {
+                      "type": "integer",
+                      "description": "COSE algorithm identifier"
+                    }
+                  }
+                }
+              },
+              "timeout": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Milliseconds to wait for completion"
+              },
+              "excludeCredentials": {
+                "type": "array",
+                "description": "Credentials to exclude",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "base64url"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "public-key"
+                      ]
+                    },
+                    "transports": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "ble",
+                          "cable",
+                          "hybrid",
+                          "internal",
+                          "nfc",
+                          "smart-card",
+                          "usb"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "authenticatorSelection": {
+                "type": "object",
+                "description": "Authenticator selection criteria",
+                "properties": {
+                  "authenticatorAttachment": {
+                    "type": "string",
+                    "enum": [
+                      "platform",
+                      "cross-platform"
+                    ]
+                  },
+                  "requireResidentKey": {
+                    "type": "boolean"
+                  },
+                  "residentKey": {
+                    "type": "string",
+                    "enum": [
+                      "discouraged",
+                      "preferred",
+                      "required"
+                    ]
+                  },
+                  "userVerification": {
+                    "type": "string",
+                    "enum": [
+                      "discouraged",
+                      "preferred",
+                      "required"
+                    ]
+                  }
+                }
+              },
+              "hints": {
+                "type": "array",
+                "description": "Credential UX hints",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "hybrid",
+                    "security-key",
+                    "client-device"
+                  ]
+                }
+              },
+              "attestation": {
+                "type": "string",
+                "enum": [
+                  "direct",
+                  "enterprise",
+                  "indirect",
+                  "none"
+                ],
+                "description": "Attestation conveyance preference"
+              },
+              "attestationFormats": {
+                "type": "array",
+                "description": "Supported attestation formats",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "fido-u2f",
+                    "packed",
+                    "android-safetynet",
+                    "android-key",
+                    "tpm",
+                    "apple",
+                    "none"
+                  ]
+                }
+              },
+              "extensions": {
+                "type": "object",
+                "description": "Authentication extensions inputs",
+                "properties": {
+                  "appid": {
+                    "type": "string"
+                  },
+                  "credProps": {
+                    "type": "boolean"
+                  },
+                  "hmacCreateSecret": {
+                    "type": "boolean"
+                  },
+                  "minPinLength": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "enrollOptions"
+        ]
+      },
+      "PostPasskeyEnrollReq": {
+        "type": "object",
+        "properties": {
+          "enrollInfo": {
+            "type": "object",
+            "description": "Registration response JSON from navigator.credentials.create(), with all ArrayBuffers Base64URL-encoded",
+            "required": [
+              "id",
+              "rawId",
+              "response",
+              "clientExtensionResults",
+              "type"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "base64url",
+                "description": "Base64URL-encoded credential ID"
+              },
+              "rawId": {
+                "type": "string",
+                "format": "base64url",
+                "description": "Base64URL-encoded raw credential ID"
+              },
+              "response": {
+                "type": "object",
+                "description": "Authenticator attestation response, with all binary fields Base64URL-encoded",
+                "required": [
+                  "clientDataJSON",
+                  "attestationObject"
+                ],
+                "properties": {
+                  "clientDataJSON": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded JSON of the clientData"
+                  },
+                  "attestationObject": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded CBOR attestation object"
+                  },
+                  "authenticatorData": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded authenticatorData (optional)"
+                  },
+                  "transports": {
+                    "type": "array",
+                    "description": "Supported authenticator transports (optional)",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "ble",
+                        "cable",
+                        "hybrid",
+                        "internal",
+                        "nfc",
+                        "smart-card",
+                        "usb"
+                      ]
+                    }
+                  },
+                  "publicKeyAlgorithm": {
+                    "type": "integer",
+                    "description": "COSE algorithm identifier (optional)"
+                  },
+                  "publicKey": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded raw public key (optional)"
+                  }
+                }
+              },
+              "authenticatorAttachment": {
+                "type": "string",
+                "description": "Where the credential is stored (optional)",
+                "enum": [
+                  "platform",
+                  "cross-platform"
+                ]
+              },
+              "clientExtensionResults": {
+                "type": "object",
+                "description": "Results of any client-side extensions",
+                "properties": {
+                  "appid": {
+                    "type": "boolean",
+                    "description": "appid extension result (optional)"
+                  },
+                  "credProps": {
+                    "type": "object",
+                    "description": "credProps extension result (optional)",
+                    "properties": {
+                      "rk": {
+                        "type": "boolean",
+                        "description": "Whether the credential is resident-key capable"
+                      }
+                    }
+                  },
+                  "hmacCreateSecret": {
+                    "type": "boolean",
+                    "description": "hmacCreateSecret extension result (optional)"
+                  }
+                }
+              },
+              "type": {
+                "type": "string",
+                "description": "Credential type",
+                "enum": [
+                  "public-key"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "enrollInfo"
+        ]
+      },
+      "PostPasskeyEnrollDeclineReq": {
+        "type": "object",
+        "properties": {
+          "remember": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "remember"
+        ]
+      },
+      "PasskeyVerifyInfoRes": {
+        "type": "object",
+        "properties": {
+          "passkeyOption": {
+            "type": "object",
+            "nullable": true,
+            "description": "A variant of PublicKeyCredentialRequestOptions suitable for JSON transmission to the browser to be passed into navigator.credentials.get().",
+            "required": [
+              "challenge"
+            ],
+            "properties": {
+              "challenge": {
+                "type": "string",
+                "format": "base64url",
+                "description": "Base64URL-encoded challenge"
+              },
+              "timeout": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Milliseconds the caller is willing to wait for the call to complete"
+              },
+              "rpId": {
+                "type": "string",
+                "description": "Relying Party identifier"
+              },
+              "allowCredentials": {
+                "type": "array",
+                "description": "List of credential descriptors that are allowed for assertion",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "base64url",
+                      "description": "Base64URL-encoded credential ID"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "public-key"
+                      ],
+                      "description": "Credential type"
+                    },
+                    "transports": {
+                      "type": "array",
+                      "description": "Allowed authenticator transports",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "ble",
+                          "cable",
+                          "hybrid",
+                          "internal",
+                          "nfc",
+                          "smart-card",
+                          "usb"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "userVerification": {
+                "type": "string",
+                "enum": [
+                  "discouraged",
+                  "preferred",
+                  "required"
+                ],
+                "description": "User verification requirement"
+              },
+              "hints": {
+                "type": "array",
+                "description": "Hints to guide the browser’s authenticator UX",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "hybrid",
+                    "security-key",
+                    "client-device"
+                  ]
+                }
+              },
+              "extensions": {
+                "type": "object",
+                "description": "Authentication extension inputs",
+                "properties": {
+                  "appid": {
+                    "type": "string"
+                  },
+                  "credProps": {
+                    "type": "boolean"
+                  },
+                  "hmacCreateSecret": {
+                    "type": "boolean"
+                  },
+                  "minPinLength": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "passkeyOption"
+        ]
+      },
+      "PostPasskeyVerifyReq": {
+        "type": "object",
+        "properties": {
+          "passkeyInfo": {
+            "type": "object",
+            "description": "Authentication response JSON from navigator.credentials.get(), with all ArrayBuffers Base64URL-encoded",
+            "required": [
+              "id",
+              "rawId",
+              "response",
+              "clientExtensionResults",
+              "type"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "base64url",
+                "description": "Base64URL-encoded credential ID"
+              },
+              "rawId": {
+                "type": "string",
+                "format": "base64url",
+                "description": "Base64URL-encoded raw credential ID"
+              },
+              "response": {
+                "type": "object",
+                "description": "Authenticator assertion response, with all binary fields Base64URL-encoded",
+                "required": [
+                  "clientDataJSON",
+                  "authenticatorData",
+                  "signature"
+                ],
+                "properties": {
+                  "clientDataJSON": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded JSON of the clientData"
+                  },
+                  "authenticatorData": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded authenticatorData"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded assertion signature"
+                  },
+                  "userHandle": {
+                    "type": "string",
+                    "format": "base64url",
+                    "description": "Base64URL-encoded user handle (optional)"
+                  }
+                }
+              },
+              "authenticatorAttachment": {
+                "type": "string",
+                "description": "Where the credential is stored (optional)",
+                "enum": [
+                  "platform",
+                  "cross-platform"
+                ]
+              },
+              "clientExtensionResults": {
+                "type": "object",
+                "description": "Results of any client-side extensions",
+                "properties": {
+                  "appid": {
+                    "type": "boolean",
+                    "description": "appid extension result (optional)"
+                  },
+                  "credProps": {
+                    "type": "object",
+                    "description": "credProps extension result (optional)",
+                    "properties": {
+                      "rk": {
+                        "type": "boolean",
+                        "description": "Whether the credential is resident-key capable"
+                      }
+                    }
+                  },
+                  "hmacCreateSecret": {
+                    "type": "boolean",
+                    "description": "hmacCreateSecret extension result (optional)"
+                  }
+                }
+              },
+              "type": {
+                "type": "string",
+                "description": "Credential type",
+                "enum": [
+                  "public-key"
+                ]
+              }
+            }
+          },
+          "challenge": {
+            "type": "string",
+            "description": "The challenge value read from the response of Get passkey verify options"
+          }
+        },
+        "required": [
+          "passkeyInfo",
+          "challenge"
+        ]
+      },
+      "RecoveryCodeEnrollRes": {
+        "type": "object",
+        "properties": {
+          "recoveryCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recoveryCode"
+        ]
+      },
+      "AuthRes": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "nextStep": {
+            "type": "string",
+            "enum": [
+              "consent",
+              "mfa_enroll",
+              "email_mfa",
+              "sms_mfa",
+              "otp_setup",
+              "otp_mfa",
+              "passkey_enroll"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sessionId",
+          "success"
+        ]
+      },
+      "SignInWithRecoveryCodeRes": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "nextStep": {
+            "type": "string",
+            "enum": [
+              "consent",
+              "mfa_enroll",
+              "email_mfa",
+              "sms_mfa",
+              "otp_setup",
+              "otp_mfa",
+              "passkey_enroll"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "recoveryCode": {
+            "type": "string",
+            "description": "A freshly issued recovery code that replaces the one just consumed. Display it to the user once; it cannot be retrieved again."
+          }
+        },
+        "required": [
+          "sessionId",
+          "success",
+          "recoveryCode"
+        ]
+      },
+      "TokenExchangeRes": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "number"
+          },
+          "expires_on": {
+            "type": "number"
+          },
+          "not_before": {
+            "type": "number"
+          },
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "scope": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "refresh_token_expires_in": {
+            "type": "number"
+          },
+          "refresh_token_expires_on": {
+            "type": "number"
+          },
+          "id_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in",
+          "expires_on",
+          "not_before",
+          "token_type",
+          "scope"
+        ]
+      },
+      "TokenRefreshReq": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "TokenRefreshRes": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "number"
+          },
+          "expires_on": {
+            "type": "number"
+          },
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in",
+          "expires_on",
+          "token_type"
+        ]
+      },
+      "SignOutReq": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken",
+          "clientId"
+        ]
+      },
+      "GetAppConsentRes": {
+        "type": "object",
+        "properties": {
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "deletedAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": null
+                },
+                "locales": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number"
+                      },
+                      "scopeId": {
+                        "type": "number"
+                      },
+                      "locale": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      },
+                      "updatedAt": {
+                        "type": "string"
+                      },
+                      "deletedAt": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": null
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "appName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "scopes",
+          "appName"
+        ]
+      },
+      "ResetPasswordReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "UserOrgsRes": {
+        "type": "object",
+        "properties": {
+          "orgs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "companyLogoUrl": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "activeOrgSlug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orgs",
+          "activeOrgSlug"
+        ]
+      },
+      "PostProcessSwitchOrgReq": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "org"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/embedded-auth/v1/initiate": {
+      "post": {
+        "summary": "Initiate a new embedded auth session",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostInitiateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A session id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/sign-up": {
+      "get": {
+        "summary": "Get sign up info, only need to call this endpoint if you enabled user attribute for sign up form",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sign up info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSignUpInfoRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Sign up using the embedded auth session",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostSignUpReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next step of the auth flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/sign-in": {
+      "post": {
+        "summary": "Sign in using the embedded auth session",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostSignInReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next step of the auth flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/app-consent": {
+      "get": {
+        "summary": "Get app consent",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "App consent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAppConsentRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Post app consent",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "App consent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/mfa-enrollment": {
+      "get": {
+        "summary": "Get mfa enrollment",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mfa enrollment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaEnrollmentInfoRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Enroll a new mfa",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostMfaEnrollmentReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mfa enrolled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/email-mfa-code": {
+      "post": {
+        "summary": "send an email mfa code to the user",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "an email mfa code has been sent to the user"
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/email-mfa": {
+      "post": {
+        "summary": "verify the email mfa code",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "the email mfa code has been verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/otp-mfa-setup": {
+      "get": {
+        "summary": "get the otp mfa initial setup info, this is for the first time otp mfa setup",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the otp mfa initial setup info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpMfaSetupRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/otp-mfa": {
+      "get": {
+        "summary": "get the otp mfa config, this is for the existing otp mfa verification",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the otp mfa config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpMfaConfigRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "verify the otp mfa code",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "the otp mfa code has been verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/sms-mfa-setup": {
+      "post": {
+        "summary": "send a sms mfa code to the phone number provided, this is for the first time sms mfa setup",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmsMfaSetupReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "a new sms mfa code has been sent to the user"
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/sms-mfa": {
+      "get": {
+        "summary": "get the sms mfa config, this will also send a sms mfa code to the user",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the sms mfa config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmsMfaConfigRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "verify the sms mfa code",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "the sms mfa code has been verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/sms-mfa-code": {
+      "post": {
+        "summary": "send a new sms mfa code to the user",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "a new sms mfa code has been sent to the user"
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/passkey-enroll": {
+      "get": {
+        "summary": "get the passkey enroll options",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the passkey enroll options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyEnrollInfoRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "enroll a new passkey",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostPasskeyEnrollReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next step of the auth flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/passkey-enroll-decline": {
+      "post": {
+        "summary": "decline to enroll a new passkey",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostPasskeyEnrollDeclineReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next step of the auth flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/passkey-verify": {
+      "get": {
+        "summary": "Get the passkey verify options for the target email",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the passkey verify options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyVerifyInfoRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "verify a passkey",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostPasskeyVerifyReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next step of the auth flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/recovery-code-enroll": {
+      "get": {
+        "summary": "get the recovery code, this is for the first time recovery code enroll",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the recovery code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodeEnrollRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/recovery-code": {
+      "post": {
+        "summary": "sign in with a recovery code",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostSignInWithRecoveryCodeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next step of the auth flow, plus a freshly issued recovery code that replaces the consumed one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInWithRecoveryCodeRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/switch-org": {
+      "get": {
+        "summary": "Get user orgs",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User orgs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOrgsRes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Switch user org",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostProcessSwitchOrgReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next step of the auth flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/{sessionId}/app-banners": {
+      "get": {
+        "summary": "get the app banners",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the app banners",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppBannersRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/token-exchange": {
+      "post": {
+        "summary": "Exchange the auth code for access token, refresh token, id token",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenExchangeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Access token, refresh token, id token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenExchangeRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/token-refresh": {
+      "post": {
+        "summary": "Refresh the access token",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefreshReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRefreshRes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/sign-out": {
+      "post": {
+        "summary": "Sign out",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignOutReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sign out successfully"
+          }
+        }
+      }
+    },
+    "/embedded-auth/v1/reset-password-code": {
+      "post": {
+        "summary": "Trigger a password reset code",
+        "tags": [
+          "Embedded Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset email triggered"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

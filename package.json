@@ -56,6 +56,7 @@
     "identity:typecheck": "npm --prefix workers/identity run typecheck",
     "identity:test": "npm --prefix workers/identity test",
     "identity:keyset": "node scripts/superboard-generate-identity-keyset.mjs",
+    "identity:melody-secrets": "node scripts/superboard-generate-melody-auth-secrets.mjs",
     "identity:cutover:verify": "node scripts/cloudflare-identity-cutover.mjs",
     "identity:check": "npm run identity:types && npm run identity:typecheck && npm run identity:test && node scripts/cloudflare-dry-run.mjs --service identity --reference --allow-unprovisioned",
     "files:types": "node scripts/cloudflare-types.mjs --service files --reference --allow-unprovisioned",
@@ -117,6 +118,10 @@
     "react-native:audit": "npm --prefix sdks/react-native run security:audit",
     "react-native:check": "npm run react-native:native-contract:check && npm --prefix sdks/react-native run check",
     "portable-sdks:check": "npm run javascript:check && npm run react-native:check",
+    "identity-sdks:typecheck": "npm run identity-sdks:build && for sdk in web react vue angular nextjs; do npm --prefix sdks/identity/$sdk run type:check || exit 1; done",
+    "identity-sdks:test": "for sdk in web react vue angular nextjs; do npm --prefix sdks/identity/$sdk run test:check || exit 1; done",
+    "identity-sdks:build": "for sdk in web react vue angular nextjs; do npm --prefix sdks/identity/$sdk run build || exit 1; done",
+    "identity-sdks:check": "npm run identity-sdks:typecheck && npm run identity-sdks:test",
     "worker:deploy": "npm run cloudflare:deploy -- --service api",
     "migration:inventory": "node scripts/superboard-inventory.mjs --summary",
     "migration:inventory:test": "node --test scripts/api-migrations.test.mjs scripts/analytics-reconcile.test.mjs scripts/superboard-inventory.test.mjs",
@@ -148,7 +153,7 @@
     "cloudflare:types:reference": "node scripts/cloudflare-types-reference.mjs --reference",
     "cloudflare:types:check": "node scripts/cloudflare-types-reference.mjs --reference --check",
     "cloudflare:types:check:target": "node scripts/cloudflare-types-reference.mjs --check",
-    "cloudflare:test:targets": "node --test scripts/backoffice-policy.test.mjs scripts/cloudflare-bootstrap.test.mjs scripts/cloudflare-worker-shells.test.mjs scripts/cloudflare-development-secrets.test.mjs scripts/cloudflare-target.test.mjs scripts/cloudflare-types-reference.test.mjs scripts/superboard-environment.test.mjs scripts/cloudflare-deploy-plan.test.mjs scripts/cloudflare-domain-plan.test.mjs scripts/cloudflare-migration-batch.test.mjs scripts/cloudflare-services.test.mjs scripts/configuration-boundaries.test.mjs scripts/custom-worker-check.test.mjs scripts/github-bootstrap.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs scripts/github-history-plan.test.mjs scripts/github-readiness.test.mjs scripts/github-reconcile.test.mjs scripts/non-node-security-audit.test.mjs scripts/superboard-configure-application.test.mjs scripts/superboard-generate-identity-keyset.test.mjs scripts/superboard-target-options.test.mjs scripts/platform-readiness.test.mjs scripts/public-routing-gate.test.mjs scripts/vocostar-managed-workers.test.mjs scripts/cloudflare-d1-*.test.mjs scripts/cloudflare-secret-bundle.test.mjs scripts/cloudflare-secret-promote.test.mjs scripts/cloudflare-secret-retire.test.mjs scripts/cloudflare-secret-inventory.test.mjs scripts/cloudflare-secret-preflight.test.mjs scripts/cloudflare-rotate-oauth.test.mjs",
+    "cloudflare:test:targets": "node --test scripts/backoffice-policy.test.mjs scripts/cloudflare-bootstrap.test.mjs scripts/cloudflare-worker-shells.test.mjs scripts/cloudflare-development-secrets.test.mjs scripts/cloudflare-target.test.mjs scripts/cloudflare-types-reference.test.mjs scripts/superboard-environment.test.mjs scripts/cloudflare-deploy-plan.test.mjs scripts/cloudflare-domain-plan.test.mjs scripts/cloudflare-migration-batch.test.mjs scripts/cloudflare-services.test.mjs scripts/configuration-boundaries.test.mjs scripts/custom-worker-check.test.mjs scripts/github-bootstrap.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs scripts/github-history-plan.test.mjs scripts/github-readiness.test.mjs scripts/github-reconcile.test.mjs scripts/non-node-security-audit.test.mjs scripts/superboard-configure-application.test.mjs scripts/superboard-generate-identity-keyset.test.mjs scripts/superboard-generate-melody-auth-secrets.test.mjs scripts/superboard-target-options.test.mjs scripts/platform-readiness.test.mjs scripts/public-routing-gate.test.mjs scripts/vocostar-managed-workers.test.mjs scripts/cloudflare-d1-*.test.mjs scripts/cloudflare-secret-bundle.test.mjs scripts/cloudflare-secret-promote.test.mjs scripts/cloudflare-secret-retire.test.mjs scripts/cloudflare-secret-inventory.test.mjs scripts/cloudflare-secret-preflight.test.mjs scripts/cloudflare-rotate-oauth.test.mjs",
     "configuration:check": "node scripts/configuration-boundaries.mjs",
     "configuration:test": "node --test scripts/configuration-boundaries.test.mjs",
     "cloudflare:rotate-oauth": "node scripts/cloudflare-rotate-oauth.mjs",
@@ -183,7 +188,7 @@
     "test": "npm run contracts:test && npm run dashboard:test && npm run worker:test && npm run billing:test && npm run email:test && npm run identity:test && npm run files:test && npm run observability:test && npm run mcp:test && npm run modules:test",
     "contracts:test": "npx vitest run packages/contracts/src",
     "test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 npm run test:e2e",
-    "test:all": "npm run brand:check && npm run copy:check && npm run sdk:catalog:check && npm run sdk:catalog:test && npm run sdk:documentation:check && npm run flutterflow:source:test && npm run flutterflow-library:check && npm run flutterflow-applications:check && npm run migration:inventory && npm run migration:inventory:test && npm run cloudflare:test:targets && npm run dashboard:lint && npm run typecheck && npm run custom:check:all && npm run legacy-messaging:check && npm run chatwoot:test && npm run flutter:check && npm run portable-sdks:check && npm run test && npm run module-cutover:test && npm run dashboard:cf-build:reference && npm run worker:check && npm run identity:check && npm run files:check && npm run observability:check && npm run mcp:check && npm run modules:check"
+    "test:all": "npm run brand:check && npm run copy:check && npm run sdk:catalog:check && npm run sdk:catalog:test && npm run sdk:documentation:check && npm run flutterflow:source:test && npm run flutterflow-library:check && npm run flutterflow-applications:check && npm run migration:inventory && npm run migration:inventory:test && npm run cloudflare:test:targets && npm run dashboard:lint && npm run typecheck && npm run custom:check:all && npm run legacy-messaging:check && npm run chatwoot:test && npm run flutter:check && npm run portable-sdks:check && npm run identity-sdks:check && npm run test && npm run module-cutover:test && npm run dashboard:cf-build:reference && npm run worker:check && npm run identity:check && npm run files:check && npm run observability:check && npm run mcp:check && npm run modules:check"
   },
   "workspaces": [
     "apps/dashboard",
@@ -209,7 +214,12 @@
     "workers/custom/vocostar/orchestrators/medias",
     "workers/custom/vocostar/orchestrators/vocals",
     "packages/contracts",
-    "packages/email-transport"
+    "packages/email-transport",
+    "sdks/identity/web",
+    "sdks/identity/react",
+    "sdks/identity/vue",
+    "sdks/identity/angular",
+    "sdks/identity/nextjs"
   ],
   "overrides": {
     "glob@12.0.0": {
@@ -219,6 +229,7 @@
     "sharp": "0.35.3"
   },
   "devDependencies": {
+    "@peculiar/x509": "^1.14.3",
     "ajv": "^8.17.1",
     "eslint": "^9.39.2"
   }

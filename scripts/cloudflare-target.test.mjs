@@ -6,6 +6,7 @@ import {
   cloudflareEnv,
   environmentFromArgs,
   loadTarget,
+  publicAuthUrl,
   publicApiUrl,
   targetSelectionFromArgs,
   targetNameFromArgs,
@@ -16,7 +17,7 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   for (const name of ["mbza-development", "vocostar"]) {
     const { target } = await loadTarget(name);
     assert.equal("accountId" in target, false);
-    assert.equal(target.schemaVersion, 14);
+    assert.equal(target.schemaVersion, 15);
     assert.deepEqual(
       target.resourceIdentity,
       name === "mbza-development"
@@ -101,6 +102,7 @@ test("mbza development domains keep API and short links separate", async () => {
   const { target } = await loadTarget("mbza-development");
   assert.equal(target.environments.development.publicRouting, "active");
   assert.equal(publicApiUrl(target), "https://api.mbza.dev");
+  assert.equal(publicAuthUrl(target), "https://auth.mbza.dev");
   assert.equal(target.domains.shortlinks, "in.mbza.dev");
   assert.equal(target.domains.dashboard, "board.mbza.dev");
   assert.deepEqual(target.retiredDomains, [

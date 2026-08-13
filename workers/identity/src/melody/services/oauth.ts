@@ -1,0 +1,304 @@
+import { Context } from 'hono'
+import { env } from 'hono/adapter'
+import {
+  ClientType, PostTokenByAuthCodeRes, PostTokenByRefreshTokenRes, Scope, genRandomString,
+} from '@melody-auth/shared'
+import {
+  errorConfig, messageConfig, typeConfig,
+} from '../configs'
+import {
+  cryptoUtil, loggerUtil, requestUtil, timeUtil,
+} from '../utils'
+import {
+  identityService,
+  identityBridgeService,
+  jwtService,
+  kvService,
+  roleService,
+  scopeService,
+  userService,
+} from './'
+import { oauthDto } from '../dtos'
+import {
+  signInLogModel, userAttributeModel, userAttributeValueModel, userModel,
+} from '../models'
+
+export const handleAuthCodeTokenExchange = async (
+  c: Context<typeConfig.Context>,
+  authInfo: typeConfig.AuthCodeBody,
+  bodyDto: oauthDto.PostTokenAuthCodeDto,
+  options: { persistAuthCode?: boolean } = {},
+) => {
+  const { AUTH_CODE_VERIFIER_THRESHOLD: threshold } = env(c)
+
+  let ip: string | undefined
+  let failedAttempts = 0
+  if (threshold) {
+    ip = requestUtil.getRequestIP(c)
+    failedAttempts = await kvService.getFailedAuthCodeVerifierAttemptsByIP(
+      c.env.KV,
+      authInfo.user.id,
+      ip,
+    )
+    if (failedAttempts >= threshold) {
+      loggerUtil.triggerLogger(
+        c,
+        loggerUtil.LoggerLevel.Warn,
+        messageConfig.RequestError.AuthCodeVerifierLocked,
+      )
+      throw new errorConfig.Forbidden(messageConfig.RequestError.AuthCodeVerifierLocked)
+    }
+  }
+
+  const isValidChallenge = await cryptoUtil.isValidCodeChallenge(
+    bodyDto.codeVerifier,
+    authInfo.request.codeChallenge,
+    authInfo.request.codeChallengeMethod,
+  )
+  if (!isValidChallenge) {
+    if (threshold) {
+      await kvService.setFailedAuthCodeVerifierAttempts(
+        c.env.KV,
+        authInfo.user.id,
+        ip,
+        failedAttempts + 1,
+      )
+    }
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongCodeVerifier,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongCodeVerifier)
+  }
+
+  const {
+    ENABLE_SIGN_IN_LOG: enableSignInLog,
+    ENABLE_USER_ATTRIBUTE: enableUserAttribute,
+  } = env(c)
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+    options,
+  )
+
+  const authorizedScopes = await scopeService.verifyAppScopes(
+    c,
+    authInfo.appId,
+    authInfo.request.scopes,
+  )
+  const scopedAuthInfo = {
+    ...authInfo,
+    request: {
+      ...authInfo.request,
+      scopes: authorizedScopes,
+    },
+  }
+
+  const userRoles = await roleService.getUserRoles(
+    c,
+    authInfo.user.id,
+  )
+  const authId = await identityBridgeService.canonicalSubject(
+    c,
+    authInfo.appId,
+    authInfo.user,
+  )
+  const scope = authorizedScopes.join(' ')
+  const currentTimestamp = timeUtil.getCurrentTimestamp()
+
+  const {
+    accessToken,
+    accessTokenExpiresIn,
+    accessTokenExpiresAt,
+  } = await jwtService.genAccessToken(
+    c,
+    ClientType.SPA,
+    currentTimestamp,
+    authId,
+    authInfo.request.clientId,
+    scope,
+    userRoles,
+  )
+
+  const result: PostTokenByAuthCodeRes = {
+    access_token: accessToken,
+    expires_in: accessTokenExpiresIn,
+    expires_on: accessTokenExpiresAt,
+    not_before: currentTimestamp,
+    token_type: 'Bearer',
+    scope,
+  }
+
+  if (authorizedScopes.includes(Scope.OfflineAccess)) {
+    const { SPA_REFRESH_TOKEN_EXPIRES_IN: refreshTokenExpiresIn } = env(c)
+    const refreshToken = `${authInfo.user.id}.${genRandomString(128)}`
+    const refreshTokenExpiresAt = currentTimestamp + refreshTokenExpiresIn
+
+    result.refresh_token = refreshToken
+    result.refresh_token_expires_in = refreshTokenExpiresIn
+    result.refresh_token_expires_on = refreshTokenExpiresAt
+
+    await kvService.storeRefreshToken(
+      c.env.KV,
+      refreshToken,
+      {
+        authId,
+        melodyUserId: authInfo.user.id,
+        clientId: authInfo.request.clientId,
+        scope,
+        roles: userRoles,
+        expiredAt: refreshTokenExpiresAt,
+      },
+      refreshTokenExpiresIn,
+    )
+  }
+
+  if (authorizedScopes.includes(Scope.OpenId)) {
+    let attributes: Record<string, string> | undefined
+    if (enableUserAttribute) {
+      attributes = {}
+      const userAttributes = await userAttributeModel.getAll(c.env.DB)
+      const userAttributeValues = await userAttributeValueModel.getAllByUserId(
+        c.env.DB,
+        authInfo.user.id,
+      )
+      for (const userAttributeValue of userAttributeValues) {
+        const userAttribute = userAttributes.find((attribute) => attribute.id === userAttributeValue.userAttributeId)
+        if (userAttribute?.includeInIdTokenBody) {
+          attributes[userAttribute.name] = userAttributeValue.value
+        }
+      }
+    }
+
+    const { idToken } = await jwtService.genIdToken(
+      c,
+      currentTimestamp,
+      scopedAuthInfo,
+      userRoles,
+      attributes,
+      authId,
+    )
+    result.id_token = idToken
+  }
+
+  await userService.increaseLoginCount(
+    c,
+    authInfo.user.id,
+  )
+
+  if (enableSignInLog) {
+    const ip = requestUtil.getRequestIP(c)
+    let detail = null
+    if ('cf' in c.req.raw) {
+      const cf = c.req.raw.cf as {
+        longitude: string;
+        continent: string;
+        country: string;
+        timezone: string;
+        region: string;
+        regionCode: string;
+        latitude: string;
+      }
+      detail = JSON.stringify({
+        longitude: cf.longitude,
+        continent: cf.continent,
+        country: cf.country,
+        timezone: cf.timezone,
+        region: cf.region,
+        regionCode: cf.regionCode,
+        latitude: cf.latitude,
+      })
+    }
+    await signInLogModel.create(
+      c.env.DB,
+      {
+        userId: authInfo.user.id,
+        ip: ip ?? null,
+        detail,
+      },
+    )
+  }
+
+  return result
+}
+
+export const handleRefreshTokenTokenExchange = async (
+  c: Context<typeConfig.Context>,
+  bodyDto: oauthDto.PostTokenRefreshTokenDto,
+) => {
+  const refreshTokenBody = await kvService.getRefreshTokenBody(
+    c,
+    bodyDto.refreshToken,
+  )
+
+  const user = refreshTokenBody.melodyUserId
+    ? await userModel.getById(
+      c.env.DB,
+      refreshTokenBody.melodyUserId,
+    )
+    : await identityBridgeService.resolveUserBySubject(
+      c,
+      refreshTokenBody.authId,
+      refreshTokenBody.clientId,
+    )
+  if (!user || !user.isActive) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.UserDisabled,
+    )
+    throw new errorConfig.UnAuthorized(messageConfig.RequestError.UserDisabled)
+  }
+
+  const {
+    accessToken,
+    accessTokenExpiresIn,
+    accessTokenExpiresAt,
+  } = await jwtService.genAccessToken(
+    c,
+    ClientType.SPA,
+    timeUtil.getCurrentTimestamp(),
+    refreshTokenBody.authId,
+    refreshTokenBody.clientId,
+    refreshTokenBody.scope,
+    refreshTokenBody.roles,
+    refreshTokenBody.impersonatedBy,
+  )
+
+  const result: PostTokenByRefreshTokenRes = {
+    access_token: accessToken,
+    expires_in: accessTokenExpiresIn,
+    expires_on: accessTokenExpiresAt,
+    token_type: 'Bearer',
+  }
+
+  return result
+}
+
+export const handleInvalidRefreshToken = async (
+  c: Context<typeConfig.Context>,
+  refreshToken: string,
+  clientId: string,
+) => {
+  const refreshTokenBody = await kvService.getRefreshTokenBody(
+    c,
+    refreshToken,
+  )
+
+  if (!refreshTokenBody || clientId !== refreshTokenBody.clientId) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongRefreshToken,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongRefreshToken)
+  }
+
+  await kvService.invalidRefreshToken(
+    c.env.KV,
+    refreshToken,
+  )
+}

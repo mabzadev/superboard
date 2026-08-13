@@ -1,0 +1,115 @@
+import { Context } from 'hono'
+import { env } from 'hono/adapter'
+import { Scope } from '@melody-auth/shared'
+import { oauthDto } from '../dtos'
+import {
+  routeConfig, typeConfig,
+  variableConfig,
+} from '../configs'
+import { kvService } from '../services'
+import { cryptoUtil } from '../utils'
+
+export const getSystemInfo = async (c: Context<typeConfig.Context>) => {
+  const environment = env(c)
+
+  const configs = {
+    AUTHORIZATION_CODE_EXPIRES_IN: environment.AUTHORIZATION_CODE_EXPIRES_IN,
+    SPA_ACCESS_TOKEN_EXPIRES_IN: environment.SPA_ACCESS_TOKEN_EXPIRES_IN,
+    SPA_REFRESH_TOKEN_EXPIRES_IN: environment.SPA_REFRESH_TOKEN_EXPIRES_IN,
+    S2S_ACCESS_TOKEN_EXPIRES_IN: environment.S2S_ACCESS_TOKEN_EXPIRES_IN,
+    ID_TOKEN_EXPIRES_IN: environment.ID_TOKEN_EXPIRES_IN,
+    SERVER_SESSION_EXPIRES_IN: environment.SERVER_SESSION_EXPIRES_IN,
+    AUTH_SERVER_URL: environment.AUTH_SERVER_URL,
+    SUPPORTED_LOCALES: environment.SUPPORTED_LOCALES,
+    ENABLE_LOCALE_SELECTOR: environment.ENABLE_LOCALE_SELECTOR,
+    COMPANY_LOGO_URL: environment.COMPANY_LOGO_URL,
+    COMPANY_EMAIL_LOGO_URL: environment.COMPANY_EMAIL_LOGO_URL,
+    EMAIL_SENDER_NAME: environment.EMAIL_SENDER_NAME,
+    GOOGLE_AUTH_CLIENT_ID: environment.GOOGLE_AUTH_CLIENT_ID,
+    FACEBOOK_AUTH_CLIENT_ID: environment.FACEBOOK_AUTH_CLIENT_ID,
+    GITHUB_AUTH_CLIENT_ID: environment.GITHUB_AUTH_CLIENT_ID,
+    GITHUB_AUTH_APP_NAME: environment.GITHUB_AUTH_APP_NAME,
+    DISCORD_AUTH_CLIENT_ID: environment.DISCORD_AUTH_CLIENT_ID,
+    APPLE_AUTH_CLIENT_ID: environment.APPLE_AUTH_CLIENT_ID,
+    OIDC_AUTH_PROVIDERS: environment.OIDC_AUTH_PROVIDERS,
+    ENABLE_SIGN_UP: environment.ENABLE_SIGN_UP,
+    ENABLE_PASSWORD_RESET: environment.ENABLE_PASSWORD_RESET,
+    PASSWORD_RESET_EMAIL_THRESHOLD: environment.PASSWORD_RESET_EMAIL_THRESHOLD,
+    PASSWORD_RESET_CODE_THRESHOLD: environment.PASSWORD_RESET_CODE_THRESHOLD,
+    ENABLE_NAMES: environment.ENABLE_NAMES,
+    NAMES_IS_REQUIRED: environment.NAMES_IS_REQUIRED,
+    ENABLE_USER_APP_CONSENT: environment.ENABLE_USER_APP_CONSENT,
+    ENFORCE_ONE_MFA_ENROLLMENT: environment.ENFORCE_ONE_MFA_ENROLLMENT,
+    ENABLE_EMAIL_VERIFICATION: environment.ENABLE_EMAIL_VERIFICATION,
+    REPLACE_EMAIL_VERIFICATION_WITH_WELCOME_EMAIL: environment.REPLACE_EMAIL_VERIFICATION_WITH_WELCOME_EMAIL,
+    EMAIL_VERIFICATION_CODE_THRESHOLD: environment.EMAIL_VERIFICATION_CODE_THRESHOLD,
+    EMAIL_MFA_IS_REQUIRED: environment.EMAIL_MFA_IS_REQUIRED,
+    EMAIL_MFA_EMAIL_THRESHOLD: environment.EMAIL_MFA_EMAIL_THRESHOLD,
+    CHANGE_EMAIL_EMAIL_THRESHOLD: environment.CHANGE_EMAIL_EMAIL_THRESHOLD,
+    CHANGE_EMAIL_CODE_THRESHOLD: environment.CHANGE_EMAIL_CODE_THRESHOLD,
+    OTP_MFA_IS_REQUIRED: environment.OTP_MFA_IS_REQUIRED,
+    SMS_MFA_IS_REQUIRED: environment.SMS_MFA_IS_REQUIRED,
+    SMS_MFA_MESSAGE_THRESHOLD: environment.SMS_MFA_MESSAGE_THRESHOLD,
+    MFA_CODE_VERIFY_THRESHOLD: environment.MFA_CODE_VERIFY_THRESHOLD,
+    AUTH_CODE_VERIFIER_THRESHOLD: environment.AUTH_CODE_VERIFIER_THRESHOLD,
+    ACCOUNT_LOCKOUT_THRESHOLD: environment.ACCOUNT_LOCKOUT_THRESHOLD,
+    ACCOUNT_LOCKOUT_EXPIRES_IN: environment.ACCOUNT_LOCKOUT_EXPIRES_IN,
+    UNLOCK_ACCOUNT_VIA_PASSWORD_RESET: environment.UNLOCK_ACCOUNT_VIA_PASSWORD_RESET,
+    ALLOW_EMAIL_MFA_AS_BACKUP: environment.ALLOW_EMAIL_MFA_AS_BACKUP,
+    ALLOW_PASSKEY_ENROLLMENT: environment.ALLOW_PASSKEY_ENROLLMENT,
+    BLOCKED_POLICIES: environment.BLOCKED_POLICIES,
+    TERMS_LINK: environment.TERMS_LINK,
+    PRIVACY_POLICY_LINK: environment.PRIVACY_POLICY_LINK,
+    ENABLE_EMAIL_LOG: environment.ENABLE_EMAIL_LOG,
+    ENABLE_SMS_LOG: environment.ENABLE_SMS_LOG,
+    ENABLE_SIGN_IN_LOG: environment.ENABLE_SIGN_IN_LOG,
+    ENABLE_PASSWORD_SIGN_IN: environment.ENABLE_PASSWORD_SIGN_IN,
+    ENABLE_PASSWORDLESS_SIGN_IN: environment.ENABLE_PASSWORDLESS_SIGN_IN,
+    ENABLE_MFA_REMEMBER_DEVICE: environment.ENABLE_MFA_REMEMBER_DEVICE,
+    ENABLE_RECOVERY_CODE: environment.ENABLE_RECOVERY_CODE,
+    ENABLE_ORG: environment.ENABLE_ORG,
+    ALLOW_USER_SWITCH_ORG_ON_SIGN_IN: environment.ALLOW_USER_SWITCH_ORG_ON_SIGN_IN,
+    ENABLE_ORG_GROUP: variableConfig.systemConfig.enableOrgGroup,
+    ENABLE_PLAIN_PKCE_METHOD: variableConfig.systemConfig.enablePlainPkceMethod,
+    ENABLE_USER_ATTRIBUTE: environment.ENABLE_USER_ATTRIBUTE,
+    EMBEDDED_AUTH_ORIGINS: environment.EMBEDDED_AUTH_ORIGINS,
+    ENABLE_SAML_SSO_AS_SP: environment.ENABLE_SAML_SSO_AS_SP,
+    ENABLE_APP_BANNER: environment.ENABLE_APP_BANNER,
+  }
+
+  return c.json({ configs })
+}
+
+export const getOpenidConfig = async (c: Context<typeConfig.Context>) => {
+  const { AUTH_SERVER_URL: serverUrl } = env(c)
+  return c.json({
+    issuer: serverUrl,
+    authorization_endpoint: `${serverUrl}${routeConfig.OauthRoute.Authorize}`,
+    token_endpoint: `${serverUrl}${routeConfig.OauthRoute.Token}`,
+    userinfo_endpoint: `${serverUrl}${routeConfig.OauthRoute.Userinfo}`,
+    revocation_endpoint: `${serverUrl}${routeConfig.OauthRoute.Revoke}`,
+    scopes_supported: Object.values(Scope),
+    response_types_supported: ['code'],
+    grant_types_supported: Object.values(oauthDto.TokenGrantType),
+    token_endpoint_auth_methods_supported: ['client_secret_basic'],
+    claims_supported: ['sub', 'email', 'first_name', 'last_name', 'locale'],
+    id_token_signing_alg_values_supported: ['RS256'],
+    jwks_uri: `${serverUrl}/.well-known/jwks.json`,
+    code_challenge_methods_supported: variableConfig.systemConfig.enablePlainPkceMethod
+      ? ['S256', 'plain']
+      : ['S256'],
+  })
+}
+
+export const getJwks = async (c: Context<typeConfig.Context>) => {
+  const publicKey = await kvService.getJwtPublicSecret(c)
+  const keys = []
+  const jwk = await cryptoUtil.secretToJwk(publicKey)
+  keys.push(jwk)
+  const deprecatedPublicKey = await kvService.getDeprecatedPublicSecret(c.env.KV)
+  if (deprecatedPublicKey) {
+    const deprecatedJwk = await cryptoUtil.secretToJwk(deprecatedPublicKey)
+    keys.push(deprecatedJwk)
+  }
+  return c.json({ keys })
+}

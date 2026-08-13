@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { DASHBOARD_SECTIONS, pageForPath, sectionForPath } from "../navigation";
 
 describe("dashboard navigation", () => {
-  it("defines Dashboard followed by the eight product sections", () => {
+  it("defines Dashboard followed by the nine product sections", () => {
     expect(DASHBOARD_SECTIONS.map(({ label }) => label)).toEqual([
       "Dashboard",
       "App",
+      "Identity",
       "Products",
       "Paywalls",
       "Dynamic Links",
@@ -35,6 +36,21 @@ describe("dashboard navigation", () => {
           "Android Setup",
           "iOS Setup",
           "Web Setup",
+        ],
+      ],
+      [
+        "Identity",
+        [
+          "Overview",
+          "Users",
+          "User Attributes",
+          "Roles",
+          "Applications",
+          "Scopes",
+          "Organizations",
+          "Logs",
+          "SAML SSO",
+          "Account Policies",
         ],
       ],
       ["Products", ["Purchases", "Customers", "Offerings", "Entitlements"]],
@@ -94,7 +110,9 @@ describe("dashboard navigation", () => {
       for (const page of section.pages) {
         expect(
           page.href === `/${section.slug}` ||
-            new RegExp(`^/${section.slug}/[a-z0-9-]+$`).test(page.href)
+            new RegExp(`^/${section.slug}/[a-z0-9-]+(?:/[a-z0-9-]+)?$`).test(
+              page.href
+            )
         ).toBe(true);
       }
     }
@@ -109,11 +127,13 @@ describe("dashboard navigation", () => {
     );
     expect(pageForPath("/paywalls/statistics")?.label).toBe("Statistics");
     expect(pageForPath("/onboardings/statistics")?.label).toBe("Statistics");
+    expect(pageForPath("/identity/en/apps/42")?.label).toBe("Applications");
+    expect(pageForPath("/identity/fr/users/abc")?.label).toBe("Users");
   });
 
-  it("defines Dashboard and exactly 49 physical module pages", () => {
+  it("defines Dashboard and exactly 59 physical module pages", () => {
     expect(DASHBOARD_SECTIONS.flatMap((section) => section.pages)).toHaveLength(
-      50
+      60
     );
   });
 

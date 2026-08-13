@@ -350,6 +350,10 @@ export function publicApiUrl(target) {
   return `https://${target.domains.api}`;
 }
 
+export function publicAuthUrl(target) {
+  return `https://${target.domains.auth}`;
+}
+
 export function publicDashboardUrl(target) {
   return `https://${target.domains.dashboard}`;
 }

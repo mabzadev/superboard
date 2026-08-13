@@ -155,6 +155,7 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
   ]),
   identity: Object.freeze([
     "IDENTITY_KEYSET",
+    "MELODY_AUTH_SECRETS",
     "EMAIL_INTERNAL_TOKEN",
     "FILES_INTERNAL_TOKEN",
     "INTERNAL_API_TOKEN",

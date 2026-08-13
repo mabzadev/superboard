@@ -1,0 +1,4610 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Melody Auth S2S API",
+    "version": "0.0.1"
+  },
+  "security": [
+    {
+      "oauth2": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/oauth2/v1/token",
+            "scopes": {
+              "root": "Full access",
+              "read_app": "Read access to app",
+              "write_app": "Write access to app",
+              "read_user": "Read access to user",
+              "write_user": "Write access to user",
+              "read_role": "Read access to role",
+              "write_role": "Write access to role",
+              "read_scope": "Read access to scope",
+              "write_scope": "Write access to scope",
+              "read_org": "Read access to org",
+              "write_org": "Write access to org"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Scope": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "spa",
+              "s2s"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "note",
+          "type",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "ScopeDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Scope"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "locales": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "number"
+                    },
+                    "scopeId": {
+                      "type": "number"
+                    },
+                    "locale": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "deletedAt": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scopeId",
+                    "locale",
+                    "value",
+                    "createdAt",
+                    "updatedAt",
+                    "deletedAt"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "locales"
+            ]
+          }
+        ]
+      },
+      "PutScopeReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "note": {
+            "type": "string"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          }
+        }
+      },
+      "PostScopeReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "spa",
+              "s2s"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "note",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "PutRoleReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "PostRoleReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "Org": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "allowPublicRegistration": {
+            "type": "boolean"
+          },
+          "onlyUseForBrandingOverride": {
+            "type": "boolean"
+          },
+          "companyLogoUrl": {
+            "type": "string"
+          },
+          "companyEmailLogoUrl": {
+            "type": "string"
+          },
+          "fontFamily": {
+            "type": "string"
+          },
+          "fontUrl": {
+            "type": "string"
+          },
+          "layoutColor": {
+            "type": "string"
+          },
+          "labelColor": {
+            "type": "string"
+          },
+          "primaryButtonColor": {
+            "type": "string"
+          },
+          "primaryButtonLabelColor": {
+            "type": "string"
+          },
+          "primaryButtonBorderColor": {
+            "type": "string"
+          },
+          "secondaryButtonColor": {
+            "type": "string"
+          },
+          "secondaryButtonLabelColor": {
+            "type": "string"
+          },
+          "secondaryButtonBorderColor": {
+            "type": "string"
+          },
+          "criticalIndicatorColor": {
+            "type": "string"
+          },
+          "emailSenderName": {
+            "type": "string"
+          },
+          "termsLink": {
+            "type": "string"
+          },
+          "privacyPolicyLink": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "allowPublicRegistration",
+          "onlyUseForBrandingOverride",
+          "companyLogoUrl",
+          "fontFamily",
+          "fontUrl",
+          "layoutColor",
+          "labelColor",
+          "companyEmailLogoUrl",
+          "primaryButtonColor",
+          "primaryButtonLabelColor",
+          "primaryButtonBorderColor",
+          "secondaryButtonColor",
+          "secondaryButtonLabelColor",
+          "secondaryButtonBorderColor",
+          "criticalIndicatorColor",
+          "emailSenderName",
+          "termsLink",
+          "privacyPolicyLink",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "PutOrgReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "allowPublicRegistration": {
+            "type": "boolean"
+          },
+          "onlyUseForBrandingOverride": {
+            "type": "boolean"
+          },
+          "companyLogoUrl": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 250
+          },
+          "companyEmailLogoUrl": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 250
+          },
+          "fontFamily": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 50
+          },
+          "fontUrl": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 250
+          },
+          "layoutColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "labelColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "primaryButtonColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "primaryButtonLabelColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "primaryButtonBorderColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "secondaryButtonColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "secondaryButtonLabelColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "secondaryButtonBorderColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "criticalIndicatorColor": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "emailSenderName": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 20
+          },
+          "termsLink": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 250
+          },
+          "privacyPolicyLink": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 250
+          }
+        }
+      },
+      "PostOrgReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "allowPublicRegistration": {
+            "type": "boolean"
+          },
+          "onlyUseForBrandingOverride": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "allowPublicRegistration",
+          "onlyUseForBrandingOverride"
+        ]
+      },
+      "OrgGroup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "orgId": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "name",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "PostOrgGroupReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "orgId": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "orgId"
+        ]
+      },
+      "PutOrgGroupReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "App": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "spa",
+              "s2s"
+            ]
+          },
+          "redirectUris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "useSystemMfaConfig": {
+            "type": "boolean"
+          },
+          "requireEmailMfa": {
+            "type": "boolean"
+          },
+          "requireOtpMfa": {
+            "type": "boolean"
+          },
+          "requireSmsMfa": {
+            "type": "boolean"
+          },
+          "allowEmailMfaAsBackup": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "clientId",
+          "name",
+          "isActive",
+          "type",
+          "redirectUris",
+          "useSystemMfaConfig",
+          "requireEmailMfa",
+          "requireOtpMfa",
+          "requireSmsMfa",
+          "allowEmailMfaAsBackup",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "AppDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/App"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "scopes"
+            ]
+          }
+        ]
+      },
+      "Banner": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "text",
+          "isActive",
+          "locales",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "CreatedAppDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AppDetail"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "secret": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "secret"
+            ]
+          }
+        ]
+      },
+      "AppBanner": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Banner"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "appIds": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              }
+            },
+            "required": [
+              "appIds"
+            ]
+          }
+        ]
+      },
+      "PostAppBannerReq": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "PutAppBannerReq": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          },
+          "appIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PostAppReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "spa",
+              "s2s"
+            ]
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "redirectUris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "scopes",
+          "redirectUris"
+        ]
+      },
+      "PutAppReq": {
+        "type": "object",
+        "properties": {
+          "redirectUris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "useSystemMfaConfig": {
+            "type": "boolean"
+          },
+          "requireEmailMfa": {
+            "type": "boolean"
+          },
+          "requireOtpMfa": {
+            "type": "boolean"
+          },
+          "requireSmsMfa": {
+            "type": "boolean"
+          },
+          "allowEmailMfaAsBackup": {
+            "type": "boolean"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "authId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "linkedAuthId": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialAccountId": {
+            "type": "string",
+            "nullable": true
+          },
+          "socialAccountType": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string"
+          },
+          "loginCount": {
+            "type": "number"
+          },
+          "mfaTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "otpVerified": {
+            "type": "boolean"
+          },
+          "smsPhoneNumberVerified": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isInviting": {
+            "type": "boolean"
+          },
+          "invitationExpiresAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "authId",
+          "email",
+          "socialAccountId",
+          "socialAccountType",
+          "firstName",
+          "lastName",
+          "locale",
+          "emailVerified",
+          "otpVerified",
+          "loginCount",
+          "mfaTypes",
+          "smsPhoneNumberVerified",
+          "isActive",
+          "isInviting",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "UserDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/User"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "nullable": true
+              },
+              "org": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "number"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  }
+                },
+                "nullable": true
+              },
+              "orgGroups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "nullable": true
+              },
+              "attributes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "example": {
+                  "attribute name 1": "value for attribute name 1",
+                  "attribute name 2": "value for attribute name 2"
+                },
+                "nullable": true
+              }
+            },
+            "required": [
+              "roles"
+            ]
+          }
+        ]
+      },
+      "UserConsentedApp": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "number"
+          },
+          "appName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "appId",
+          "appName"
+        ]
+      },
+      "UserAttribute": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          },
+          "includeInSignUpForm": {
+            "type": "boolean"
+          },
+          "requiredInSignUpForm": {
+            "type": "boolean"
+          },
+          "includeInIdTokenBody": {
+            "type": "boolean"
+          },
+          "includeInUserInfo": {
+            "type": "boolean"
+          },
+          "unique": {
+            "type": "boolean"
+          },
+          "validationRegex": {
+            "type": "string"
+          },
+          "validationLocales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "includeInSignUpForm",
+          "requiredInSignUpForm",
+          "unique",
+          "validationRegex",
+          "validationLocales",
+          "includeInIdTokenBody",
+          "includeInUserInfo",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "PostUserAttributeReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          },
+          "includeInSignUpForm": {
+            "type": "boolean"
+          },
+          "requiredInSignUpForm": {
+            "type": "boolean"
+          },
+          "includeInIdTokenBody": {
+            "type": "boolean"
+          },
+          "includeInUserInfo": {
+            "type": "boolean"
+          },
+          "unique": {
+            "type": "boolean"
+          },
+          "validationRegex": {
+            "type": "string"
+          },
+          "validationLocales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "includeInSignUpForm",
+          "requiredInSignUpForm",
+          "includeInIdTokenBody",
+          "includeInUserInfo",
+          "unique"
+        ]
+      },
+      "PutUserAttributeReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "locales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          },
+          "includeInSignUpForm": {
+            "type": "boolean"
+          },
+          "requiredInSignUpForm": {
+            "type": "boolean"
+          },
+          "includeInIdTokenBody": {
+            "type": "boolean"
+          },
+          "includeInUserInfo": {
+            "type": "boolean"
+          },
+          "unique": {
+            "type": "boolean"
+          },
+          "validationRegex": {
+            "type": "string"
+          },
+          "validationLocales": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "locale": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "locale",
+                "value"
+              ]
+            }
+          }
+        }
+      },
+      "UserPasskey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "credentialId": {
+            "type": "string"
+          },
+          "counter": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "credentialId",
+          "counter"
+        ]
+      },
+      "PutUserReq": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "orgSlug": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "example": {
+              "1": "value for attributeId 1",
+              "2": "value for attributeId 2"
+            }
+          }
+        }
+      },
+      "EmailLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "receiver": {
+            "type": "string"
+          },
+          "response": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "success",
+          "receiver",
+          "response",
+          "content",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "SmsLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "receiver": {
+            "type": "string"
+          },
+          "response": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "receiver",
+          "response",
+          "content",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "SignInLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "userId": {
+            "type": "number"
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "ip",
+          "detail",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "SamlIdp": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "userIdAttribute": {
+            "type": "string"
+          },
+          "emailAttribute": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstNameAttribute": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastNameAttribute": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "isActive",
+          "name",
+          "userIdAttribute",
+          "emailAttribute",
+          "firstNameAttribute",
+          "lastNameAttribute",
+          "metadata",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "PutSamlIdpReq": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          },
+          "userIdAttribute": {
+            "type": "string"
+          },
+          "emailAttribute": {
+            "type": "string"
+          },
+          "firstNameAttribute": {
+            "type": "string"
+          },
+          "lastNameAttribute": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "string"
+          }
+        }
+      },
+      "PostSamlIdpReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "userIdAttribute": {
+            "type": "string"
+          },
+          "emailAttribute": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstNameAttribute": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastNameAttribute": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "userIdAttribute",
+          "emailAttribute",
+          "firstNameAttribute",
+          "lastNameAttribute",
+          "metadata"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/scopes": {
+      "get": {
+        "summary": "Get a list of scopes",
+        "description": "Required scope - read_scope",
+        "tags": [
+          "Scopes"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of scopes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Scope"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new scope",
+        "description": "Required scope - write_scope",
+        "tags": [
+          "Scopes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostScopeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scope": {
+                      "$ref": "#/components/schemas/ScopeDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scopes/{id}": {
+      "get": {
+        "summary": "Get a single scope by ID",
+        "description": "Required scope - read_scope",
+        "tags": [
+          "Scopes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the scope"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single scope object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scope": {
+                      "$ref": "#/components/schemas/ScopeDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing scope by ID",
+        "description": "Required scope - write_scope",
+        "tags": [
+          "Scopes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the scope"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutScopeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scope": {
+                      "$ref": "#/components/schemas/ScopeDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing scope by ID",
+        "description": "Required scope - write_scope",
+        "tags": [
+          "Scopes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the scope"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/roles": {
+      "get": {
+        "summary": "Get a list of roles",
+        "description": "Required scope - read_role",
+        "tags": [
+          "Roles"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of roles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Role"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new role",
+        "description": "Required scope - write_role",
+        "tags": [
+          "Roles"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostRoleReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "$ref": "#/components/schemas/Role"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/roles/{id}": {
+      "get": {
+        "summary": "Get a single role by ID",
+        "description": "Required scope - read_role",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single role object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "$ref": "#/components/schemas/Role"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing role by ID",
+        "description": "Required scope - write_role",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the role"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutRoleReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "$ref": "#/components/schemas/Role"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing role by ID",
+        "description": "Required scope - write_role",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the role"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/roles/{id}/users": {
+      "get": {
+        "summary": "Get a list of users by roleId",
+        "description": "Required scope - read_user, read_role",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of users by roleId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/orgs": {
+      "get": {
+        "summary": "Get a list of orgs",
+        "description": "Required scope - read_org",
+        "tags": [
+          "Orgs"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of orgs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Org"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new org",
+        "description": "Required scope - write_org",
+        "tags": [
+          "Orgs"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostOrgReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "org": {
+                      "$ref": "#/components/schemas/Org"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/orgs/{id}": {
+      "get": {
+        "summary": "Get a single org by ID",
+        "description": "Required scope - read_org",
+        "tags": [
+          "Orgs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single org object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "org": {
+                      "$ref": "#/components/schemas/Org"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing org by ID",
+        "description": "Required scope - write_org",
+        "tags": [
+          "Orgs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOrgReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "org": {
+                      "$ref": "#/components/schemas/Org"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing org by ID",
+        "description": "Required scope - write_org",
+        "tags": [
+          "Orgs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/orgs/{id}/users": {
+      "get": {
+        "summary": "Get a list of users currently active in one organization",
+        "description": "Required scopes - read_org, read_user",
+        "tags": [
+          "Orgs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org"
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of users to return per page"
+          },
+          {
+            "in": "query",
+            "name": "page_number",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number to return"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by name or email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of active users in this org",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Total number of users matching the query"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/orgs/{id}/all-users": {
+      "get": {
+        "summary": "Get a list of all users in one organization",
+        "description": "Required scopes - read_org, read_user",
+        "tags": [
+          "Orgs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org"
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of users to return per page"
+          },
+          {
+            "in": "query",
+            "name": "page_number",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of all users in this org",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Total number of users matching the query"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/org-groups": {
+      "get": {
+        "summary": "Get a list of org groups by orgId",
+        "description": "Required scope - read_org",
+        "tags": [
+          "Org Groups"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "org_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "The unique ID of the org"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of org groups by orgId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgGroups": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrgGroup"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new org group",
+        "description": "Required scope - write_org",
+        "tags": [
+          "Org Groups"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostOrgGroupReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgGroup": {
+                      "$ref": "#/components/schemas/OrgGroup"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/org-groups/{id}/users": {
+      "get": {
+        "summary": "Get a list of users by orgGroupId",
+        "description": "Required scope - read_user, read_org",
+        "tags": [
+          "Org Groups"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org group"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of users by orgGroupId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/org-groups/{id}": {
+      "put": {
+        "summary": "Update an existing org group by ID",
+        "description": "Required scope - write_org",
+        "tags": [
+          "Org Groups"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org group"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOrgGroupReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgGroup": {
+                      "$ref": "#/components/schemas/OrgGroup"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing org group by ID",
+        "description": "Required scope - write_org",
+        "tags": [
+          "Org Groups"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the org group"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/apps": {
+      "get": {
+        "summary": "Get a list of apps",
+        "description": "Required scope - read_app",
+        "tags": [
+          "Apps"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of apps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "apps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/App"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new app",
+        "description": "Required scope - write_app. Assigning the root scope additionally requires the caller to hold the root scope.",
+        "tags": [
+          "Apps"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostAppReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "app": {
+                      "$ref": "#/components/schemas/CreatedAppDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/apps/{id}": {
+      "get": {
+        "summary": "Get a single app by ID",
+        "description": "Required scope - read_app",
+        "tags": [
+          "Apps"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the app"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single app object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "app": {
+                      "$ref": "#/components/schemas/AppDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing app by ID",
+        "description": "Required scope - write_app. Assigning the root scope additionally requires the caller to hold the root scope.",
+        "tags": [
+          "Apps"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the app"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutAppReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "app": {
+                      "$ref": "#/components/schemas/AppDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing app by ID",
+        "description": "Required scope - write_app",
+        "tags": [
+          "Apps"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the app"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/app-banners": {
+      "get": {
+        "summary": "Get a list of app banners",
+        "description": "Required scope - read_app",
+        "tags": [
+          "App Banners"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of app banners",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "appBanners": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AppBanner"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new app banner",
+        "description": "Required scope - write_app",
+        "tags": [
+          "App Banners"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostAppBannerReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "appBanner": {
+                      "$ref": "#/components/schemas/AppBanner"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/app-banners/{id}": {
+      "get": {
+        "summary": "Get a single app banner by ID",
+        "description": "Required scope - read_app",
+        "tags": [
+          "App Banners"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the app banner"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single app banner object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "appBanner": {
+                      "$ref": "#/components/schemas/AppBanner"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing app banner by ID",
+        "description": "Required scope - write_app",
+        "tags": [
+          "App Banners"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the app banner"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutAppBannerReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "appBanner": {
+                      "$ref": "#/components/schemas/AppBanner"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing app banner by ID",
+        "description": "Required scope - write_app",
+        "tags": [
+          "App Banners"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the app banner"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "summary": "Get a list of users",
+        "description": "Required scope - read_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of users to return per page"
+          },
+          {
+            "in": "query",
+            "name": "page_number",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number to return"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by name or email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Total number of users matching the query"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}": {
+      "get": {
+        "summary": "Get a single user by authId",
+        "description": "Required scope - read_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single user object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/UserDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing user by authId",
+        "description": "Required scope - write_user. Assigning a privileged role (e.g. super_admin) additionally requires the caller to hold the root scope.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutUserReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/UserDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing user by authId",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/locked-ips": {
+      "get": {
+        "summary": "Get a list of locked IPs for a user",
+        "description": "Required scope - read_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of IPs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lockedIPs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The list of locked IP addresses for the user"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Unlock all locked IP addresses for a user",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/verify-email": {
+      "post": {
+        "summary": "Send a verification email to the user",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "The authId of the user who will receive the verification email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/consented-apps": {
+      "get": {
+        "summary": "Get a list of apps user has consented to",
+        "description": "Required scope - read_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of consented apps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "consentedApps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserConsentedApp"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/consented-apps/{appId}": {
+      "delete": {
+        "summary": "Delete an existing consent for a user by authId and appId",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          },
+          {
+            "in": "path",
+            "name": "appId",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The id of the app"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/passkeys": {
+      "get": {
+        "summary": "Get a list of passkeys for a user",
+        "description": "Required scope - read_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of passkeys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "passkeys": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserPasskey"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/passkeys/{passkeyId}": {
+      "delete": {
+        "summary": "Remove a passkey for a user",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "The authId of the user"
+          },
+          {
+            "in": "path",
+            "name": "passkeyId",
+            "schema": {
+              "type": "number"
+            },
+            "required": true,
+            "description": "The id of the passkey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/email-mfa": {
+      "post": {
+        "summary": "enroll user for email MFA.",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Unenroll user from email MFA.",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/otp-mfa": {
+      "post": {
+        "summary": "enroll user for OTP MFA.",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove user's current OTP MFA setup.",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/sms-mfa": {
+      "post": {
+        "summary": "enroll user for SMS MFA.",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove user's current SMS MFA setup.",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/account-linking/{linkingAuthId}": {
+      "post": {
+        "summary": "Link current user account with another user account",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "The authId of the user"
+          },
+          {
+            "in": "path",
+            "name": "linkingAuthId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "The authId of the account to link with"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/account-linking": {
+      "delete": {
+        "summary": "Unlink current user account with another user account",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/impersonation/{appId}": {
+      "post": {
+        "summary": "Generate an impersonation refresh token for a user by authId and appId",
+        "description": "Required scope - root",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          },
+          {
+            "in": "path",
+            "name": "appId",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The id of the app"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "impersonatorToken": {
+                    "type": "string",
+                    "description": "The access token of the user impersonating, this user must be a super_admin"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A refresh token for impersonation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refresh_token": {
+                      "type": "string",
+                      "description": "The refresh token for impersonation"
+                    },
+                    "refresh_token_expires_on": {
+                      "type": "number",
+                      "description": "The expiration time of the refresh token"
+                    },
+                    "refresh_token_expires_in": {
+                      "type": "number",
+                      "description": "The remaining time of the refresh token in seconds"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/active-sessions": {
+      "get": {
+        "summary": "Get a list of active sessions for a user",
+        "description": "Required scope - read_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of active sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "activeSessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sessionId": {
+                            "type": "string"
+                          },
+                          "expiredAt": {
+                            "type": "number"
+                          },
+                          "authId": {
+                            "type": "string"
+                          },
+                          "clientId": {
+                            "type": "string"
+                          },
+                          "scope": {
+                            "type": "string"
+                          },
+                          "roles": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/active-sessions/{sessionId}": {
+      "delete": {
+        "summary": "Delete an active session for a user by authId and sessionId",
+        "description": "Required scope - write_user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          },
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The session token id to delete"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/org-groups/{orgGroupId}": {
+      "post": {
+        "summary": "Add an existing org group to a user by authId and orgGroupId",
+        "description": "Required scope - write_user, write_org",
+        "tags": [
+          "User Org Groups"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          },
+          {
+            "in": "path",
+            "name": "orgGroupId",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The id of the org group"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing org group for a user by authId and orgGroupId",
+        "description": "Required scope - write_user, write_org",
+        "tags": [
+          "User Org Groups"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          },
+          {
+            "in": "path",
+            "name": "orgGroupId",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The id of the org group"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{authId}/orgs": {
+      "get": {
+        "summary": "Get a list of orgs for a user",
+        "description": "Required scope - read_user, read_org",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of orgs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Org"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Change orgs for a user",
+        "description": "Required scope - write_user, write_org",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the user"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orgs": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "The ids of the orgs"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/invitations/{authId}": {
+      "post": {
+        "summary": "Resend invitation email to a pending user",
+        "description": "Required scope - write_user.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the pending invited user"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locale": {
+                    "type": "string",
+                    "description": "Locale for the invitation email"
+                  },
+                  "signinUrl": {
+                    "type": "string",
+                    "description": "URL to redirect the user to after accepting the invitation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Revoke invitation for a pending user",
+        "description": "Required scope - write_user.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "authId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The authId of the pending invited user"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitation revoked successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/users/invitations": {
+      "post": {
+        "summary": "Invite a user to join the platform",
+        "description": "Required scope - write_user. Assigning a privileged role (e.g. super_admin) additionally requires the caller to hold the root scope.",
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "The email address to invite"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "description": "Optional first name"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "description": "Optional last name"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "description": "Locale for the invitation email"
+                  },
+                  "orgSlug": {
+                    "type": "string",
+                    "description": "Organization slug to assign the user to"
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Roles to assign to the invited user"
+                  },
+                  "signinUrl": {
+                    "type": "string",
+                    "description": "URL to redirect the user to after accepting the invitation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/UserDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-attributes": {
+      "get": {
+        "summary": "Get a list of user attributes",
+        "description": "Required scope - root",
+        "tags": [
+          "User Attributes"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of user attributes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userAttributes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserAttribute"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a user attribute",
+        "description": "Required scope - root",
+        "tags": [
+          "User Attributes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostUserAttributeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A user attribute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userAttribute": {
+                      "$ref": "#/components/schemas/UserAttribute"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-attributes/{id}": {
+      "get": {
+        "summary": "Get a user attribute",
+        "description": "Required scope - root",
+        "tags": [
+          "User Attributes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the user attribute"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A user attribute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userAttribute": {
+                      "$ref": "#/components/schemas/UserAttribute"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a user attribute",
+        "description": "Required scope - root",
+        "tags": [
+          "User Attributes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the user attribute"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutUserAttributeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A user attribute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userAttribute": {
+                      "$ref": "#/components/schemas/UserAttribute"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing user attribute by ID",
+        "description": "Required scope - root",
+        "tags": [
+          "User Attributes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the user attribute"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/logs/email": {
+      "get": {
+        "summary": "Get a list of email logs",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of logs to return per page"
+          },
+          {
+            "in": "query",
+            "name": "page_number",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of email logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EmailLog"
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Total number of logs matching the query"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete email logs before a certain date, this action is irreversible",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Delete all logs that are older than this date in utc format."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/logs/email/{id}": {
+      "get": {
+        "summary": "Get an email log by id",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the email log"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single email log object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "log": {
+                      "$ref": "#/components/schemas/EmailLog"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/logs/sms": {
+      "get": {
+        "summary": "Get a list of SMS logs",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of logs to return per page"
+          },
+          {
+            "in": "query",
+            "name": "page_number",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of SMS logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SmsLog"
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Total number of logs matching the query"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete SMS logs before a certain date, this action is irreversible",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Delete all logs that are older than this date in utc format."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/logs/sms/{id}": {
+      "get": {
+        "summary": "Get an SMS log by id",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the SMS log"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single SMS log object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "log": {
+                      "$ref": "#/components/schemas/SmsLog"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/logs/sign-in": {
+      "get": {
+        "summary": "Get a list of Sign-in logs",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of logs to return per page"
+          },
+          {
+            "in": "query",
+            "name": "page_number",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of Sign-in logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SignInLog"
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Total number of logs matching the query"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Sign-in logs before a certain date, this action is irreversible",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Delete all logs that are older than this date in utc format."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/api/v1/logs/sign-in/{id}": {
+      "get": {
+        "summary": "Get an sign-in log by id",
+        "description": "Required scope - root",
+        "tags": [
+          "Logs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the sign-in log"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single sign-in log object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "log": {
+                      "$ref": "#/components/schemas/SignInLog"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saml/idps": {
+      "get": {
+        "summary": "Get a list of SAML IDPs",
+        "description": "Required scope - root",
+        "tags": [
+          "SAML"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of SAML IDPs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "idps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SamlIdp"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new SAML IDP",
+        "description": "Required scope - root",
+        "tags": [
+          "SAML"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostSamlIdpReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "idp": {
+                      "$ref": "#/components/schemas/SamlIdp"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saml/idps/{id}": {
+      "get": {
+        "summary": "Get a SAML IDP",
+        "description": "Required scope - root",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "tags": [
+          "SAML"
+        ],
+        "responses": {
+          "200": {
+            "description": "A SAML IDP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "idp": {
+                      "$ref": "#/components/schemas/SamlIdp"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing SAML IDP",
+        "description": "Required scope - root",
+        "tags": [
+          "SAML"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the SAML IDP"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutSamlIdpReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "idp": {
+                      "$ref": "#/components/schemas/SamlIdp"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an existing SAML IDP",
+        "description": "Required scope - root",
+        "tags": [
+          "SAML"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The unique ID of the SAML IDP"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation with no content to return"
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "summary": "Get system info",
+        "description": "Requires an authenticated S2S access token. No specific scope is required.",
+        "tags": [
+          "System"
+        ],
+        "security": [
+          {
+            "oauth2": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System configuration values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "configs": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

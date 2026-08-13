@@ -36,6 +36,7 @@ try {
     "account-alias",
     "workers-dev-subdomain",
     "api-domain",
+    "auth-domain",
     "shortlinks-domain",
     "sdk-domain",
     "dashboard-domain",

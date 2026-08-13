@@ -1,0 +1,40 @@
+{
+  "name": "@melody-auth/angular",
+  "version": "1.0.5",
+  "type": "module",
+  "main": "dist/fesm2022/melody-auth-angular.mjs",
+  "typings": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ValueMelody/melody-auth.git"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@angular/cli": "^21.2.21",
+    "@angular/compiler": "^21.2.20",
+    "@angular/compiler-cli": "^21.2.20",
+    "@angular/core": "^21.2.20",
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^29.1.1",
+    "ng-packagr": "^21.2.7",
+    "tsc-alias": "^1.8.10",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "@angular/core": "^21.2.20"
+  },
+  "scripts": {
+    "build": "rm -rf ./dist && mkdir ./dist && ng-packagr -p ./ng-package.json",
+    "type:check": "tsc --noEmit",
+    "test:check": "NODE_OPTIONS=--no-experimental-webstorage vitest run .",
+    "test:coverage": "vitest run . --coverage"
+  },
+  "dependencies": {
+    "@melody-auth/shared": "^1.0.6",
+    "@melody-auth/web": "^1.0.4"
+  }
+}

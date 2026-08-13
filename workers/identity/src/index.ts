@@ -21,6 +21,8 @@ import {
   verifyApplicationToken,
   verifyProviderToken,
 } from "./crypto";
+import melodyApp from "./melody";
+import { integratedIdentityEnv, melodyBindings } from "./melody-runtime";
 import type { IdentityEnv, IdentityUser } from "./types";
 
 type Variables = { userId: string; sessionId: string; projectId: number };
@@ -41,6 +43,266 @@ type IdentityAdminUserRow = {
   created_at: string;
   updated_at: string;
 };
+
+app.all("/internal/v1/melody-admin", proxyMelodyAdmin);
+app.all("/internal/v1/melody-admin/*", proxyMelodyAdmin);
+
+async function proxyMelodyAdmin(c: IdentityContext): Promise<Response> {
+  const project = await internalProject(c);
+  if (project instanceof Response) return project;
+  if (!new Set(["owner", "admin"]).has(project.role)) {
+    return error(
+      "administrator_required",
+      "Owner or administrator access is required",
+      403,
+    );
+  }
+  const source = new URL(c.req.url);
+  const prefix = "/internal/v1/melody-admin";
+  const suffix = source.pathname.slice(prefix.length) || "/info";
+  if (!(suffix === "/info" || suffix.startsWith("/api/v1/"))) {
+    return error(
+      "identity_admin_path_invalid",
+      "Identity administration path is not allowed",
+      404,
+    );
+  }
+  const resource = identityAdminResource(suffix);
+  if (
+    resource?.resourceId != null &&
+    !(await identityAdminResourceAllowed(
+      c.env.DB,
+      c.env.IDENTITY_REALM,
+      project.projectId,
+      resource.type,
+      resource.resourceId,
+    ))
+  ) {
+    return error(
+      "identity_resource_not_found",
+      "Identity resource was not found",
+      404,
+    );
+  }
+  const target = new URL(`https://identity.internal${suffix}`);
+  target.search = source.search;
+  const headers = new Headers({
+    accept: c.req.header("accept") || "application/json",
+    authorization: "Bearer superboard-internal-admin",
+  });
+  const contentType = c.req.header("content-type");
+  if (contentType) headers.set("content-type", contentType);
+  const request = new Request(target, {
+    method: c.req.method,
+    headers,
+    body:
+      c.req.method === "GET" || c.req.method === "HEAD"
+        ? undefined
+        : c.req.raw.body,
+  });
+  const upstream = await melodyApp.fetch(
+    request,
+    melodyBindings(integratedIdentityEnv(c.env), {
+      internalAdmin: true,
+      projectId: project.projectId,
+    }),
+    c.executionCtx,
+  );
+  if (!resource || !upstream.ok) return upstream;
+  if (c.req.method === "GET" && resource.collection) {
+    return filterIdentityAdminCollection(
+      upstream,
+      c.env.DB,
+      c.env.IDENTITY_REALM,
+      project.projectId,
+      resource,
+    );
+  }
+  if (c.req.method === "POST" && resource.collection) {
+    return bindCreatedIdentityAdminResource(
+      upstream,
+      c.env.DB,
+      c.env.IDENTITY_REALM,
+      project.projectId,
+      resource,
+    );
+  }
+  return upstream;
+}
+
+type IdentityAdminResource = {
+  type: string;
+  collection: boolean;
+  resourceId: number | null;
+  listKey: string;
+  itemKey: string;
+};
+
+const identityAdminResourceDefinitions = [
+  { prefix: "/api/v1/user-attributes", type: "user_attribute", listKey: "userAttributes", itemKey: "userAttribute" },
+  { prefix: "/api/v1/app-banners", type: "app_banner", listKey: "appBanners", itemKey: "appBanner" },
+  { prefix: "/api/v1/org-groups", type: "org_group", listKey: "orgGroups", itemKey: "orgGroup" },
+  { prefix: "/api/v1/saml/idps", type: "saml_idp", listKey: "idps", itemKey: "idp" },
+  { prefix: "/api/v1/roles", type: "role", listKey: "roles", itemKey: "role" },
+  { prefix: "/api/v1/scopes", type: "scope", listKey: "scopes", itemKey: "scope" },
+  { prefix: "/api/v1/orgs", type: "org", listKey: "orgs", itemKey: "org" },
+] as const;
+
+function identityAdminResource(pathname: string): IdentityAdminResource | null {
+  for (const definition of identityAdminResourceDefinitions) {
+    if (!(pathname === definition.prefix || pathname.startsWith(`${definition.prefix}/`))) continue;
+    const remainder = pathname.slice(definition.prefix.length);
+    if (!remainder || remainder === "/") {
+      return {
+        ...definition,
+        collection: true,
+        resourceId: null,
+      };
+    }
+    const match = /^\/(\d+)(?:\/|$)/u.exec(remainder);
+    const resourceId = match ? Number(match[1]) : null;
+    if (!resourceId || !Number.isSafeInteger(resourceId)) return null;
+    return {
+      ...definition,
+      collection: false,
+      resourceId,
+    };
+  }
+  return null;
+}
+
+async function identityAdminResourceAllowed(
+  db: D1Database,
+  realm: string,
+  projectId: number,
+  type: string,
+  resourceId: number,
+): Promise<boolean> {
+  if (await identitySystemResource(db, type, resourceId)) return true;
+  const row = await db.prepare(
+    `SELECT resource_id FROM identity_admin_resource_scope
+     WHERE realm=? AND project_id=? AND resource_type=? AND resource_id=?
+     LIMIT 1`,
+  ).bind(realm, projectId, type, resourceId).first();
+  return Boolean(row);
+}
+
+async function identitySystemResource(
+  db: D1Database,
+  type: string,
+  resourceId: number,
+): Promise<boolean> {
+  if (type === "role") {
+    return Boolean(await db.prepare(
+      `SELECT id FROM role WHERE id=? AND name='super_admin' AND "deletedAt" IS NULL`,
+    ).bind(resourceId).first());
+  }
+  if (type === "scope") {
+    return Boolean(await db.prepare(
+      `SELECT id FROM scope WHERE id=? AND name IN (
+         'openid','profile','offline_access','root',
+         'read_user','write_user','read_app','write_app',
+         'read_scope','write_scope','read_role','write_role',
+         'read_org','write_org'
+       ) AND "deletedAt" IS NULL`,
+    ).bind(resourceId).first());
+  }
+  return false;
+}
+
+async function allowedIdentityAdminResourceIds(
+  db: D1Database,
+  realm: string,
+  projectId: number,
+  type: string,
+  candidates: number[],
+): Promise<Set<number>> {
+  const allowed = new Set<number>();
+  await Promise.all(candidates.map(async (id) => {
+    if (await identityAdminResourceAllowed(
+      db,
+      realm,
+      projectId,
+      type,
+      id,
+    )) allowed.add(id);
+  }));
+  return allowed;
+}
+
+async function filterIdentityAdminCollection(
+  upstream: Response,
+  db: D1Database,
+  realm: string,
+  projectId: number,
+  resource: IdentityAdminResource,
+): Promise<Response> {
+  const payload = await upstream.clone().json<Record<string, unknown>>().catch(() => null);
+  const items = payload?.[resource.listKey];
+  if (!payload || !Array.isArray(items)) return upstream;
+  const candidates = items
+    .map((item) => Number((item as { id?: unknown }).id))
+    .filter((id) => Number.isSafeInteger(id) && id > 0);
+  const allowed = await allowedIdentityAdminResourceIds(
+    db,
+    realm,
+    projectId,
+    resource.type,
+    candidates,
+  );
+  payload[resource.listKey] = items.filter((item) =>
+    allowed.has(Number((item as { id?: unknown }).id)));
+  return identityAdminJsonResponse(
+    upstream,
+    payload,
+  );
+}
+
+async function bindCreatedIdentityAdminResource(
+  upstream: Response,
+  db: D1Database,
+  realm: string,
+  projectId: number,
+  resource: IdentityAdminResource,
+): Promise<Response> {
+  const payload = await upstream.clone().json<Record<string, unknown>>().catch(() => null);
+  const item = payload?.[resource.itemKey] as { id?: unknown } | undefined;
+  const resourceId = Number(item?.id);
+  if (!payload || !Number.isSafeInteger(resourceId) || resourceId <= 0) return upstream;
+  await db.prepare(
+    `INSERT INTO identity_admin_resource_scope
+       (realm,resource_type,resource_id,project_id)
+     VALUES (?,?,?,?)
+     ON CONFLICT(realm,resource_type,resource_id) DO UPDATE SET
+       project_id=excluded.project_id,
+       updated_at=CURRENT_TIMESTAMP`,
+  ).bind(
+    realm,
+    resource.type,
+    resourceId,
+    projectId,
+  ).run();
+  return identityAdminJsonResponse(
+    upstream,
+    payload,
+  );
+}
+
+function identityAdminJsonResponse(
+  upstream: Response,
+  payload: Record<string, unknown>,
+): Response {
+  const headers = new Headers(upstream.headers);
+  headers.set("content-type", "application/json; charset=utf-8");
+  headers.set("cache-control", "no-store");
+  headers.set("x-content-type-options", "nosniff");
+  headers.delete("content-length");
+  return new Response(JSON.stringify(payload), {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers,
+  });
+}
 
 app.get("/health", async (c) => {
   try {
@@ -1292,4 +1554,48 @@ function response(value: unknown, status = 200): Response {
   });
 }
 
-export default app;
+const integratedWorker: ExportedHandler<IdentityEnv> = {
+  async fetch(request, env, executionContext) {
+    const url = new URL(request.url);
+    const gatewayRequest =
+      request.headers.get("x-superboard-auth-gateway") === "1";
+
+    if (
+      gatewayRequest &&
+      (url.pathname === "/client.js" || url.pathname === "/client.css")
+    ) {
+      const assets = integratedIdentityEnv(env).ASSETS;
+      const response = await assets.fetch(request);
+      const headers = new Headers(response.headers);
+      headers.set("x-content-type-options", "nosniff");
+      headers.set("cache-control", "public, max-age=300, must-revalidate");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+
+    if (gatewayRequest && !legacyIdentityPath(url.pathname)) {
+      return melodyApp.fetch(
+        request,
+        melodyBindings(integratedIdentityEnv(env)),
+        executionContext,
+      );
+    }
+
+    return app.fetch(request, env, executionContext);
+  },
+};
+
+function legacyIdentityPath(pathname: string): boolean {
+  return (
+    pathname === "/health" ||
+    pathname === "/auth" ||
+    pathname.startsWith("/auth/") ||
+    pathname === "/internal" ||
+    pathname.startsWith("/internal/")
+  );
+}
+
+export default integratedWorker;

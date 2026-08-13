@@ -26,7 +26,7 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 14 },
+    "schemaVersion": { "const": 15 },
     "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "accountAlias": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "resourceIdentity": { "$ref": "#/$defs/resourceIdentity" },
@@ -163,9 +163,10 @@
     "domains": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["api", "shortlinks", "sdk", "dashboard", "files", "mcp"],
+      "required": ["api", "auth", "shortlinks", "sdk", "dashboard", "files", "mcp"],
       "properties": {
         "api": { "$ref": "#/$defs/hostname" },
+        "auth": { "$ref": "#/$defs/hostname" },
         "shortlinks": { "$ref": "#/$defs/hostname" },
         "sdk": { "$ref": "#/$defs/hostname" },
         "dashboard": { "$ref": "#/$defs/hostname" },

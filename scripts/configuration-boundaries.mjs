@@ -259,15 +259,15 @@ function validateReferenceTarget(reference, contract, errors) {
       errors.push(`${reference.path} domains.${role} must belong to ${suffix}`);
     }
   }
-  const apiOrigin = `https://${target.domains?.api ?? ""}`;
-  if (target.authGateway?.issuer !== apiOrigin) {
+  const authOrigin = `https://${target.domains?.auth ?? ""}`;
+  if (target.authGateway?.issuer !== authOrigin) {
     errors.push(
-      `${reference.path} authGateway.issuer must derive from domains.api`,
+      `${reference.path} authGateway.issuer must derive from domains.auth`,
     );
   }
-  if (target.authGateway?.jwksUrl !== `${apiOrigin}/.well-known/jwks.json`) {
+  if (target.authGateway?.jwksUrl !== `${authOrigin}/.well-known/jwks.json`) {
     errors.push(
-      `${reference.path} authGateway.jwksUrl must derive from domains.api`,
+      `${reference.path} authGateway.jwksUrl must derive from domains.auth`,
     );
   }
   for (const address of [

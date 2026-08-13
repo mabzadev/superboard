@@ -14,6 +14,7 @@ const target = {
   environments: { development: { publicRouting: "active" } },
   domains: {
     api: "api.example.test",
+    auth: "auth.example.test",
     shortlinks: "in.example.test",
     sdk: "sdk.example.test",
     files: "files.example.test",
@@ -38,12 +39,12 @@ const target = {
 
 test("the domain plan assigns every public surface to one explicit Worker", () => {
   const expected = expectedDomainOwners(target, "development");
-  assert.equal(expected.length, 7);
+  assert.equal(expected.length, 8);
   assert.deepEqual(
     expected
       .filter((entry) => entry.service === "opengrow-api-dev")
       .map((entry) => entry.surface),
-    ["api", "shortlinks", "sdk", "files"],
+    ["api", "auth", "shortlinks", "sdk", "files"],
   );
   assert.throws(
     () =>
@@ -66,7 +67,7 @@ test("mail preview is optional for SMTP targets", () => {
     ),
   };
   const expected = expectedDomainOwners(smtpTarget, "development");
-  assert.equal(expected.length, 6);
+  assert.equal(expected.length, 7);
   assert.equal(
     expected.some((entry) => entry.surface === "mailPreview"),
     false,
