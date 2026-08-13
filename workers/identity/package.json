@@ -10,7 +10,7 @@
     "test": "vitest run && vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@hono/swagger-ui": "^0.5.2",
+    "@hono/swagger-ui": "^0.6.1",
     "@melody-auth/shared": "^1.0.12",
     "@simplewebauthn/browser": "^13.2.2",
     "@simplewebauthn/server": "^13.2.2",
@@ -19,10 +19,10 @@
     "base32-decode": "^1.0.0",
     "base32-encode": "^2.0.0",
     "bcryptjs": "^3.0.3",
-    "class-validator": "^0.14.2",
-    "fflate": "^0.4.8",
+    "class-validator": "^0.15.1",
+    "fflate": "^0.8.3",
     "hono": "^4.11.9",
-    "hono-sessions": "^0.7.2",
+    "hono-sessions": "^0.8.1",
     "jose": "^6.2.2",
     "qrcode": "^1.5.4",
     "qs": "^6.14.0",
