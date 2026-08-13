@@ -388,6 +388,32 @@ describe("Worker scheduled and queue handlers", () => {
     expect(forwarded!.headers.get("x-superboard-auth-gateway")).toBe("1");
   });
 
+  it("serves the Melody RS256 JWKS on the dedicated auth domain", async () => {
+    let forwarded: Request | null = null;
+    const fetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        forwarded = new Request(input, init);
+        return Response.json({ keys: [{ alg: "RS256" }] });
+      },
+    );
+    const response = await worker.fetch?.(
+      new Request("https://auth.test/.well-known/jwks.json", {
+        headers: { Host: "auth.test" },
+      }),
+      env({ IDENTITY_SERVICE: { fetch } as unknown as Fetcher }),
+      {} as ExecutionContext,
+    );
+
+    expect(response?.status).toBe(200);
+    await expect(response?.json()).resolves.toEqual({
+      keys: [{ alg: "RS256" }],
+    });
+    expect(forwarded!.url).toBe(
+      "https://identity.internal/.well-known/jwks.json",
+    );
+    expect(forwarded!.headers.get("x-superboard-auth-gateway")).toBe("1");
+  });
+
   it("enqueues maintenance work from the scheduled handler when a queue binding exists", async () => {
     const sent: unknown[] = [];
     const waitUntil = vi.fn((promise: Promise<unknown>) => promise);
