@@ -181,6 +181,7 @@ export const postAuthorizeAccount = async (c: Context<typeConfig.Context>) => {
       bodyDto.email,
       user,
       bodyDto.locale,
+      app.id,
     )
     if (verificationCode) {
       await kvService.storeEmailVerificationCode(

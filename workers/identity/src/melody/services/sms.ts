@@ -9,6 +9,10 @@ import {
 } from '../utils'
 import { smsLogModel } from '../models'
 import { systemConfig } from '../configs/variable'
+import {
+  resolveProjectId,
+  type DeliveryLogScope,
+} from './logScope'
 
 const checkSmsSetup = (c: Context<typeConfig.Context>) => {
   const {
@@ -32,6 +36,7 @@ export const sendSms = async (
   c: Context<typeConfig.Context>,
   receiverPhoneNumber: string,
   smsBody: string,
+  logScope: DeliveryLogScope = {},
 ) => {
   const {
     TWILIO_ACCOUNT_ID: twilioAccountId,
@@ -92,6 +97,10 @@ export const sendSms = async (
         receiver,
         response: cryptoUtil.redactMessageBody(response ?? ''),
         content: cryptoUtil.redactMessageBody(smsBody),
+        projectId: await resolveProjectId(
+          c,
+          logScope,
+        ),
       },
     )
   }
@@ -103,6 +112,7 @@ export const sendSmsMfa = async (
   c: Context<typeConfig.Context>,
   phoneNumber: string,
   locale: typeConfig.Locale,
+  logScope: DeliveryLogScope = {},
 ) => {
   checkSmsSetup(c)
 
@@ -116,6 +126,7 @@ export const sendSmsMfa = async (
     c,
     phoneNumber,
     content,
+    logScope,
   )
 
   return res ? mfaCode : null

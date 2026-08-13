@@ -22,6 +22,7 @@ import { oauthDto } from '../dtos'
 import {
   signInLogModel, userAttributeModel, userAttributeValueModel, userModel,
 } from '../models'
+import { resolveProjectId } from './logScope'
 
 export const handleAuthCodeTokenExchange = async (
   c: Context<typeConfig.Context>,
@@ -218,6 +219,10 @@ export const handleAuthCodeTokenExchange = async (
         userId: authInfo.user.id,
         ip: ip ?? null,
         detail,
+        projectId: await resolveProjectId(
+          c,
+          { appId: authInfo.appId, userId: authInfo.user.id },
+        ),
       },
     )
   }

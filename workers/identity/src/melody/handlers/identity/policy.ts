@@ -135,6 +135,7 @@ export const postChangeEmailCode = async (c: Context<typeConfig.Context>) => {
     bodyDto.email,
     bodyDto.locale,
     authInfo.user.orgSlug,
+    { appId: authInfo.appId, userId: authInfo.user.id },
   )
   if (code) {
     await kvService.storeChangeEmailCode(

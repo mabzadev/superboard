@@ -276,6 +276,7 @@ export const signUp = async (c: Context<typeConfig.Context>) => {
       bodyDto.email,
       user,
       sessionBody.request.locale,
+      sessionBody.appId,
     )
     if (verificationCode) {
       await kvService.storeEmailVerificationCode(
