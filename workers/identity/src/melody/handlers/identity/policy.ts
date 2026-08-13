@@ -1,0 +1,504 @@
+import {
+  Context, TypedResponse,
+} from 'hono'
+import { env } from 'hono/adapter'
+import {
+  errorConfig,
+  messageConfig,
+  typeConfig,
+} from '../../configs'
+import {
+  identityDto, oauthDto,
+} from '../../dtos'
+import {
+  emailService,
+  identityService,
+  kvService, passkeyService, recoveryCodeService, userService,
+} from '../../services'
+import {
+  cryptoUtil, validateUtil, loggerUtil, requestUtil,
+} from '../../utils'
+import {
+  userModel, userPasskeyModel,
+} from '../../models'
+
+const checkAccount = (
+  c: Context<typeConfig.Context>, user: userModel.Record,
+): string => {
+  if (!user.email || user.socialAccountId) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.SocialAccountNotSupported,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.SocialAccountNotSupported)
+  }
+
+  return user.email
+}
+
+export const postChangePassword = async (c: Context<typeConfig.Context>) => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.PostChangePasswordDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.ChangePassword,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+  )
+
+  await userService.changeUserPassword(
+    c,
+    authInfo.user,
+    bodyDto,
+  )
+
+  return c.json({ success: true })
+}
+
+export const postChangeEmailCode = async (c: Context<typeConfig.Context>) => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.PostChangeEmailCodeDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.ChangeEmail,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  const userEmail = checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+  )
+
+  const { CHANGE_EMAIL_EMAIL_THRESHOLD: emailThreshold } = env(c)
+
+  if (emailThreshold) {
+    const emailAttempts = await kvService.getChangeEmailAttempts(
+      c.env.KV,
+      userEmail,
+    )
+
+    if (emailAttempts >= emailThreshold) {
+      loggerUtil.triggerLogger(
+        c,
+        loggerUtil.LoggerLevel.Warn,
+        messageConfig.RequestError.ChangeEmailLocked,
+      )
+      throw new errorConfig.Forbidden(messageConfig.RequestError.ChangeEmailLocked)
+    }
+
+    await kvService.setChangeEmailAttempts(
+      c.env.KV,
+      userEmail,
+      emailAttempts + 1,
+    )
+  }
+
+  const code = await emailService.sendChangeEmailVerificationCode(
+    c,
+    bodyDto.email,
+    bodyDto.locale,
+    authInfo.user.orgSlug,
+  )
+  if (code) {
+    await kvService.storeChangeEmailCode(
+      c.env.KV,
+      authInfo.user.id,
+      bodyDto.email,
+      code,
+    )
+  }
+
+  return c.json({ success: true })
+}
+
+export const postChangeEmail = async (c: Context<typeConfig.Context>) => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.PostChangeEmailDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.ChangeEmail,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+  )
+
+  const { CHANGE_EMAIL_CODE_THRESHOLD: changeEmailCodeThreshold } = env(c)
+  let ip: string | undefined
+  let failedAttempts = 0
+
+  if (changeEmailCodeThreshold) {
+    ip = requestUtil.getRequestIP(c)
+    failedAttempts = await kvService.getFailedChangeEmailCodeAttemptsByIP(
+      c.env.KV,
+      authInfo.user.id,
+      ip,
+    )
+    if (failedAttempts >= changeEmailCodeThreshold) {
+      loggerUtil.triggerLogger(
+        c,
+        loggerUtil.LoggerLevel.Warn,
+        messageConfig.RequestError.ChangeEmailCodeLocked,
+      )
+      throw new errorConfig.Forbidden(messageConfig.RequestError.ChangeEmailCodeLocked)
+    }
+  }
+
+  const isCorrectCode = await kvService.verifyChangeEmailCode(
+    c.env.KV,
+    authInfo.user.id,
+    bodyDto.email,
+    bodyDto.verificationCode,
+  )
+
+  if (!isCorrectCode) {
+    if (changeEmailCodeThreshold) {
+      const attempts = failedAttempts + 1
+      await kvService.setFailedChangeEmailCodeAttempts(
+        c.env.KV,
+        authInfo.user.id,
+        ip,
+        attempts,
+      )
+    }
+
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongChangeEmailCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongCode)
+  }
+
+  await userService.changeUserEmail(
+    c,
+    authInfo.user,
+    bodyDto,
+  )
+
+  return c.json({ success: true })
+}
+
+export const postResetMfa = async (c: Context<typeConfig.Context>) => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.PostProcessDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authCodeBody = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.ResetMfa,
+  )
+  if (!authCodeBody) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authCodeBody,
+  )
+
+  await userService.resetUserMfa(
+    c,
+    authCodeBody.user.authId,
+  )
+
+  return c.json({ success: true })
+}
+
+export interface GetManagePasskeyRes {
+  passkey: userPasskeyModel.Record | null;
+  enrollOptions: PublicKeyCredentialCreationOptionsJSON;
+}
+export const getManagePasskey = async (c: Context<typeConfig.Context>)
+: Promise<TypedResponse<GetManagePasskeyRes>> => {
+  const queryDto = await identityDto.parseGetProcess(c)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    queryDto.code,
+    oauthDto.Policy.ManagePasskey,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  const passkey = await passkeyService.getPasskeyByUser(
+    c,
+    authInfo.user.id,
+  )
+
+  const enrollOptions = await passkeyService.genPasskeyEnrollOptions(
+    c,
+    authInfo,
+  )
+
+  return c.json({
+    passkey,
+    enrollOptions,
+  })
+}
+
+export const postManagePasskey = async (c: Context<typeConfig.Context>) => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.PostManagePasskeyDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.ManagePasskey,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+  )
+
+  const {
+    passkeyId, passkeyPublickey, passkeyCounter,
+  } = await passkeyService.processPasskeyEnroll(
+    c,
+    authInfo,
+    bodyDto.enrollInfo,
+  )
+
+  await passkeyService.createUserPasskey(
+    c,
+    authInfo.user.id,
+    passkeyId,
+    cryptoUtil.uint8ArrayToBase64(passkeyPublickey),
+    passkeyCounter,
+  )
+
+  return c.json({
+    success: true,
+    passkey: {
+      credentialId: passkeyId,
+      counter: passkeyCounter,
+    },
+  })
+}
+
+export interface PostManageRecoveryCodeRes {
+  recoveryCode: string;
+}
+export const postManageRecoveryCode = async (c: Context<typeConfig.Context>)
+: Promise<TypedResponse<PostManageRecoveryCodeRes>> => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.PostProcessDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.ManageRecoveryCode,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+  )
+
+  const { recoveryCode } = await recoveryCodeService.regenerateRecoveryCode(
+    c,
+    authInfo,
+  )
+
+  return c.json({
+    success: true, recoveryCode,
+  })
+}
+
+export const deleteManagePasskey = async (c: Context<typeConfig.Context>) => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.DeleteManagePasskeyDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.ManagePasskey,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  const passkey = await passkeyService.getPasskeyByUser(
+    c,
+    authInfo.user.id,
+  )
+
+  if (!passkey) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.PasskeyNotFound,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.PasskeyNotFound)
+  }
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+  )
+
+  await passkeyService.deletePasskey(
+    c,
+    authInfo.user.id,
+    passkey.id,
+  )
+
+  return c.json({ success: true })
+}
+
+export const postUpdateInfo = async (c: Context<typeConfig.Context>) => {
+  const reqBody = await c.req.json()
+
+  const bodyDto = new identityDto.PostUpdateInfoDto(reqBody)
+  await validateUtil.dto(bodyDto)
+
+  const authInfo = await kvService.getAuthCodeBodyForPolicy(
+    c.env.KV,
+    bodyDto.code,
+    oauthDto.Policy.UpdateInfo,
+  )
+  if (!authInfo) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.WrongAuthCode,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongAuthCode)
+  }
+  checkAccount(
+    c,
+    authInfo.user,
+  )
+
+  await identityService.ensureAuthCodeIsSecured(
+    c,
+    bodyDto.code,
+    authInfo,
+  )
+
+  await userService.updateUser(
+    c,
+    authInfo.user.authId,
+    {
+      firstName: bodyDto.firstName, lastName: bodyDto.lastName,
+    },
+  )
+
+  return c.json({ success: true })
+}

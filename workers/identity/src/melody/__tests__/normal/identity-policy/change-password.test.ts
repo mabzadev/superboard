@@ -1,0 +1,200 @@
+import {
+  afterEach, beforeEach, describe, expect, test,
+} from 'vitest'
+import { Database } from 'better-sqlite3'
+import app from '../../../index'
+import {
+  migrate, mock,
+  mockedKV,
+} from 'tests/mock'
+import {
+  messageConfig, routeConfig,
+} from '../../../configs'
+import {
+  prepareFollowUpBody, insertUsers, postSignInRequest, getApp, markAuthCodeAsSecured,
+} from 'tests/identity'
+import { Policy } from '../../../dtos/oauth'
+
+let db: Database
+
+beforeEach(async () => {
+  db = await migrate()
+})
+
+afterEach(async () => {
+  await db.close()
+  await mockedKV.empty()
+})
+
+const sendCorrectChangePasswordReq = async ({
+  code, policy = Policy.ChangePassword,
+}: {
+  code?: string;
+  policy?: Policy;
+} = {}) => {
+  await insertUsers(
+    db,
+    false,
+  )
+
+  const body = await prepareFollowUpBody(
+    db,
+    policy,
+  )
+  await markAuthCodeAsSecured(body.code)
+  const res = await app.request(
+    routeConfig.IdentityRoute.ChangePassword,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        ...body,
+        code: code ?? body.code,
+        password: 'Password2!',
+      }),
+    },
+    mock(db),
+  )
+  return { res }
+}
+
+describe(
+  'post /change-password',
+  () => {
+    test(
+      'should change password',
+      async () => {
+        const { res } = await sendCorrectChangePasswordReq()
+        const json = await res.json()
+        expect(json).toStrictEqual({ success: true })
+
+        const appRecord = await getApp(db)
+        const reLoginRes = await postSignInRequest(
+          db,
+          appRecord,
+          { password: 'Password2!' },
+        )
+        const loginResJson = await reLoginRes.json() as { code: string }
+        expect(loginResJson).toStrictEqual({
+          code: expect.any(String),
+          redirectUri: 'http://localhost:3000/en/dashboard',
+          state: '123',
+          scopes: ['profile', 'openid', 'offline_access'],
+          nextPage: routeConfig.View.Consent,
+        })
+      },
+    )
+
+    test(
+      'should throw error if use same password',
+      async () => {
+        await insertUsers(
+          db,
+          false,
+        )
+
+        const body = await prepareFollowUpBody(
+          db,
+          Policy.ChangePassword,
+        )
+        await markAuthCodeAsSecured(body.code)
+        const res = await app.request(
+          routeConfig.IdentityRoute.ChangePassword,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              ...body,
+              code: body.code,
+              password: 'Password1!',
+            }),
+          },
+          mock(db),
+        )
+        expect(res.status).toBe(400)
+        expect(await res.text()).toBe(messageConfig.RequestError.RequireDifferentPassword)
+      },
+    )
+
+    test(
+      'should throw error if user does not have password',
+      async () => {
+        await insertUsers(
+          db,
+          false,
+        )
+
+        const body = await prepareFollowUpBody(
+          db,
+          Policy.ChangePassword,
+        )
+
+        const authStore = await mockedKV.get(`AC-${body.code}`)
+        await mockedKV.put(
+          `AC-${body.code}`,
+          JSON.stringify({
+            ...JSON.parse(authStore ?? ''),
+            user: {
+              ...JSON.parse(authStore ?? '').user,
+              password: null,
+            },
+          }),
+        )
+        await markAuthCodeAsSecured(body.code)
+
+        const res = await app.request(
+          routeConfig.IdentityRoute.ChangePassword,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              ...body,
+              code: body.code,
+              password: 'Password1!',
+            }),
+          },
+          mock(db),
+        )
+        expect(res.status).toBe(404)
+        expect(await res.text()).toBe(messageConfig.RequestError.NoUser)
+      },
+    )
+
+    test(
+      'should throw 400 if use wrong auth code',
+      async () => {
+        const { res } = await sendCorrectChangePasswordReq({ code: 'abc' })
+        expect(res.status).toBe(400)
+        expect(await res.text()).toBe(messageConfig.RequestError.WrongAuthCode)
+      },
+    )
+
+    test(
+      'should throw 400 if auth code has the wrong policy',
+      async () => {
+        const { res } = await sendCorrectChangePasswordReq({ policy: Policy.SignInOrSignUp })
+        expect(res.status).toBe(400)
+        expect(await res.text()).toBe(messageConfig.RequestError.WrongAuthCode)
+      },
+    )
+
+    test(
+      'should throw error if feature not enabled',
+      async () => {
+        global.process.env.ENABLE_PASSWORD_RESET = false as unknown as string
+        const { res } = await sendCorrectChangePasswordReq()
+        expect(res.status).toBe(400)
+
+        global.process.env.ENABLE_PASSWORD_RESET = true as unknown as string
+      },
+    )
+
+    test(
+      'should throw error if policy is blocked',
+      async () => {
+        global.process.env.BLOCKED_POLICIES = [Policy.ChangePassword] as unknown as string
+        const { res } = await sendCorrectChangePasswordReq()
+        expect(res.status).toBe(400)
+
+        global.process.env.BLOCKED_POLICIES = [] as unknown as string
+      },
+    )
+  },
+)

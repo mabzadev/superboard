@@ -91,7 +91,7 @@ export async function signProjectContext(
   const bytes = await crypto.subtle.sign(
     "HMAC",
     key,
-    encode(canonicalProjectContext(context)),
+    arrayBuffer(encode(canonicalProjectContext(context))),
   );
   return base64UrlEncode(new Uint8Array(bytes));
 }
@@ -120,8 +120,8 @@ export async function verifyProjectContextSignature(
   return crypto.subtle.verify(
     "HMAC",
     key,
-    signatureBytes,
-    encode(canonicalProjectContext(context)),
+    arrayBuffer(signatureBytes),
+    arrayBuffer(encode(canonicalProjectContext(context))),
   );
 }
 
@@ -260,7 +260,7 @@ function importHmacKey(
 ): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
-    encode(secret),
+    arrayBuffer(encode(secret)),
     { name: "HMAC", hash: "SHA-256" },
     false,
     keyUsages,
@@ -269,6 +269,12 @@ function importHmacKey(
 
 function encode(value: string): Uint8Array {
   return new TextEncoder().encode(value);
+}
+
+function arrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
 }
 
 function base64UrlEncode(bytes: Uint8Array): string {

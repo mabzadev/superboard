@@ -59,7 +59,7 @@ export default defineConfig({
           timeout: 120_000,
         },
         {
-          command: `NEXT_PUBLIC_API_URL=${workerUrl} NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-dashboard-e2e NEXT_PUBLIC_DOCS_URL=https://docs.example.test NEXT_PUBLIC_SDK_URL=https://sdk.example.test NEXT_PUBLIC_SHORTLINK_URL=https://in.example.test NEXT_PUBLIC_MCP_URL=https://mcp.example.test CLIENT_SECRET=dashboard-secret npm run dev`,
+          command: `NEXT_PUBLIC_API_URL=${workerUrl} NEXT_PUBLIC_AUTH_URL=${workerUrl} NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-dashboard-e2e NEXT_PUBLIC_DOCS_URL=https://docs.example.test NEXT_PUBLIC_SDK_URL=https://sdk.example.test NEXT_PUBLIC_SHORTLINK_URL=https://in.example.test NEXT_PUBLIC_MCP_URL=https://mcp.example.test CLIENT_SECRET=dashboard-secret npm run dev`,
           url: "http://localhost:3001",
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
@@ -67,7 +67,7 @@ export default defineConfig({
       ]
     : {
         command:
-          "NEXT_PUBLIC_API_URL=http://127.0.0.1:8787 NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-e2e NEXT_PUBLIC_DOCS_URL=https://docs.example.test NEXT_PUBLIC_SDK_URL=https://sdk.example.test NEXT_PUBLIC_SHORTLINK_URL=https://in.example.test NEXT_PUBLIC_MCP_URL=https://mcp.example.test NEXT_PUBLIC_APP_URL=http://localhost:3001 npm run dev",
+          "NEXT_PUBLIC_API_URL=http://127.0.0.1:8787 NEXT_PUBLIC_AUTH_URL=http://127.0.0.1:8787 NEXT_PUBLIC_API_PATH=/api/v1 NEXT_PUBLIC_CLIENT_ID=opengrow-e2e NEXT_PUBLIC_DOCS_URL=https://docs.example.test NEXT_PUBLIC_SDK_URL=https://sdk.example.test NEXT_PUBLIC_SHORTLINK_URL=https://in.example.test NEXT_PUBLIC_MCP_URL=https://mcp.example.test NEXT_PUBLIC_APP_URL=http://localhost:3001 npm run dev",
         url: "http://localhost:3001",
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

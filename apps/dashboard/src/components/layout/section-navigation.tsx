@@ -19,10 +19,14 @@ export function SectionNavigation() {
     >
       {section.pages.map((item) => {
         const active = currentPage?.href === item.href;
+        const locale = pathname.match(/^\/identity\/(en|fr)(?:\/|$)/)?.[1];
+        const href = locale
+          ? item.href.replace("/identity/en", `/identity/${locale}`)
+          : item.href;
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={href}
             aria-current={active ? "page" : undefined}
             className="ds-topnav-link shrink-0"
           >

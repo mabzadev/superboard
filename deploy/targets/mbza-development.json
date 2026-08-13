@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 14,
+  "schemaVersion": 15,
   "target": "mbza-development",
   "accountAlias": "mbza-development",
   "resourceIdentity": {
@@ -54,6 +54,7 @@
   },
   "domains": {
     "api": "api.mbza.dev",
+    "auth": "auth.mbza.dev",
     "shortlinks": "in.mbza.dev",
     "sdk": "sdk.mbza.dev",
     "dashboard": "board.mbza.dev",
@@ -141,9 +142,9 @@
     "dashboardClientId": "superboard-mbza-development"
   },
   "authGateway": {
-    "issuer": "https://api.mbza.dev",
+    "issuer": "https://auth.mbza.dev",
     "audience": "superboard",
-    "jwksUrl": "https://api.mbza.dev/.well-known/jwks.json"
+    "jwksUrl": "https://auth.mbza.dev/.well-known/jwks.json"
   },
   "publicSurfaceMonitors": [
     {

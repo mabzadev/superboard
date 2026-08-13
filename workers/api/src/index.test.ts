@@ -69,6 +69,7 @@ function env(overrides: Partial<Env> = {}): Env {
     D1_EXPECTED_MIGRATION: "0057_application_account_erasure.sql",
     SHORTLINK_DOMAIN: "go.test",
     API_DOMAIN: "api.test",
+    AUTH_DOMAIN: "auth.test",
     SDK_DOMAIN: "sdk.test",
     CORS_ORIGIN: "*",
     JWT_SECRET: "index-secret",
@@ -350,6 +351,41 @@ describe("Worker scheduled and queue handlers", () => {
     expect(forwarded!.headers.get("authorization")).toBe(
       "Bearer application-token",
     );
+  });
+
+  it("routes the dedicated auth domain only through the private Identity binding", async () => {
+    let forwarded: Request | null = null;
+    const fetch = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        forwarded = new Request(input, init);
+        return new Response("auth", {
+          headers: { "set-cookie": "session=opaque; Secure; HttpOnly" },
+        });
+      },
+    );
+    const response = await worker.fetch?.(
+      new Request("https://auth.test/oauth2/v1/authorize?client_id=dashboard", {
+        headers: {
+          Host: "auth.test",
+          Cookie: "locale=fr",
+          Origin: "https://board.test",
+        },
+      }),
+      env({
+        IDENTITY_SERVICE: { fetch } as unknown as Fetcher,
+      }),
+      {} as ExecutionContext,
+    );
+
+    expect(response?.status).toBe(200);
+    expect(response?.headers.get("set-cookie")).toContain("session=opaque");
+    expect(forwarded!.url).toBe(
+      "https://identity.internal/oauth2/v1/authorize?client_id=dashboard",
+    );
+    expect(forwarded!.headers.get("cookie")).toBe("locale=fr");
+    expect(forwarded!.headers.get("origin")).toBe("https://board.test");
+    expect(forwarded!.headers.get("x-forwarded-host")).toBe("auth.test");
+    expect(forwarded!.headers.get("x-superboard-auth-gateway")).toBe("1");
   });
 
   it("enqueues maintenance work from the scheduled handler when a queue binding exists", async () => {

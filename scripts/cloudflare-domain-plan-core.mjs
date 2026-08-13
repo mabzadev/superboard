@@ -15,6 +15,7 @@ export function expectedDomainOwners(target, environment) {
   }
   const entries = [
     ["api", target.domains.api, target.workers.api?.[environment]],
+    ["auth", target.domains.auth, target.workers.api?.[environment]],
     [
       "shortlinks",
       target.domains.shortlinks,

@@ -31,6 +31,7 @@ import messagingAdminRoutes from "./routes/messaging-admin";
 import inboxAdminRoutes from "./routes/inbox-admin";
 import platformStatusRoutes from "./routes/platform-status";
 import applicationUsersAdminRoutes from "./routes/application-users-admin";
+import identityAdminRoutes from "./routes/identity-admin";
 import redirectRoute from "./routes/redirect";
 import { runMaintenance } from "./lib/maintenance";
 import { dispatchQueueJob } from "./lib/jobs";
@@ -266,6 +267,15 @@ app.get("/.well-known/jwks.json", (c) =>
 app.all("*", async (c, next) => {
   const host = c.req.header("host") || "";
 
+  if (host === c.env.AUTH_DOMAIN) {
+    const url = new URL(c.req.url);
+    return proxyAuthGateway(
+      c.req.raw,
+      c.env.IDENTITY_SERVICE,
+      `${url.pathname}${url.search}`,
+    );
+  }
+
   if (host === c.env.FILES_DOMAIN) {
     const url = new URL(c.req.url);
     if (url.pathname === "/v1/files" || url.pathname.startsWith("/v1/files/")) {
@@ -343,6 +353,7 @@ app.route("/api/v1/diagnostics", diagnosticsRoutes);
 app.route("/api/v1/admin", adminRoutes);
 app.route("/api/v1/platform", platformStatusRoutes);
 app.route("/api/v1/application-users/projects", applicationUsersAdminRoutes);
+app.route("/api/v1/identity-admin/projects", identityAdminRoutes);
 app.all("/api/v1/marketing/tracking/:action/:token", (c) => {
   const action = c.req.param("action");
   if (!["open", "click", "unsubscribe"].includes(action)) return c.notFound();
@@ -474,6 +485,72 @@ async function proxyPublicService(
         error: {
           code: "service_unavailable",
           message: "Service is unavailable",
+          retryable: true,
+        },
+      },
+      { status: 503 },
+    );
+  }
+}
+
+async function proxyAuthGateway(
+  request: Request,
+  binding: Fetcher | undefined,
+  path: string,
+): Promise<Response> {
+  if (!binding) {
+    return Response.json(
+      {
+        error: {
+          code: "identity_service_unavailable",
+          message: "Identity service is unavailable",
+          retryable: true,
+        },
+      },
+      { status: 503 },
+    );
+  }
+
+  const headers = new Headers(request.headers);
+  for (const name of [
+    "connection",
+    "host",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+  ]) {
+    headers.delete(name);
+  }
+  const publicUrl = new URL(request.url);
+  headers.set("x-forwarded-host", publicUrl.host);
+  headers.set("x-forwarded-proto", publicUrl.protocol.slice(0, -1));
+  headers.set("x-superboard-auth-gateway", "1");
+
+  const method = request.method.toUpperCase();
+  try {
+    return await binding.fetch(`https://identity.internal${path}`, {
+      method,
+      headers,
+      body: method === "GET" || method === "HEAD" ? null : request.body,
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (cause) {
+    console.error(
+      JSON.stringify({
+        event: "auth_gateway_proxy_failed",
+        path: path.split("?", 1)[0],
+        error: cause instanceof Error ? cause.message : String(cause),
+      }),
+    );
+    return Response.json(
+      {
+        error: {
+          code: "identity_service_unavailable",
+          message: "Identity service is unavailable",
           retryable: true,
         },
       },

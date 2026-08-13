@@ -29,6 +29,54 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@melody-auth/react": [
+        "./src/identity/melody-react.tsx"
+      ],
+      "app/Setup": [
+        "./src/identity/Setup.tsx"
+      ],
+      "app/useSignalValue": [
+        "./src/identity/useSignalValue.ts"
+      ],
+      "app/[lang]/*": [
+        "./src/app/(protected)/identity/[lang]/*"
+      ],
+      "components/*": [
+        "./src/identity/components/*"
+      ],
+      "hooks/*": [
+        "./src/identity/hooks/*"
+      ],
+      "i18n/*": [
+        "./src/identity/i18n/*"
+      ],
+      "identity/*": [
+        "./src/identity/*"
+      ],
+      "identity-route/*": [
+        "./src/app/(protected)/identity/[lang]/*"
+      ],
+      "services/*": [
+        "./src/identity/services/*"
+      ],
+      "signals": [
+        "./src/identity/signals/index.ts"
+      ],
+      "signals/*": [
+        "./src/identity/signals/*"
+      ],
+      "stores": [
+        "./src/identity/stores/index.tsx"
+      ],
+      "stores/*": [
+        "./src/identity/stores/*"
+      ],
+      "tools": [
+        "./src/identity/tools/index.ts"
+      ],
+      "tools/*": [
+        "./src/identity/tools/*"
       ]
     }
   },

@@ -1,0 +1,268 @@
+import { Context } from 'hono'
+import { env } from 'hono/adapter'
+import { genRandomString } from '@melody-auth/shared'
+import {
+  errorConfig, messageConfig,
+  routeConfig,
+} from '../configs'
+import {
+  identityService, kvService, userService,
+} from '../services'
+import * as samlService from './service'
+import {
+  oauthHandler, embeddedHandler,
+} from '../handlers'
+import { oauthDto } from '../dtos'
+import { loggerUtil } from '../utils'
+
+const firstStringValue = (value?: string | string[]): string => {
+  if (Array.isArray(value)) return value.length ? String(value[0]) : ''
+  return value === undefined || value === null ? '' : String(value)
+}
+
+const toStringArray = (value?: string | string[]): string[] => {
+  if (Array.isArray(value)) return value.map((item) => String(item))
+  return value === undefined || value === null ? [] : [String(value)]
+}
+
+const getSamlReplayTtl = (
+  notOnOrAfter: string, fallback: number,
+): number => {
+  if (!notOnOrAfter) return fallback
+  const remainingMs = new Date(notOnOrAfter).getTime() - Date.now()
+  if (Number.isNaN(remainingMs)) return fallback
+  return Math.max(
+    Math.ceil(remainingMs / 1000),
+    60,
+  )
+}
+
+export const getSamlSpLogin = async (c: Context) => {
+  const policy = c.req.query('policy')
+  const {
+    queryDto, app,
+  } = await oauthHandler.parseGetAuthorizeDto(c)
+
+  if (!policy?.startsWith(oauthDto.Policy.SamSso)) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.InvalidPolicy,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidPolicy)
+  }
+
+  const name = policy.replace(
+    oauthDto.Policy.SamSso,
+    '',
+  )
+
+  const sp = await samlService.createSp(c)
+
+  const { provider: idp } = await samlService.loadIdp(
+    c,
+    name,
+    app.id,
+  )
+
+  const {
+    id: requestId, context,
+  } = await sp.createLoginRequest(
+    idp,
+    'redirect',
+  )
+
+  const { AUTHORIZATION_CODE_EXPIRES_IN: codeExpiresIn } = env(c)
+
+  const authCode = genRandomString(128)
+  const authCodeBody = {
+    appId: app.id,
+    appName: app.name,
+    request: queryDto,
+    samlRequestId: requestId,
+  }
+  await kvService.storeEmbeddedSession(
+    c.env.KV,
+    authCode,
+    authCodeBody,
+    codeExpiresIn,
+  )
+
+  const url = new URL(context)
+  url.searchParams.set(
+    'RelayState',
+    authCode,
+  )
+
+  return c.redirect(
+    url.toString(),
+    302,
+  )
+}
+
+export const getSamlSpMetadata = async (c: Context) => {
+  const sp = await samlService.createSp(c)
+  return c.text(
+    sp.getMetadata(),
+    200,
+    { 'Content-Type': 'application/xml' },
+  )
+}
+
+export const postSamlSpAcs = async (c: Context) => {
+  const sp = await samlService.createSp(c)
+  const contentType = c.req.header('content-type')?.toLowerCase() ?? ''
+  const declaredLength = Number(c.req.header('content-length') ?? '0')
+  if (
+    !contentType.startsWith('application/x-www-form-urlencoded') ||
+    !Number.isFinite(declaredLength) ||
+    declaredLength > 2_100_000
+  ) {
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlResponse)
+  }
+  const rawBody = await c.req.text()
+  if (new TextEncoder().encode(rawBody).byteLength > 2_100_000) {
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlResponse)
+  }
+  const body = new URLSearchParams(rawBody)
+  const sessionId = body.get('RelayState') ?? ''
+  const samlResponse = body.get('SAMLResponse') ?? ''
+  if (!/^[A-Za-z0-9_-]{32,256}$/.test(sessionId) || !samlResponse) {
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlResponse)
+  }
+
+  const session = await kvService.getEmbeddedSessionBody(
+    c.env.KV,
+    sessionId,
+  )
+  if (!session) {
+    throw new errorConfig.Forbidden(messageConfig.RequestError.WrongSessionId)
+  }
+
+  const name = (session.request as oauthDto.GetAuthorizeDto).policy?.replace(
+    oauthDto.Policy.SamSso,
+    '',
+  ) ?? ''
+
+  const {
+    provider: idp, record,
+  } = await samlService.loadIdp(
+    c,
+    name,
+    session.appId,
+  )
+
+  let extract: Awaited<ReturnType<typeof sp.parseLoginResponse>>['extract']
+  try {
+    const parsed = await sp.parseLoginResponse(
+      idp,
+      'post',
+      { body: { SAMLResponse: samlResponse } },
+    )
+    extract = parsed.extract
+  } catch {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Error,
+      messageConfig.RequestError.InvalidSamlResponse,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlResponse)
+  }
+
+  const inResponseTo = firstStringValue(extract.response?.inResponseTo)
+  if (!session.samlRequestId || inResponseTo !== session.samlRequestId) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.InvalidSamlInResponseTo,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlInResponseTo)
+  }
+
+  const audiences = toStringArray(extract.audience)
+  if (!audiences.includes(samlService.getSpEntityId(c))) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.InvalidSamlAudience,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlAudience)
+  }
+
+  const destination = firstStringValue(extract.response?.destination)
+  if (destination !== samlService.getSpAcsUrl(c)) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.InvalidSamlDestination,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlDestination)
+  }
+
+  const { AUTHORIZATION_CODE_EXPIRES_IN: codeExpiresIn } = env(c)
+
+  const responseId = firstStringValue(extract.response?.id)
+  if (!responseId || await kvService.isSamlResponseConsumed(
+    c.env.KV,
+    responseId,
+  )) {
+    loggerUtil.triggerLogger(
+      c,
+      loggerUtil.LoggerLevel.Warn,
+      messageConfig.RequestError.SamlResponseReplayed,
+    )
+    throw new errorConfig.Forbidden(messageConfig.RequestError.SamlResponseReplayed)
+  }
+  await kvService.markSamlResponseConsumed(
+    c.env.KV,
+    responseId,
+    getSamlReplayTtl(
+      firstStringValue(extract.conditions?.notOnOrAfter),
+      codeExpiresIn,
+    ),
+  )
+
+  const userId = firstStringValue(extract.attributes?.[record.userIdAttribute])
+  const email = record.emailAttribute ? firstStringValue(extract.attributes?.[record.emailAttribute]) : ''
+  const firstName = record.firstNameAttribute ? firstStringValue(extract.attributes?.[record.firstNameAttribute]) : ''
+  const lastName = record.lastNameAttribute ? firstStringValue(extract.attributes?.[record.lastNameAttribute]) : ''
+  if (!userId) throw new errorConfig.Forbidden(messageConfig.RequestError.InvalidSamlResponse)
+
+  const samlUser: userService.SamlUser = {
+    userId,
+    email: email || null,
+    firstName: firstName || null,
+    lastName: lastName || null,
+  }
+
+  const user = await userService.processSamlAccount(
+    c,
+    samlUser,
+    name,
+    'en',
+  )
+
+  const authCodeBody = embeddedHandler.sessionBodyToAuthCodeBody({
+    ...session,
+    user,
+  })
+  await kvService.storeAuthCode(
+    c.env.KV,
+    sessionId,
+    authCodeBody,
+    codeExpiresIn,
+  )
+
+  const detail = await identityService.processPostAuthorize(
+    c,
+    identityService.AuthorizeStep.Social,
+    sessionId,
+    authCodeBody,
+  )
+
+  const qs = `?state=${detail.state}&code=${detail.code}&locale=${session.request.locale}`
+  const url = detail.nextPage === routeConfig.View.Consent
+    ? `${routeConfig.IdentityRoute.ProcessView}${qs}&redirect_uri=${detail.redirectUri}&step=consent`
+    : `${detail.redirectUri}${qs}`
+  return c.redirect(url)
+}
