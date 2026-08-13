@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Archive,
   Ban,
+  Cloud,
   Download,
   Mail,
   Pause,
@@ -1244,7 +1245,7 @@ function CampaignManagerPage() {
                   ))}
                 </select>
                 <select
-                  aria-label="SMTP profile"
+                  aria-label="Sender identity"
                   className={selectClass}
                   value={campaignForm.smtpId}
                   onChange={(event) =>
@@ -1254,7 +1255,7 @@ function CampaignManagerPage() {
                     }))
                   }
                 >
-                  <option value="">Automatic SMTP</option>
+                  <option value="">Automatic sender</option>
                   {smtp.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
@@ -1756,6 +1757,10 @@ export function MarketingStatisticsPage() {
 export function MarketingSettingsPage() {
   const { selectedProject } = useProjectSelection();
   const [profiles, setProfiles] = useState<SmtpSettings[]>([]);
+  const [deliveryProvider, setDeliveryProvider] = useState<"smtp" | "aws-ses">(
+    "smtp"
+  );
+  const [awsRegion, setAwsRegion] = useState<string | null>(null);
   const [webhooks, setWebhooks] = useState<ProviderWebhook[]>([]);
   const [outbox, setOutbox] = useState<DeliveryOutboxItem[]>([]);
   const [deadLetters, setDeadLetters] = useState<MarketingDeadLetter[]>([]);
@@ -1787,6 +1792,8 @@ export function MarketingSettingsPage() {
         ]);
       const rows = smtpResult.profiles || (smtpResult.id ? [smtpResult] : []);
       setProfiles(rows);
+      setDeliveryProvider(smtpResult.provider || "smtp");
+      setAwsRegion(smtpResult.aws_region || null);
       setWebhooks(hookRows);
       setOutbox(outboxRows);
       setDeadLetters(deadLetterRows);
@@ -1811,7 +1818,7 @@ export function MarketingSettingsPage() {
   const reset = () => {
     setSmtp({
       id: crypto.randomUUID(),
-      name: `SMTP ${profiles.length + 1}`,
+      name: `Sender ${profiles.length + 1}`,
       configured: false,
       port: 587,
       security: "starttls",
@@ -1831,7 +1838,9 @@ export function MarketingSettingsPage() {
             hourly_quota: smtp.hourly_quota || null,
             daily_quota: smtp.daily_quota || null,
           }),
-        "SMTP profile encrypted and saved"
+        deliveryProvider === "aws-ses"
+          ? "Amazon SES sender identity saved"
+          : "SMTP sender profile encrypted and saved"
       )
     )
       setPassword("");
@@ -1839,7 +1848,7 @@ export function MarketingSettingsPage() {
   return (
     <ModulePage
       title="Marketing settings"
-      description="Multiple encrypted SMTP profiles, quotas, failover, provider webhooks and delivery retries."
+      description="Sender identities, AWS SES delivery, quotas, domain authentication, provider events and retries."
       error={error}
     >
       {!selectedProject ? (
@@ -1847,7 +1856,26 @@ export function MarketingSettingsPage() {
       ) : (
         <div className="space-y-6">
           <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-            <FormCard title="SMTP profile">
+            <FormCard title="Sender identity">
+              {deliveryProvider === "aws-ses" ? (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                      <Cloud className="size-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Amazon SES managed delivery</p>
+                      <p className="text-xs text-muted-foreground">
+                        {awsRegion || "AWS region"} · STARTTLS · port 587
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Credentials are owned by the central Email Worker. They are
+                    never stored in a project or exposed in this interface.
+                  </p>
+                </div>
+              ) : null}
               <Input
                 placeholder="Profile name"
                 value={smtp.name || ""}
@@ -1855,62 +1883,69 @@ export function MarketingSettingsPage() {
                   setSmtp((value) => ({ ...value, name: event.target.value }))
                 }
               />
-              <div className="grid grid-cols-[1fr_100px] gap-2">
-                <Input
-                  placeholder="SMTP host"
-                  value={smtp.host || ""}
-                  onChange={(event) =>
-                    setSmtp((value) => ({ ...value, host: event.target.value }))
-                  }
-                />
-                <Input
-                  aria-label="SMTP port"
-                  type="number"
-                  value={smtp.port || 587}
-                  onChange={(event) =>
-                    setSmtp((value) => ({
-                      ...value,
-                      port: Number(event.target.value),
-                    }))
-                  }
-                />
-              </div>
-              <select
-                aria-label="SMTP security"
-                className={selectClass}
-                value={smtp.security || "starttls"}
-                onChange={(event) =>
-                  setSmtp((value) => ({
-                    ...value,
-                    security: event.target.value,
-                  }))
-                }
-              >
-                <option value="tls">TLS</option>
-                <option value="starttls">STARTTLS</option>
-                <option value="plain">Plain</option>
-              </select>
-              <Input
-                placeholder="Username"
-                value={smtp.username || ""}
-                onChange={(event) =>
-                  setSmtp((value) => ({
-                    ...value,
-                    username: event.target.value,
-                  }))
-                }
-              />
-              <Input
-                type="password"
-                autoComplete="new-password"
-                placeholder={
-                  smtp.configured
-                    ? "Leave blank to keep encrypted password"
-                    : "Password"
-                }
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
+              {deliveryProvider === "smtp" ? (
+                <>
+                  <div className="grid grid-cols-[1fr_100px] gap-2">
+                    <Input
+                      placeholder="SMTP host"
+                      value={smtp.host || ""}
+                      onChange={(event) =>
+                        setSmtp((value) => ({
+                          ...value,
+                          host: event.target.value,
+                        }))
+                      }
+                    />
+                    <Input
+                      aria-label="SMTP port"
+                      type="number"
+                      value={smtp.port || 587}
+                      onChange={(event) =>
+                        setSmtp((value) => ({
+                          ...value,
+                          port: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                  <select
+                    aria-label="SMTP security"
+                    className={selectClass}
+                    value={smtp.security || "starttls"}
+                    onChange={(event) =>
+                      setSmtp((value) => ({
+                        ...value,
+                        security: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="tls">TLS</option>
+                    <option value="starttls">STARTTLS</option>
+                    <option value="plain">Plain</option>
+                  </select>
+                  <Input
+                    placeholder="Username"
+                    value={smtp.username || ""}
+                    onChange={(event) =>
+                      setSmtp((value) => ({
+                        ...value,
+                        username: event.target.value,
+                      }))
+                    }
+                  />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={
+                      smtp.configured
+                        ? "Leave blank to keep encrypted password"
+                        : "Password"
+                    }
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </>
+              ) : null}
               <Input
                 type="email"
                 placeholder="From email"
@@ -2005,9 +2040,9 @@ export function MarketingSettingsPage() {
                 </Button>
                 <Button
                   disabled={
-                    !smtp.host ||
                     !smtp.from_email ||
-                    (!smtp.configured && !password)
+                    (deliveryProvider === "smtp" &&
+                      (!smtp.host || (!smtp.configured && !password)))
                   }
                   onClick={() => void save()}
                 >
@@ -2020,7 +2055,7 @@ export function MarketingSettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings />
-                  SMTP pool
+                  Sender identities
                 </CardTitle>
                 <CardDescription>
                   {profiles.length} profiles · {auditCount} audited mutations
@@ -2028,7 +2063,7 @@ export function MarketingSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {profiles.length === 0 ? (
-                  <Empty text="No SMTP profiles configured." />
+                  <Empty text="No sender identities configured." />
                 ) : (
                   profiles.map((item) => (
                     <div key={item.id} className="rounded-md border p-3">
@@ -2043,7 +2078,10 @@ export function MarketingSettingsPage() {
                         >
                           <p className="font-medium">{item.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {item.host}:{item.port} · priority {item.priority} ·{" "}
+                            {deliveryProvider === "aws-ses"
+                              ? `Amazon SES · ${awsRegion || "managed region"}`
+                              : `${item.host}:${item.port}`}{" "}
+                            · priority {item.priority} ·{" "}
                             {item.last_test_status || "untested"}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -2086,7 +2124,7 @@ export function MarketingSettingsPage() {
                                     item.id,
                                     testRecipient || item.from_email
                                   ),
-                                "SMTP test accepted"
+                                "Delivery test accepted"
                               )
                             }
                           >
@@ -2104,7 +2142,7 @@ export function MarketingSettingsPage() {
                                     selectedProject.id,
                                     item.id!
                                   ),
-                                "SMTP profile deleted"
+                                "Sender identity deleted"
                               )
                             }
                           >
@@ -2117,7 +2155,7 @@ export function MarketingSettingsPage() {
                 )}
                 <Input
                   type="email"
-                  placeholder="SMTP test recipient (optional)"
+                  placeholder="Delivery test recipient (optional)"
                   value={testRecipient}
                   onChange={(event) => setTestRecipient(event.target.value)}
                 />

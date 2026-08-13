@@ -1,5 +1,8 @@
 import { Env } from "../types";
-import { EMAIL_SERVICE_SEND_PATH } from "@superboard/contracts/email";
+import {
+  EMAIL_SERVICE_AWS_SES_EVENTS_PATH,
+  EMAIL_SERVICE_SEND_PATH,
+} from "@superboard/contracts/email";
 import { readJsonObjectLimited, readTextLimited } from "./http-limits";
 
 type MailMessage = {
@@ -229,6 +232,67 @@ export async function sendMail(
   }
 
   throw new Error(`Unsupported mail provider: ${provider}`);
+}
+
+export async function proxyAwsSesEvent(
+  env: Env,
+  request: Request,
+): Promise<Response> {
+  if (!env.EMAIL_SERVICE) {
+    return Response.json({ error: "email_service_disabled" }, { status: 404 });
+  }
+  try {
+    const body = await readTextLimited(
+      request,
+      1_100_000,
+      "AWS SNS message is too large",
+    );
+    const response = await env.EMAIL_SERVICE.fetch(
+      `https://email.internal${EMAIL_SERVICE_AWS_SES_EVENTS_PATH}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type":
+            request.headers.get("content-type") || "text/plain; charset=utf-8",
+          ...(request.headers.get("x-amz-sns-message-type")
+            ? {
+                "x-amz-sns-message-type": String(
+                  request.headers.get("x-amz-sns-message-type"),
+                ),
+              }
+            : {}),
+        },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+    const responseBody = await readTextLimited(
+      response,
+      65_536,
+      "Email service response is too large",
+    );
+    return new Response(responseBody, {
+      status: response.status,
+      headers: {
+        "content-type":
+          response.headers.get("content-type") ||
+          "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  } catch (error) {
+    const status = Number((error as { status?: number }).status || 503);
+    return Response.json(
+      {
+        error:
+          status === 413
+            ? "aws_sns_message_too_large"
+            : "email_service_unavailable",
+      },
+      { status: status === 413 ? 413 : 503 },
+    );
+  }
 }
 
 function parseEmailAddress(value: string): string | EmailAddress {

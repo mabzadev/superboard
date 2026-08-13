@@ -102,14 +102,21 @@ export function requiredSecretInventory(target, environment) {
     "email",
     target.mail.transport === "capture"
       ? ["EMAIL_INTERNAL_TOKEN", "MAIL_PREVIEW_TOKEN"]
-      : [
-          "EMAIL_INTERNAL_TOKEN",
-          "SMTP_HOST",
-          "SMTP_PORT",
-          "SMTP_SECURITY",
-          "SMTP_USERNAME",
-          "SMTP_PASSWORD",
-        ],
+      : target.mail.provider === "aws-ses"
+        ? [
+            "EMAIL_INTERNAL_TOKEN",
+            "AWS_SES_SMTP_USERNAME",
+            "AWS_SES_SMTP_PASSWORD",
+            "AWS_SES_SNS_TOPIC_ARN",
+          ]
+        : [
+            "EMAIL_INTERNAL_TOKEN",
+            "SMTP_HOST",
+            "SMTP_PORT",
+            "SMTP_SECURITY",
+            "SMTP_USERNAME",
+            "SMTP_PASSWORD",
+          ],
   );
   add("identity", [
     "IDENTITY_KEYSET",
@@ -191,6 +198,18 @@ const PRODUCTION_SECRET_METADATA = Object.freeze({
   SMTP_PASSWORD: Object.freeze({
     source: "external-mail-provider-credential",
     rotation: "issue-new-credential-deploy-verify-then-revoke-old-credential",
+  }),
+  AWS_SES_SMTP_USERNAME: Object.freeze({
+    source: "external-aws-ses-smtp-credential",
+    rotation: "issue-new-credential-deploy-verify-then-revoke-old-credential",
+  }),
+  AWS_SES_SMTP_PASSWORD: Object.freeze({
+    source: "external-aws-ses-smtp-credential",
+    rotation: "issue-new-credential-deploy-verify-then-revoke-old-credential",
+  }),
+  AWS_SES_SNS_TOPIC_ARN: Object.freeze({
+    source: "external-aws-sns-topic-configuration",
+    rotation: "update-topic-policy-and-worker-secret-together",
   }),
 });
 
@@ -286,6 +305,7 @@ export function secretCoordinationPlan(target, environment) {
         "EMAIL_INTERNAL_TOKEN_PREVIOUS",
       ),
       exactMember("identity", "EMAIL_INTERNAL_TOKEN"),
+      exactMember("analytics", "EMAIL_INTERNAL_TOKEN"),
       exactMember("marketing", "EMAIL_INTERNAL_TOKEN"),
     ],
   });
@@ -294,7 +314,8 @@ export function secretCoordinationPlan(target, environment) {
     scope: "platform-common",
     source: "generated-shared-random",
     sameValueRequired: true,
-    rotation: "publish-the-new-key-with-the-previous-key-before-rehashing-identities",
+    rotation:
+      "publish-the-new-key-with-the-previous-key-before-rehashing-identities",
     members: [
       exactMember(
         "analytics",

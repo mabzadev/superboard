@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "target": "mbza-development",
   "accountAlias": "mbza-development",
   "resourceIdentity": {
@@ -29,9 +29,7 @@
     "applicationAudience": "mbza-development.application",
     "googleAudiences": [],
     "appleAudiences": [],
-    "webOrigins": [
-      "https://reference.mbza.dev"
-    ]
+    "webOrigins": ["https://reference.mbza.dev"]
   },
   "filePolicy": {
     "maxBytes": 10485760,
@@ -46,7 +44,10 @@
     ]
   },
   "mail": {
-    "transport": "capture",
+    "transport": "smtp",
+    "provider": "aws-ses",
+    "awsRegion": "eu-central-1",
+    "configurationSet": "superboard-development",
     "fromName": "SuperBoard Development",
     "fromAddress": "noreply@mbza.dev",
     "replyToAddress": "support@mbza.dev"
@@ -125,19 +126,12 @@
     "source": "workers/custom/reference/src/index.ts",
     "packagePath": "workers/custom/reference",
     "description": "SuperBoard reference extension used to validate the custom Worker protocol on mbza.dev.",
-    "capabilities": [
-      "reference.echo",
-      "reference.acceptance"
-    ],
-    "secrets": [
-      "CUSTOM_WORKER_TOKEN"
-    ],
+    "capabilities": ["reference.echo", "reference.acceptance"],
+    "secrets": ["CUSTOM_WORKER_TOKEN"],
     "vars": {
       "REFERENCE_JOB_RETENTION_DAYS": "30"
     },
-    "crons": [
-      "0 3 * * *"
-    ],
+    "crons": ["0 3 * * *"],
     "d1Binding": {
       "binding": "REFERENCE_DB",
       "migrationsDir": "workers/custom/reference/migrations"

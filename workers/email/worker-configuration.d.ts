@@ -7,13 +7,18 @@ interface __BaseEnv_Env {
 	ENVIRONMENT: string;
 	D1_EXPECTED_MIGRATION: string;
 	MAIL_TRANSPORT: "capture" | "smtp";
+	MAIL_PROVIDER: "smtp" | "aws-ses";
 	MAIL_FROM_NAME: string;
 	MAIL_FROM_ADDRESS: string;
 	MAIL_REPLY_TO: string;
 	EMAIL_QUEUE_NAME: string;
 	EMAIL_DLQ_NAME: string;
+	AWS_REGION: string;
+	AWS_SES_CONFIGURATION_SET: string;
+	AWS_SES_SMTP_PASSWORD: string;
+	AWS_SES_SMTP_USERNAME: string;
+	AWS_SES_SNS_TOPIC_ARN: string;
 	EMAIL_INTERNAL_TOKEN: string;
-	MAIL_PREVIEW_TOKEN: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -26,7 +31,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "MAIL_TRANSPORT" | "MAIL_FROM_NAME" | "MAIL_FROM_ADDRESS" | "MAIL_REPLY_TO" | "EMAIL_QUEUE_NAME" | "EMAIL_DLQ_NAME" | "EMAIL_INTERNAL_TOKEN" | "MAIL_PREVIEW_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "MAIL_TRANSPORT" | "MAIL_PROVIDER" | "MAIL_FROM_NAME" | "MAIL_FROM_ADDRESS" | "MAIL_REPLY_TO" | "EMAIL_QUEUE_NAME" | "EMAIL_DLQ_NAME" | "AWS_REGION" | "AWS_SES_CONFIGURATION_SET" | "AWS_SES_SMTP_PASSWORD" | "AWS_SES_SMTP_USERNAME" | "AWS_SES_SNS_TOPIC_ARN" | "EMAIL_INTERNAL_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.
@@ -35,6 +40,9 @@ declare namespace Cloudflare {
 	EMAIL_INTERNAL_TOKEN: string;
 	EMAIL_INTERNAL_TOKEN_PREVIOUS?: string;
 	MAIL_PREVIEW_TOKEN?: string;
+	AWS_SES_SMTP_USERNAME?: string;
+	AWS_SES_SMTP_PASSWORD?: string;
+	AWS_SES_SNS_TOPIC_ARN?: string;
 	SMTP_HOST?: string;
 	SMTP_PORT?: string;
 	SMTP_SECURITY?: "tls" | "starttls" | "plain";
@@ -46,6 +54,9 @@ interface Env {
 	EMAIL_INTERNAL_TOKEN: string;
 	EMAIL_INTERNAL_TOKEN_PREVIOUS?: string;
 	MAIL_PREVIEW_TOKEN?: string;
+	AWS_SES_SMTP_USERNAME?: string;
+	AWS_SES_SMTP_PASSWORD?: string;
+	AWS_SES_SNS_TOPIC_ARN?: string;
 	SMTP_HOST?: string;
 	SMTP_PORT?: string;
 	SMTP_SECURITY?: "tls" | "starttls" | "plain";

@@ -57,6 +57,7 @@ import {
 import { quarantinePlatformDeadLetter } from "./lib/platform-dead-letters";
 import { resumePendingAccountErasures } from "./lib/account-erasure";
 import { drainAnalyticsFactOutbox } from "./lib/analytics-facts";
+import { proxyAwsSesEvent } from "./lib/mail";
 
 export const app = new Hono<{ Bindings: Env }>();
 
@@ -359,6 +360,9 @@ app.post("/api/v1/marketing/provider-webhooks/:endpointId", (c) =>
     c,
     `/public/v1/provider-webhooks/${c.req.param("endpointId")}`,
   ),
+);
+app.post("/api/v1/email/aws-ses/events", (c) =>
+  proxyAwsSesEvent(c.env, c.req.raw),
 );
 app.get("/api/v1/support/realtime/:ticket", (c) =>
   proxyPublicSupport(c, `/public/v1/realtime/${c.req.param("ticket")}`),

@@ -354,6 +354,12 @@ describe("Access Key SDK module gateway", () => {
       internalPath: "/internal/v1/placements/resolve",
     },
     {
+      moduleName: "analytics" as const,
+      bindingName: "ANALYTICS_MODULE" as const,
+      publicPath: "/api/v1/analytics/remote-config/resolve",
+      internalPath: "/internal/v1/remote-config/resolve",
+    },
+    {
       moduleName: "onboardings" as const,
       bindingName: "ONBOARDINGS_MODULE" as const,
       publicPath: "/api/v1/onboardings/resolve",
@@ -538,6 +544,12 @@ describe("Access Key SDK module gateway", () => {
       "paywalls",
       "PAYWALLS_MODULE",
       "/api/v1/paywalls/events",
+      "/internal/v1/events",
+    ],
+    [
+      "analytics",
+      "ANALYTICS_MODULE",
+      "/api/v1/analytics/events",
       "/internal/v1/events",
     ],
     [

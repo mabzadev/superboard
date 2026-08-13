@@ -1,5 +1,8 @@
 import {
+  EMAIL_SERVICE_PROVIDER_EVENTS_PATH,
   EMAIL_SERVICE_SMTP_TRANSPORT_PATH,
+  type EmailProviderEvent,
+  type EmailProviderEventPage,
   type EmailSmtpPublicConfig,
   type EmailSmtpSecretConfig,
   type EmailSmtpTransportMessage,
@@ -49,7 +52,13 @@ export async function sendSmtpMessage(
           referenceId: command.referenceId,
           profileId: command.profileId,
           publicConfig: command.publicConfig,
-          secret: command.secret,
+          // AWS SES credentials are owned exclusively by the Email Worker.
+          // Existing project profiles may still contain legacy SMTP material,
+          // but it never crosses the binding in managed SES mode.
+          secret:
+            env.EMAIL_PROVIDER === "aws-ses"
+              ? { password: null }
+              : command.secret,
           message: command.message,
         }),
       },
@@ -108,6 +117,104 @@ export function isEmailTransportInProgress(error: unknown): boolean {
     "email_service_failed",
     "email_service_response_invalid",
   ]).has(String((error as { code?: unknown }).code || ""));
+}
+
+export async function pendingEmailProviderEvents(
+  env: Env,
+  source = "marketing",
+): Promise<EmailProviderEvent[]> {
+  const response = await emailServiceFetch(
+    env,
+    `${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}?source=${encodeURIComponent(source)}&limit=100`,
+    { method: "GET" },
+  );
+  const raw = await readTextLimited(response, MAX_RECEIPT_BYTES);
+  const body = safeJson(raw) as unknown as EmailProviderEventPage | null;
+  if (!response.ok || !body || !Array.isArray(body.events)) {
+    throw failure(
+      "email_provider_events_unavailable",
+      "Email provider events are temporarily unavailable",
+      response.status >= 400 ? response.status : 502,
+    );
+  }
+  return body.events.filter(validProviderEvent);
+}
+
+export async function acknowledgeEmailProviderEvents(
+  env: Env,
+  ids: string[],
+  source = "marketing",
+): Promise<void> {
+  if (!ids.length) return;
+  const response = await emailServiceFetch(
+    env,
+    `${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}/ack`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source, ids }),
+    },
+  );
+  if (!response.ok) {
+    throw failure(
+      "email_provider_event_ack_failed",
+      "Email provider event acknowledgement failed",
+      response.status,
+    );
+  }
+}
+
+async function emailServiceFetch(
+  env: Env,
+  path: string,
+  init: RequestInit,
+): Promise<Response> {
+  if (!env.EMAIL_SERVICE || !env.EMAIL_INTERNAL_TOKEN?.trim()) {
+    throw failure(
+      "email_service_unavailable",
+      "Email delivery service is not configured",
+      503,
+    );
+  }
+  try {
+    return await env.EMAIL_SERVICE.fetch(`https://email.internal${path}`, {
+      ...init,
+      headers: {
+        "x-internal-token": env.EMAIL_INTERNAL_TOKEN,
+        ...init.headers,
+      },
+      signal: init.signal ?? AbortSignal.timeout(10_000),
+    });
+  } catch {
+    throw failure(
+      "email_service_unavailable",
+      "Email delivery service is temporarily unavailable",
+      503,
+    );
+  }
+}
+
+function validProviderEvent(value: unknown): value is EmailProviderEvent {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const event = value as Partial<EmailProviderEvent>;
+  return (
+    typeof event.id === "string" &&
+    event.provider === "aws-ses" &&
+    event.source === "marketing" &&
+    Number.isSafeInteger(event.projectId) &&
+    typeof event.referenceId === "string" &&
+    typeof event.providerMessageId === "string" &&
+    new Set([
+      "delivered",
+      "soft_bounce",
+      "hard_bounce",
+      "complaint",
+      "delivery_delayed",
+      "rejected",
+    ]).has(String(event.eventType)) &&
+    typeof event.occurredAt === "string" &&
+    Boolean(event.metadata && typeof event.metadata === "object")
+  );
 }
 
 function safeJson(value: string): Record<string, unknown> | null {

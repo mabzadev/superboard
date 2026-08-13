@@ -96,27 +96,29 @@ try {
       : DOMAIN_SERVICES.includes(service)
         ? DOMAIN_SERVICE_REGISTRY[service].secrets
         : PLATFORM_SERVICE_SECRETS[service];
-  const optionalSecrets = new Set(
-    [
-      ...declaredSecrets.filter(isOptionalSecretBinding),
-      ...(service === "email"
-        ? [
+  const optionalSecrets = new Set([
+    ...declaredSecrets.filter(isOptionalSecretBinding),
+    ...(service === "email"
+      ? [
           "MAIL_PREVIEW_TOKEN",
+          "AWS_SES_SMTP_USERNAME",
+          "AWS_SES_SMTP_PASSWORD",
+          "AWS_SES_SNS_TOPIC_ARN",
           "SMTP_HOST",
           "SMTP_PORT",
           "SMTP_SECURITY",
           "SMTP_USERNAME",
           "SMTP_PASSWORD",
         ]
-        : []),
-    ],
-  );
+      : []),
+  ]);
   const secretFields = declaredSecrets
     .map((secret) => {
       const optional = optionalSecrets.has(secret) ? "?" : "";
-      const type = service === "email" && secret === "SMTP_SECURITY"
-        ? '"tls" | "starttls" | "plain"'
-        : "string";
+      const type =
+        service === "email" && secret === "SMTP_SECURITY"
+          ? '"tls" | "starttls" | "plain"'
+          : "string";
       return `\t${secret}${optional}: ${type};`;
     })
     .join("\n");
@@ -135,8 +137,18 @@ try {
     generated = [
       'type EmailQueueJob = { type: "email.deliver"; messageId: string };',
       generated
-        .replace("\tEMAIL_QUEUE: Queue;", "\tEMAIL_QUEUE: Queue<EmailQueueJob>;")
-        .replace("\tMAIL_TRANSPORT: string;", '\tMAIL_TRANSPORT: "capture" | "smtp";'),
+        .replace(
+          "\tEMAIL_QUEUE: Queue;",
+          "\tEMAIL_QUEUE: Queue<EmailQueueJob>;",
+        )
+        .replace(
+          "\tMAIL_TRANSPORT: string;",
+          '\tMAIL_TRANSPORT: "capture" | "smtp";',
+        )
+        .replace(
+          "\tMAIL_PROVIDER: string;",
+          '\tMAIL_PROVIDER: "smtp" | "aws-ses";',
+        ),
     ].join("\n");
   }
   await writeFile(

@@ -19,15 +19,70 @@ export async function ingestAnalyticsEvents(
   events: AnalyticsEventV1[],
 ): Promise<AnalyticsIngestResultV1[]> {
   const projectId = String(project.projectId);
+  if (
+    project.role !== "system" &&
+    !(await dataCollectionEnabled(env.DB, projectId))
+  ) {
+    return events.map((event) => ({
+      event_id: event.event_id,
+      status: "rejected",
+      code: "analytics_collection_disabled",
+    }));
+  }
+  const inactiveApplications =
+    project.role === "system"
+      ? new Set<string>()
+      : await disabledApplications(env.DB, projectId, events);
   const results: AnalyticsIngestResultV1[] = [];
   const accepted: string[] = [];
   for (const event of events) {
+    if (inactiveApplications.has(event.application_id)) {
+      results.push({
+        event_id: event.event_id,
+        status: "rejected",
+        code: "analytics_application_disabled",
+      });
+      continue;
+    }
     const result = await ingestOne(env, project, event);
     results.push(result);
     if (result.status === "accepted") accepted.push(event.event_id);
   }
   await dispatchOutboxEvents(env, projectId, accepted);
   return results;
+}
+
+async function disabledApplications(
+  db: D1Database,
+  projectId: string,
+  events: AnalyticsEventV1[],
+): Promise<Set<string>> {
+  const applicationIds = [
+    ...new Set(events.map((event) => event.application_id)),
+  ];
+  const placeholders = applicationIds.map(() => "?").join(", ");
+  const rows = await db
+    .prepare(
+      `SELECT application_id FROM analytics_applications
+       WHERE project_id = ? AND active = 0
+         AND application_id IN (${placeholders})`,
+    )
+    .bind(projectId, ...applicationIds)
+    .all<{ application_id: string }>();
+  return new Set(rows.results.map((row) => row.application_id));
+}
+
+async function dataCollectionEnabled(
+  db: D1Database,
+  projectId: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare(
+      "SELECT data_collection_enabled FROM analytics_project_settings WHERE project_id = ?",
+    )
+    .bind(projectId)
+    .first<{ data_collection_enabled: number }>();
+  return row == null || Number(row.data_collection_enabled) === 1;
 }
 
 async function ingestOne(
@@ -209,7 +264,8 @@ export async function handleAnalyticsQueue(
       await processAnalyticsQueueMessage(env, message.body);
       message.ack();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       await env.DB.prepare(
         `UPDATE analytics_ingest_outbox
          SET status = 'processing', attempt_count = attempt_count + 1,

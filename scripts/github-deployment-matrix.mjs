@@ -111,6 +111,7 @@ export function validateDeploymentConfiguration(configuration) {
         "paywalls",
         "dynamic-links",
         "support",
+        "analytics",
         "marketing",
         "onboardings",
         "billing",

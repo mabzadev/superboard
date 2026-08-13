@@ -52,6 +52,16 @@ Le Worker `workers/analytics` est l'autorité pour :
   et session, avec rotation current/previous ;
 - les profils et alias pseudonymes ;
 - les sessions et leur durée ;
+- le registre des applications observées et leurs paramètres de collecte ;
+- les tableaux de bord configurables et leurs widgets ;
+- les vues, écrans, dimensions techniques, navigateurs, appareils, réseaux et
+  dimensions géographiques ;
+- l'analyse d'événement et la segmentation par propriété ;
+- les groupes de crash, occurrences, statuts et commentaires utilisateurs ;
+- les cohortes évaluables ;
+- Remote Config versionné, ciblé et réparti de façon déterministe ;
+- les alertes planifiées, incidents, notifications AWS SES et webhooks signés ;
+- les annotations produit ;
 - la première installation canonique, unique par projet, application et
   instance ;
 - les faits d'achat validés, uniques par boutique, environnement, transaction
@@ -75,8 +85,8 @@ Le Worker `workers/marketing` reste l'autorité pour :
 - les abonnés, consentements, suppressions et préférences applicatives ;
 - les listes, segments et memberships ;
 - les modèles, médias, campagnes, planification, quotas et statistiques ;
-- les profils SMTP, la preuve SPF/DKIM/DMARC, le suivi, les désabonnements et les
-  événements fournisseur ;
+- les identités d'expéditeur, la preuve SPF/DKIM/DMARC, le suivi, les
+  désabonnements et les événements de livraison AWS SES ;
 - les parcours versionnés déclenchés par un événement Analytics ;
 - les conditions d'entrée et la politique de réentrée (`once`,
   `after_completion`, `every_event`) ;
@@ -89,8 +99,11 @@ Le Worker `workers/marketing` reste l'autorité pour :
   avec secret chiffré, signature HMAC et clé d'idempotence ;
 - la quarantaine, le replay/discard et l'audit opérateur.
 
-L'Email Worker reste la seule autorité SMTP. Marketing matérialise le message,
-applique consentement et ciblage, puis délègue le transport par Service Binding.
+L'Email Worker reste la seule autorité de transport. Il possède les identifiants
+SMTP AWS SES du compte, ouvre directement STARTTLS vers l'hôte régional SES et
+vérifie les signatures SNS avant de réconcilier livraison, rebond et plainte.
+Marketing matérialise le message, applique consentement et ciblage, puis délègue
+le transport par Service Binding sans recevoir le secret SMTP.
 
 ## Répartition des fonctions transverses
 
@@ -103,16 +116,18 @@ Analytics ou Marketing :
 | Installations et attribution de lien                       | Analytics pour le compte canonique, Dynamic Links pour la règle d'attribution   |
 | Achats, abonnements, refunds et validation boutique        | Billing pour la preuve, Analytics pour la projection en lecture                 |
 | Push et appareils                                          | API Notifications pour le transport, Marketing pour l'orchestration de parcours |
-| Remote configuration et comptes applicatifs                | App                                                                             |
+| Comptes applicatifs et politique d'exécution               | App                                                                             |
+| Applications observées, Remote Config, crashes et alertes  | Analytics                                                                       |
 | Expériences de paywall                                     | Paywalls                                                                        |
 | Onboarding, variantes et complétion                        | Onboardings                                                                     |
 | Audiences, consentement, campagnes et parcours             | Marketing                                                                       |
 | Email SMTP                                                 | Email                                                                           |
 
-Les événements spécialisés comme une vue, une erreur applicative ou un crash
-utilisent le contrat d'événement Analytics et un nom stable (`screen.viewed`,
-`app.error`, `app.crashed`). Ils bénéficient immédiatement des mêmes filtres,
-funnels, rapports et exports sans installer un système de plugins séparé.
+Les événements spécialisés comme une vue, une note ou un crash utilisent le
+contrat d'événement Analytics et un nom stable (`screen.viewed`, `app.crashed`)
+ou leur nom de migration Countly (`[CLY]_view`, `[CLY]_crash`,
+`[CLY]_star_rating`). Ils bénéficient des mêmes projections, filtres, funnels,
+rapports et exports sans installer un système de plugins séparé.
 
 ## Comptage fiable
 
@@ -176,10 +191,11 @@ Le rollout est ordonné :
 3. aucune source ou métrique legacy n'est supprimée avant la fenêtre de
    rétention et un rapport de réconciliation conservé.
 
-Au moment de cette implémentation, le manifeste MBZA déclare encore son D1
-Analytics sans identifiant, et VocoStar garde Analytics désactivé avec un D1
-futur sans identifiant. Les plans signalent donc explicitement ces deux
-préconditions et n'effectuent aucune écriture Cloudflare implicite.
+Le manifeste MBZA development possède ses identifiants D1, R2 et Queues
+Analytics/Marketing et active les deux modules. VocoStar conserve Analytics
+derrière son feature flag jusqu'à son propre provisionnement. Les générateurs
+refusent un déploiement d'un module activé si une ressource ou un secret requis
+n'est pas déclaré.
 
 ## Convention de code
 

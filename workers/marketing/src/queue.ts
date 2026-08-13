@@ -242,10 +242,13 @@ async function deliverOptin(
     profile.public_config_json,
     {} as SmtpPublicConfig,
   );
-  const secret = await decryptJson<SmtpSecretConfig>(
-    env.SMTP_ENCRYPTION_KEY,
-    profile.encrypted_config,
-  );
+  const secret: SmtpSecretConfig =
+    env.EMAIL_PROVIDER === "aws-ses"
+      ? { password: null }
+      : await decryptJson<SmtpSecretConfig>(
+          env.SMTP_ENCRYPTION_KEY,
+          profile.encrypted_config,
+        );
   const confirmationUrl = `${env.PUBLIC_API_URL}/api/v1/marketing/opt-in/${job.token}`;
   await sendSmtpMessage(env, {
     idempotencyKey: `marketing.optin:${job.projectId}:${job.outboxId}:${profile.id}`,
@@ -477,10 +480,13 @@ async function deliverEmail(
         profile.public_config_json,
         {} as SmtpPublicConfig,
       );
-      const secret = await decryptJson<SmtpSecretConfig>(
-        env.SMTP_ENCRYPTION_KEY,
-        profile.encrypted_config,
-      );
+      const secret: SmtpSecretConfig =
+        env.EMAIL_PROVIDER === "aws-ses"
+          ? { password: null }
+          : await decryptJson<SmtpSecretConfig>(
+              env.SMTP_ENCRYPTION_KEY,
+              profile.encrypted_config,
+            );
       const trackingPayload = {
         projectId: job.projectId,
         deliveryId: delivery.id,
