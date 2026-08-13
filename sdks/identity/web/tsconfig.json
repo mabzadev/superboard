@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["DOM", "ES2017"],
+    "declaration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "Node",
+    "module": "ESNext",
+    "rootDir": "src",
+    "outDir": "dist",
+  },
+  "include": ["src"],
+  "exclude": ["**/*.test.ts"]
+}

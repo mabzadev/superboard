@@ -300,6 +300,7 @@ npm run target:register -- \
   --account-alias sample-development \
   --workers-dev-subdomain sample \
   --api-domain api.sample.dev \
+  --auth-domain auth.sample.dev \
   --shortlinks-domain in.sample.dev \
   --sdk-domain sdk.sample.dev \
   --dashboard-domain grow.sample.dev \
@@ -312,9 +313,9 @@ npm run target:register -- \
   --operator-docs-url https://github.com/example/superboard/tree/dev/docs \
   --operator-support-email support@sample.dev \
   --application-web-origins https://reference.sample.dev \
-  --auth-gateway-issuer https://api.sample.dev \
+  --auth-gateway-issuer https://auth.sample.dev \
   --auth-gateway-audience opengrow \
-  --auth-gateway-jwks-url https://api.sample.dev/.well-known/jwks.json
+  --auth-gateway-jwks-url https://auth.sample.dev/.well-known/jwks.json
 ```
 
 Le template crée des noms différents pour le bucket applicatif et le cache

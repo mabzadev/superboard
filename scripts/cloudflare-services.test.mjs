@@ -49,6 +49,7 @@ test("the declarative registry exposes exactly eight domain services", () => {
   ]);
   assert.deepEqual(PLATFORM_SERVICE_SECRETS.identity, [
     "IDENTITY_KEYSET",
+    "MELODY_AUTH_SECRETS",
     "EMAIL_INTERNAL_TOKEN",
     "FILES_INTERNAL_TOKEN",
     "INTERNAL_API_TOKEN",
@@ -751,6 +752,7 @@ test("staged production API stays private while exposing service bindings", asyn
   assert.deepEqual(workerCatalog.customDependencies, []);
   assert.deepEqual(JSON.parse(mbza.vars.CORS_ORIGINS_JSON), [
     "https://board.mbza.dev",
+    "https://auth.mbza.dev",
     "https://reference.mbza.dev",
   ]);
   assert.deepEqual(
@@ -942,10 +944,18 @@ test("generated identity and files configs are private and parameterized", () =>
     identity.services.map(({ binding }) => binding),
     ["EMAIL_SERVICE", "FILES_SERVICE"],
   );
+  assert.deepEqual(identity.assets, {
+    directory: "../../workers/identity/dist",
+    binding: "ASSETS",
+    run_worker_first: true,
+  });
+  assert.equal(identity.vars.AUTH_SERVER_URL, "https://auth.mbza.dev");
+  assert.equal(identity.vars.EMAIL_PROVIDER_NAME, "superboard");
+  assert.equal(identity.vars.ENABLE_SAML_SSO_AS_SP, true);
   assert.equal(files.workers_dev, false);
   assert.equal(
     files.vars.AUTH_GATEWAY_JWKS_URL,
-    "https://api.mbza.dev/.well-known/jwks.json",
+    "https://auth.mbza.dev/.well-known/jwks.json",
   );
   assert.equal(files.vars.FILES_PUBLIC_ORIGIN, "https://files.mbza.dev");
   assert.equal(files.vars.DOWNLOAD_TICKET_TTL_SECONDS, "600");

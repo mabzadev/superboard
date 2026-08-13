@@ -120,6 +120,7 @@ export function requiredSecretInventory(target, environment) {
   );
   add("identity", [
     "IDENTITY_KEYSET",
+    "MELODY_AUTH_SECRETS",
     "EMAIL_INTERNAL_TOKEN",
     "FILES_INTERNAL_TOKEN",
     "INTERNAL_API_TOKEN",
@@ -162,6 +163,10 @@ const PRODUCTION_SECRET_METADATA = Object.freeze({
   IDENTITY_KEYSET: Object.freeze({
     source: "generated-asymmetric-keyset",
     rotation: "publish-overlapping-public-keys-before-retiring-the-old-key",
+  }),
+  MELODY_AUTH_SECRETS: Object.freeze({
+    source: "generated-rs256-and-saml-keyset",
+    rotation: "publish-new-jwks-verify-overlap-then-retire-old-signing-material",
   }),
   APPLE_ROOT_CERTIFICATES_B64: Object.freeze({
     source: "verified-public-trust-material",

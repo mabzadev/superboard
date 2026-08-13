@@ -1,0 +1,7 @@
+export * as routeConfig from './route'
+export * as errorConfig from './error'
+export * as localeConfig from './locale'
+export * as typeConfig from './type'
+export * as adapterConfig from './adapter'
+export * as variableConfig from './variable'
+export * as messageConfig from './message'

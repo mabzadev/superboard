@@ -17,6 +17,7 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	ENVIRONMENT: string;
 	SHORTLINK_DOMAIN: string;
 	API_DOMAIN: string;
+	AUTH_DOMAIN: string;
 	SDK_DOMAIN: string;
 	FILES_DOMAIN: string;
 	MCP_DOMAIN: string;

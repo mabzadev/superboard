@@ -6,6 +6,7 @@ import {
   loadTarget,
   parseArgs,
   publicApiUrl,
+  publicAuthUrl,
   publicDashboardUrl,
   publicMcpUrl,
   publicSdkUrl,
@@ -136,6 +137,7 @@ if (service === "dashboard") {
   const publicEnvironment = {
     ...targetCloudflareEnv,
     NEXT_PUBLIC_API_URL: apiUrl,
+    NEXT_PUBLIC_AUTH_URL: publicAuthUrl(target),
     NEXT_PUBLIC_API_PATH: "/api/v1",
     NEXT_PUBLIC_CLIENT_ID: target.oauth.dashboardClientId,
     NEXT_PUBLIC_APP_URL: appUrl,
@@ -155,6 +157,15 @@ if (service === "dashboard") {
     ["opennextjs-cloudflare", "build", "--config", configPath],
     publicEnvironment,
     resolve(root, "apps", "dashboard"),
+  );
+}
+
+if (service === "identity") {
+  run(
+    "npm",
+    ["run", "build:client"],
+    targetCloudflareEnv,
+    resolve(root, "workers", "identity"),
   );
 }
 

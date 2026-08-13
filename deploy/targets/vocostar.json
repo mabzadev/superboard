@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 14,
+  "schemaVersion": 15,
   "target": "vocostar",
   "accountAlias": "vocostar-production",
   "resourceIdentity": {
@@ -57,6 +57,7 @@
   },
   "domains": {
     "api": "api.vocostar.com",
+    "auth": "auth.vocostar.com",
     "shortlinks": "go.vocostar.com",
     "sdk": "sdk.vocostar.com",
     "dashboard": "grow.vocostar.com",

@@ -76,6 +76,10 @@ test("generated assignments satisfy every private cross-service contract without
     assignments.api.MODULE_INTERNAL_TOKEN,
     assignments.identity.INTERNAL_API_TOKEN,
   );
+  assert.match(
+    JSON.parse(assignments.identity.MELODY_AUTH_SECRETS).jwtPrivateKeyPem,
+    /BEGIN PRIVATE KEY/u,
+  );
   assert.equal(
     assignments.api.MODULE_INTERNAL_TOKEN,
     assignments.billing.INTERNAL_API_TOKEN,

@@ -9,6 +9,10 @@ import {
   readIdentityCutoverReceipt,
   verifyIdentityProjectCutover,
 } from "./cloudflare-identity-cutover.mjs";
+import {
+  d1Descriptor,
+  localMigrationFiles,
+} from "./cloudflare-d1-registry.mjs";
 import { loadTarget } from "./cloudflare-target.mjs";
 
 const accountId = "a".repeat(32);
@@ -53,6 +57,7 @@ test("Identity cutover blocks deployment while any legacy row is unscoped", asyn
 
 test("Identity cutover writes a mode-0600 receipt bound to target resources and revision", async () => {
   const { target } = await loadTarget("mbza-development");
+  const migration = await latestIdentityMigration(target);
   const directory = await mkdtemp(join(tmpdir(), "opengrow-identity-gate-"));
   const result = await verifyIdentityProjectCutover({
     target,
@@ -65,14 +70,17 @@ test("Identity cutover writes a mode-0600 receipt bound to target resources and 
     execute: () => ({ status: 0, stdout: remoteEvidence() }),
   });
   assert.equal((await stat(result.path)).mode & 0o777, 0o600);
-  assert.match(await readFile(result.path, "utf8"), /0002_project_scope\.sql/u);
+  assert.equal(
+    JSON.parse(await readFile(result.path, "utf8")).migration,
+    migration,
+  );
   const receipt = await readIdentityCutoverReceipt(result.path, {
     targetName: "mbza-development",
     environment: "development",
     accountId,
     databaseName: "superboard-dev-identity-db",
     databaseId: "0c7e4bf4-a0b3-443b-8da9-159795171aa0",
-    migration: "0002_project_scope.sql",
+    migration,
     revision,
     sha256: result.sha256,
   });
@@ -104,6 +112,7 @@ test("Identity cutover refuses a receipt inside the Git repository", async () =>
 
 test("a supplied receipt never bypasses the fresh remote D1 proof", async () => {
   const { target } = await loadTarget("mbza-development");
+  const migration = await latestIdentityMigration(target);
   const auditDirectory = await mkdtemp(
     join(tmpdir(), "opengrow-identity-audit-"),
   );
@@ -129,7 +138,7 @@ test("a supplied receipt never bypasses the fresh remote D1 proof", async () => 
         accountId,
         databaseName: "superboard-dev-identity-db",
         databaseId: "0c7e4bf4-a0b3-443b-8da9-159795171aa0",
-        migration: "0002_project_scope.sql",
+        migration,
         revision,
       },
       verification: {
@@ -188,4 +197,16 @@ function remoteEvidence(overrides = {}) {
       ],
     },
   ]);
+}
+
+async function latestIdentityMigration(target) {
+  const descriptor = d1Descriptor(
+    target,
+    "mbza-development",
+    "development",
+    "identity",
+  );
+  const migration = (await localMigrationFiles(descriptor)).at(-1);
+  assert.ok(migration, "Identity must have at least one reviewed migration");
+  return migration;
 }

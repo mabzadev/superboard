@@ -81,7 +81,7 @@ src/
 
 See [`.env.example`](.env.example) for all available configuration options.
 
-**Required:** `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CLIENT_ID`,
+**Required:** `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_AUTH_URL`, `NEXT_PUBLIC_CLIENT_ID`,
 `NEXT_PUBLIC_DOCS_URL`, `NEXT_PUBLIC_SDK_URL`,
 `NEXT_PUBLIC_SHORTLINK_URL`, `NEXT_PUBLIC_MCP_URL`, `CLIENT_SECRET`. Cloudflare builds derive every
 public URL from the selected target manifest; operators do not maintain a

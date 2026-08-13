@@ -4,6 +4,7 @@ import {
   loadTarget,
   parseArgs,
   publicApiUrl,
+  publicAuthUrl,
   publicDashboardUrl,
   publicMcpUrl,
   publicSdkUrl,
@@ -37,6 +38,7 @@ run(process.execPath, [
 const dashboardEnvironment = {
   ...process.env,
   NEXT_PUBLIC_API_URL: publicApiUrl(target),
+  NEXT_PUBLIC_AUTH_URL: publicAuthUrl(target),
   NEXT_PUBLIC_API_PATH: "/api/v1",
   NEXT_PUBLIC_CLIENT_ID: target.oauth.dashboardClientId,
   NEXT_PUBLIC_APP_URL: publicDashboardUrl(target),

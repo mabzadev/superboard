@@ -4,6 +4,7 @@ import {
   Boxes,
   ChartNoAxesCombined,
   CreditCard,
+  Fingerprint,
   Link2,
   LayoutDashboard,
   LifeBuoy,
@@ -18,6 +19,7 @@ export type SectionSlug =
   | "paywalls"
   | "dynamic-links"
   | "support"
+  | "identity"
   | "marketing"
   | "analytics"
   | "onboardings";
@@ -62,6 +64,24 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
       page("Android Setup", "/app/android-setup"),
       page("iOS Setup", "/app/ios-setup"),
       page("Web Setup", "/app/web-setup"),
+    ],
+  },
+  {
+    slug: "identity",
+    label: "Identity",
+    icon: Fingerprint,
+    href: "/identity/en/dashboard",
+    pages: [
+      page("Overview", "/identity/en/dashboard"),
+      page("Users", "/identity/en/users"),
+      page("User Attributes", "/identity/en/user-attributes"),
+      page("Roles", "/identity/en/roles"),
+      page("Applications", "/identity/en/apps"),
+      page("Scopes", "/identity/en/scopes"),
+      page("Organizations", "/identity/en/orgs"),
+      page("Logs", "/identity/en/logs"),
+      page("SAML SSO", "/identity/en/saml"),
+      page("Account Policies", "/identity/en/account"),
     ],
   },
   {
@@ -173,9 +193,15 @@ export function sectionForPath(pathname: string) {
 
 export function pageForPath(pathname: string) {
   const section = sectionForPath(pathname);
+  const comparablePath = pathname.replace(
+    /^\/identity\/(?:en|fr)(?=\/|$)/,
+    "/identity/en"
+  );
   return [...(section?.pages ?? [])]
     .sort((left, right) => right.href.length - left.href.length)
     .find(
-      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+      (item) =>
+        comparablePath === item.href ||
+        comparablePath.startsWith(`${item.href}/`)
     );
 }

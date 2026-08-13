@@ -157,6 +157,7 @@ test("the new-application template produces a complete valid custom target", asy
       "account-alias": "sample-development",
       "workers-dev-subdomain": "sample",
       "api-domain": "api.sample.dev",
+      "auth-domain": "auth.sample.dev",
       "shortlinks-domain": "in.sample.dev",
       "sdk-domain": "sdk.sample.dev",
       "dashboard-domain": "grow.sample.dev",
@@ -168,9 +169,9 @@ test("the new-application template produces a complete valid custom target", asy
       "allowed-file-content-types": "application/pdf,image/png,text/plain",
       "operator-docs-url": "https://github.com/example/superboard-platform/docs",
       "operator-support-email": "support@sample.dev",
-      "auth-gateway-issuer": "https://api.sample.dev",
+      "auth-gateway-issuer": "https://auth.sample.dev",
       "auth-gateway-audience": "opengrow",
-      "auth-gateway-jwks-url": "https://api.sample.dev/.well-known/jwks.json",
+      "auth-gateway-jwks-url": "https://auth.sample.dev/.well-known/jwks.json",
       "application-web-origins": "https://reference.sample.dev",
       "custom-source": "workers/custom/sample/src/index.ts",
       "custom-capabilities": "sample.echo",
@@ -201,6 +202,7 @@ test("the new-application template produces a complete valid custom target", asy
     migrationStrategy: "canonical",
   });
   assert.deepEqual(manifest.retiredDomains, []);
+  assert.equal(manifest.domains.auth, "auth.sample.dev");
   assert.deepEqual(manifest.applicationIdentity.webOrigins, [
     "https://reference.sample.dev",
   ]);

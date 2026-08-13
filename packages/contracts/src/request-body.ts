@@ -101,7 +101,9 @@ export async function readRequestObjectLimited(
     throw new RequestBodyError("form_invalid", "Request body media type is unsupported", 400);
   }
   try {
-    const form = await new Response(body, { headers: { "content-type": contentType } }).formData();
+    const copy = new Uint8Array(body.byteLength);
+    copy.set(body);
+    const form = await new Response(copy.buffer, { headers: { "content-type": contentType } }).formData();
     return Object.fromEntries(form.entries());
   } catch {
     throw new RequestBodyError("form_invalid", "Request body must contain valid form data", 400);

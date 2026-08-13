@@ -128,7 +128,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 
   return {
     $schema: "./schema.json",
-    schemaVersion: 14,
+    schemaVersion: 15,
     target,
     accountAlias: args["account-alias"],
     resourceIdentity: {
@@ -175,6 +175,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
     },
     domains: {
       api: args["api-domain"],
+      auth: args["auth-domain"],
       shortlinks: args["shortlinks-domain"],
       sdk: args["sdk-domain"],
       dashboard: args["dashboard-domain"],
