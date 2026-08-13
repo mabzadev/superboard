@@ -18,7 +18,7 @@
     "@angular/compiler-cli": "^21.2.20",
     "@angular/core": "^21.2.20",
     "@vitest/coverage-v8": "^4.1.10",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "ng-packagr": "^21.2.7",
     "tsc-alias": "^1.8.10",
     "typescript": "^5.9.3",

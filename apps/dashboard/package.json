@@ -118,7 +118,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "husky": "^9.1.7",
-    "jsdom": "^29.0.0",
+    "jsdom": "^30.0.1",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "shiki": "^3.23.0",
