@@ -128,7 +128,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 
   return {
     $schema: "./schema.json",
-    schemaVersion: 13,
+    schemaVersion: 14,
     target,
     accountAlias: args["account-alias"],
     resourceIdentity: {
@@ -160,6 +160,10 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
       transport:
         args["mail-transport"] ??
         (selectedEnvironment === "development" ? "capture" : "smtp"),
+      provider: args["mail-provider"] ?? "aws-ses",
+      awsRegion: args["aws-region"] ?? "eu-central-1",
+      configurationSet:
+        args["mail-configuration-set"] ?? `superboard-${selectedEnvironment}`,
       fromName: "SuperBoard",
       fromAddress: args["mail-from-address"],
     },

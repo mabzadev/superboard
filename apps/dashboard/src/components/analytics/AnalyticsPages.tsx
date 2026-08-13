@@ -35,6 +35,7 @@ import {
   createAnalyticsReport,
   deleteAnalyticsReport,
   getAnalyticsEventDefinitions,
+  getAnalyticsEventAnalysis,
   getAnalyticsEvents,
   getAnalyticsInstallations,
   getAnalyticsOperations,
@@ -44,6 +45,7 @@ import {
   getAnalyticsRetention,
   queryAnalyticsFunnel,
   type AnalyticsEvent,
+  type AnalyticsEventAnalysis,
   type AnalyticsInstallation,
   type AnalyticsOperation,
   type AnalyticsOverview,
@@ -72,21 +74,53 @@ import {
   ModulePage,
   moduleErrorMessage,
 } from "@/components/modules/ModulePage";
+import {
+  AnalyticsAlertsPage,
+  AnalyticsCohortsPage,
+  AnalyticsCrashesPage,
+  AnalyticsDashboardsPage,
+  AnalyticsDimensionsPage,
+  AnalyticsFeedbackPage,
+  AnalyticsRemoteConfigPage,
+  AnalyticsSettingsPage,
+  AnalyticsUsersPage,
+  AnalyticsViewsPage,
+} from "./AnalyticsFeaturePages";
 
 export type AnalyticsPageKind =
   | "overview"
+  | "dashboards"
+  | "users"
   | "events"
+  | "dimensions"
+  | "views"
   | "installations"
   | "purchases"
   | "insights"
-  | "reports";
+  | "cohorts"
+  | "crashes"
+  | "feedback"
+  | "remote-config"
+  | "alerts"
+  | "reports"
+  | "settings";
 
 export function AnalyticsPage({ kind }: { kind: AnalyticsPageKind }) {
   if (kind === "overview") return <OverviewPage />;
+  if (kind === "dashboards") return <AnalyticsDashboardsPage />;
+  if (kind === "users") return <AnalyticsUsersPage />;
   if (kind === "events") return <EventsPage />;
+  if (kind === "dimensions") return <AnalyticsDimensionsPage />;
+  if (kind === "views") return <AnalyticsViewsPage />;
   if (kind === "installations") return <InstallationsPage />;
   if (kind === "purchases") return <PurchasesPage />;
   if (kind === "insights") return <InsightsPage />;
+  if (kind === "cohorts") return <AnalyticsCohortsPage />;
+  if (kind === "crashes") return <AnalyticsCrashesPage />;
+  if (kind === "feedback") return <AnalyticsFeedbackPage />;
+  if (kind === "remote-config") return <AnalyticsRemoteConfigPage />;
+  if (kind === "alerts") return <AnalyticsAlertsPage />;
+  if (kind === "settings") return <AnalyticsSettingsPage />;
   return <ReportsPage />;
 }
 
@@ -244,21 +278,33 @@ function EventsPage() {
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [eventName, setEventName] = useState("");
   const [appliedName, setAppliedName] = useState("");
+  const [property, setProperty] = useState("");
+  const [analysis, setAnalysis] = useState<AnalyticsEventAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
     if (!selectedProject) return;
     try {
-      const result = await getAnalyticsEvents(selectedProject.id, {
-        ...range,
-        event_name: appliedName || undefined,
-        limit: "100",
-      });
+      const [result, eventAnalysis] = await Promise.all([
+        getAnalyticsEvents(selectedProject.id, {
+          ...range,
+          event_name: appliedName || undefined,
+          limit: "100",
+        }),
+        appliedName
+          ? getAnalyticsEventAnalysis(selectedProject.id, {
+              ...range,
+              event_name: appliedName,
+              property: property || undefined,
+            })
+          : Promise.resolve(null),
+      ]);
       setEvents(result.items);
+      setAnalysis(eventAnalysis);
       setError(null);
     } catch (cause) {
       setError(moduleErrorMessage(cause));
     }
-  }, [appliedName, range, selectedProject]);
+  }, [appliedName, property, range, selectedProject]);
   useEffect(() => void load(), [load]);
   return (
     <ModulePage
@@ -269,62 +315,157 @@ function EventsPage() {
       {!selectedProject ? (
         <EmptyProject />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent events</CardTitle>
-            <CardDescription>Filter by the exact event name.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form
-              className="flex flex-col gap-2 sm:flex-row"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setAppliedName(eventName.trim());
-              }}
-            >
-              <Input
-                value={eventName}
-                onChange={(event) => setEventName(event.target.value)}
-                placeholder="checkout.completed"
-                aria-label="Event name"
-              />
-              <Button type="submit">
-                <Filter className="size-4" /> Apply filter
-              </Button>
-            </form>
-            <DataTable
-              columns={[
-                "Event",
-                "Source",
-                "Application",
-                "Occurred",
-                "Properties",
-              ]}
-              empty="No events match this period and filter."
-            >
-              {events.map((event) => (
-                <tr key={event.event_id} className="border-b last:border-0">
-                  <Cell>
-                    <div className="font-medium">{event.event_name}</div>
-                    <div className="max-w-48 truncate font-mono text-xs text-muted-foreground">
-                      {event.event_id}
-                    </div>
-                  </Cell>
-                  <Cell>
-                    <Badge variant="outline">{event.source}</Badge>
-                  </Cell>
-                  <Cell>{event.application_id}</Cell>
-                  <Cell>{formatDate(event.occurred_at)}</Cell>
-                  <Cell>
-                    <code className="block max-w-80 truncate text-xs">
-                      {JSON.stringify(event.properties)}
-                    </code>
-                  </Cell>
-                </tr>
-              ))}
-            </DataTable>
-          </CardContent>
-        </Card>
+        <div className="space-y-5">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent events</CardTitle>
+              <CardDescription>Filter by the exact event name.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form
+                className="flex flex-col gap-2 sm:flex-row"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setProperty("");
+                  setAppliedName(eventName.trim());
+                }}
+              >
+                <Input
+                  value={eventName}
+                  onChange={(event) => setEventName(event.target.value)}
+                  placeholder="checkout.completed"
+                  aria-label="Event name"
+                />
+                <Button type="submit">
+                  <Filter className="size-4" /> Apply filter
+                </Button>
+              </form>
+              <DataTable
+                columns={[
+                  "Event",
+                  "Source",
+                  "Application",
+                  "Occurred",
+                  "Properties",
+                ]}
+                empty="No events match this period and filter."
+              >
+                {events.map((event) => (
+                  <tr key={event.event_id} className="border-b last:border-0">
+                    <Cell>
+                      <div className="font-medium">{event.event_name}</div>
+                      <div className="max-w-48 truncate font-mono text-xs text-muted-foreground">
+                        {event.event_id}
+                      </div>
+                    </Cell>
+                    <Cell>
+                      <Badge variant="outline">{event.source}</Badge>
+                    </Cell>
+                    <Cell>{event.application_id}</Cell>
+                    <Cell>{formatDate(event.occurred_at)}</Cell>
+                    <Cell>
+                      <code className="block max-w-80 truncate text-xs">
+                        {JSON.stringify(event.properties)}
+                      </code>
+                    </Cell>
+                  </tr>
+                ))}
+              </DataTable>
+            </CardContent>
+          </Card>
+          {analysis && (
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <Card>
+                <CardHeader className="flex-row items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>{analysis.event_name}</CardTitle>
+                    <CardDescription>
+                      Event volume and unique pseudonymous users over 30 days.
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge variant="secondary">
+                      {formatNumber(analysis.totals.events)} events
+                    </Badge>
+                    <Badge variant="outline">
+                      {formatNumber(analysis.totals.users)} users
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={analysis.series}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="date"
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tickLine={false}
+                          axisLine={false}
+                          width={36}
+                        />
+                        <Tooltip />
+                        <Area
+                          dataKey="events"
+                          type="monotone"
+                          stroke="var(--primary)"
+                          fill="var(--primary)"
+                          fillOpacity={0.12}
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Segmentation</CardTitle>
+                  <CardDescription>
+                    Break down this event by one recorded property.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <select
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    value={property}
+                    onChange={(event) => setProperty(event.target.value)}
+                    aria-label="Event property"
+                  >
+                    <option value="">Choose a property</option>
+                    {analysis.properties.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="space-y-2">
+                    {analysis.segmentation?.items.slice(0, 12).map((item) => (
+                      <div
+                        key={item.value}
+                        className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+                      >
+                        <span className="truncate">{item.value}</span>
+                        <span className="shrink-0 tabular-nums text-muted-foreground">
+                          {formatNumber(item.events)}
+                        </span>
+                      </div>
+                    ))}
+                    {property && !analysis.segmentation?.items.length && (
+                      <p className="py-6 text-center text-sm text-muted-foreground">
+                        No values for this property.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       )}
     </ModulePage>
   );

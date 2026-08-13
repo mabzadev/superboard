@@ -2,7 +2,11 @@ import { Hono, type Context } from "hono";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import { verifyInternalProjectContext, failure } from "./auth";
 import { decryptJson, encryptJson, sha256 } from "./secrets";
-import { sendSmtpMessage } from "./email-service";
+import {
+  acknowledgeEmailProviderEvents,
+  pendingEmailProviderEvents,
+  sendSmtpMessage,
+} from "./email-service";
 import type {
   Env,
   MarketingQueueJob,
@@ -27,10 +31,7 @@ import { handleMarketingQueue, isMarketingQueueJob } from "./queue";
 import { verifyTrackingToken } from "./tracking";
 import { verifyEmailAuthentication } from "./email-authentication";
 import { marketingIdentityHashCandidates } from "./identity";
-import {
-  dispatchDueJourneyEnrollments,
-  journeyRoutes,
-} from "./journeys";
+import { dispatchDueJourneyEnrollments, journeyRoutes } from "./journeys";
 
 const app = new Hono<{
   Bindings: Env;
@@ -1626,10 +1627,13 @@ app.post("/internal/v1/campaigns/:campaignId/test", async (c) => {
     profile.public_config_json,
     {} as SmtpPublicConfig,
   );
-  const secret = await decryptJson<SmtpSecretConfig>(
-    c.env.SMTP_ENCRYPTION_KEY,
-    String(profile.encrypted_config),
-  );
+  const secret: SmtpSecretConfig =
+    c.env.EMAIL_PROVIDER === "aws-ses"
+      ? { password: null }
+      : await decryptJson<SmtpSecretConfig>(
+          c.env.SMTP_ENCRYPTION_KEY,
+          String(profile.encrypted_config),
+        );
   const result = await sendSmtpMessage(c.env, {
     idempotencyKey: `marketing.campaign-test:${projectId}:${c.get("project").requestId}:${profile.id}`,
     projectId,
@@ -1752,8 +1756,19 @@ app.get("/internal/v1/settings/smtp", async (c) => {
   return c.json({
     data:
       profiles.length === 1
-        ? profiles[0]
-        : { profiles, configured: profiles.length > 0 },
+        ? {
+            ...profiles[0],
+            provider: c.env.EMAIL_PROVIDER,
+            aws_region:
+              c.env.EMAIL_PROVIDER === "aws-ses" ? c.env.AWS_REGION : null,
+          }
+        : {
+            profiles,
+            configured: profiles.length > 0,
+            provider: c.env.EMAIL_PROVIDER,
+            aws_region:
+              c.env.EMAIL_PROVIDER === "aws-ses" ? c.env.AWS_REGION : null,
+          },
   });
 });
 
@@ -1986,10 +2001,13 @@ app.post("/internal/v1/settings/smtp/test", async (c) => {
     profile.public_config_json,
     {} as SmtpPublicConfig,
   );
-  const secret = await decryptJson<SmtpSecretConfig>(
-    c.env.SMTP_ENCRYPTION_KEY,
-    String(profile.encrypted_config),
-  );
+  const secret: SmtpSecretConfig =
+    c.env.EMAIL_PROVIDER === "aws-ses"
+      ? { password: null }
+      : await decryptJson<SmtpSecretConfig>(
+          c.env.SMTP_ENCRYPTION_KEY,
+          String(profile.encrypted_config),
+        );
   try {
     const result = await sendSmtpMessage(c.env, {
       idempotencyKey: `marketing.smtp-test:${projectId}:${c.get("project").requestId}:${profile.id}`,
@@ -2145,6 +2163,8 @@ async function processProviderEvent(
     "soft_bounce",
     "hard_bounce",
     "complaint",
+    "delivery_delayed",
+    "rejected",
   ]);
   const metadata = jsonObject(body.metadata, "metadata");
   const providerEventId =
@@ -2180,7 +2200,11 @@ async function processProviderEvent(
         ? "delivered"
         : eventType === "complaint"
           ? "complained"
-          : "bounced";
+          : eventType === "soft_bounce" || eventType === "hard_bounce"
+            ? "bounced"
+            : eventType === "rejected"
+              ? "failed"
+              : String(delivery.status);
     const statements = [
       env.DB.prepare(
         `UPDATE email_deliveries SET status = ?, updated_at = ? WHERE id = ? AND project_id = ?`,
@@ -2478,16 +2502,33 @@ async function saveSmtpProfile(c: MarketingContext) {
   )
     .bind(projectId, profileId)
     .first<{ encrypted_config: string }>();
+  const managedAwsSes = c.env.EMAIL_PROVIDER === "aws-ses";
+  const awsRegion = String(c.env.AWS_REGION || "")
+    .trim()
+    .toLowerCase();
+  if (managedAwsSes && !/^[a-z]{2}(?:-gov)?-[a-z]+-\d$/u.test(awsRegion)) {
+    throw failure(
+      "aws_region_invalid",
+      "AWS SES region is not configured",
+      503,
+    );
+  }
   const publicConfig: SmtpPublicConfig = {
-    host: text(body.host, "host", 253),
-    port: positiveInt(body.port, "port", 587),
-    security: enumValue(
-      body.security,
-      "security",
-      ["tls", "starttls", "plain"],
-      "starttls",
-    ),
-    username: optionalText(body.username, "username", 320),
+    host: managedAwsSes
+      ? `email-smtp.${awsRegion}.amazonaws.com${awsRegion.startsWith("cn-") ? ".cn" : ""}`
+      : text(body.host, "host", 253),
+    port: managedAwsSes ? 587 : positiveInt(body.port, "port", 587),
+    security: managedAwsSes
+      ? "starttls"
+      : enumValue(
+          body.security,
+          "security",
+          ["tls", "starttls", "plain"],
+          "starttls",
+        ),
+    username: managedAwsSes
+      ? null
+      : optionalText(body.username, "username", 320),
     from_email: email(body.from_email, "from_email"),
     from_name: optionalText(body.from_name, "from_name", 255),
     reply_to: body.reply_to ? email(body.reply_to, "reply_to") : null,
@@ -2508,11 +2549,13 @@ async function saveSmtpProfile(c: MarketingContext) {
     );
   }
   const password = optionalText(body.password, "password", 8_000);
-  if (!password && !existing)
+  if (!managedAwsSes && !password && !existing)
     throw failure("password_required", "SMTP password is required");
-  const encrypted = password
-    ? await encryptJson(c.env.SMTP_ENCRYPTION_KEY, { password })
-    : existing!.encrypted_config;
+  const encrypted = managedAwsSes
+    ? await encryptJson(c.env.SMTP_ENCRYPTION_KEY, { password: null })
+    : password
+      ? await encryptJson(c.env.SMTP_ENCRYPTION_KEY, { password })
+      : existing!.encrypted_config;
   await c.env.DB.prepare(
     `
     INSERT INTO smtp_profiles (id, project_id, name, encrypted_config, public_config_json, priority, enabled,
@@ -2976,10 +3019,18 @@ function serializeTemplate(row: Record<string, unknown>) {
   return row;
 }
 function serializeSmtpProfile(row: Record<string, unknown>) {
+  const configuration = parseStoredJson<Record<string, unknown>>(
+    row.public_config_json,
+    {},
+  );
+  const host = String(configuration.host || "");
   return {
     id: row.id,
     name: row.name,
-    ...parseStoredJson<Record<string, unknown>>(row.public_config_json, {}),
+    ...configuration,
+    provider: /^email-smtp\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$/u.test(host)
+      ? "aws-ses"
+      : "smtp",
     priority: row.priority,
     enabled: Boolean(row.enabled),
     hourly_quota: row.hourly_quota,
@@ -3194,8 +3245,68 @@ async function scheduled(
         } satisfies MarketingQueueJob);
       }
       await dispatchDueJourneyEnrollments(env);
+      await reconcileEmailProviderEvents(env);
     })(),
   );
+}
+
+async function reconcileEmailProviderEvents(env: Env) {
+  let events: Awaited<ReturnType<typeof pendingEmailProviderEvents>>;
+  try {
+    events = await pendingEmailProviderEvents(env);
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "marketing_provider_event_reconciliation_failed",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return;
+  }
+  const acknowledged: string[] = [];
+  for (const event of events) {
+    try {
+      const response = await processProviderEvent(
+        env,
+        event.projectId,
+        {
+          event_type: event.eventType,
+          provider_event_id: event.id,
+          provider_message_id: event.providerMessageId,
+          delivery_id: event.referenceId,
+          metadata: {
+            ...event.metadata,
+            provider: event.provider,
+            provider_event_id: event.id,
+            provider_occurred_at: event.occurredAt,
+          },
+        },
+        `email:${event.provider}`,
+      );
+      if (response.ok) acknowledged.push(event.id);
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "marketing_provider_event_apply_failed",
+          provider_event_id: event.id,
+          project_id: event.projectId,
+          delivery_id: event.referenceId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+  if (acknowledged.length) {
+    await acknowledgeEmailProviderEvents(env, acknowledged).catch((error) =>
+      console.error(
+        JSON.stringify({
+          event: "marketing_provider_event_ack_failed",
+          count: acknowledged.length,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      ),
+    );
+  }
 }
 
 export default {

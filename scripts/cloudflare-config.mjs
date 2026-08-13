@@ -383,6 +383,12 @@ function domainConfig() {
             PUBLIC_API_URL: publicApiUrl(target),
           }
         : {}),
+      ...(definition.vars.includes("EMAIL_PROVIDER")
+        ? { EMAIL_PROVIDER: target.mail.provider }
+        : {}),
+      ...(definition.vars.includes("AWS_REGION")
+        ? { AWS_REGION: target.mail.awsRegion || "" }
+        : {}),
       ...(definition.vars.includes("ALLOWED_PROJECT_IDS")
         ? {
             ALLOWED_PROJECT_IDS: resources.supportProjectIds.join(","),
@@ -590,11 +596,18 @@ function emailConfig() {
       ENVIRONMENT: environment,
       ...d1SchemaVars(),
       MAIL_TRANSPORT: target.mail.transport,
+      MAIL_PROVIDER: target.mail.provider,
       MAIL_FROM_NAME: target.mail.fromName,
       MAIL_FROM_ADDRESS: target.mail.fromAddress,
       MAIL_REPLY_TO: target.mail.replyToAddress || "",
       EMAIL_QUEUE_NAME: resources.queues.email,
       EMAIL_DLQ_NAME: resources.queues.emailDlq,
+      ...(target.mail.provider === "aws-ses"
+        ? {
+            AWS_REGION: target.mail.awsRegion,
+            AWS_SES_CONFIGURATION_SET: target.mail.configurationSet,
+          }
+        : {}),
     },
     d1_databases: [
       {
@@ -621,7 +634,11 @@ function emailConfig() {
       queueConsumer(resources.queues.emailDlq, null, 10, 5, 100),
     ];
   }
-  if (target.domains.mailPreview && publicRoutesEnabled) {
+  if (
+    target.mail.transport === "capture" &&
+    target.domains.mailPreview &&
+    publicRoutesEnabled
+  ) {
     config.routes = [
       { pattern: target.domains.mailPreview, custom_domain: true },
     ];

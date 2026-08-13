@@ -22,6 +22,18 @@ export type AnalyticsEventContextV1 = {
   platform?: string;
   app_version?: string;
   os_version?: string;
+  device?: string;
+  device_type?: string;
+  browser?: string;
+  browser_version?: string;
+  country_code?: string;
+  city?: string;
+  carrier?: string;
+  screen_resolution?: string;
+  orientation?: string;
+  connection_type?: string;
+  campaign?: string;
+  acquisition_source?: string;
   sdk_name?: string;
   sdk_version?: string;
   locale?: string;
@@ -143,11 +155,27 @@ export class AnalyticsContractError extends Error {
 }
 
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
-const EVENT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9._:-]{0,127}$/u;
+// Existing SDKs use conventional identifiers. The Countly-compatible adapter
+// also preserves Countly's documented internal event prefix so migrations do
+// not need to rewrite historical event names.
+const EVENT_NAME_PATTERN =
+  /^(?:[A-Za-z][A-Za-z0-9._:-]{0,127}|\[CLY\]_[A-Za-z0-9._:-]{1,122})$/u;
 const CONTEXT_KEYS = new Set<keyof AnalyticsEventContextV1>([
   "platform",
   "app_version",
   "os_version",
+  "device",
+  "device_type",
+  "browser",
+  "browser_version",
+  "country_code",
+  "city",
+  "carrier",
+  "screen_resolution",
+  "orientation",
+  "connection_type",
+  "campaign",
+  "acquisition_source",
   "sdk_name",
   "sdk_version",
   "locale",

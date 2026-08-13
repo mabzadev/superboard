@@ -27,8 +27,10 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
     secrets: [
       "INTERNAL_API_TOKEN",
       "INTERNAL_API_TOKEN_PREVIOUS",
+      "EMAIL_INTERNAL_TOKEN",
       "ANALYTICS_ID_HASH_KEY",
       "ANALYTICS_ID_HASH_KEY_PREVIOUS",
+      "ANALYTICS_CONFIG_ENCRYPTION_KEY",
     ],
     r2: [{ binding: "EVENT_ARCHIVE", resourceKey: "analytics" }],
     queue: {
@@ -46,7 +48,10 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
         nameSuffix: "operations",
       },
     ],
-    services: [{ binding: "MARKETING_MODULE", service: "marketing" }],
+    services: [
+      { binding: "MARKETING_MODULE", service: "marketing" },
+      { binding: "EMAIL_SERVICE", service: "email" },
+    ],
   }),
   marketing: domainService("MARKETING_MODULE", "marketing", {
     secrets: [
@@ -58,7 +63,7 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
       "SMTP_ENCRYPTION_KEY",
       "TRACKING_SIGNING_KEY",
     ],
-    vars: ["PUBLIC_API_URL"],
+    vars: ["PUBLIC_API_URL", "EMAIL_PROVIDER", "AWS_REGION"],
     r2: [{ binding: "MEDIA", resourceKey: "marketing" }],
     queue: {
       binding: "MARKETING_QUEUE",
@@ -139,6 +144,9 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
     "EMAIL_INTERNAL_TOKEN",
     "EMAIL_INTERNAL_TOKEN_PREVIOUS",
     "MAIL_PREVIEW_TOKEN",
+    "AWS_SES_SMTP_USERNAME",
+    "AWS_SES_SMTP_PASSWORD",
+    "AWS_SES_SNS_TOPIC_ARN",
     "SMTP_HOST",
     "SMTP_PORT",
     "SMTP_SECURITY",

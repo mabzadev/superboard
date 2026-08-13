@@ -42,6 +42,40 @@ describe("SMTP provider acceptance boundary", () => {
     expect(writes.at(-1)).toBe("QUIT\r\n");
   });
 
+  it("extracts the Amazon SES message id from its 250 Ok receipt", async () => {
+    const writes: string[] = [];
+    sockets.connect.mockReturnValue(
+      fakeSocket(
+        [
+          "220 ready",
+          "250 hello",
+          "250 sender accepted",
+          "250 recipient accepted",
+          "354 transmit message",
+          "250 Ok 01010190-example-message-id-000000",
+          "221 goodbye",
+        ],
+        writes,
+      ),
+    );
+
+    await expect(
+      sendSmtpMessage(
+        smtpConfig,
+        { password: null },
+        {
+          to: "recipient@example.test",
+          subject: "Accepted by SES",
+          text: "Body",
+          html: null,
+          messageId: "<opengrow-stable@example.test>",
+        },
+      ),
+    ).resolves.toMatchObject({
+      messageId: "01010190-example-message-id-000000",
+    });
+  });
+
   it("uses the caller's deterministic Message-ID verbatim", () => {
     const first = buildMessage(smtpConfig, {
       to: "recipient@example.test",
@@ -60,6 +94,18 @@ describe("SMTP provider acceptance boundary", () => {
     expect(first.messageId).toBe("<opengrow-stable@example.test>");
     expect(second.messageId).toBe(first.messageId);
     expect(first.raw).toContain("Message-ID: <opengrow-stable@example.test>");
+  });
+
+  it("rejects caller overrides of transport-owned message headers", () => {
+    expect(() =>
+      buildMessage(smtpConfig, {
+        to: "recipient@example.test",
+        subject: "Stable",
+        text: "Body",
+        html: null,
+        headers: { From: "attacker@example.test" },
+      }),
+    ).toThrowError(expect.objectContaining({ code: "email_header_reserved" }));
   });
 
   it("classifies a connection loss after DATA as outcome unknown", async () => {

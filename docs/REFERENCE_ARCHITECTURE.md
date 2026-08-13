@@ -35,17 +35,17 @@ the product name and must not appear as a default inside reusable runtime code.
 
 ## Development endpoints
 
-| Surface       | URL                                          | Responsibility                                                                          |
-| ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Reference app | `https://reference.mbza.dev`                 | Executable Flutter Web acceptance specification                                         |
-| Back office   | `https://board.mbza.dev`                     | SuperBoard administration and infrastructure status                                     |
-| API           | `https://api.mbza.dev`                       | Authenticated API gateway and SDK orchestration                                         |
-| SDK           | `https://sdk.mbza.dev`                       | Mobile and FlutterFlow SDK surface                                                      |
-| Short links   | `https://in.mbza.dev`                        | Redirects, attribution and universal/app links                                          |
-| Files         | `https://files.mbza.dev`                     | Controlled file delivery                                                                |
-| MCP           | `https://mcp.mbza.dev/mcp`                   | OAuth-protected infrastructure status and operator tools over stateless Streamable HTTP |
-| Mail preview  | `https://mail.mbza.dev`                      | Protected capture of development email                                                  |
-| Support       | `https://api.mbza.dev/api/v1/support-client` | Authenticated mobile Support gateway (HTTP, attachments and realtime tickets)           |
+| Surface       | URL                                                | Responsibility                                                                          |
+| ------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Reference app | `https://reference.mbza.dev`                       | Executable Flutter Web acceptance specification                                         |
+| Back office   | `https://board.mbza.dev`                           | SuperBoard administration and infrastructure status                                     |
+| API           | `https://api.mbza.dev`                             | Authenticated API gateway and SDK orchestration                                         |
+| SDK           | `https://sdk.mbza.dev`                             | Mobile and FlutterFlow SDK surface                                                      |
+| Short links   | `https://in.mbza.dev`                              | Redirects, attribution and universal/app links                                          |
+| Files         | `https://files.mbza.dev`                           | Controlled file delivery                                                                |
+| MCP           | `https://mcp.mbza.dev/mcp`                         | OAuth-protected infrastructure status and operator tools over stateless Streamable HTTP |
+| SES feedback  | `https://api.mbza.dev/api/v1/email/aws-ses/events` | Signature-verified Amazon SNS delivery, bounce and complaint ingress                    |
+| Support       | `https://api.mbza.dev/api/v1/support-client`       | Authenticated mobile Support gateway (HTTP, attachments and realtime tickets)           |
 
 The API and short-link origins are deliberately distinct. Platform endpoints
 come from `deploy/targets/mbza-development.json`; the acceptance application's
@@ -80,15 +80,22 @@ flowchart LR
   modules --> onboardings["Onboardings"]
   billing -->|"verified fact outbox"| analytics
   analytics -->|"pseudonymous event signals"| marketing
-  email --> capture["mail.mbza.dev in development"]
-  email --> smtp["Per-app SMTP in production"]
+  email -->|"STARTTLS 587"| ses["Amazon SES regional SMTP"]
+  ses --> sns["Amazon SNS delivery feedback"]
+  sns -->|"signed public callback"| api
   support -. replaces .-> chatwoot["Temporary OpenChat source / chat.vocostar.com"]
 ```
 
 All private Worker-to-Worker calls use Cloudflare Service Bindings. Public
 domains terminate only on the gateway, dashboard, short-link surface and
-protected mail preview where required. Support HTTP and realtime ticket ingress
+signed provider callback where required. Support HTTP and realtime ticket ingress
 both pass through the API gateway.
+
+Marketing, Analytics and Email are Cloudflare-native Workers. They require no
+Tunnel, VPC, private network, virtual machine, container or Docker runtime.
+Cloudflare D1 stores transactional state, R2 stores archives and media, Queues
+carry retryable work, Workflows run durable Analytics operations, cron triggers
+evaluate journeys and alerts, and Service Bindings carry private traffic.
 
 The reference application is not a seventeenth business service. It is a
 separately deployed, assets-only Worker whose sole role is end-to-end acceptance
@@ -98,26 +105,26 @@ pending; pull requests never publish the MBZA test site.
 
 ## Worker catalogue
 
-| Worker          | Scope                        | Purpose                                                                                               | Primary state                                  |
-| --------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `api`           | common, mandatory            | OAuth/JWT gateway, users, projects, notifications, file orchestration, SDK routes, health aggregation | central D1, KV, R2, Queues                     |
-| `dashboard`     | common, mandatory            | SuperBoard administrator UI, including `/infrastructure`                                              | OpenNext assets and cache R2                   |
-| `email`         | common, mandatory            | transactional/test delivery, SMTP dispatch, retries, capture and preview                              | email D1, Email Queue + DLQ                    |
-| `billing`       | optional feature             | store verification, purchases, subscriptions, entitlements, refunds and billing jobs                  | central D1/KV/R2, Billing Queue + DLQ          |
-| `identity`      | common, mandatory            | application accounts, email/password, Google/Apple federation, sessions and JWT exchange              | Identity D1                                    |
-| `files`         | common, mandatory            | authenticated upload, metadata, streaming download, deletion and account purge                        | Files D1 + common files R2                     |
-| `observability` | common, mandatory            | sanitized Tail Worker events and operational summaries                                                | Analytics Engine                               |
-| `mcp`           | common, mandatory            | OAuth-protected operator tools for projects, links, analytics, campaigns and SDK configuration        | stateless; private API Service Binding         |
-| `messaging`     | legacy migration source only | old realtime implementation; disabled on reference targets                                            | legacy Messaging D1/R2 until retention expires |
-| `app`           | optional feature             | customers, referrals, access keys and SDK setup                                                       | module D1                                      |
-| `products`      | optional feature             | products, offerings and entitlements                                                                  | module D1                                      |
-| `paywalls`      | optional feature             | paywall definitions, versions, placements and events                                                  | module D1                                      |
-| `dynamic-links` | optional feature             | links, campaigns, domains, redirect rules and attribution                                             | module D1                                      |
-| `support`       | optional feature             | unified inbox, contacts, attachments, webhooks and workflows                                          | module D1/R2, Queue + DLQ, Durable Object      |
-| `analytics`     | optional feature             | pseudonymous events, sessions, installations, verified purchases, funnels, retention and reports      | module D1/R2, Analytics Queue + DLQ, Workflow  |
-| `marketing`     | optional feature             | consent, audiences, templates, campaigns, versioned journeys and omnichannel delivery                 | module D1/R2, Marketing Queue + DLQ            |
-| `onboardings`   | optional feature             | onboarding flows, placements and completion analytics                                                 | module D1                                      |
-| `custom`        | optional, one per app        | jobs/integrations that are genuinely unique to one application                                        | only resources declared by that app            |
+| Worker          | Scope                        | Purpose                                                                                                                                                                                                          | Primary state                                  |
+| --------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `api`           | common, mandatory            | OAuth/JWT gateway, users, projects, notifications, file orchestration, SDK routes, health aggregation                                                                                                            | central D1, KV, R2, Queues                     |
+| `dashboard`     | common, mandatory            | SuperBoard administrator UI, including `/infrastructure`                                                                                                                                                         | OpenNext assets and cache R2                   |
+| `email`         | common, mandatory            | transactional/test delivery, SMTP dispatch, retries, capture and preview                                                                                                                                         | email D1, Email Queue + DLQ                    |
+| `billing`       | optional feature             | store verification, purchases, subscriptions, entitlements, refunds and billing jobs                                                                                                                             | central D1/KV/R2, Billing Queue + DLQ          |
+| `identity`      | common, mandatory            | application accounts, email/password, Google/Apple federation, sessions and JWT exchange                                                                                                                         | Identity D1                                    |
+| `files`         | common, mandatory            | authenticated upload, metadata, streaming download, deletion and account purge                                                                                                                                   | Files D1 + common files R2                     |
+| `observability` | common, mandatory            | sanitized Tail Worker events and operational summaries                                                                                                                                                           | Analytics Engine                               |
+| `mcp`           | common, mandatory            | OAuth-protected operator tools for projects, links, analytics, campaigns and SDK configuration                                                                                                                   | stateless; private API Service Binding         |
+| `messaging`     | legacy migration source only | old realtime implementation; disabled on reference targets                                                                                                                                                       | legacy Messaging D1/R2 until retention expires |
+| `app`           | optional feature             | customers, referrals, access keys and SDK setup                                                                                                                                                                  | module D1                                      |
+| `products`      | optional feature             | products, offerings and entitlements                                                                                                                                                                             | module D1                                      |
+| `paywalls`      | optional feature             | paywall definitions, versions, placements and events                                                                                                                                                             | module D1                                      |
+| `dynamic-links` | optional feature             | links, campaigns, domains, redirect rules and attribution                                                                                                                                                        | module D1                                      |
+| `support`       | optional feature             | unified inbox, contacts, attachments, webhooks and workflows                                                                                                                                                     | module D1/R2, Queue + DLQ, Durable Object      |
+| `analytics`     | optional feature             | pseudonymous events, applications, dashboards, sessions, views, technology/location, installations, verified purchases, funnels, retention, cohorts, crashes, feedback, Remote Config, alerts, hooks and exports | module D1/R2, Analytics Queue + DLQ, Workflow  |
+| `marketing`     | optional feature             | consent, audiences, lists, segments, templates, media, broadcasts, visual versioned journeys, in-app messages, sender identities, tracking and omnichannel delivery                                              | module D1/R2, Marketing Queue + DLQ            |
+| `onboardings`   | optional feature             | onboarding flows, placements and completion analytics                                                                                                                                                            | module D1                                      |
+| `custom`        | optional, one per app        | jobs/integrations that are genuinely unique to one application                                                                                                                                                   | only resources declared by that app            |
 
 The target `features` object decides which optional common Workers are deployed.
 API, dashboard, email, identity, files, observability and MCP are the mandatory
@@ -136,20 +143,20 @@ Cloudflare secrets and support overlap rotation.
 
 ## Common versus application-specific configuration
 
-| Concern                       | Common implementation                 | Application-owned input                             |
-| ----------------------------- | ------------------------------------- | --------------------------------------------------- |
-| Email/password authentication | API Worker and common database schema | registration mode and branding                      |
-| Google and Apple sign-in      | common identity routes                | provider client IDs and secrets                     |
-| Notifications                 | common API and queues                 | provider credentials, templates, feature enablement |
-| Upload/download               | common API, signed operations and R2  | bucket binding and retention policy                 |
-| Users/roles                   | common owner/admin/member model       | initial allowlist and operators                     |
-| Paywalls/products             | reusable feature Workers              | catalogue and application/store identifiers         |
-| Marketing/newsletters         | reusable marketing Worker             | contacts, consent, SMTP profile and campaigns       |
-| Product analytics             | reusable analytics Worker             | event vocabulary, retention and reporting policy    |
-| Transactional email           | common email Worker                   | sender identity and SMTP secret                     |
-| Support                       | reusable SuperBoard support Worker    | inbox configuration and webhooks                    |
-| Unique conversions/AI jobs    | custom Worker contract                | implementation, queues, model/provider credentials  |
-| Domains/resources             | deployment generator                  | target manifest values                              |
+| Concern                       | Common implementation                 | Application-owned input                                |
+| ----------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| Email/password authentication | API Worker and common database schema | registration mode and branding                         |
+| Google and Apple sign-in      | common identity routes                | provider client IDs and secrets                        |
+| Notifications                 | common API and queues                 | provider credentials, templates, feature enablement    |
+| Upload/download               | common API, signed operations and R2  | bucket binding and retention policy                    |
+| Users/roles                   | common owner/admin/member model       | initial allowlist and operators                        |
+| Paywalls/products             | reusable feature Workers              | catalogue and application/store identifiers            |
+| Marketing/newsletters         | reusable marketing Worker             | contacts, consent, sender identities and campaigns     |
+| Product analytics             | reusable analytics Worker             | event vocabulary, retention and reporting policy       |
+| Transactional email           | common Email Worker                   | sender identity; account-level AWS SES SMTP credential |
+| Support                       | reusable SuperBoard support Worker    | inbox configuration and webhooks                       |
+| Unique conversions/AI jobs    | custom Worker contract                | implementation, queues, model/provider credentials     |
+| Domains/resources             | deployment generator                  | target manifest values                                 |
 
 ## Configuration contract
 
@@ -169,7 +176,7 @@ Cloudflare secrets and support overlap rotation.
 - the per-application upload ceiling, processor-ticket lifetime and
   exact/wildcard MIME allowlist enforced by the common Files Worker.
 
-The current contract is `schemaVersion: 13`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
+The current contract is `schemaVersion: 14`. It never contains the Cloudflare account ID, API tokens, SMTP passwords, OAuth
 provider secrets, signing keys or preview tokens. Account selection resolves in
 this order:
 
@@ -190,16 +197,17 @@ key returns the original receipt when a caller retries the same normalized
 payload and rejects reuse with different content.
 
 The optional Marketing Worker owns the complete newsletter boundary: subscriber
-lists, consent, suppression, segments, templates, scheduling, per-project SMTP
-profiles, quotas/failover, one-click unsubscribe, tracking, provider events and
-reports. It does not execute the shared SMTP implementation directly. After
-applying consent, segmentation, personalization, tracking, quotas and profile
-failover, Marketing delegates the fully materialized message and selected
-in-memory profile to Email through a private Service Binding. Email is the sole
-SMTP socket authority and retains an idempotent transport receipt without
-persisting the delegated body or secret. This avoids a second transport
-authority without forcing applications that do not enable Marketing to deploy
-campaign state or credentials.
+lists, consent, suppression, segments, templates, scheduling, per-project sender
+identities, quotas/failover, one-click unsubscribe, tracking, provider events and
+reports. It does not execute the SMTP implementation directly. After applying
+consent, segmentation, personalization, tracking, quotas and sender failover,
+Marketing delegates the fully materialized message and selected public sender
+identity to Email through a private Service Binding. In managed AWS mode no SES
+username or password is accepted from Marketing and legacy project SMTP material
+is removed from the command. Email is the sole socket and credential authority
+and retains an idempotent transport receipt without persisting the delegated
+body. This avoids a second transport authority without forcing applications that
+do not enable Marketing to deploy campaign state.
 
 Applications read and update their own consent through
 `/api/v1/sdk/marketing/v1/preferences`. The client supplies only consent,
@@ -211,17 +219,96 @@ the bearer or trusting client identity headers. Marketing exposes only public
 lists to this role and never permits application traffic to weaken complaint,
 hard-bounce, privacy or manual suppressions.
 
-Development uses `capture`, so no test message can leave `mbza.dev` by mistake.
-The preview UI never exposes messages without `MAIL_PREVIEW_TOKEN`. Production
-uses `smtp`; `SMTP_PASSWORD`, `EMAIL_INTERNAL_TOKEN` and preview credentials are
-Cloudflare Worker secrets, not database or Git values.
+The MBZA development and VocoStar production targets use managed Amazon SES.
+The target contains only `provider`, AWS region and configuration-set name. The
+regional SMTP username/password and the exact SNS Topic ARN are Cloudflare Worker
+secrets attached only to Email. Generic SMTP and protected capture remain
+supported target modes, but are not part of this deployment path.
 
-An accepted SMTP test is not treated as sender readiness. Marketing resolves the
+Email connects directly from the Worker to
+`email-smtp.<region>.amazonaws.com:587`, upgrades with STARTTLS, adds the declared
+SES configuration set and stores the provider message ID. SES feedback returns
+through Amazon SNS to one API callback. Email validates the exact Topic ARN,
+regional HTTPS certificate URL, canonical SNS fields and RSA signature before it
+updates a receipt. Confirmation URLs are validated and fetched only after the
+signed envelope succeeds. Delivery, delayed delivery, reject, soft/hard bounce
+and complaint events are normalized without recipient addresses. Marketing
+consumes its normalized events over a private Service Binding and acknowledges
+them only after its own suppression and delivery state is durable.
+
+An accepted delivery test is not treated as sender readiness. Marketing resolves the
 sender domain's SPF, DKIM selector and DMARC records through Cloudflare's binary
 DNS-over-HTTPS endpoint, persists the result on the profile and exposes it in
 the back office and health metrics. Production campaign and double-opt-in
 delivery only select profiles whose three checks are verified. Editing a sender
 or selector invalidates the previous proof.
+
+## Native Marketing architecture
+
+Marketing follows the information architecture of a mature customer-engagement
+product while retaining SuperBoard's design system and authorization model. The
+Dashboard exposes audiences, public/private lists, computed segments, templates,
+media, transactional sends, scheduled broadcasts, visual journeys, in-app
+messages, external channels, statistics, sender identities, provider hooks and
+operational retries. The journey editor is a native graph canvas: email, channel,
+delay, branch, attribute-update and exit nodes are edited in an inspector and
+connected by default/true/false outcomes. Raw graph JSON is an optional advanced
+escape hatch rather than the primary interface.
+
+Journey definitions are versioned. Activation freezes the version used by an
+enrollment, and each step has an execution receipt so a Queue retry cannot send
+the same side effect twice. Delays are durable queue state; branches evaluate
+normalized subscriber/event context; suppression and confirmed consent are
+rechecked immediately before every email. Campaign and journey delivery both
+converge on the central Email Worker.
+
+## Native Analytics architecture
+
+Analytics accepts versioned event batches through the SDK gateway. The gateway
+resolves an Access Key and application identity, strips caller-controlled project
+headers, signs the internal project context and forwards through a Service
+Binding. Raw user, anonymous, installation and session identifiers are converted
+to keyed hashes before D1 or R2 persistence. Hot events remain queryable in D1;
+the immutable normalized event is archived in R2; Queue projection receipts make
+sessions, daily metrics, views, crash groups and feedback exactly-once.
+
+The native module includes:
+
+- application inventory and collection settings;
+- custom dashboards and metric, timeseries, event, funnel, retention, map,
+  crash, view, installation and purchase widgets;
+- event exploration, daily analysis, property segmentation and dimensional
+  reports for platform, version, device, browser, location, carrier, connection
+  and acquisition;
+- pseudonymous profiles, sessions, views, installations and verified purchases;
+- funnels, retention cohorts and reusable behavioral cohorts;
+- deterministic crash grouping, occurrence inspection and resolution workflow;
+- ratings and written feedback;
+- versioned Remote Config with conditional and stable percentage rollout;
+- minute-level alerts for thresholds, crash spikes, missing data, installation
+  drops and verified-purchase drops, with AWS SES notifications;
+- HMAC-signed HTTPS hooks with encrypted secrets, idempotent delivery records and
+  exponential retry;
+- timeline annotations, saved reports, R2 export, replay, subject erasure and
+  rollup rebuild through Cloudflare Workflows.
+
+Remote Config is the only POST-based Analytics read exposed to an application
+SDK. It still requires the project Access Key and configured application
+identifier. Administrative resources stay behind the Dashboard JWT gateway and
+every mutation requires an idempotency key and emits an audit record.
+
+## Canonical counting boundary
+
+SDK event names can never create accounting facts. Installation totals are
+projected only from the reserved
+`superboard.analytics.installation.created.v1` event produced by the trusted
+platform path. Purchase totals are projected only from
+`superboard.analytics.purchase.verified.v1`, emitted by Billing after Apple,
+Google, Stripe or manual verification. Both facts have source-event and business
+uniqueness constraints. Ingestion receipts, projection receipts, Billing outbox
+records and Queue replays all converge on the same row, so retries are observable
+but do not increase totals. Refunds, chargebacks and cancellations remain separate
+verified fact types; revenue is never inferred from an arbitrary client event.
 
 Every Queue with a DLQ has two generated consumers: the business consumer sends
 terminal failures to its DLQ, and the owning Worker persists that DLQ in its own

@@ -23,11 +23,19 @@ export default defineConfig({
           bindings: {
             INTERNAL_API_TOKEN: "analytics-runtime-secret",
             ANALYTICS_ID_HASH_KEY: "analytics-runtime-hash-key",
+            ANALYTICS_CONFIG_ENCRYPTION_KEY:
+              "analytics-runtime-configuration-key",
+            EMAIL_INTERNAL_TOKEN: "analytics-runtime-email-token",
             ...d1RuntimeBindings(migrations),
           },
           serviceBindings: {
             MARKETING_MODULE: async () =>
-              Response.json({ data: { duplicate: false, matched_journeys: 0 } }, { status: 202 }),
+              Response.json(
+                { data: { duplicate: false, matched_journeys: 0 } },
+                { status: 202 },
+              ),
+            EMAIL_SERVICE: async () =>
+              Response.json({ id: crypto.randomUUID(), status: "queued" }),
           },
         },
       };

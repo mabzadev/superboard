@@ -7,33 +7,33 @@
   "vars": {
     "ENVIRONMENT": "test",
     "SERVICE_NAME": "analytics",
-    "D1_EXPECTED_MIGRATION": "0001_analytics.sql",
+    "D1_EXPECTED_MIGRATION": "0002_countly_capabilities.sql",
     "QUEUE_NAME": "analytics-test-ingest",
-    "DLQ_NAME": "analytics-test-ingest-dlq"
+    "DLQ_NAME": "analytics-test-ingest-dlq",
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "analytics-test",
       "database_id": "00000000-0000-0000-0000-000000000014",
-      "migrations_dir": "migrations"
-    }
+      "migrations_dir": "migrations",
+    },
   ],
   "r2_buckets": [
-    { "binding": "EVENT_ARCHIVE", "bucket_name": "analytics-test-events" }
+    { "binding": "EVENT_ARCHIVE", "bucket_name": "analytics-test-events" },
   ],
   "queues": {
     "producers": [
-      { "binding": "ANALYTICS_INGEST_QUEUE", "queue": "analytics-test-ingest" }
+      { "binding": "ANALYTICS_INGEST_QUEUE", "queue": "analytics-test-ingest" },
     ],
     "consumers": [
       {
         "queue": "analytics-test-ingest",
         "max_batch_size": 25,
         "max_batch_timeout": 1,
-        "max_retries": 8
-      }
-    ]
+        "max_retries": 8,
+      },
+    ],
   },
-  "triggers": { "crons": ["* * * * *"] }
+  "triggers": { "crons": ["* * * * *"] },
 }

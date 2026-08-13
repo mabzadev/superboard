@@ -162,12 +162,23 @@ test("shared production contracts identify both ends and environment-specific bi
   );
 });
 
-test("SMTP and target extension secrets have explicit provenance", async () => {
+test("AWS SES and target extension secrets have explicit provenance", async () => {
   const target = (await loadTarget("vocostar")).target;
   const plan = secretCoordinationPlan(target, "production");
   assert.equal(
-    plan.contracts.find(({ id }) => id === "email-smtp-password").source,
-    "external-mail-provider-credential",
+    plan.contracts.find(({ id }) => id === "email-aws-ses-smtp-username")
+      .source,
+    "external-aws-ses-smtp-credential",
+  );
+  assert.equal(
+    plan.contracts.find(({ id }) => id === "email-aws-ses-smtp-password")
+      .source,
+    "external-aws-ses-smtp-credential",
+  );
+  assert.equal(
+    plan.contracts.find(({ id }) => id === "email-aws-ses-sns-topic-arn")
+      .source,
+    "external-aws-sns-topic-configuration",
   );
   assert.equal(
     plan.contracts.find(({ id }) => id === "custom-custom-worker-token"),

@@ -42,6 +42,9 @@ test("the injected secret inventory is derived from common and custom registries
     "JWT_SECRET",
     "INTERNAL_API_TOKEN",
     "SMTP_PASSWORD",
+    "AWS_SES_SMTP_USERNAME",
+    "AWS_SES_SMTP_PASSWORD",
+    "AWS_SES_SNS_TOPIC_ARN",
     "APPLICATION_PROVIDER_TOKEN",
   ]) {
     assert.equal(names.has(name), true, name);

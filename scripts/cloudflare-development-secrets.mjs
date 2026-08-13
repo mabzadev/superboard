@@ -33,15 +33,11 @@ export function buildDevelopmentSecretPlan({
   environment,
   accountId,
   analyticsTokenConfigured,
+  awsSesConfigured = false,
 }) {
   if (environment !== "development") {
     throw new Error(
       "Development secret bootstrap is forbidden outside development",
-    );
-  }
-  if (target.mail?.transport !== "capture") {
-    throw new Error(
-      "Development secret bootstrap requires capture mail transport",
     );
   }
   const requirements = requiredSecretInventory(target, environment);
@@ -72,7 +68,14 @@ export function buildDevelopmentSecretPlan({
     optionalCapabilities: {
       analyticsQueries: analyticsTokenConfigured ? "enabled" : "disabled",
     },
-    blockers: [],
+    blockers:
+      target.mail?.transport === "smtp" &&
+      target.mail?.provider === "aws-ses" &&
+      !awsSesConfigured
+        ? [
+            "AWS SES requires AWS_SES_SMTP_USERNAME, AWS_SES_SMTP_PASSWORD and AWS_SES_SNS_TOPIC_ARN",
+          ]
+        : [],
   };
   return { ...plan, confirmation: developmentSecretConfirmation(plan) };
 }
@@ -103,6 +106,9 @@ export async function generateDevelopmentSecretAssignments({
   accountId,
   analyticsToken,
   appleRootBase64,
+  awsSesSmtpUsername = "",
+  awsSesSmtpPassword = "",
+  awsSesSnsTopicArn = "",
 }) {
   const token = () => randomBytes(48).toString("base64url");
   const moduleToken = token();
@@ -148,7 +154,15 @@ export async function generateDevelopmentSecretAssignments({
     },
     email: {
       EMAIL_INTERNAL_TOKEN: emailToken,
-      MAIL_PREVIEW_TOKEN: token(),
+      ...(target.mail?.transport === "capture"
+        ? { MAIL_PREVIEW_TOKEN: token() }
+        : target.mail?.provider === "aws-ses"
+          ? {
+              AWS_SES_SMTP_USERNAME: awsSesSmtpUsername,
+              AWS_SES_SMTP_PASSWORD: awsSesSmtpPassword,
+              AWS_SES_SNS_TOPIC_ARN: awsSesSnsTopicArn,
+            }
+          : {}),
     },
     identity: {
       INTERNAL_API_TOKEN: moduleToken,
@@ -181,7 +195,9 @@ export async function generateDevelopmentSecretAssignments({
     },
     analytics: {
       INTERNAL_API_TOKEN: moduleToken,
+      EMAIL_INTERNAL_TOKEN: emailToken,
       ANALYTICS_ID_HASH_KEY: analyticsHashKey,
+      ANALYTICS_CONFIG_ENCRYPTION_KEY: token(),
     },
     marketing: {
       INTERNAL_API_TOKEN: moduleToken,
@@ -428,11 +444,21 @@ async function main() {
   const analyticsToken = String(
     process.env.CLOUDFLARE_ANALYTICS_TOKEN ?? "",
   ).trim();
+  const awsSesSmtpUsername = String(
+    process.env.AWS_SES_SMTP_USERNAME ?? "",
+  ).trim();
+  const awsSesSmtpPassword = String(process.env.AWS_SES_SMTP_PASSWORD ?? "");
+  const awsSesSnsTopicArn = String(
+    process.env.AWS_SES_SNS_TOPIC_ARN ?? "",
+  ).trim();
   const plan = buildDevelopmentSecretPlan({
     target,
     environment,
     accountId,
     analyticsTokenConfigured: Boolean(analyticsToken),
+    awsSesConfigured: Boolean(
+      awsSesSmtpUsername && awsSesSmtpPassword && awsSesSnsTopicArn,
+    ),
   });
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
   if (!args.apply) {
@@ -457,6 +483,9 @@ async function main() {
     accountId,
     analyticsToken,
     appleRootBase64: await fetchAppleRootG3(),
+    awsSesSmtpUsername,
+    awsSesSmtpPassword,
+    awsSesSnsTopicArn,
   });
   const receipts = uploadSecrets(targetName, environment, assignments, env);
   receipts.push(

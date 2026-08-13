@@ -15,6 +15,7 @@ test("development secret plan is value-free, account-scoped and deterministic", 
     environment: "development",
     accountId: "a".repeat(32),
     analyticsTokenConfigured: true,
+    awsSesConfigured: true,
   });
   assert.equal(plan.valuesIncluded, false);
   assert.equal(plan.blockers.length, 0);
@@ -35,6 +36,7 @@ test("development secret plan refuses production and treats analytics credential
         environment: "production",
         accountId: "a".repeat(32),
         analyticsTokenConfigured: true,
+        awsSesConfigured: true,
       }),
     /forbidden outside development/u,
   );
@@ -43,6 +45,7 @@ test("development secret plan refuses production and treats analytics credential
     environment: "development",
     accountId: "a".repeat(32),
     analyticsTokenConfigured: false,
+    awsSesConfigured: true,
   });
   assert.equal(plan.blockers.length, 0);
   assert.equal(plan.optionalCapabilities.analyticsQueries, "disabled");
@@ -56,6 +59,10 @@ test("generated assignments satisfy every private cross-service contract without
     accountId: "a".repeat(32),
     analyticsToken: "",
     appleRootBase64: "apple-root",
+    awsSesSmtpUsername: "ses-user",
+    awsSesSmtpPassword: "ses-password",
+    awsSesSnsTopicArn:
+      "arn:aws:sns:eu-central-1:123456789012:superboard-development",
   });
   assert.equal(
     assignments.api.MODULE_INTERNAL_TOKEN,
@@ -79,12 +86,20 @@ test("generated assignments satisfy every private cross-service contract without
   );
   assert.equal(typeof assignments.analytics.ANALYTICS_ID_HASH_KEY, "string");
   assert.equal(
+    typeof assignments.analytics.ANALYTICS_CONFIG_ENCRYPTION_KEY,
+    "string",
+  );
+  assert.equal(
     assignments.analytics.ANALYTICS_ID_HASH_KEY,
     assignments.marketing.ANALYTICS_ID_HASH_KEY,
   );
   assert.equal(
     assignments.api.EMAIL_INTERNAL_TOKEN,
     assignments.email.EMAIL_INTERNAL_TOKEN,
+  );
+  assert.equal(
+    assignments.api.EMAIL_INTERNAL_TOKEN,
+    assignments.analytics.EMAIL_INTERNAL_TOKEN,
   );
   assert.equal(
     assignments.api.EMAIL_INTERNAL_TOKEN,
@@ -117,6 +132,10 @@ test("development assignments include analytics credentials only when supplied",
     accountId: "a".repeat(32),
     analyticsToken: "analytics-token",
     appleRootBase64: "apple-root",
+    awsSesSmtpUsername: "ses-user",
+    awsSesSmtpPassword: "ses-password",
+    awsSesSnsTopicArn:
+      "arn:aws:sns:eu-central-1:123456789012:superboard-development",
   });
   assert.deepEqual(assignments.observability, {
     OBSERVABILITY_INTERNAL_TOKEN: assignments.api.OBSERVABILITY_INTERNAL_TOKEN,

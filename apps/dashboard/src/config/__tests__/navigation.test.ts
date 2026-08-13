@@ -67,11 +67,21 @@ describe("dashboard navigation", () => {
         "Analytics",
         [
           "Overview",
+          "Dashboards",
+          "Users & Sessions",
           "Events",
+          "Technology & Location",
+          "Views",
           "Installations",
           "Verified Purchases",
           "Funnels & Retention",
-          "Reports",
+          "Cohorts",
+          "Crashes",
+          "Feedback",
+          "Remote Config",
+          "Alerts",
+          "Reports & Exports",
+          "Settings",
         ],
       ],
       ["Onboardings", ["Onboardings", "Statistics"]],
@@ -101,9 +111,9 @@ describe("dashboard navigation", () => {
     expect(pageForPath("/onboardings/statistics")?.label).toBe("Statistics");
   });
 
-  it("defines Dashboard and exactly 39 physical module pages", () => {
+  it("defines Dashboard and exactly 49 physical module pages", () => {
     expect(DASHBOARD_SECTIONS.flatMap((section) => section.pages)).toHaveLength(
-      40
+      50
     );
   });
 

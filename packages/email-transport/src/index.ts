@@ -204,6 +204,19 @@ export function buildMessage(config: SmtpPublicConfig, message: SmtpMessage) {
     ? sanitizeMessageId(message.messageId)
     : `<${crypto.randomUUID()}@${sanitizeDomain(config.from_email.split("@")[1] || "opengrow.local")}>`;
   const boundary = `opengrow-${crypto.randomUUID()}`;
+  const customHeaders = Object.entries(message.headers || {}).map(
+    ([name, value]) => {
+      const normalizedName = sanitizeHeaderName(name);
+      if (RESERVED_MESSAGE_HEADERS.has(normalizedName.toLowerCase())) {
+        throw error(
+          "email_header_reserved",
+          `Email header ${normalizedName} is managed by the transport`,
+          422,
+        );
+      }
+      return `${normalizedName}: ${sanitizeHeaderValue(value)}`;
+    },
+  );
   const headers = [
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: ${messageId}`,
@@ -213,10 +226,7 @@ export function buildMessage(config: SmtpPublicConfig, message: SmtpMessage) {
     ...(config.reply_to
       ? [`Reply-To: ${sanitizeMailbox(config.reply_to)}`]
       : []),
-    ...Object.entries(message.headers || {}).map(
-      ([name, value]) =>
-        `${sanitizeHeaderName(name)}: ${sanitizeHeaderValue(value)}`,
-    ),
+    ...customHeaders,
     "MIME-Version: 1.0",
   ];
   let body: string;
@@ -305,5 +315,21 @@ function toBase64(value: string) {
   return btoa(binary);
 }
 function extractMessageId(value: string) {
-  return /(?:queued as|id=)\s*<?([^\s>]+)>?/i.exec(value)?.[1] || null;
+  return (
+    /(?:queued as|id=)\s*<?([^\s>]+)>?/iu.exec(value)?.[1] ||
+    /^Ok\s+<?([^\s>]+)>?/iu.exec(value.trim())?.[1] ||
+    null
+  );
 }
+
+const RESERVED_MESSAGE_HEADERS = new Set([
+  "date",
+  "message-id",
+  "from",
+  "to",
+  "subject",
+  "reply-to",
+  "mime-version",
+  "content-type",
+  "content-transfer-encoding",
+]);

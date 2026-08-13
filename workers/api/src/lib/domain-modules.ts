@@ -29,6 +29,12 @@ export const DOMAIN_SDK_ROUTES = Object.freeze([
   sdkRoute("paywalls", "/resolve", "/placements/resolve", false),
   sdkRoute("paywalls", "/events", "/events", true),
   sdkRoute("analytics", "/events", "/events", true),
+  sdkRoute(
+    "analytics",
+    "/remote-config/resolve",
+    "/remote-config/resolve",
+    false,
+  ),
   sdkRoute("onboardings", "/resolve", "/placements/resolve", false),
   sdkRoute("onboardings", "/events", "/events", true),
 ]);
