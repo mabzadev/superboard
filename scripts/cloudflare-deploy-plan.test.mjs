@@ -170,6 +170,20 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
     deployService,
     /const targetCloudflareEnv = cloudflareEnv\(target\)/u,
   );
+  const finalConfigGeneration = deployService.lastIndexOf(
+    "generateServiceConfig();",
+  );
+  const identityCutover = deployService.indexOf(
+    "await enforceIdentityProjectCutover",
+  );
+  const workerDeployment = deployService.lastIndexOf(
+    'if (service === "dashboard")',
+  );
+  assert.ok(identityCutover > 0 && identityCutover < finalConfigGeneration);
+  assert.ok(
+    finalConfigGeneration < workerDeployment,
+    "deployment configuration must be regenerated after migration helpers and before Worker activation",
+  );
   assert.match(deployService, /await readMigrationBatchReceipt/u);
   assert.ok(
     deployService.indexOf("runtimeBridgeDeploymentBlockers") <
@@ -177,9 +191,13 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
   );
   assert.match(deployService, /await enforceIdentityProjectCutover/u);
   assert.match(deployService, /!migrationsConvergedByBatch/u);
-  assert.match(
-    deployService,
-    /args\["no-routes"\][\s\S]*\["--no-routes"\][\s\S]*superboard-allowlist/u,
+  const allowlistBootstrap = deployService.indexOf("superboard-allowlist.mjs");
+  assert.ok(
+    allowlistBootstrap > 0 &&
+      deployService.indexOf(
+        '...(args["no-routes"] ? ["--no-routes"] : [])',
+        allowlistBootstrap,
+      ) > allowlistBootstrap,
   );
   assert.match(allowlist, /args\["no-routes"\].*\["--no-routes"\]/u);
 });
