@@ -27,7 +27,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # FlutterFlow 2.2.5 was released before Flutter 2.1.4. Keep the immutable
 # FlutterFlow tag while converging its transitive Flutter SDK to the separately
