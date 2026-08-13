@@ -457,9 +457,13 @@ describe("Identity Worker with D1", () => {
       DB: D1Database;
       MELODY_AUTH_SECRETS: string;
     };
-    const secrets = JSON.parse(runtime.MELODY_AUTH_SECRETS) as {
-      samlPrivateKeyPem: string;
-      samlCertificatePem: string;
+    const encodedSecrets = JSON.parse(runtime.MELODY_AUTH_SECRETS) as {
+      sp: string;
+      sc: string;
+    };
+    const secrets = {
+      samlPrivateKeyPem: testPem(encodedSecrets.sp, "PRIVATE KEY"),
+      samlCertificatePem: testPem(encodedSecrets.sc, "CERTIFICATE"),
     };
     const idpEntityId = "https://idp.example.test/metadata";
     const idpSsoUrl = "https://idp.example.test/sso";
@@ -836,6 +840,11 @@ function base64Bytes(value: string): Uint8Array {
     bytes[index] = binary.charCodeAt(index);
   }
   return bytes;
+}
+
+function testPem(value: string, label: string): string {
+  const lines = value.match(/.{1,64}/gu) ?? [];
+  return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----`;
 }
 
 const secondProject = {

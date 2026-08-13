@@ -67,6 +67,7 @@ function parseSecrets (raw: string): MelodyAuthSecrets {
     throw new Error('melody_auth_secrets_invalid')
   }
   const payload = value as Record<string, unknown>
+  if (payload.v === 1) return parseCompactSecrets(payload)
   const jwtPrivateKeyPem = requiredPem(
     payload.jwtPrivateKeyPem,
     'PRIVATE KEY',
@@ -88,6 +89,40 @@ function parseSecrets (raw: string): MelodyAuthSecrets {
     samlPrivateKeyPem: optionalPem(payload.samlPrivateKeyPem),
     samlCertificatePem: optionalCertificate(payload.samlCertificatePem),
   }
+}
+
+function parseCompactSecrets (payload: Record<string, unknown>): MelodyAuthSecrets {
+  const sessionSecret = typeof payload.ss === 'string' ? payload.ss : ''
+  if (sessionSecret.length < 32 || sessionSecret.length > 512) {
+    throw new Error('melody_session_secret_invalid')
+  }
+  return {
+    jwtPrivateKeyPem: pemFromBody(payload.jp, 'PRIVATE KEY'),
+    jwtPublicKeyPem: pemFromBody(payload.ju, 'PUBLIC KEY'),
+    sessionSecret,
+    samlPrivateKeyPem: pemFromBody(payload.sp, 'PRIVATE KEY'),
+    samlCertificatePem: pemFromBody(payload.sc, 'CERTIFICATE'),
+  }
+}
+
+function pemFromBody (value: unknown, label: string): string {
+  if (
+    typeof value !== 'string' ||
+    value.length < 64 ||
+    value.length > 12_000 ||
+    value.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/u.test(value)
+  ) {
+    throw new Error(`melody_${label.toLowerCase().replaceAll(' ', '_')}_invalid`)
+  }
+  try {
+    const byteLength = atob(value).length
+    if (byteLength < 256 || byteLength > 8_192) throw new Error('invalid_size')
+  } catch {
+    throw new Error(`melody_${label.toLowerCase().replaceAll(' ', '_')}_invalid`)
+  }
+  const lines = value.match(/.{1,64}/gu) ?? []
+  return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`
 }
 
 function requiredPem (value: unknown, label: string): string {

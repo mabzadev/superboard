@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
 // @ts-expect-error The Node-side generator is an ESM script with its own tests.
-import { generateMelodyAuthSecrets } from "../../scripts/superboard-generate-melody-auth-secrets.mjs";
+import { generateMelodyAuthSecrets, serializeMelodyAuthSecrets } from "../../scripts/superboard-generate-melody-auth-secrets.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 
@@ -37,7 +37,7 @@ export default defineConfig({
             INTERNAL_API_TOKEN: "identity-runtime-internal-token",
             EMAIL_INTERNAL_TOKEN: "email-runtime-token",
             FILES_INTERNAL_TOKEN: "files-runtime-token",
-            MELODY_AUTH_SECRETS: JSON.stringify(melodyAuthSecrets),
+            MELODY_AUTH_SECRETS: serializeMelodyAuthSecrets(melodyAuthSecrets),
             MELODY_ENVIRONMENT: "prod",
             IDENTITY_REALM: "test:local",
             AUTH_SERVER_URL: "https://auth.example.test",
