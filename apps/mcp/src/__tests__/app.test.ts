@@ -164,7 +164,10 @@ describe("auth middleware", () => {
 
     const res = await request(app)
       .post("/mcp")
-      .set("Authorization", "Bearer some-token")
+      // Use a token unique to this cache-miss scenario. Reusing the token from
+      // the preceding validation test can make this assertion depend on cache
+      // timing when the full monorepo suite is under load.
+      .set("Authorization", "Bearer unreachable-token")
       .set("Content-Type", "application/json")
       .send({});
 
