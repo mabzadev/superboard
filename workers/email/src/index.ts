@@ -1,6 +1,8 @@
 import {
   EMAIL_SERVICE_DEAD_LETTERS_PATH,
+  EMAIL_SERVICE_AWS_SES_EVENTS_PATH,
   EMAIL_SERVICE_OPERATIONS_PATH,
+  EMAIL_SERVICE_PROVIDER_EVENTS_PATH,
   EMAIL_SERVICE_SEND_PATH,
   EMAIL_SERVICE_SMTP_TRANSPORT_PATH,
 } from "@superboard/contracts/email";
@@ -8,6 +10,9 @@ import type {
   EmailDeadLetterOperation,
   EmailOperation,
   EmailOperationsPage,
+  EmailProviderEvent,
+  EmailProviderEventAcknowledgement,
+  EmailProviderEventPage,
   EmailServiceReceipt,
   EmailSmtpTransportReceipt,
   EmailSmtpTransportRequest,
@@ -36,6 +41,12 @@ import {
   parseEmailSmtpTransportRequest,
   secretsEqual,
 } from "./validation";
+import {
+  normalizeAwsSesEvent,
+  parseAwsSnsEnvelope,
+  trustedAwsSnsConfirmationUrl,
+  verifyAwsSnsEnvelope,
+} from "./aws-ses";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -43,6 +54,29 @@ export default {
     if (request.method === "GET" && url.pathname === "/health")
       return health(env);
     if (request.method === "GET" && url.pathname === "/") return previewShell();
+    if (
+      request.method === "POST" &&
+      url.pathname === EMAIL_SERVICE_AWS_SES_EVENTS_PATH
+    ) {
+      return receiveAwsSesEvent(request, env);
+    }
+    if (url.pathname.startsWith(EMAIL_SERVICE_PROVIDER_EVENTS_PATH)) {
+      if (!(await internalAuthorized(request, env)))
+        return json({ error: "unauthorized" }, 401);
+      if (
+        request.method === "GET" &&
+        url.pathname === EMAIL_SERVICE_PROVIDER_EVENTS_PATH
+      ) {
+        return listProviderEvents(env, url);
+      }
+      if (
+        request.method === "POST" &&
+        url.pathname === `${EMAIL_SERVICE_PROVIDER_EVENTS_PATH}/ack`
+      ) {
+        return acknowledgeProviderEvents(request, env);
+      }
+      return json({ error: "not_found" }, 404);
+    }
     if (
       request.method === "POST" &&
       url.pathname === EMAIL_SERVICE_SMTP_TRANSPORT_PATH
@@ -139,6 +173,294 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env, EmailQueueJob>;
+
+async function receiveAwsSesEvent(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  if (env.MAIL_PROVIDER !== "aws-ses" || !env.AWS_SES_SNS_TOPIC_ARN?.trim()) {
+    return json({ error: "aws_ses_events_not_configured" }, 503);
+  }
+  try {
+    const envelope = parseAwsSnsEnvelope(
+      await readJsonLimited(request, 1_100_000),
+    );
+    await verifyAwsSnsEnvelope(envelope, env.AWS_SES_SNS_TOPIC_ARN);
+    if (envelope.Type === "SubscriptionConfirmation") {
+      const confirmation = await fetch(trustedAwsSnsConfirmationUrl(envelope), {
+        method: "GET",
+        redirect: "error",
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!confirmation.ok) {
+        return json({ error: "aws_sns_confirmation_failed" }, 503);
+      }
+      return json({ accepted: true, subscriptionConfirmed: true }, 202);
+    }
+    if (envelope.Type === "UnsubscribeConfirmation") {
+      console.error(
+        JSON.stringify({
+          event: "aws_sns_subscription_removed",
+          topic_arn: envelope.TopicArn,
+          message_id: envelope.MessageId,
+        }),
+      );
+      return json({ accepted: true }, 202);
+    }
+
+    const event = normalizeAwsSesEvent(envelope.Message);
+    const claimed = await env.DB.prepare(
+      `
+      INSERT INTO email_provider_events
+        (id, provider, provider_message_id, event_type, occurred_at, metadata_json)
+      VALUES (?, 'aws-ses', ?, ?, ?, ?)
+      ON CONFLICT(id) DO NOTHING RETURNING id
+    `,
+    )
+      .bind(
+        envelope.MessageId,
+        event.providerMessageId,
+        event.eventType,
+        event.occurredAt,
+        JSON.stringify(event.metadata),
+      )
+      .first<{ id: string }>();
+    if (!claimed) return json({ accepted: true, duplicate: true }, 202);
+
+    try {
+      const [delegated, direct] = await Promise.all([
+        env.DB.prepare(
+          `
+          SELECT id, source, project_id, reference_id FROM email_transport_deliveries
+          WHERE provider_message_id = ? LIMIT 1
+        `,
+        )
+          .bind(event.providerMessageId)
+          .first<{
+            id: string;
+            source: string;
+            project_id: number;
+            reference_id: string;
+          }>(),
+        env.DB.prepare(
+          `
+          SELECT delivery.id, delivery.message_id, message.project_id
+          FROM email_deliveries delivery
+          JOIN email_messages message ON message.id = delivery.message_id
+          WHERE delivery.provider_message_id = ? LIMIT 1
+        `,
+        )
+          .bind(event.providerMessageId)
+          .first<{
+            id: string;
+            message_id: string;
+            project_id: number | null;
+          }>(),
+      ]);
+      const diagnostic = JSON.stringify(event.metadata).slice(0, 4_000);
+      if (delegated) {
+        const now = new Date().toISOString();
+        await env.DB.batch([
+          env.DB.prepare(
+            `
+            UPDATE email_transport_deliveries
+            SET provider_status = ?, provider_event_at = ?, provider_diagnostic = ?,
+                status = CASE
+                  WHEN ? = 'delivered' AND status IN ('sending', 'outcome_unknown') THEN 'sent'
+                  ELSE status
+                END,
+                sent_at = CASE
+                  WHEN ? = 'delivered' THEN COALESCE(sent_at, ?)
+                  ELSE sent_at
+                END,
+                lease_expires_at = CASE WHEN ? = 'delivered' THEN NULL ELSE lease_expires_at END,
+                updated_at = ?
+            WHERE id = ?
+          `,
+          ).bind(
+            event.eventType,
+            event.occurredAt,
+            diagnostic,
+            event.eventType,
+            event.eventType,
+            event.occurredAt,
+            event.eventType,
+            now,
+            delegated.id,
+          ),
+          env.DB.prepare(
+            `
+            UPDATE email_provider_events
+            SET source = ?, project_id = ?, reference_id = ?, correlation_status = 'matched',
+                consumer_status = 'pending'
+            WHERE id = ? AND correlation_status = 'processing'
+          `,
+          ).bind(
+            delegated.source,
+            delegated.project_id,
+            delegated.reference_id,
+            envelope.MessageId,
+          ),
+        ]);
+      } else if (direct) {
+        await env.DB.batch([
+          env.DB.prepare(
+            `
+            UPDATE email_deliveries
+            SET provider_status = ?, provider_event_at = ?, provider_diagnostic = ?,
+                status = CASE
+                  WHEN ? = 'delivered' AND status = 'sending' THEN 'sent'
+                  ELSE status
+                END,
+                sent_at = CASE
+                  WHEN ? = 'delivered' THEN COALESCE(sent_at, ?)
+                  ELSE sent_at
+                END,
+                updated_at = ?
+            WHERE id = ?
+          `,
+          ).bind(
+            event.eventType,
+            event.occurredAt,
+            diagnostic,
+            event.eventType,
+            event.eventType,
+            event.occurredAt,
+            new Date().toISOString(),
+            direct.id,
+          ),
+          env.DB.prepare(
+            `
+            UPDATE email_provider_events
+            SET source = 'email', project_id = ?, reference_id = ?,
+                correlation_status = 'matched', consumer_status = 'not_applicable'
+            WHERE id = ? AND correlation_status = 'processing'
+          `,
+          ).bind(direct.project_id, direct.id, envelope.MessageId),
+        ]);
+        if (event.eventType === "delivered") {
+          await markMessageSent(env.DB, direct.message_id);
+        }
+      } else {
+        await env.DB.prepare(
+          `
+          UPDATE email_provider_events SET correlation_status = 'unmatched'
+          WHERE id = ? AND correlation_status = 'processing'
+        `,
+        )
+          .bind(envelope.MessageId)
+          .run();
+      }
+      return json(
+        {
+          accepted: true,
+          correlated: Boolean(delegated || direct),
+          eventType: event.eventType,
+        },
+        202,
+      );
+    } catch (error) {
+      await env.DB.prepare(
+        `DELETE FROM email_provider_events WHERE id = ? AND correlation_status = 'processing'`,
+      )
+        .bind(envelope.MessageId)
+        .run()
+        .catch(() => undefined);
+      throw error;
+    }
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      return json({ error: error.code }, error.status);
+    }
+    const code =
+      error instanceof Error && /^aws_(?:sns|ses)_/u.test(error.message)
+        ? error.message
+        : "aws_ses_event_invalid";
+    const status = new Set([
+      "aws_sns_signature_invalid",
+      "aws_sns_topic_invalid",
+      "aws_sns_url_untrusted",
+    ]).has(code)
+      ? 401
+      : code === "aws_ses_event_unsupported"
+        ? 202
+        : 422;
+    if (status >= 400 && status !== 401) {
+      console.error(JSON.stringify({ event: "aws_ses_event_rejected", code }));
+    }
+    return json({ error: code }, status);
+  }
+}
+
+async function listProviderEvents(env: Env, url: URL): Promise<Response> {
+  const source = String(url.searchParams.get("source") || "").trim();
+  if (!/^[a-z][a-z0-9_-]{0,63}$/u.test(source)) {
+    return json({ error: "provider_event_source_invalid" }, 422);
+  }
+  const limit = boundedLimit(url.searchParams.get("limit"));
+  const rows = await env.DB.prepare(
+    `
+    SELECT id, provider, source, project_id, reference_id, provider_message_id,
+           event_type, occurred_at, metadata_json
+    FROM email_provider_events
+    WHERE source = ? AND consumer_status = 'pending'
+    ORDER BY received_at, id LIMIT ?
+  `,
+  )
+    .bind(source, limit)
+    .all<EmailProviderEventRow>();
+  const page: EmailProviderEventPage = {
+    events: rows.results.map(serializeProviderEvent),
+  };
+  return json(page);
+}
+
+async function acknowledgeProviderEvents(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  let body: EmailProviderEventAcknowledgement;
+  try {
+    const value = await readJsonLimited(request, 64_000);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return json({ error: "provider_event_ack_invalid" }, 422);
+    }
+    const candidate = value as Record<string, unknown>;
+    const source = String(candidate.source || "").trim();
+    const ids = Array.isArray(candidate.ids)
+      ? [
+          ...new Set(
+            candidate.ids.filter((id): id is string => typeof id === "string"),
+          ),
+        ]
+      : [];
+    if (
+      !/^[a-z][a-z0-9_-]{0,63}$/u.test(source) ||
+      ids.length < 1 ||
+      ids.length > 100 ||
+      ids.some((id) => id.length > 256)
+    ) {
+      return json({ error: "provider_event_ack_invalid" }, 422);
+    }
+    body = { source, ids };
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      return json({ error: error.code }, error.status);
+    }
+    throw error;
+  }
+  const result = await env.DB.prepare(
+    `
+    UPDATE email_provider_events
+    SET consumer_status = 'completed', consumed_at = ?
+    WHERE source = ? AND consumer_status = 'pending'
+      AND id IN (${body.ids.map(() => "?").join(",")})
+  `,
+  )
+    .bind(new Date().toISOString(), body.source, ...body.ids)
+    .run();
+  return json({ acknowledged: Number(result.meta.changes || 0) });
+}
 
 async function enqueueMessage(request: Request, env: Env): Promise<Response> {
   if (!(await internalAuthorized(request, env)))
@@ -376,11 +698,20 @@ async function deliverDelegatedSmtp(
   }
   let result: { messageId: string; response: string };
   try {
-    result = await sendSmtpMessage(input.publicConfig, input.secret, {
+    const smtp = resolveSmtpConfiguration(
+      env,
+      input.publicConfig,
+      input.secret,
+    );
+    result = await sendSmtpMessage(smtp.public, smtp.secret, {
       ...input.message,
+      headers: providerHeaders(env, input.message.headers, {
+        source: input.source,
+        project: String(input.projectId),
+      }),
       messageId: await deterministicMessageId(
         input.idempotencyKey,
-        input.publicConfig.from_email,
+        smtp.public.from_email,
       ),
     });
   } catch (error) {
@@ -548,7 +879,12 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
         subject: message.subject,
         text: message.text_body,
         html: message.html_body,
-        headers: safeJson(message.headers_json),
+        headers: providerHeaders(env, safeJson(message.headers_json), {
+          source: "email",
+          ...(message.project_id == null
+            ? {}
+            : { project: String(message.project_id) }),
+        }),
         messageId: await deterministicMessageId(
           `email.delivery:${message.id}:${delivery.id}`,
           message.from_address,
@@ -620,9 +956,62 @@ async function deliverMessage(env: Env, messageId: string): Promise<void> {
 }
 
 function smtpConfiguration(env: Env, message: EmailRow) {
-  const host = String(env.SMTP_HOST || "").trim();
-  const port = Number(env.SMTP_PORT);
-  const security = env.SMTP_SECURITY || "starttls";
+  return resolveSmtpConfiguration(
+    env,
+    {
+      host: String(env.SMTP_HOST || "").trim(),
+      port: Number(env.SMTP_PORT),
+      security: env.SMTP_SECURITY || "starttls",
+      username: env.SMTP_USERNAME || null,
+      from_email: message.from_address,
+      from_name: message.from_name,
+      reply_to: message.reply_to,
+    },
+    { password: env.SMTP_PASSWORD || null },
+  );
+}
+
+function resolveSmtpConfiguration(
+  env: Env,
+  supplied: {
+    host: string;
+    port: number;
+    security: "tls" | "starttls" | "plain";
+    username: string | null;
+    from_email: string;
+    from_name: string | null;
+    reply_to: string | null;
+  },
+  suppliedSecret: { password: string | null },
+) {
+  if (env.MAIL_PROVIDER === "aws-ses") {
+    const region = String(env.AWS_REGION || "")
+      .trim()
+      .toLowerCase();
+    if (!/^[a-z]{2}(?:-gov)?-[a-z]+-\d$/u.test(region)) {
+      throw new Error("AWS_REGION is invalid for SES SMTP");
+    }
+    const username = String(env.AWS_SES_SMTP_USERNAME || "").trim();
+    const password = String(env.AWS_SES_SMTP_PASSWORD || "");
+    if (!username || !password) {
+      throw new Error("AWS SES SMTP credentials are not configured");
+    }
+    return {
+      public: {
+        host: `email-smtp.${region}.amazonaws.com${region.startsWith("cn-") ? ".cn" : ""}`,
+        port: 587,
+        security: "starttls" as const,
+        username,
+        from_email: supplied.from_email,
+        from_name: supplied.from_name,
+        reply_to: supplied.reply_to,
+      },
+      secret: { password },
+    };
+  }
+  const host = supplied.host.trim();
+  const port = supplied.port;
+  const security = supplied.security;
   if (
     !host ||
     !Number.isSafeInteger(port) ||
@@ -641,13 +1030,38 @@ function smtpConfiguration(env: Env, message: EmailRow) {
       host,
       port,
       security,
-      username: env.SMTP_USERNAME || null,
-      from_email: message.from_address,
-      from_name: message.from_name,
-      reply_to: message.reply_to,
+      username: supplied.username,
+      from_email: supplied.from_email,
+      from_name: supplied.from_name,
+      reply_to: supplied.reply_to,
     },
-    secret: { password: env.SMTP_PASSWORD || null },
+    secret: suppliedSecret,
   };
+}
+
+function providerHeaders(
+  env: Env,
+  headers: Record<string, string> | undefined,
+  tags: Record<string, string>,
+): Record<string, string> {
+  const output = { ...(headers || {}) };
+  if (env.MAIL_PROVIDER !== "aws-ses") return output;
+  const configurationSet = String(env.AWS_SES_CONFIGURATION_SET || "").trim();
+  if (!/^[A-Za-z0-9_-]{1,64}$/u.test(configurationSet)) {
+    throw new Error("AWS_SES_CONFIGURATION_SET is invalid");
+  }
+  output["X-SES-CONFIGURATION-SET"] = configurationSet;
+  const normalizedTags = Object.entries(tags)
+    .filter(
+      ([name, value]) =>
+        /^[A-Za-z0-9_-]{1,64}$/u.test(name) &&
+        /^[A-Za-z0-9_-]{1,256}$/u.test(value),
+    )
+    .map(([name, value]) => `${name}=${value}`);
+  if (normalizedTags.length) {
+    output["X-SES-MESSAGE-TAGS"] = normalizedTags.join(", ");
+  }
+  return output;
 }
 
 async function markMessageSent(db: D1Database, id: string) {
@@ -919,6 +1333,10 @@ function emailConfigurationHealth(env: Env) {
   if (!env.EMAIL_INTERNAL_TOKEN?.trim()) {
     throw new Error("EMAIL_INTERNAL_TOKEN is not configured");
   }
+  const provider = env.MAIL_PROVIDER || "smtp";
+  if (!new Set(["smtp", "aws-ses"]).has(provider)) {
+    throw new Error("MAIL_PROVIDER is invalid");
+  }
   const previewProtected = Boolean(env.MAIL_PREVIEW_TOKEN?.trim());
   if (env.MAIL_TRANSPORT === "capture" && !previewProtected) {
     throw new Error("MAIL_PREVIEW_TOKEN is not configured");
@@ -927,27 +1345,43 @@ function emailConfigurationHealth(env: Env) {
   if (env.MAIL_TRANSPORT === "smtp" && !queueConfigured) {
     throw new Error("EMAIL_QUEUE is not configured");
   }
+  const awsSesConfigured =
+    provider !== "aws-ses" ||
+    Boolean(
+      /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/u.test(env.AWS_REGION || "") &&
+      /^[A-Za-z0-9_-]{1,64}$/u.test(env.AWS_SES_CONFIGURATION_SET || "") &&
+      env.AWS_SES_SMTP_USERNAME?.trim() &&
+      env.AWS_SES_SMTP_PASSWORD &&
+      env.AWS_SES_SNS_TOPIC_ARN?.trim(),
+    );
   const smtpConfigured =
     env.MAIL_TRANSPORT !== "smtp" ||
-    Boolean(
-      env.SMTP_HOST?.trim() &&
-      Number.isSafeInteger(Number(env.SMTP_PORT)) &&
-      Number(env.SMTP_PORT) > 0 &&
-      Number(env.SMTP_PORT) <= 65535 &&
-      Number(env.SMTP_PORT) !== 25 &&
-      new Set(["tls", "starttls", "plain"]).has(
-        env.SMTP_SECURITY || "starttls",
-      ) &&
-      !(env.ENVIRONMENT === "production" && env.SMTP_SECURITY === "plain"),
-    );
+    (provider === "aws-ses"
+      ? awsSesConfigured
+      : Boolean(
+          env.SMTP_HOST?.trim() &&
+          Number.isSafeInteger(Number(env.SMTP_PORT)) &&
+          Number(env.SMTP_PORT) > 0 &&
+          Number(env.SMTP_PORT) <= 65535 &&
+          Number(env.SMTP_PORT) !== 25 &&
+          new Set(["tls", "starttls", "plain"]).has(
+            env.SMTP_SECURITY || "starttls",
+          ) &&
+          !(env.ENVIRONMENT === "production" && env.SMTP_SECURITY === "plain"),
+        ));
   if (!smtpConfigured) throw new Error("SMTP transport is not configured");
   return {
+    provider,
     senderConfigured: true,
     internalAuthenticationConfigured: true,
     previewProtected:
       env.MAIL_TRANSPORT === "capture" ? previewProtected : null,
     queueConfigured: env.MAIL_TRANSPORT === "smtp" ? queueConfigured : null,
     smtpConfigured: env.MAIL_TRANSPORT === "smtp" ? smtpConfigured : null,
+    providerEventsConfigured:
+      env.MAIL_TRANSPORT === "smtp" && provider === "aws-ses"
+        ? awsSesConfigured
+        : null,
   };
 }
 
@@ -1258,6 +1692,22 @@ function serializeEmailTransport(
   };
 }
 
+function serializeProviderEvent(
+  row: EmailProviderEventRow,
+): EmailProviderEvent {
+  return {
+    id: row.id,
+    provider: "aws-ses",
+    source: row.source,
+    projectId: Number(row.project_id),
+    referenceId: row.reference_id,
+    providerMessageId: row.provider_message_id,
+    eventType: row.event_type,
+    occurredAt: row.occurred_at,
+    metadata: safeObjectJson(row.metadata_json),
+  };
+}
+
 async function readMessage(env: Env, id: string): Promise<Response> {
   const message = await env.DB.prepare(
     `SELECT * FROM email_messages WHERE id = ?`,
@@ -1319,6 +1769,17 @@ function safeJson(value: string): Record<string, string> {
   }
 }
 
+function safeObjectJson(value: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
     status,
@@ -1341,6 +1802,7 @@ function previewShell(): Response {
 
 type EmailRow = {
   id: string;
+  project_id: number | null;
   from_name: string;
   from_address: string;
   reply_to: string | null;
@@ -1413,6 +1875,17 @@ type EmailTransportOperationRow = {
   created_at: string;
   updated_at: string;
   sent_at: string | null;
+};
+type EmailProviderEventRow = {
+  id: string;
+  provider: "aws-ses";
+  source: string;
+  project_id: number;
+  reference_id: string;
+  provider_message_id: string;
+  event_type: EmailProviderEvent["eventType"];
+  occurred_at: string;
+  metadata_json: string;
 };
 type ReplayableDeadLetterRow = Pick<
   EmailDeadLetterRow,

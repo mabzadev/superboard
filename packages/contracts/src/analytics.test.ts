@@ -27,6 +27,27 @@ describe("analytics contracts", () => {
     expect(parseAnalyticsEventsV1({ events: [event] })).toHaveLength(1);
   });
 
+  it("accepts Countly-compatible events and product dimensions", () => {
+    expect(
+      parseAnalyticsEventV1({
+        ...event,
+        event_name: "[CLY]_view",
+        context: {
+          platform: "ios",
+          device: "iPhone17,1",
+          country_code: "CH",
+          connection_type: "wifi",
+        },
+      }),
+    ).toMatchObject({
+      event_name: "[CLY]_view",
+      context: {
+        device: "iPhone17,1",
+        country_code: "CH",
+      },
+    });
+  });
+
   it("reserves system event names from SDK callers", () => {
     expect(() =>
       parseAnalyticsEventV1({

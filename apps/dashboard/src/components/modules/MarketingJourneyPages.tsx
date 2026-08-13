@@ -63,8 +63,7 @@ import {
   showErrorNotification,
   showSuccessNotification,
 } from "@/lib/Notifications";
-
-type SimpleAction = "email" | "channel" | "delay" | "update_attribute" | "exit";
+import { JourneyCanvasEditor } from "./JourneyCanvasEditor";
 
 const emptyDefinition: JourneyDefinition = {
   start_node_id: "exit",
@@ -88,11 +87,8 @@ export function MarketingJourneysPage() {
   const [eventName, setEventName] = useState("account.created");
   const [reentry, setReentry] =
     useState<MarketingJourney["reentry_policy"]>("once");
-  const [action, setAction] = useState<SimpleAction>("exit");
-  const [actionReference, setActionReference] = useState("");
-  const [delayMinutes, setDelayMinutes] = useState("60");
-  const [attributeKey, setAttributeKey] = useState("lifecycle_stage");
-  const [attributeValue, setAttributeValue] = useState("activated");
+  const [builderDefinition, setBuilderDefinition] =
+    useState<JourneyDefinition>(emptyDefinition);
   const [advanced, setAdvanced] = useState(false);
   const [triggerText, setTriggerText] = useState(
     JSON.stringify({ event_name: "account.created", conditions: [] }, null, 2)
@@ -127,11 +123,7 @@ export function MarketingJourneysPage() {
     setDescription("");
     setEventName("account.created");
     setReentry("once");
-    setAction("exit");
-    setActionReference("");
-    setDelayMinutes("60");
-    setAttributeKey("lifecycle_stage");
-    setAttributeValue("activated");
+    setBuilderDefinition(emptyDefinition);
     setAdvanced(false);
     setTriggerText(
       JSON.stringify({ event_name: "account.created", conditions: [] }, null, 2)
@@ -147,7 +139,8 @@ export function MarketingJourneysPage() {
     setReentry(journey.reentry_policy);
     setTriggerText(JSON.stringify(journey.trigger, null, 2));
     setDefinitionText(JSON.stringify(journey.definition, null, 2));
-    setAdvanced(true);
+    setBuilderDefinition(journey.definition);
+    setAdvanced(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -171,13 +164,7 @@ export function MarketingJourneysPage() {
               definitionText,
               "Journey definition"
             ) as JourneyDefinition)
-          : simpleDefinition({
-              action,
-              reference: actionReference,
-              delayMinutes,
-              attributeKey,
-              attributeValue,
-            }),
+          : builderDefinition,
       };
     } catch (cause) {
       showErrorNotification(moduleErrorMessage(cause));
@@ -331,110 +318,40 @@ export function MarketingJourneysPage() {
                 </div>
 
                 {!advanced && (
-                  <div className="grid gap-4 rounded-xl border p-4 md:grid-cols-2">
-                    <Field label="First action">
-                      <select
-                        className={selectClass}
-                        value={action}
-                        onChange={(event) => {
-                          setAction(event.target.value as SimpleAction);
-                          setActionReference("");
-                        }}
-                      >
-                        <option value="exit">Record entry and finish</option>
-                        <option value="email">Send an email</option>
-                        <option value="channel">Send through a channel</option>
-                        <option value="delay">Wait, then finish</option>
-                        <option value="update_attribute">
-                          Update subscriber data
-                        </option>
-                      </select>
-                    </Field>
-                    {action === "email" && (
-                      <Field label="Email template">
-                        <select
-                          required
-                          className={selectClass}
-                          value={actionReference}
-                          onChange={(event) =>
-                            setActionReference(event.target.value)
-                          }
-                        >
-                          <option value="">Choose a template</option>
-                          {templates.map((template) => (
-                            <option key={template.id} value={template.id}>
-                              {template.name}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                    )}
-                    {action === "channel" && (
-                      <Field label="Channel connector">
-                        <select
-                          required
-                          className={selectClass}
-                          value={actionReference}
-                          onChange={(event) =>
-                            setActionReference(event.target.value)
-                          }
-                        >
-                          <option value="">Choose a connector</option>
-                          {connectors
-                            .filter((connector) => connector.enabled)
-                            .map((connector) => (
-                              <option key={connector.id} value={connector.id}>
-                                {connector.name} · {connector.channel}
-                              </option>
-                            ))}
-                        </select>
-                      </Field>
-                    )}
-                    {action === "delay" && (
-                      <Field label="Wait in minutes">
-                        <Input
-                          required
-                          min="1"
-                          type="number"
-                          value={delayMinutes}
-                          onChange={(event) =>
-                            setDelayMinutes(event.target.value)
-                          }
-                        />
-                      </Field>
-                    )}
-                    {action === "update_attribute" && (
-                      <>
-                        <Field label="Subscriber field">
-                          <Input
-                            required
-                            value={attributeKey}
-                            onChange={(event) =>
-                              setAttributeKey(event.target.value)
-                            }
-                          />
-                        </Field>
-                        <Field label="New value">
-                          <Input
-                            required
-                            value={attributeValue}
-                            onChange={(event) =>
-                              setAttributeValue(event.target.value)
-                            }
-                          />
-                        </Field>
-                      </>
-                    )}
-                  </div>
+                  <JourneyCanvasEditor
+                    value={builderDefinition}
+                    onChange={setBuilderDefinition}
+                    templates={templates}
+                    connectors={connectors}
+                  />
                 )}
 
                 <details
                   open={advanced}
-                  onToggle={(event) => setAdvanced(event.currentTarget.open)}
+                  onToggle={(event) => {
+                    const open = event.currentTarget.open;
+                    if (open) {
+                      setDefinitionText(
+                        JSON.stringify(builderDefinition, null, 2)
+                      );
+                    } else {
+                      try {
+                        setBuilderDefinition(
+                          parseObject(
+                            definitionText,
+                            "Journey definition"
+                          ) as JourneyDefinition
+                        );
+                      } catch {
+                        // Validation feedback remains attached to the save action.
+                      }
+                    }
+                    setAdvanced(open);
+                  }}
                   className="rounded-xl border p-4"
                 >
                   <summary className="cursor-pointer font-medium">
-                    Advanced journey graph
+                    Raw graph JSON (advanced)
                   </summary>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Configure conditions, branches, delays, messages and
@@ -958,44 +875,6 @@ function StatusBadge({ status }: { status: MarketingJourney["status"] }) {
       {labelize(status)}
     </Badge>
   );
-}
-
-function simpleDefinition(input: {
-  action: SimpleAction;
-  reference: string;
-  delayMinutes: string;
-  attributeKey: string;
-  attributeValue: string;
-}): JourneyDefinition {
-  if (input.action === "exit") return emptyDefinition;
-  const actionNode =
-    input.action === "email"
-      ? { id: "action", type: "email" as const, template_id: input.reference }
-      : input.action === "channel"
-        ? {
-            id: "action",
-            type: "channel" as const,
-            connector_id: input.reference,
-          }
-        : input.action === "delay"
-          ? {
-              id: "action",
-              type: "delay" as const,
-              delay_seconds: Math.max(
-                60,
-                Math.round(Number(input.delayMinutes) * 60)
-              ),
-            }
-          : {
-              id: "action",
-              type: "update_attribute" as const,
-              attributes: { [input.attributeKey.trim()]: input.attributeValue },
-            };
-  return {
-    start_node_id: "action",
-    nodes: [actionNode, { id: "exit", type: "exit" }],
-    edges: [{ from: "action", to: "exit", outcome: "default" }],
-  };
 }
 
 function parseObject(value: string, label: string) {

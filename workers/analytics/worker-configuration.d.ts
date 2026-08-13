@@ -12,9 +12,12 @@ interface __BaseEnv_Env {
 	AUTH_GATEWAY_JWKS_URL: string;
 	QUEUE_NAME: string;
 	DLQ_NAME: string;
+	ANALYTICS_CONFIG_ENCRYPTION_KEY: string;
 	ANALYTICS_ID_HASH_KEY: string;
+	EMAIL_INTERNAL_TOKEN: string;
 	INTERNAL_API_TOKEN: string;
 	MARKETING_MODULE: Fetcher;
+	EMAIL_SERVICE: Fetcher;
 	ANALYTICS_OPERATIONS_WORKFLOW: Workflow<Parameters<import("./src/index").AnalyticsOperationsWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
@@ -28,7 +31,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "QUEUE_NAME" | "DLQ_NAME" | "ANALYTICS_ID_HASH_KEY" | "INTERNAL_API_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "QUEUE_NAME" | "DLQ_NAME" | "ANALYTICS_CONFIG_ENCRYPTION_KEY" | "ANALYTICS_ID_HASH_KEY" | "EMAIL_INTERNAL_TOKEN" | "INTERNAL_API_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.
@@ -36,13 +39,17 @@ declare namespace Cloudflare {
 	interface Env {
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	EMAIL_INTERNAL_TOKEN: string;
 	ANALYTICS_ID_HASH_KEY: string;
 	ANALYTICS_ID_HASH_KEY_PREVIOUS?: string;
+	ANALYTICS_CONFIG_ENCRYPTION_KEY: string;
 	}
 }
 interface Env {
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	EMAIL_INTERNAL_TOKEN: string;
 	ANALYTICS_ID_HASH_KEY: string;
 	ANALYTICS_ID_HASH_KEY_PREVIOUS?: string;
+	ANALYTICS_CONFIG_ENCRYPTION_KEY: string;
 }

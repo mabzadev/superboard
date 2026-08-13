@@ -118,6 +118,7 @@ test("development uses one native Git connection per Worker while production rem
       "paywalls",
       "dynamic-links",
       "support",
+      "analytics",
       "marketing",
       "onboardings",
       "billing",

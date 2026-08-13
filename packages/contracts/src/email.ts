@@ -3,6 +3,9 @@ export const EMAIL_SERVICE_OPERATIONS_PATH = "/internal/v1/operations";
 export const EMAIL_SERVICE_DEAD_LETTERS_PATH =
   "/internal/v1/operations/dead-letters";
 export const EMAIL_SERVICE_SMTP_TRANSPORT_PATH = "/internal/v1/transport/smtp";
+export const EMAIL_SERVICE_PROVIDER_EVENTS_PATH =
+  "/internal/v1/transport/provider-events";
+export const EMAIL_SERVICE_AWS_SES_EVENTS_PATH = "/public/v1/aws-ses/events";
 
 export type EmailKind = "transactional" | "marketing" | "test";
 
@@ -76,6 +79,39 @@ export interface EmailSmtpTransportReceipt {
   messageId: string;
   response: string;
   replayed?: boolean;
+}
+
+export type EmailProviderEventType =
+  | "delivered"
+  | "soft_bounce"
+  | "hard_bounce"
+  | "complaint"
+  | "delivery_delayed"
+  | "rejected";
+
+/**
+ * Normalized, recipient-free provider result exported to a domain module.
+ * The Email Worker remains the signature-verification and SMTP authority.
+ */
+export interface EmailProviderEvent {
+  id: string;
+  provider: "aws-ses";
+  source: string;
+  projectId: number;
+  referenceId: string;
+  providerMessageId: string;
+  eventType: EmailProviderEventType;
+  occurredAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface EmailProviderEventPage {
+  events: EmailProviderEvent[];
+}
+
+export interface EmailProviderEventAcknowledgement {
+  source: string;
+  ids: string[];
 }
 
 export type EmailTransportOperationStatus =

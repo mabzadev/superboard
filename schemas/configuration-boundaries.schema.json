@@ -35,7 +35,8 @@
             "targetSelector",
             "requiredEnvironment",
             "domainSuffixPolicy",
-            "requiredMailTransport"
+            "requiredMailTransport",
+            "requiredMailProvider"
           ],
           "properties": {
             "targetSelector": {
@@ -43,7 +44,8 @@
             },
             "requiredEnvironment": { "const": "development" },
             "domainSuffixPolicy": { "const": "derive-from-domains.api" },
-            "requiredMailTransport": { "const": "capture" }
+            "requiredMailTransport": { "const": "smtp" },
+            "requiredMailProvider": { "const": "aws-ses" }
           }
         },
         "applications": {

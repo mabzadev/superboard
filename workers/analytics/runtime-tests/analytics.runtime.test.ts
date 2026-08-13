@@ -11,6 +11,7 @@ import {
 } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { handleAnalyticsQueue } from "../src/ingestion";
+import { evaluateAnalyticsAlerts } from "../src/automations";
 
 const secret = "analytics-runtime-secret";
 
@@ -93,8 +94,8 @@ describe("Analytics in the Workers runtime", () => {
         storage: { hot: "d1", archive: "r2", pipeline: "queue" },
         schema: {
           status: "current",
-          expectedMigration: "0001_analytics.sql",
-          latestMigration: "0001_analytics.sql",
+          expectedMigration: "0002_countly_capabilities.sql",
+          latestMigration: "0002_countly_capabilities.sql",
         },
         metrics: {
           ingestion: {
@@ -336,6 +337,366 @@ describe("Analytics in the Workers runtime", () => {
         ],
       },
     });
+  });
+
+  it("projects Countly-style views, crashes and ratings exactly once", async () => {
+    const events = [
+      {
+        schema_version: 1,
+        event_id: "runtime-view-1",
+        event_name: "[CLY]_view",
+        occurred_at: new Date().toISOString(),
+        source: "sdk",
+        application_id: "runtime-app-capabilities",
+        session_id: "private-view-session",
+        user_id: "private-view-user",
+        properties: {
+          view_name: "Checkout",
+          view_url: "/checkout",
+          duration_seconds: 42,
+        },
+      },
+      {
+        schema_version: 1,
+        event_id: "runtime-crash-1",
+        event_name: "[CLY]_crash",
+        occurred_at: new Date().toISOString(),
+        source: "sdk",
+        application_id: "runtime-app-capabilities",
+        user_id: "private-crash-user",
+        properties: {
+          title: "CheckoutError",
+          message: "Payment button failed",
+          stack: "at Checkout.submit",
+          fatal: true,
+        },
+        context: { platform: "ios", app_version: "2.0.0" },
+      },
+      {
+        schema_version: 1,
+        event_id: "runtime-rating-1",
+        event_name: "[CLY]_star_rating",
+        occurred_at: new Date().toISOString(),
+        source: "sdk",
+        application_id: "runtime-app-capabilities",
+        user_id: "private-rating-user",
+        properties: { rating: 5, comment: "Fast and clear" },
+      },
+    ];
+    for (const event of events) {
+      const accepted = await SELF.fetch(
+        await signedRequest("/internal/v1/events", 22, "POST", event),
+      );
+      expect(accepted.status).toBe(202);
+      await projectEvent(22, event.event_id, `${event.event_id}-projection-1`);
+      await projectEvent(22, event.event_id, `${event.event_id}-projection-2`);
+    }
+
+    await expect(
+      env.DB.prepare(
+        `SELECT COUNT(*) AS total, MAX(duration_seconds) AS duration_seconds
+         FROM analytics_view_facts WHERE project_id = '22'`,
+      ).first(),
+    ).resolves.toMatchObject({ total: 1, duration_seconds: 42 });
+    await expect(
+      env.DB.prepare(
+        `SELECT COUNT(*) AS groups, MAX(occurrence_count) AS occurrences,
+                MAX(fatal) AS fatal
+         FROM analytics_crash_groups WHERE project_id = '22'`,
+      ).first(),
+    ).resolves.toMatchObject({ groups: 1, occurrences: 1, fatal: 1 });
+    await expect(
+      env.DB.prepare(
+        `SELECT COUNT(*) AS total, MAX(rating) AS rating
+         FROM analytics_feedback_facts WHERE project_id = '22'`,
+      ).first(),
+    ).resolves.toMatchObject({ total: 1, rating: 5 });
+
+    const views = await SELF.fetch(
+      await signedRequest("/internal/v1/views", 22),
+    );
+    expect(views.status).toBe(200);
+    await expect(views.json()).resolves.toMatchObject({
+      data: {
+        items: [
+          expect.objectContaining({
+            view_name: "Checkout",
+            views: 1,
+            average_duration_seconds: 42,
+          }),
+        ],
+      },
+    });
+    const analysis = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/events/analyze?event_name=%5BCLY%5D_view&property=view_name",
+        22,
+      ),
+    );
+    expect(analysis.status).toBe(200);
+    await expect(analysis.json()).resolves.toMatchObject({
+      data: {
+        event_name: "[CLY]_view",
+        totals: { events: 1, users: 1 },
+        properties: expect.arrayContaining(["view_name", "duration_seconds"]),
+        segmentation: {
+          property: "view_name",
+          items: [{ value: "Checkout", events: 1, users: 1 }],
+        },
+      },
+    });
+  });
+
+  it("provides idempotent dashboards and deterministic remote configuration", async () => {
+    const dashboardPayload = {
+      name: "Product health",
+      description: "Activation and stability",
+      visibility: "project",
+      layout: { columns: 12 },
+    };
+    const dashboardRequest = () =>
+      signedRequest(
+        "/internal/v1/dashboards",
+        31,
+        "POST",
+        dashboardPayload,
+        "runtime-dashboard-create",
+      );
+    const created = await SELF.fetch(await dashboardRequest());
+    expect(created.status).toBe(201);
+    const dashboard = await created.json<{ data: { id: string } }>();
+    const replayed = await SELF.fetch(await dashboardRequest());
+    expect(replayed.status).toBe(201);
+    expect(replayed.headers.get("idempotency-replayed")).toBe("true");
+    await expect(replayed.json()).resolves.toMatchObject({
+      data: { id: dashboard.data.id },
+    });
+
+    const config = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/remote-config/checkout_banner",
+        31,
+        "PUT",
+        {
+          environment: "test",
+          value: { message: "Welcome" },
+          conditions: [
+            { field: "country", operator: "equals", value: "CH" },
+            { rollout_percentage: 100 },
+          ],
+        },
+        "runtime-config-upsert",
+      ),
+    );
+    expect(config.status).toBe(201);
+    const invalidConfig = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/remote-config/invalid_condition",
+        31,
+        "PUT",
+        {
+          environment: "test",
+          value: true,
+          conditions: [{ field: "country", operator: "unknown", value: "CH" }],
+        },
+        "runtime-config-invalid-condition",
+      ),
+    );
+    expect(invalidConfig.status).toBe(400);
+    const resolve = () =>
+      signedRequest("/internal/v1/remote-config/resolve", 31, "POST", {
+        app_instance_id: "private-device",
+        context: { country: "CH" },
+      });
+    const first = await SELF.fetch(await resolve());
+    const second = await SELF.fetch(await resolve());
+    await expect(first.json()).resolves.toMatchObject({
+      data: {
+        values: { checkout_banner: { message: "Welcome" } },
+        versions: { checkout_banner: 1 },
+      },
+    });
+    await expect(second.json()).resolves.toMatchObject({
+      data: {
+        values: { checkout_banner: { message: "Welcome" } },
+        versions: { checkout_banner: 1 },
+      },
+    });
+  });
+
+  it("applies collection and hot-retention settings without dropping canonical facts", async () => {
+    const settings = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/settings",
+        55,
+        "PUT",
+        {
+          hot_retention_days: 7,
+          timezone: "Europe/Zurich",
+          data_collection_enabled: false,
+        },
+        "runtime-settings-collection-disabled",
+      ),
+    );
+    expect(settings.status).toBe(200);
+
+    const rejected = await SELF.fetch(
+      await signedRequest("/internal/v1/events", 55, "POST", {
+        schema_version: 1,
+        event_id: "runtime-disabled-sdk-event",
+        event_name: "screen.viewed",
+        occurred_at: new Date().toISOString(),
+        source: "sdk",
+        application_id: "runtime-disabled-app",
+        app_instance_id: "private-disabled-instance",
+        properties: { view_name: "Disabled" },
+      }),
+    );
+    expect(rejected.status).toBe(207);
+    await expect(rejected.json()).resolves.toMatchObject({
+      data: {
+        accepted: 0,
+        rejected: 1,
+        results: [{ code: "analytics_collection_disabled" }],
+      },
+    });
+
+    const canonical = {
+      schema_version: 1,
+      event_id: "runtime-disabled-canonical-installation",
+      event_name: "superboard.analytics.installation.created.v1",
+      occurred_at: new Date().toISOString(),
+      source: "system",
+      application_id: "runtime-disabled-app",
+      app_instance_id: "private-canonical-instance",
+      properties: {},
+    };
+    const accepted = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/events",
+        55,
+        "POST",
+        canonical,
+        undefined,
+        "system",
+      ),
+    );
+    expect(accepted.status).toBe(202);
+    await projectEvent(55, canonical.event_id, "disabled-canonical-projection");
+    await expect(
+      env.DB.prepare(
+        `SELECT COUNT(*) AS total FROM analytics_installations
+         WHERE project_id = '55' AND source_event_id = ?`,
+      )
+        .bind(canonical.event_id)
+        .first(),
+    ).resolves.toMatchObject({ total: 1 });
+    await expect(
+      env.DB.prepare(
+        `SELECT CAST(ROUND(julianday(expires_at) - julianday(occurred_at)) AS INTEGER) AS retention_days
+         FROM analytics_events_hot WHERE project_id = '55' AND event_id = ?`,
+      )
+        .bind(canonical.event_id)
+        .first(),
+    ).resolves.toMatchObject({ retention_days: 7 });
+  });
+
+  it("stops SDK collection for a disabled application", async () => {
+    const initialEvent = {
+      schema_version: 1,
+      event_id: "runtime-active-application-event",
+      event_name: "screen.viewed",
+      occurred_at: new Date().toISOString(),
+      source: "sdk",
+      application_id: "runtime-toggle-app",
+      app_instance_id: "private-toggle-instance",
+      properties: { view_name: "Home" },
+    };
+    expect(
+      (
+        await SELF.fetch(
+          await signedRequest("/internal/v1/events", 56, "POST", initialEvent),
+        )
+      ).status,
+    ).toBe(202);
+    await projectEvent(56, initialEvent.event_id, "toggle-app-projection");
+
+    const disabled = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/applications/runtime-toggle-app",
+        56,
+        "PUT",
+        { active: false },
+        "runtime-disable-application",
+      ),
+    );
+    expect(disabled.status).toBe(200);
+
+    const rejected = await SELF.fetch(
+      await signedRequest("/internal/v1/events", 56, "POST", {
+        ...initialEvent,
+        event_id: "runtime-disabled-application-event",
+      }),
+    );
+    expect(rejected.status).toBe(207);
+    await expect(rejected.json()).resolves.toMatchObject({
+      data: {
+        accepted: 0,
+        results: [{ code: "analytics_application_disabled" }],
+      },
+    });
+  });
+
+  it("validates and evaluates alert rules with central email delivery", async () => {
+    const invalid = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/alerts",
+        44,
+        "POST",
+        {
+          name: "Invalid recipient",
+          alert_type: "crash_spike",
+          definition: { window_minutes: 60, threshold: 1 },
+          channels: [{ type: "email", to: "not-an-email" }],
+        },
+        "runtime-invalid-alert",
+      ),
+    );
+    expect(invalid.status).toBe(400);
+    await expect(invalid.json()).resolves.toMatchObject({
+      error: { code: "analytics_alert_recipient_invalid" },
+    });
+
+    const created = await SELF.fetch(
+      await signedRequest(
+        "/internal/v1/alerts",
+        44,
+        "POST",
+        {
+          name: "No incoming data",
+          alert_type: "no_data",
+          definition: { window_minutes: 60 },
+          channels: [{ type: "email", to: "analytics@example.com" }],
+          cooldown_minutes: 60,
+        },
+        "runtime-no-data-alert",
+      ),
+    );
+    expect(created.status).toBe(201);
+    await evaluateAnalyticsAlerts(env);
+    await expect(
+      env.DB.prepare(
+        `SELECT COUNT(*) AS total, MAX(notification_status) AS notification_status
+         FROM analytics_alert_incidents WHERE project_id = '44'`,
+      ).first(),
+    ).resolves.toMatchObject({ total: 1, notification_status: "sent" });
+
+    await evaluateAnalyticsAlerts(env);
+    await expect(
+      env.DB.prepare(
+        "SELECT COUNT(*) AS total FROM analytics_alert_incidents WHERE project_id = '44'",
+      ).first(),
+    ).resolves.toMatchObject({ total: 1 });
   });
 
   it("rejects canonical financial facts from non-system callers", async () => {

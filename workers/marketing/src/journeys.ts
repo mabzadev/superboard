@@ -990,10 +990,13 @@ async function deliverJourneyEmail(
       profile.public_config_json,
       {} as SmtpPublicConfig,
     ),
-    secret: await decryptJson<SmtpSecretConfig>(
-      env.SMTP_ENCRYPTION_KEY,
-      profile.encrypted_config,
-    ),
+    secret:
+      env.EMAIL_PROVIDER === "aws-ses"
+        ? { password: null }
+        : await decryptJson<SmtpSecretConfig>(
+            env.SMTP_ENCRYPTION_KEY,
+            profile.encrypted_config,
+          ),
     message: {
       to: subscriber.email,
       subject: personalize(

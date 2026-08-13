@@ -198,8 +198,14 @@ test("generated Analytics config declares its complete durable pipeline", () => 
   assert.deepEqual(DOMAIN_SERVICE_REGISTRY.analytics.secrets, [
     "INTERNAL_API_TOKEN",
     "INTERNAL_API_TOKEN_PREVIOUS",
+    "EMAIL_INTERNAL_TOKEN",
     "ANALYTICS_ID_HASH_KEY",
     "ANALYTICS_ID_HASH_KEY_PREVIOUS",
+    "ANALYTICS_CONFIG_ENCRYPTION_KEY",
+  ]);
+  assert.deepEqual(config.services, [
+    { binding: "MARKETING_MODULE", service: "superboard-marketing-dev" },
+    { binding: "EMAIL_SERVICE", service: "superboard-email-dev" },
   ]);
 });
 
@@ -401,12 +407,10 @@ test("generated Email and Marketing configs quarantine terminal queue failures",
   assert.equal(email.queues.consumers[1].queue, email.vars.EMAIL_DLQ_NAME);
   assert.equal(email.queues.consumers[1].dead_letter_queue, undefined);
   assert.deepEqual(email.secrets.required, [
+    "AWS_SES_SMTP_PASSWORD",
+    "AWS_SES_SMTP_USERNAME",
+    "AWS_SES_SNS_TOPIC_ARN",
     "EMAIL_INTERNAL_TOKEN",
-    "SMTP_HOST",
-    "SMTP_PASSWORD",
-    "SMTP_PORT",
-    "SMTP_SECURITY",
-    "SMTP_USERNAME",
   ]);
 
   const marketing = JSON.parse(

@@ -44,7 +44,46 @@ import {
   listSavedReports,
   updateSavedReport,
 } from "./reports";
+import {
+  createDashboard,
+  analyzeEvent,
+  createDashboardWidget,
+  deleteAlert,
+  deleteAnnotation,
+  deleteCohort,
+  deleteDashboard,
+  deleteDashboardWidget,
+  deleteHook,
+  deleteRemoteConfig,
+  evaluateCohort,
+  getAnalyticsSettings,
+  getCrashGroup,
+  getDashboard,
+  listAlerts,
+  listAnnotations,
+  listApplications,
+  listCohorts,
+  listCrashGroups,
+  listDashboards,
+  listDimensions,
+  listFeedback,
+  listHooks,
+  listRemoteConfig,
+  listViews,
+  resolveRemoteConfig,
+  saveAlert,
+  saveAnnotation,
+  saveCohort,
+  saveHook,
+  transitionAlertIncident,
+  updateAnalyticsSettings,
+  updateApplication,
+  updateCrashGroup,
+  updateDashboard,
+  upsertRemoteConfig,
+} from "./resources";
 import type { Env } from "./types";
+import { drainAnalyticsHooks, evaluateAnalyticsAlerts } from "./automations";
 
 export { AnalyticsOperationsWorkflow };
 
@@ -105,8 +144,19 @@ app.get("/internal/v1", (c) =>
         "verified-purchases",
         "sessions",
         "profiles",
+        "applications",
+        "custom-dashboards",
+        "views",
+        "technology-and-location-dimensions",
+        "crash-reporting",
+        "feedback",
         "funnels",
         "retention",
+        "cohorts",
+        "remote-config",
+        "alerts",
+        "webhooks",
+        "annotations",
         "saved-reports",
         "exports",
         "erasure",
@@ -127,19 +177,18 @@ app.post("/internal/v1/events", async (c) => {
     }
     throw error;
   }
-  const results = await ingestAnalyticsEvents(
-    c.env,
-    c.get("project"),
-    events,
-  );
+  const results = await ingestAnalyticsEvents(c.env, c.get("project"), events);
   const rejected = results.some((result) => result.status === "rejected");
   const accepted = results.some((result) => result.status === "accepted");
   return c.json(
     {
       data: {
-        accepted: results.filter((result) => result.status === "accepted").length,
-        duplicates: results.filter((result) => result.status === "duplicate").length,
-        rejected: results.filter((result) => result.status === "rejected").length,
+        accepted: results.filter((result) => result.status === "accepted")
+          .length,
+        duplicates: results.filter((result) => result.status === "duplicate")
+          .length,
+        rejected: results.filter((result) => result.status === "rejected")
+          .length,
         results,
       },
     },
@@ -166,6 +215,9 @@ app.get("/internal/v1/events", async (c) =>
       new URL(c.req.url),
     ),
   }),
+);
+app.get("/internal/v1/events/analyze", async (c) =>
+  c.json({ data: await analyzeEvent(c) }),
 );
 
 app.get("/internal/v1/installations", async (c) =>
@@ -245,8 +297,145 @@ app.get("/internal/v1/event-definitions", async (c) => {
   return c.json({ data: { items: rows.results } });
 });
 
+app.get("/internal/v1/applications", async (c) =>
+  c.json({ data: await listApplications(c) }),
+);
+app.put("/internal/v1/applications/:id", async (c) =>
+  mutationResponse(await updateApplication(c, c.req.param("id"))),
+);
+
+app.get("/internal/v1/dashboards", async (c) =>
+  c.json({ data: await listDashboards(c) }),
+);
+app.post("/internal/v1/dashboards", async (c) =>
+  mutationResponse(await createDashboard(c)),
+);
+app.get("/internal/v1/dashboards/:id", async (c) =>
+  c.json({ data: await getDashboard(c, c.req.param("id")) }),
+);
+app.put("/internal/v1/dashboards/:id", async (c) =>
+  mutationResponse(await updateDashboard(c, c.req.param("id"))),
+);
+app.delete("/internal/v1/dashboards/:id", async (c) =>
+  mutationResponse(await deleteDashboard(c, c.req.param("id"))),
+);
+app.post("/internal/v1/dashboards/:id/widgets", async (c) =>
+  mutationResponse(await createDashboardWidget(c, c.req.param("id"))),
+);
+app.delete("/internal/v1/dashboards/:id/widgets/:widgetId", async (c) =>
+  mutationResponse(
+    await deleteDashboardWidget(c, c.req.param("id"), c.req.param("widgetId")),
+  ),
+);
+
+app.get("/internal/v1/views", async (c) =>
+  c.json({ data: await listViews(c) }),
+);
+app.get("/internal/v1/dimensions", async (c) =>
+  c.json({ data: await listDimensions(c) }),
+);
+app.get("/internal/v1/crashes", async (c) =>
+  c.json({ data: await listCrashGroups(c) }),
+);
+app.get("/internal/v1/crashes/:fingerprint", async (c) =>
+  c.json({ data: await getCrashGroup(c, c.req.param("fingerprint")) }),
+);
+app.put("/internal/v1/crashes/:fingerprint", async (c) =>
+  mutationResponse(await updateCrashGroup(c, c.req.param("fingerprint"))),
+);
+app.get("/internal/v1/feedback", async (c) =>
+  c.json({ data: await listFeedback(c) }),
+);
+
+app.get("/internal/v1/remote-config", async (c) =>
+  c.json({ data: await listRemoteConfig(c) }),
+);
+app.put("/internal/v1/remote-config/:key", async (c) =>
+  mutationResponse(await upsertRemoteConfig(c, c.req.param("key"))),
+);
+app.delete("/internal/v1/remote-config/:key", async (c) =>
+  mutationResponse(await deleteRemoteConfig(c, c.req.param("key"))),
+);
+app.post("/internal/v1/remote-config/resolve", async (c) =>
+  c.json({ data: await resolveRemoteConfig(c) }),
+);
+
+app.get("/internal/v1/cohorts", async (c) =>
+  c.json({ data: await listCohorts(c) }),
+);
+app.post("/internal/v1/cohorts", async (c) =>
+  mutationResponse(await saveCohort(c)),
+);
+app.put("/internal/v1/cohorts/:id", async (c) =>
+  mutationResponse(await saveCohort(c, c.req.param("id"))),
+);
+app.post("/internal/v1/cohorts/:id/evaluate", async (c) =>
+  mutationResponse(await evaluateCohort(c, c.req.param("id"))),
+);
+app.delete("/internal/v1/cohorts/:id", async (c) =>
+  mutationResponse(await deleteCohort(c, c.req.param("id"))),
+);
+
+app.get("/internal/v1/alerts", async (c) =>
+  c.json({ data: await listAlerts(c) }),
+);
+app.post("/internal/v1/alerts", async (c) =>
+  mutationResponse(await saveAlert(c)),
+);
+app.put("/internal/v1/alerts/:id", async (c) =>
+  mutationResponse(await saveAlert(c, c.req.param("id"))),
+);
+app.delete("/internal/v1/alerts/:id", async (c) =>
+  mutationResponse(await deleteAlert(c, c.req.param("id"))),
+);
+app.post("/internal/v1/alert-incidents/:id/acknowledge", async (c) =>
+  mutationResponse(
+    await transitionAlertIncident(c, c.req.param("id"), "acknowledged"),
+  ),
+);
+app.post("/internal/v1/alert-incidents/:id/resolve", async (c) =>
+  mutationResponse(
+    await transitionAlertIncident(c, c.req.param("id"), "resolved"),
+  ),
+);
+
+app.get("/internal/v1/hooks", async (c) =>
+  c.json({ data: await listHooks(c) }),
+);
+app.post("/internal/v1/hooks", async (c) =>
+  mutationResponse(await saveHook(c)),
+);
+app.put("/internal/v1/hooks/:id", async (c) =>
+  mutationResponse(await saveHook(c, c.req.param("id"))),
+);
+app.delete("/internal/v1/hooks/:id", async (c) =>
+  mutationResponse(await deleteHook(c, c.req.param("id"))),
+);
+
+app.get("/internal/v1/annotations", async (c) =>
+  c.json({ data: await listAnnotations(c) }),
+);
+app.post("/internal/v1/annotations", async (c) =>
+  mutationResponse(await saveAnnotation(c)),
+);
+app.put("/internal/v1/annotations/:id", async (c) =>
+  mutationResponse(await saveAnnotation(c, c.req.param("id"))),
+);
+app.delete("/internal/v1/annotations/:id", async (c) =>
+  mutationResponse(await deleteAnnotation(c, c.req.param("id"))),
+);
+
+app.get("/internal/v1/settings", async (c) =>
+  c.json({ data: await getAnalyticsSettings(c) }),
+);
+app.put("/internal/v1/settings", async (c) =>
+  mutationResponse(await updateAnalyticsSettings(c)),
+);
+
 app.delete("/internal/v1/application/users/:id", async (c) => {
-  if (!["application", "system", "owner", "admin"].includes(c.get("project").role)) {
+  if (
+    !["application", "system", "owner", "admin"].includes(c.get("project").role)
+  ) {
     throw httpError(
       "analytics_erasure_forbidden",
       "Analytics subject erasure is not permitted for this role",
@@ -289,7 +478,9 @@ app.get("/internal/v1/retention", async (c) =>
 app.get("/internal/v1/reports", async (c) =>
   c.json({ data: await listSavedReports(c) }),
 );
-app.post("/internal/v1/reports", async (c) => mutationResponse(await createSavedReport(c)));
+app.post("/internal/v1/reports", async (c) =>
+  mutationResponse(await createSavedReport(c)),
+);
 app.get("/internal/v1/reports/:id", async (c) =>
   c.json({ data: await getSavedReport(c, c.req.param("id")) }),
 );
@@ -343,6 +534,11 @@ export async function analyticsHealth(db: D1Database) {
         (SELECT COUNT(*) FROM analytics_installations) AS installations_total,
         (SELECT COUNT(*) FROM analytics_purchase_facts) AS purchases_total,
         (SELECT COUNT(*) FROM analytics_sessions) AS sessions_total,
+        (SELECT COUNT(*) FROM analytics_view_facts) AS views_total,
+        (SELECT COUNT(*) FROM analytics_crash_occurrences) AS crashes_total,
+        (SELECT COUNT(*) FROM analytics_feedback_facts) AS feedback_total,
+        (SELECT COUNT(*) FROM analytics_alert_incidents WHERE status = 'open') AS alert_incidents_open,
+        (SELECT COUNT(*) FROM analytics_hook_deliveries WHERE status IN ('pending', 'failed')) AS hooks_pending,
         (SELECT COUNT(*) FROM analytics_dead_letters WHERE status = 'quarantined') AS dead_letters_quarantined,
         (SELECT COUNT(*) FROM analytics_operation_jobs WHERE status IN ('queued', 'running')) AS operations_active`,
     )
@@ -360,6 +556,9 @@ export async function analyticsHealth(db: D1Database) {
       installations: count("installations_total"),
       purchases: count("purchases_total"),
       sessions: count("sessions_total"),
+      views: count("views_total"),
+      crashes: count("crashes_total"),
+      feedback: count("feedback_total"),
     },
     operations: {
       active: count("operations_active"),
@@ -368,6 +567,10 @@ export async function analyticsHealth(db: D1Database) {
     marketingSignals: {
       pending: count("marketing_signals_pending"),
       deadLetter: count("marketing_signals_dead_letter"),
+    },
+    automations: {
+      openAlerts: count("alert_incidents_open"),
+      pendingHooks: count("hooks_pending"),
     },
   };
 }
@@ -405,6 +608,8 @@ export default {
       Promise.all([
         drainAnalyticsOutbox(env),
         drainMarketingSignals(env),
+        evaluateAnalyticsAlerts(env),
+        drainAnalyticsHooks(env),
         purgeExpiredHotEvents(env.DB),
         resumeQueuedOperations(env),
         env.DB.prepare(
@@ -418,11 +623,7 @@ export default {
       ]).then(() => undefined),
     );
   },
-  async queue(
-    batch: MessageBatch<unknown>,
-    env: Env,
-    _ctx: ExecutionContext,
-  ) {
+  async queue(batch: MessageBatch<unknown>, env: Env, _ctx: ExecutionContext) {
     await handleAnalyticsQueue(batch, env);
   },
 };

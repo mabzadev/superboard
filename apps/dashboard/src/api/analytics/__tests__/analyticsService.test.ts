@@ -11,11 +11,13 @@ vi.mock("@/lib/api", () => api);
 vi.mock("@/lib/config", () => ({ config: { apiPath: "/api/v1" } }));
 
 import {
+  createAnalyticsDashboard,
   createAnalyticsOperation,
   createAnalyticsReport,
   getAnalyticsEvents,
   getAnalyticsOverview,
   queryAnalyticsFunnel,
+  upsertAnalyticsRemoteConfig,
 } from "../analyticsService";
 
 describe("Analytics dashboard service contracts", () => {
@@ -92,6 +94,33 @@ describe("Analytics dashboard service contracts", () => {
       3,
       "/api/v1/analytics/projects/10-test/operations",
       { operation_type: "export", input: {} }
+    );
+  });
+
+  it("maps dashboards and remote configuration through the native module", async () => {
+    api.POST.mockResolvedValueOnce({ data: { data: { id: "dashboard-1" } } });
+    api.PUT.mockResolvedValueOnce({
+      data: { data: { id: "config-1", version: 1 } },
+    });
+
+    await createAnalyticsDashboard("10-test", {
+      name: "Product health",
+      visibility: "project",
+      layout: { columns: 12 },
+    });
+    await upsertAnalyticsRemoteConfig("10-test", "checkout_banner", {
+      environment: "test",
+      value: { enabled: true },
+      conditions: [{ rollout_percentage: 50 }],
+    });
+
+    expect(api.POST).toHaveBeenCalledWith(
+      "/api/v1/analytics/projects/10-test/dashboards",
+      expect.objectContaining({ name: "Product health" })
+    );
+    expect(api.PUT).toHaveBeenCalledWith(
+      "/api/v1/analytics/projects/10-test/remote-config/checkout_banner",
+      expect.objectContaining({ environment: "test" })
     );
   });
 });

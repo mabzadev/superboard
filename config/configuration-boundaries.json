@@ -18,7 +18,8 @@
       "targetSelector": "superboard.project.json#/development/target",
       "requiredEnvironment": "development",
       "domainSuffixPolicy": "derive-from-domains.api",
-      "requiredMailTransport": "capture"
+      "requiredMailTransport": "smtp",
+      "requiredMailProvider": "aws-ses"
     },
     "applications": {
       "targetDirectory": "deploy/targets",

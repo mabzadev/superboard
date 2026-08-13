@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "target": "vocostar",
   "accountAlias": "vocostar-production",
   "resourceIdentity": {
@@ -49,6 +49,9 @@
   },
   "mail": {
     "transport": "smtp",
+    "provider": "aws-ses",
+    "awsRegion": "eu-central-1",
+    "configurationSet": "superboard-production",
     "fromName": "SuperBoard",
     "fromAddress": "noreply@vocostar.com"
   },
@@ -369,15 +372,15 @@
           "name": "opengrow-dynamic-links-db",
           "id": "8c46f117-6b12-49df-8308-e82458e31eab"
         },
-      "support": {
-        "name": "opengrow-support-db",
-        "id": "13171470-dfb5-46ce-b047-c9b151c34ae2"
-      },
-      "analytics": {
-        "name": "opengrow-analytics-db",
-        "id": null
-      },
-      "marketing": {
+        "support": {
+          "name": "opengrow-support-db",
+          "id": "13171470-dfb5-46ce-b047-c9b151c34ae2"
+        },
+        "analytics": {
+          "name": "opengrow-analytics-db",
+          "id": null
+        },
+        "marketing": {
           "name": "opengrow-marketing-db",
           "id": "b9989b1d-fea5-454e-aba5-9f674b85af9b"
         },
@@ -387,26 +390,26 @@
         }
       },
       "moduleR2": {
-      "support": {
-        "name": "opengrow-support-attachments"
-      },
-      "analytics": {
-        "name": "opengrow-analytics-events"
-      },
-      "marketing": {
+        "support": {
+          "name": "opengrow-support-attachments"
+        },
+        "analytics": {
+          "name": "opengrow-analytics-events"
+        },
+        "marketing": {
           "name": "opengrow-marketing-media"
         }
       },
       "moduleQueues": {
-      "support": {
-        "name": "opengrow-support-events",
-        "dlq": "opengrow-support-events-dlq"
-      },
-      "analytics": {
-        "name": "opengrow-analytics-ingest",
-        "dlq": "opengrow-analytics-ingest-dlq"
-      },
-      "marketing": {
+        "support": {
+          "name": "opengrow-support-events",
+          "dlq": "opengrow-support-events-dlq"
+        },
+        "analytics": {
+          "name": "opengrow-analytics-ingest",
+          "dlq": "opengrow-analytics-ingest-dlq"
+        },
+        "marketing": {
           "name": "opengrow-marketing-delivery",
           "dlq": "opengrow-marketing-delivery-dlq"
         }

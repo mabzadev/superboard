@@ -26,7 +26,7 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 13 },
+    "schemaVersion": { "const": 14 },
     "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "accountAlias": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "resourceIdentity": { "$ref": "#/$defs/resourceIdentity" },
@@ -131,9 +131,18 @@
     "mail": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["transport", "fromName", "fromAddress"],
+      "required": ["transport", "provider", "fromName", "fromAddress"],
       "properties": {
         "transport": { "enum": ["capture", "smtp"] },
+        "provider": { "enum": ["smtp", "aws-ses"] },
+        "awsRegion": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(-gov)?-[a-z]+-[0-9]$"
+        },
+        "configurationSet": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
         "fromName": { "type": "string", "minLength": 1 },
         "fromAddress": {
           "type": "string",
@@ -143,7 +152,13 @@
           "type": "string",
           "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "provider": { "const": "aws-ses" } } },
+          "then": { "required": ["awsRegion", "configurationSet"] }
+        }
+      ]
     },
     "domains": {
       "type": "object",

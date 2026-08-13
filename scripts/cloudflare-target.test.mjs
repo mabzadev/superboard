@@ -16,7 +16,7 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   for (const name of ["mbza-development", "vocostar"]) {
     const { target } = await loadTarget(name);
     assert.equal("accountId" in target, false);
-    assert.equal(target.schemaVersion, 13);
+    assert.equal(target.schemaVersion, 14);
     assert.deepEqual(
       target.resourceIdentity,
       name === "mbza-development"

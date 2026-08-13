@@ -239,9 +239,12 @@ function validateReferenceTarget(reference, contract, errors) {
       `${reference.path} must isolate the reference profile in development only`,
     );
   }
-  if (target.mail?.transport !== referenceContract.requiredMailTransport) {
+  if (
+    target.mail?.transport !== referenceContract.requiredMailTransport ||
+    target.mail?.provider !== referenceContract.requiredMailProvider
+  ) {
     errors.push(
-      `${reference.path} must use capture mail and cannot carry production SMTP credentials`,
+      `${reference.path} must use the account-level AWS SES SMTP transport without embedding credentials`,
     );
   }
   const suffix = registrableConfigurationSuffix(target.domains?.api);

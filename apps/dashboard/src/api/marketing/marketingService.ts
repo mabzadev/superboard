@@ -96,6 +96,8 @@ export type SmtpSettings = {
   last_tested_at?: string | null;
   last_test_status?: string | null;
   profiles?: SmtpSettings[];
+  provider?: "smtp" | "aws-ses";
+  aws_region?: string | null;
 };
 export type ProviderWebhook = {
   id: string;
