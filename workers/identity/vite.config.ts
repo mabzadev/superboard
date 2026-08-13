@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [tsconfigPaths(), tailwindcss()],
+  plugins: [tsconfigPaths({ root: import.meta.dirname }), tailwindcss()],
   esbuild: { jsxImportSource: "hono/jsx/dom" },
   build: {
     emptyOutDir: true,

@@ -1,13 +1,12 @@
-import classNames from 'classnames'
+import classNames from "classnames";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbSeparator,
-} from 'components/ui/breadcrumb'
-import { useRouter } from 'i18n/navigation'
-import { SidebarTrigger } from 'components/ui/sidebar'
+} from "components/ui/breadcrumb";
+import { useRouter } from "i18n/navigation";
 
 const ShadcnBreadcrumb = ({
   parent,
@@ -25,24 +24,17 @@ const ShadcnBreadcrumb = ({
   action?: React.ReactNode;
   className?: string;
 }) => {
-  const router = useRouter()
+  const router = useRouter();
   return (
-    <section
-      className={classNames(
-        'flex items-center gap-3 mb-8',
-        className,
-      )}>
-      <SidebarTrigger
-        variant='outline'
-        className='sm:hidden scale-100' />
+    <section className={classNames("flex items-center gap-3 mb-8", className)}>
       <Breadcrumb>
         <BreadcrumbList>
           {parent && (
             <>
-              <BreadcrumbItem className='cursor-pointer'>
+              <BreadcrumbItem className="cursor-pointer">
                 <BreadcrumbLink
                   onClick={() => {
-                    router.push(parent.href)
+                    router.push(parent.href);
                   }}
                 >
                   {parent.label}
@@ -54,7 +46,7 @@ const ShadcnBreadcrumb = ({
 
           {page && (
             <>
-              <h1 className='text-2xl font-bold tracking-tight leading-none'>
+              <h1 className="text-2xl font-bold tracking-tight leading-none">
                 {page.label}
               </h1>
             </>
@@ -63,7 +55,7 @@ const ShadcnBreadcrumb = ({
       </Breadcrumb>
       {action}
     </section>
-  )
-}
+  );
+};
 
-export default ShadcnBreadcrumb
+export default ShadcnBreadcrumb;
