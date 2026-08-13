@@ -115,21 +115,7 @@ const configPath = resolve(
   "generated",
   `${targetName}-${service}-${environment}.jsonc`,
 );
-run(
-  "node",
-  [
-    resolve(root, "scripts", "cloudflare-config.mjs"),
-    "--target",
-    targetName,
-    "--service",
-    service,
-    "--environment",
-    environment,
-    ...(args["no-routes"] ? ["--no-routes"] : []),
-    ...(args.preflight ? ["--preflight"] : []),
-  ],
-  targetCloudflareEnv,
-);
+generateServiceConfig();
 
 if (service === "dashboard") {
   const apiUrl = publicApiUrl(target);
@@ -237,6 +223,12 @@ if (service === "identity" && !uploadOnly) {
   });
 }
 
+// D1 convergence and other read-only verification helpers intentionally
+// generate a route-free Wrangler configuration at the canonical generated
+// path. Recreate the requested deployment configuration after those helpers
+// so an active deploy can never detach a public route or queue consumer.
+generateServiceConfig();
+
 if (service === "dashboard") {
   run(
     "npx",
@@ -257,6 +249,24 @@ if (service === "dashboard") {
       ...(uploadOnly ? ["versions", "upload"] : ["deploy"]),
       "--config",
       configPath,
+    ],
+    targetCloudflareEnv,
+  );
+}
+
+function generateServiceConfig() {
+  run(
+    "node",
+    [
+      resolve(root, "scripts", "cloudflare-config.mjs"),
+      "--target",
+      targetName,
+      "--service",
+      service,
+      "--environment",
+      environment,
+      ...(args["no-routes"] ? ["--no-routes"] : []),
+      ...(args.preflight ? ["--preflight"] : []),
     ],
     targetCloudflareEnv,
   );
