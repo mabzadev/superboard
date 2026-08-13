@@ -253,13 +253,20 @@ app.get("/.well-known/purchases-jwks.json", async (c) => {
   }
 });
 
-app.get("/.well-known/jwks.json", (c) =>
-  proxyPublicService(
+app.get("/.well-known/jwks.json", (c) => {
+  if ((c.req.header("host") || "") === c.env.AUTH_DOMAIN) {
+    return proxyAuthGateway(
+      c.req.raw,
+      c.env.IDENTITY_SERVICE,
+      "/.well-known/jwks.json",
+    );
+  }
+  return proxyPublicService(
     c.req.raw,
     c.env.IDENTITY_SERVICE,
     "/.well-known/jwks.json",
-  ),
-);
+  );
+});
 
 // =============================================
 // Route requests by subdomain
