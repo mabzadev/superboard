@@ -12,16 +12,16 @@
   },
   "dependencies": {
     "@superboard/contracts": "*",
-    "hono": "^4.13.1"
+    "hono": "^4.13.3"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.59.3",
-    "@typescript-eslint/parser": "^8.59.3",
-    "@cloudflare/vitest-pool-workers": "0.20.3",
-    "@cloudflare/workers-types": "^5.20260808.1",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/workers-types": "^5.20260822.1",
     "eslint": "^9.39.5",
     "typescript": "^5.8.3",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.120.0"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.125.0"
   }
 }
