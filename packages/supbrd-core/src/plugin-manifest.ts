@@ -20,6 +20,7 @@ export interface SuperBoardStoreDescriptor extends SuperBoardContributionDescrip
 export interface SuperBoardSchemaDescriptor extends SuperBoardContributionDescriptor {
 	schema_id: string;
 	closed: true;
+	json_schema: { readonly [key: string]: unknown };
 }
 
 export interface SuperBoardCommandDescriptor extends SuperBoardContributionDescriptor {
@@ -71,6 +72,7 @@ export async function sha256Canonical(value: unknown): Promise<string> {
 
 export async function verifySuperBoardPluginManifest(
 	value: unknown,
+	options: { artifact_content?: unknown } = {},
 ): Promise<{ valid: boolean; errors: string[] }> {
 	const errors: string[] = [];
 	if (!isRecord(value)) return { valid: false, errors: ["MANIFEST_NOT_OBJECT"] };
@@ -114,7 +116,7 @@ export async function verifySuperBoardPluginManifest(
 
 	if (isChecksum(value.artifact_checksum)) {
 		const { artifact_checksum: _checksum, ...artifact } = value;
-		if ((await sha256Canonical(artifact)) !== value.artifact_checksum) {
+		if ((await sha256Canonical(options.artifact_content ?? artifact)) !== value.artifact_checksum) {
 			errors.push("ARTIFACT_CHECKSUM_MISMATCH");
 		}
 	}

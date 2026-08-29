@@ -1,4 +1,3 @@
-import { composeUserFrontReleaseInput } from "@superboard/supbrd-plug-user";
 import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
@@ -8,6 +7,7 @@ import {
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
+import { composeUserFrontReleaseInput } from "../../../../lib/user-front-release.js";
 
 export const prerender = false;
 

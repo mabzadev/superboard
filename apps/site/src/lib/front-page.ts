@@ -1,4 +1,5 @@
 import {
+	assertRendererCompatibility,
 	resolveFrontRequest,
 	type CompiledFrontRelease,
 	type FrontRequestResolution,
@@ -8,10 +9,7 @@ import { hasPermission, type RoleLevel } from "@emdash-cms/auth";
 import { loadDependencyHealth, loadLastVerifiedFrontRelease, type LoadedFrontRelease } from "./release-source.js";
 import type { SuperBoardSiteEnv } from "./site-env.js";
 import type { UserMember } from "@superboard/supbrd-plug-user";
-import {
-	CORE_ADMIN_SHELL_DESCRIPTOR,
-	assertRendererCompatibility,
-} from "@superboard/supbrd-plug-user";
+import { CORE_ADMIN_SHELL_DESCRIPTOR } from "./user-front-release.js";
 
 interface EmDashUser {
 	id: string;
@@ -94,7 +92,10 @@ async function resolveFrontPageFromRelease(
 				if (layout?.root_renderer_id !== CORE_ADMIN_SHELL_DESCRIPTOR.renderer_id) {
 					throw new Error(`Unknown root layout renderer for ${layoutId}`);
 				}
-				assertRendererCompatibility(CORE_ADMIN_SHELL_DESCRIPTOR);
+				assertRendererCompatibility(CORE_ADMIN_SHELL_DESCRIPTOR, {
+					abi_version: "1.0.0",
+					runtime_version: "0.1.0",
+				});
 			}
 		} catch {
 			resolution = {

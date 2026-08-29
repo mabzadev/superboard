@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
 import { compileFrontRelease } from "../packages/supbrd-core/dist/index.js";
-import { composeUserFrontReleaseInput } from "../packages/supbrd-plug-user/src/index.js";
+import { composeUserFrontReleaseInput } from "../apps/site/src/lib/user-front-release.js";
 
 const root = resolve(import.meta.dirname, "..");
 const previewId = "user-slice-preview";
@@ -49,6 +49,19 @@ INSERT OR REPLACE INTO superboard_dependency_health
 VALUES
   ('local', 'dependency.supbrd_plug_user', 'ready', 'sha256:${"a".repeat(64)}',
    '${issuedAt}', '${expiresAt}');
+UPDATE superboard_front_release_candidates
+SET status = 'approved', approval_json = '{"local_visual_proof":true}', approved_at = '${issuedAt}'
+WHERE candidate_id = '${release.payload.candidate_id}';
+INSERT INTO superboard_front_active_releases
+  (instance_id, active_release_id, previous_release_id, pointer_revision, activation_id, activated_at)
+VALUES
+  ('local', '${release.payload.release_id}', NULL, 1, 'user-slice-local-visual-activation', '${issuedAt}')
+ON CONFLICT(instance_id) DO UPDATE SET
+  active_release_id = excluded.active_release_id,
+  previous_release_id = superboard_front_active_releases.active_release_id,
+  pointer_revision = superboard_front_active_releases.pointer_revision + 1,
+  activation_id = 'user-slice-local-visual-activation-${Date.now()}',
+  activated_at = excluded.activated_at;
 `;
 
 run("pnpm", [

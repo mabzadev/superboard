@@ -982,6 +982,9 @@ importers:
       '@emdash-cms/cloudflare':
         specifier: workspace:*
         version: link:../../packages/cloudflare
+      '@lingui/core':
+        specifier: 'catalog:'
+        version: 5.9.5(@lingui/babel-plugin-lingui-macro@5.9.5(typescript@6.0.3))
       '@superboard/supbrd-core':
         specifier: workspace:*
         version: link:../../packages/supbrd-core

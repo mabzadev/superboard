@@ -6,12 +6,14 @@ export {
 export {
 	sha256Canonical,
 	verifySuperBoardPluginManifest,
-	type SuperBoardCommandDescriptor,
-	type SuperBoardContributionDescriptor,
-	type SuperBoardDataSourceDescriptor,
-	type SuperBoardPluginManifest,
-	type SuperBoardSchemaDescriptor,
-	type SuperBoardStoreDescriptor,
+} from "./plugin-manifest.js";
+export type {
+	SuperBoardCommandDescriptor,
+	SuperBoardContributionDescriptor,
+	SuperBoardDataSourceDescriptor,
+	SuperBoardPluginManifest,
+	SuperBoardSchemaDescriptor,
+	SuperBoardStoreDescriptor,
 } from "./plugin-manifest.js";
 export {
 	REQUIRED_FRONT_STATES,
@@ -44,6 +46,8 @@ export {
 	compileFrontRelease,
 	verifyFrontRelease,
 } from "./release-compiler.js";
+export { assertRendererCompatibility } from "./renderer-runtime.js";
+export type { RendererRuntimeCompatibility } from "./renderer-runtime.js";
 export { resolveFrontRoute, type FrontRouteResolution } from "./front-router.js";
 export {
 	resolveFrontRequest,

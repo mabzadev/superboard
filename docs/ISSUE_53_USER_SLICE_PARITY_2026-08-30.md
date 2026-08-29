@@ -14,7 +14,7 @@ Cette note lie la Release Front de l’issue #53 aux comportements historiques E
 ## Propriétés vérifiées
 
 - `supbrd-plug-user` exporte des contributions, jamais une URL, une page ou une navigation finale. Les quatre routes et leur Présentation sont composées par la Release Front.
-- Le SuperBoard Plugin Manifest utilise le contrat fermé commun de `supbrd-core`. Son checksum d’artefact et ceux des Renderer, Command, Data Source, Schema et Store Descriptors sont calculés sur leur contenu JSON canonique.
+- Le SuperBoard Plugin Manifest utilise le contrat fermé commun de `supbrd-core`. Les checksums des Command, Data Source, Schema et Store Descriptors sont calculés sur leur contenu JSON canonique. Chaque checksum de Renderer inclut la source de sa fonction de rendu et le checksum de son props schema exact. Le checksum d’artefact du plugin couvre le manifest et les trois implémentations de rendu ; le lock Core couvre les implémentations de compilation et de résolution réellement chargées.
 - Les trois renderers passent par une registry typée unique. Les props de login, profil et membres sont discriminées par `kind`; aucun routage par suffixe d’identifiant n’est utilisé.
 - Les messages du plugin sont fournis en anglais et en français. La Release transporte les deux catalogues.
 - Un crash d’un renderer de plugin retourne l’état isolé `error`. Une ABI incompatible du vrai descriptor `emdash.core.renderer.admin_shell` refuse le montage racine.
@@ -33,7 +33,14 @@ Le test échoue si les Validation Receipts ne sont pas tous `passed`, si l’app
 
 ## Preuve visuelle locale
 
-Le contrat visuel des quatre routes est regroupé dans `apps/site/tests/visual/user-slice.html`; les captures light/dark versionnées sont `apps/site/tests/visual/user-slice-light.png` et `apps/site/tests/visual/user-slice-dark.png`. En complément, la route de preview réelle `/superboard-preview/:previewId/login` a été ouverte dans le navigateur local contre le candidate D1 et a monté `supbrd-plug-user.renderer.login_form`. Les routes authentifiées restent volontairement protégées par une vraie session opérateur ; aucun bypass de capture n’a été ajouté.
+Les huit PNG versionnés sous `apps/site/tests/visual/` proviennent des quatre routes runtime réelles, chacune en thème light et dark :
+
+- `user-slice-login-{light,dark}.png` depuis `/login`, sans session ;
+- `user-slice-app-{light,dark}.png` depuis `/app` ;
+- `user-slice-profile-{light,dark}.png` depuis `/app/profile` ;
+- `user-slice-users-{light,dark}.png` depuis `/app/users`.
+
+La Release signée a été installée dans le D1 local comme active, puis relue par la source `d1`. Les trois routes admin ont été capturées avec la session créée par l’endpoint officiel `/_emdash/api/auth/dev-bypass`, disponible uniquement sous `import.meta.env.DEV`; `/login` a été capturée sans session. Les captures affichent toutes `release=01J00000000000000000000305` et `source=d1`. Aucun bypass de production ni fixture HTML synthétique n’est utilisé.
 
 Commandes de reproduction :
 

@@ -2,11 +2,13 @@
 import type { FrontPageModel } from "../lib/front-page.js";
 import {
 	mountUserRenderer,
-	USER_MESSAGES,
 	USER_RENDERER_IDS,
-	type UserLocale,
-	type UserMessageId,
 } from "@superboard/supbrd-plug-user";
+import {
+	createUserFrontI18n,
+	type UserFrontLocale,
+	type UserFrontMessageId,
+} from "../lib/user-front-i18n.js";
 
 interface Props {
 	model: FrontPageModel;
@@ -15,10 +17,11 @@ interface Props {
 const { model } = Astro.props;
 const previewTheme = Astro.url.searchParams.get("theme") === "light" ? "light" : "dark";
 const requestedLocale = Astro.url.searchParams.get("lang") ?? Astro.request.headers.get("accept-language") ?? "en";
-const locale: UserLocale = requestedLocale.toLowerCase().startsWith("fr") ? "fr" : "en";
-const message = (id: UserMessageId) => USER_MESSAGES[locale][id];
-const localizedPageTitle = model.page_title && Object.hasOwn(USER_MESSAGES[locale], model.page_title)
-	? message(model.page_title as UserMessageId)
+const locale: UserFrontLocale = requestedLocale.toLowerCase().startsWith("fr") ? "fr" : "en";
+const i18n = createUserFrontI18n(locale);
+const message = (id: UserFrontMessageId) => i18n._(id);
+const localizedPageTitle = model.page_title && i18n.messages[model.page_title]
+	? i18n._(model.page_title)
 	: model.page_title;
 const { resolution } = model;
 const releaseId = model.release?.release.payload.release_id ?? null;
@@ -40,10 +43,10 @@ const userRendererViews = resolution.result === "rendered"
 	})
 	: [];
 const stateTitle = {
-	maintenance: "Front unavailable",
-	not_found: "Page not found",
-	forbidden: "Access denied",
-	unavailable: "Dependency unavailable",
+	maintenance: message("site.front.unavailable"),
+	not_found: message("site.front.not_found"),
+	forbidden: message("site.front.forbidden"),
+	unavailable: message("site.front.dependency_unavailable"),
 }[resolution.result as "maintenance" | "not_found" | "forbidden" | "unavailable"];
 ---
 
@@ -105,17 +108,16 @@ const stateTitle = {
 		<div class="shell">
 			<header>
 				<div class="brand">SuperBoard</div>
-				<a class="admin-link" href="/_emdash/admin">Open EmDash Admin</a>
+				<a class="admin-link" href="/_emdash/admin">{message("site.admin.open")}</a>
 			</header>
 			<main>
 				<section class="panel">
 					{resolution.result === "rendered" ? (
 						<>
-							<div class="eyebrow">Front Route Manifest</div>
+							<div class="eyebrow">{message("site.front.route_manifest")}</div>
 							<h1>{localizedPageTitle ?? resolution.page_id}</h1>
 							<p>
-								This surface is resolved from the active immutable Front Release. Renderer slots are
-								inventoried below and remain isolated from the generic Core runtime.
+								{message("site.front.description")}
 							</p>
 							<div class="renderers">
 								{userRendererViews.map((view) => (
@@ -142,11 +144,10 @@ const stateTitle = {
 						</>
 					) : (
 						<>
-							<div class="eyebrow">Fail-closed runtime state</div>
-							<h1>{stateTitle ?? "Front unavailable"}</h1>
+							<div class="eyebrow">{message("site.front.fail_closed")}</div>
+							<h1>{stateTitle ?? message("site.front.unavailable")}</h1>
 							<p>
-								No unverified draft or partial release is rendered. EmDash Admin remains available to
-								repair, validate, preview, approve, and publish a complete Front Release.
+								{message("site.front.fail_closed_description")}
 							</p>
 						</>
 					)}

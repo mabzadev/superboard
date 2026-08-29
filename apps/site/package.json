@@ -18,6 +18,7 @@
 		"@astrojs/react": "catalog:",
 		"@emdash-cms/auth": "workspace:*",
 		"@emdash-cms/cloudflare": "workspace:*",
+		"@lingui/core": "catalog:",
 		"@superboard/supbrd-core": "workspace:*",
 		"@superboard/supbrd-plug-user": "workspace:*",
 		"astro": "catalog:",

@@ -6,7 +6,6 @@ import {
 	createOperatorReauthenticationReceipt,
 	validateFrontReleaseCandidate,
 } from "@superboard/supbrd-core";
-import { composeUserFrontReleaseInput } from "@superboard/supbrd-plug-user";
 import { env } from "cloudflare:workers";
 import { expect, test } from "vitest";
 
@@ -22,6 +21,7 @@ import {
 	stageCompiledFrontRelease,
 	verifyActivationReceipts,
 } from "../src/lib/release-repository.js";
+import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 
 test("produces candidate, preview, approval and activation evidence for the user slice", async () => {
 	const keys = await crypto.subtle.generateKey(
