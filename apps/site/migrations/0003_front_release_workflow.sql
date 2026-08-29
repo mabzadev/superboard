@@ -68,3 +68,27 @@ CREATE INDEX IF NOT EXISTS idx_superboard_operator_reauth_candidate
   ON superboard_operator_reauthentication_receipts(candidate_id);
 CREATE INDEX IF NOT EXISTS idx_superboard_front_approval_reauth_receipt
   ON superboard_front_approval_reauthentication(receipt_id);
+
+CREATE TRIGGER IF NOT EXISTS superboard_operator_reauth_immutable_update
+BEFORE UPDATE ON superboard_operator_reauthentication_receipts
+BEGIN
+  SELECT RAISE(ABORT, 'operator reauthentication receipts are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_operator_reauth_immutable_delete
+BEFORE DELETE ON superboard_operator_reauthentication_receipts
+BEGIN
+  SELECT RAISE(ABORT, 'operator reauthentication receipts are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_approval_reauth_immutable_update
+BEFORE UPDATE ON superboard_front_approval_reauthentication
+BEGIN
+  SELECT RAISE(ABORT, 'approval reauthentication links are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_approval_reauth_immutable_delete
+BEFORE DELETE ON superboard_front_approval_reauthentication
+BEGIN
+  SELECT RAISE(ABORT, 'approval reauthentication links are immutable');
+END;

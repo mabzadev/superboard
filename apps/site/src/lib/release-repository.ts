@@ -183,8 +183,10 @@ export async function persistReleaseApproval(
 				 ) SELECT candidate_id, ?, ?
 				 FROM superboard_front_release_candidates
 				 WHERE candidate_id = ? AND status = 'approved'
-				 ON CONFLICT(candidate_id) DO UPDATE SET
-				   receipt_id = excluded.receipt_id, linked_at = excluded.linked_at`,
+				   AND NOT EXISTS (
+				     SELECT 1 FROM superboard_front_approval_reauthentication AS linked
+				     WHERE linked.candidate_id = superboard_front_release_candidates.candidate_id
+				   )`,
 			)
 			.bind(
 				reauthenticationReceiptId,
@@ -193,6 +195,44 @@ export async function persistReleaseApproval(
 			),
 	]);
 	return (result.meta.changes ?? 0) === 1;
+}
+
+export async function verifyActivationReceipts(
+	db: D1Database,
+	input: {
+		activation_id: string;
+		instance_id: string;
+		active_release_id: string;
+		pointer_revision: number;
+	},
+): Promise<boolean> {
+	const row = await db
+		.prepare(
+			`SELECT
+			   EXISTS(
+			     SELECT 1 FROM superboard_front_activations
+			     WHERE activation_id = ? AND instance_id = ?
+			       AND active_release_id = ? AND pointer_revision = ?
+			   ) AS history_exists,
+			   EXISTS(
+			     SELECT 1 FROM superboard_front_outbox
+			     WHERE event_type = 'front_release.activated' AND instance_id = ?
+			       AND release_id = ? AND pointer_revision = ?
+			       AND json_extract(payload_json, '$.activation_id') = ?
+			   ) AS outbox_exists`,
+		)
+		.bind(
+			input.activation_id,
+			input.instance_id,
+			input.active_release_id,
+			input.pointer_revision,
+			input.instance_id,
+			input.active_release_id,
+			input.pointer_revision,
+			input.activation_id,
+		)
+		.first<{ history_exists: number; outbox_exists: number }>();
+	return row?.history_exists === 1 && row.outbox_exists === 1;
 }
 
 function candidateFromRow(row: CandidateRow): FrontReleaseCandidateRecord {

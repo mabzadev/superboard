@@ -22,8 +22,9 @@ import {
 	createD1FrontReleaseRepository,
 	persistReleaseApproval,
 	stageCompiledFrontRelease,
+	verifyActivationReceipts,
 } from "../src/lib/release-repository.js";
-import { resolvePreviewFrontPage } from "../src/lib/front-page.js";
+import { resolvePreviewFrontPage, resolveSiteFrontPage } from "../src/lib/front-page.js";
 import { loadLastVerifiedFrontRelease } from "../src/lib/release-source.js";
 
 function release(): CompiledFrontRelease {
@@ -43,6 +44,14 @@ function release(): CompiledFrontRelease {
 }
 
 describe("Site Front Release D1 workflow", () => {
+	test("serves maintenance before the Instance has an active release", async () => {
+		expect((await resolveSiteFrontPage(env, "/login", undefined)).resolution).toEqual({
+			result: "maintenance",
+			route_id: null,
+			state_renderer_id: null,
+		});
+	});
+
 	test("persists one immutable snapshot behind draft revision CAS", async () => {
 		const created = await saveFrontDraft(env.DB, {
 			front_draft_id: "draft-runtime",
@@ -213,6 +222,14 @@ describe("Site Front Release D1 workflow", () => {
 				},
 			}),
 		).toMatchObject({ status: "activated", previous_release_id: first.payload.release_id });
+		expect(
+			await verifyActivationReceipts(env.DB, {
+				activation_id: "smoke-activation-b",
+				instance_id: "vocostar",
+				active_release_id: second.payload.release_id,
+				pointer_revision: 3,
+			}),
+		).toBe(true);
 		await env.RELEASE_CACHE.delete("last_verified_release:vocostar");
 		expect((await loadLastVerifiedFrontRelease(env, "vocostar"))?.release.payload.release_id).toBe(
 			second.payload.release_id,

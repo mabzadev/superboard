@@ -94,24 +94,6 @@ export async function loadFrontDraft(db: D1Database, frontDraftId: string): Prom
 	return row ? draftFromRow(row) : null;
 }
 
-export async function persistDraftSnapshot(db: D1Database, snapshot: DraftSnapshot): Promise<void> {
-	await db
-		.prepare(
-			`INSERT INTO superboard_front_draft_snapshots (
-			   draft_snapshot_id, front_draft_id, instance_id, draft_revision, input_json, created_at
-			 ) VALUES (?, ?, ?, ?, ?, ?)`,
-		)
-		.bind(
-			snapshot.draft_snapshot_id,
-			snapshot.front_draft_id,
-			snapshot.instance_id,
-			snapshot.draft_revision,
-			canonicalizeReleasePayload(snapshot.input),
-			snapshot.created_at,
-		)
-		.run();
-}
-
 export async function createDraftSnapshotCas(
 	db: D1Database,
 	input: {

@@ -7,7 +7,10 @@ import {
 } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
 import { isRecord } from "../../../../lib/request-validation.js";
-import { createD1FrontReleaseRepository } from "../../../../lib/release-repository.js";
+import {
+	createD1FrontReleaseRepository,
+	verifyActivationReceipts,
+} from "../../../../lib/release-repository.js";
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
@@ -43,6 +46,16 @@ export const POST: APIRoute = async (context) => {
 		activated_at: activatedAt,
 	});
 	if (result.status !== "activated") return jsonResponse({ error: result }, 409);
+	if (
+		!(await verifyActivationReceipts(env.DB, {
+			activation_id: result.activation_id,
+			instance_id: env.SUPERBOARD_INSTANCE_ID,
+			active_release_id: result.active_release_id,
+			pointer_revision: result.pointer_revision,
+		}))
+	) {
+		return jsonResponse({ error: { code: "ACTIVATION_RECEIPT_VERIFICATION_FAILED" } }, 500);
+	}
 	await env.RELEASE_CACHE.delete(`last_verified_release:${env.SUPERBOARD_INSTANCE_ID}`);
 	const loaded = await loadLastVerifiedFrontRelease(env, env.SUPERBOARD_INSTANCE_ID);
 	if (!loaded || loaded.release.payload.release_id !== result.active_release_id) {

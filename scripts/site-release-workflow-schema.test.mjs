@@ -30,6 +30,12 @@ test("pointer rollback writes immutable history and a rollback outbox event", (t
      ) VALUES
        ('candidate-a', 'vocostar', 'release-a', '{}', 'checksum-a', 'set-a', 'key', 'approved', '{}', '2026-08-30T00:00:00.000Z'),
        ('candidate-b', 'vocostar', 'release-b', '{}', 'checksum-b', 'set-b', 'key', 'approved', '{}', '2026-08-30T00:00:00.000Z');
+     INSERT INTO superboard_operator_reauthentication_receipts VALUES
+       ('reauth-a', 'operator', 'vocostar', 'front_release.approve', 'candidate-a',
+        '2026-08-30T00:00:00.000Z', '2026-08-30T00:05:00.000Z', 'checksum',
+        '2026-08-30T00:00:00.000Z');
+     INSERT INTO superboard_front_approval_reauthentication VALUES
+       ('candidate-a', 'reauth-a', '2026-08-30T00:00:00.000Z');
      INSERT INTO superboard_front_active_releases VALUES
        ('vocostar', 'release-a', NULL, 1, 'activation-a', '2026-08-30T00:01:00.000Z');
      UPDATE superboard_front_active_releases
@@ -56,6 +62,10 @@ test("pointer rollback writes immutable history and a rollback outbox event", (t
       "SELECT COUNT(*) FROM superboard_front_outbox WHERE event_type = 'front_release.rolled_back'",
     ),
     "1",
+  );
+  assert.throws(
+    () => execute(database, "UPDATE superboard_front_approval_reauthentication SET receipt_id = 'changed' WHERE candidate_id = 'candidate-a'"),
+    /immutable/u,
   );
 });
 

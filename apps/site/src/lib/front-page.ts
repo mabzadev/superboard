@@ -3,12 +3,13 @@ import {
 	type CompiledFrontRelease,
 	type FrontRequestResolution,
 } from "@superboard/supbrd-core";
+import { hasPermission, type RoleLevel } from "@emdash-cms/auth";
 
 import { loadDependencyHealth, loadLastVerifiedFrontRelease, type LoadedFrontRelease } from "./release-source.js";
 import type { SuperBoardSiteEnv } from "./site-env.js";
 
 interface EmDashUser {
-	role: number;
+	role: RoleLevel;
 }
 
 export interface FrontPageModel {
@@ -25,27 +26,7 @@ export async function resolveSiteFrontPage(
 ): Promise<FrontPageModel> {
 	const instanceId = env.SUPERBOARD_INSTANCE_ID;
 	const release = await loadLastVerifiedFrontRelease(env, instanceId);
-	let dependencyHealth: Record<string, "ready" | "unavailable"> = {};
-	if (release) {
-		try {
-			dependencyHealth = await loadDependencyHealth(env.DB, instanceId, new Date().toISOString());
-		} catch {
-			dependencyHealth = {};
-		}
-	}
-	const resolution = resolveFrontRequest({
-		last_verified_release: release?.runtime_release ?? null,
-		requested_path: requestedPath,
-		admin_session: user ? "valid" : "absent",
-		permissions: user && user.role >= 50 ? ["superboard.admin.access"] : [],
-		dependency_health: dependencyHealth,
-	});
-	const pageTitle =
-		resolution.result === "rendered" && release
-			? release.release.payload.presentation.pages.find((page) => page.page_id === resolution.page_id)
-					?.title ?? null
-			: null;
-	return { instance_id: instanceId, release, resolution, page_title: pageTitle };
+	return resolveFrontPageFromRelease(env, release, requestedPath, user);
 }
 
 export async function resolvePreviewFrontPage(
@@ -54,16 +35,6 @@ export async function resolvePreviewFrontPage(
 	requestedPath: string,
 	user: EmDashUser | undefined,
 ): Promise<FrontPageModel> {
-	let dependencyHealth: Record<string, "ready" | "unavailable"> = {};
-	try {
-		dependencyHealth = await loadDependencyHealth(
-			env.DB,
-			env.SUPERBOARD_INSTANCE_ID,
-			new Date().toISOString(),
-		);
-	} catch {
-		dependencyHealth = {};
-	}
 	const loaded: LoadedFrontRelease = {
 		release,
 		runtime_release: {
@@ -73,21 +44,42 @@ export async function resolvePreviewFrontPage(
 		pointer_revision: 0,
 		source: "preview",
 	};
+	return resolveFrontPageFromRelease(env, loaded, requestedPath, user);
+}
+
+async function resolveFrontPageFromRelease(
+	env: SuperBoardSiteEnv,
+	release: LoadedFrontRelease | null,
+	requestedPath: string,
+	user: EmDashUser | undefined,
+): Promise<FrontPageModel> {
+	let dependencyHealth: Record<string, "ready" | "unavailable"> = {};
+	if (release) {
+		try {
+			dependencyHealth = await loadDependencyHealth(
+				env.DB,
+				env.SUPERBOARD_INSTANCE_ID,
+				new Date().toISOString(),
+			);
+		} catch {
+			dependencyHealth = {};
+		}
+	}
 	const resolution = resolveFrontRequest({
-		last_verified_release: loaded.runtime_release,
+		last_verified_release: release?.runtime_release ?? null,
 		requested_path: requestedPath,
 		admin_session: user ? "valid" : "absent",
-		permissions: user && user.role >= 50 ? ["superboard.admin.access"] : [],
+		permissions: hasPermission(user, "settings:manage") ? ["superboard.admin.access"] : [],
 		dependency_health: dependencyHealth,
 	});
 	const pageTitle =
-		resolution.result === "rendered"
-			? release.payload.presentation.pages.find((page) => page.page_id === resolution.page_id)
+		resolution.result === "rendered" && release
+			? release.release.payload.presentation.pages.find((page) => page.page_id === resolution.page_id)
 					?.title ?? null
 			: null;
 	return {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
-		release: loaded,
+		release,
 		resolution,
 		page_title: pageTitle,
 	};
