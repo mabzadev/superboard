@@ -30,6 +30,7 @@ if (
   !managedWorker &&
   ![
     ...DOMAIN_SERVICES,
+    "site",
     "billing",
     "messaging",
     "email",
@@ -62,7 +63,9 @@ const workerDirectory = managedWorker
   ? resolve(root, managedWorker.packagePath)
   : service === "custom"
     ? resolve(root, target.customWorker.packagePath)
-    : resolve(root, "workers", service);
+    : service === "site"
+      ? resolve(root, "apps", "site")
+      : resolve(root, "workers", service);
 const outputPath = resolve(workerDirectory, "worker-configuration.d.ts");
 const configPath = resolve(
   root,
@@ -84,7 +87,7 @@ try {
       "--config",
       configPath,
       "--include-runtime",
-      "false",
+      service === "site" ? "true" : "false",
       "--strict-vars=false",
     ],
     workerDirectory,
@@ -99,6 +102,7 @@ try {
         : PLATFORM_SERVICE_SECRETS[service];
   const optionalSecrets = new Set([
     ...declaredSecrets.filter(isOptionalSecretBinding),
+    ...(service === "site" ? ["SUPERBOARD_RELEASE_PRIVATE_JWK"] : []),
     ...(service === "email"
       ? [
           "MAIL_PREVIEW_TOKEN",

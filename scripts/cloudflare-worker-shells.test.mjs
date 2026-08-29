@@ -35,6 +35,7 @@ const target = {
       "identity",
       "api",
       "mcp",
+      "site",
       "dashboard",
     ].map((service) => [service, { development: `sample-${service}-dev` }]),
   ),
@@ -48,7 +49,7 @@ test("Worker shell planning is ordered, scoped and idempotent", () => {
     existingWorkerNames: ["sample-observability-dev", "unrelated-worker"],
   });
   assert.equal(plan.ready, false);
-  assert.equal(plan.workers.length, 7);
+  assert.equal(plan.workers.length, 8);
   assert.equal(plan.resourceIdentity.logicalName, "sample");
   assert.equal(
     plan.workers.every(
@@ -96,7 +97,7 @@ test("Worker shell apply requires exact confirmation and creates only missing se
     confirm: plan.confirmation,
     create: async (worker) => calls.push(worker.name),
   });
-  assert.equal(applied.length, 6);
+  assert.equal(applied.length, 7);
   assert.equal(calls.includes("sample-observability-dev"), false);
   assert.equal(new Set(calls).size, calls.length);
 });

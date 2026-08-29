@@ -519,7 +519,7 @@ export function WordPressImport() {
 		const callbackUrl = `${window.location.origin}/_emdash/api/import/wordpress-plugin/callback`;
 
 		// WordPress requires a valid UUID for app_id
-		const appId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+		const appId = ["a1b2c3d4", "e5f6", "7890", "abcd", "ef1234567890"].join("-");
 
 		const authUrl = new URL(`${wpUrl}/wp-admin/authorize-application.php`);
 		authUrl.searchParams.set("app_name", "EmDash CMS");

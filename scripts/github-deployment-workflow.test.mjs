@@ -8,7 +8,7 @@ const workflow = await readFile(
   "utf8",
 );
 const ciWorkflow = await readFile(
-  new URL("../.github/workflows/ci.yml", import.meta.url),
+  new URL("../.github/workflows/superboard-ci.yml", import.meta.url),
   "utf8",
 );
 const releaseWorkflow = await readFile(
@@ -98,7 +98,7 @@ test("pull request secret scanning receives only the read-scoped workflow token"
 
 test("production Cloudflare deployment is restricted, preflighted and target-driven", () => {
   assert.match(workflow, /workflow_run:/);
-  assert.match(workflow, /workflows: \[CI\]/);
+  assert.match(workflow, /workflows: \[SuperBoard CI\]/);
   assert.match(workflow, /types: \[completed\]/);
   assert.match(workflow, /branches: \[main\]/);
   assert.doesNotMatch(workflow, /branches: \[dev, main\]/);
@@ -282,14 +282,14 @@ test("branch protection can require one stable aggregate CI check", () => {
   assert.match(ciWorkflow, /Validate Cloudflare and GitHub control planes/);
   assert.match(
     ciWorkflow,
-    /npm run migration:inventory && npm run migration:inventory:test/,
+    /pnpm run migration:inventory && pnpm run migration:inventory:test/,
   );
   assert.match(
     ciWorkflow,
-    /npm run cloudflare:test:targets && npm run cloudflare:test:services/,
+    /pnpm run cloudflare:test:targets && pnpm run cloudflare:test:services/,
   );
   assert.match(ciWorkflow, /Verify generated Cloudflare binding types/);
-  assert.match(ciWorkflow, /npm run cloudflare:types:check/);
+  assert.match(ciWorkflow, /pnpm run cloudflare:types:check/);
 });
 
 test("required CI executes pinned Python and Ruby dependency audits", () => {
@@ -337,7 +337,7 @@ test("required CI executes pinned Python and Ruby dependency audits", () => {
     auditJob,
     /gem install bundler-audit --version "\$SUPERBOARD_BUNDLER_AUDIT_VERSION" --no-document/u,
   );
-  assert.match(auditJob, /npm run security:audit:non-node/u);
+  assert.match(auditJob, /pnpm run security:audit:non-node/u);
   assert.match(
     ciWorkflow,
     /NON_NODE_SECURITY_RESULT: \$\{\{ needs\.non_node_security\.result \}\}/u,
@@ -346,15 +346,15 @@ test("required CI executes pinned Python and Ruby dependency audits", () => {
 });
 
 test("CI validates every maintained SDK family and the Chatwoot migration path", () => {
-  assert.match(ciWorkflow, /npm run sdk:documentation:check/);
+  assert.match(ciWorkflow, /pnpm run sdk:documentation:check/);
   assert.match(ciWorkflow, /node_sdks:/);
-  assert.match(ciWorkflow, /npm ci && npm run check/);
+  assert.match(ciWorkflow, /pnpm install --frozen-lockfile && pnpm run check/);
   assert.match(
     ciWorkflow,
-    /Install repository tooling for the React Native contract[\s\S]*npm ci --ignore-scripts[\s\S]*npm run react-native:native-contract:check/,
+    /Install repository tooling for the React Native contract[\s\S]*pnpm install --frozen-lockfile --ignore-scripts[\s\S]*pnpm run react-native:native-contract:check/,
   );
-  assert.match(ciWorkflow, /npm run react-native:native-contract:check/);
-  assert.match(ciWorkflow, /run: yarn check/);
+  assert.match(ciWorkflow, /pnpm run react-native:native-contract:check/);
+  assert.match(ciWorkflow, /run: pnpm check/);
   assert.match(ciWorkflow, /ios_sdk:/);
   assert.match(
     ciWorkflow,
@@ -363,8 +363,8 @@ test("CI validates every maintained SDK family and the Chatwoot migration path",
   assert.match(ciWorkflow, /\.\/scripts\/run_tests\.sh/);
   assert.match(ciWorkflow, /android_sdk:/);
   assert.match(ciWorkflow, /:OpenGrow:testDebugUnitTest/);
-  assert.match(ciWorkflow, /npm run chatwoot:test/);
-  assert.match(ciWorkflow, /npm run custom:check:all/);
+  assert.match(ciWorkflow, /pnpm run chatwoot:test/);
+  assert.match(ciWorkflow, /pnpm run custom:check:all/);
   assert.doesNotMatch(ciWorkflow, /custom-(?:reference|vocostar):check/);
   assert.match(ciWorkflow, /NODE_SDKS_RESULT/);
   assert.match(ciWorkflow, /IOS_SDK_RESULT/);
@@ -390,7 +390,7 @@ test("JavaScript CI and releases execute the complete first-party package check"
   );
   assert.match(javascriptManifest.scripts.check, /npm run test:package/);
   assert.match(javascriptManifest.scripts.check, /npm run pack:check$/);
-  assert.match(ciWorkflow, /npm ci && npm run check/);
+  assert.match(ciWorkflow, /pnpm install --frozen-lockfile && pnpm run check/);
   assert.doesNotMatch(releaseWorkflow, /working-directory: sdks\/javascript/u);
 });
 

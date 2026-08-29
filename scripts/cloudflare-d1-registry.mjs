@@ -9,6 +9,7 @@ import { root } from "./cloudflare-target.mjs";
 
 export const D1_SCHEMA_OWNERS = Object.freeze([
   "api",
+  "site",
   "messaging",
   "email",
   "identity",
@@ -47,6 +48,9 @@ export function d1Descriptor(
   };
   if (service === "api") {
     return descriptor(common, resources.d1, "DB", "workers/api/migrations");
+  }
+  if (service === "site") {
+    return descriptor(common, resources.siteD1, "DB", "apps/site/migrations");
   }
   if (service === "messaging") {
     return descriptor(

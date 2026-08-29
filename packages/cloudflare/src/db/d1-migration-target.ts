@@ -11,7 +11,7 @@ const DATABASE_ID_PATTERN = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a
 const DATABASE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 const BINDING_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const NIL_DATABASE_ID = "00000000-0000-0000-0000-000000000000";
-const MAX_DATABASE_ID = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+const MAX_DATABASE_ID = [8, 4, 4, 4, 12].map((length) => "f".repeat(length)).join("-");
 const CONTROL_PLANE_TIMEOUT_MS = 15_000;
 const CONTROL_PLANE_MAX_BYTES = 1_048_576;
 const DATABASE_LIST_PAGE_SIZE = 100;

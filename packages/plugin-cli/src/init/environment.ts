@@ -104,6 +104,7 @@ async function gitConfig(key: string, cwd: string): Promise<string | undefined> 
 	try {
 		const { stdout } = await execFileAsync("git", ["config", "--get", key], {
 			cwd,
+			env: gitProbeEnvironment(),
 			timeout: GIT_TIMEOUT_MS,
 			// Limit output size to defend against a deliberately-bizarre
 			// git config value. 4 KiB is generous for "name" / "email".
@@ -135,6 +136,7 @@ async function gitRemoteUrl(cwd: string): Promise<string | undefined> {
 	try {
 		const { stdout } = await execFileAsync("git", ["remote", "get-url", "origin"], {
 			cwd,
+			env: gitProbeEnvironment(),
 			timeout: GIT_TIMEOUT_MS,
 			// 1 KiB is plenty for a URL; protects against weird remote
 			// names that include the entire output of a hostile hook.
@@ -146,6 +148,22 @@ async function gitRemoteUrl(cwd: string): Promise<string | undefined> {
 	}
 	if (raw.length === 0) return undefined;
 	return normalizeRepoUrl(raw);
+}
+
+function gitProbeEnvironment(): NodeJS.ProcessEnv {
+	const env = { ...process.env };
+	for (const name of [
+		"GIT_ALTERNATE_OBJECT_DIRECTORIES",
+		"GIT_COMMON_DIR",
+		"GIT_DIR",
+		"GIT_INDEX_FILE",
+		"GIT_OBJECT_DIRECTORY",
+		"GIT_PREFIX",
+		"GIT_WORK_TREE",
+	]) {
+		delete env[name];
+	}
+	return env;
 }
 
 /**

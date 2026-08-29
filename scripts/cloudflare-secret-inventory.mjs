@@ -92,6 +92,7 @@ export function requiredSecretInventory(target, environment) {
   }
   add("api", api, apiAlternatives);
   add("dashboard", ["CLIENT_SECRET"]);
+  add("site", ["EMDASH_ENCRYPTION_KEY"]);
   if (target.features?.billing)
     add(
       "billing",
@@ -160,6 +161,14 @@ export function requiredSecretInventory(target, environment) {
 }
 
 const PRODUCTION_SECRET_METADATA = Object.freeze({
+  EMDASH_ENCRYPTION_KEY: Object.freeze({
+    source: "generated-emdash-encryption-key",
+    rotation: "deploy-new-key-version-reencrypt-plugin-secrets-then-retire-old-key",
+  }),
+  SUPERBOARD_RELEASE_PRIVATE_JWK: Object.freeze({
+    source: "generated-asymmetric-release-key",
+    rotation: "publish-and-verify-new-public-key-before-signing-with-the-new-private-key",
+  }),
   CLIENT_SECRET: Object.freeze({
     source: "generated-paired-database",
     rotation: "rotate-worker-secret-and-oauth-database-hash-together",

@@ -164,6 +164,7 @@ export const DOMAIN_SERVICES = Object.freeze(
 
 export const PLATFORM_SERVICES = Object.freeze([
   "api",
+  "site",
   "dashboard",
   "billing",
   "messaging",
@@ -212,6 +213,10 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
     ...BILLING_SECRETS,
   ]),
   dashboard: Object.freeze(["CLIENT_SECRET"]),
+  site: Object.freeze([
+    "EMDASH_ENCRYPTION_KEY",
+    "SUPERBOARD_RELEASE_PRIVATE_JWK",
+  ]),
   billing: Object.freeze([
     ...BILLING_SECRETS,
     "INTERNAL_API_TOKEN",
@@ -334,6 +339,7 @@ export function isServiceEnabled(target, service) {
   if (
     [
       "api",
+      "site",
       "dashboard",
       "email",
       "identity",

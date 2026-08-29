@@ -134,6 +134,9 @@ export async function generateDevelopmentSecretAssignments({
   );
   const appleRoots = JSON.stringify([appleRootBase64]);
   const assignments = {
+    site: {
+      EMDASH_ENCRYPTION_KEY: `emdash_enc_v1_${randomBytes(32).toString("base64url")}`,
+    },
     api: {
       JWT_SECRET: token(),
       MODULE_INTERNAL_TOKEN: moduleToken,

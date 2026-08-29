@@ -63,6 +63,7 @@
     "shortlinks": "go.vocostar.com",
     "sdk": "sdk.vocostar.com",
     "dashboard": "grow.vocostar.com",
+    "site": "site.vocostar.com",
     "files": "files.vocostar.com",
     "mcp": "mcp.vocostar.com",
     "messaging": "messages.vocostar.com"
@@ -71,6 +72,9 @@
   "workers": {
     "api": {
       "production": "opengrow-api"
+    },
+    "site": {
+      "production": "opengrow-site"
     },
     "dashboard": {
       "production": "opengrow"
@@ -300,6 +304,15 @@
     "audience": "opengrow",
     "jwksUrl": "https://api.vocostar.com/.well-known/jwks.json"
   },
+  "siteRuntime": {
+    "workerLoaderBinding": "LOADER",
+    "crons": ["* * * * *"],
+    "observability": {
+      "enabled": true,
+      "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true },
+      "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+    }
+  },
   "publicSurfaceMonitors": [
     {
       "id": "legacy-chatwoot",
@@ -316,6 +329,21 @@
       "d1": {
         "name": "opengrow-db",
         "id": "0eafa441-cc8b-4da1-9db5-37a82642d69a"
+      },
+      "siteD1": {
+        "name": "opengrow-site-db",
+        "id": null
+      },
+      "siteMedia": {
+        "name": "opengrow-site-media"
+      },
+      "siteSessionKv": {
+        "name": "opengrow-site-session",
+        "id": null
+      },
+      "siteReleaseKv": {
+        "name": "opengrow-site-last-verified-release",
+        "id": null
       },
       "kv": {
         "name": "opengrow",

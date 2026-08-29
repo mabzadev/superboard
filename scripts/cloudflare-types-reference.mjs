@@ -10,6 +10,7 @@ import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const services = [
+  "site",
   "billing",
   "email",
   "identity",
@@ -91,7 +92,9 @@ export async function main(
   const outputs = [
     resolve(root, "workers/api/src/generated-env.d.ts"),
     ...services.map((service) =>
-      resolve(root, "workers", service, "worker-configuration.d.ts"),
+      service === "site"
+        ? resolve(root, "apps", "site", "worker-configuration.d.ts")
+        : resolve(root, "workers", service, "worker-configuration.d.ts"),
     ),
     ...customSelections.map(({ packagePath }) =>
       resolve(root, packagePath, "worker-configuration.d.ts"),

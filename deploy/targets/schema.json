@@ -23,6 +23,7 @@
     "workers",
     "oauth",
     "authGateway",
+    "siteRuntime",
     "environments"
   ],
   "properties": {
@@ -167,13 +168,14 @@
     "domains": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["api", "auth", "shortlinks", "sdk", "dashboard", "files", "mcp"],
+      "required": ["api", "auth", "shortlinks", "sdk", "dashboard", "site", "files", "mcp"],
       "properties": {
         "api": { "$ref": "#/$defs/hostname" },
         "auth": { "$ref": "#/$defs/hostname" },
         "shortlinks": { "$ref": "#/$defs/hostname" },
         "sdk": { "$ref": "#/$defs/hostname" },
         "dashboard": { "$ref": "#/$defs/hostname" },
+        "site": { "$ref": "#/$defs/hostname" },
         "files": { "$ref": "#/$defs/hostname" },
         "mcp": { "$ref": "#/$defs/hostname" },
         "mailPreview": { "$ref": "#/$defs/hostname" },
@@ -191,6 +193,7 @@
       "additionalProperties": false,
       "required": [
         "api",
+        "site",
         "dashboard",
         "email",
         "identity",
@@ -200,6 +203,7 @@
       ],
       "properties": {
         "api": { "$ref": "#/$defs/workerNames" },
+        "site": { "$ref": "#/$defs/workerNames" },
         "dashboard": { "$ref": "#/$defs/workerNames" },
         "billing": { "$ref": "#/$defs/workerNames" },
         "messaging": { "$ref": "#/$defs/workerNames" },
@@ -236,6 +240,47 @@
         "issuer": { "type": "string", "pattern": "^https://[^\\s]+$" },
         "audience": { "type": "string", "minLength": 1, "maxLength": 255 },
         "jwksUrl": { "type": "string", "pattern": "^https://[^\\s]+$" }
+      }
+    },
+    "siteRuntime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workerLoaderBinding", "crons", "observability"],
+      "properties": {
+        "workerLoaderBinding": { "const": "LOADER" },
+        "crons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 5, "maxLength": 100 }
+        },
+        "observability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "logs", "traces"],
+          "properties": {
+            "enabled": { "const": true },
+            "logs": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "head_sampling_rate", "invocation_logs"],
+              "properties": {
+                "enabled": { "const": true },
+                "head_sampling_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+                "invocation_logs": { "const": true }
+              }
+            },
+            "traces": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "head_sampling_rate"],
+              "properties": {
+                "enabled": { "const": true },
+                "head_sampling_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        }
       }
     },
     "publicSurfaceMonitors": {
@@ -790,6 +835,10 @@
       "additionalProperties": false,
       "required": [
         "d1",
+        "siteD1",
+        "siteMedia",
+        "siteSessionKv",
+        "siteReleaseKv",
         "kv",
         "r2",
         "dashboardCache",
@@ -809,6 +858,10 @@
       ],
       "properties": {
         "d1": { "$ref": "#/$defs/namedResource" },
+        "siteD1": { "$ref": "#/$defs/namedResource" },
+        "siteMedia": { "$ref": "#/$defs/namedResource" },
+        "siteSessionKv": { "$ref": "#/$defs/namedResource" },
+        "siteReleaseKv": { "$ref": "#/$defs/namedResource" },
         "kv": { "$ref": "#/$defs/namedResource" },
         "r2": { "$ref": "#/$defs/namedResource" },
         "dashboardCache": { "$ref": "#/$defs/namedResource" },

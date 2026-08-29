@@ -104,6 +104,76 @@ test("all domain services are accepted by shared service validation", () => {
   assert.throws(() => assertService("unknown"), /must be one of/);
 });
 
+test("generated Site config uses only explicit target resources and keeps public release disabled", async () => {
+  for (const [targetName, environment] of [
+    ["mbza-development", "development"],
+    ["vocostar", "production"],
+  ]) {
+    execFileSync(
+      process.execPath,
+      [
+        "scripts/cloudflare-config.mjs",
+        "--service",
+        "site",
+        "--target",
+        targetName,
+        "--environment",
+        environment,
+        "--allow-unprovisioned",
+      ],
+      { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+    );
+    const { target } = await loadTarget(targetName);
+    const resources = target.environments[environment];
+    const config = JSON.parse(
+      readFileSync(
+        new URL(
+          `../deploy/generated/${targetName}-site-${environment}.jsonc`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+
+    assert.equal(config.main, "../../apps/site/dist/server/entry.mjs");
+    assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, target.target);
+    assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "disabled");
+    assert.equal(
+      config.vars.D1_EXPECTED_MIGRATION,
+      "0002_front_release_activation_guard.sql",
+    );
+    assert.equal(config.compatibility_flags.includes("global_fetch_strictly_public"), false);
+    assert.deepEqual(config.d1_databases, [
+      {
+        binding: "DB",
+        database_name: resources.siteD1.name,
+        database_id: resources.siteD1.id ?? "00000000-0000-4000-8000-000000000000",
+        migrations_dir: "../../apps/site/migrations",
+        migrations_table: "d1_migrations",
+      },
+    ]);
+    assert.deepEqual(config.r2_buckets, [
+      { binding: "MEDIA", bucket_name: resources.siteMedia.name },
+    ]);
+    assert.deepEqual(config.kv_namespaces, [
+      {
+        binding: "SESSION",
+        id: resources.siteSessionKv.id ?? "00000000000000000000000000000000",
+      },
+      {
+        binding: "RELEASE_CACHE",
+        id: resources.siteReleaseKv.id ?? "00000000000000000000000000000000",
+      },
+    ]);
+    assert.deepEqual(config.worker_loaders, [
+      { binding: target.siteRuntime.workerLoaderBinding },
+    ]);
+    assert.deepEqual(config.triggers, { crons: target.siteRuntime.crons });
+    assert.deepEqual(config.observability, target.siteRuntime.observability);
+    assert.equal(config.routes, undefined);
+  }
+});
+
 test("every D1 Worker receives the reviewed latest migration automatically", async () => {
   const targetName = "mbza-development";
   const environment = "development";

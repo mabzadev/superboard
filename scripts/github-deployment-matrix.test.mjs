@@ -124,6 +124,7 @@ test("development uses one native Git connection per Worker while production rem
       "custom",
       "api",
       "mcp",
+      "site",
       "dashboard",
     ],
     buildCommand:

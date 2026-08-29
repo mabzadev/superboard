@@ -43,6 +43,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
     (service) =>
       [
         "api",
+        "site",
         "dashboard",
         "email",
         "identity",
@@ -68,6 +69,13 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
   });
   const environmentResources = {
     d1: { name: `${resourcePrefix()}-db`, id: null },
+    siteD1: { name: `${resourcePrefix()}-site-db`, id: null },
+    siteMedia: { name: `${resourcePrefix()}-site-media` },
+    siteSessionKv: { name: `${resourcePrefix()}-site-session`, id: null },
+    siteReleaseKv: {
+      name: `${resourcePrefix()}-site-last-verified-release`,
+      id: null,
+    },
     kv: { name: resourcePrefix(), id: null },
     r2: { name: resourcePrefix() },
     dashboardCache: {
@@ -215,6 +223,9 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
       shortlinks: args["shortlinks-domain"],
       sdk: args["sdk-domain"],
       dashboard: args["dashboard-domain"],
+      site:
+        args["site-domain"] ||
+        `site.${args["zone-name"] || registrableZone(args["api-domain"])}`,
       files: args["files-domain"],
       mcp: args["mcp-domain"],
       ...(args["mail-preview-domain"]
@@ -237,6 +248,15 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
       issuer: args["auth-gateway-issuer"],
       audience: args["auth-gateway-audience"],
       jwksUrl: args["auth-gateway-jwks-url"],
+    },
+    siteRuntime: {
+      workerLoaderBinding: "LOADER",
+      crons: ["* * * * *"],
+      observability: {
+        enabled: true,
+        logs: { enabled: true, head_sampling_rate: 1, invocation_logs: true },
+        traces: { enabled: true, head_sampling_rate: 0.1 },
+      },
     },
     environments: { [selectedEnvironment]: environmentResources },
   };

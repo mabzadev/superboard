@@ -27,6 +27,7 @@
           "custom",
           "api",
           "mcp",
+          "site",
           "dashboard"
         ],
         "buildCommand": "npm ci && npm --prefix apps/reference ci && node --test scripts/backoffice-policy.test.mjs scripts/github-deployment-matrix.test.mjs scripts/github-deployment-workflow.test.mjs && npm run cloudflare:test:services && npm run typecheck && npm test && npm run custom:check && npm --prefix apps/reference run config:test",

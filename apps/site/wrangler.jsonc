@@ -12,7 +12,7 @@
 		}
 	],
 	"r2_buckets": [{ "binding": "MEDIA", "bucket_name": "superboard-site-media" }],
-	"kv_namespaces": [{ "binding": "RELEASE_CACHE" }],
+	"kv_namespaces": [{ "binding": "SESSION" }, { "binding": "RELEASE_CACHE" }],
 	"worker_loaders": [{ "binding": "LOADER" }],
 	"vars": {
 		"SUPERBOARD_INSTANCE_ID": "local",

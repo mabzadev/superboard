@@ -107,7 +107,7 @@ test("canonical remote resources with missing manifest ids are adopted without c
   );
   assert.equal(
     plan.operations.filter(({ type }) => type === "adopt").length,
-    13,
+    16,
   );
   assert.equal(JSON.stringify(plan).includes("a".repeat(32)), false);
   assert.match(

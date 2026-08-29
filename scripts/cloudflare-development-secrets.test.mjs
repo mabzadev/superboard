@@ -146,6 +146,10 @@ test("generated assignments satisfy every private cross-service contract without
     "OBSERVABILITY_INTERNAL_TOKEN",
   ]);
   assert.equal(Object.hasOwn(assignments, "dashboard"), false);
+  assert.match(
+    assignments.site.EMDASH_ENCRYPTION_KEY,
+    /^emdash_enc_v1_[A-Za-z0-9_-]{43}$/u,
+  );
 });
 
 test("development assignments include analytics credentials only when supplied", async () => {

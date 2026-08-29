@@ -16,6 +16,7 @@ test("the D1 registry assigns one migration owner per enabled database", async (
     descriptors.map(({ service }) => service),
     [
       "api",
+      "site",
       "email",
       "identity",
       "files",

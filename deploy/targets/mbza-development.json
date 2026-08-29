@@ -62,6 +62,7 @@
     "shortlinks": "in.mbza.dev",
     "sdk": "sdk.mbza.dev",
     "dashboard": "board.mbza.dev",
+    "site": "site.mbza.dev",
     "files": "files.mbza.dev",
     "mcp": "mcp.mbza.dev",
     "mailPreview": "mail.mbza.dev"
@@ -77,6 +78,9 @@
   "workers": {
     "api": {
       "development": "superboard-api-dev"
+    },
+    "site": {
+      "development": "superboard-site-dev"
     },
     "dashboard": {
       "development": "superboard-dashboard-dev"
@@ -160,6 +164,15 @@
     "audience": "superboard",
     "jwksUrl": "https://auth.mbza.dev/.well-known/jwks.json"
   },
+  "siteRuntime": {
+    "workerLoaderBinding": "LOADER",
+    "crons": ["* * * * *"],
+    "observability": {
+      "enabled": true,
+      "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true },
+      "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+    }
+  },
   "publicSurfaceMonitors": [
     {
       "id": "reference",
@@ -177,6 +190,21 @@
       "d1": {
         "name": "superboard-dev-db",
         "id": "02001526-c44d-47e5-8b1d-df47a3b68d69"
+      },
+      "siteD1": {
+        "name": "superboard-dev-site-db",
+        "id": null
+      },
+      "siteMedia": {
+        "name": "superboard-dev-site-media"
+      },
+      "siteSessionKv": {
+        "name": "superboard-dev-site-session",
+        "id": null
+      },
+      "siteReleaseKv": {
+        "name": "superboard-dev-site-last-verified-release",
+        "id": null
       },
       "kv": {
         "name": "superboard-dev",

@@ -117,6 +117,20 @@ const configPath = resolve(
 );
 generateServiceConfig();
 
+if (service === "site") {
+  run(
+    process.execPath,
+    [
+      resolve(root, "scripts", "cloudflare-site-build.mjs"),
+      "--target",
+      targetName,
+      "--environment",
+      environment,
+    ],
+    targetCloudflareEnv,
+  );
+}
+
 if (service === "dashboard") {
   const apiUrl = publicApiUrl(target);
   const appUrl = publicDashboardUrl(target);
@@ -240,6 +254,17 @@ if (service === "dashboard") {
     ],
     targetCloudflareEnv,
     resolve(root, "apps", "dashboard"),
+  );
+} else if (service === "site") {
+  run(
+    "npx",
+    [
+      "wrangler",
+      ...(uploadOnly ? ["versions", "upload"] : ["deploy"]),
+      "--config",
+      resolve(root, "apps/site/dist/server/wrangler.json"),
+    ],
+    targetCloudflareEnv,
   );
 } else {
   run(

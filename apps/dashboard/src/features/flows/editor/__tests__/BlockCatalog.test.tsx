@@ -18,7 +18,7 @@ describe("Flows block catalog", () => {
       expect(
         screen.getByRole("button", {
           name: (name) =>
-            name === `${definition.label}${definition.description}`,
+            name === `${definition.label} ${definition.description}`,
         })
       ).toBeInTheDocument();
     }

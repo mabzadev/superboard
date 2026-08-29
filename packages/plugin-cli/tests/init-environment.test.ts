@@ -9,6 +9,7 @@
  * subprocess wrapper is a thin layer that doesn't have much to fail.
  */
 
+import { execFileSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -153,5 +154,34 @@ describe("probeEnvironment — package.json extraction", () => {
 		);
 		const env = await probeEnvironment(dir);
 		expect(env.repo).toBeUndefined();
+	});
+
+	it("does not inherit repository-local Git variables from a parent hook", async () => {
+		const parent = await mkdtemp(join(tmpdir(), "emdash-parent-git-"));
+		const previousGitDir = process.env.GIT_DIR;
+		const previousWorkTree = process.env.GIT_WORK_TREE;
+		const cleanGitEnv = { ...process.env };
+		delete cleanGitEnv.GIT_DIR;
+		delete cleanGitEnv.GIT_WORK_TREE;
+		delete cleanGitEnv.GIT_INDEX_FILE;
+		try {
+			execFileSync("git", ["init", "--quiet", parent], { env: cleanGitEnv });
+			execFileSync(
+				"git",
+				["-C", parent, "remote", "add", "origin", "git@github.com:example/parent.git"],
+				{ env: cleanGitEnv },
+			);
+			process.env.GIT_DIR = join(parent, ".git");
+			process.env.GIT_WORK_TREE = parent;
+
+			const env = await probeEnvironment(dir);
+			expect(env.repo).toBeUndefined();
+		} finally {
+			if (previousGitDir === undefined) delete process.env.GIT_DIR;
+			else process.env.GIT_DIR = previousGitDir;
+			if (previousWorkTree === undefined) delete process.env.GIT_WORK_TREE;
+			else process.env.GIT_WORK_TREE = previousWorkTree;
+			await rm(parent, { recursive: true, force: true });
+		}
 	});
 });

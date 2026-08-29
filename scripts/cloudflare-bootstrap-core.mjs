@@ -57,7 +57,25 @@ export function desiredCloudflareResources(target, environment) {
   }
   const desired = [
     idResource("d1", "d1", "Central API D1", resources.d1, ["d1", "id"]),
+    idResource("siteD1", "d1", "Site EmDash D1", resources.siteD1, [
+      "siteD1",
+      "id",
+    ]),
     idResource("kv", "kv", "API KV", resources.kv, ["kv", "id"]),
+    idResource(
+      "siteSessionKv",
+      "kv",
+      "Site session KV",
+      resources.siteSessionKv,
+      ["siteSessionKv", "id"],
+    ),
+    idResource(
+      "siteReleaseKv",
+      "kv",
+      "Site Last Verified Release KV",
+      resources.siteReleaseKv,
+      ["siteReleaseKv", "id"],
+    ),
     idResource("emailD1", "d1", "Email D1", resources.emailD1, [
       "emailD1",
       "id",
@@ -116,6 +134,7 @@ export function desiredCloudflareResources(target, environment) {
     );
   }
   desired.push(
+    namedResource("siteMedia", "r2", "Site EmDash media R2", resources.siteMedia),
     namedResource("r2", "r2", "Application files R2", resources.r2),
     namedResource(
       "dashboardCache",

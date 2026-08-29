@@ -71,6 +71,10 @@ const domainResource = DOMAIN_SERVICES.includes(service)
 if (
   ((service === "api" || service === "billing") &&
     (!resources.d1.id || !resources.kv.id)) ||
+  (service === "site" &&
+    (!resources.siteD1.id ||
+      !resources.siteSessionKv.id ||
+      !resources.siteReleaseKv.id)) ||
   (service === "messaging" && !resources.messagingD1.id) ||
   (service === "email" && !resources.emailD1.id) ||
   (service === "identity" && !resources.identityD1.id) ||
@@ -103,6 +107,8 @@ const outputPath = resolve(
 const config =
   service === "api"
     ? apiConfig()
+    : service === "site"
+      ? siteConfig()
     : service === "dashboard"
       ? dashboardConfig()
       : service === "billing"
@@ -164,7 +170,10 @@ function baseConfig() {
     ...(accountId ? { account_id: accountId } : {}),
     // Pin to the newest date supported by the current Wrangler/workerd toolchain.
     compatibility_date: "2026-08-08",
-    compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+    compatibility_flags:
+      service === "site"
+        ? ["nodejs_compat"]
+        : ["nodejs_compat", "global_fetch_strictly_public"],
     workers_dev: false,
     preview_urls: false,
     observability: {
@@ -198,6 +207,44 @@ function requiredSecretNamesForService() {
         : oneOf[0],
     ),
   ].sort();
+}
+
+function siteConfig() {
+  return {
+    ...baseConfig(),
+    main: "../../apps/site/dist/server/entry.mjs",
+    no_bundle: true,
+    rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
+    assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
+    vars: {
+      SUPERBOARD_INSTANCE_ID: target.target,
+      SUPERBOARD_RELEASE_OPERATIONS: "disabled",
+      ...d1SchemaVars(),
+    },
+    d1_databases: [
+      {
+        binding: "DB",
+        database_name: resources.siteD1.name,
+        database_id: resourceId(resources.siteD1, "d1"),
+        migrations_dir: "../../apps/site/migrations",
+        migrations_table: "d1_migrations",
+      },
+    ],
+    r2_buckets: [
+      { binding: "MEDIA", bucket_name: resources.siteMedia.name },
+    ],
+    kv_namespaces: [
+      { binding: "SESSION", id: resourceId(resources.siteSessionKv, "kv") },
+      {
+        binding: "RELEASE_CACHE",
+        id: resourceId(resources.siteReleaseKv, "kv"),
+      },
+    ],
+    worker_loaders: [{ binding: target.siteRuntime.workerLoaderBinding }],
+    images: { binding: "IMAGES" },
+    triggers: { crons: [...target.siteRuntime.crons] },
+    observability: target.siteRuntime.observability,
+  };
 }
 
 function apiConfig() {

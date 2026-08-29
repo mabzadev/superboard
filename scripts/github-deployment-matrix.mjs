@@ -117,6 +117,7 @@ export function validateDeploymentConfiguration(configuration) {
         "custom",
         "api",
         "mcp",
+        "site",
         "dashboard",
       ];
       if (
