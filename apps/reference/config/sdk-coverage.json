@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/sdk-coverage.schema.json",
   "schemaVersion": 2,
-  "catalogueSchemaVersion": 4,
+  "catalogueSchemaVersion": 5,
   "platformRepository": "https://github.com/mabzadev/superboard",
   "promotionPolicy": "complete-active-set",
   "libraries": [
@@ -18,7 +18,7 @@
       "baselineSha": "1cddb333ff3330fd6ffa507d780821121bd7273a",
       "catalogueStatus": "pending-release",
       "candidateRef": "sdk-flutter-v3.0.0",
-      "coverageMode": "dart-transitive-override"
+      "coverageMode": "dart-candidate-transitive"
     },
     {
       "id": "flutterflow",
@@ -33,7 +33,7 @@
       "baselineSha": "b90e7e0ede12cf6321a7a8d104baf1fd8f564867",
       "catalogueStatus": "pending-release",
       "candidateRef": "sdk-flutterflow-v3.0.0",
-      "coverageMode": "dart-direct"
+      "coverageMode": "dart-candidate-direct"
     },
     {
       "id": "flutterflow-support",
@@ -46,7 +46,7 @@
       "baselineTag": "sdk-flutterflow-messaging-v1.3.0",
       "baselineSha": "e896f8ea91a140419471b02301f0bde48d8d6b13",
       "catalogueStatus": "released",
-      "coverageMode": "dart-legacy-direct"
+      "coverageMode": "historical-release"
     },
     {
       "id": "ios",

@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 15,
+  "schemaVersion": 17,
   "target": "mbza-development",
   "accountAlias": "mbza-development",
   "resourceIdentity": {
@@ -10,6 +10,7 @@
     "migrationStrategy": "canonical"
   },
   "workersDevSubdomain": "mbza",
+  "zoneName": "mbza.dev",
   "registrationMode": "allowlist",
   "ssoEnabled": false,
   "features": {
@@ -17,19 +18,22 @@
     "messaging": false,
     "app": true,
     "products": true,
-    "paywalls": true,
+    "paywalls": false,
     "dynamic-links": true,
     "support": true,
     "analytics": true,
     "marketing": true,
-    "onboardings": true
+    "onboardings": false,
+    "flows": true
   },
   "applicationIdentity": {
     "registrationMode": "open",
     "applicationAudience": "mbza-development.application",
     "googleAudiences": [],
     "appleAudiences": [],
-    "webOrigins": ["https://reference.mbza.dev"]
+    "webOrigins": [
+      "https://reference.mbza.dev"
+    ]
   },
   "filePolicy": {
     "maxBytes": 10485760,
@@ -119,6 +123,9 @@
     "onboardings": {
       "development": "superboard-onboardings-dev"
     },
+    "flows": {
+      "development": "superboard-flows-dev"
+    },
     "custom": {
       "development": "superboard-custom-reference-dev"
     }
@@ -127,12 +134,19 @@
     "source": "workers/custom/reference/src/index.ts",
     "packagePath": "workers/custom/reference",
     "description": "SuperBoard reference extension used to validate the custom Worker protocol on mbza.dev.",
-    "capabilities": ["reference.echo", "reference.acceptance"],
-    "secrets": ["CUSTOM_WORKER_TOKEN"],
+    "capabilities": [
+      "reference.echo",
+      "reference.acceptance"
+    ],
+    "secrets": [
+      "CUSTOM_WORKER_TOKEN"
+    ],
     "vars": {
       "REFERENCE_JOB_RETENTION_DAYS": "30"
     },
-    "crons": ["0 3 * * *"],
+    "crons": [
+      "0 3 * * *"
+    ],
     "d1Binding": {
       "binding": "REFERENCE_DB",
       "migrationsDir": "workers/custom/reference/migrations"
@@ -210,8 +224,8 @@
           "id": "0b1222e3-e2b5-4a96-a26d-6b9a0ce14116"
         },
         "support": {
-          "name": "superboard-dev-support-db",
-          "id": "6f08fb37-c2fc-4f91-beb2-7462f7976463"
+          "name": "superboard-dev-support-v2-db",
+          "id": null
         },
         "analytics": {
           "name": "superboard-dev-analytics-db",
@@ -224,23 +238,46 @@
         "onboardings": {
           "name": "superboard-dev-onboardings-db",
           "id": "d7a0389d-52a3-465b-a606-f995fa46202a"
+        },
+        "flows": {
+          "name": "superboard-dev-flows-db",
+          "id": "54179925-1e63-4f60-931b-7fc2f72775fd"
         }
       },
       "moduleR2": {
         "support": {
-          "name": "superboard-dev-support-attachments"
+          "name": "superboard-dev-support-v2-attachments"
         },
         "analytics": {
           "name": "superboard-dev-analytics-events"
         },
         "marketing": {
           "name": "superboard-dev-marketing-media"
+        },
+        "flows": {
+          "name": "superboard-dev-flows-archive"
+        }
+      },
+      "moduleVectorize": {
+        "supportKnowledge": {
+          "name": "superboard-dev-support-v2-knowledge",
+          "dimensions": 1024,
+          "metric": "cosine",
+          "description": "SuperBoard Support knowledge index"
         }
       },
       "moduleQueues": {
         "support": {
-          "name": "superboard-dev-support-events",
-          "dlq": "superboard-dev-support-events-dlq"
+          "name": "superboard-dev-support-v2-events",
+          "dlq": "superboard-dev-support-v2-events-dlq"
+        },
+        "supportAi": {
+          "name": "superboard-dev-support-v2-ai",
+          "dlq": "superboard-dev-support-v2-ai-dlq"
+        },
+        "supportBulk": {
+          "name": "superboard-dev-support-v2-bulk",
+          "dlq": "superboard-dev-support-v2-bulk-dlq"
         },
         "analytics": {
           "name": "superboard-dev-analytics-ingest",
@@ -249,7 +286,16 @@
         "marketing": {
           "name": "superboard-dev-marketing-delivery",
           "dlq": "superboard-dev-marketing-delivery-dlq"
+        },
+        "flows": {
+          "name": "superboard-dev-flows-events",
+          "dlq": "superboard-dev-flows-events-dlq"
         }
+      },
+      "supportRouting": {
+        "pattern": "api.mbza.dev/api/v1/support*",
+        "worker": "superboard-api-dev",
+        "mode": "active"
       },
       "publicRouting": "active",
       "billingExecutionMode": "local",

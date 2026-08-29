@@ -1,0 +1,82 @@
+{
+  "name": "@superboard/flows-js-components",
+  "description": "Built-in components for Flows JS SDK",
+  "keywords": [
+    "javascript",
+    "html",
+    "ux",
+    "guide",
+    "spotlight",
+    "popover",
+    "overlay",
+    "users",
+    "saas",
+    "onboarding",
+    "tour",
+    "walkthrough",
+    "user-onboarding",
+    "feature-introductions",
+    "onboarding-tool",
+    "product-adoption",
+    "product-tours"
+  ],
+  "version": "2.10.4",
+  "license": "MIT",
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsup --env.NODE_ENV development",
+    "build": "tsup --env.NODE_ENV production && node scripts/rename-global-modules.js",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch",
+    "tsc": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
+    "clsx": "^2.1.1",
+    "dompurify": "^3.4.12",
+    "es-toolkit": "^1.50.0",
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "@superboard/flows-js": "workspace:*",
+    "@superboard/flows-shared": "workspace:*",
+    "@superboard/flows-styles": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.12.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "tsup": "^8.5.1",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "peerDependencies": {
+    "@superboard/flows-js": "workspace:*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./components": {
+      "types": "./dist/components.d.ts",
+      "import": "./dist/components.mjs",
+      "require": "./dist/components.js"
+    },
+    "./tour-components": {
+      "types": "./dist/tour-components.d.ts",
+      "import": "./dist/tour-components.mjs",
+      "require": "./dist/tour-components.js"
+    },
+    "./survey-components": {
+      "types": "./dist/survey-components.d.ts",
+      "import": "./dist/survey-components.mjs",
+      "require": "./dist/survey-components.js"
+    },
+    "./index.css": {
+      "import": "./dist/index.css",
+      "require": "./dist/index.css"
+    }
+  }
+}

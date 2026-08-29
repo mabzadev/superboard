@@ -11,7 +11,7 @@
     "test:runtime": "INTERNAL_API_TOKEN=paywalls-runtime-secret vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@superboard/contracts": "*",
+    "@superboard/contracts": "workspace:*",
     "hono": "^4.7.4"
   },
   "devDependencies": {

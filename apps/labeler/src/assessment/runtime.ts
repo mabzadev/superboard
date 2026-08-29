@@ -20,6 +20,7 @@ import { createD1ListingLabelIssuer, type ListingLabelIssuer } from "../labels/i
 import { readLabelerRuntimeConfig, type LabelerRuntimeConfig } from "../runtime-config.js";
 import { createDohHostnameResolver } from "../runtime-network.js";
 import { createLabelPublicationTarget } from "../subscriptions/publisher.js";
+import { toOwnedArrayBuffer } from "../bytes.js";
 import { createD1AssessmentLifecycleStore } from "./lifecycle.js";
 import { createGuardedMediaAcquirer } from "./media.js";
 import { createAtprotoExactRecordVerifier } from "./records.js";
@@ -156,7 +157,7 @@ function createGuardedIdentityFetch(
 			maxRedirects: 3,
 		});
 		if (!result.success) throw new Error(`DID resolution failed: ${result.error.code}`);
-		return new Response(result.value.bytes, {
+		return new Response(toOwnedArrayBuffer(result.value.bytes), {
 			status: result.value.status,
 			headers: result.value.headers,
 		});

@@ -59,7 +59,7 @@ test("promotion validates receipt and orders consumers before API", async () => 
   assert.equal(blocked.blockers[0].id, "shared-secret-non-atomic-cutover");
   assert.deepEqual(
     blocked.services.map(({ service }) => service),
-    ["email", "identity", "marketing", "api"],
+    ["email", "identity", "support", "marketing", "api"],
   );
   const approved = validateSecretUploadReceipt({
     target,
@@ -132,11 +132,69 @@ test("overlap-capable shared token promotion needs no maintenance override", asy
   assert.equal(promotion.blockers.length, 0);
   assert.deepEqual(
     promotion.services.map(({ service }) => service),
-    ["email", "identity", "marketing", "api"],
+    ["email", "identity", "support", "marketing", "api"],
   );
   assert.equal(
     overlapOrderBlockers(bundlePlan, [...promotion.services].reverse())[0].id,
     "overlap-promotion-order-unsafe",
+  );
+});
+
+test("Flows dedicated API secret cutover promotes Flows before API", async () => {
+  const { target } = await loadTarget("mbza-development");
+  const bundlePlan = buildSecretBundlePlan({
+    target,
+    targetName: "mbza-development",
+    environment: "development",
+    contractIds: ["flows-internal-token"],
+    overlap: true,
+  });
+  const services = [
+    ...new Set(
+      bundlePlan.contracts.flatMap(({ members }) =>
+        members.map(({ service }) => service),
+      ),
+    ),
+  ].map((service) => ({
+    service,
+    worker: workerNameForService(target, service, "development"),
+    names: bundlePlan.contracts
+      .flatMap(({ members }) => members)
+      .filter((member) => member.service === service)
+      .flatMap((member) => [
+        member.name,
+        ...(member.previousName ? [member.previousName] : []),
+      ]),
+    strategy: "inactive-version",
+    versionTag: secretVersionTag(bundlePlan, service),
+  }));
+  const receipt = buildSecretUploadReceipt(bundlePlan, services);
+  const promotion = validateSecretUploadReceipt({
+    target,
+    targetName: "mbza-development",
+    environment: "development",
+    receipt,
+    acceptSharedCutover: true,
+  });
+
+  assert.equal(promotion.overlap, true);
+  assert.equal(promotion.blockers.length, 0);
+  assert.deepEqual(
+    promotion.services.map(({ service }) => service),
+    ["flows", "api"],
+  );
+  assert.deepEqual(
+    promotion.services.map(({ service, names }) => ({ service, names })),
+    [
+      {
+        service: "flows",
+        names: [
+          "INTERNAL_API_TOKEN",
+          "INTERNAL_API_TOKEN_PREVIOUS",
+        ],
+      },
+      { service: "api", names: ["FLOWS_INTERNAL_TOKEN"] },
+    ],
   );
 });
 

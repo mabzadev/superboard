@@ -27,7 +27,7 @@ const workflow = await readFile(new URL(".github/workflows/ci.yml", root), "utf8
 
 function catalogueFixture() {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     repository: manifest.platformRepository,
     libraries: manifest.libraries.map((library) => ({
       id: library.id,
@@ -68,7 +68,7 @@ function remoteTagOutput(ref, sha) {
   return `${"a".repeat(40)}\trefs/tags/${ref}\n${sha}\trefs/tags/${ref}^{}\n`;
 }
 
-test("coverage v2 models catalogue v4 as two active, two internal and three archived SDKs", () => {
+test("coverage v2 models the seven reference SDKs from catalogue v5", () => {
   const validate = new Ajv({ allErrors: true }).compile(schema);
   assert.equal(validate(manifest), true, JSON.stringify(validate.errors));
   const libraries = validateSdkCoverage(manifest);
@@ -93,22 +93,22 @@ test("coverage v2 models catalogue v4 as two active, two internal and three arch
   );
 });
 
-test("the executable remains pinned to every published Dart baseline", () => {
+test("the executable consumes the coordinated native Dart candidates", () => {
   const libraries = verifyReferenceCoverage({ manifest, project, pubspec, lockSource });
   assert.deepEqual(
     libraries
       .filter(({ coverageMode }) => coverageMode.startsWith("dart-"))
       .map(({ id, coverageMode }) => [id, coverageMode]),
     [
-      ["flutter", "dart-transitive-override"],
-      ["flutterflow", "dart-direct"],
-      ["flutterflow-support", "dart-legacy-direct"],
+      ["flutter", "dart-candidate-transitive"],
+      ["flutterflow", "dart-candidate-direct"],
     ],
   );
   assert.match(
     lockSource,
-    /opengrow_flutter:[\s\S]*ref: "sdk-flutter-v2\.1\.4"[\s\S]*resolved-ref: "1cddb333ff3330fd6ffa507d780821121bd7273a"[\s\S]*version: "2\.1\.4"/u,
+    /superboard_flutter:[\s\S]*path: "\.\.\/\.\.\/sdks\/flutter"[\s\S]*source: path[\s\S]*version: "3\.0\.0"/u,
   );
+  assert.doesNotMatch(lockSource, /opengrow_flutterflow_messaging:/u);
 });
 
 test("coverage fails closed on omissions, stale baselines and partial active promotion", () => {
@@ -116,12 +116,13 @@ test("coverage fails closed on omissions, stale baselines and partial active pro
   omitted.libraries.pop();
   assert.throws(() => validateSdkCoverage(omitted), /must declare exactly/u);
 
-  const staleLock = lockSource
-    .replace('ref: "sdk-flutter-v2.1.4"', 'ref: "sdk-flutter-v2.1.3"')
-    .replace('version: "2.1.4"', 'version: "2.1.3"');
+  const staleLock = lockSource.replace(
+    'path: "../../sdks/flutter"',
+    'path: "../../sdks/flutter-drift"',
+  );
   assert.throws(
     () => verifyReferenceCoverage({ manifest, project, pubspec, lockSource: staleLock }),
-    /flutter lock ref must be sdk-flutter-v2\.1\.4/u,
+    /flutter lock path must be \.\.\/\.\.\/sdks\/flutter/u,
   );
 
   const partial = structuredClone(manifest);
@@ -138,8 +139,18 @@ test("coverage fails closed on omissions, stale baselines and partial active pro
   assert.throws(() => validateSdkCoverage(partial), /advance atomically/u);
 });
 
-test("the exact Platform catalogue v4 matches baselines and exposes both v3 candidates", () => {
-  const result = verifyCatalogueCoverage(manifest, catalogueFixture());
+test("the Platform catalogue v5 may add Flows packages without changing reference baselines", () => {
+  const catalogue = catalogueFixture();
+  catalogue.libraries.push({
+    id: "flows-js",
+    lifecycle: "active",
+    packageName: "@superboard/flows-js",
+    sourcePath: "sdks/flows/upstream/packages/js",
+    sourceVersion: "1.23.3",
+    releaseStatus: "unreleased",
+    publicationTarget: "public-npm",
+  });
+  const result = verifyCatalogueCoverage(manifest, catalogue);
   assert.equal(result.libraries.length, 7);
   assert.equal(result.readiness.promotionReady, false);
   assert.deepEqual(
@@ -198,7 +209,7 @@ test("secretless remote gates verify immutable baselines, including both iOS tag
   assert.ok(tagCalls.includes("sdk-ios-v1.0.3"));
 });
 
-test("coverage CI uses public reads, catalogue v4 and canonical variables", () => {
+test("coverage CI uses public reads, catalogue v5 and canonical variables", () => {
   assert.match(workflow, /npm run sdk:coverage:verify/u);
   assert.match(workflow, /npm run sdk:coverage:catalog/u);
   assert.match(workflow, /SUPERBOARD_FLUTTER_VERSION/u);

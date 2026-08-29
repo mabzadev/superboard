@@ -9,7 +9,7 @@
     "test": "vitest run && INTERNAL_API_TOKEN=app-runtime-secret vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@superboard/contracts": "*",
+    "@superboard/contracts": "workspace:*",
     "hono": "^4.7.4"
   },
   "devDependencies": {

@@ -119,6 +119,7 @@ export async function main(
       "--service",
       service,
       ...mode.generatorArgs,
+      "--allow-disabled",
       "--allow-unprovisioned",
     ]);
   }

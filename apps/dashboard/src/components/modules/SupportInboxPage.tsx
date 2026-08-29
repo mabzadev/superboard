@@ -9,10 +9,13 @@ import {
   Inbox,
   MessageSquareText,
   Paperclip,
+  Plus,
   RefreshCw,
   RotateCcw,
+  Save,
   Send,
   ShieldCheck,
+  Trash2,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -25,19 +28,22 @@ import {
   showErrorNotification,
   showSuccessNotification,
 } from "@/lib/Notifications";
-import { inboxDeepLink } from "@/api/messaging/inboxDeepLink";
+import { inboxDeepLink } from "@/api/support/inboxDeepLink";
 import {
-  getMessagingSettings,
-  type MessagingSettingsBootstrap,
-} from "@/api/messaging/settingsService";
+  executeSupportMacro,
+  getSupportDraft,
+  saveSupportDraft,
+} from "@/api/support/operationsService";
 import {
-  executeMessagingMacro,
-  getMessagingDraft,
-  saveMessagingDraft,
-} from "@/api/messaging/operationsService";
+  listSupportInboxes,
+  listSupportMemberships,
+  listSupportTeams,
+} from "@/api/support/workforceService";
 import {
   getInboxMessages,
   getUnifiedInboxItems,
+  listInboxCannedResponses,
+  listInboxMacros,
   createInboxRealtimeTicket,
   downloadInboxAttachment,
   inboxRealtimeUrl,
@@ -51,7 +57,7 @@ import {
   type InboxConversation,
   type InboxMessage,
   type UnifiedInboxItem,
-} from "@/api/messaging/inboxService";
+} from "@/api/support/inboxService";
 
 const dateTime = (value?: string | null) =>
   value
@@ -92,8 +98,17 @@ export default function InboxPage() {
     "idle" | "connecting" | "live" | "reconnecting"
   >("idle");
   const [customerTyping, setCustomerTyping] = useState(false);
-  const [supportSettings, setSupportSettings] =
-    useState<MessagingSettingsBootstrap | null>(null);
+  const [macros, setMacros] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [cannedResponses, setCannedResponses] = useState<
+    Array<{ id: string; name: string; content: string }>
+  >([]);
+  const [workforceOptions, setWorkforceOptions] = useState<{
+    agents: Array<{ value: string; label: string }>;
+    teams: Array<{ value: string; label: string }>;
+    inboxes: Array<{ value: string; label: string }>;
+  }>({ agents: [], teams: [], inboxes: [] });
   const [selectedMacroId, setSelectedMacroId] = useState("");
   const typingTimer = useRef<number | null>(null);
   const customerTypingTimer = useRef<number | null>(null);
@@ -188,12 +203,51 @@ export default function InboxPage() {
   }, [loadItems]);
   useEffect(() => {
     if (!projectId) {
-      setSupportSettings(null);
+      setMacros([]);
+      setCannedResponses([]);
+      setWorkforceOptions({ agents: [], teams: [], inboxes: [] });
       return;
     }
-    void getMessagingSettings(projectId)
-      .then((result) => setSupportSettings(result.data))
-      .catch(() => setSupportSettings(null));
+    void Promise.all([
+      listInboxMacros(projectId),
+      listInboxCannedResponses(projectId),
+    ])
+      .then(([macroPage, responsePage]) => {
+        setMacros(
+          macroPage.data
+            .filter((macro) => macro.active)
+            .map((macro) => ({ value: macro.id, label: macro.name }))
+        );
+        setCannedResponses(
+          responsePage.data.filter((response) => response.active)
+        );
+      })
+      .catch(() => {
+        setMacros([]);
+        setCannedResponses([]);
+      });
+    void Promise.all([
+      listSupportMemberships(projectId, { limit: 100 }),
+      listSupportTeams(projectId, { limit: 100 }),
+      listSupportInboxes(projectId, { limit: 100 }),
+    ])
+      .then(([memberships, teams, inboxes]) =>
+        setWorkforceOptions({
+          agents: memberships.data
+            .filter((membership) => membership.active)
+            .map((membership) => ({
+              value: membership.auth_user_id,
+              label: membership.display_name,
+            })),
+          teams: teams.data
+            .filter((team) => team.active)
+            .map((team) => ({ value: team.id, label: team.name })),
+          inboxes: inboxes.data
+            .filter((inbox) => inbox.status === "active")
+            .map((inbox) => ({ value: inbox.id, label: inbox.name })),
+        })
+      )
+      .catch(() => setWorkforceOptions({ agents: [], teams: [], inboxes: [] }));
   }, [projectId]);
   useEffect(() => {
     void loadMessages();
@@ -202,7 +256,7 @@ export default function InboxPage() {
     if (!projectId || selected?.source_type !== "conversation") return;
     let cancelled = false;
     setReply("");
-    void getMessagingDraft(projectId, selected.source_id)
+    void getSupportDraft(projectId, selected.source_id)
       .then((result) => {
         if (!cancelled && result.data?.content)
           setReply((current) => current || result.data?.content || "");
@@ -280,13 +334,15 @@ export default function InboxPage() {
             );
             void loadItems();
           } else if (
-            event.type === "typing.changed" &&
-            event.actor?.kind === "user"
+            (event.type === "typing.started" ||
+              event.type === "typing.stopped") &&
+            event.actor_kind === "user"
           ) {
-            setCustomerTyping(event.active === true);
+            const active = event.type === "typing.started";
+            setCustomerTyping(active);
             if (customerTypingTimer.current)
               window.clearTimeout(customerTypingTimer.current);
-            if (event.active) {
+            if (active) {
               customerTypingTimer.current = window.setTimeout(
                 () => setCustomerTyping(false),
                 5_000
@@ -345,7 +401,7 @@ export default function InboxPage() {
         privateNote
       );
       pendingTextMessage.current = null;
-      void saveMessagingDraft(projectId, selected.source_id, "").catch(
+      void saveSupportDraft(projectId, selected.source_id, "").catch(
         () => undefined
       );
       void setInboxConversationTyping(
@@ -409,7 +465,7 @@ export default function InboxPage() {
     if (draftTimer.current) window.clearTimeout(draftTimer.current);
     draftTimer.current = window.setTimeout(() => {
       if (projectId && selected?.source_type === "conversation") {
-        void saveMessagingDraft(projectId, selected.source_id, value).catch(
+        void saveSupportDraft(projectId, selected.source_id, value).catch(
           () => undefined
         );
       }
@@ -485,25 +541,9 @@ export default function InboxPage() {
     }
   };
 
-  const agents = configurationOptions(
-    supportSettings,
-    "agent",
-    "auth_user_id",
-    "display_name"
-  );
-  const teams = configurationOptions(supportSettings, "team");
-  const inboxes = configurationOptions(supportSettings, "inbox");
-  const macros = configurationOptions(supportSettings, "macro");
-  const cannedResponses = (supportSettings?.entities || [])
-    .filter(
-      (entity) => entity.entity_type === "canned_response" && entity.enabled
-    )
-    .map((entity) => ({
-      id: entity.id,
-      name: entity.name,
-      content: String(entity.configuration.content || ""),
-    }));
-
+  const agents = workforceOptions.agents;
+  const teams = workforceOptions.teams;
+  const inboxes = workforceOptions.inboxes;
   const executeMacro = async () => {
     if (
       !projectId ||
@@ -512,7 +552,7 @@ export default function InboxPage() {
     )
       return;
     try {
-      await executeMessagingMacro(
+      await executeSupportMacro(
         projectId,
         selected.source_id,
         selectedMacroId
@@ -765,30 +805,12 @@ export default function InboxPage() {
                         }
                       />
                     </div>
-                    <textarea
-                      key={`${selected.id}:attributes:${String(selected.source.custom_attributes_json || "")}`}
-                      aria-label="Conversation custom attributes"
-                      className="min-h-16 w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-                      defaultValue={prettyJson(
-                        selected.source.custom_attributes_json
-                      )}
-                      placeholder="Conversation custom attributes (JSON)"
-                      onBlur={(event) => {
-                        try {
-                          const value = JSON.parse(event.target.value || "{}");
-                          if (
-                            !value ||
-                            typeof value !== "object" ||
-                            Array.isArray(value)
-                          )
-                            throw new Error();
-                          void update({ custom_attributes: value });
-                        } catch {
-                          showErrorNotification(
-                            "Custom attributes must be a JSON object"
-                          );
-                        }
-                      }}
+                    <ConversationAttributes
+                      conversationKey={selected.id}
+                      value={selected.source.custom_attributes_json}
+                      onSave={(customAttributes) =>
+                        update({ custom_attributes: customAttributes })
+                      }
                     />
                   </header>
                   <div className="flex-1 space-y-3 overflow-auto bg-muted/20 p-5">
@@ -980,24 +1002,6 @@ function localDateTime(value: string) {
   return local.toISOString().slice(0, 16);
 }
 
-function configurationOptions(
-  settings: MessagingSettingsBootstrap | null,
-  type: string,
-  valueKey?: string,
-  labelKey?: string
-) {
-  return (settings?.entities || [])
-    .filter((entity) => entity.entity_type === type && entity.enabled)
-    .map((entity) => ({
-      value: String(
-        valueKey ? entity.configuration[valueKey] || entity.id : entity.id
-      ),
-      label: String(
-        labelKey ? entity.configuration[labelKey] || entity.name : entity.name
-      ),
-    }));
-}
-
 function ConfigurationSelect({
   label,
   value,
@@ -1018,7 +1022,7 @@ function ConfigurationSelect({
       onChange={(event) => onChange(event.target.value)}
     >
       <option value="">{label}</option>
-      {value && !known && <option value={value}>{value} (legacy)</option>}
+      {value && !known && <option value={value}>{value}</option>}
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -1028,16 +1032,127 @@ function ConfigurationSelect({
   );
 }
 
-function prettyJson(value: unknown) {
+function conversationAttributes(value: unknown) {
   try {
-    return JSON.stringify(
-      typeof value === "string" ? JSON.parse(value) : value || {},
-      null,
-      2
-    );
+    const parsed =
+      typeof value === "string" ? JSON.parse(value || "{}") : value || {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return [];
+    return Object.entries(parsed).map(([key, item]) => ({
+      id: crypto.randomUUID(),
+      key,
+      value: item == null ? "" : String(item),
+    }));
   } catch {
-    return "{}";
+    return [];
   }
+}
+
+function ConversationAttributes({
+  conversationKey,
+  value,
+  onSave,
+}: {
+  conversationKey: string;
+  value: unknown;
+  onSave: (value: Record<string, string>) => Promise<void>;
+}) {
+  const [attributes, setAttributes] = useState(() =>
+    conversationAttributes(value)
+  );
+  useEffect(() => {
+    setAttributes(conversationAttributes(value));
+  }, [conversationKey, value]);
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">Custom attributes</p>
+        <Button
+          size="sm"
+          type="button"
+          variant="outline"
+          onClick={() =>
+            setAttributes((current) => [
+              ...current,
+              { id: crypto.randomUUID(), key: "", value: "" },
+            ])
+          }
+        >
+          <Plus /> Add
+        </Button>
+      </div>
+      {attributes.map((attribute, index) => (
+        <div
+          className="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+          key={attribute.id}
+        >
+          <input
+            aria-label={`Conversation attribute ${index + 1} name`}
+            className="rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Attribute name"
+            value={attribute.key}
+            onChange={(event) =>
+              setAttributes((current) =>
+                current.map((item) =>
+                  item.id === attribute.id
+                    ? { ...item, key: event.target.value }
+                    : item
+                )
+              )
+            }
+          />
+          <input
+            aria-label={`Conversation attribute ${index + 1} value`}
+            className="rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Value"
+            value={attribute.value}
+            onChange={(event) =>
+              setAttributes((current) =>
+                current.map((item) =>
+                  item.id === attribute.id
+                    ? { ...item, value: event.target.value }
+                    : item
+                )
+              )
+            }
+          />
+          <Button
+            aria-label={`Remove conversation attribute ${index + 1}`}
+            size="icon"
+            type="button"
+            variant="ghost"
+            onClick={() =>
+              setAttributes((current) =>
+                current.filter((item) => item.id !== attribute.id)
+              )
+            }
+          >
+            <Trash2 />
+          </Button>
+        </div>
+      ))}
+      {attributes.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No custom attributes.</p>
+      ) : null}
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          type="button"
+          onClick={() =>
+            void onSave(
+              Object.fromEntries(
+                attributes
+                  .filter((attribute) => attribute.key.trim())
+                  .map((attribute) => [attribute.key.trim(), attribute.value])
+              )
+            )
+          }
+        >
+          <Save /> Save attributes
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function mergeMessage(current: InboxMessage[], message: InboxMessage) {

@@ -73,6 +73,30 @@ export function replaceGitDependencyRef(source, packageName, releaseRef) {
   return replaceGitDependency(source, packageName, packageName, releaseRef);
 }
 
+function hasDependency(source, packageName) {
+  const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return new RegExp(`^[ \\t]*${escaped}:[ \\t]*$`, "mu").test(source);
+}
+
+export function replaceDependencyWithGit(
+  source,
+  packageName,
+  nextPackageName,
+  { repository, releaseRef, sourcePath },
+) {
+  const { lines, start, end, indent } = dependencyRange(source, packageName);
+  const padding = " ".repeat(indent);
+  const replacement = [
+    `${padding}${nextPackageName}:`,
+    `${padding}  git:`,
+    `${padding}    url: ${String(repository).replace(/\.git$/u, "")}.git`,
+    `${padding}    ref: ${releaseRef}`,
+    `${padding}    path: ${sourcePath}`,
+  ];
+  lines.splice(start, end - start, ...replacement);
+  return lines.join("\n");
+}
+
 export function removeGitDependency(source, packageName) {
   const { lines, start, end } = dependencyRange(source, packageName);
   let removalEnd = end;
@@ -86,8 +110,8 @@ export function removeGitDependency(source, packageName) {
 }
 
 function catalogueLibraries(catalogue, coverageManifest) {
-  if (catalogue?.schemaVersion !== 4) {
-    throw new Error("The SDK catalogue must use schemaVersion 4");
+  if (catalogue?.schemaVersion !== 5) {
+    throw new Error("The SDK catalogue must use schemaVersion 5");
   }
   if (
     String(catalogue?.repository || "").replace(/\.git$/u, "") !==
@@ -100,10 +124,9 @@ function catalogueLibraries(catalogue, coverageManifest) {
   );
   if (
     !Array.isArray(catalogue.libraries) ||
-    catalogue.libraries.length !== Object.keys(sdkContracts).length ||
-    entries.size !== Object.keys(sdkContracts).length
+    entries.size !== catalogue.libraries.length
   ) {
-    throw new Error("The SDK catalogue must contain the complete governed set");
+    throw new Error("The SDK catalogue must contain unique governed entries");
   }
   for (const [id, contract] of Object.entries(sdkContracts)) {
     const library = entries.get(id);
@@ -177,18 +200,38 @@ export function promoteReferenceSdkSet({
     const contract = sdkContracts[id];
     const baseline = nextCoverage.libraries.find((library) => library.id === id);
     const releaseRef = promotedRef(source, contract);
-    nextPubspec = replaceGitDependency(
+    const currentPackageName = hasDependency(
       nextPubspec,
-      baseline.packageName,
+      baseline.candidatePackageName,
+    )
+      ? baseline.candidatePackageName
+      : baseline.packageName;
+    nextPubspec = replaceDependencyWithGit(
+      nextPubspec,
+      currentPackageName,
       source.packageName,
-      releaseRef,
+      {
+        repository: nextCoverage.platformRepository,
+        releaseRef,
+        sourcePath: source.sourcePath,
+      },
     );
     if (referenceSdkMappings[id].projectLibrary) {
-      nextSnippet = replaceGitDependency(
+      const snippetPackageName = hasDependency(
         nextSnippet,
-        baseline.packageName,
+        baseline.candidatePackageName,
+      )
+        ? baseline.candidatePackageName
+        : baseline.packageName;
+      nextSnippet = replaceDependencyWithGit(
+        nextSnippet,
+        snippetPackageName,
         source.packageName,
-        releaseRef,
+        {
+          repository: nextCoverage.platformRepository,
+          releaseRef,
+          sourcePath: source.sourcePath,
+        },
       );
       delete nextProject.libraries[baseline.packageName];
       nextProject.libraries[source.packageName] = {
@@ -207,6 +250,7 @@ export function promoteReferenceSdkSet({
       baselineTag: releaseRef,
       baselineSha: source.releaseSha,
       catalogueStatus: "released",
+      coverageMode: contract.promotedCoverageMode,
     });
     delete baseline.candidatePackageName;
     delete baseline.candidateRef;
@@ -216,8 +260,12 @@ export function promoteReferenceSdkSet({
   const support = nextCoverage.libraries.find(
     ({ id }) => id === "flutterflow-support",
   );
-  nextPubspec = removeGitDependency(nextPubspec, support.packageName);
-  nextSnippet = removeGitDependency(nextSnippet, support.packageName);
+  if (hasDependency(nextPubspec, support.packageName)) {
+    nextPubspec = removeGitDependency(nextPubspec, support.packageName);
+  }
+  if (hasDependency(nextSnippet, support.packageName)) {
+    nextSnippet = removeGitDependency(nextSnippet, support.packageName);
+  }
   delete nextProject.libraries[support.packageName];
   support.coverageMode = "historical-release";
 

@@ -95,3 +95,51 @@ query-counts-out/
 scripts/query-dumps/sqlite/
 scripts/query-dumps/d1/
 scripts/query-dumps/classification.*.md
+
+# SuperBoard overlay
+# Dependencies
+node_modules/
+
+# Build output
+build/
+.dart_tool/
+**/.flutterflow/
+tools/flutterflow-library/generated_code/
+**/.flutter-plugins-dependencies
+.next/
+.vercel/
+.open-next/
+.wrangler/
+deploy/generated/
+.backups/
+dist/
+out/
+.build/
+coverage/
+tsconfig.tsbuildinfo
+test-results/
+playwright-report/
+apps/dashboard/e2e/.auth/
+apps/dashboard/test-results/
+apps/dashboard/playwright-report/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Logs and OS files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Runtime caches
+.cache/
+.turbo/
+/.ci-reference-contract/
+/.flows-cutover/
+/scripts/support-audit/generated/
+package-lock.json

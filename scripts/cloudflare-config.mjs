@@ -352,13 +352,24 @@ function apiConfig() {
     }
   }
   if (publicRoutesEnabled) {
-    config.routes = [
-      { pattern: target.domains.api, custom_domain: true },
-      { pattern: target.domains.auth, custom_domain: true },
-      { pattern: target.domains.shortlinks, custom_domain: true },
-      { pattern: target.domains.sdk, custom_domain: true },
-      { pattern: target.domains.files, custom_domain: true },
-    ];
+    if (environment === "production" && resources.supportRouting) {
+      if (resources.supportRouting.mode === "active") {
+        config.routes = [
+          {
+            pattern: resources.supportRouting.pattern,
+            zone_name: target.zoneName,
+          },
+        ];
+      }
+    } else {
+      config.routes = [
+        { pattern: target.domains.api, custom_domain: true },
+        { pattern: target.domains.auth, custom_domain: true },
+        { pattern: target.domains.shortlinks, custom_domain: true },
+        { pattern: target.domains.sdk, custom_domain: true },
+        { pattern: target.domains.files, custom_domain: true },
+      ];
+    }
   }
   return config;
 }
@@ -366,6 +377,11 @@ function apiConfig() {
 function domainConfig() {
   const definition = DOMAIN_SERVICE_REGISTRY[service];
   const resourceKey = definition.resourceKey;
+  const domainQueues = definition.queues.map((queueDefinition) => ({
+    definition: queueDefinition,
+    resource: resources.moduleQueues[queueDefinition.resourceKey],
+  }));
+  const primaryQueue = domainQueues[0] ?? null;
   const config = {
     ...baseConfig(),
     workers_dev: false,
@@ -387,6 +403,11 @@ function domainConfig() {
             PUBLIC_API_URL: publicApiUrl(target),
           }
         : {}),
+      ...(definition.vars.includes("PUBLIC_DASHBOARD_URL")
+        ? {
+            PUBLIC_DASHBOARD_URL: publicDashboardUrl(target),
+          }
+        : {}),
       ...(definition.vars.includes("EMAIL_PROVIDER")
         ? { EMAIL_PROVIDER: target.mail.provider }
         : {}),
@@ -398,13 +419,19 @@ function domainConfig() {
             ALLOWED_PROJECT_IDS: resources.supportProjectIds.join(","),
           }
         : {}),
-      ...(definition.queue
+      ...definition.staticVars,
+      ...(primaryQueue
         ? {
-            QUEUE_NAME:
-              resources.moduleQueues[definition.queue.resourceKey].name,
-            DLQ_NAME: resources.moduleQueues[definition.queue.resourceKey].dlq,
+            QUEUE_NAME: primaryQueue.resource.name,
+            DLQ_NAME: primaryQueue.resource.dlq,
           }
         : {}),
+      ...Object.fromEntries(
+        domainQueues.flatMap(({ definition: queue, resource }) => [
+          ...(queue.nameVar ? [[queue.nameVar, resource.name]] : []),
+          ...(queue.dlqVar ? [[queue.dlqVar, resource.dlq]] : []),
+        ]),
+      ),
     },
     d1_databases: [
       {
@@ -422,6 +449,15 @@ function domainConfig() {
       bucket_name: resources.moduleR2[binding.resourceKey].name,
     }));
   }
+  if (definition.ai) {
+    config.ai = { binding: definition.ai.binding };
+  }
+  if (definition.vectorize.length) {
+    config.vectorize = definition.vectorize.map((binding) => ({
+      binding: binding.binding,
+      index_name: resources.moduleVectorize[binding.resourceKey].name,
+    }));
+  }
   if (definition.services.length) {
     config.services = definition.services.map((binding) => ({
       binding: binding.binding,
@@ -435,21 +471,27 @@ function domainConfig() {
       class_name: workflow.className,
     }));
   }
-  if (definition.queue) {
-    const queue = resources.moduleQueues[definition.queue.resourceKey];
+  if (domainQueues.length) {
     config.queues = {
-      producers: [{ binding: definition.queue.binding, queue: queue.name }],
+      producers: domainQueues.map(({ definition: queue, resource }) => ({
+        binding: queue.binding,
+        queue: resource.name,
+      })),
     };
     if (!preflight) {
       config.queues.consumers = [
-        queueConsumer(
-          queue.name,
-          queue.dlq,
-          definition.queue.maxBatchSize,
-          definition.queue.maxBatchTimeout,
-          definition.queue.maxRetries,
+        ...domainQueues.map(({ definition: queue, resource }) =>
+          queueConsumer(
+            resource.name,
+            resource.dlq,
+            queue.maxBatchSize,
+            queue.maxBatchTimeout,
+            queue.maxRetries,
+          ),
         ),
-        queueConsumer(queue.dlq, null, 10, 5, 100),
+        ...domainQueues.map(({ resource }) =>
+          queueConsumer(resource.dlq, null, 10, 5, 100),
+        ),
       ];
     }
   }

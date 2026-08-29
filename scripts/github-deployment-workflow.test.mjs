@@ -374,7 +374,7 @@ test("CI validates every maintained SDK family and the Chatwoot migration path",
 test("JavaScript CI and releases execute the complete first-party package check", () => {
   assert.equal(
     javascriptManifest.scripts.test,
-    "node --test test/opengrow.test.js",
+    "node --test test/opengrow.test.js test/support.test.js",
   );
   assert.equal(
     javascriptManifest.scripts["audit:production"],

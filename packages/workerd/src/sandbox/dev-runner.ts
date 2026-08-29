@@ -237,9 +237,12 @@ export class MiniflareDevRunner implements SandboxRunner {
 			throw new Error(`Miniflare not running, cannot dispatch to ${pluginId}`);
 		}
 		const workerName = pluginId.replace(SAFE_ID_RE, "_");
-		const worker = await this.mf.getWorker(workerName);
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Miniflare's Request_2 value exposes fetch at runtime, and this boundary only accepts the shared subset documented above.
+		const worker = (await this.mf.getWorker(workerName)) as unknown as {
+			fetch(input: string, init?: never): Promise<Response>;
+		};
 		// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- miniflare's Response_2 / RequestInit_2 are structurally compatible with the global types we use here. See JSDoc above.
-		return worker.fetch(url, init as never) as unknown as Response;
+		return worker.fetch(url, init as never);
 	}
 }
 

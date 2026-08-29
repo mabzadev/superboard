@@ -99,19 +99,24 @@ export default function LibrariesPageContent() {
           <div className="grid gap-4 lg:grid-cols-2">
             {catalog.libraries.map((library) => {
               const pending = library.releaseStatus === "pending-release";
+              const unreleased = library.releaseStatus === "unreleased";
+              const releaseRef = library.releaseRef;
+              const install = library.install;
               const status: {
                 label: string;
                 variant: "default" | "destructive" | "outline" | "secondary";
               } =
-                library.lifecycle === "archived"
-                  ? { label: "Archived", variant: "secondary" }
-                  : library.lifecycle === "internal"
-                    ? { label: "Internal", variant: "outline" }
-                    : pending
-                      ? { label: "Release pending", variant: "destructive" }
-                      : { label: "Released", variant: "default" };
+                unreleased
+                  ? { label: "Not published", variant: "outline" }
+                  : library.lifecycle === "archived"
+                    ? { label: "Archived", variant: "secondary" }
+                    : library.lifecycle === "internal"
+                      ? { label: "Internal", variant: "outline" }
+                      : pending
+                        ? { label: "Release pending", variant: "destructive" }
+                        : { label: "Released", variant: "default" };
               return (
-                <Card key={library.id}>
+                <Card key={library.id} data-testid={`library-${library.id}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -134,20 +139,22 @@ export default function LibrariesPageContent() {
                         label="Source"
                         value={library.sourceVersion}
                         icon={
-                          pending ? (
+                          pending || unreleased ? (
                             <TriangleAlert className="size-4 text-amber-500" />
                           ) : (
                             <CheckCircle2 className="size-4 text-emerald-500" />
                           )
                         }
                       />
-                      <Version
-                        label="Latest release"
-                        value={library.latestReleaseVersion}
-                        icon={
-                          <CheckCircle2 className="size-4 text-emerald-500" />
-                        }
-                      />
+                      {library.latestReleaseVersion && (
+                        <Version
+                          label="Latest release"
+                          value={library.latestReleaseVersion}
+                          icon={
+                            <CheckCircle2 className="size-4 text-emerald-500" />
+                          }
+                        />
+                      )}
                       <Version
                         label="Lifecycle"
                         value={library.lifecycle}
@@ -248,61 +255,63 @@ export default function LibrariesPageContent() {
                         <ExternalLink className="size-3" />
                       </a>
                     </div>
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
-                        Immutable ref
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs">
-                          {library.releaseRef}
-                        </code>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          aria-label={`Copy ${library.displayName} release ref`}
-                          onClick={() =>
-                            void copy(library.releaseRef, "Release ref")
-                          }
-                        >
-                          <Copy className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <details>
-                      <summary className="cursor-pointer text-sm font-medium">
-                        {library.lifecycle !== "active"
-                          ? "Historical dependency"
-                          : library.distribution
-                          ? "Authenticated dependency command"
-                          : "Installation"}
-                      </summary>
-                      {library.distribution && (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          This command alone is insufficient; configure the
-                          authenticated registry shown above first.
+                    {releaseRef && (
+                      <div>
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">
+                          Immutable ref
                         </p>
-                      )}
-                      <div className="mt-2 flex items-start gap-2">
-                        <pre className="min-w-0 flex-1 overflow-auto rounded bg-muted p-3 text-xs">
-                          {library.install}
-                        </pre>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          aria-label={`Copy ${library.displayName} installation`}
-                          onClick={() =>
-                            void copy(
-                              library.install,
-                              library.distribution
-                                ? "Dependency command"
-                                : "Installation"
-                            )
-                          }
-                        >
-                          <Copy className="size-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs">
+                            {releaseRef}
+                          </code>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            aria-label={`Copy ${library.displayName} release ref`}
+                            onClick={() => void copy(releaseRef, "Release ref")}
+                          >
+                            <Copy className="size-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </details>
+                    )}
+                    {install && (
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium">
+                          {library.lifecycle !== "active"
+                            ? "Historical dependency"
+                            : library.distribution
+                            ? "Authenticated dependency command"
+                            : "Installation"}
+                        </summary>
+                        {library.distribution && (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            This command alone is insufficient; configure the
+                            authenticated registry shown above first.
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-start gap-2">
+                          <pre className="min-w-0 flex-1 overflow-auto rounded bg-muted p-3 text-xs">
+                            {install}
+                          </pre>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            aria-label={`Copy ${library.displayName} installation`}
+                            onClick={() =>
+                              void copy(
+                                install,
+                                library.distribution
+                                  ? "Dependency command"
+                                  : "Installation"
+                              )
+                            }
+                          >
+                            <Copy className="size-4" />
+                          </Button>
+                        </div>
+                      </details>
+                    )}
                   </CardContent>
                 </Card>
               );

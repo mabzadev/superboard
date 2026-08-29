@@ -12,6 +12,7 @@ describe('Support realtime secret overlap', () => {
             project_id: 12,
             conversation_id: 'conversation-1',
             actor_id: 'actor-1',
+            actor_kind: 'agent',
             expires_at: '2026-08-09T10:01:00.000Z',
           }),
         }),
@@ -25,6 +26,7 @@ describe('Support realtime secret overlap', () => {
       12,
       'conversation-1',
       'actor-1',
+      'agent',
       1_786_268_400,
     );
     await expect(consumeRealtimeTicket(
@@ -39,6 +41,7 @@ describe('Support realtime secret overlap', () => {
       project_id: 12,
       conversation_id: 'conversation-1',
       actor_id: 'actor-1',
+      actor_kind: 'agent',
     });
   });
 });

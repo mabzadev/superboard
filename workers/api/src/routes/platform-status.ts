@@ -75,7 +75,7 @@ const WORKERS = [
     "MESSAGING",
     "binding",
     "/health",
-    "Legacy Messaging runtime (disabled after Support convergence)",
+    "Internal messaging transport",
     ["messaging"],
     ["MESSAGING_QUEUE"],
     ["messages"],
@@ -224,6 +224,17 @@ const WORKERS = [
     [],
   ),
   worker(
+    "flows",
+    "feature",
+    "FLOWS_MODULE",
+    "binding",
+    "/internal/v1/health",
+    "Project-scoped visual workflows, components, tours, surveys and Launchpad",
+    ["flows", "flows-archive", "flows-user-runtime", "flows-realtime"],
+    ["FLOW_EVENTS"],
+    ["projections", "delays", "exports", "maintenance", "deadLetters"],
+  ),
+  worker(
     "custom",
     "application",
     "CUSTOM_WORKER",
@@ -364,6 +375,7 @@ const API_CAPABILITIES = [
       "/api/v1/dynamic-links/*",
       "/api/v1/marketing/*",
       "/api/v1/onboardings/*",
+      "/api/v1/flows/*",
     ],
   },
   {
@@ -1104,7 +1116,10 @@ function operationalServices(input: {
         ? [...new Set(routes)]
         : directWorkerRoutes(definition.id, definition.healthPath),
       dependencies: {
-        services: workerServiceDependencies(definition.id),
+        services: workerServiceDependencies(definition.id).filter(
+          (dependency) =>
+            input.topology.workers.get(dependency)?.enabled !== false,
+        ),
         stores: definition.stores,
         queues: definition.queues,
         externalWorkers:
@@ -1172,6 +1187,7 @@ function workerCapabilityIds(id: string): string[] {
     support: ["support"],
     marketing: ["marketing-consent"],
     onboardings: ["modules"],
+    flows: ["modules"],
     custom: ["custom-jobs"],
     dashboard: ["platform", "libraries"],
     observability: ["platform"],
@@ -1200,12 +1216,14 @@ function workerServiceDependencies(id: string): string[] {
       "support",
       "marketing",
       "onboardings",
+      "flows",
       "custom",
     ],
     dashboard: ["api"],
     identity: ["email", "files"],
     mcp: ["api"],
     custom: ["files"],
+    flows: ["products", "identity", "email"],
   };
   return dependencies[id] ?? [];
 }
@@ -1573,7 +1591,7 @@ function dataStoreInventory(
       "R2",
       "support",
       serviceStatus("support"),
-      "Support attachments migrated from Chatwoot and created in SuperBoard",
+      "Support attachments stored by SuperBoard",
     ),
     store(
       "support-realtime",
@@ -1598,6 +1616,32 @@ function dataStoreInventory(
       "onboardings",
       "onboardings",
       "Onboarding flows, targeting, versions and completion events",
+    ),
+    d1Store(
+      "flows",
+      "flows",
+      "Organizations, immutable workflow versions, components, Launchpad, analytics and MTU projections",
+    ),
+    store(
+      "flows-archive",
+      "R2",
+      "flows",
+      serviceStatus("flows"),
+      "Flow event archives, exports, assets and migration packages",
+    ),
+    store(
+      "flows-user-runtime",
+      "Durable Object",
+      "flows",
+      serviceStatus("flows"),
+      "Strong per-user workflow execution state and transactional outbox",
+    ),
+    store(
+      "flows-realtime",
+      "Durable Object",
+      "flows",
+      serviceStatus("flows"),
+      "Hibernating WebSocket hubs for ordered block updates",
     ),
     d1Store(
       "custom",

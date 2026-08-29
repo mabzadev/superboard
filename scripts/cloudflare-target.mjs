@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import Ajv from "ajv/dist/2020.js";
 import { validateCustomWorkerBindings } from "./superboard-target-options.mjs";
+import { DOMAIN_SERVICE_REGISTRY } from "./cloudflare-services.mjs";
 import {
   assertTargetPhysicalResourceNames,
   resourceIdentity,
@@ -60,6 +61,13 @@ export async function validateTarget(target) {
       String(hostname).toLowerCase(),
     ),
   );
+  const zoneName = String(target.zoneName).toLowerCase();
+  const apiDomain = String(target.domains?.api ?? "").toLowerCase();
+  if (apiDomain !== zoneName && !apiDomain.endsWith(`.${zoneName}`)) {
+    throw new Error(
+      `Invalid target manifest: domains.api must belong to zoneName ${zoneName}`,
+    );
+  }
   const retiredDomains = new Set();
   for (const retired of target.retiredDomains ?? []) {
     const hostname = String(retired.hostname).toLowerCase();
@@ -103,6 +111,43 @@ export async function validateTarget(target) {
         );
       }
     }
+    for (const [service, definition] of Object.entries(
+      DOMAIN_SERVICE_REGISTRY,
+    )) {
+      if (!target.features?.[service]) continue;
+      const resources = target.environments[environment];
+      if (!resources.moduleD1?.[definition.resourceKey]) {
+        throw new Error(
+          `Invalid target manifest: environments.${environment}.moduleD1.${definition.resourceKey} is required because ${service} is enabled`,
+        );
+      }
+      for (const resource of definition.r2) {
+        if (!resources.moduleR2?.[resource.resourceKey]) {
+          throw new Error(
+            `Invalid target manifest: environments.${environment}.moduleR2.${resource.resourceKey} is required because ${service} is enabled`,
+          );
+        }
+      }
+      for (const queue of definition.queues) {
+        if (!resources.moduleQueues?.[queue.resourceKey]) {
+          throw new Error(
+            `Invalid target manifest: environments.${environment}.moduleQueues.${queue.resourceKey} is required because ${service} is enabled`,
+          );
+        }
+      }
+      for (const vectorize of definition.vectorize) {
+        if (!resources.moduleVectorize?.[vectorize.resourceKey]) {
+          throw new Error(
+            `Invalid target manifest: environments.${environment}.moduleVectorize.${vectorize.resourceKey} is required because ${service} is enabled`,
+          );
+        }
+      }
+    }
+  }
+  if (target.features?.flows && !target.features?.products) {
+    throw new Error(
+      "Invalid target manifest: Products must be enabled when Flows is enabled",
+    );
   }
   if (Boolean(target.customWorker) !== Boolean(target.workers?.custom)) {
     throw new Error(
@@ -141,6 +186,13 @@ export async function validateTarget(target) {
   }
   for (const environment of environments) {
     const resources = target.environments[environment];
+    const enabledModuleQueueKeys = new Set(
+      Object.entries(DOMAIN_SERVICE_REGISTRY)
+        .filter(([service]) => target.features?.[service])
+        .flatMap(([, definition]) =>
+          definition.queues.map((queue) => queue.resourceKey),
+        ),
+    );
     const queueNames = [
       resources.queues.events,
       resources.queues.eventsDlq,
@@ -157,13 +209,34 @@ export async function validateTarget(target) {
         ? [resources.queues.messaging, resources.queues.messagingDlq]
         : []),
       ...Object.entries(resources.moduleQueues ?? {})
-        .filter(([moduleName]) => target.features[moduleName])
+        .filter(([moduleName]) => enabledModuleQueueKeys.has(moduleName))
         .flatMap(([, queue]) => [queue.name, queue.dlq]),
     ];
     if (new Set(queueNames).size !== queueNames.length) {
       throw new Error(
         `Invalid target manifest: enabled queue names must be unique in ${environment}`,
       );
+    }
+    if (target.features?.support) {
+      const routing = resources.supportRouting;
+      const expectedPattern = `${target.domains.api}/api/v1/support*`;
+      const expectedWorker = target.workers.api[environment];
+      if (
+        routing.pattern !== expectedPattern ||
+        routing.worker !== expectedWorker
+      ) {
+        throw new Error(
+          `Invalid target manifest: environments.${environment}.supportRouting must route ${expectedPattern} to ${expectedWorker}`,
+        );
+      }
+      if (
+        routing.mode === "active" &&
+        resources.publicRouting !== "active"
+      ) {
+        throw new Error(
+          `Invalid target manifest: environments.${environment}.supportRouting cannot be active while publicRouting is staged`,
+        );
+      }
     }
   }
   if (target.customWorker) {

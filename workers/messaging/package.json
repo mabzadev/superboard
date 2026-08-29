@@ -9,7 +9,7 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@superboard/contracts": "*",
+    "@superboard/contracts": "workspace:*",
     "hono": "^4.7.4",
     "jose": "^5.10.0"
   },

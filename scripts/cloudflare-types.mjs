@@ -54,6 +54,7 @@ run(process.execPath, [
   targetName,
   "--environment",
   environment,
+  ...(args["allow-disabled"] ? ["--allow-disabled"] : []),
   ...(args["allow-unprovisioned"] ? ["--allow-unprovisioned"] : []),
 ]);
 

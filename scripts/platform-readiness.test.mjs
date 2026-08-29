@@ -51,8 +51,8 @@ test("target readiness distinguishes unresolved fixtures from provisioned target
   const mbzaResult = targetReadiness(mbza, "development");
   const vocostarResult = targetReadiness(vocostar, "production");
 
-  assert.equal(requiredResourceIds(mbza, "development").length, 14);
-  assert.equal(mbzaResult.resourceIds.missing.length, 14);
+  assert.equal(requiredResourceIds(mbza, "development").length, 13);
+  assert.equal(mbzaResult.resourceIds.missing.length, 13);
   assert.equal(mbzaResult.resourceIdentity.logicalName, "superboard");
   assert.equal(mbzaResult.resourceIdentity.physicalName, "superboard");
   assert.equal(
@@ -66,8 +66,11 @@ test("target readiness distinguishes unresolved fixtures from provisioned target
   assert.equal(mbzaResult.acceptance.dashboardCacheIsolated, true);
   assert.equal(mbzaResult.acceptance.legacyMessagingDisabled, true);
   assert.equal(vocostarResult.resourceIds.required, 13);
-  assert.equal(vocostarResult.resourceIds.missing.length, 0);
-  assert.equal(vocostarResult.manifestProvisioned, true);
+  assert.deepEqual(
+    vocostarResult.resourceIds.missing.map(({ key, name }) => ({ key, name })),
+    [{ key: "moduleD1.support", name: "opengrow-support-v2-db" }],
+  );
+  assert.equal(vocostarResult.manifestProvisioned, false);
 });
 
 test("SDK readiness keeps unreleased source versions visible", () => {
@@ -757,11 +760,29 @@ test("current offline report is fail-closed and contains actionable blockers", a
     report.blockers.some(
       (blocker) => blocker.id === "mbza-development.resource_ids",
     ),
-    false,
+    true,
+  );
+  assert.deepEqual(
+    report.targets["mbza-development"].resourceIds.missing.map(
+      ({ key, name }) => ({ key, name }),
+    ),
+    [
+      {
+        key: "moduleD1.support",
+        name: "superboard-dev-support-v2-db",
+      },
+    ],
   );
   assert.equal(
     report.blockers.some((blocker) => blocker.id === "vocostar.resource_ids"),
-    false,
+    true,
+  );
+  assert.deepEqual(
+    report.targets.vocostar.resourceIds.missing.map(({ key, name }) => ({
+      key,
+      name,
+    })),
+    [{ key: "moduleD1.support", name: "opengrow-support-v2-db" }],
   );
   assert.ok(
     report.blockers.some((blocker) => blocker.id === "vocostar.credentials"),
@@ -800,9 +821,9 @@ test("current offline report is fail-closed and contains actionable blockers", a
     displayName: "SuperBoard",
     dependencies: 1,
     libraryValues: 11,
-    widgets: 5,
+    widgets: 9,
     pages: 3,
-    actions: 64,
+    actions: 88,
     errors: [],
   });
   assert.deepEqual(report.flutterFlowApplications, {

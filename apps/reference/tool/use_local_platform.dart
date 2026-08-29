@@ -10,8 +10,8 @@ void main(List<String> arguments) {
   }
   final platform = Directory(arguments.single).absolute;
   final flutterFlow = Directory('${platform.path}/sdks/flutterflow');
-  final messaging = Directory('${platform.path}/sdks/flutterflow_messaging');
-  if (!flutterFlow.existsSync() || !messaging.existsSync()) {
+  final flutterSdk = Directory('${platform.path}/sdks/flutter');
+  if (!flutterFlow.existsSync() || !flutterSdk.existsSync()) {
     stderr.writeln(
       'The selected directory is not a SuperBoard monorepo checkout.',
     );
@@ -20,10 +20,10 @@ void main(List<String> arguments) {
   }
   File('pubspec_overrides.yaml').writeAsStringSync('''
 dependency_overrides:
-  opengrow_flutterflow:
+  superboard_flutterflow:
     path: ${flutterFlow.path}
-  opengrow_flutterflow_messaging:
-    path: ${messaging.path}
+  superboard_flutter:
+    path: ${flutterSdk.path}
 ''');
   stdout.writeln('Local SDK overrides written. Run flutter pub get.');
 }

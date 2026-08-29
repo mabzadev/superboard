@@ -1,0 +1,16 @@
+{
+  "name": "@superboard/flows-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "workspaces": [
+    "upstream/packages/*",
+    "upstream/tests/e2e"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "check:import": "node ../../scripts/sync-flows-upstream.mjs --check && node --test ../../scripts/sync-flows-upstream.test.mjs",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

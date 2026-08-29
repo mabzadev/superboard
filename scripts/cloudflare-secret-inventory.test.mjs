@@ -130,7 +130,33 @@ test("shared production contracts identify both ends and environment-specific bi
     productionPlan.contracts
       .find(({ id }) => id === "email-internal-token")
       .members.map(({ service }) => service),
-    ["api", "email", "identity", "marketing"],
+    ["api", "email", "identity", "support", "marketing"],
+  );
+  assert.deepEqual(
+    developmentPlan.contracts
+      .find(({ id }) => id === "flows-internal-token")
+      .members.map(({ service, name }) => ({ service, name })),
+    [
+      { service: "api", name: "FLOWS_INTERNAL_TOKEN" },
+      { service: "flows", name: "INTERNAL_API_TOKEN" },
+    ],
+  );
+  assert.equal(
+    developmentPlan.contracts.some(({ id }) => id === "flows-email-internal-token"),
+    false,
+  );
+  assert.equal(
+    productionPlan.contracts.some(
+      ({ id }) =>
+        id === "flows-internal-token" || id === "flows-email-internal-token",
+    ),
+    false,
+  );
+  assert.equal(
+    developmentPlan.contracts
+      .find(({ id }) => id === "module-internal-token")
+      .members.some(({ service }) => service === "flows"),
+    false,
   );
   assert.equal(productionPlan.summary.overlapCapableContracts, 6);
   assert.equal(

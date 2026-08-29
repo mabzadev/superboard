@@ -1442,7 +1442,7 @@ async function rpushAppForProjectPlatform(db: D1Database, projectId: number | st
   return null;
 }
 
-async function enqueuePushNotifications(db: D1Database, notificationId: number | string, projectId: number | string) {
+export async function enqueuePushNotifications(db: D1Database, notificationId: number | string, projectId: number | string) {
   const notification = await db.prepare(`
     SELECT id, title, subtitle, send_push
     FROM notifications

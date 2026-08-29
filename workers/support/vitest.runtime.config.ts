@@ -22,9 +22,16 @@ export default defineConfig({
         miniflare: {
           bindings: {
             INTERNAL_API_TOKEN: "support-runtime-secret",
+            ALLOWED_PROJECT_IDS: "12",
             SUPPORT_WEBHOOK_ENCRYPTION_KEY:
               "support-runtime-webhook-encryption-key",
+            SUPPORT_CREDENTIAL_ENCRYPTION_KEY:
+              "support-runtime-credential-encryption-key",
             ...d1RuntimeBindings(migrations),
+          },
+          queueProducers: {
+            SUPPORT_AI_QUEUE: { queueName: "support-test-ai" },
+            SUPPORT_BULK_QUEUE: { queueName: "support-test-bulk" },
           },
         },
       };

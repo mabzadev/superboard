@@ -1,0 +1,403 @@
+import { defineSemanticTokens } from "@pandacss/dev";
+
+export const semanticTokens = defineSemanticTokens({
+  colors: {
+    bg: {
+      DEFAULT: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.900}" } },
+      neutral: {
+        DEFAULT: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.900}" } },
+        muted: { value: { base: "{colors.neutral.25}", _dark: "{colors.neutral.875}" } },
+        subtle: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+        strong: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.650}" } },
+        pureInverted: { value: { base: "{colors.neutral.850}", _dark: "{colors.neutral.50}" } },
+      },
+      primary: {
+        DEFAULT: { value: { base: "{colors.primary.500}", _dark: "{colors.primary-dark.400}" } },
+        subtle: { value: { base: "{colors.primary.50}", _dark: "{colors.primary-dark.800}" } },
+        muted: { value: { base: "{colors.primary.25}", _dark: "{colors.primary-dark.900}" } },
+      },
+      warning: {
+        subtle: { value: { base: "{colors.warning.50}", _dark: "{colors.warning-dark.800}" } },
+        muted: { value: { base: "{colors.warning.25}", _dark: "{colors.warning-dark.900}" } },
+      },
+      success: {
+        DEFAULT: { value: { base: "{colors.success.400}", _dark: "{colors.success-dark.400}" } },
+        muted: { value: { base: "{colors.success.25}", _dark: "{colors.success-dark.900}" } },
+      },
+      danger: {
+        subtle: { value: { base: "{colors.danger.50}", _dark: "{colors.danger-dark.800}" } },
+        muted: { value: { base: "{colors.danger.25}", _dark: "{colors.danger-dark.900}" } },
+      },
+    },
+
+    fg: {
+      DEFAULT: { value: { base: "{colors.neutral.900}", _dark: "{colors.neutral.25}" } },
+      neutral: {
+        DEFAULT: { value: { base: "{colors.neutral.900}", _dark: "{colors.neutral.25}" } },
+        muted: { value: { base: "{colors.neutral.700}", _dark: "{colors.neutral.250}" } },
+        subtle: { value: { base: "{colors.neutral.500}", _dark: "{colors.neutral.400}" } },
+        onPrimary: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.900}" } },
+        onBlack: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.900}" } },
+      },
+      primary: {
+        DEFAULT: { value: { base: "{colors.primary.600}", _dark: "{colors.primary-dark.400}" } },
+      },
+      warning: {
+        DEFAULT: { value: { base: "{colors.warning.500}", _dark: "{colors.warning-dark.400}" } },
+        light: { value: { base: "{colors.warning.300}", _dark: "{colors.warning-dark.400}" } },
+      },
+      success: {
+        DEFAULT: { value: { base: "{colors.success.500}", _dark: "{colors.success-dark.400}" } },
+      },
+      danger: {
+        DEFAULT: { value: { base: "{colors.danger.500}", _dark: "{colors.danger-dark.400}" } },
+      },
+    },
+
+    border: {
+      DEFAULT: { value: { base: "{colors.neutral.125}", _dark: "{colors.neutral.750}" } },
+      neutral: {
+        DEFAULT: { value: { base: "{colors.neutral.125}", _dark: "{colors.neutral.750}" } },
+        placeholder: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.800}" } },
+        muted: { value: { base: "{colors.neutral.75}", _dark: "{colors.neutral.850}" } },
+        strong: { value: { base: "{colors.neutral.200}", _dark: "{colors.neutral.600}" } },
+        onBlack: { value: { base: "{colors.neutral.700}", _dark: "{colors.neutral.750}" } },
+        white: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.900}" } },
+        dark: { value: { base: "{colors.neutral.650}", _dark: "{colors.neutral.200}" } },
+      },
+      primary: {
+        DEFAULT: { value: { base: "{colors.primary.500}", _dark: "{colors.primary-dark.400}" } },
+        subtle: { value: { base: "{colors.primary.300}", _dark: "{colors.primary-dark.600}" } },
+      },
+      warning: {
+        subtle: { value: { base: "{colors.warning.200}", _dark: "{colors.warning-dark.600}" } },
+      },
+      success: {
+        DEFAULT: { value: { base: "{colors.success.400}", _dark: "{colors.success-dark.400}" } },
+        subtle: {
+          value: { base: "{colors.success.300}", _dark: "{colors.success-dark.600}" },
+        },
+      },
+      danger: {
+        DEFAULT: { value: { base: "{colors.danger.400}", _dark: "{colors.danger-dark.400}" } },
+        subtle: {
+          value: { base: "{colors.danger.300}", _dark: "{colors.danger-dark.600}" },
+        },
+      },
+    },
+
+    // control is a generic pattern for control elements like fields
+    control: {
+      bg: {
+        DEFAULT: { value: { base: "{colors.neutral.25}", _dark: "{colors.neutral.875}" } },
+        hover: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.825}" } },
+        subtleHover: { value: { base: "{colors.neutral.25}", _dark: "{colors.neutral.875}" } },
+        selected: { value: { base: "{colors.primary.50}", _dark: "{colors.primary-dark.800}" } },
+        disabled: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+        strong: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.650}" } },
+        strongHover: { value: { base: "{colors.neutral.150}", _dark: "{colors.neutral.500}" } },
+        success: { value: { base: "{colors.success.400}", _dark: "{colors.success-dark.400}" } },
+        successHover: {
+          value: { base: "{colors.success.500}", _dark: "{colors.success-dark.500}" },
+        },
+      },
+      fg: {
+        DEFAULT: { value: { base: "{colors.neutral.900}", _dark: "{colors.neutral.25}" } },
+        selected: { value: { base: "{colors.primary.600}", _dark: "{colors.primary-dark.400}" } },
+        disabled: { value: { base: "{colors.neutral.400}", _dark: "{colors.neutral.500}" } },
+        placeholder: { value: { base: "{colors.neutral.400}", _dark: "{colors.neutral.500}" } },
+      },
+      border: {
+        DEFAULT: { value: { base: "{colors.neutral.200}", _dark: "{colors.neutral.700}" } },
+        hover: { value: { base: "{colors.neutral.300}", _dark: "{colors.neutral.600}" } },
+        disabled: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+        selected: { value: { base: "{colors.primary.500}", _dark: "{colors.primary-dark.400}" } },
+        error: { value: { base: "{colors.danger.400}", _dark: "{colors.danger-dark.400}" } },
+      },
+    },
+
+    // panes are used for main background areas like layout, sidebar, panels, etc.
+    pane: {
+      bg: {
+        DEFAULT: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.925}" } },
+        main: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.925}" } },
+        secondary: { value: { base: "{colors.neutral.25}", _dark: "{colors.neutral.950}" } },
+        web: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.950}" } },
+        elevated: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.900}" } },
+        tooltip: { value: { base: "{colors.neutral.850}", _dark: "{colors.neutral.1000}" } },
+        translucentBackground: {
+          value: {
+            base: "hsla(0, 0%, 100%, 0.85)",
+            _dark: "hsla(216, 11.1%, 8.8%, 0.80)",
+          },
+        },
+        translucentOverlay: {
+          value: { base: "rgba(0, 0, 0, 0.75)", _dark: "rgba(0, 0, 0, 0.50)" },
+        },
+      },
+      fg: {
+        scroll: { value: { base: "{colors.neutral.300}", _dark: "{colors.neutral.500}" } },
+        tooltip: { value: { base: "{colors.neutral.25}", _dark: "{colors.neutral.25}" } },
+      },
+      border: {
+        elevated: { value: { base: "{colors.neutral.150}", _dark: "{colors.neutral.750}" } },
+        tooltip: { value: { base: "{colors.neutral.850}", _dark: "{colors.neutral.800}" } },
+      },
+    },
+
+    // workflow block icon colors
+    // TODO: use special colors to separate from other semantic colors
+    blockIcon: {
+      start: {
+        bg: { value: { base: "{colors.warning.100}", _dark: "{colors.warning-dark.800}" } },
+        fg: { value: { base: "{colors.warning.600}", _dark: "{colors.warning-dark.400}" } },
+        border: { value: { base: "{colors.warning.200}", _dark: "{colors.warning-dark.700}" } },
+      },
+      component: {
+        bg: { value: { base: "#dbe3ff", _dark: "#252e56" } },
+        fg: { value: { base: "#4757b8", _dark: "#6e85f2" } },
+        border: { value: { base: "#c0d0ff", _dark: "#1f2a4e" } },
+      },
+      logic: {
+        bg: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.800}" } },
+        fg: { value: { base: "{colors.neutral.600}", _dark: "{colors.neutral.400}" } },
+        border: { value: { base: "{colors.neutral.150}", _dark: "{colors.neutral.700}" } },
+      },
+      action: {
+        bg: { value: { base: "{colors.danger.100}", _dark: "{colors.danger-dark.800}" } },
+        fg: { value: { base: "{colors.danger.600}", _dark: "{colors.danger-dark.400}" } },
+        border: { value: { base: "{colors.danger.150}", _dark: "{colors.danger-dark.700}" } },
+      },
+      note: {
+        bg: { value: { base: "#f4fbcb", _dark: "#2f3802" } },
+        fg: { value: { base: "#748700", _dark: "#AABF2A" } },
+        border: { value: { base: "#DEED82", _dark: "#3b4217" } },
+      },
+    },
+    // charts and data visualization
+    dataViz: {
+      green: {
+        fg: {
+          DEFAULT: { value: { base: "{colors.success.400}", _dark: "{colors.success-dark.400}" } },
+          muted: { value: { base: "{colors.success.600}", _dark: "{colors.success-dark.600}" } },
+        },
+      },
+      blue: {
+        fg: {
+          DEFAULT: { value: { base: "{colors.primary.400}", _dark: "{colors.primary-dark.400}" } },
+          muted: { value: { base: "{colors.primary.600}", _dark: "{colors.primary-dark.600}" } },
+        },
+      },
+      neutral: {
+        fg: {
+          DEFAULT: { value: { base: "{colors.neutral.400}", _dark: "{colors.neutral.400}" } },
+          muted: { value: { base: "{colors.neutral.600}", _dark: "{colors.neutral.600}" } },
+        },
+      },
+      purple: {
+        fg: {
+          DEFAULT: { value: "#855af2" },
+        },
+      },
+      salmon: {
+        fg: {
+          DEFAULT: { value: "#ff7557" },
+        },
+      },
+      teal: {
+        fg: {
+          DEFAULT: { value: "#80e1d9" },
+        },
+      },
+      yellow: {
+        fg: {
+          DEFAULT: { value: "#f8bc3b" },
+        },
+      },
+      brick: {
+        fg: {
+          DEFAULT: { value: "#b2596e" },
+        },
+      },
+      lightBlue: {
+        fg: {
+          DEFAULT: { value: "#72bef4" },
+        },
+      },
+      skin: {
+        fg: {
+          DEFAULT: { value: "#ffb27a" },
+        },
+      },
+      darkTeal: {
+        fg: {
+          DEFAULT: { value: "#0d7ea0" },
+        },
+      },
+      darkGreen: {
+        fg: {
+          DEFAULT: { value: "#3ba974" },
+        },
+      },
+      pink: {
+        fg: {
+          DEFAULT: { value: "#febbb2" },
+        },
+      },
+      violet: {
+        fg: {
+          DEFAULT: { value: "#ca80dc" },
+        },
+      },
+      pastelTeal: {
+        fg: {
+          DEFAULT: { value: "#5bb7af" },
+        },
+      },
+    },
+    // TODO: separate button into separate pattern
+    button: {
+      primary: {
+        bg: {
+          rest: { value: { base: "{colors.primary.500}", _dark: "{colors.primary-dark.500}" } },
+          hover: { value: { base: "{colors.primary.550}", _dark: "{colors.primary-dark.450}" } },
+          active: { value: { base: "{colors.primary.600}", _dark: "{colors.primary-dark.400}" } },
+          disabled: { value: { base: "{colors.primary.200}", _dark: "{colors.primary-dark.800}" } },
+        },
+        border: {
+          rest: { value: { base: "{colors.primary.600}", _dark: "{colors.primary-dark.400}" } },
+          hover: { value: { base: "{colors.primary.600}", _dark: "{colors.primary-dark.400}" } },
+          active: { value: { base: "{colors.primary.600}", _dark: "{colors.primary-dark.400}" } },
+          disabled: { value: { base: "{colors.primary.200}", _dark: "{colors.primary-dark.800}" } },
+        },
+        fg: {
+          rest: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.0}" } },
+          disabled: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.500}" } },
+        },
+      },
+      secondary: {
+        bg: {
+          rest: { value: { base: "{colors.neutral.25}", _dark: "{colors.neutral.850}" } },
+          hover: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.800}" } },
+          active: { value: { base: "{colors.neutral.75}", _dark: "{colors.neutral.750}" } },
+          disabled: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+        },
+        border: {
+          rest: { value: { base: "{colors.neutral.200}", _dark: "{colors.neutral.700}" } },
+          hover: { value: { base: "{colors.neutral.250}", _dark: "{colors.neutral.600}" } },
+          active: { value: { base: "{colors.neutral.250}", _dark: "{colors.neutral.600}" } },
+          disabled: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.800}" } },
+        },
+        fg: {
+          rest: { value: { base: "{colors.neutral.900}", _dark: "{colors.neutral.25}" } },
+          disabled: { value: { base: "{colors.neutral.400}", _dark: "{colors.neutral.600}" } },
+        },
+      },
+      black: {
+        bg: {
+          rest: { value: { base: "{colors.neutral.850}", _dark: "{colors.neutral.50}" } },
+          hover: { value: { base: "{colors.neutral.750}", _dark: "{colors.neutral.100}" } },
+          active: { value: { base: "{colors.neutral.700}", _dark: "{colors.neutral.150}" } },
+          disabled: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.800}" } },
+        },
+        border: {
+          rest: { value: { base: "{colors.neutral.1000}", _dark: "{colors.neutral.0}" } },
+          hover: { value: { base: "{colors.neutral.900}", _dark: "{colors.neutral.0}" } },
+          active: { value: { base: "{colors.neutral.900}", _dark: "{colors.neutral.0}" } },
+          disabled: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.800}" } },
+        },
+        fg: {
+          rest: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.900}" } },
+          disabled: { value: { base: "{colors.neutral.300}", _dark: "{colors.neutral.600}" } },
+        },
+      },
+      ghost: {
+        bg: {
+          rest: { value: "transparent" },
+          hover: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+          active: { value: { base: "{colors.neutral.75}", _dark: "{colors.neutral.800}" } },
+          disabled: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+        },
+        border: {
+          rest: { value: "transparent" },
+          hover: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+          active: { value: { base: "{colors.neutral.75}", _dark: "{colors.neutral.800}" } },
+          disabled: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+        },
+        fg: {
+          rest: { value: { base: "{colors.neutral.900}", _dark: "{colors.neutral.25}" } },
+          disabled: { value: { base: "{colors.neutral.400}", _dark: "{colors.neutral.600}" } },
+        },
+      },
+      danger: {
+        bg: {
+          rest: { value: { base: "{colors.neutral.25}", _dark: "{colors.neutral.850}" } },
+          hover: { value: { base: "{colors.danger.500}", _dark: "{colors.danger-dark.600}" } },
+          active: { value: { base: "{colors.danger.600}", _dark: "{colors.danger-dark.500}" } },
+          disabled: { value: { base: "{colors.neutral.50}", _dark: "{colors.neutral.850}" } },
+        },
+        border: {
+          rest: { value: { base: "{colors.neutral.200}", _dark: "{colors.neutral.700}" } },
+          hover: { value: { base: "{colors.danger.600}", _dark: "{colors.danger-dark.500}" } },
+          active: { value: { base: "{colors.danger.600}", _dark: "{colors.danger-dark.500}" } },
+          disabled: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.800}" } },
+        },
+        fg: {
+          rest: { value: { base: "{colors.danger.500}", _dark: "{colors.danger-dark.500}" } },
+          hover: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.0}" } },
+          active: { value: { base: "{colors.neutral.0}", _dark: "{colors.neutral.0}" } },
+          disabled: { value: { base: "{colors.danger.200}", _dark: "{colors.danger-dark.700}" } },
+        },
+      },
+    },
+    special: {
+      dotBg: { value: { base: "{colors.neutral.100}", _dark: "{colors.neutral.800}" } },
+      glassMorph: {
+        value: {
+          base: "hsla(214.3, 7%, 58%, 10%)",
+          _dark: "hsla(214.3, 7%, 58%, 10%)",
+        },
+      },
+      translucentHover: {
+        value: {
+          base: "hsla(214.3, 14.3%, 9.6%, 6%)",
+          _dark: "hsla(217.5, 25%, 93.7%, 8%)",
+        },
+      },
+      noteBlock: {
+        bg: { value: { base: "#FFE597", _dark: "#CFBD7C" } },
+        border: { value: { base: "#FCDE83", _dark: "#E4C977" } },
+        borderHighlight: { value: { base: "#F2CC5A", _dark: "#F3C743" } },
+      },
+    },
+  },
+
+  shadows: {
+    l1: { value: { base: "{shadows.light1}", _dark: "{shadows.dark1}" } },
+    newL1: { value: { base: "{shadows.newLight1}", _dark: "{shadows.newDark1}" } },
+    newL2: { value: { base: "{shadows.newLight2}", _dark: "{shadows.newDark2}" } },
+    l2: { value: { base: "{shadows.light2}", _dark: "{shadows.dark2}" } },
+    l3: { value: { base: "{shadows.light3}", _dark: "{shadows.dark3}" } },
+    l4: { value: { base: "{shadows.light4}", _dark: "{shadows.dark4}" } },
+    l5: { value: { base: "{shadows.light5}", _dark: "{shadows.dark5}" } },
+
+    focus: { value: { base: "{shadows.lightFocus}", _dark: "{shadows.darkFocus}" } },
+    inset: { value: { base: "inset 0px 1px 0px 0px rgba(0, 0, 0, 0.3)", _dark: "none" } },
+    neutralFocus: { value: { base: "{shadows.blackFocus}", _dark: "{shadows.whiteFocus}" } },
+
+    solid: {
+      value: {
+        base: "{shadows.lightSolid}",
+        _dark: "{shadows.darkSolid}",
+      },
+    },
+
+    antimetal: {
+      value: {
+        base: "0 24px 24px -12px hsla(216, 15%, 20%, 0.04), 0 12px 12px -6px hsla(216, 15%, 20%, 0.04), 0 6px 6px -3px hsla(216, 15%, 20%, 0.04), 0 3px 3px -1.5px hsla(216, 15%, 20%, 0.04), 0 1px 1px -0.5px hsla(216, 15%, 20%, 0.04)",
+        _dark:
+          "0 24px 24px -12px hsla(216, 15%, 20%, 0.04), 0 12px 12px -6px hsla(216, 15%, 20%, 0.04), 0 6px 6px -3px hsla(216, 15%, 20%, 0.04), 0 3px 3px -1.5px hsla(216, 15%, 20%, 0.04), 0 1px 1px -0.5px hsla(216, 15%, 20%, 0.04)",
+      },
+    },
+  },
+});

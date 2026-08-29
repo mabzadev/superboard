@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@superboard/contracts": "*",
+    "@superboard/contracts": "workspace:*",
     "hono": "^4.11.9",
     "jose": "^6.2.2"
   },

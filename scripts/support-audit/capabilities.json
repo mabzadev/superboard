@@ -1,0 +1,333 @@
+{
+  "schema_version": 2,
+  "internal_only": true,
+  "reference": {
+    "repository": "mabzadev/openchat",
+    "commit": "0ea73ad7191d6da480b728621774ca1ead53d2bb",
+    "route_method_count": 758,
+    "canonical_route_sha256": "4859034e692ee2164ba94a51386860b24983b4250495b5bf9927d405f32478aa",
+    "routes_source_sha256": "f75b25ec64dbe3464109820379c427063c3e834bdf4ce9a4ac2fd493ec6207ba"
+  },
+  "capabilities": [
+    {
+      "id": "inbox-conversations",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/conversation-room.ts", "workers/support/src/index.ts"],
+        "persistence": ["workers/support/migrations/0001_support.sql", "workers/support/migrations/0007_message_attachments.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportInboxPage.tsx", "packages/contracts/src/support.ts"],
+        "tests": [
+          {
+            "file": "workers/support/runtime-tests/support.runtime.test.ts",
+            "runner": "vitest-workers",
+            "behavior_tokens": [
+              "persists isolated conversations and replays idempotent mutations",
+              "expect(replay.headers.get(\"idempotency-replayed\")).toBe(\"true\")",
+              "data: [{ id: created.data.id, project_id: 12 }]"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "contacts-companies",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/index.ts", "workers/support/src/native.ts"],
+        "persistence": ["workers/support/migrations/0003_support_operations.sql", "workers/support/migrations/0011_support_relations.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportContactsPage.tsx"],
+        "tests": [
+          {
+            "file": "workers/support/runtime-tests/support.runtime.test.ts",
+            "runner": "vitest-workers",
+            "behavior_tokens": [
+              "manages contacts and companies with bounded cursor pagination and project isolation",
+              "/internal/v1/projects/12/contacts?q=Cursor&limit=2",
+              "data: { deleted: true, detached_contacts: 3 }"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "workforce",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/native.ts"],
+        "persistence": ["workers/support/migrations/0010_support_workforce.sql"],
+        "asynchronous": ["workers/support/src/workflows.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportWorkforcePage.tsx"],
+        "tests": [
+          {
+            "file": "workers/support/runtime-tests/service-levels.runtime.test.ts",
+            "runner": "vitest-workers",
+            "behavior_tokens": [
+              "balances by utilization while enforcing inbox, team, presence, leave, and capacity",
+              "reason: \"balanced_selected\"",
+              "selected_user_id: \"balanced-b\""
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "automations-sla",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/workflows.ts", "workers/support/src/native.ts"],
+        "persistence": ["workers/support/migrations/0013_support_automation_sla.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts", "workers/support/src/index.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportAutomationsPage.tsx"],
+        "tests": [
+          {
+            "file": "workers/support/src/workflows.test.ts",
+            "runner": "vitest-support",
+            "behavior_tokens": [
+              "accepts bounded nested condition groups and native actions",
+              "{ type: \"assign_team\", value: \"billing\" }",
+              "workflow_action_invalid"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "channels-providers",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/providers.ts", "workers/support/src/webhooks.ts"],
+        "persistence": ["workers/support/migrations/0012_support_providers.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportChannelsPage.tsx"],
+        "tests": [
+          {
+            "file": "workers/support/src/providers.test.ts",
+            "runner": "vitest-support",
+            "behavior_tokens": [
+              "verifies a native Meta signature before persisting and enqueueing",
+              "x-hub-signature-256",
+              "support.provider.event.received.v1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "integrations",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/native.ts", "workers/support/src/webhooks.ts"],
+        "persistence": ["workers/support/migrations/0012_support_providers.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportIntegrationsPage.tsx"],
+        "tests": [
+          {
+            "file": "apps/dashboard/src/components/modules/__tests__/SupportIntegrationsPage.test.tsx",
+            "runner": "vitest-dashboard",
+            "behavior_tokens": [
+              "creates then configures an HTTPS webhook and clears its secret",
+              "https://hooks.example.com/incidents",
+              "expect(signingSecret).toHaveValue(\"\")"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "proactive-support",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/native.ts"],
+        "persistence": ["workers/support/migrations/0014_support_proactive_notifications.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts", "workers/support/src/index.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportProactivePage.tsx"],
+        "tests": [
+          {
+            "file": "workers/support/runtime-tests/support.runtime.test.ts",
+            "runner": "vitest-workers",
+            "behavior_tokens": [
+              "dispatches proactive Support idempotently and applies provider acknowledgements",
+              "type: \"support.campaign.dispatch.v1\"",
+              "campaign_deliveries: 1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "help-center",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/native.ts", "workers/support/src/index.ts"],
+        "persistence": ["workers/support/migrations/0015_support_help_center.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportHelpCenterPage.tsx", "sdks/flutter/lib/src/support/client.dart"],
+        "tests": [
+          {
+            "file": "apps/dashboard/src/api/support/__tests__/nativeServices.test.ts",
+            "runner": "vitest-dashboard",
+            "behavior_tokens": [
+              "connects proactive, Help Center and Captain actions to their native endpoints",
+              "/api/v1/support/projects/project-1/help-center/articles/article%2F1/publish",
+              "await publishSupportArticle(\"project-1\", \"article/1\")"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "captain",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/native.ts", "workers/support/src/webhooks.ts"],
+        "persistence": ["workers/support/migrations/0016_support_captain_reporting.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportCaptainPage.tsx"],
+        "tests": [
+          {
+            "file": "apps/dashboard/src/api/support/__tests__/nativeServices.test.ts",
+            "runner": "vitest-dashboard",
+            "behavior_tokens": [
+              "connects proactive, Help Center and Captain actions to their native endpoints",
+              "/api/v1/support/projects/project-1/captain/tasks",
+              "task_type: \"summarize\""
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "notifications",
+      "disposition": "delegated",
+      "authority": "SuperBoard API Notifications",
+      "reason": "Support owns notification business events while the shared API owns browser and push transport.",
+      "contract": ["packages/contracts/src/support-notifications.ts", "workers/support/src/notifications.ts", "workers/api/src/routes/push.ts", "workers/api/src/routes/sdk.ts"],
+      "tests": ["packages/contracts/src/support-notifications.test.ts", "workers/support/src/notifications.test.ts", "workers/api/src/routes/push-support.test.ts"]
+    },
+    {
+      "id": "email-transport",
+      "disposition": "delegated",
+      "authority": "SuperBoard Email",
+      "reason": "Support owns conversations and delegates transactional and SMTP transport through an authenticated internal contract.",
+      "contract": ["packages/contracts/src/email.ts", "workers/email/src/index.ts"],
+      "tests": ["packages/contracts/src/email.test.ts", "workers/email/src/inbound.test.ts", "workers/api/src/lib/support-gateway.test.ts"]
+    },
+    {
+      "id": "identity-access",
+      "disposition": "delegated",
+      "authority": "SuperBoard Identity",
+      "reason": "Identity authenticates owners, administrators and members; Support resolves its own active agent membership and role.",
+      "contract": ["packages/contracts/src/project-context.ts", "workers/support/src/access.ts"],
+      "tests": ["workers/support/src/access.test.ts"]
+    },
+    {
+      "id": "grow-administration",
+      "disposition": "delegated",
+      "authority": "Grow Dashboard and SuperBoard API",
+      "reason": "Account, installation, custom-domain and global administration belong to Grow and the central API rather than Support.",
+      "contract": ["apps/dashboard/src/config/navigation.ts", "workers/api/src/routes/admin.ts"],
+      "tests": ["apps/dashboard/src/config/__tests__/navigation.test.ts", "workers/api/src/index.test.ts"]
+    },
+    {
+      "id": "attachments",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/conversation-room.ts", "workers/support/src/validation.ts"],
+        "persistence": ["workers/support/migrations/0007_message_attachments.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["packages/contracts/src/support.ts", "sdks/flutter/lib/src/support/models.dart"],
+        "tests": [
+          {
+            "file": "workers/support/runtime-tests/support.runtime.test.ts",
+            "runner": "vitest-workers",
+            "behavior_tokens": [
+              "persists messages and accepts hibernatable WebSockets in the conversation Durable Object",
+              "expect(attachmentPayload.data.attachments).toHaveLength(1)",
+              "await expect(download.text()).resolves.toBe(\"attachment proof\")"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "widget-client",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/index.ts", "workers/api/src/lib/support-gateway.ts"],
+        "persistence": ["workers/support/migrations/0017_support_client_runtime.sql"],
+        "asynchronous": ["workers/support/src/conversation-room.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["sdks/flutter/lib/src/support/client.dart", "sdks/flutterflow/lib/src/support/actions.dart"],
+        "tests": [
+          {
+            "file": "workers/support/src/widget-auth.test.ts",
+            "runner": "vitest-support",
+            "behavior_tokens": [
+              "binds the signature to body, method, public path, project, visitor, and idempotency key",
+              "x-superboard-widget-signature",
+              "code: \"widget_identity_invalid\", status: 401"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "operations-reporting",
+      "disposition": "implemented",
+      "authority": "SuperBoard Support",
+      "dimensions": {
+        "behavior": ["workers/support/src/native.ts"],
+        "persistence": ["workers/support/migrations/0016_support_captain_reporting.sql"],
+        "asynchronous": ["workers/support/src/webhooks.ts"],
+        "rbac": ["workers/support/src/access.ts"],
+        "interface": ["apps/dashboard/src/components/modules/SupportReportsPage.tsx", "apps/dashboard/src/components/modules/SupportSettingsPage.tsx"],
+        "tests": [
+          {
+            "file": "apps/dashboard/src/api/support/__tests__/nativeServices.test.ts",
+            "runner": "vitest-dashboard",
+            "behavior_tokens": [
+              "connects filtered reports, exports and operations diagnostics",
+              "/api/v1/support/projects/project-1/reports/exports",
+              "/api/v1/support/projects/project-1/settings/operations"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "framework-internal",
+      "disposition": "excluded",
+      "authority": "Internal audit only",
+      "reason": "Framework preview, debug, development mailbox and storage implementation routes are not Support product capabilities."
+    },
+    {
+      "id": "marketing-and-billing",
+      "disposition": "excluded",
+      "authority": "SuperBoard Marketing and Billing",
+      "reason": "Marketing consent, promotional delivery, newsletters, attribution and billing are outside the Support authority boundary."
+    }
+  ]
+}

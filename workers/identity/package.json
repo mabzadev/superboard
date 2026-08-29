@@ -14,7 +14,7 @@
     "@melody-auth/shared": "^1.0.12",
     "@simplewebauthn/browser": "^13.2.2",
     "@simplewebauthn/server": "^13.2.2",
-    "@superboard/contracts": "*",
+    "@superboard/contracts": "workspace:*",
     "@xmldom/xmldom": "^0.9.11",
     "base32-decode": "^1.0.0",
     "base32-encode": "^2.0.0",

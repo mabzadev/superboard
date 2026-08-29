@@ -84,6 +84,7 @@ export function requiredSecretInventory(target, environment) {
     "OBSERVABILITY_INTERNAL_TOKEN",
     "STORE_CREDENTIALS_ACTIVE_KEY_VERSION",
   ];
+  if (target.features?.flows) api.push("FLOWS_INTERNAL_TOKEN");
   if (target.customWorker) api.push("CUSTOM_WORKER_TOKEN");
   const apiAlternatives = [BILLING_KEY_ALTERNATIVE];
   if (target.features?.billing && resources.billingExecutionMode === "local") {
@@ -101,7 +102,10 @@ export function requiredSecretInventory(target, environment) {
   add(
     "email",
     target.mail.transport === "capture"
-      ? ["EMAIL_INTERNAL_TOKEN", "MAIL_PREVIEW_TOKEN"]
+      ? [
+          "EMAIL_INTERNAL_TOKEN",
+          "MAIL_PREVIEW_TOKEN",
+        ]
       : target.mail.provider === "aws-ses"
         ? [
             "EMAIL_INTERNAL_TOKEN",
@@ -287,12 +291,29 @@ export function secretCoordinationPlan(target, environment) {
         "INTERNAL_API_TOKEN",
         "INTERNAL_API_TOKEN_PREVIOUS",
       ),
-      ...DOMAIN_SERVICES.map((service) =>
-        exactMember(
-          service,
-          "INTERNAL_API_TOKEN",
-          "INTERNAL_API_TOKEN_PREVIOUS",
-        ),
+      ...DOMAIN_SERVICES.filter((service) => service !== "flows").map(
+        (service) =>
+          exactMember(
+            service,
+            "INTERNAL_API_TOKEN",
+            "INTERNAL_API_TOKEN_PREVIOUS",
+          ),
+      ),
+    ],
+  });
+  addContract({
+    id: "flows-internal-token",
+    scope: "platform-common",
+    source: "generated-flows-dedicated-random",
+    sameValueRequired: true,
+    rotation:
+      "add-dedicated-api-token-after-flows-accepts-the-new-active-and-old-previous-values",
+    members: [
+      exactMember("api", "FLOWS_INTERNAL_TOKEN"),
+      exactMember(
+        "flows",
+        "INTERNAL_API_TOKEN",
+        "INTERNAL_API_TOKEN_PREVIOUS",
       ),
     ],
   });
@@ -310,6 +331,7 @@ export function secretCoordinationPlan(target, environment) {
         "EMAIL_INTERNAL_TOKEN_PREVIOUS",
       ),
       exactMember("identity", "EMAIL_INTERNAL_TOKEN"),
+      exactMember("support", "EMAIL_INTERNAL_TOKEN"),
       exactMember("analytics", "EMAIL_INTERNAL_TOKEN"),
       exactMember("marketing", "EMAIL_INTERNAL_TOKEN"),
     ],

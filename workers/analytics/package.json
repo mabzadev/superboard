@@ -13,7 +13,7 @@
     "types": "node ../../scripts/cloudflare-types.mjs --service analytics --reference --allow-unprovisioned"
   },
   "dependencies": {
-    "@superboard/contracts": "*",
+    "@superboard/contracts": "workspace:*",
     "hono": "^4.13.1"
   },
   "devDependencies": {

@@ -8,6 +8,9 @@ import {
 } from "@superboard/contracts/project-context";
 import type { Env } from "../types";
 import { getAuthContext } from "./auth";
+import { flowsInternalToken } from "./flows-internal-auth";
+import { isFlowsLegacyCutoverEnabled } from "./flows-cutover-state";
+import { readJsonObjectLimited } from "./http-limits";
 
 export const DOMAIN_MODULES = {
   app: "APP_MODULE",
@@ -18,16 +21,46 @@ export const DOMAIN_MODULES = {
   analytics: "ANALYTICS_MODULE",
   marketing: "MARKETING_MODULE",
   onboardings: "ONBOARDINGS_MODULE",
+  flows: "FLOWS_MODULE",
 } as const;
 
 export type DomainModuleBinding = (typeof DOMAIN_MODULES)[DomainModuleName];
+export type LegacyDomainModuleName = "paywalls" | "onboardings";
+
+export const PUBLIC_FLOWS_SDK_ROUTES = Object.freeze([
+  {
+    method: "POST",
+    publicPath: "/api/v1/flows/v2/sdk/blocks",
+    internalPath: "/v2/sdk/blocks",
+  },
+  {
+    method: "POST",
+    publicPath: "/api/v1/flows/v2/sdk/workflows",
+    internalPath: "/v2/sdk/workflows",
+  },
+  {
+    method: "POST",
+    publicPath: "/api/v1/flows/v2/sdk/events",
+    internalPath: "/v2/sdk/events",
+  },
+  {
+    method: "POST",
+    publicPath: "/api/v1/flows/v2/sdk/survey",
+    internalPath: "/v2/sdk/survey",
+  },
+  {
+    method: "GET",
+    publicPath: "/api/v1/flows/ws/sdk/block-updates",
+    internalPath: "/ws/sdk/block-updates",
+  },
+]);
 
 export const DOMAIN_SDK_ROUTES = Object.freeze([
   sdkRoute("app", "/runtime-policy", "/runtime-policy/resolve", false),
   sdkRoute("app", "/events", "/customer-events", true),
   sdkRoute("products", "/offerings/resolve", "/offerings/resolve", false),
-  sdkRoute("paywalls", "/resolve", "/placements/resolve", false),
-  sdkRoute("paywalls", "/events", "/events", true),
+  legacySdkRoute("paywalls", "/resolve", "/placements/resolve", false),
+  legacySdkRoute("paywalls", "/events", "/events", true),
   sdkRoute("analytics", "/events", "/events", true),
   sdkRoute(
     "analytics",
@@ -35,8 +68,8 @@ export const DOMAIN_SDK_ROUTES = Object.freeze([
     "/remote-config/resolve",
     false,
   ),
-  sdkRoute("onboardings", "/resolve", "/placements/resolve", false),
-  sdkRoute("onboardings", "/events", "/events", true),
+  legacySdkRoute("onboardings", "/resolve", "/placements/resolve", false),
+  legacySdkRoute("onboardings", "/events", "/events", true),
 ]);
 
 export interface DomainSdkRoute {
@@ -45,9 +78,12 @@ export interface DomainSdkRoute {
   publicPath: string;
   internalPath: string;
   requiresIdempotency: boolean;
+  legacyModuleName?: LegacyDomainModuleName;
+  flowsInternalPath?: string;
 }
 
 export interface DomainErrorBody {
+  message: string;
   error: {
     code: string;
     message: string;
@@ -96,11 +132,58 @@ export async function proxyDomainModule(
   }
 }
 
+/**
+ * Keep legacy dashboard contracts alive without keeping their Workers active.
+ * MBZA forwards these routes to Flows; a target such as VocoStar that has not
+ * cut over yet keeps using its original service binding.
+ */
+export async function proxyLegacyDomainModule(
+  c: GatewayContext,
+  legacyModuleName: LegacyDomainModuleName,
+): Promise<Response> {
+  const requestId = requestIdFrom(c.req.raw);
+  try {
+    return await proxyDomainModuleRequest(
+      c,
+      legacyModuleName,
+      DOMAIN_MODULES[legacyModuleName],
+      requestId,
+      {
+        publicModuleName: legacyModuleName,
+        internalPrefix: "/internal/v1",
+        legacyModuleName,
+      },
+    );
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "legacy_domain_module_gateway_failed",
+        module: legacyModuleName,
+        legacy_module: legacyModuleName,
+        request_id: requestId,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return domainError(
+      requestId,
+      500,
+      "gateway_internal_error",
+      "The module gateway could not process the request",
+      { retryable: true },
+    );
+  }
+}
+
 async function proxyDomainModuleRequest(
   c: GatewayContext,
   moduleName: DomainModuleName,
   bindingName: DomainModuleBinding,
   requestId: string,
+  options: {
+    publicModuleName?: DomainModuleName;
+    internalPrefix?: string;
+    legacyModuleName?: LegacyDomainModuleName;
+  } = {},
 ): Promise<Response> {
   const auth = await getAuthContext(c.env, c.req.header("Authorization"));
   if (!auth) {
@@ -112,12 +195,20 @@ async function proxyDomainModuleRequest(
     );
   }
 
-  const route = extractDomainRoute(c.req.raw, moduleName);
+  const route = extractDomainRoute(
+    c.req.raw,
+    options.publicModuleName ?? moduleName,
+    options.internalPrefix,
+  );
   if (!route.ok) {
     return domainError(requestId, route.status, route.code, route.message, {
       details: route.details,
     });
   }
+  let internalPath =
+    moduleName === "flows" && options.publicModuleName === undefined
+      ? `/internal/v1/projects/${route.projectRef}${route.internalPath.slice("/internal/v1".length)}`
+      : route.internalPath;
 
   if (isMutatingRequest(c.req.raw)) {
     const error = validateIdempotencyKey(c.req.raw, requestId);
@@ -138,6 +229,18 @@ async function proxyDomainModuleRequest(
     );
   }
 
+  let selectedModuleName = moduleName;
+  let selectedBindingName = bindingName;
+  if (
+    options.legacyModuleName &&
+    c.env.FLOWS_MODULE &&
+    (await isFlowsLegacyCutoverEnabled(c.env.DB, project.context.projectId))
+  ) {
+    selectedModuleName = "flows";
+    selectedBindingName = "FLOWS_MODULE";
+    internalPath = `/internal/v1/legacy/${options.legacyModuleName}${route.internalPath.slice("/internal/v1".length)}`;
+  }
+
   if (
     isMutatingRequest(c.req.raw) &&
     (await isProjectReadOnly(c.env.DB, project.context.projectId))
@@ -153,10 +256,10 @@ async function proxyDomainModuleRequest(
 
   return forwardDomainRequest(
     c,
-    moduleName,
-    bindingName,
+    selectedModuleName,
+    selectedBindingName,
     requestId,
-    route.internalPath,
+    internalPath,
     {
       ...project.context,
       actorId: auth.userId,
@@ -179,6 +282,18 @@ export async function proxyDomainSdkModule(
         resolved.message,
       );
     }
+    const useFlows = Boolean(
+      route.legacyModuleName &&
+      c.env.FLOWS_MODULE &&
+      (await isFlowsLegacyCutoverEnabled(c.env.DB, resolved.context.projectId))
+    );
+    const moduleName: DomainModuleName = useFlows ? "flows" : route.moduleName;
+    const bindingName: DomainModuleBinding = useFlows
+      ? "FLOWS_MODULE"
+      : route.bindingName;
+    const internalPath = useFlows
+      ? route.flowsInternalPath ?? route.internalPath
+      : route.internalPath;
     if (route.requiresIdempotency) {
       const error = validateIdempotencyKey(c.req.raw, requestId);
       if (error) return error;
@@ -197,10 +312,10 @@ export async function proxyDomainSdkModule(
     }
     return forwardDomainRequest(
       c,
-      route.moduleName,
-      route.bindingName,
+      moduleName,
+      bindingName,
       requestId,
-      route.internalPath,
+      internalPath,
       {
         ...resolved.context,
         actorId: 0,
@@ -211,7 +326,7 @@ export async function proxyDomainSdkModule(
     console.error(
       JSON.stringify({
         event: "domain_module_sdk_gateway_failed",
-        module: route.moduleName,
+        module: route.legacyModuleName ?? route.moduleName,
         request_id: requestId,
         error: error instanceof Error ? error.message : String(error),
       }),
@@ -223,6 +338,110 @@ export async function proxyDomainSdkModule(
       "The module SDK gateway could not process the request",
       { retryable: true },
     );
+  }
+}
+
+/**
+ * The public Flows SDK authenticates with its project/environment contract in
+ * the Flows Worker, not with a Dashboard bearer session. The API
+ * gateway therefore streams the request unchanged to the private binding and
+ * preserves WebSocket upgrades.
+ */
+export async function proxyPublicFlows(
+  c: GatewayContext,
+  internalPath: string,
+): Promise<Response> {
+  const requestId = requestIdFrom(c.req.raw);
+  if (!c.env.FLOWS_MODULE) {
+    return flowsPublicError(
+      requestId,
+      503,
+      "module_unavailable",
+      "Flows service is unavailable",
+      true,
+    );
+  }
+  try {
+    const removedContext = await removedFlowsOrganizationContext(c.req.raw);
+    if (removedContext) {
+      return flowsPublicError(
+        requestId,
+        422,
+        "flows_project_context_required",
+        "Flows SDK requests must use projectId/project_id",
+        false,
+      );
+    }
+    const source = new URL(c.req.url);
+    const target = new URL(`https://flows.internal${internalPath}`);
+    target.search = source.search;
+    const headers = publicFlowsHeaders(c.req.raw.headers, requestId);
+    const forwarded = new Request(new Request(target, c.req.raw), { headers });
+    const response = await c.env.FLOWS_MODULE.fetch(forwarded);
+    const responseHeaders = new Headers(response.headers);
+    responseHeaders.set("X-Request-Id", requestId);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+      webSocket: response.webSocket,
+    });
+  } catch (error) {
+    const failure = error as { status?: number; code?: string; message?: string };
+    if (failure.status === 413) {
+      return flowsPublicError(
+        requestId,
+        413,
+        failure.code ?? "body_too_large",
+        failure.message ?? "Flows SDK request is too large",
+        false,
+      );
+    }
+    console.error(
+      JSON.stringify({
+        event: "flows_public_proxy_failed",
+        request_id: requestId,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return flowsPublicError(
+      requestId,
+      502,
+      "module_request_failed",
+      "Flows service request failed",
+      true,
+    );
+  }
+}
+
+async function removedFlowsOrganizationContext(
+  request: Request,
+): Promise<boolean> {
+  const normalized = (value: string) => value
+    .toLowerCase()
+    .replaceAll("-", "")
+    .replaceAll("_", "");
+  const url = new URL(request.url);
+  if ([...url.searchParams.keys()].some((key) => normalized(key) === "organizationid")) {
+    return true;
+  }
+  if ([...request.headers.keys()].some((key) => normalized(key) === "xflowsorganizationid")) {
+    return true;
+  }
+  if (["GET", "HEAD"].includes(request.method)) return false;
+  if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) {
+    return false;
+  }
+  try {
+    const payload = await readJsonObjectLimited(
+      request.clone(),
+      1024 * 1024,
+      "Flows SDK request is too large",
+    );
+    return Object.keys(payload).some((key) => normalized(key) === "organizationid");
+  } catch (error) {
+    if ((error as { status?: number }).status === 413) throw error;
+    return false;
   }
 }
 
@@ -289,15 +508,24 @@ export async function proxyPublicSupport(
     const source = new URL(c.req.url);
     const target = new URL(`https://support.internal${internalPath}`);
     target.search = source.search;
-    const response = await c.env.SUPPORT_MODULE.fetch(
-      new Request(target, c.req.raw),
-    );
-    const headers = new Headers(response.headers);
-    headers.set("X-Request-Id", requestId);
+    const headers = new Headers(c.req.raw.headers);
+    const canonicalProject = headers.get("x-superboard-project-id");
+    if (canonicalProject && !headers.has("x-opengrow-project-id")) {
+      headers.set("x-opengrow-project-id", canonicalProject);
+    }
+    headers.set("x-request-id", requestId);
+    const forwarded = new Request(target, {
+      method: c.req.method,
+      headers,
+      body: ["GET", "HEAD"].includes(c.req.method) ? null : c.req.raw.body,
+    });
+    const response = await c.env.SUPPORT_MODULE.fetch(forwarded);
+    const responseHeaders = new Headers(response.headers);
+    responseHeaders.set("X-Request-Id", requestId);
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers,
+      headers: responseHeaders,
       webSocket: response.webSocket,
     });
   } catch (error) {
@@ -334,7 +562,7 @@ export async function isProjectReadOnly(
   return Number(row?.enabled ?? 0) === 1;
 }
 
-async function forwardDomainRequest(
+export async function forwardDomainRequest(
   c: GatewayContext,
   moduleName: DomainModuleName,
   bindingName: DomainModuleBinding,
@@ -352,7 +580,10 @@ async function forwardDomainRequest(
       { retryable: true },
     );
   }
-  const internalToken = c.env.MODULE_INTERNAL_TOKEN?.trim();
+  const internalToken =
+    moduleName === "flows"
+      ? flowsInternalToken(c.env)
+      : c.env.MODULE_INTERNAL_TOKEN?.trim();
   if (!internalToken) {
     return domainError(
       requestId,
@@ -395,6 +626,7 @@ async function forwardDomainRequest(
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
+      webSocket: response.webSocket,
     });
   } catch (error) {
     console.error(
@@ -558,6 +790,7 @@ export async function resolveSdkProjectContext(
 export function extractDomainRoute(
   request: Request,
   moduleName: DomainModuleName,
+  internalPrefix = "/internal/v1",
 ):
   | { ok: true; projectRef: string; internalPath: string }
   | {
@@ -626,8 +859,8 @@ export function extractDomainRoute(
     projectRef,
     internalPath:
       resourceSegments.length === 0
-        ? "/internal/v1"
-        : `/internal/v1/${resourceSegments.join("/")}`,
+        ? internalPrefix
+        : `${internalPrefix}/${resourceSegments.join("/")}`,
   };
 }
 
@@ -734,6 +967,7 @@ export function domainError(
   } = {},
 ): Response {
   const body: DomainErrorBody = {
+    message,
     error: {
       code,
       message,
@@ -808,7 +1042,16 @@ function isMutatingRequest(request: Request): boolean {
 }
 
 export function isDomainSdkRoutePath(pathname: string): boolean {
-  return DOMAIN_SDK_ROUTES.some((route) => route.publicPath === pathname);
+  return (
+    DOMAIN_SDK_ROUTES.some((route) => route.publicPath === pathname) ||
+    PUBLIC_FLOWS_SDK_ROUTES.some((route) => route.publicPath === pathname)
+  );
+}
+
+export function isPublicFlowsSdkRoutePath(pathname: string): boolean {
+  return PUBLIC_FLOWS_SDK_ROUTES.some(
+    (route) => route.publicPath === pathname,
+  );
 }
 
 function sdkRoute(
@@ -824,6 +1067,75 @@ function sdkRoute(
     internalPath: `/internal/v1${internalSuffix}`,
     requiresIdempotency,
   });
+}
+
+function legacySdkRoute(
+  moduleName: LegacyDomainModuleName,
+  publicSuffix: string,
+  internalSuffix: string,
+  requiresIdempotency: boolean,
+): DomainSdkRoute {
+  return Object.freeze({
+    ...sdkRoute(
+      moduleName,
+      publicSuffix,
+      internalSuffix,
+      requiresIdempotency,
+    ),
+    legacyModuleName: moduleName,
+    flowsInternalPath: `/internal/v1/legacy/${moduleName}${internalSuffix}`,
+  });
+}
+
+function publicFlowsHeaders(source: Headers, requestId: string): Headers {
+  const headers = new Headers(source);
+  for (const name of [
+    "Authorization",
+    "Cookie",
+    "Host",
+    "X-Internal-Token",
+    "X-Project-Id",
+    "X-Project-Ref",
+    "X-Instance-Id",
+    "X-Environment",
+    "X-Actor-Id",
+    "X-Role",
+    "X-Context-Issued-At",
+    "X-Context-Version",
+    "X-Context-Signature",
+  ]) {
+    headers.delete(name);
+  }
+  headers.set("X-Request-Id", requestId);
+  return headers;
+}
+
+function flowsPublicError(
+  requestId: string,
+  status: number,
+  code: string,
+  message: string,
+  retryable: boolean,
+): Response {
+  return Response.json(
+    {
+      message,
+      error: {
+        code,
+        message,
+        status,
+        request_id: requestId,
+        retryable,
+      },
+    },
+    {
+      status,
+      headers: {
+        "Cache-Control": "no-store",
+        "X-Request-Id": requestId,
+      },
+    },
+  );
 }
 
 function validateIdempotencyKey(

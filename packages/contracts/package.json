@@ -15,6 +15,10 @@
     "./request-body": "./src/request-body.ts",
     "./url-security": "./src/url-security.ts",
     "./dead-letter": "./src/dead-letter.ts",
-    "./analytics": "./src/analytics.ts"
+    "./analytics": "./src/analytics.ts",
+    "./flows": "./src/flows.ts",
+    "./support": "./src/support.ts",
+    "./support-notifications": "./src/support-notifications.ts",
+    "./fixtures/support/v1.json": "./fixtures/support/v1.json"
   }
 }

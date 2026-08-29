@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@superboard/contracts": "*"
+    "@superboard/contracts": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260808.1",

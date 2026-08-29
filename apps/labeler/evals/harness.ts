@@ -14,6 +14,7 @@ import type {
 	ModerationModelIdentity,
 	TextModerationAdapter,
 } from "../src/ai/types.js";
+import { toOwnedArrayBuffer } from "../src/bytes.js";
 import { buildCanonicalAssessmentInput } from "../src/assessment/canonical.js";
 import { checkModerationLinks } from "../src/assessment/links.js";
 import { createGuardedMediaAcquirer } from "../src/assessment/media.js";
@@ -442,7 +443,7 @@ async function acquireCanonicalImageFixture(
 					throw new Error("eval attempted to fetch a non-display resource");
 				}
 				return {
-					response: new Response(assetBytes, {
+					response: new Response(toOwnedArrayBuffer(assetBytes), {
 						headers: { "content-type": fixture.input.mimeType },
 					}),
 					connectedAddress: "8.8.8.8",

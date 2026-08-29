@@ -688,6 +688,16 @@ Après une modification de bibliothèque :
    tous deux publiés, GitHub vérifie leurs tags/releases et ouvre une PR unique
    qui épingle les deux dépendances immuables dans `apps/reference`.
 
+Un package nouveau suit d'abord l'état `unreleased`. Il déclare sa version
+source et sa cible de publication, mais aucun `latestReleaseVersion`,
+`releaseRef`, `releaseSha` ou extrait d'installation : ces valeurs n'existent
+qu'après la première publication réussie. Les quatre SDK publics Flows
+(`flows-js`, `flows-react`, `flows-js-components` et
+`flows-react-components`) utilisent cette règle avec une cible npm publique.
+`flows-shared` et `flows-styles` restent des workspaces privés `internal` : ils
+sont inventoriés, versionnés et contrôlés, mais ne prétendent pas être des
+paquets installables indépendamment.
+
 Le Dashboard `/app/libraries` est une vue de cet état Git. Il n'accepte ni
 édition directe du code ni jeton de dépôt. Les écrans de configuration SDK ne
 stockent que des références opaques `secret://`, `provider://` ou

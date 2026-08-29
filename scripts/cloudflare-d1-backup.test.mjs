@@ -15,7 +15,10 @@ import { targetWithoutResourceIds } from "./cloudflare-test-fixtures.mjs";
 test("D1 backups are protected, hashed and carry database ownership evidence", async () => {
   const directory = await mkdtemp(join(tmpdir(), "opengrow-d1-backup-"));
   try {
-    const { target } = await loadTarget("vocostar");
+    const { target: source } = await loadTarget("vocostar");
+    const target = structuredClone(source);
+    target.environments.production.moduleD1.support.id =
+      "13171470-dfb5-46ce-b047-c9b151c34ae2";
     const descriptor = d1Descriptor(target, "vocostar", "production", "support");
     const now = new Date("2026-08-08T10:20:30.000Z");
     const result = await createD1Backup({
@@ -26,7 +29,7 @@ test("D1 backups are protected, hashed and carry database ownership evidence", a
       execute: async ({ output }) => writeFile(output, "-- D1 export\nSELECT 1;\n"),
     });
     assert.equal(result.receipt.service, "support");
-    assert.equal(result.receipt.database.name, "opengrow-support-db");
+    assert.equal(result.receipt.database.name, "opengrow-support-v2-db");
     assert.equal(result.receipt.artifact.bytes, 23);
     assert.match(result.receipt.artifact.sha256, /^[a-f0-9]{64}$/u);
     assert.deepEqual(JSON.parse(await readFile(result.paths.receipt, "utf8")), result.receipt);

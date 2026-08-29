@@ -1,3 +1,5 @@
+import { toOwnedArrayBuffer } from "../bytes.js";
+
 import type { DisplayMediaDecoder, GuardedMediaTransport, MediaContentStore } from "./media.js";
 
 const HEADER_END = new Uint8Array([13, 10, 13, 10]);
@@ -57,7 +59,7 @@ export function createWorkersSocketPinnedTransport(connect: SocketConnect): Guar
 					await secureSocket.close().catch(() => undefined);
 					const parsed = parsePinnedHttpResponse(bytes);
 					return {
-						response: new Response(parsed.body, {
+						response: new Response(toOwnedArrayBuffer(parsed.body), {
 							status: parsed.status,
 							headers: parsed.headers,
 						}),
@@ -273,12 +275,13 @@ export function createCloudflareImagesDecoder(images: ImagesBinding): DisplayMed
 		async decode(bytes, limits) {
 			if (limits.signal.aborted) throw new Error("display media decoding was aborted");
 			assertSingleFrameImage(bytes);
-			const info = await images.info(new Blob([bytes]).stream());
+			const ownedBytes = toOwnedArrayBuffer(bytes);
+			const info = await images.info(new Blob([ownedBytes]).stream());
 			if (!("width" in info) || !("height" in info)) {
 				throw new Error("display media decoder rejected a non-raster image");
 			}
 			const transformed = await images
-				.input(new Blob([bytes]).stream())
+				.input(new Blob([ownedBytes]).stream())
 				.transform({ width: 1, height: 1, fit: "contain" })
 				.output({ format: "image/png", anim: false });
 			await drainBoundedStream(transformed.image(), 1024 * 1024, limits.signal);

@@ -5,6 +5,7 @@ import {
 	type ImageModerationDerivativeTransformer,
 } from "../src/ai/image-resize.js";
 import { IMAGE_PROMPT_HASH } from "../src/ai/prompts.js";
+import { toOwnedArrayBuffer } from "../src/bytes.js";
 import {
 	createWorkersAiImageAdapter,
 	workersAiBindingFromEnv,
@@ -223,7 +224,7 @@ async function resizeImage(
 	maxDimension: number,
 ): Promise<Uint8Array> {
 	const output = await images
-		.input(new Blob([bytes]).stream())
+		.input(new Blob([toOwnedArrayBuffer(bytes)]).stream())
 		.transform({ width: maxDimension, height: maxDimension, fit: "scale-down" })
 		.output({ format: "image/webp", quality: 85, anim: false });
 	return new Uint8Array(await new Response(output.image()).arrayBuffer());

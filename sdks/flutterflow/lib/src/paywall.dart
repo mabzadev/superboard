@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'dart:async';
 import 'dart:math';
 
@@ -6,6 +8,10 @@ import 'package:superboard_flutter/superboard_flutter.dart';
 
 import 'experience_client.dart';
 
+/// Compatibility widget backed by the Paywalls aliases served by Flows.
+@Deprecated(
+  'Use SuperBoardFlowsOverlay, SuperBoardFlowsSlot, or a commerce Flow.',
+)
 class SuperBoardPaywall extends StatefulWidget {
   const SuperBoardPaywall({
     super.key,

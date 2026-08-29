@@ -94,18 +94,44 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
     moduleD1: Object.fromEntries(
       DOMAIN_SERVICES.map((service) => {
         const key = DOMAIN_SERVICE_REGISTRY[service].resourceKey;
-        return [key, { name: `${resourcePrefix()}-${service}-db`, id: null }];
+        return [
+          key,
+          {
+            name:
+              service === "support"
+                ? `${resourcePrefix()}-support-v2-db`
+                : `${resourcePrefix()}-${service}-db`,
+            id: null,
+          },
+        ];
       }),
     ),
     moduleR2: {
-      support: { name: `${resourcePrefix()}-support-attachments` },
+      support: { name: `${resourcePrefix()}-support-v2-attachments` },
       analytics: { name: `${resourcePrefix()}-analytics-events` },
       marketing: { name: `${resourcePrefix()}-marketing-media` },
+      flows: { name: `${resourcePrefix()}-flows-archive` },
+    },
+    moduleVectorize: {
+      supportKnowledge: {
+        name: `${resourcePrefix()}-support-v2-knowledge`,
+        dimensions: 1024,
+        metric: "cosine",
+        description: "SuperBoard Support knowledge index",
+      },
     },
     moduleQueues: {
       support: {
-        name: `${resourcePrefix()}-support-events`,
-        dlq: `${resourcePrefix()}-support-events-dlq`,
+        name: `${resourcePrefix()}-support-v2-events`,
+        dlq: `${resourcePrefix()}-support-v2-events-dlq`,
+      },
+      supportAi: {
+        name: `${resourcePrefix()}-support-v2-ai`,
+        dlq: `${resourcePrefix()}-support-v2-ai-dlq`,
+      },
+      supportBulk: {
+        name: `${resourcePrefix()}-support-v2-bulk`,
+        dlq: `${resourcePrefix()}-support-v2-bulk-dlq`,
       },
       analytics: {
         name: `${resourcePrefix()}-analytics-ingest`,
@@ -115,6 +141,15 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
         name: `${resourcePrefix()}-marketing-delivery`,
         dlq: `${resourcePrefix()}-marketing-delivery-dlq`,
       },
+      flows: {
+        name: `${resourcePrefix()}-flows-events`,
+        dlq: `${resourcePrefix()}-flows-events-dlq`,
+      },
+    },
+    supportRouting: {
+      pattern: `${args["api-domain"]}/api/v1/support*`,
+      worker: `${prefix}-api-${suffix}`,
+      mode: selectedEnvironment === "production" ? "staged" : "active",
     },
     publicRouting: selectedEnvironment === "production" ? "staged" : "active",
     billingExecutionMode: "local",
@@ -128,7 +163,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 
   return {
     $schema: "./schema.json",
-    schemaVersion: 15,
+    schemaVersion: 17,
     target,
     accountAlias: args["account-alias"],
     resourceIdentity: {
@@ -138,6 +173,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
       migrationStrategy: "canonical",
     },
     workersDevSubdomain: args["workers-dev-subdomain"],
+    zoneName: args["zone-name"] || registrableZone(args["api-domain"]),
     registrationMode: "allowlist",
     ssoEnabled: false,
     features,
@@ -215,4 +251,15 @@ function csv(value) {
         .filter(Boolean),
     ),
   ];
+}
+
+function registrableZone(hostname) {
+  const labels = String(hostname ?? "")
+    .toLowerCase()
+    .split(".")
+    .filter(Boolean);
+  if (labels.length < 2) {
+    throw new Error("--zone-name is required when the API domain has no parent zone");
+  }
+  return labels.slice(-2).join(".");
 }

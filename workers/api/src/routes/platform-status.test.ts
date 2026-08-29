@@ -1256,6 +1256,7 @@ function workerCatalog(managedWorkers: unknown[] = []) {
     "analytics",
     "marketing",
     "onboardings",
+    "flows",
   ];
   return JSON.stringify({
     schemaVersion: 1,

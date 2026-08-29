@@ -6,7 +6,10 @@ import {
   cloudflareBootstrapConfirmation,
   desiredCloudflareResources,
 } from "./cloudflare-bootstrap-core.mjs";
-import { fetchCloudflareBootstrapInventories } from "./cloudflare-bootstrap.mjs";
+import {
+  assertBootstrapMode,
+  fetchCloudflareBootstrapInventories,
+} from "./cloudflare-bootstrap.mjs";
 import { loadTarget } from "./cloudflare-target.mjs";
 import { targetWithoutResourceIds } from "./cloudflare-test-fixtures.mjs";
 
@@ -32,6 +35,23 @@ test("bootstrap inventory is derived from enabled target features", async () => 
   );
   assert.equal(
     resources.some(({ key }) => key === "moduleQueues.support.dlq"),
+    true,
+  );
+  assert.equal(
+    resources.some(({ key }) => key === "moduleQueues.supportAi.name"),
+    true,
+  );
+  assert.equal(
+    resources.some(({ key }) => key === "moduleQueues.supportBulk.dlq"),
+    true,
+  );
+  assert.equal(
+    resources.some(
+      ({ key, kind, name }) =>
+        key === "moduleVectorize.supportKnowledge" &&
+        kind === "vectorize" &&
+        name === "superboard-dev-support-v2-knowledge",
+    ),
     true,
   );
   assert.equal(
@@ -87,7 +107,7 @@ test("canonical remote resources with missing manifest ids are adopted without c
   );
   assert.equal(
     plan.operations.filter(({ type }) => type === "adopt").length,
-    14,
+    13,
   );
   assert.equal(JSON.stringify(plan).includes("a".repeat(32)), false);
   assert.match(
@@ -128,6 +148,99 @@ test("configured ids are fail-closed when Cloudflare reports another name", asyn
   );
 });
 
+test("Vectorize bootstrap is fail-closed on immutable index configuration drift", async () => {
+  const { target } = await loadTarget("vocostar");
+  const desired = desiredCloudflareResources(target, "production");
+  const inventories = inventoriesFor(desired);
+  const knowledge = inventories.vectorize.find(
+    ({ name }) => name === "opengrow-support-v2-knowledge",
+  );
+  knowledge.config.dimensions = 768;
+  const plan = buildCloudflareBootstrapPlan({
+    target,
+    environment: "production",
+    accountId: "e".repeat(32),
+    inventories,
+  });
+  assert.equal(plan.applicable, false);
+  assert.ok(
+    plan.blockers.some(
+      ({ type, key }) =>
+        type === "configured-resource-shape-mismatch" &&
+        key === "moduleVectorize.supportKnowledge",
+    ),
+  );
+});
+
+test("fresh Support bootstrap creates only empty v2 resources and never adopts", async () => {
+  const { target } = await loadTarget("vocostar");
+  const empty = { d1: [], kv: [], r2: [], queue: [], vectorize: [] };
+  const plan = buildCloudflareBootstrapPlan({
+    target,
+    environment: "production",
+    accountId: "f".repeat(32),
+    inventories: empty,
+    freshSupportInstall: true,
+  });
+  assert.equal(plan.mode, "remote-read-only-fresh-support");
+  assert.equal(plan.applicable, true);
+  assert.equal(plan.operations.length, 9);
+  assert.equal(
+    plan.operations.every(
+      ({ type, key, name }) =>
+        type === "create" &&
+        /^module(?:D1|R2|Vectorize|Queues)\.support/u.test(key) &&
+        name.includes("-support-v2-"),
+    ),
+    true,
+  );
+
+  const existing = inventoriesFor(
+    desiredCloudflareResources(target, "production"),
+  );
+  const blocked = buildCloudflareBootstrapPlan({
+    target,
+    environment: "production",
+    accountId: "f".repeat(32),
+    inventories: existing,
+    freshSupportInstall: true,
+  });
+  assert.equal(blocked.applicable, false);
+  assert.equal(blocked.operations.length, 0);
+  assert.equal(
+    blocked.blockers.every(
+      ({ type }) => type === "fresh-resource-already-exists",
+    ),
+    true,
+  );
+});
+
+test("an unprovisioned Support v2 target can only be applied in fresh mode", async () => {
+  const { target } = await loadTarget("vocostar");
+  assert.throws(
+    () =>
+      assertBootstrapMode(target, "production", {
+        apply: true,
+        freshSupportInstall: false,
+      }),
+    /only with --fresh-support-install/u,
+  );
+  assert.equal(
+    assertBootstrapMode(target, "production", {
+      apply: true,
+      freshSupportInstall: true,
+    }),
+    true,
+  );
+  assert.equal(
+    assertBootstrapMode(target, "production", {
+      apply: false,
+      freshSupportInstall: false,
+    }),
+    true,
+  );
+});
+
 test("bootstrap requires the exact plan confirmation and records returned ids", async () => {
   const { target: source } = await loadTarget("mbza-development");
   const target = targetWithoutResourceIds(source, "development");
@@ -135,7 +248,7 @@ test("bootstrap requires the exact plan confirmation and records returned ids", 
     target,
     environment: "development",
     accountId: "c".repeat(32),
-    inventories: { d1: [], kv: [], r2: [], queue: [] },
+    inventories: { d1: [], kv: [], r2: [], queue: [], vectorize: [] },
   });
   let calls = 0;
   await assert.rejects(
@@ -199,6 +312,18 @@ test("remote inventory fetch follows page and R2 cursor pagination", async () =>
         result_info: { page: 1, total_pages: 1, total_count: 1 },
       });
     }
+    if (url.pathname.endsWith("/vectorize/v2/indexes")) {
+      return Response.json({
+        success: true,
+        result: [
+          {
+            name: "knowledge",
+            config: { dimensions: 1024, metric: "cosine" },
+          },
+        ],
+        result_info: { page: 1, total_pages: 1, total_count: 1 },
+      });
+    }
     if (url.pathname.endsWith("/r2/buckets")) {
       const cursor = url.searchParams.get("cursor");
       return Response.json({
@@ -218,7 +343,8 @@ test("remote inventory fetch follows page and R2 cursor pagination", async () =>
   assert.equal(inventories.kv.length, 1);
   assert.equal(inventories.r2.length, 2);
   assert.equal(inventories.queue.length, 1);
-  assert.equal(calls.length, 6);
+  assert.equal(inventories.vectorize.length, 1);
+  assert.equal(calls.length, 7);
   assert.equal(
     calls.every(({ authorization }) => authorization === "Bearer secret-token"),
     true,
@@ -226,7 +352,7 @@ test("remote inventory fetch follows page and R2 cursor pagination", async () =>
 });
 
 function inventoriesFor(resources) {
-  const inventories = { d1: [], kv: [], r2: [], queue: [] };
+  const inventories = { d1: [], kv: [], r2: [], queue: [], vectorize: [] };
   let index = 0;
   for (const resource of resources) {
     index += 1;
@@ -242,6 +368,14 @@ function inventoriesFor(resources) {
       });
     } else if (resource.kind === "r2") {
       inventories.r2.push({ name: resource.name });
+    } else if (resource.kind === "vectorize") {
+      inventories.vectorize.push({
+        name: resource.name,
+        config: {
+          dimensions: resource.configuration.dimensions,
+          metric: resource.configuration.metric,
+        },
+      });
     } else {
       inventories.queue.push({
         queue_id: idFor(index),

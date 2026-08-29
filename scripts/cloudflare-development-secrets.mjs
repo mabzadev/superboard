@@ -117,6 +117,7 @@ export async function generateDevelopmentSecretAssignments({
   const token = () => randomBytes(48).toString("base64url");
   const moduleToken = token();
   const emailToken = token();
+  const flowsModuleToken = token();
   const filesToken = token();
   const observabilityToken = token();
   const customToken = token();
@@ -136,6 +137,9 @@ export async function generateDevelopmentSecretAssignments({
     api: {
       JWT_SECRET: token(),
       MODULE_INTERNAL_TOKEN: moduleToken,
+      ...(target.features?.flows
+        ? { FLOWS_INTERNAL_TOKEN: flowsModuleToken }
+        : {}),
       EMAIL_INTERNAL_TOKEN: emailToken,
       OPENGROW_CUTOVER_TOKEN: token(),
       PUSH_PROCESS_KEY: token(),
@@ -199,6 +203,8 @@ export async function generateDevelopmentSecretAssignments({
     },
     support: {
       INTERNAL_API_TOKEN: moduleToken,
+      EMAIL_INTERNAL_TOKEN: emailToken,
+      SUPPORT_CREDENTIAL_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),
       SUPPORT_WEBHOOK_ENCRYPTION_KEY: token(),
     },
     analytics: {
@@ -213,6 +219,11 @@ export async function generateDevelopmentSecretAssignments({
       ANALYTICS_ID_HASH_KEY: analyticsHashKey,
       SMTP_ENCRYPTION_KEY: token(),
       TRACKING_SIGNING_KEY: token(),
+    },
+    flows: {
+      INTERNAL_API_TOKEN: flowsModuleToken,
+      FLOW_USER_ENCRYPTION_KEY: token(),
+      FLOW_USER_HASH_KEY: token(),
     },
   };
   for (const service of [

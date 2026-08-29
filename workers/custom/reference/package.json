@@ -9,7 +9,7 @@
     "test": "vitest run && vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@superboard/contracts": "*"
+    "@superboard/contracts": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.20.3",

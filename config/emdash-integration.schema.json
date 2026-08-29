@@ -1,0 +1,103 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://superboard.dev/schemas/emdash-integration.schema.json",
+	"title": "SuperBoard EmDash integration",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["schemaVersion", "upstream", "overlay", "compatibility"],
+	"properties": {
+		"schemaVersion": { "const": 1 },
+		"upstream": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["remote", "commit", "version"],
+			"properties": {
+				"remote": { "const": "https://github.com/emdash-cms/emdash.git" },
+				"commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+				"version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+			}
+		},
+		"overlay": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["root", "generatedFiles", "excludedWorktreePaths"],
+			"properties": {
+				"root": { "type": "string", "minLength": 1 },
+				"generatedFiles": {
+					"type": "array",
+					"minItems": 1,
+					"uniqueItems": true,
+					"items": { "type": "string", "minLength": 1 }
+				},
+				"excludedWorktreePaths": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": { "type": "string", "minLength": 1 }
+				}
+			}
+		},
+		"compatibility": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"eslintImportResolverTypescript",
+				"allowBuilds",
+				"additionalOverrides",
+				"patchedDependencies",
+				"trustPolicyExclude",
+				"virtualStoreType",
+				"hoistPattern",
+				"resolvePeersFromWorkspaceRoot",
+				"dedupePeerDependents",
+				"packageExtensions"
+			],
+			"properties": {
+				"eslintImportResolverTypescript": {
+					"type": "string",
+					"pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+				},
+				"allowBuilds": {
+					"type": "object",
+					"minProperties": 1,
+					"additionalProperties": { "type": "boolean" }
+				},
+				"additionalOverrides": {
+					"type": "object",
+					"additionalProperties": { "type": "string", "minLength": 1 }
+				},
+				"patchedDependencies": {
+					"type": "object",
+					"additionalProperties": { "type": "string", "minLength": 1 }
+				},
+				"trustPolicyExclude": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": { "type": "string", "pattern": "^[^@]+@[^@]+$" }
+				},
+				"virtualStoreType": { "const": "project" },
+				"hoistPattern": {
+					"type": "array",
+					"minItems": 1,
+					"uniqueItems": true,
+					"items": { "type": "string", "minLength": 1 }
+				},
+				"resolvePeersFromWorkspaceRoot": { "const": false },
+				"dedupePeerDependents": { "const": false },
+				"packageExtensions": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["dependencies"],
+						"properties": {
+							"dependencies": {
+								"type": "object",
+								"additionalProperties": { "type": "string", "minLength": 1 }
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

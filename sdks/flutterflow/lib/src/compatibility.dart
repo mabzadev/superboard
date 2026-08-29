@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 // Compatibility surface for an atomic FlutterFlow application cutover.
 //
 // New projects must use the SuperBoard names exported from

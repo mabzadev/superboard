@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 15,
+  "schemaVersion": 17,
   "target": "vocostar",
   "accountAlias": "vocostar-production",
   "resourceIdentity": {
@@ -10,6 +10,7 @@
     "migrationStrategy": "retain-physical-name"
   },
   "workersDevSubdomain": "vocostar",
+  "zoneName": "vocostar.com",
   "registrationMode": "allowlist",
   "ssoEnabled": false,
   "features": {
@@ -22,7 +23,8 @@
     "support": true,
     "analytics": false,
     "marketing": true,
-    "onboardings": true
+    "onboardings": true,
+    "flows": false
   },
   "applicationIdentity": {
     "registrationMode": "open",
@@ -374,8 +376,8 @@
           "id": "8c46f117-6b12-49df-8308-e82458e31eab"
         },
         "support": {
-          "name": "opengrow-support-db",
-          "id": "13171470-dfb5-46ce-b047-c9b151c34ae2"
+          "name": "opengrow-support-v2-db",
+          "id": null
         },
         "analytics": {
           "name": "opengrow-analytics-db",
@@ -392,7 +394,7 @@
       },
       "moduleR2": {
         "support": {
-          "name": "opengrow-support-attachments"
+          "name": "opengrow-support-v2-attachments"
         },
         "analytics": {
           "name": "opengrow-analytics-events"
@@ -401,10 +403,26 @@
           "name": "opengrow-marketing-media"
         }
       },
+      "moduleVectorize": {
+        "supportKnowledge": {
+          "name": "opengrow-support-v2-knowledge",
+          "dimensions": 1024,
+          "metric": "cosine",
+          "description": "SuperBoard Support knowledge index"
+        }
+      },
       "moduleQueues": {
         "support": {
-          "name": "opengrow-support-events",
-          "dlq": "opengrow-support-events-dlq"
+          "name": "opengrow-support-v2-events",
+          "dlq": "opengrow-support-v2-events-dlq"
+        },
+        "supportAi": {
+          "name": "opengrow-support-v2-ai",
+          "dlq": "opengrow-support-v2-ai-dlq"
+        },
+        "supportBulk": {
+          "name": "opengrow-support-v2-bulk",
+          "dlq": "opengrow-support-v2-bulk-dlq"
         },
         "analytics": {
           "name": "opengrow-analytics-ingest",
@@ -414,6 +432,11 @@
           "name": "opengrow-marketing-delivery",
           "dlq": "opengrow-marketing-delivery-dlq"
         }
+      },
+      "supportRouting": {
+        "pattern": "api.vocostar.com/api/v1/support*",
+        "worker": "opengrow-api",
+        "mode": "staged"
       },
       "publicRouting": "staged",
       "billingExecutionMode": "service",

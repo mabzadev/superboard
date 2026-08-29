@@ -1,0 +1,95 @@
+import type { Block } from "@superboard/flows-shared";
+import test, { expect } from "@playwright/test";
+import { randomUUID } from "crypto";
+import { mockBlocksEndpoint } from "./utils";
+
+test.beforeEach(async ({ page }) => {
+  await page.routeWebSocket(
+    (url) => url.pathname === "/api/v1/flows/ws/sdk/block-updates",
+    () => {},
+  );
+});
+
+const getCard = (props: { slotIndex?: number; text: string }): Block => ({
+  id: randomUUID(),
+  workflowId: randomUUID(),
+  type: "component",
+  componentType: "Card",
+  data: { text: props.text },
+  exitNodes: [],
+  slottable: true,
+  slotId: "my-slot",
+  slotIndex: props.slotIndex,
+  propertyMeta: [],
+});
+
+const run = (packageName: string) => {
+  test(`${packageName} - should render empty slot`, async ({ page }) => {
+    await mockBlocksEndpoint(page, []);
+    await page.goto(`/${packageName}.html`);
+    await expect(page.getByText("Slot placeholder", { exact: true })).toBeVisible();
+  });
+  test(`${packageName} - should render block in slot and hide placeholder`, async ({ page }) => {
+    await mockBlocksEndpoint(page, [getCard({ text: "Hello world" })]);
+    await page.goto(`/${packageName}.html`);
+    await expect(page.getByText("Slot placeholder", { exact: true })).toBeHidden();
+    await expect(page.getByText("Hello world", { exact: true })).toBeVisible();
+    await expect(page.locator(".flows-card")).toBeVisible();
+  });
+  test(`${packageName} - should sort blocks by slotIndex`, async ({ page }) => {
+    await mockBlocksEndpoint(page, [
+      getCard({ text: "block number one" }),
+      getCard({ text: "block number two" }),
+    ]);
+    await page.goto(`/${packageName}.html`);
+    await expect(page.locator(".flows-card").nth(0).locator(".card-text")).toHaveText(
+      "block number one",
+    );
+    await expect(page.locator(".flows-card").nth(1).locator(".card-text")).toHaveText(
+      "block number two",
+    );
+
+    await mockBlocksEndpoint(page, [
+      getCard({ text: "block number one", slotIndex: 1 }),
+      getCard({ text: "block number two" }),
+    ]);
+    await page.goto(`/${packageName}.html`);
+    await expect(page.locator(".flows-card").nth(0).locator(".card-text")).toHaveText(
+      "block number two",
+    );
+    await expect(page.locator(".flows-card").nth(1).locator(".card-text")).toHaveText(
+      "block number one",
+    );
+
+    await mockBlocksEndpoint(page, [
+      getCard({ text: "block number one", slotIndex: 1 }),
+      getCard({ text: "block number two", slotIndex: 2 }),
+    ]);
+    await page.goto(`/${packageName}.html`);
+    await expect(page.locator(".flows-card").nth(0).locator(".card-text")).toHaveText(
+      "block number one",
+    );
+    await expect(page.locator(".flows-card").nth(1).locator(".card-text")).toHaveText(
+      "block number two",
+    );
+  });
+  test(`${packageName} - should limit rendered blocks by slot limit`, async ({ page }) => {
+    await mockBlocksEndpoint(page, [
+      getCard({ text: "block number one" }),
+      getCard({ text: "block number two" }),
+    ]);
+    await page.goto(`/${packageName}.html?slotLimit=1`);
+    await expect(page.getByText("block number one", { exact: true })).toBeVisible();
+    await expect(page.getByText("block number two", { exact: true })).toBeHidden();
+    await mockBlocksEndpoint(page, [
+      getCard({ text: "block number one" }),
+      getCard({ text: "block number two" }),
+    ]);
+    await page.goto(`/${packageName}.html?slotLimit=2`);
+    await expect(page.getByText("block number one", { exact: true })).toBeVisible();
+    await expect(page.getByText("block number two", { exact: true })).toBeVisible();
+  });
+};
+
+run("js");
+run("react");

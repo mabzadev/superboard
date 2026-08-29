@@ -13,6 +13,7 @@
       "sdks/flutterflow/lib/src/bootstrap.dart",
       "sdks/flutterflow/lib/src/customer_events.dart",
       "sdks/flutterflow/lib/src/experience_client.dart",
+      "sdks/flutterflow/lib/src/flows.dart",
       "sdks/flutterflow/lib/src/models.dart",
       "sdks/flutterflow/lib/src/onboarding.dart",
       "sdks/flutterflow/lib/src/paywall.dart",
@@ -27,6 +28,10 @@
   },
   "widgets": [
     "SuperBoardBootstrap",
+    "SuperBoardFlowsBootstrap",
+    "SuperBoardFlutterFlowFlowsSlot",
+    "SuperBoardFlutterFlowFlowsOverlay",
+    "SuperBoardFlutterFlowFlowAnchor",
     "SuperBoardPaywall",
     "SuperBoardOnboarding",
     "SuperBoardRestorePurchasesButton",
@@ -40,6 +45,20 @@
       "superboardIdentify",
       "superboardSetUserAttributesJson",
       "superboardSetPushToken"
+    ],
+    "flows": [
+      "superboardFlowsInitialize",
+      "superboardFlowsIdentify",
+      "superboardFlowsSetUserPropertiesJson",
+      "superboardFlowsSetContext",
+      "superboardFlowsSetLanguage",
+      "superboardFlowsStartWorkflow",
+      "superboardFlowsResetWorkflowProgress",
+      "superboardFlowsResetAllWorkflowsProgress",
+      "superboardFlowsFetchWorkflowsJson",
+      "superboardFlowsNotifyNavigation",
+      "superboardFlowsNotifyAnchorInteraction",
+      "superboardFlowsDispose"
     ],
     "applicationGateway": [
       "superboardApplicationInitialize",
@@ -118,6 +137,18 @@
       "superboardSupportConnectRealtime",
       "superboardSupportDisconnectRealtime",
       "superboardSupportGetLastRealtimeEventJson",
+      "superboardSupportGetContactJson",
+      "superboardSupportUpdateContactJson",
+      "superboardSupportTrackEventJson",
+      "superboardSupportInboxMembersJson",
+      "superboardSupportProactiveSupportJson",
+      "superboardSupportConversationLabelsJson",
+      "superboardSupportRequestTranscriptJson",
+      "superboardSupportHelpCenterCategoriesJson",
+      "superboardSupportSearchHelpCenterJson",
+      "superboardSupportHelpCenterArticleJson",
+      "superboardSupportRecordHelpCenterViewJson",
+      "superboardSupportJoinMeetingJson",
       "superboardSupportDispose"
     ],
     "compatibilityAliases": [
@@ -149,7 +180,11 @@
       "superboardPurchaseResultJsonStream"
     ],
     "support": ["superboardSupportEventJsonStream"],
-    "compatibilityAliases": ["superboardMessagingEventJsonStream"]
+    "compatibilityAliases": ["superboardMessagingEventJsonStream"],
+    "flows": [
+      "superboardFlowFloatingBlocksJsonStream",
+      "superboardFlowSlotBlocksJsonStream"
+    ]
   },
   "compatibility": {
     "strategy": "single-package-atomic-cutover",

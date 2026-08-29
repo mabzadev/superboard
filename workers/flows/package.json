@@ -1,0 +1,29 @@
+{
+  "name": "@superboard/flows-worker",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src runtime-tests vitest.config.ts vitest.runtime.config.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.runtime.json",
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.runtime.config.ts",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:runtime": "vitest run --config vitest.runtime.config.ts",
+    "types": "node ../../scripts/cloudflare-types.mjs --service flows --reference --allow-unprovisioned"
+  },
+  "dependencies": {
+    "@superboard/contracts": "workspace:*",
+    "hono": "^4.13.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.20.3",
+    "@cloudflare/workers-types": "^5.20260813.1",
+    "@typescript-eslint/eslint-plugin": "^8.59.3",
+    "@typescript-eslint/parser": "^8.59.3",
+    "eslint": "^9.39.5",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.120.0"
+  }
+}

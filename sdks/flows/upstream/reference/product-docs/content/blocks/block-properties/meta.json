@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "overview",
+    "string",
+    "number",
+    "boolean",
+    "select",
+    "array",
+    "state-memory",
+    "block-trigger",
+    "block-state",
+    "action",
+    "slot",
+    "page-targeting",
+    "user-properties",
+    "wait",
+    "block-key"
+  ]
+}

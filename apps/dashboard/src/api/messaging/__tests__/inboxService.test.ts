@@ -52,7 +52,7 @@ describe("Inbox deep links", () => {
 });
 
 describe("Inbox realtime", () => {
-  it("builds a secure WebSocket URL on the API v2 route", () => {
+  it("builds a secure WebSocket URL on the native Support route", () => {
     expect(
       inboxRealtimeUrl("project-1", "conversation 1", "ticket-value")
     ).toBe("wss://api.example.test/api/v1/support/realtime/ticket-value");
@@ -62,8 +62,11 @@ describe("Inbox realtime", () => {
     expect(
       parseInboxRealtimeEvent(
         JSON.stringify({
+          schema_version: 1,
           type: "message.created",
+          event_id: "event-1",
           conversation_id: "conversation-1",
+          occurred_at: "2026-08-04T12:00:00.000Z",
           message: {
             id: "message-1",
             conversation_id: "conversation-1",
@@ -81,12 +84,16 @@ describe("Inbox realtime", () => {
     expect(
       parseInboxRealtimeEvent(
         JSON.stringify({
-          type: "typing.changed",
+          schema_version: 1,
+          type: "typing.started",
+          event_id: "event-2",
+          conversation_id: "conversation-1",
+          occurred_at: "2026-08-04T12:00:01.000Z",
           actor: { kind: "user", id: "customer-1" },
           active: true,
         })
       )
-    ).toMatchObject({ type: "typing.changed", active: true });
+    ).toMatchObject({ type: "typing.started", active: true });
   });
 
   it("rejects malformed, unknown, and oversized events", () => {

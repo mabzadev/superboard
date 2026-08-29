@@ -1,6 +1,9 @@
 import {
   EMAIL_SERVICE_DEAD_LETTERS_PATH,
   EMAIL_SERVICE_AWS_SES_EVENTS_PATH,
+  EMAIL_INBOUND_ENDPOINT_HEADER,
+  EMAIL_INBOUND_PROVIDER_HEADER,
+  EMAIL_SERVICE_INBOUND_NORMALIZE_PATH,
   EMAIL_SERVICE_OPERATIONS_PATH,
   EMAIL_SERVICE_PROVIDER_EVENTS_PATH,
   EMAIL_SERVICE_SEND_PATH,
@@ -8,6 +11,7 @@ import {
 } from "@superboard/contracts/email";
 import type {
   EmailDeadLetterOperation,
+  EmailInboundNormalizationResponse,
   EmailOperation,
   EmailOperationsPage,
   EmailProviderEvent,
@@ -47,6 +51,10 @@ import {
   trustedAwsSnsConfirmationUrl,
   verifyAwsSnsEnvelope,
 } from "./aws-ses";
+import {
+  inboundNormalizationError,
+  normalizeInboundEmailRequest,
+} from "./inbound";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -59,6 +67,12 @@ export default {
       url.pathname === EMAIL_SERVICE_AWS_SES_EVENTS_PATH
     ) {
       return receiveAwsSesEvent(request, env);
+    }
+    if (
+      request.method === "POST" &&
+      url.pathname === EMAIL_SERVICE_INBOUND_NORMALIZE_PATH
+    ) {
+      return normalizeInboundEmail(request, env);
     }
     if (url.pathname.startsWith(EMAIL_SERVICE_PROVIDER_EVENTS_PATH)) {
       if (!(await internalAuthorized(request, env)))
@@ -173,6 +187,83 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env, EmailQueueJob>;
+
+async function normalizeInboundEmail(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  const requestId = safeRequestId(request.headers.get("x-request-id"));
+  if (!(await internalAuthorized(request, env))) {
+    return inboundEmailError(requestId, 401, "unauthorized");
+  }
+  const provider = String(
+    request.headers.get(EMAIL_INBOUND_PROVIDER_HEADER) || "",
+  ).trim();
+  const endpointId = String(
+    request.headers.get(EMAIL_INBOUND_ENDPOINT_HEADER) || "",
+  ).trim();
+  if (!provider || provider.length > 64) {
+    return inboundEmailError(requestId, 422, "inbound_email_provider_invalid");
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/u.test(endpointId)) {
+    return inboundEmailError(requestId, 422, "inbound_email_endpoint_invalid");
+  }
+  try {
+    const payload: EmailInboundNormalizationResponse = {
+      data: await normalizeInboundEmailRequest(request, provider, endpointId),
+    };
+    return Response.json(payload, {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "x-request-id": requestId,
+      },
+    });
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      return inboundEmailError(requestId, error.status, error.code);
+    }
+    const normalized = inboundNormalizationError(error);
+    return inboundEmailError(requestId, 422, normalized.code);
+  }
+}
+
+function inboundEmailError(
+  requestId: string,
+  status: 400 | 401 | 413 | 422,
+  code: string,
+): Response {
+  const message =
+    status === 413
+      ? "Inbound email payload is too large"
+      : status === 401
+        ? "Inbound email request is unauthorized"
+        : "Inbound email payload is invalid";
+  return Response.json(
+    {
+      error: {
+        code,
+        message,
+        retryable: false,
+        request_id: requestId,
+      },
+    },
+    {
+      status,
+      headers: {
+        "cache-control": "no-store",
+        "x-request-id": requestId,
+      },
+    },
+  );
+}
+
+function safeRequestId(value: string | null): string {
+  const provided = String(value || "").trim();
+  return /^[A-Za-z0-9._:-]{1,128}$/u.test(provided)
+    ? provided
+    : crypto.randomUUID();
+}
 
 async function receiveAwsSesEvent(
   request: Request,

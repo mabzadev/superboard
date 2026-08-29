@@ -29,3 +29,39 @@ updates:
         dependency-type: "production"
         update-types: ["minor", "patch"]
     open-pull-requests-limit: 10
+
+  - package-ecosystem: "pub"
+    directory: "/apps/reference"
+    schedule:
+      interval: "weekly"
+    groups:
+      compatible-updates:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pub"
+    directory: "/sdks/flutter"
+    schedule:
+      interval: "weekly"
+    groups:
+      compatible-updates:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pub"
+    directory: "/sdks/flutterflow"
+    schedule:
+      interval: "weekly"
+    groups:
+      compatible-updates:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pub"
+    directory: "/sdks/flutterflow_messaging"
+    schedule:
+      interval: "monthly"
+    groups:
+      compatible-updates:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

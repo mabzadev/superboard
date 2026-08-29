@@ -96,6 +96,7 @@
     "localWranglerTemplates": [
       "workers/app/wrangler.jsonc",
       "workers/dynamic-links/wrangler.jsonc",
+      "workers/flows/wrangler.jsonc",
       "workers/identity/wrangler.jsonc",
       "workers/onboardings/wrangler.jsonc",
       "workers/paywalls/wrangler.jsonc",

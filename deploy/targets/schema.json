@@ -10,6 +10,7 @@
     "accountAlias",
     "resourceIdentity",
     "workersDevSubdomain",
+    "zoneName",
     "registrationMode",
     "ssoEnabled",
     "features",
@@ -26,11 +27,12 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 15 },
+    "schemaVersion": { "const": 17 },
     "target": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "accountAlias": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,30}$" },
     "resourceIdentity": { "$ref": "#/$defs/resourceIdentity" },
     "workersDevSubdomain": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "zoneName": { "$ref": "#/$defs/hostname" },
     "registrationMode": { "enum": ["allowlist", "public"] },
     "ssoEnabled": { "type": "boolean" },
     "features": {
@@ -46,7 +48,8 @@
         "support",
         "analytics",
         "marketing",
-        "onboardings"
+        "onboardings",
+        "flows"
       ],
       "properties": {
         "billing": { "type": "boolean" },
@@ -58,7 +61,8 @@
         "support": { "type": "boolean" },
         "analytics": { "type": "boolean" },
         "marketing": { "type": "boolean" },
-        "onboardings": { "type": "boolean" }
+        "onboardings": { "type": "boolean" },
+        "flows": { "type": "boolean" }
       }
     },
     "applicationIdentity": {
@@ -212,7 +216,8 @@
         "support": { "$ref": "#/$defs/workerNames" },
         "analytics": { "$ref": "#/$defs/workerNames" },
         "marketing": { "$ref": "#/$defs/workerNames" },
-        "onboardings": { "$ref": "#/$defs/workerNames" }
+        "onboardings": { "$ref": "#/$defs/workerNames" },
+        "flows": { "$ref": "#/$defs/workerNames" }
       }
     },
     "oauth": {
@@ -681,7 +686,8 @@
         "support": { "$ref": "#/$defs/namedResource" },
         "analytics": { "$ref": "#/$defs/namedResource" },
         "marketing": { "$ref": "#/$defs/namedResource" },
-        "onboardings": { "$ref": "#/$defs/namedResource" }
+        "onboardings": { "$ref": "#/$defs/namedResource" },
+        "flows": { "$ref": "#/$defs/namedResource" }
       }
     },
     "moduleR2": {
@@ -691,7 +697,8 @@
       "properties": {
         "support": { "$ref": "#/$defs/namedResource" },
         "analytics": { "$ref": "#/$defs/namedResource" },
-        "marketing": { "$ref": "#/$defs/namedResource" }
+        "marketing": { "$ref": "#/$defs/namedResource" },
+        "flows": { "$ref": "#/$defs/namedResource" }
       }
     },
     "moduleQueue": {
@@ -709,8 +716,43 @@
       "required": ["support", "analytics", "marketing"],
       "properties": {
         "support": { "$ref": "#/$defs/moduleQueue" },
+        "supportAi": { "$ref": "#/$defs/moduleQueue" },
+        "supportBulk": { "$ref": "#/$defs/moduleQueue" },
         "analytics": { "$ref": "#/$defs/moduleQueue" },
-        "marketing": { "$ref": "#/$defs/moduleQueue" }
+        "marketing": { "$ref": "#/$defs/moduleQueue" },
+        "flows": { "$ref": "#/$defs/moduleQueue" }
+      }
+    },
+    "vectorizeResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "dimensions", "metric"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "dimensions": { "type": "integer", "minimum": 1, "maximum": 1536 },
+        "metric": { "enum": ["cosine", "euclidean", "dot-product"] },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "legacyName": { "type": "boolean" }
+      }
+    },
+    "moduleVectorize": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "supportKnowledge": { "$ref": "#/$defs/vectorizeResource" }
+      }
+    },
+    "supportRouting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern", "worker", "mode"],
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "pattern": "^[a-z0-9.-]+/api/v1/support\\*$"
+        },
+        "worker": { "type": "string", "minLength": 1 },
+        "mode": { "enum": ["staged", "active"] }
       }
     },
     "queues": {
@@ -758,7 +800,9 @@
         "supportProjectIds",
         "moduleD1",
         "moduleR2",
+        "moduleVectorize",
         "moduleQueues",
+        "supportRouting",
         "publicRouting",
         "billingExecutionMode",
         "queues"
@@ -781,7 +825,9 @@
         },
         "moduleD1": { "$ref": "#/$defs/moduleD1" },
         "moduleR2": { "$ref": "#/$defs/moduleR2" },
+        "moduleVectorize": { "$ref": "#/$defs/moduleVectorize" },
         "moduleQueues": { "$ref": "#/$defs/moduleQueues" },
+        "supportRouting": { "$ref": "#/$defs/supportRouting" },
         "messagingProjectIds": {
           "type": "array",
           "items": { "type": "integer", "minimum": 1 },

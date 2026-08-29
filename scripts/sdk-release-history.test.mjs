@@ -117,3 +117,26 @@ test("a burned immutable version requires a version bump", async () => {
     assertSdkReleaseCandidateNotFailed(history, "ios", "1.0.2"),
   );
 });
+
+test("Flows package failures use their canonical immutable tag namespace", async () => {
+  const catalogue = await loadSdkCatalog();
+  const history = await loadSdkReleaseHistory();
+  const candidate = structuredClone(history);
+  candidate.immutableFailures.push({
+    libraryId: "flows-js",
+    version: "1.23.3",
+    releaseTag: "sdk-flows-js-v1.23.3",
+    packageRefs: [],
+    releaseSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    workflowRunId: 424242,
+    failedAt: "2026-08-13T12:00:00Z",
+    failureKind: "package-tests-failed",
+  });
+
+  const result = await validateSdkReleaseHistory(candidate, catalogue);
+  assert.deepEqual(result.errors, []);
+  assert.throws(
+    () => assertSdkReleaseCandidateNotFailed(candidate, "flows-js", "1.23.3"),
+    /sdk-flows-js-v1\.23\.3/u,
+  );
+});

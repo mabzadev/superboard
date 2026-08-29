@@ -193,13 +193,9 @@ test("libraries come from the SuperBoard monorepo and custom code is not copied"
     archived: ["flutterflow-support", "javascript", "react-native"],
   });
   const libraryContracts = {
-    opengrow_flutterflow: {
+    superboard_flutterflow: {
       path: "sdks/flutterflow",
       releasePrefix: "sdk-flutterflow-v",
-    },
-    opengrow_flutterflow_messaging: {
-      path: "sdks/flutterflow_messaging",
-      releasePrefix: "sdk-flutterflow-messaging-v",
     },
   };
   assert.deepEqual(
@@ -218,23 +214,18 @@ test("libraries come from the SuperBoard monorepo and custom code is not copied"
     );
   }
   for (const [packageName, library] of Object.entries(project.libraries)) {
-    const ref = pubspecDependencyRef(
+    const dependencyPath = pubspecPathDependency(
       await readFile(new URL("pubspec.yaml", root), "utf8"),
       packageName,
     );
-    assert.equal(
-      ref,
-      library.sourceVersion === library.releaseVersion
-        ? library.releaseRef
-        : library.developmentRef,
-    );
+    assert.equal(dependencyPath, `../../${library.path}`);
   }
   const actions = await readFile(
     new URL("lib/src/services/reference_actions.dart", root),
     "utf8",
   );
-  assert.match(actions, /opengrowApplicationMarketingPreferencesJson/);
-  assert.match(actions, /opengrowApplicationUpdateMarketingConsentJson/);
+  assert.match(actions, /superboardApplicationMarketingPreferencesJson/);
+  assert.match(actions, /superboardApplicationUpdateMarketingConsentJson/);
   assert.doesNotMatch(actions, /\/api\/v1\/marketing-admin/);
 });
 
@@ -690,12 +681,12 @@ test("GitHub CI deploys only development and accepts exact platform revisions", 
   assert.doesNotMatch(workflow, /git restore --source=HEAD --worktree -- pubspec\.lock/);
 });
 
-function pubspecDependencyRef(source, packageName) {
+function pubspecPathDependency(source, packageName) {
   const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
   const match = source.match(
-    new RegExp(`^  ${escaped}:\\n(?: {4,}.*\\n)*? {6}ref: ([^\\s]+)$`, "mu"),
+    new RegExp(`^  ${escaped}:\\n {4}path: ([^\\s]+)$`, "mu"),
   );
-  assert.ok(match, `Missing Git dependency ${packageName}`);
+  assert.ok(match, `Missing path dependency ${packageName}`);
   return match[1];
 }
 
