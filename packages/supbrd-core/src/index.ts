@@ -4,6 +4,16 @@ export {
 	type CanonicalJsonValue,
 } from "./canonical-json.js";
 export {
+	sha256Canonical,
+	verifySuperBoardPluginManifest,
+	type SuperBoardCommandDescriptor,
+	type SuperBoardContributionDescriptor,
+	type SuperBoardDataSourceDescriptor,
+	type SuperBoardPluginManifest,
+	type SuperBoardSchemaDescriptor,
+	type SuperBoardStoreDescriptor,
+} from "./plugin-manifest.js";
+export {
 	REQUIRED_FRONT_STATES,
 	type CompiledFrontRelease,
 	type DependencyPolicy,

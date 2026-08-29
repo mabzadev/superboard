@@ -31,7 +31,7 @@ test("produces candidate, preview, approval and activation evidence for the user
 	);
 	const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 	const release = await compileFrontRelease(
-		composeUserFrontReleaseInput({
+		await composeUserFrontReleaseInput({
 			instance_id: "vocostar",
 			front_draft_id: "01J00000000000000000000401",
 			draft_snapshot_id: "01J00000000000000000000402",

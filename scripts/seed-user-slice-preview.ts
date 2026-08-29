@@ -13,7 +13,7 @@ const keys = await crypto.subtle.generateKey(
 );
 const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 const release = await compileFrontRelease(
-	composeUserFrontReleaseInput({
+	await composeUserFrontReleaseInput({
 		instance_id: "local",
 		front_draft_id: "01J00000000000000000000301",
 		draft_snapshot_id: "01J00000000000000000000302",

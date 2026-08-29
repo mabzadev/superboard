@@ -15,6 +15,10 @@
 			.light .route { border-color: #cbd5e1; background: #fff; box-shadow: 0 1rem 2rem #64748b20; }
 			code { color: #93c5fd; } .light code { color: #1d4ed8; }
 			.renderer { margin-top: 1rem; padding: 1rem; border: 1px dashed #64748b; border-radius: 0.7rem; }
+			.action { display: inline-block; padding: .55rem .8rem; border-radius: .55rem; background: #2f81f7; color: white; text-decoration: none; font-weight: 700; }
+			.fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+			.field { border: 1px solid #475569; border-radius: .5rem; padding: .55rem; }
+			table { width: 100%; border-collapse: collapse; } th, td { padding: .4rem; border-bottom: 1px solid #475569; text-align: left; font-size: .85rem; }
 			p { color: #aab8ca; } .light p { color: #475569; }
 			@media (max-width: 700px) { main { grid-template-columns: 1fr; } }
 		</style>
@@ -23,10 +27,10 @@
 	<body>
 		<header>SuperBoard · Release Front candidate · supbrd-plug-user 1.3.0</header>
 		<main>
-			<section class="route"><code>/login</code><h1>Sign in</h1><div class="renderer"><strong>Operator sign in</strong><p>Continue with the shared EmDash Passkey session.</p></div></section>
+			<section class="route"><code>/login</code><h1>Sign in</h1><div class="renderer"><strong>Operator sign in</strong><p>Continue with the shared EmDash Passkey session.</p><a class="action" href="#">Continue with Passkey</a></div></section>
 			<section class="route"><code>/app</code><h1>SuperBoard Admin</h1><div class="renderer"><strong>Admin shell</strong><p>Presentation owned by EmDash; no concrete page is exported by the plugin.</p></div></section>
-			<section class="route"><code>/app/profile</code><h1>Profile</h1><div class="renderer"><strong>Operator profile</strong><p>Mounted from supbrd-plug-user.renderer.profile_card.</p></div></section>
-			<section class="route"><code>/app/users</code><h1>Users</h1><div class="renderer"><strong>Application users</strong><p>Mounted from supbrd-plug-user.renderer.members_table.</p></div></section>
+			<section class="route"><code>/app/profile</code><h1>Profile</h1><div class="renderer"><strong>Operator profile</strong><p>Mounted from supbrd-plug-user.renderer.profile_card.</p><div class="fields"><div class="field">Name<br><b>Operator</b></div><div class="field">Email<br><b>operator@example.com</b></div></div></div></section>
+			<section class="route"><code>/app/users</code><h1>Users</h1><div class="renderer"><strong>Application users</strong><p>Mounted from supbrd-plug-user.renderer.members_table.</p><table><tr><th>Name</th><th>Email</th><th>Status</th></tr><tr><td>Operator</td><td>operator@example.com</td><td>Active</td></tr></table></div></section>
 		</main>
 	</body>
 </html>

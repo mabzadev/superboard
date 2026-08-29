@@ -26,7 +26,7 @@ export const POST: APIRoute = async (context) => {
 			release_id: stringField(body.release_id),
 		};
 		const now = new Date().toISOString();
-		const input = composeUserFrontReleaseInput({
+		const input = await composeUserFrontReleaseInput({
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			...identifiers,
 			created_at: now,
