@@ -9,5 +9,6 @@
 			"database_name": "superboard-site-runtime-test",
 			"migrations_dir": "migrations"
 		}
-	]
+	],
+	"kv_namespaces": [{ "binding": "RELEASE_CACHE", "id": "00000000000000000000000000000000" }]
 }

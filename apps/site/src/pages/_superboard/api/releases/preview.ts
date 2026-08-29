@@ -7,6 +7,7 @@ import {
 	persistFrontPreview,
 } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
 export const prerender = false;
@@ -38,9 +39,11 @@ export const POST: APIRoute = async (context) => {
 		expires_at: new Date(Date.parse(issuedAt) + requestedHours * 60 * 60 * 1_000).toISOString(),
 	});
 	await persistFrontPreview(env.DB, preview);
-	return jsonResponse(preview, 201);
+	return jsonResponse(
+		{
+			...preview,
+			preview_url: `/superboard-preview/${encodeURIComponent(preview.preview_id)}/`,
+		},
+		201,
+	);
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}

@@ -1,5 +1,6 @@
 import { assertFrontReleaseInput, compileFrontRelease } from "@superboard/supbrd-core";
 import type { APIRoute } from "astro";
+import { handleError } from "emdash/api/error";
 
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
 import {
@@ -7,6 +8,7 @@ import {
 	recordCompilation,
 } from "../../../../lib/front-workflow-repository.js";
 import { stageCompiledFrontRelease } from "../../../../lib/release-repository.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
 export const prerender = false;
@@ -119,21 +121,13 @@ export const POST: APIRoute = async (context) => {
 				created_at: new Date().toISOString(),
 			});
 		}
-		return jsonResponse(
-			{
-				error: {
-					code: "FRONT_RELEASE_COMPILATION_FAILED",
-					message: error instanceof Error ? error.message : "Invalid compilation input",
-				},
-			},
-			422,
+		return handleError(
+			error,
+			"Front Release compilation failed",
+			"FRONT_RELEASE_COMPILATION_FAILED",
 		);
 	}
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function parsePrivateReleaseJwk(value: string): ReleasePrivateJwk {
 	const jwk: unknown = JSON.parse(value);

@@ -6,6 +6,7 @@ import {
 	getFrontReleaseCandidate,
 } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { createD1FrontReleaseRepository } from "../../../../lib/release-repository.js";
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
@@ -49,7 +50,3 @@ export const POST: APIRoute = async (context) => {
 	}
 	return jsonResponse(result, 201);
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}

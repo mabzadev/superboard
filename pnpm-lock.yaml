@@ -976,6 +976,9 @@ importers:
       '@astrojs/react':
         specifier: 'catalog:'
         version: 6.0.0(@types/node@25.9.5)(@types/react-dom@19.2.3(@types/react@19.2.18))(@types/react@19.2.18)(esbuild@0.28.1)(jiti@2.7.0)(less@4.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(sass@1.103.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0)
+      '@emdash-cms/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@emdash-cms/cloudflare':
         specifier: workspace:*
         version: link:../../packages/cloudflare

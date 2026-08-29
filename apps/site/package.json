@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@astrojs/cloudflare": "catalog:",
 		"@astrojs/react": "catalog:",
+		"@emdash-cms/auth": "workspace:*",
 		"@emdash-cms/cloudflare": "workspace:*",
 		"@superboard/supbrd-core": "workspace:*",
 		"astro": "catalog:",

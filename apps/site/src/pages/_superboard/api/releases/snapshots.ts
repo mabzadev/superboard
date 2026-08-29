@@ -1,11 +1,8 @@
-import { snapshotFrontDraft } from "@superboard/supbrd-core";
 import type { APIRoute } from "astro";
 
-import {
-	loadFrontDraft,
-	persistDraftSnapshot,
-} from "../../../../lib/front-workflow-repository.js";
+import { createDraftSnapshotCas } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
 export const prerender = false;
@@ -18,21 +15,21 @@ export const POST: APIRoute = async (context) => {
 	if (!isRecord(body) || typeof body.front_draft_id !== "string" || typeof body.draft_snapshot_id !== "string") {
 		return jsonResponse({ error: { code: "INVALID_SNAPSHOT_REQUEST" } }, 422);
 	}
-	const draft = await loadFrontDraft(env.DB, body.front_draft_id);
-	if (!draft || draft.instance_id !== env.SUPERBOARD_INSTANCE_ID) {
-		return jsonResponse({ error: { code: "FRONT_DRAFT_NOT_FOUND" } }, 404);
+	if (!Number.isSafeInteger(body.expected_draft_revision)) {
+		return jsonResponse({ error: { code: "INVALID_SNAPSHOT_REQUEST" } }, 422);
 	}
-	if (body.expected_draft_revision !== draft.revision) {
+	const result = await createDraftSnapshotCas(env.DB, {
+		draft_snapshot_id: body.draft_snapshot_id,
+		front_draft_id: body.front_draft_id,
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		expected_draft_revision: Number(body.expected_draft_revision),
+		created_at: new Date().toISOString(),
+	});
+	if (result.status === "conflict") {
 		return jsonResponse(
-			{ error: { code: "STALE_DRAFT_REVISION", current_revision: draft.revision } },
+			{ error: { code: "STALE_DRAFT_REVISION", current_revision: result.current_revision } },
 			409,
 		);
 	}
-	const snapshot = snapshotFrontDraft(draft, body.draft_snapshot_id, new Date().toISOString());
-	await persistDraftSnapshot(env.DB, snapshot);
-	return jsonResponse(snapshot, 201);
+	return jsonResponse(result.snapshot, 201);
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}

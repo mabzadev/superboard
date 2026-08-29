@@ -1,7 +1,9 @@
 import type { APIRoute } from "astro";
+import { handleError } from "emdash/api/error";
 
 import { saveFrontDraft } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
 export const prerender = false;
@@ -24,16 +26,9 @@ export const PUT: APIRoute = async (context) => {
 			? jsonResponse({ error: { code: "STALE_DRAFT_REVISION", ...result } }, 409)
 			: jsonResponse(result.draft, 200);
 	} catch (error) {
-		return jsonResponse(
-			{ error: { code: "DRAFT_UPDATE_FAILED", message: errorMessage(error) } },
-			422,
-		);
+		return handleError(error, "Front draft update failed", "DRAFT_UPDATE_FAILED");
 	}
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function requiredString(value: unknown): string {
 	if (typeof value !== "string" || value === "") throw new Error("string field is required");
@@ -43,8 +38,4 @@ function requiredString(value: unknown): string {
 function requiredInteger(value: unknown): number {
 	if (!Number.isSafeInteger(value) || Number(value) < 0) throw new Error("revision must be non-negative");
 	return Number(value);
-}
-
-function errorMessage(error: unknown): string {
-	return error instanceof Error ? error.message : "Invalid draft";
 }

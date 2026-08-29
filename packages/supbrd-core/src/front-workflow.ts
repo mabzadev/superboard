@@ -38,7 +38,10 @@ export interface FrontReleaseCandidateEvidence {
 	signing_key_status: "active" | "retired" | "missing";
 	verification: FrontReleaseVerification;
 	dependencies_ready: boolean;
+	renderers_ready: boolean;
+	gateway_ready: boolean;
 	stores_ready: boolean;
+	migrations_ready: boolean;
 	workers_ready: boolean;
 	secrets_ready: boolean;
 	media_ready: boolean;
@@ -176,7 +179,10 @@ export function validateFrontReleaseCandidate(
 	if (evidence.signing_key_status === "missing") errors.push("SIGNING_KEY_MISSING");
 	for (const [ready, code] of [
 		[evidence.dependencies_ready, "DEPENDENCIES_NOT_READY"],
+		[evidence.renderers_ready, "RENDERERS_NOT_READY"],
+		[evidence.gateway_ready, "GATEWAY_NOT_READY"],
 		[evidence.stores_ready, "STORES_NOT_READY"],
+		[evidence.migrations_ready, "MIGRATIONS_NOT_READY"],
 		[evidence.workers_ready, "WORKERS_NOT_READY"],
 		[evidence.secrets_ready, "SECRETS_NOT_READY"],
 		[evidence.media_ready, "MEDIA_NOT_READY"],

@@ -7,6 +7,7 @@ import type {
 } from "@superboard/supbrd-core";
 import {
 	canonicalizeReleasePayload,
+	parseCompiledFrontReleaseJson,
 	verifyFrontRelease,
 } from "@superboard/supbrd-core";
 
@@ -27,6 +28,14 @@ interface SnapshotRow {
 	draft_revision: number;
 	input_json: string;
 	created_at: string;
+}
+
+interface PreviewReleaseRow {
+	release_json: string;
+	candidate_id: string;
+	release_id: string;
+	content_checksum: string;
+	expires_at: string;
 }
 
 export async function saveFrontDraft(
@@ -103,6 +112,43 @@ export async function persistDraftSnapshot(db: D1Database, snapshot: DraftSnapsh
 		.run();
 }
 
+export async function createDraftSnapshotCas(
+	db: D1Database,
+	input: {
+		draft_snapshot_id: string;
+		front_draft_id: string;
+		instance_id: string;
+		expected_draft_revision: number;
+		created_at: string;
+	},
+): Promise<
+	| { status: "created"; snapshot: DraftSnapshot }
+	| { status: "conflict"; current_revision: number }
+> {
+	const row = await db
+		.prepare(
+			`INSERT INTO superboard_front_draft_snapshots (
+			   draft_snapshot_id, front_draft_id, instance_id, draft_revision, input_json, created_at
+			 )
+			 SELECT ?, front_draft_id, instance_id, revision, input_json, ?
+			 FROM superboard_front_drafts
+			 WHERE front_draft_id = ? AND instance_id = ? AND revision = ?
+			 RETURNING draft_snapshot_id, front_draft_id, instance_id, draft_revision,
+			           input_json, created_at`,
+		)
+		.bind(
+			input.draft_snapshot_id,
+			input.created_at,
+			input.front_draft_id,
+			input.instance_id,
+			input.expected_draft_revision,
+		)
+		.first<SnapshotRow>();
+	if (row) return { status: "created", snapshot: snapshotFromRow(row) };
+	const draft = await loadFrontDraft(db, input.front_draft_id);
+	return { status: "conflict", current_revision: draft?.revision ?? 0 };
+}
+
 export async function loadDraftSnapshot(
 	db: D1Database,
 	draftSnapshotId: string,
@@ -114,16 +160,7 @@ export async function loadDraftSnapshot(
 		)
 		.bind(draftSnapshotId)
 		.first<SnapshotRow>();
-	return row
-		? {
-				draft_snapshot_id: row.draft_snapshot_id,
-				front_draft_id: row.front_draft_id,
-				instance_id: row.instance_id,
-				draft_revision: row.draft_revision,
-				input: JSON.parse(row.input_json),
-				created_at: row.created_at,
-			}
-		: null;
+	return row ? snapshotFromRow(row) : null;
 }
 
 export async function recordCompilation(
@@ -199,6 +236,38 @@ export async function persistFrontPreview(
 		.run();
 }
 
+export async function loadFrontPreview(
+	db: D1Database,
+	previewId: string,
+	now: string,
+): Promise<{ candidate: FrontReleaseCandidateRecord; expires_at: string } | null> {
+	const row = await db
+		.prepare(
+			`SELECT candidate.release_json, preview.candidate_id, preview.release_id,
+			        preview.content_checksum, preview.expires_at
+			 FROM superboard_front_previews AS preview
+			 JOIN superboard_front_release_candidates AS candidate
+			   ON candidate.candidate_id = preview.candidate_id
+			 WHERE preview.preview_id = ?
+			   AND preview.audience = 'front_preview'
+			   AND preview.mutation_mode = 'dry_run'
+			   AND preview.expires_at >= ?`,
+		)
+		.bind(previewId, now)
+		.first<PreviewReleaseRow>();
+	if (!row) return null;
+	const release = parseCompiledFrontReleaseJson(row.release_json);
+	if (
+		release.payload.candidate_id !== row.candidate_id ||
+		release.payload.release_id !== row.release_id ||
+		release.content_checksum !== row.content_checksum
+	) {
+		throw new Error("Front preview identity mismatch");
+	}
+	const stored = await getFrontReleaseCandidate(db, row.candidate_id);
+	return stored ? { candidate: stored, expires_at: row.expires_at } : null;
+}
+
 export async function persistReauthenticationReceipt(
 	db: D1Database,
 	receipt: OperatorReauthenticationReceipt,
@@ -267,7 +336,10 @@ export async function candidateEvidence(
 		signing_key_status: key?.status ?? "missing",
 		verification,
 		dependencies_ready: passedLayers.has("reference_graph") && dependenciesReady,
+		renderers_ready: passedLayers.has("renderer_compatibility"),
+		gateway_ready: passedLayers.has("routing") && passedLayers.has("actions_data_sources"),
 		stores_ready: passedLayers.has("plugins_stores_workers"),
+		migrations_ready: passedLayers.has("migrations"),
 		workers_ready: passedLayers.has("plugins_stores_workers"),
 		secrets_ready: passedLayers.has("permissions_security"),
 		media_ready: passedLayers.has("translations_media"),
@@ -303,5 +375,16 @@ function draftFromRow(row: DraftRow): FrontDraft {
 		revision: row.revision,
 		input: JSON.parse(row.input_json),
 		updated_at: row.updated_at,
+	};
+}
+
+function snapshotFromRow(row: SnapshotRow): DraftSnapshot {
+	return {
+		draft_snapshot_id: row.draft_snapshot_id,
+		front_draft_id: row.front_draft_id,
+		instance_id: row.instance_id,
+		draft_revision: row.draft_revision,
+		input: JSON.parse(row.input_json),
+		created_at: row.created_at,
 	};
 }

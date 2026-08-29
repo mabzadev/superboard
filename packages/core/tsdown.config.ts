@@ -132,6 +132,7 @@ export default defineConfig({
 		// the admin's React + @cloudflare/kumo), which their own build
 		// must process.
 		"src/api/route-utils.ts",
+		"src/api/error.ts",
 		"src/api/schemas/index.ts",
 		"src/auth/providers/github.ts",
 		"src/auth/providers/google.ts",

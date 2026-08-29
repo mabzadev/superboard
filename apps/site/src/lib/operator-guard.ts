@@ -1,4 +1,5 @@
 import type { APIContext } from "astro";
+import { hasPermission } from "@emdash-cms/auth";
 import {
 	createOperatorReauthenticationReceipt,
 	type OperatorReauthenticationReceipt,
@@ -6,18 +7,18 @@ import {
 
 import type { SuperBoardSiteEnv } from "./site-env.js";
 
-const ADMIN_ROLE = 50;
-
 export function requireReleaseOperator(
 	context: Pick<APIContext, "locals" | "request" | "url">,
 	env: SuperBoardSiteEnv,
 ): Response | null {
 	if (!context.locals.user) return errorResponse("AUTHENTICATION_REQUIRED", 401);
-	if (context.locals.user.role < ADMIN_ROLE) return errorResponse("OPERATOR_REQUIRED", 403);
+	if (!hasPermission(context.locals.user, "settings:manage")) {
+		return errorResponse("OPERATOR_REQUIRED", 403);
+	}
 	if (String(env.SUPERBOARD_RELEASE_OPERATIONS) !== "enabled") {
 		return errorResponse("RELEASE_OPERATIONS_DISABLED", 503);
 	}
-	if (context.request.headers.get("X-SuperBoard-Request") !== "1") {
+	if (context.request.headers.get("X-EmDash-Request") !== "1") {
 		return errorResponse("CSRF_HEADER_REQUIRED", 403);
 	}
 	const origin = context.request.headers.get("Origin");

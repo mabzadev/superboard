@@ -104,6 +104,7 @@ export async function stageCompiledFrontRelease(
 	publicJwk: JsonWebKey,
 	createdAt: string,
 ): Promise<void> {
+	const normalizedPublicJwk: JsonWebKey = JSON.parse(JSON.stringify(publicJwk));
 	const existingKey = await db
 		.prepare("SELECT public_jwk FROM superboard_release_signing_keys WHERE kid = ?")
 		.bind(release.signature.kid)
@@ -111,7 +112,7 @@ export async function stageCompiledFrontRelease(
 	if (
 		existingKey &&
 		canonicalizeReleasePayload(JSON.parse(existingKey.public_jwk)) !==
-			canonicalizeReleasePayload(publicJwk)
+			canonicalizeReleasePayload(normalizedPublicJwk)
 	) {
 		throw new Error("Release signing kid is already bound to another public key");
 	}
@@ -129,7 +130,7 @@ export async function stageCompiledFrontRelease(
 				 VALUES (?, ?, 'active', ?)
 				 ON CONFLICT(kid) DO NOTHING`,
 			)
-			.bind(release.signature.kid, JSON.stringify(publicJwk), createdAt),
+			.bind(release.signature.kid, JSON.stringify(normalizedPublicJwk), createdAt),
 		db
 			.prepare(
 				`INSERT INTO superboard_front_release_candidates (
@@ -155,24 +156,42 @@ export async function persistReleaseApproval(
 	approval: ReleaseApproval,
 	reauthenticationReceiptId?: string,
 ): Promise<boolean> {
-	const result = await db
-		.prepare(
+	const update = db.prepare(
 			`UPDATE superboard_front_release_candidates
-			 SET status = 'approved', approval_json = ?, approved_at = ?,
-			     reauthentication_receipt_id = ?
+			 SET status = 'approved', approval_json = ?, approved_at = ?
 			 WHERE candidate_id = ? AND release_id = ? AND content_checksum = ?
 			   AND validation_set_checksum = ? AND status = 'validated'`,
 		)
 		.bind(
 			JSON.stringify(approval),
 			approval.approved_at,
-			reauthenticationReceiptId ?? null,
 			approval.candidate_id,
 			approval.release_id,
 			approval.content_checksum,
 			approval.validation_set_checksum,
 		)
-		.run();
+	if (!reauthenticationReceiptId) {
+		const result = await update.run();
+		return (result.meta.changes ?? 0) === 1;
+	}
+	const [result] = await db.batch([
+		update,
+		db
+			.prepare(
+				`INSERT INTO superboard_front_approval_reauthentication (
+				   candidate_id, receipt_id, linked_at
+				 ) SELECT candidate_id, ?, ?
+				 FROM superboard_front_release_candidates
+				 WHERE candidate_id = ? AND status = 'approved'
+				 ON CONFLICT(candidate_id) DO UPDATE SET
+				   receipt_id = excluded.receipt_id, linked_at = excluded.linked_at`,
+			)
+			.bind(
+				reauthenticationReceiptId,
+				approval.approved_at,
+				approval.candidate_id,
+			),
+	]);
 	return (result.meta.changes ?? 0) === 1;
 }
 

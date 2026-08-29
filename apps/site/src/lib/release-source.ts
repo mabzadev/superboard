@@ -27,7 +27,7 @@ export interface LoadedFrontRelease {
 	release: CompiledFrontRelease;
 	runtime_release: LastVerifiedFrontRelease;
 	pointer_revision: number;
-	source: "d1" | "last_verified_cache";
+	source: "d1" | "last_verified_cache" | "preview";
 }
 
 export async function loadLastVerifiedFrontRelease(

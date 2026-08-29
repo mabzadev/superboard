@@ -50,6 +50,21 @@ CREATE TABLE IF NOT EXISTS superboard_operator_reauthentication_receipts (
   created_at TEXT NOT NULL
 );
 
-ALTER TABLE superboard_front_release_candidates
-  ADD COLUMN reauthentication_receipt_id TEXT
-  REFERENCES superboard_operator_reauthentication_receipts(receipt_id);
+CREATE TABLE IF NOT EXISTS superboard_front_approval_reauthentication (
+  candidate_id TEXT PRIMARY KEY
+    REFERENCES superboard_front_release_candidates(candidate_id),
+  receipt_id TEXT NOT NULL UNIQUE
+    REFERENCES superboard_operator_reauthentication_receipts(receipt_id),
+  linked_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_superboard_front_snapshots_draft
+  ON superboard_front_draft_snapshots(front_draft_id);
+CREATE INDEX IF NOT EXISTS idx_superboard_front_compilations_snapshot
+  ON superboard_front_compilations(draft_snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_superboard_front_previews_candidate
+  ON superboard_front_previews(candidate_id);
+CREATE INDEX IF NOT EXISTS idx_superboard_operator_reauth_candidate
+  ON superboard_operator_reauthentication_receipts(candidate_id);
+CREATE INDEX IF NOT EXISTS idx_superboard_front_approval_reauth_receipt
+  ON superboard_front_approval_reauthentication(receipt_id);

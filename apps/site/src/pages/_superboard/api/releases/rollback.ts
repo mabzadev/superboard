@@ -13,6 +13,7 @@ import {
 } from "../../../../lib/operator-guard.js";
 import { createD1FrontReleaseRepository } from "../../../../lib/release-repository.js";
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
 export const prerender = false;
@@ -65,7 +66,3 @@ export const POST: APIRoute = async (context) => {
 	await loadLastVerifiedFrontRelease(env, env.SUPERBOARD_INSTANCE_ID);
 	return jsonResponse({ ...result, rollback: "pointer_only" }, 201);
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}

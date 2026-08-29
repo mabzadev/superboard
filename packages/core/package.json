@@ -57,10 +57,14 @@
       "types": "./dist/astro/routes/*.d.mts",
       "default": "./dist/astro/routes/*.mjs"
     },
-    "./api/route-utils": {
+		"./api/route-utils": {
       "types": "./dist/api/route-utils.d.mts",
       "default": "./dist/api/route-utils.mjs"
-    },
+		},
+		"./api/error": {
+			"types": "./dist/api/error.d.mts",
+			"default": "./dist/api/error.mjs"
+		},
     "./api/schemas": {
       "types": "./dist/api/schemas/index.d.mts",
       "default": "./dist/api/schemas/index.mjs"

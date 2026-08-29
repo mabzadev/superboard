@@ -60,8 +60,10 @@ export {
 	snapshotFrontDraft,
 	updateFrontDraft,
 	validateFrontReleaseCandidate,
-	type DraftSnapshot,
-	type FrontDraft,
-	type FrontReleaseCandidateEvidence,
-	type OperatorReauthenticationReceipt,
+} from "./front-workflow.js";
+export type {
+	DraftSnapshot,
+	FrontDraft,
+	FrontReleaseCandidateEvidence,
+	OperatorReauthenticationReceipt,
 } from "./front-workflow.js";

@@ -12,7 +12,7 @@ function context(options: { role?: number; origin?: string; marker?: string } = 
 			method: "POST",
 			headers: {
 				Origin: options.origin ?? "https://site.example",
-				"X-SuperBoard-Request": options.marker ?? "1",
+				"X-EmDash-Request": options.marker ?? "1",
 			},
 		}),
 		url: new URL("https://site.example/superboard-system/api/releases/compile"),

@@ -12,6 +12,7 @@ import {
 	requireReleaseOperator,
 } from "../../../../lib/operator-guard.js";
 import { persistReleaseApproval } from "../../../../lib/release-repository.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
 export const prerender = false;
@@ -55,10 +56,6 @@ export const POST: APIRoute = async (context) => {
 		? jsonResponse(result, 201)
 		: jsonResponse({ error: { code: "APPROVAL_PERSISTENCE_CONFLICT" } }, 409);
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function stringArray(value: unknown): string[] {
 	return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : [];
