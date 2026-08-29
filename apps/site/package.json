@@ -19,6 +19,7 @@
 		"@emdash-cms/auth": "workspace:*",
 		"@emdash-cms/cloudflare": "workspace:*",
 		"@superboard/supbrd-core": "workspace:*",
+		"@superboard/supbrd-plug-user": "workspace:*",
 		"astro": "catalog:",
 		"emdash": "workspace:*",
 		"layerr": "^3.0.0",

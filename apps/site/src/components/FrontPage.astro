@@ -1,13 +1,31 @@
 ---
 import type { FrontPageModel } from "../lib/front-page.js";
+import { mountUserRenderer, renderUserRenderer } from "@superboard/supbrd-plug-user";
 
 interface Props {
 	model: FrontPageModel;
 }
 
 const { model } = Astro.props;
+const previewTheme = Astro.url.searchParams.get("theme") === "light" ? "light" : "dark";
 const { resolution } = model;
 const releaseId = model.release?.release.payload.release_id ?? null;
+const userRendererViews = resolution.result === "rendered"
+	? resolution.renderer_ids.flatMap((rendererId) => {
+		if (!rendererId.startsWith("supbrd-plug-user.renderer.")) return [];
+		const props = rendererId.endsWith("login_form")
+			? { title: "Sign in" }
+			: rendererId.endsWith("profile_card")
+				? { show_devices: true }
+				: { page_size: 25 };
+		return [mountUserRenderer({
+			renderer_id: rendererId,
+			props,
+			render: () => renderUserRenderer(rendererId),
+			root_layout: false,
+		})];
+	})
+	: [];
 const stateTitle = {
 	maintenance: "Front unavailable",
 	not_found: "Page not found",
@@ -17,7 +35,7 @@ const stateTitle = {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme={previewTheme}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
@@ -47,6 +65,19 @@ const stateTitle = {
 			.meta span { border: 1px solid #2b3c57; border-radius: 999px; padding: 0.4rem 0.65rem; color: #91a4bf; font: 0.75rem ui-monospace, SFMono-Regular, Menlo, monospace; }
 			.renderers { display: grid; gap: 0.8rem; margin-top: 1.5rem; }
 			.renderer { border: 1px dashed #3d5273; border-radius: 0.75rem; padding: 1rem; background: #0a111f; color: #c9d4e4; }
+			html[data-theme="light"] {
+				color-scheme: light;
+				background: #f5f8fc;
+				color: #142033;
+			}
+			html[data-theme="light"] body { background: radial-gradient(circle at 15% 0%, #dbeafe 0, transparent 36%), #f5f8fc; }
+			html[data-theme="light"] header { border-bottom-color: #cbd5e1; background: #ffffffdd; }
+			html[data-theme="light"] .panel { border-color: #cbd5e1; background: #ffffffed; box-shadow: 0 2rem 5rem #64748b33; }
+			html[data-theme="light"] p { color: #475569; }
+			html[data-theme="light"] .meta span { border-color: #cbd5e1; color: #52627a; }
+			html[data-theme="light"] .renderer { border-color: #94a3b8; background: #f8fafc; color: #24324a; }
+			html[data-theme="light"] .admin-link { border-color: #94a3b8; }
+			html[data-theme="light"] a { color: #1d4ed8; }
 		</style>
 	</head>
 	<body>
@@ -66,8 +97,11 @@ const stateTitle = {
 								inventoried below and remain isolated from the generic Core runtime.
 							</p>
 							<div class="renderers">
-								{resolution.renderer_ids.map((rendererId) => (
-									<div class="renderer" data-renderer-id={rendererId}>{rendererId}</div>
+								{userRendererViews.map((view) => (
+									<div class="renderer" data-renderer-id={view.renderer_id} data-state={view.state}>
+										<strong>{view.title}</strong>
+										<p>{view.description}</p>
+									</div>
 								))}
 							</div>
 						</>

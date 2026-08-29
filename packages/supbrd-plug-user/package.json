@@ -1,0 +1,19 @@
+{
+	"name": "@superboard/supbrd-plug-user",
+	"version": "1.3.0",
+	"private": true,
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"typecheck": "tsgo --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@superboard/supbrd-core": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

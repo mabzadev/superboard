@@ -1,5 +1,6 @@
 ---
 import FrontPage from "../../../components/FrontPage.astro";
+import { hasPermission } from "@emdash-cms/auth";
 import { candidateEvidence, loadFrontPreview } from "../../../lib/front-workflow-repository.js";
 import { resolvePreviewFrontPage } from "../../../lib/front-page.js";
 import { getSiteEnv } from "../../../lib/site-env.js";
@@ -7,6 +8,9 @@ import { getSiteEnv } from "../../../lib/site-env.js";
 export const prerender = false;
 
 const env = getSiteEnv();
+if (!hasPermission(Astro.locals.user, "settings:manage")) {
+	return new Response("Operator session required", { status: Astro.locals.user ? 403 : 401 });
+}
 const previewId = Astro.params.previewId ?? "";
 const preview = await loadFrontPreview(env.DB, previewId, new Date().toISOString());
 if (!preview) return new Response("Preview not found or expired", { status: 404 });

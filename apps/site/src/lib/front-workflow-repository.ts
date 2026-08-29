@@ -131,6 +131,46 @@ export async function createDraftSnapshotCas(
 	return { status: "conflict", current_revision: draft?.revision ?? 0 };
 }
 
+export async function createFrontDraftWithSnapshot(
+	db: D1Database,
+	input: {
+		front_draft_id: string;
+		draft_snapshot_id: string;
+		instance_id: string;
+		value: unknown;
+		created_at: string;
+	},
+): Promise<void> {
+	await db.batch([
+		db
+			.prepare(
+				`INSERT INTO superboard_front_drafts (
+				   front_draft_id, instance_id, revision, input_json, updated_at
+				 ) VALUES (?, ?, 1, ?, ?)`,
+			)
+			.bind(
+				input.front_draft_id,
+				input.instance_id,
+				canonicalizeReleasePayload(input.value),
+				input.created_at,
+			),
+		db
+			.prepare(
+				`INSERT INTO superboard_front_draft_snapshots (
+				   draft_snapshot_id, front_draft_id, instance_id, draft_revision, input_json, created_at
+				 ) SELECT ?, front_draft_id, instance_id, revision, input_json, ?
+				 FROM superboard_front_drafts
+				 WHERE front_draft_id = ? AND instance_id = ? AND revision = 1`,
+			)
+			.bind(
+				input.draft_snapshot_id,
+				input.created_at,
+				input.front_draft_id,
+				input.instance_id,
+			),
+	]);
+}
+
 export async function loadDraftSnapshot(
 	db: D1Database,
 	draftSnapshotId: string,
