@@ -175,6 +175,12 @@
   },
   "publicSurfaceMonitors": [
     {
+      "id": "site-preview",
+      "url": "https://site.mbza.dev",
+      "healthUrl": "https://site.mbza.dev/superboard-system/health",
+      "description": "Staged Site EmDash preview; it does not own Dashboard traffic"
+    },
+    {
       "id": "reference",
       "url": "https://reference.mbza.dev",
       "healthUrl": "https://reference.mbza.dev/",

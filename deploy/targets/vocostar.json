@@ -315,6 +315,12 @@
   },
   "publicSurfaceMonitors": [
     {
+      "id": "site-preview",
+      "url": "https://site.vocostar.com",
+      "healthUrl": "https://site.vocostar.com/superboard-system/health",
+      "description": "Staged Site EmDash preview; it does not own Dashboard traffic"
+    },
+    {
       "id": "legacy-chatwoot",
       "url": "https://chat.vocostar.com",
       "healthUrl": "https://chat.vocostar.com/ready",

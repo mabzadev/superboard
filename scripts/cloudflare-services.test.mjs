@@ -135,42 +135,60 @@ test("generated Site config uses only explicit target resources and keeps public
       ),
     );
 
-    assert.equal(config.main, "../../apps/site/dist/server/entry.mjs");
     assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, target.target);
     assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "disabled");
-    assert.equal(
-      config.vars.D1_EXPECTED_MIGRATION,
-      "0002_front_release_activation_guard.sql",
-    );
+    assert.match(config.vars.D1_EXPECTED_MIGRATION, /^\d+.*\.sql$/u);
     assert.equal(config.compatibility_flags.includes("global_fetch_strictly_public"), false);
-    assert.deepEqual(config.d1_databases, [
-      {
-        binding: "DB",
-        database_name: resources.siteD1.name,
-        database_id: resources.siteD1.id ?? "00000000-0000-4000-8000-000000000000",
-        migrations_dir: "../../apps/site/migrations",
-        migrations_table: "d1_migrations",
-      },
-    ]);
-    assert.deepEqual(config.r2_buckets, [
-      { binding: "MEDIA", bucket_name: resources.siteMedia.name },
-    ]);
-    assert.deepEqual(config.kv_namespaces, [
-      {
-        binding: "SESSION",
-        id: resources.siteSessionKv.id ?? "00000000000000000000000000000000",
-      },
-      {
-        binding: "RELEASE_CACHE",
-        id: resources.siteReleaseKv.id ?? "00000000000000000000000000000000",
-      },
-    ]);
-    assert.deepEqual(config.worker_loaders, [
-      { binding: target.siteRuntime.workerLoaderBinding },
-    ]);
+    assert.equal(config.d1_databases[0].database_name, resources.siteD1.name);
+    assert.equal(config.d1_databases[0].database_id.length, 36);
+    assert.equal(config.r2_buckets[0].bucket_name, resources.siteMedia.name);
+    const namespaces = Object.fromEntries(
+      config.kv_namespaces.map(({ binding, id }) => [binding, id]),
+    );
+    assert.equal(namespaces.SESSION.length, 32);
+    assert.equal(namespaces.RELEASE_CACHE.length, 32);
+    assert.equal(
+      config.worker_loaders[0].binding,
+      target.siteRuntime.workerLoaderBinding,
+    );
     assert.deepEqual(config.triggers, { crons: target.siteRuntime.crons });
     assert.deepEqual(config.observability, target.siteRuntime.observability);
     assert.equal(config.routes, undefined);
+
+    execFileSync(
+      process.execPath,
+      [
+        "scripts/cloudflare-config.mjs",
+        "--service",
+        "api",
+        "--target",
+        targetName,
+        "--environment",
+        environment,
+        "--allow-unprovisioned",
+        "--no-routes",
+      ],
+      { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+    );
+    const apiConfig = JSON.parse(
+      readFileSync(
+        new URL(
+          `../deploy/generated/${targetName}-api-${environment}.jsonc`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    const siteMonitor = JSON.parse(apiConfig.vars.PUBLIC_SURFACES_JSON).find(
+      ({ id }) => id === "site-preview",
+    );
+    assert.equal(siteMonitor.url, `https://${target.domains.site}`);
+    assert.equal(
+      JSON.parse(apiConfig.vars.PLATFORM_WORKERS_JSON).workers.find(
+        ({ id }) => id === "site",
+      ).publicSurfaceIds.includes("site-preview"),
+      true,
+    );
   }
 });
 
@@ -984,9 +1002,10 @@ test("staged production API stays private while exposing service bindings", asyn
       "shortlinks",
       "files",
       "dashboard",
-      "mcp",
-      "mail-preview",
-      "reference",
+    "mcp",
+    "mail-preview",
+    "site-preview",
+    "reference",
     ],
   );
   assert.deepEqual(

@@ -1204,6 +1204,7 @@ function publicSurfaceMonitors(selectedTarget) {
 function platformWorkerTopology(selectedTarget) {
   const publicSurfaceIds = {
     api: ["api", "sdk", "shortlinks"],
+    site: ["site-preview"],
     dashboard: ["dashboard"],
     email: selectedTarget.domains.mailPreview ? ["mail-preview"] : [],
     files: ["files"],

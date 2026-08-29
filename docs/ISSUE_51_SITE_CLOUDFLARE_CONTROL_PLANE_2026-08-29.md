@@ -6,6 +6,9 @@
 targets now declare separate, non-secret identities for the Site Worker, Site
 D1, MEDIA R2 bucket, SESSION KV namespace, Last Verified Release KV namespace,
 Worker Loader binding, cron schedule, hostname, secrets and observability.
+The domain plan includes the development Site hostname without attaching it,
+and each target exports a `site-preview` health monitor while preserving the
+historical Dashboard owner.
 
 The target build compiles Astro first, overlays only the selected target values,
 and deploys `apps/site/dist/server/wrangler.json`. The artifact keeps
