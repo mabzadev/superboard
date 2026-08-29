@@ -53,6 +53,14 @@ export function createD1FrontReleaseRepository(db: D1Database): FrontReleaseRepo
 			return row ? activeFromRow(row) : null;
 		},
 		async compareAndSwapActive({ candidate, command }) {
+			const before = await this.getActive(command.instance_id);
+			if ((before?.active_release_id ?? null) !== command.expected_active_release_id) {
+				return {
+					status: "conflict",
+					active_release_id: before?.active_release_id ?? null,
+					pointer_revision: before?.pointer_revision ?? 0,
+				};
+			}
 			const row = await db
 				.prepare(
 					`INSERT INTO superboard_front_active_releases (
@@ -110,6 +118,13 @@ export async function stageCompiledFrontRelease(
 	await db.batch([
 		db
 			.prepare(
+				`UPDATE superboard_front_release_candidates
+				 SET status = 'superseded'
+				 WHERE instance_id = ? AND status = 'validated' AND candidate_id <> ?`,
+			)
+			.bind(release.payload.instance_id, release.payload.candidate_id),
+		db
+			.prepare(
 				`INSERT INTO superboard_release_signing_keys (kid, public_jwk, status, created_at)
 				 VALUES (?, ?, 'active', ?)
 				 ON CONFLICT(kid) DO NOTHING`,
@@ -138,17 +153,20 @@ export async function stageCompiledFrontRelease(
 export async function persistReleaseApproval(
 	db: D1Database,
 	approval: ReleaseApproval,
+	reauthenticationReceiptId?: string,
 ): Promise<boolean> {
 	const result = await db
 		.prepare(
 			`UPDATE superboard_front_release_candidates
-			 SET status = 'approved', approval_json = ?, approved_at = ?
+			 SET status = 'approved', approval_json = ?, approved_at = ?,
+			     reauthentication_receipt_id = ?
 			 WHERE candidate_id = ? AND release_id = ? AND content_checksum = ?
 			   AND validation_set_checksum = ? AND status = 'validated'`,
 		)
 		.bind(
 			JSON.stringify(approval),
 			approval.approved_at,
+			reauthenticationReceiptId ?? null,
 			approval.candidate_id,
 			approval.release_id,
 			approval.content_checksum,

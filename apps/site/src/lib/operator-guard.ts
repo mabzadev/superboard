@@ -1,4 +1,8 @@
 import type { APIContext } from "astro";
+import {
+	createOperatorReauthenticationReceipt,
+	type OperatorReauthenticationReceipt,
+} from "@superboard/supbrd-core";
 
 import type { SuperBoardSiteEnv } from "./site-env.js";
 
@@ -29,6 +33,34 @@ export function jsonResponse(body: unknown, status = 200): Response {
 			"Content-Type": "application/json; charset=utf-8",
 			"X-Content-Type-Options": "nosniff",
 		},
+	});
+}
+
+export async function recentOperatorReauthentication(
+	context: Pick<APIContext, "locals" | "session">,
+	input: {
+		instance_id: string;
+		candidate_id: string;
+		action: OperatorReauthenticationReceipt["action"];
+		now: string;
+	},
+): Promise<OperatorReauthenticationReceipt | null> {
+	if (!context.locals.user || !context.session) return null;
+	const marker = await context.session.get("strongReauthentication");
+	if (!marker || marker.userId !== context.locals.user.id) return null;
+	const verified = Date.parse(marker.verifiedAt);
+	const now = Date.parse(input.now);
+	if (!Number.isFinite(verified) || !Number.isFinite(now) || now - verified > 5 * 60 * 1_000) {
+		return null;
+	}
+	return createOperatorReauthenticationReceipt({
+		receipt_id: crypto.randomUUID(),
+		operator_id: context.locals.user.id,
+		instance_id: input.instance_id,
+		action: input.action,
+		candidate_id: input.candidate_id,
+		reauthenticated_at: new Date(verified).toISOString(),
+		expires_at: new Date(verified + 5 * 60 * 1_000).toISOString(),
 	});
 }
 

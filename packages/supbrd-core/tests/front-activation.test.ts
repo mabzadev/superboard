@@ -78,4 +78,35 @@ describe("Front Release activation", () => {
 			pointer_revision: 1,
 		});
 	});
+
+	test("rejects an approval mismatch and expired approval reauthentication", async () => {
+		const release = candidate();
+		const storedApproval = approval(release);
+		const repository = createInMemoryFrontReleaseRepository([
+			{ release, status: "approved", approval: storedApproval },
+		]);
+		const mismatched = structuredClone(storedApproval);
+		mismatched.warnings_acknowledged = ["different-warning-set"];
+		expect(
+			await activateFrontRelease(repository, {
+				instance_id: "vocostar",
+				candidate_id: release.payload.candidate_id,
+				activation_id: "01J00000000000000000000015",
+				expected_active_release_id: null,
+				approval: mismatched,
+				activated_at: "2026-08-29T18:31:00.000Z",
+			}),
+		).toEqual({ status: "rejected", code: "APPROVAL_MISMATCH" });
+
+		expect(
+			await activateFrontRelease(repository, {
+				instance_id: "vocostar",
+				candidate_id: release.payload.candidate_id,
+				activation_id: "01J00000000000000000000016",
+				expected_active_release_id: null,
+				approval: storedApproval,
+				activated_at: "2026-08-29T18:35:00.001Z",
+			}),
+		).toEqual({ status: "rejected", code: "STRONG_REAUTH_REQUIRED" });
+	});
 });

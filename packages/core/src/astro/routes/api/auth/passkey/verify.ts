@@ -56,6 +56,10 @@ export const POST: APIRoute = async ({ request, locals, session }) => {
 		// Create session
 		if (session) {
 			session.set("user", { id: user.id });
+			session.set("strongReauthentication", {
+				userId: user.id,
+				verifiedAt: new Date().toISOString(),
+			});
 		}
 
 		return apiSuccess({

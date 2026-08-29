@@ -47,6 +47,7 @@ declare global {
 		interface SessionData {
 			user: { id: string };
 			hasSeenWelcome: boolean;
+			strongReauthentication: { userId: string; verifiedAt: string };
 		}
 	}
 }

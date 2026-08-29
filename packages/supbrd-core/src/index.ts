@@ -52,3 +52,16 @@ export {
 	type ReleaseApproval,
 } from "./front-activation.js";
 export { parseCompiledFrontReleaseJson, parseReleaseApprovalJson } from "./release-json.js";
+export {
+	approveFrontReleaseCandidate,
+	createFrontPreview,
+	createOperatorReauthenticationReceipt,
+	planPointerRollback,
+	snapshotFrontDraft,
+	updateFrontDraft,
+	validateFrontReleaseCandidate,
+	type DraftSnapshot,
+	type FrontDraft,
+	type FrontReleaseCandidateEvidence,
+	type OperatorReauthenticationReceipt,
+} from "./front-workflow.js";

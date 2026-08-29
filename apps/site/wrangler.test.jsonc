@@ -1,0 +1,13 @@
+{
+	"name": "superboard-site-runtime-test",
+	"main": "runtime-tests/worker.ts",
+	"compatibility_date": "2026-08-08",
+	"compatibility_flags": ["nodejs_compat"],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "superboard-site-runtime-test",
+			"migrations_dir": "migrations"
+		}
+	]
+}
