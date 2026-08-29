@@ -81,6 +81,10 @@
 					"jsdom": "26.1.0"
 				}
 			}
+		},
+		"supportedArchitectures": {
+			"os": ["current", "darwin", "linux"],
+			"cpu": ["x64", "arm64"]
 		}
 	}
 }

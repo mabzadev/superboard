@@ -13,6 +13,8 @@ import {
 	renderSuperboardCi,
 } from "./emdash-overlay.mjs";
 
+const TRAILING_WHITESPACE_PATTERN = /\s+$/;
+
 const overlay = {
 	package: {
 		metadata: { name: "superboard", private: true },
@@ -20,6 +22,9 @@ const overlay = {
 		workspaces: ["apps/dashboard", "workers/api", "sdks/javascript"],
 		overrides: { postcss: "8.5.26", "glob@12.0.0": { minimatch: "10.2.6" } },
 		devDependencies: { prettier: "overlay", eslint: "overlay-eslint" },
+		optionalDependencies: {
+			"@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260421.2",
+		},
 	},
 	gitignore: "node_modules/\n/pnpm-lock.yaml\n.backups/\n",
 };
@@ -44,6 +49,10 @@ void test("root package keeps the EmDash base and composes colliding gates", () 
 	assert.equal(result.scripts["dashboard:test"], "dashboard-test");
 	assert.equal(result.devDependencies.prettier, "upstream");
 	assert.equal(result.devDependencies.eslint, "overlay-eslint");
+	assert.equal(
+		result.optionalDependencies["@typescript/native-preview-darwin-arm64"],
+		"7.0.0-dev.20260421.2",
+	);
 });
 
 void test("pnpm workspace retains upstream projects and adds uncovered SuperBoard projects", () => {
@@ -75,6 +84,10 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 				},
 			},
 		},
+		supportedArchitectures: {
+			os: ["current", "darwin", "linux"],
+			cpu: ["x64", "arm64"],
+		},
 	});
 
 	assert.ok(result.includes("  - apps/*"));
@@ -97,7 +110,9 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	assert.ok(result.includes('"@cloudflare/vitest-plugin@1.0.0":'));
 	assert.ok(result.includes('"@cloudflare/workers-types": "4.20260305.1"'));
 	assert.ok(result.includes('"jsdom": "26.1.0"'));
-	assert.equal(result.split("\n").some((line) => /\s+$/.test(line)), false);
+	assert.ok(result.includes("supportedArchitectures:"));
+	assert.ok(result.includes('    - "arm64"'));
+	assert.equal(result.split("\n").some((line) => TRAILING_WHITESPACE_PATTERN.test(line)), false);
 });
 
 void test("gitignore keeps the pnpm lock authoritative", () => {
@@ -107,6 +122,7 @@ void test("gitignore keeps the pnpm lock authoritative", () => {
 	assert.ok(!lines.includes("pnpm-lock.yaml"));
 	assert.ok(!lines.includes("/pnpm-lock.yaml"));
 	assert.ok(lines.includes("package-lock.json"));
+	assert.ok(lines.includes("!.dev.vars.example"));
 	assert.ok(lines.includes(".backups/"));
 });
 
@@ -176,6 +192,7 @@ void test("integrated README keeps SuperBoard authoritative and documents the pi
 	assert.ok(result.includes("1717d31b351164a5f78e95fe004ee582c7c50f40"));
 	assert.ok(result.includes("pnpm install --frozen-lockfile"));
 	assert.ok(result.includes("pnpm run test:all"));
+	assert.ok(result.includes("pnpm site:check"));
 	assert.ok(result.indexOf("## Integrated EmDash foundation") < result.indexOf("## Layout"));
 });
 
@@ -203,6 +220,7 @@ jobs:
 	assert.ok(result.includes("pnpm run worker:check"));
 	assert.ok(result.includes("pnpm check"));
 	assert.ok(result.includes("pnpm emdash:overlay:check"));
+	assert.ok(result.includes("pnpm site:check"));
 });
 
 void test("upstream lint inventory contains executable source only", () => {

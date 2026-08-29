@@ -1,0 +1,33 @@
+{
+	"name": "@superboard/site",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"preview": "astro preview",
+		"typecheck": "astro check",
+		"types": "wrangler types",
+		"test": "vitest run",
+		"dry-run": "astro build && wrangler deploy --dry-run"
+	},
+	"dependencies": {
+		"@astrojs/cloudflare": "catalog:",
+		"@astrojs/react": "catalog:",
+		"@emdash-cms/cloudflare": "workspace:*",
+		"@superboard/supbrd-core": "workspace:*",
+		"astro": "catalog:",
+		"emdash": "workspace:*",
+		"layerr": "^3.0.0",
+		"react": "catalog:",
+		"react-dom": "catalog:"
+	},
+	"devDependencies": {
+		"@astrojs/check": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

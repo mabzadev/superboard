@@ -225,11 +225,17 @@
 		"sdk:catalog:test": "node --test scripts/sdk-catalog.test.mjs scripts/sdk-release-history.test.mjs",
 		"sdk:documentation:write": "node scripts/sdk-documentation.mjs write",
 		"sdk:documentation:check": "node scripts/sdk-documentation.mjs check && node --test scripts/sdk-documentation.test.mjs",
-		"superboard:typecheck": "pnpm run worker:typecheck && pnpm run billing:typecheck && pnpm run email:typecheck && pnpm run identity:typecheck && pnpm run files:typecheck && pnpm run observability:typecheck && pnpm run mcp:typecheck && pnpm run modules:typecheck && pnpm run dashboard:typecheck",
-		"superboard:test": "pnpm run contracts:test && pnpm run dashboard:test && pnpm run worker:test && pnpm run billing:test && pnpm run email:test && pnpm run identity:test && pnpm run files:test && pnpm run observability:test && pnpm run mcp:test && pnpm run modules:test",
+		"site:types": "pnpm --dir apps/site run types",
+		"site:typecheck": "pnpm --dir apps/site run typecheck",
+		"site:test": "pnpm --dir apps/site test",
+		"site:build": "pnpm --dir apps/site run build",
+		"site:dry-run": "pnpm --dir apps/site run dry-run",
+		"site:check": "pnpm run site:types && pnpm run site:typecheck && pnpm run site:test && pnpm run site:dry-run",
+		"superboard:typecheck": "pnpm run worker:typecheck && pnpm run billing:typecheck && pnpm run email:typecheck && pnpm run identity:typecheck && pnpm run files:typecheck && pnpm run observability:typecheck && pnpm run mcp:typecheck && pnpm run modules:typecheck && pnpm run dashboard:typecheck && pnpm run site:typecheck",
+		"superboard:test": "pnpm run contracts:test && pnpm run dashboard:test && pnpm run worker:test && pnpm run billing:test && pnpm run email:test && pnpm run identity:test && pnpm run files:test && pnpm run observability:test && pnpm run mcp:test && pnpm run modules:test && pnpm run site:test",
 		"contracts:test": "pnpm exec vitest run packages/contracts/src",
 		"test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 pnpm run test:e2e",
-		"test:all": "pnpm run brand:check && pnpm run copy:check && pnpm run sdk:catalog:check && pnpm run sdk:catalog:test && pnpm run sdk:documentation:check && pnpm run flows-sdk:check && pnpm run flutterflow:source:test && pnpm run flutterflow-library:check && pnpm run flutterflow-applications:check && pnpm run migration:inventory && pnpm run migration:inventory:test && pnpm run cloudflare:test:targets && pnpm run dashboard:lint && pnpm run typecheck && pnpm run custom:check:all && pnpm run legacy-messaging:check && pnpm run chatwoot:test && pnpm run flutter:check && pnpm run portable-sdks:check && pnpm run identity-sdks:check && pnpm run test && pnpm run module-cutover:test && pnpm run dashboard:cf-build:reference && pnpm run worker:check && pnpm run identity:check && pnpm run files:check && pnpm run observability:check && pnpm run mcp:check && pnpm run modules:check",
+		"test:all": "pnpm run brand:check && pnpm run copy:check && pnpm run sdk:catalog:check && pnpm run sdk:catalog:test && pnpm run sdk:documentation:check && pnpm run flows-sdk:check && pnpm run flutterflow:source:test && pnpm run flutterflow-library:check && pnpm run flutterflow-applications:check && pnpm run migration:inventory && pnpm run migration:inventory:test && pnpm run cloudflare:test:targets && pnpm run dashboard:lint && pnpm run typecheck && pnpm run site:check && pnpm run custom:check:all && pnpm run legacy-messaging:check && pnpm run chatwoot:test && pnpm run flutter:check && pnpm run portable-sdks:check && pnpm run identity-sdks:check && pnpm run test && pnpm run module-cutover:test && pnpm run dashboard:cf-build:reference && pnpm run worker:check && pnpm run identity:check && pnpm run files:check && pnpm run observability:check && pnpm run mcp:check && pnpm run modules:check",
 		"prepare": "husky",
 		"typecheck": "pnpm run emdash:typecheck && pnpm run superboard:typecheck",
 		"test": "pnpm run emdash:test && pnpm run superboard:test",
@@ -281,5 +287,8 @@
 	"homepage": "https://github.com/mabzadev/superboard",
 	"bugs": {
 		"url": "https://github.com/mabzadev/superboard/issues"
+	},
+	"optionalDependencies": {
+		"@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260421.2"
 	}
 }

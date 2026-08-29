@@ -17,7 +17,7 @@ jobs:
   plan:
     name: Security and change plan
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/apps/reference
     outputs:
@@ -49,8 +49,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Validate EmDash integration overlay
-        run: pnpm emdash:overlay:check && pnpm emdash:workspace-deps:check && pnpm emdash:integration:test
+      - name: Validate EmDash integration and SuperBoard Site
+        run: pnpm emdash:overlay:check && pnpm emdash:workspace-deps:check && pnpm emdash:integration:test && pnpm site:check
       - name: Test change planner
         run: node --test .github/scripts/*.test.mjs
       - name: Select affected checks

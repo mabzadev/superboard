@@ -2,6 +2,14 @@
 virtualStoreType: project
 resolvePeersFromWorkspaceRoot: false
 dedupePeerDependents: false
+supportedArchitectures:
+  os:
+    - "current"
+    - "darwin"
+    - "linux"
+  cpu:
+    - "x64"
+    - "arm64"
 hoistPattern:
   - "*"
   - "!@cloudflare/workers-types"

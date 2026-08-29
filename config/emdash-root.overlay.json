@@ -218,11 +218,17 @@
 			"sdk:catalog:test": "node --test scripts/sdk-catalog.test.mjs scripts/sdk-release-history.test.mjs",
 			"sdk:documentation:write": "node scripts/sdk-documentation.mjs write",
 			"sdk:documentation:check": "node scripts/sdk-documentation.mjs check && node --test scripts/sdk-documentation.test.mjs",
-			"typecheck": "npm run worker:typecheck && npm run billing:typecheck && npm run email:typecheck && npm run identity:typecheck && npm run files:typecheck && npm run observability:typecheck && npm run mcp:typecheck && npm run modules:typecheck && npm run dashboard:typecheck",
-			"test": "npm run contracts:test && npm run dashboard:test && npm run worker:test && npm run billing:test && npm run email:test && npm run identity:test && npm run files:test && npm run observability:test && npm run mcp:test && npm run modules:test",
+			"site:types": "npm --prefix apps/site run types",
+			"site:typecheck": "npm --prefix apps/site run typecheck",
+			"site:test": "npm --prefix apps/site test",
+			"site:build": "npm --prefix apps/site run build",
+			"site:dry-run": "npm --prefix apps/site run dry-run",
+			"site:check": "npm run site:types && npm run site:typecheck && npm run site:test && npm run site:dry-run",
+			"typecheck": "npm run worker:typecheck && npm run billing:typecheck && npm run email:typecheck && npm run identity:typecheck && npm run files:typecheck && npm run observability:typecheck && npm run mcp:typecheck && npm run modules:typecheck && npm run dashboard:typecheck && npm run site:typecheck",
+			"test": "npm run contracts:test && npm run dashboard:test && npm run worker:test && npm run billing:test && npm run email:test && npm run identity:test && npm run files:test && npm run observability:test && npm run mcp:test && npm run modules:test && npm run site:test",
 			"contracts:test": "npx vitest run packages/contracts/src",
 			"test:e2e:real": "cd apps/dashboard && PLAYWRIGHT_REAL_BACKEND=1 npm run test:e2e",
-			"test:all": "npm run brand:check && npm run copy:check && npm run sdk:catalog:check && npm run sdk:catalog:test && npm run sdk:documentation:check && npm run flows-sdk:check && npm run flutterflow:source:test && npm run flutterflow-library:check && npm run flutterflow-applications:check && npm run migration:inventory && npm run migration:inventory:test && npm run cloudflare:test:targets && npm run dashboard:lint && npm run typecheck && npm run custom:check:all && npm run legacy-messaging:check && npm run chatwoot:test && npm run flutter:check && npm run portable-sdks:check && npm run identity-sdks:check && npm run test && npm run module-cutover:test && npm run dashboard:cf-build:reference && npm run worker:check && npm run identity:check && npm run files:check && npm run observability:check && npm run mcp:check && npm run modules:check",
+			"test:all": "npm run brand:check && npm run copy:check && npm run sdk:catalog:check && npm run sdk:catalog:test && npm run sdk:documentation:check && npm run flows-sdk:check && npm run flutterflow:source:test && npm run flutterflow-library:check && npm run flutterflow-applications:check && npm run migration:inventory && npm run migration:inventory:test && npm run cloudflare:test:targets && npm run dashboard:lint && npm run typecheck && npm run site:check && npm run custom:check:all && npm run legacy-messaging:check && npm run chatwoot:test && npm run flutter:check && npm run portable-sdks:check && npm run identity-sdks:check && npm run test && npm run module-cutover:test && npm run dashboard:cf-build:reference && npm run worker:check && npm run identity:check && npm run files:check && npm run observability:check && npm run mcp:check && npm run modules:check",
 			"prepare": "husky"
 		},
 		"workspaces": [
@@ -284,6 +290,9 @@
 			"@types/react": "catalog:",
 			"@types/react-dom": "catalog:",
 			"vitest": "catalog:"
+		},
+		"optionalDependencies": {
+			"@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260421.2"
 		}
 	},
 	"gitignore": "# Dependencies\nnode_modules/\n/pnpm-lock.yaml\n\n# Build output\nbuild/\n.dart_tool/\n**/.flutterflow/\ntools/flutterflow-library/generated_code/\n**/.flutter-plugins-dependencies\n.next/\n.vercel/\n.open-next/\n.wrangler/\ndeploy/generated/\n.backups/\ndist/\nout/\n.build/\ncoverage/\ntsconfig.tsbuildinfo\ntest-results/\nplaywright-report/\napps/dashboard/e2e/.auth/\napps/dashboard/test-results/\napps/dashboard/playwright-report/\n\n# Local env / secrets\n.env\n.env.*\n!.env.example\n.dev.vars\n\n# Logs and OS files\n*.log\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\n.DS_Store\n\n# Runtime caches\n.cache/\n.turbo/\n/.ci-reference-contract/\n/.flows-cutover/\n/scripts/support-audit/generated/\n",

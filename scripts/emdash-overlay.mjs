@@ -69,6 +69,7 @@ const overlayLintSources = [
 	"scripts/emdash-overlay.mjs",
 	"scripts/emdash-overlay.test.mjs",
 ];
+const overlayLintRoots = ["apps/site", "packages/supbrd-core"];
 const upstreamLintBaselineExclusions = new Set(["packages/plugins/forms/src/admin.tsx"]);
 
 export function normalizePnpmScript(script) {
@@ -107,6 +108,11 @@ are incomplete. It is not the target Front SuperBoard. The audited integration
 details are in
 [\`docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md\`](docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md).
 
+The first executable target slice lives in \`apps/site\`. It mounts the native
+EmDash Admin, a generic fail-closed Front runtime, the closed Release Front
+contract, D1 activation receipts, and a Last Verified Release cache that never
+becomes activation authority. Release operations are disabled by default.
+
 Use the integrated pnpm gates from the repository root:
 
 \`\`\`bash
@@ -114,6 +120,7 @@ pnpm install --frozen-lockfile
 pnpm build
 pnpm emdash:typecheck
 pnpm emdash:test
+pnpm site:check
 pnpm support:check
 pnpm flows:check
 \`\`\`
@@ -129,6 +136,7 @@ export function renderSuperboardCi(source) {
 		.replace(packageLockCachePathPattern, "pnpm-lock.yaml")
 		.replace(yarnInstallPattern, "pnpm install --frozen-lockfile")
 		.replace(yarnCheckPattern, "pnpm check")
+		.replace("    timeout-minutes: 10", "    timeout-minutes: 20")
 		.replace(
 			setupNodeActionPattern,
 			'$1- uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8\n$1- uses: actions/setup-node@',
@@ -139,7 +147,7 @@ export function renderSuperboardCi(source) {
 	}
 	rendered = rendered.replace(
 		installStep,
-		`${installStep}      - name: Validate EmDash integration overlay\n        run: pnpm emdash:overlay:check && pnpm emdash:workspace-deps:check && pnpm emdash:integration:test\n`,
+		`${installStep}      - name: Validate EmDash integration and SuperBoard Site\n        run: pnpm emdash:overlay:check && pnpm emdash:workspace-deps:check && pnpm emdash:integration:test && pnpm site:check\n`,
 	);
 	return rendered;
 }
@@ -175,6 +183,10 @@ export function renderRootPackage(upstreamPackage, overlay) {
 		devDependencies: {
 			...product.devDependencies,
 			...upstreamPackage.devDependencies,
+		},
+		optionalDependencies: {
+			...upstreamPackage.optionalDependencies,
+			...product.optionalDependencies,
 		},
 	};
 }
@@ -219,6 +231,12 @@ export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
 	const hoistPatternLines = compatibility.hoistPattern
 		.map((value) => `  - ${JSON.stringify(value)}`)
 		.join("\n");
+	const supportedOperatingSystems = compatibility.supportedArchitectures.os
+		.map((value) => `    - ${JSON.stringify(value)}`)
+		.join("\n");
+	const supportedCpus = compatibility.supportedArchitectures.cpu
+		.map((value) => `    - ${JSON.stringify(value)}`)
+		.join("\n");
 	const packageExtensionLines = Object.entries(compatibility.packageExtensions)
 		.map(([key, value]) => {
 			const renderedValue = renderYamlValue(value, 4);
@@ -226,7 +244,7 @@ export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
 			return `  ${JSON.stringify(key)}:${separator}${renderedValue}`;
 		})
 		.join("\n");
-	let rendered = `# SuperBoard keeps the virtual store deterministic and package peer graphs isolated.\nvirtualStoreType: ${compatibility.virtualStoreType}\nresolvePeersFromWorkspaceRoot: ${String(compatibility.resolvePeersFromWorkspaceRoot)}\ndedupePeerDependents: ${String(compatibility.dedupePeerDependents)}\nhoistPattern:\n${hoistPatternLines}\npackageExtensions:\n${packageExtensionLines}\n\n${upstreamWorkspace}`;
+	let rendered = `# SuperBoard keeps the virtual store deterministic and package peer graphs isolated.\nvirtualStoreType: ${compatibility.virtualStoreType}\nresolvePeersFromWorkspaceRoot: ${String(compatibility.resolvePeersFromWorkspaceRoot)}\ndedupePeerDependents: ${String(compatibility.dedupePeerDependents)}\nsupportedArchitectures:\n  os:\n${supportedOperatingSystems}\n  cpu:\n${supportedCpus}\nhoistPattern:\n${hoistPatternLines}\npackageExtensions:\n${packageExtensionLines}\n\n${upstreamWorkspace}`;
 	const trustPolicyAnchor = "trustPolicyExclude:\n";
 	if (!rendered.includes(trustPolicyAnchor)) {
 		throw new Error("The pinned pnpm trustPolicyExclude anchor has drifted");
@@ -295,7 +313,7 @@ export function renderGitignore(upstreamGitignore, overlay) {
 	const localLines = overlay.gitignore
 		.split("\n")
 		.filter((line) => line.trim() !== "/pnpm-lock.yaml" && line.trim() !== "pnpm-lock.yaml");
-	return `${upstreamGitignore.trimEnd()}\n\n# SuperBoard overlay\n${localLines.join("\n").trim()}\npackage-lock.json\n`;
+	return `${upstreamGitignore.trimEnd()}\n!.dev.vars.example\n\n# SuperBoard overlay\n${localLines.join("\n").trim()}\npackage-lock.json\n`;
 }
 
 export function isLintSourcePath(path) {
@@ -310,15 +328,35 @@ export async function lintUpstream() {
 		"--name-only",
 		config.upstream.commit,
 	]).stdout.split("\n");
-	const paths = [
-		...new Set([...upstreamPaths, ...overlayLintSources]),
-	].filter((path) => isLintSourcePath(path) && existsSync(resolve(repositoryRoot, path)));
+	const overlayRootSources = (
+		await Promise.all(overlayLintRoots.map((root) => listLintSources(resolve(repositoryRoot, root))))
+	)
+		.flat()
+		.map((path) => relative(repositoryRoot, path));
+	const paths = [...new Set([...upstreamPaths, ...overlayLintSources, ...overlayRootSources])].filter(
+		(path) => isLintSourcePath(path) && existsSync(resolve(repositoryRoot, path)),
+	);
 	const executable = resolve(repositoryRoot, "node_modules/.bin/oxlint");
 	const result = spawnSync(executable, ["--type-aware", "--deny-warnings", ...paths], {
 		cwd: repositoryRoot,
 		stdio: "inherit",
 	});
 	return result.status ?? 1;
+}
+
+async function listLintSources(root) {
+	const entries = await readdir(root, { withFileTypes: true });
+	const paths = [];
+	for (const entry of entries) {
+		if (["dist", "node_modules", "generated"].includes(entry.name)) continue;
+		const path = resolve(root, entry.name);
+		if (entry.isDirectory()) {
+			paths.push(...(await listLintSources(path)));
+		} else if (isLintSourcePath(path) && !path.endsWith("worker-configuration.d.ts")) {
+			paths.push(path);
+		}
+	}
+	return paths;
 }
 
 const dependencySections = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];

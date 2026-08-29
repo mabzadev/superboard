@@ -1,0 +1,2 @@
+# Release publication remains disabled unless all gates and operator reauthentication are configured.
+SUPERBOARD_RELEASE_PRIVATE_JWK=

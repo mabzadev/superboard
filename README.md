@@ -30,6 +30,11 @@ are incomplete. It is not the target Front SuperBoard. The audited integration
 details are in
 [`docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md`](docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md).
 
+The first executable target slice lives in `apps/site`. It mounts the native
+EmDash Admin, a generic fail-closed Front runtime, the closed Release Front
+contract, D1 activation receipts, and a Last Verified Release cache that never
+becomes activation authority. Release operations are disabled by default.
+
 Use the integrated pnpm gates from the repository root:
 
 ```bash
@@ -37,6 +42,7 @@ pnpm install --frozen-lockfile
 pnpm build
 pnpm emdash:typecheck
 pnpm emdash:test
+pnpm site:check
 pnpm support:check
 pnpm flows:check
 ```
