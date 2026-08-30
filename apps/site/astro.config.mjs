@@ -5,6 +5,8 @@ import { cloudflareEmail } from "@emdash-cms/cloudflare/plugins";
 import { defineConfig } from "astro/config";
 import emdash from "emdash/astro";
 
+import { superboardReleaseOperatorApi } from "./release-operator-api.mjs";
+
 const emailFromAddress = process.env.SUPERBOARD_SITE_EMAIL_FROM_ADDRESS ?? "noreply@localhost";
 const emailFromName = process.env.SUPERBOARD_SITE_EMAIL_FROM_NAME ?? "SuperBoard";
 const emailReplyTo = process.env.SUPERBOARD_SITE_EMAIL_REPLY_TO || undefined;
@@ -14,6 +16,7 @@ export default defineConfig({
 	adapter: cloudflare(),
 	integrations: [
 		react(),
+		superboardReleaseOperatorApi(),
 		emdash({
 			database: d1({ binding: "DB", session: "disabled" }),
 			storage: r2({ binding: "MEDIA" }),
