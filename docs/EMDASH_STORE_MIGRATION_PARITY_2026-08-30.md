@@ -56,8 +56,8 @@ node --test scripts/module-cutover/*.test.mjs
 pnpm --filter @superboard/site test:runtime
 pnpm --dir sdks/javascript test
 pnpm --dir sdks/react-native test --runInBand
-flutter --directory sdks/flutter test test/emdash_store_parity_test.dart
-flutter --directory sdks/flutterflow test test/emdash_store_parity_test.dart
+(cd sdks/flutter && flutter test test/emdash_store_parity_test.dart)
+(cd sdks/flutterflow && flutter test test/emdash_store_parity_test.dart)
 ```
 
 Les opérations de provisionnement distant, de domaine, de trafic et de mutation production restent hors périmètre de cette livraison.

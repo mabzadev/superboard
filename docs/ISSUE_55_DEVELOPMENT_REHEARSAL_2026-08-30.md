@@ -41,8 +41,8 @@ Le Dashboard historique et ses domaines restent inchangés. Aucune cible
 
 ## Gate ouvert exact
 
-Le nouveau Site n’a encore aucun Opérateur EmDash initialisé. La suite exige
-donc une intervention de l’Opérateur sur `/_emdash/admin/setup`, puis une vraie
+Le nouveau Site n’a encore aucun Opérateur SuperBoard initialisé. La suite exige
+donc une intervention de l’Opérateur SuperBoard sur `/_emdash/admin/setup`, puis une vraie
 strong reauthentication. Tant que ce gate humain n’est pas franchi :
 
 - `SUPERBOARD_RELEASE_OPERATIONS` reste `disabled` ;

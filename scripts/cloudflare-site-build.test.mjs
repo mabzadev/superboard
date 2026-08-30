@@ -34,14 +34,10 @@ test("Site deployment preserves only the explicitly approved development preview
 		d1_databases: [{ binding: "DB", migrations_dir: "../../apps/site/migrations" }],
 		routes: [{ pattern: "site.mbza.dev", custom_domain: true }],
 	};
-	assert.deepEqual(
-		siteDeploymentArtifact(config, { previewHostname: "site.mbza.dev" }).routes,
-		[{ pattern: "site.mbza.dev", custom_domain: true }],
-	);
-	assert.throws(
-		() => siteDeploymentArtifact(config),
-		/must not acquire a public route/u,
-	);
+	assert.deepEqual(siteDeploymentArtifact(config, { previewHostname: "site.mbza.dev" }).routes, [
+		{ pattern: "site.mbza.dev", custom_domain: true },
+	]);
+	assert.throws(() => siteDeploymentArtifact(config), /must not acquire a public route/u);
 	assert.throws(
 		() =>
 			siteDeploymentArtifact(config, {

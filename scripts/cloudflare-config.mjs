@@ -32,6 +32,7 @@ import { requiredSecretInventory } from "./cloudflare-secret-inventory.mjs";
 import { assertTargetPhysicalResourceNames } from "./cloudflare-resource-identity.mjs";
 import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 import { assertPublicRoutingReady } from "./public-routing-gate.mjs";
+import { resolveSitePreviewRoute } from "./cloudflare-site-preview.mjs";
 import {
   D1_SCHEMA_OWNERS,
   d1Descriptor,
@@ -48,27 +49,23 @@ const { targetName, environment } = await targetSelectionFromArgs(
 const preflight = Boolean(args.preflight);
 const allowUnprovisioned = Boolean(args["allow-unprovisioned"]);
 const outputSuffix = args["output-suffix"];
-const sitePreviewRoute = Boolean(args["site-preview-route"]);
 if (outputSuffix && !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(outputSuffix)) {
   throw new Error("--output-suffix must be a safe lowercase name");
 }
 const { target } = await loadTarget(targetName);
+const sitePreviewRoute = resolveSitePreviewRoute({
+  requested: Boolean(args["site-preview-route"]),
+  service,
+  environment,
+  hostname: target.domains.site,
+  noRoutes: Boolean(args["no-routes"]),
+  preflight,
+});
 assertTargetPhysicalResourceNames(target, environment);
 assertServiceForTarget(target, service);
 const managedWorker = managedWorkerDefinition(target, service);
 if (!isServiceEnabled(target, service) && !args["allow-disabled"]) {
   throw new Error(`${service} is disabled for target ${targetName}`);
-}
-if (
-  sitePreviewRoute &&
-  (service !== "site" ||
-    environment !== "development" ||
-    Boolean(args["no-routes"]) ||
-    preflight)
-) {
-  throw new Error(
-    "--site-preview-route is allowed only for an active development Site deployment",
-  );
 }
 const resources = target.environments[environment];
 if (!resources || !workerNameForService(target, service, environment)) {
@@ -254,11 +251,7 @@ function siteConfig() {
     ],
     worker_loaders: [{ binding: target.siteRuntime.workerLoaderBinding }],
     images: { binding: "IMAGES" },
-    ...(sitePreviewRoute
-      ? {
-          routes: [{ pattern: target.domains.site, custom_domain: true }],
-        }
-      : {}),
+    ...(sitePreviewRoute ? { routes: sitePreviewRoute.routes } : {}),
     ...(preflight ? {} : { triggers: { crons: [...target.siteRuntime.crons] } }),
     observability: target.siteRuntime.observability,
   };

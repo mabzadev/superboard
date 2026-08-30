@@ -23,6 +23,7 @@ import {
 import { migrationConfirmation } from "./cloudflare-d1-converge.mjs";
 import { readMigrationBatchReceipt } from "./cloudflare-migration-batch.mjs";
 import { runtimeBridgeDeploymentBlockers } from "./cloudflare-deploy-plan.mjs";
+import { resolveSitePreviewRoute } from "./cloudflare-site-preview.mjs";
 import {
   enforceIdentityProjectCutover,
   resolveDeploymentRevision,
@@ -35,6 +36,14 @@ const service = args.service ?? "api";
 const uploadOnly = Boolean(args["upload-only"] || args.preflight);
 
 const { target } = await loadTarget(targetName);
+const sitePreviewRoute = resolveSitePreviewRoute({
+  requested: Boolean(args["site-preview-route"]),
+  service,
+  environment,
+  hostname: target.domains.site,
+  noRoutes: Boolean(args["no-routes"]),
+  preflight: Boolean(args.preflight),
+});
 assertServiceForTarget(target, service);
 const blockers = runtimeBridgeDeploymentBlockers({
   target,
@@ -126,7 +135,7 @@ if (service === "site") {
       targetName,
       "--environment",
       environment,
-      ...(args["site-preview-route"] ? ["--site-preview-route"] : []),
+      ...(sitePreviewRoute?.cliArgs ?? []),
     ],
     targetCloudflareEnv,
   );
@@ -292,7 +301,7 @@ function generateServiceConfig() {
       "--environment",
       environment,
       ...(args["no-routes"] ? ["--no-routes"] : []),
-      ...(args["site-preview-route"] ? ["--site-preview-route"] : []),
+      ...(sitePreviewRoute?.cliArgs ?? []),
       ...(args.preflight ? ["--preflight"] : []),
     ],
     targetCloudflareEnv,

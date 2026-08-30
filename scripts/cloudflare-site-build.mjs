@@ -4,12 +4,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import {
-	loadTarget,
-	parseArgs,
-	root,
-	targetSelectionFromArgs,
-} from "./cloudflare-target.mjs";
+import { resolveSitePreviewRoute } from "./cloudflare-site-preview.mjs";
+import { loadTarget, parseArgs, root, targetSelectionFromArgs } from "./cloudflare-target.mjs";
 
 export function siteDeploymentArtifact(config, { previewHostname = null } = {}) {
 	if (config?.vars?.SUPERBOARD_RELEASE_OPERATIONS !== "disabled") {
@@ -42,9 +38,13 @@ export function siteDeploymentArtifact(config, { previewHostname = null } = {}) 
 export async function buildSiteTarget(argv = process.argv.slice(2), execute = run) {
 	const args = parseArgs(argv);
 	const { targetName, environment } = await targetSelectionFromArgs(args);
-	const previewHostname = args["site-preview-route"]
-		? (await loadTarget(targetName)).target.domains.site
-		: null;
+	const { target } = await loadTarget(targetName);
+	const sitePreviewRoute = resolveSitePreviewRoute({
+		requested: Boolean(args["site-preview-route"]),
+		service: "site",
+		environment,
+		hostname: target.domains.site,
+	});
 	execute("pnpm", ["--dir", "apps/site", "run", "build"]);
 	execute(process.execPath, [
 		"scripts/cloudflare-config.mjs",
@@ -54,7 +54,7 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		targetName,
 		"--environment",
 		environment,
-		...(args["site-preview-route"] ? ["--site-preview-route"] : []),
+		...(sitePreviewRoute?.cliArgs ?? []),
 		...(args["allow-unprovisioned"] ? ["--allow-unprovisioned"] : []),
 	]);
 	const generatedPath = resolve(
@@ -66,7 +66,13 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 	const generated = JSON.parse(await readFile(generatedPath, "utf8"));
 	await writeFile(
 		artifactPath,
-		`${JSON.stringify(siteDeploymentArtifact(generated, { previewHostname }), null, 2)}\n`,
+		`${JSON.stringify(
+			siteDeploymentArtifact(generated, {
+				previewHostname: sitePreviewRoute?.hostname ?? null,
+			}),
+			null,
+			2,
+		)}\n`,
 	);
 	return artifactPath;
 }
