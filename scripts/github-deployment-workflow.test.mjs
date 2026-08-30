@@ -354,7 +354,10 @@ test("CI validates every maintained SDK family and the Chatwoot migration path",
     /Install repository tooling for the React Native contract[\s\S]*pnpm install --frozen-lockfile --ignore-scripts[\s\S]*pnpm run react-native:native-contract:check/,
   );
   assert.match(ciWorkflow, /pnpm run react-native:native-contract:check/);
-  assert.match(ciWorkflow, /run: pnpm check/);
+  assert.match(
+    ciWorkflow,
+    /Install React Native dependencies[\s\S]*run: yarn install --immutable[\s\S]*run: yarn check/,
+  );
   assert.match(ciWorkflow, /ios_sdk:/);
   assert.match(
     ciWorkflow,
