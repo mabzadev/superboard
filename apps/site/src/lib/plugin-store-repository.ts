@@ -1,4 +1,8 @@
-import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
+import {
+	canonicalizeReleasePayload,
+	verifySuperBoardPluginManifest,
+} from "@superboard/supbrd-core";
+import type { SuperBoardPluginManifest } from "@superboard/supbrd-core";
 
 const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9*]+(?:-[a-z0-9*]+)*$/u;
 
@@ -15,6 +19,7 @@ interface StoreRecordInput {
 	payload: unknown;
 	updated_at: string;
 	encryption_key: CryptoKey;
+	manifest: SuperBoardPluginManifest;
 }
 
 interface StoreRecordRow {
@@ -32,6 +37,19 @@ interface StoreRecordRow {
 
 export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInput) {
 	assertPlugin(input.plugin_id);
+	const manifestVerification = await verifySuperBoardPluginManifest(input.manifest);
+	if (
+		!manifestVerification.valid ||
+		input.manifest.plugin_id !== input.plugin_id ||
+		!input.manifest.stores.some(
+			(store) => store.store_id === input.store_id && store.authority === input.plugin_id,
+		)
+	) {
+		throw new Error("STORE_WRITE_AUTHORITY_REJECTED");
+	}
+	if (!input.store_id.startsWith(`${input.plugin_id}.store.`)) {
+		throw new Error("STORE_NAMESPACE_REJECTED");
+	}
 	const instanceId = resolveInstanceAlias(input);
 	const canonicalPayload = canonicalizeReleasePayload(input.payload);
 	const priorOperation = await db
@@ -200,6 +218,7 @@ export async function issueWorkerExecutionLease(db: D1Database, input: {
 	plugin_id: string;
 	operation_id: string;
 	callback_token: string;
+	callback_public_jwk: JsonWebKey;
 	issued_at: string;
 	expires_at: string;
 }) {
@@ -216,15 +235,17 @@ export async function issueWorkerExecutionLease(db: D1Database, input: {
 		db
 			.prepare(
 				`INSERT INTO superboard_worker_execution_leases
-				 (attempt_id, plugin_id, operation_id, callback_token_hash, issued_at, expires_at,
-				  superseded_at, consumed_at)
-				 VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`,
+				 (attempt_id, plugin_id, operation_id, callback_token_hash, callback_public_jwk,
+				  issued_at, expires_at, superseded_at, consumed_at,
+				  callback_payload_checksum, callback_signature)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL)`,
 			)
 			.bind(
 				input.attempt_id,
 				input.plugin_id,
 				input.operation_id,
 				await sha256(input.callback_token),
+				JSON.stringify(input.callback_public_jwk),
 				input.issued_at,
 				input.expires_at,
 			),
@@ -235,17 +256,63 @@ export async function acceptWorkerCallback(db: D1Database, input: {
 	attempt_id: string;
 	plugin_id: string;
 	callback_token: string;
+	payload_checksum: string;
+	signature: string;
 	completed_at: string;
 }) {
+	const lease = await db
+		.prepare(
+			`SELECT operation_id, callback_public_jwk
+			 FROM superboard_worker_execution_leases
+			 WHERE attempt_id = ? AND plugin_id = ? AND callback_token_hash = ?
+			   AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at >= ?`,
+		)
+		.bind(
+			input.attempt_id,
+			input.plugin_id,
+			await sha256(input.callback_token),
+			input.completed_at,
+		)
+		.first<{ operation_id: string; callback_public_jwk: string }>();
+	if (!lease) throw new Error("WORKER_CALLBACK_REJECTED");
+	const publicKey = await crypto.subtle.importKey(
+		"jwk",
+		JSON.parse(lease.callback_public_jwk) as JsonWebKey,
+		{ name: "ECDSA", namedCurve: "P-256" },
+		false,
+		["verify"],
+	);
+	const signedPayload = canonicalizeReleasePayload({
+		attempt_id: input.attempt_id,
+		plugin_id: input.plugin_id,
+		operation_id: lease.operation_id,
+		payload_checksum: input.payload_checksum,
+		completed_at: input.completed_at,
+	});
+	const signatureValid = await crypto.subtle.verify(
+		{ name: "ECDSA", hash: "SHA-256" },
+		publicKey,
+		base64ToBytes(input.signature),
+		new TextEncoder().encode(signedPayload),
+	);
+	if (!signatureValid) throw new Error("WORKER_CALLBACK_SIGNATURE_INVALID");
 	const result = await db
 		.prepare(
 			`UPDATE superboard_worker_execution_leases
-			 SET consumed_at = ?
+			 SET consumed_at = ?, callback_payload_checksum = ?, callback_signature = ?
 			 WHERE attempt_id = ? AND plugin_id = ? AND callback_token_hash = ?
 			   AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at >= ?
 			 RETURNING operation_id`,
 		)
-		.bind(input.completed_at, input.attempt_id, input.plugin_id, await sha256(input.callback_token), input.completed_at)
+		.bind(
+			input.completed_at,
+			input.payload_checksum,
+			input.signature,
+			input.attempt_id,
+			input.plugin_id,
+			await sha256(input.callback_token),
+			input.completed_at,
+		)
 		.first<{ operation_id: string }>();
 	if (!result) throw new Error("WORKER_CALLBACK_REJECTED");
 	return result;

@@ -100,11 +100,13 @@ test("backfill apply is idempotent and resumes from a verified checkpoint", asyn
     adapter, registry: [exampleEntity], plan, safety: testSafety(),
     onCheckpoint: async (checkpoint) => { saved = structuredClone(checkpoint); },
   });
-  assert.equal(first.ready, true);
-  assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(first.ready, true);
+	assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(adapter.repositoryUpsertCalls.length, 1);
   const repeated = await applyPlan({ adapter, registry: [exampleEntity], plan, safety: testSafety(), checkpoint: saved });
   assert.equal(repeated.entities[0].resumed, true);
-  assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(adapter.repositoryUpsertCalls.length, 1);
   const verification = await buildPlan({ adapter, registry: [exampleEntity], projectRef: "10-test", modules: ["app"] });
   assert.equal(verification.ready, true);
 });
@@ -276,10 +278,14 @@ test("the remote adapter rejects every mutation while write authority is disable
     commandRunner: () => { commands += 1; return "[]"; },
     target: {
       accountId: "0".repeat(32), domains: { shortlinks: "example.test" },
-      environments: { production: { d1: { name: "api" }, messagingD1: { name: "messaging" }, moduleD1: { app: { name: "app" } } } },
+      environments: { production: { d1: { name: "api" }, siteD1: { name: "site" }, messagingD1: { name: "messaging" }, moduleD1: { app: { name: "app" } } } },
     },
   });
-  await assert.rejects(adapter.upsert(exampleEntity, [], fixture().project, "SELECT 1;"), /writes are disabled/u);
+	await assert.rejects(adapter.upsert(exampleEntity, [], fixture().project, "SELECT 1;"), /writes are disabled/u);
+	await assert.rejects(
+		adapter.upsertRepository(exampleEntity, [row()], fixture().project),
+		/repository writes are disabled/u,
+	);
   await assert.rejects(adapter.setMaintenance("10-test", { enabled: true }), /writes are disabled/u);
   assert.equal(commands, 0);
 });

@@ -1,6 +1,8 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import topology from "../../../config/emdash-plugin-topology.json";
+import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
+import type { SuperBoardPluginManifest } from "@superboard/supbrd-core";
 
 import {
 	acceptWorkerCallback,
@@ -19,7 +21,7 @@ describe("EmDash plugin Store authority", () => {
 		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 		const input = {
 			plugin_id: "supbrd-plug-user",
-			store_id: "supbrd-plug-user.store.authority",
+			store_id: "supbrd-plug-user.store.directory",
 			projectId: "vocostar",
 			pid: "vocostar",
 			entity_type: "user",
@@ -29,6 +31,7 @@ describe("EmDash plugin Store authority", () => {
 			payload: { email: "user@example.com", active: true },
 			updated_at: "2026-08-30T02:00:00.000Z",
 			encryption_key: encryptionKey,
+			manifest: pluginManifest("supbrd-plug-user"),
 		};
 		const created = await putPluginStoreRecord(env.DB, input);
 		expect(created).toMatchObject({ revision: 1, instance_id: "vocostar", idempotent: false });
@@ -39,6 +42,13 @@ describe("EmDash plugin Store authority", () => {
 		const stored = await env.DB.prepare("SELECT payload_json FROM superboard_plugin_store_records WHERE entity_id = 'user-1'").first<{ payload_json: string }>();
 		expect(stored?.payload_json).not.toContain("user@example.com");
 		await expect(putPluginStoreRecord(env.DB, { ...input, entity_id: "user-2" })).rejects.toThrow(/IDEMPOTENCY_TARGET_CONFLICT/u);
+		await expect(
+			putPluginStoreRecord(env.DB, {
+				...input,
+				operation_id: "operation-cross-store",
+				store_id: "supbrd-plug-settings.store.settings",
+			}),
+		).rejects.toThrow(/AUTHORITY_REJECTED|NAMESPACE_REJECTED/u);
 	});
 
 	test("fails shadow mismatches closed with metrics that contain no payload", async () => {
@@ -67,6 +77,7 @@ describe("EmDash plugin Store authority", () => {
 			payload: { locale: "fr" },
 			updated_at: "2026-08-30T02:00:00.000Z",
 			encryption_key: encryptionKey,
+			manifest: pluginManifest("supbrd-plug-settings"),
 		});
 		const delta = await exportPluginStoreReverseDelta(env.DB, {
 			plugin_id: "supbrd-plug-settings",
@@ -80,11 +91,18 @@ describe("EmDash plugin Store authority", () => {
 	});
 
 	test("accepts a Worker callback only once with the exact attempt lease", async () => {
+		const callbackKeys = await crypto.subtle.generateKey(
+			{ name: "ECDSA", namedCurve: "P-256" },
+			true,
+			["sign", "verify"],
+		);
+		const callbackPublicJwk = await crypto.subtle.exportKey("jwk", callbackKeys.publicKey);
 		await issueWorkerExecutionLease(env.DB, {
 			attempt_id: "attempt-billing-1",
 			plugin_id: "supbrd-plugmod-billing",
 			operation_id: "billing-operation-1",
 			callback_token: "callback-secret",
+			callback_public_jwk: callbackPublicJwk,
 			issued_at: "2026-08-30T02:00:00.000Z",
 			expires_at: "2026-08-30T02:10:00.000Z",
 		});
@@ -92,6 +110,8 @@ describe("EmDash plugin Store authority", () => {
 			attempt_id: "attempt-billing-1",
 			plugin_id: "supbrd-plugmod-billing",
 			callback_token: "wrong",
+			payload_checksum: `sha256:${"a".repeat(64)}`,
+			signature: "invalid",
 			completed_at: "2026-08-30T02:01:00.000Z",
 		})).rejects.toThrow(/CALLBACK_REJECTED/u);
 		await issueWorkerExecutionLease(env.DB, {
@@ -99,6 +119,7 @@ describe("EmDash plugin Store authority", () => {
 			plugin_id: "supbrd-plugmod-billing",
 			operation_id: "billing-operation-1",
 			callback_token: "replacement-secret",
+			callback_public_jwk: callbackPublicJwk,
 			issued_at: "2026-08-30T02:02:00.000Z",
 			expires_at: "2026-08-30T02:10:00.000Z",
 		});
@@ -106,18 +127,33 @@ describe("EmDash plugin Store authority", () => {
 			attempt_id: "attempt-billing-1",
 			plugin_id: "supbrd-plugmod-billing",
 			callback_token: "callback-secret",
+			payload_checksum: `sha256:${"a".repeat(64)}`,
+			signature: "invalid",
 			completed_at: "2026-08-30T02:03:00.000Z",
 		})).rejects.toThrow(/CALLBACK_REJECTED/u);
+		const completedAt = "2026-08-30T02:03:00.000Z";
+		const payloadChecksum = `sha256:${"a".repeat(64)}`;
+		const signature = await signWorkerCallback(callbackKeys.privateKey, {
+			attempt_id: "attempt-billing-2",
+			plugin_id: "supbrd-plugmod-billing",
+			operation_id: "billing-operation-1",
+			payload_checksum: payloadChecksum,
+			completed_at: completedAt,
+		});
 		expect(await acceptWorkerCallback(env.DB, {
 			attempt_id: "attempt-billing-2",
 			plugin_id: "supbrd-plugmod-billing",
 			callback_token: "replacement-secret",
-			completed_at: "2026-08-30T02:03:00.000Z",
+			payload_checksum: payloadChecksum,
+			signature,
+			completed_at: completedAt,
 		})).toEqual({ operation_id: "billing-operation-1" });
 		await expect(acceptWorkerCallback(env.DB, {
 			attempt_id: "attempt-billing-2",
 			plugin_id: "supbrd-plugmod-billing",
 			callback_token: "replacement-secret",
+			payload_checksum: payloadChecksum,
+			signature,
 			completed_at: "2026-08-30T02:04:00.000Z",
 		})).rejects.toThrow(/CALLBACK_REJECTED/u);
 	});
@@ -164,6 +200,7 @@ describe("EmDash plugin Store authority", () => {
 					payload: { fixture_id: entityId, domain: manifest.plugin_id },
 					updated_at: "2026-08-30T02:05:00.000Z",
 					encryption_key: encryptionKey,
+					manifest: manifest as SuperBoardPluginManifest,
 				};
 				const created = await putPluginStoreRecord(env.DB, input);
 				expect(created.idempotent).toBe(false);
@@ -190,3 +227,27 @@ describe("EmDash plugin Store authority", () => {
 		expect(storeCount).toBeGreaterThan(19);
 	});
 });
+
+function pluginManifest(pluginId: string): SuperBoardPluginManifest {
+	const entry = topology.plugins.find(({ manifest }) => manifest.plugin_id === pluginId);
+	if (!entry) throw new Error(`Missing test manifest: ${pluginId}`);
+	return entry.manifest as SuperBoardPluginManifest;
+}
+
+async function signWorkerCallback(
+	privateKey: CryptoKey,
+	payload: {
+		attempt_id: string;
+		plugin_id: string;
+		operation_id: string;
+		payload_checksum: string;
+		completed_at: string;
+	},
+): Promise<string> {
+	const signature = await crypto.subtle.sign(
+		{ name: "ECDSA", hash: "SHA-256" },
+		privateKey,
+		new TextEncoder().encode(canonicalizeReleasePayload(payload)),
+	);
+	return btoa(String.fromCodePoint(...new Uint8Array(signature)));
+}

@@ -259,6 +259,7 @@ export async function applyPlan({ adapter, registry, plan, safety, checkpoint = 
       if (compareDatasets(item.rows, targetRows, entity).matches) resumed = true;
     }
     if (!item.matches && !resumed) {
+      await adapter.upsertRepository(entity, item.rows, plan.project);
       await adapter.upsert(entity, item.rows, plan.project, upsertSql(entity, item.rows));
     }
     const actualRows = await adapter.readTarget(entity, plan.project);

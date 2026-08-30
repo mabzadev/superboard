@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -9,6 +10,7 @@ export class FixtureAdapter {
   constructor(fixture) {
     this.fixture = structuredClone(fixture);
     this.upsertCalls = [];
+    this.repositoryUpsertCalls = [];
   }
 
   async resolveProject(parsed) {
@@ -38,6 +40,16 @@ export class FixtureAdapter {
     this.fixture.target_rows[entity.id] = [...index.values()];
   }
 
+  async upsertRepository(entity, rows, context) {
+    this.fixture.repository_rows ||= {};
+    if (canonicalJson(this.fixture.repository_rows[entity.id] || []) === canonicalJson(rows)) {
+      return { instance_id: String(context.instance_id), count: rows.length, idempotent: true };
+    }
+    this.repositoryUpsertCalls.push({ entity: entity.id, repository: entity.repositoryId });
+    this.fixture.repository_rows[entity.id] = structuredClone(rows);
+    return { instance_id: String(context.instance_id), count: rows.length, idempotent: false };
+  }
+
   async maintenanceStatus(projectRef) {
     return structuredClone(this.fixture.maintenance?.[projectRef] || { enabled: false, window_id: null });
   }
@@ -50,7 +62,7 @@ export class FixtureAdapter {
 }
 
 export class RemoteD1Adapter {
-  constructor({ root, target, targetName, environment, allowWrites = false, gatewayToken, commandRunner = runCommand }) {
+  constructor({ root, target, targetName, environment, allowWrites = false, gatewayToken, repositoryEncryptionKey, commandRunner = runCommand }) {
     this.root = root;
     this.target = target;
     this.targetName = targetName;
@@ -58,6 +70,7 @@ export class RemoteD1Adapter {
     this.resources = target.environments[environment];
     this.allowWrites = allowWrites;
     this.gatewayToken = gatewayToken;
+    this.repositoryEncryptionKey = repositoryEncryptionKey;
     this.commandRunner = commandRunner;
     if (!this.resources) throw new Error(`${targetName} does not define environment ${environment}`);
   }
@@ -95,6 +108,25 @@ export class RemoteD1Adapter {
       await writeFile(path, sql, { mode: 0o600 });
       this.capture([
         "wrangler", "d1", "execute", databaseId(this.moduleDatabase(entity.module)),
+        "--remote", "--file", path,
+      ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+
+  async upsertRepository(entity, rows, context) {
+    if (!this.allowWrites) throw new Error("Remote repository writes are disabled");
+    if (!this.repositoryEncryptionKey) {
+      throw new Error("SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY is required for repository authority");
+    }
+    const sql = repositoryUpsertSql(entity, rows, context, this.repositoryEncryptionKey);
+    const directory = await mkdtemp(join(tmpdir(), "superboard-repository-cutover-"));
+    const path = join(directory, `${entity.id.replaceAll(".", "-")}-repository.sql`);
+    try {
+      await writeFile(path, sql, { mode: 0o600 });
+      this.capture([
+        "wrangler", "d1", "execute", databaseId(this.resources.siteD1),
         "--remote", "--file", path,
       ]);
     } finally {
@@ -160,6 +192,41 @@ export class RemoteD1Adapter {
     if (!database) throw new Error(`Missing module D1 binding for ${module}`);
     return database;
   }
+}
+
+function repositoryUpsertSql(entity, rows, context, encodedKey) {
+  const key = Buffer.from(encodedKey, "base64");
+  if (key.length !== 32) throw new Error("SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY must be base64 AES-256 key material");
+  const statements = rows.map((row) => {
+    const plaintext = canonicalJson(row);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", key, iv);
+    const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+    const envelope = canonicalJson({
+      algorithm: "AES-GCM",
+      iv: iv.toString("base64"),
+      ciphertext: Buffer.concat([ciphertext, cipher.getAuthTag()]).toString("base64"),
+    });
+    const payloadChecksum = `sha256:${createHash("sha256").update(envelope).digest("hex")}`;
+    const entityId = entity.keys.map((column) => String(row[column])).join(":");
+    const operationId = `cutover:${context.project_ref}:${entity.id}:${createHash("sha256").update(`${entityId}:${plaintext}`).digest("hex")}`;
+    return `INSERT INTO superboard_plugin_store_records
+      (plugin_id,store_id,instance_id,entity_type,entity_id,revision,payload_json,
+       payload_checksum,last_operation_id,updated_at)
+      VALUES (${sqlString(entity.pluginId)},${sqlString(entity.storeId)},${sqlString(String(context.instance_id))},
+       ${sqlString(entity.id)},${sqlString(entityId)},1,${sqlString(envelope)},${sqlString(payloadChecksum)},
+       ${sqlString(operationId)},${sqlString(new Date().toISOString())})
+      ON CONFLICT(plugin_id,store_id,instance_id,entity_type,entity_id) DO UPDATE SET
+       revision=superboard_plugin_store_records.revision+1,
+       payload_json=excluded.payload_json,payload_checksum=excluded.payload_checksum,
+       last_operation_id=excluded.last_operation_id,updated_at=excluded.updated_at
+      WHERE superboard_plugin_store_records.last_operation_id<>excluded.last_operation_id;`;
+  });
+  return ["PRAGMA foreign_keys = ON;", ...statements, ""].join("\n");
+}
+
+function sqlString(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
 }
 
 export async function loadFixture(path) {

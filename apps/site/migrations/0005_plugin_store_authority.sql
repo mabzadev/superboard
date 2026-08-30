@@ -103,10 +103,13 @@ CREATE TABLE IF NOT EXISTS superboard_worker_execution_leases (
   plugin_id TEXT NOT NULL,
   operation_id TEXT NOT NULL,
   callback_token_hash TEXT NOT NULL,
+  callback_public_jwk TEXT NOT NULL CHECK (json_valid(callback_public_jwk)),
   issued_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   superseded_at TEXT,
   consumed_at TEXT,
+  callback_payload_checksum TEXT,
+  callback_signature TEXT,
   UNIQUE(plugin_id, operation_id, attempt_id)
 );
 
