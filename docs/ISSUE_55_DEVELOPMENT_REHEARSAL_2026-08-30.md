@@ -94,6 +94,42 @@ Le Dashboard historique et ses domaines restent inchangés. Aucune cible
   partie du Canonical Release Payload.
 - Aucune lecture ni mutation `vocostar/production` n’a été effectuée.
 
+## Correction finale du catalogue de plugins
+
+La première clôture de #55 comptait à tort les manifests de contrôle comme des
+plugins runtime installés. Le ticket a été rouvert et cette lacune a été
+corrigée avant la clôture finale.
+
+- Les 18 plugins SuperBoard concrets possèdent maintenant un entrypoint EmDash
+  bundlé et apparaissent comme plugins configurés. Le template
+  `supbrd-plugmod-custom-*` reste exclu : son Worker Descriptor est
+  `not_ready` et son identifiant wildcard ne représente pas une installation.
+- `_plugin_state` contient 18 états SuperBoard `active`, source `config`.
+  L’écran EmDash Plugins affiche 19 cartes : les 18 plugins SuperBoard plus
+  `cloudflare-email`.
+- `supbrd-plug-user` v1.3.0 est devenu le manifest actif avec les six Stores
+  canoniques `access_keys`, `credentials`, `customers`, `directory`,
+  `referrals` et `sessions`. Les tests d’autorité, chiffrement, CAS,
+  idempotence et shadow read restent verts après promotion.
+- Les 18 dependencies possèdent un health receipt `ready` borné. La
+  synchronisation distante du catalogue a été exécutée le
+  `2026-08-30T10:30:28.196Z` et expire le `2026-08-31T10:30:28.196Z`.
+- La Release Front complète `01M193JMG6NKBDJXW9TMSBN48E`, candidat
+  `01M193JMG61VZPZ8W5QGGMSY3Q`, contient 19 entrées de Plugin Lock : Core et
+  les 18 plugins concrets. Elle contient 18 Dependency Policies, 13 reçus de
+  validation, le content checksum
+  `sha256:d522335008dea064a8171c1d161c29f2321dbf3201068f300a759b9425bfc471`
+  et le validation set
+  `sha256:c4a30c43729b26004152432dfff853cc4f9c91d624878e32adad3fc913c287db`.
+- Cette Release complète a été approuvée puis activée par
+  `0adb66e7-c880-4622-8064-b8e55c04025e` en révision 4. Le rollback
+  pointer-only `722c7421-2593-446f-b342-975f250ce8c8` a restauré v1 en
+  révision 5. Les deux opérations possèdent un reçu de réauthentification,
+  un historique et une outbox vérifiés.
+- Le Worker final de cette correction est
+  `f5fddd59-1781-4cbf-88bf-fbd699147c2e`. Le commit d’implémentation est
+  `912a8fd`.
+
 ## Commande de preview versionnée
 
 Après initialisation opérateur et satisfaction des gates Release Front, le Site
