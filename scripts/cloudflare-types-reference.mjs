@@ -153,14 +153,18 @@ export async function main(
 
   if (compareReferenceOutputs) {
     const stale = [];
+	const differences = [];
     for (const path of outputs) {
-      if (before.get(path) !== (await file(path))) {
+		const previous = before.get(path);
+		const current = await file(path);
+		if (previous !== current) {
         stale.push(path.slice(root.length + 1));
+			differences.push(firstDifference(path, previous, current));
       }
     }
     if (stale.length) {
       throw new Error(
-        `Generated Cloudflare binding types were stale:\n${stale.join("\n")}`,
+		`Generated Cloudflare binding types were stale:\n${stale.join("\n")}\n${differences.join("\n")}`,
       );
     }
   }
@@ -184,6 +188,18 @@ async function file(path) {
     if (error?.code === "ENOENT") return null;
     throw error;
   });
+}
+
+function firstDifference(path, previous, current) {
+	const beforeLines = String(previous ?? "<missing>").split("\n");
+	const afterLines = String(current ?? "<missing>").split("\n");
+	const limit = Math.max(beforeLines.length, afterLines.length);
+	for (let index = 0; index < limit; index += 1) {
+		if (beforeLines[index] !== afterLines[index]) {
+			return `${path.slice(root.length + 1)}:${index + 1}\n- ${beforeLines[index] ?? "<missing>"}\n+ ${afterLines[index] ?? "<missing>"}`;
+		}
+	}
+	return `${path.slice(root.length + 1)}: content changed`;
 }
 
 function run(command, args) {

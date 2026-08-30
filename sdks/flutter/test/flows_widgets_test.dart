@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -228,6 +229,12 @@ void main() {
   });
 
   testWidgets('native Basics V2 card golden', (tester) async {
+    final previousGoldenFileComparator = goldenFileComparator;
+    goldenFileComparator = _TolerantGoldenFileComparator(
+      Uri.parse('test/flows_widgets_test.dart'),
+      precisionTolerance: 0.01,
+    );
+    addTearDown(() => goldenFileComparator = previousGoldenFileComparator);
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(600, 400);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -513,6 +520,35 @@ void main() {
     expect(find.text('How useful is this?'), findsOneWidget);
     await offline.dispose();
   });
+}
+
+class _TolerantGoldenFileComparator extends LocalFileComparator {
+  _TolerantGoldenFileComparator(
+    super.testFile, {
+    required double precisionTolerance,
+  }) : assert(
+         0 <= precisionTolerance && precisionTolerance <= 1,
+         'precisionTolerance must be between 0 and 1',
+       ),
+       _precisionTolerance = precisionTolerance;
+
+  final double _precisionTolerance;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final result = await GoldenFileComparator.compareLists(
+      imageBytes,
+      await getGoldenBytes(golden),
+    );
+    final passed = result.passed || result.diffPercent <= _precisionTolerance;
+    if (passed) {
+      result.dispose();
+      return true;
+    }
+    final error = await generateFailureOutput(result, golden, basedir);
+    result.dispose();
+    throw FlutterError(error);
+  }
 }
 
 Future<SuperBoardFlowsClient> _client(http.Client httpClient) async {

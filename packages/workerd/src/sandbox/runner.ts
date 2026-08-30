@@ -97,6 +97,14 @@ export function minimalWorkerdEnv(): NodeJS.ProcessEnv {
  * Falls back to TCP on Windows where Unix sockets are not available. */
 const USE_UNIX_SOCKET = process.platform !== "win32";
 
+// Give each Node process a private block for plugin listeners. Test runners and
+// clustered Node deployments can otherwise start independent workerd sidecars
+// on the same historical base port.
+const PLUGIN_PORT_BLOCK_SIZE = 128;
+const PLUGIN_PORT_BLOCK_COUNT = 200;
+const PROCESS_PLUGIN_PORT_BASE =
+	18_788 + (process.pid % PLUGIN_PORT_BLOCK_COUNT) * PLUGIN_PORT_BLOCK_SIZE;
+
 const activeRunners = new Set<WorkerdSandboxRunner>();
 let sigHandlerRegistered = false;
 
@@ -337,7 +345,7 @@ export class WorkerdSandboxRunner implements SandboxRunner {
 	private epoch = 0;
 
 	/** Next available port for plugin nanoservices */
-	private nextPluginPort = 18788;
+	private nextPluginPort = PROCESS_PLUGIN_PORT_BASE;
 
 	/**
 	 * Ports freed by unloadPlugin(), preferred over nextPluginPort on the

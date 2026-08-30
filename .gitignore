@@ -144,3 +144,4 @@ yarn-error.log*
 /.flows-cutover/
 /scripts/support-audit/generated/
 package-lock.json
+!sdks/javascript/package-lock.json
