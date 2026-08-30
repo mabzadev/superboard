@@ -20,6 +20,8 @@ const release = await compileFrontRelease(
 		compilation_id: "01J00000000000000000000303",
 		candidate_id: "01J00000000000000000000304",
 		release_id: "01J00000000000000000000305",
+		release_sequence: 1,
+		previous_release_id: null,
 		created_at: "2026-08-30T00:45:00.000Z",
 	}),
 	{ kid: "user-slice-local-key", private_key: keys.privateKey },

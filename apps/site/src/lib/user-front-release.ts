@@ -38,6 +38,8 @@ export async function composeUserFrontReleaseInput(input: {
 	compilation_id: string;
 	candidate_id: string;
 	release_id: string;
+	release_sequence: number;
+	previous_release_id: string | null;
 	created_at: string;
 }): Promise<FrontReleaseInput> {
 	const statePolicies: Record<FrontState, string> = {
@@ -77,8 +79,8 @@ export async function composeUserFrontReleaseInput(input: {
 		schema_version: "1.0.0",
 		compiler_version: "0.1.0",
 		...input,
-		release_sequence: 1,
-		previous_release_id: null,
+		release_sequence: input.release_sequence,
+		previous_release_id: input.previous_release_id,
 		front_route_manifest: {
 			schema_version: "1.0.0",
 			manifest_id: "01J00000000000000000000220",

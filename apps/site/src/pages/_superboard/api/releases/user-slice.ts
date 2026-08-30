@@ -1,8 +1,12 @@
 import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
-import { createFrontDraftWithSnapshot } from "../../../../lib/front-workflow-repository.js";
+import {
+	createFrontDraftWithSnapshot,
+	getCandidateByReleaseId,
+} from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import { createD1FrontReleaseRepository } from "../../../../lib/release-repository.js";
 import { isRecord, isUlid } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 import { composeUserFrontReleaseInput } from "../../../../lib/user-front-release.js";
@@ -32,9 +36,22 @@ export const POST: APIRoute = async (context) => {
 			release_id: body.release_id,
 		};
 		const now = new Date().toISOString();
+		const active = await createD1FrontReleaseRepository(env.DB).getActive(
+			env.SUPERBOARD_INSTANCE_ID,
+		);
+		const predecessor = active
+			? await getCandidateByReleaseId(env.DB, active.active_release_id)
+			: null;
+		if (active && !predecessor) {
+			return jsonResponse({ error: { code: "ACTIVE_RELEASE_PREDECESSOR_MISSING" } }, 409);
+		}
+		const releaseSequence = (predecessor?.release.payload.release_sequence ?? 0) + 1;
+		const previousReleaseId = active?.active_release_id ?? null;
 		const input = await composeUserFrontReleaseInput({
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			...identifiers,
+			release_sequence: releaseSequence,
+			previous_release_id: previousReleaseId,
 			created_at: now,
 		});
 		await createFrontDraftWithSnapshot(env.DB, {
@@ -49,6 +66,8 @@ export const POST: APIRoute = async (context) => {
 				front_draft_id: identifiers.front_draft_id,
 				draft_snapshot_id: identifiers.draft_snapshot_id,
 				draft_revision: 1,
+				release_sequence: releaseSequence,
+				previous_release_id: previousReleaseId,
 				next: "/superboard-system/api/releases/compile",
 			},
 			201,

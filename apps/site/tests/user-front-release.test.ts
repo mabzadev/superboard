@@ -22,8 +22,22 @@ const identifiers = {
 	compilation_id: "01J00000000000000000000203",
 	candidate_id: "01J00000000000000000000204",
 	release_id: "01J00000000000000000000205",
+	release_sequence: 1,
+	previous_release_id: null,
 	created_at: "2026-08-30T00:30:00.000Z",
 };
+
+test("composes the next release against the exact active predecessor", async () => {
+	const input = await composeUserFrontReleaseInput({
+		...identifiers,
+		candidate_id: "01J00000000000000000000206",
+		release_id: "01J00000000000000000000207",
+		release_sequence: 2,
+		previous_release_id: identifiers.release_id,
+	});
+	expect(input.release_sequence).toBe(2);
+	expect(input.previous_release_id).toBe(identifiers.release_id);
+});
 
 test("the Site composes a permission-filtered user slice from plugin contributions", async () => {
 	const input = await composeUserFrontReleaseInput(identifiers);

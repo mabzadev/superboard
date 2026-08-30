@@ -37,6 +37,8 @@ test("produces candidate, preview, approval and activation evidence for the user
 			compilation_id: "01J00000000000000000000403",
 			candidate_id: "01J00000000000000000000404",
 			release_id: "01J00000000000000000000405",
+			release_sequence: 1,
+			previous_release_id: null,
 			created_at: "2026-08-30T00:55:00.000Z",
 		}),
 		{ kid: "user-slice-runtime-key", private_key: keys.privateKey },
