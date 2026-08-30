@@ -10,8 +10,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/lib/domain-modules.test.ts",
+      "proof_sha256": "sha256:1fb1724cdc9a9a412c85903239c1a5a37e150d49f2f09b575e4f70ca4ed8759d",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -21,8 +21,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/admin-cutover-flows-routing.test.ts",
+      "proof_sha256": "sha256:c0e8f2489b7da0ae5d45f1f42c473053dfd20bb682839a7d563198a131a1f13b",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -32,8 +32,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/index.test.ts",
+      "proof_sha256": "sha256:2b86eb9d166c7c8e8bcfd37df825d15339b84d15c522cca8c091c3c83a152a40",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -43,8 +43,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/lib/purchases-v2.test.ts",
+      "proof_sha256": "sha256:a1323ea1e853a01aad67c0684dae5d62e120e4359d64f24c9cddf6c48abd8532",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -54,8 +54,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/projects-visitors.test.ts",
+      "proof_sha256": "sha256:4937cee8d74d2983071175693ccfa6a6ab2b2e080225425c03d5fac0e9c3ff5b",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -65,8 +65,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/marketing-sdk.test.ts",
+      "proof_sha256": "sha256:30a0126e5663f6e8c318b305427cfd316629243949472a5979c0469adf5b821b",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -76,8 +76,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/mcp.test.ts",
+      "proof_sha256": "sha256:1734a654557917cd7d648af12ae04a49aad1a81f59510bc212f95ec4ae840a89",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -87,8 +87,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/platform-status.test.ts",
+      "proof_sha256": "sha256:fac6b2fb5b28b7766d93a4dd6e24f332e1a960b87fe9e2fbd81f83100005546e",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -98,8 +98,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/sdk-auth.test.ts",
+      "proof_sha256": "sha256:4680edc9459cbde3eaf705b7661cea1cdde2ba3a25ae9252e041e7e35bf5d204",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -109,8 +109,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/lib/support-gateway.test.ts",
+      "proof_sha256": "sha256:8f8bf49fccb50dd1796ca0a28a27e009724750a86158df69889f4b044fee11f7",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -120,8 +120,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/providers.test.ts",
+      "proof_sha256": "sha256:40856adc99a01cec927bc371bb98ca5948a3a441edcec8a2979c72f8c9fd5d28",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -131,8 +131,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/index.test.ts",
+      "proof_sha256": "sha256:2b86eb9d166c7c8e8bcfd37df825d15339b84d15c522cca8c091c3c83a152a40",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -142,8 +142,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/auth-routes.test.ts",
+      "proof_sha256": "sha256:41de9692c308d9f156fa650945536620367468e9ff934a9185f797d354126abd",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -153,8 +153,8 @@
       "kind": "api",
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
-      "test": "scripts/superboard-inventory.test.mjs",
-      "proof_sha256": "sha256:c6d7fe42fd2fcda45d197f06dee762b0dab409656d10fc0e9986c1f70e31f749",
+      "test": "workers/api/src/routes/projects-visitors.test.ts",
+      "proof_sha256": "sha256:4937cee8d74d2983071175693ccfa6a6ab2b2e080225425c03d5fac0e9c3ff5b",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -165,7 +165,7 @@
       "baseline": "apps/dashboard/src/app/accept-invite/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -176,7 +176,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/account/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -187,7 +187,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -198,7 +198,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/alerts/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -209,7 +209,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/cohorts/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -220,7 +220,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/crashes/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -231,7 +231,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/dashboards/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -242,7 +242,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/dimensions/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -253,7 +253,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/events/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -264,7 +264,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/feedback/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -275,7 +275,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/insights/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -286,7 +286,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/installations/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -297,7 +297,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/purchases/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -308,7 +308,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/remote-config/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -319,7 +319,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/reports/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -330,7 +330,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/settings/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -341,7 +341,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/users/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -352,7 +352,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/analytics/views/page.tsx",
       "target": "supbrd-plugmod-analytics",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -363,7 +363,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/access-key/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -374,7 +374,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/android-setup/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -385,7 +385,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/customers/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -396,7 +396,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/ios-setup/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -407,7 +407,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/libraries/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -418,7 +418,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/referrals/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -429,7 +429,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/users/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -440,7 +440,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/app/web-setup/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -451,7 +451,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dashboard/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -462,7 +462,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dynamic-links/campaigns/page.tsx",
       "target": "supbrd-plugmod-dynamic-links",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -473,7 +473,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dynamic-links/campaigns/[id]/page.tsx",
       "target": "supbrd-plugmod-dynamic-links",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -484,7 +484,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dynamic-links/domain/page.tsx",
       "target": "supbrd-plugmod-dynamic-links",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -495,7 +495,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dynamic-links/links/page.tsx",
       "target": "supbrd-plugmod-dynamic-links",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -506,7 +506,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dynamic-links/redirect-rules/page.tsx",
       "target": "supbrd-plugmod-dynamic-links",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -517,7 +517,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dynamic-links/social-media-preview/page.tsx",
       "target": "supbrd-plugmod-dynamic-links",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -528,7 +528,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/dynamic-links/tracking/page.tsx",
       "target": "supbrd-plugmod-dynamic-links",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -539,7 +539,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -550,7 +550,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/components/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -561,7 +561,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/launchpad/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -572,7 +572,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/settings/environments/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -583,7 +583,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/settings/localization/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -594,7 +594,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/settings/sdk/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -605,7 +605,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/users/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -616,7 +616,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/users/[id]/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -627,7 +627,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/workflows/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -638,7 +638,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/flows/workflows/[id]/page.tsx",
       "target": "supbrd-plugmod-flows",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "flows_complete_gate",
       "required": false
@@ -649,7 +649,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -660,7 +660,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -671,7 +671,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/account/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -682,7 +682,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -693,7 +693,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -704,7 +704,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/banners/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -715,7 +715,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/banners/new/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -726,7 +726,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/new/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -737,7 +737,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/dashboard/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -748,7 +748,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -759,7 +759,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/email/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -770,7 +770,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/sign-in/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -781,7 +781,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/sms/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -792,7 +792,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -803,7 +803,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -814,7 +814,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/new/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -825,7 +825,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/roles/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -836,7 +836,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/roles/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -847,7 +847,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/roles/new/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -858,7 +858,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/saml/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -869,7 +869,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/saml/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -880,7 +880,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/saml/new/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -891,7 +891,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/scopes/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -902,7 +902,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/scopes/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -913,7 +913,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/scopes/new/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -924,7 +924,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/user-attributes/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -935,7 +935,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/user-attributes/[id]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -946,7 +946,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/user-attributes/new/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -957,7 +957,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/users/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -968,7 +968,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/identity/[lang]/users/[authId]/page.tsx",
       "target": "supbrd-plug-user",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -979,7 +979,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/infrastructure/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -990,7 +990,7 @@
       "baseline": "apps/dashboard/src/app/login/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1001,7 +1001,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/marketing/campaigns/page.tsx",
       "target": "supbrd-plugmod-marketing",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1012,7 +1012,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/marketing/channels/page.tsx",
       "target": "supbrd-plugmod-marketing",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1023,7 +1023,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/marketing/email/page.tsx",
       "target": "supbrd-plugmod-marketing",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1034,7 +1034,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/marketing/in-app-messages/page.tsx",
       "target": "supbrd-plugmod-marketing",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1045,7 +1045,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/marketing/journeys/page.tsx",
       "target": "supbrd-plugmod-marketing",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1056,7 +1056,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/marketing/settings/page.tsx",
       "target": "supbrd-plugmod-marketing",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1067,7 +1067,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/marketing/statistics/page.tsx",
       "target": "supbrd-plugmod-marketing",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1078,7 +1078,7 @@
       "baseline": "apps/dashboard/src/app/mcp/authorize/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1089,7 +1089,7 @@
       "baseline": "apps/dashboard/src/app/message-preview-craft/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1100,7 +1100,7 @@
       "baseline": "apps/dashboard/src/app/new_password/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1111,7 +1111,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/onboardings/page.tsx",
       "target": "supbrd-plugmod-onboardings",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1122,7 +1122,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/onboardings/statistics/page.tsx",
       "target": "supbrd-plugmod-onboardings",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1133,7 +1133,7 @@
       "baseline": "apps/dashboard/src/app/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1144,7 +1144,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/paywalls/page.tsx",
       "target": "supbrd-plugmod-paywalls",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1155,7 +1155,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/paywalls/statistics/page.tsx",
       "target": "supbrd-plugmod-paywalls",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1166,7 +1166,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/products/customers/page.tsx",
       "target": "supbrd-plug-products",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1177,7 +1177,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/products/entitlements/page.tsx",
       "target": "supbrd-plug-products",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1188,7 +1188,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/products/offerings/page.tsx",
       "target": "supbrd-plug-products",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1199,7 +1199,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/products/purchases/page.tsx",
       "target": "supbrd-plug-products",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1210,7 +1210,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/project-settings/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1221,7 +1221,7 @@
       "baseline": "apps/dashboard/src/app/register/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1232,7 +1232,7 @@
       "baseline": "apps/dashboard/src/app/register/with_email/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1243,7 +1243,7 @@
       "baseline": "apps/dashboard/src/app/reset_password/page.tsx",
       "target": "supbrd-core",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -1254,7 +1254,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/automations/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1265,7 +1265,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/captain/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1276,7 +1276,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/channels/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1287,7 +1287,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/configuration/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1298,7 +1298,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/contacts/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1309,7 +1309,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/help-center/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1320,7 +1320,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/inbox/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1331,7 +1331,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/integrations/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1342,7 +1342,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/proactive-support/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1353,7 +1353,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/quality/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1364,7 +1364,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/reports/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1375,7 +1375,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/settings/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false
@@ -1386,7 +1386,7 @@
       "baseline": "apps/dashboard/src/app/(protected)/support/workforce/page.tsx",
       "target": "supbrd-plugmod-support",
       "test": "scripts/dashboard-route-parity.test.mjs",
-      "proof_sha256": "sha256:9b30dc6bb9416466a7776db7f1d6731f100680a22a16b0145e8781a9885c7eca",
+      "proof_sha256": "sha256:c383b6a12a35097384ef2cdc060ac33354739c287ab19ba68e6a08fb07e8b0b0",
       "source_status": "unvalidated",
       "blocker": "support_extended_gate",
       "required": false

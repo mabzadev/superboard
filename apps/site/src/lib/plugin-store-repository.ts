@@ -2,7 +2,6 @@ import {
 	canonicalizeReleasePayload,
 	verifySuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
-import type { SuperBoardPluginManifest } from "@superboard/supbrd-core";
 
 const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9*]+(?:-[a-z0-9*]+)*$/u;
 
@@ -19,7 +18,6 @@ interface StoreRecordInput {
 	payload: unknown;
 	updated_at: string;
 	encryption_key: CryptoKey;
-	manifest: SuperBoardPluginManifest;
 }
 
 interface StoreRecordRow {
@@ -37,11 +35,24 @@ interface StoreRecordRow {
 
 export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInput) {
 	assertPlugin(input.plugin_id);
-	const manifestVerification = await verifySuperBoardPluginManifest(input.manifest);
+	const installed = await db
+		.prepare(
+			`SELECT artifact.manifest_json
+			 FROM superboard_active_plugin_manifests AS active
+			 JOIN superboard_plugin_manifest_artifacts AS artifact
+			   ON artifact.artifact_checksum = active.artifact_checksum
+			 WHERE active.plugin_id = ? AND artifact.plugin_id = active.plugin_id`,
+		)
+		.bind(input.plugin_id)
+		.first<{ manifest_json: string }>();
+	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
+	const manifest: unknown = JSON.parse(installed.manifest_json);
+	const manifestVerification = await verifySuperBoardPluginManifest(manifest);
 	if (
 		!manifestVerification.valid ||
-		input.manifest.plugin_id !== input.plugin_id ||
-		!input.manifest.stores.some(
+		!isManifest(manifest) ||
+		manifest.plugin_id !== input.plugin_id ||
+		!manifest.stores.some(
 			(store) => store.store_id === input.store_id && store.authority === input.plugin_id,
 		)
 	) {
@@ -142,6 +153,20 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 		.first<StoreRecordRow>();
 	if (!row) throw new Error("STORE_REVISION_CONFLICT");
 	return { ...(await toRecord(row, input.encryption_key)), idempotent: false };
+}
+
+function isManifest(value: unknown): value is {
+	plugin_id: string;
+	stores: Array<{ store_id: string; authority: string }>;
+} {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"plugin_id" in value &&
+		typeof value.plugin_id === "string" &&
+		"stores" in value &&
+		Array.isArray(value.stores)
+	);
 }
 
 export async function loadPluginStoreRecord(

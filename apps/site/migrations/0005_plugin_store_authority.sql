@@ -1,5 +1,32 @@
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS superboard_plugin_manifest_artifacts (
+  artifact_checksum TEXT PRIMARY KEY,
+  plugin_id TEXT NOT NULL,
+  manifest_json TEXT NOT NULL CHECK (json_valid(manifest_json)),
+  installed_at TEXT NOT NULL,
+  UNIQUE(plugin_id, artifact_checksum)
+);
+
+CREATE TABLE IF NOT EXISTS superboard_active_plugin_manifests (
+  plugin_id TEXT PRIMARY KEY,
+  artifact_checksum TEXT NOT NULL
+    REFERENCES superboard_plugin_manifest_artifacts(artifact_checksum),
+  activated_at TEXT NOT NULL
+);
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_manifest_artifact_immutable_update
+BEFORE UPDATE ON superboard_plugin_manifest_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'plugin manifest artifacts are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_manifest_artifact_immutable_delete
+BEFORE DELETE ON superboard_plugin_manifest_artifacts
+BEGIN
+  SELECT RAISE(ABORT, 'plugin manifest artifacts are immutable');
+END;
+
 CREATE TABLE IF NOT EXISTS superboard_plugin_store_records (
   plugin_id TEXT NOT NULL,
   store_id TEXT NOT NULL,

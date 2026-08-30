@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import topology from "../../../config/emdash-plugin-topology.json";
 import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
-import type { SuperBoardPluginManifest } from "@superboard/supbrd-core";
 
 import {
 	acceptWorkerCallback,
@@ -31,7 +30,6 @@ describe("EmDash plugin Store authority", () => {
 			payload: { email: "user@example.com", active: true },
 			updated_at: "2026-08-30T02:00:00.000Z",
 			encryption_key: encryptionKey,
-			manifest: pluginManifest("supbrd-plug-user"),
 		};
 		const created = await putPluginStoreRecord(env.DB, input);
 		expect(created).toMatchObject({ revision: 1, instance_id: "vocostar", idempotent: false });
@@ -77,7 +75,6 @@ describe("EmDash plugin Store authority", () => {
 			payload: { locale: "fr" },
 			updated_at: "2026-08-30T02:00:00.000Z",
 			encryption_key: encryptionKey,
-			manifest: pluginManifest("supbrd-plug-settings"),
 		});
 		const delta = await exportPluginStoreReverseDelta(env.DB, {
 			plugin_id: "supbrd-plug-settings",
@@ -200,7 +197,6 @@ describe("EmDash plugin Store authority", () => {
 					payload: { fixture_id: entityId, domain: manifest.plugin_id },
 					updated_at: "2026-08-30T02:05:00.000Z",
 					encryption_key: encryptionKey,
-					manifest: manifest as SuperBoardPluginManifest,
 				};
 				const created = await putPluginStoreRecord(env.DB, input);
 				expect(created.idempotent).toBe(false);
@@ -227,12 +223,6 @@ describe("EmDash plugin Store authority", () => {
 		expect(storeCount).toBeGreaterThan(19);
 	});
 });
-
-function pluginManifest(pluginId: string): SuperBoardPluginManifest {
-	const entry = topology.plugins.find(({ manifest }) => manifest.plugin_id === pluginId);
-	if (!entry) throw new Error(`Missing test manifest: ${pluginId}`);
-	return entry.manifest as SuperBoardPluginManifest;
-}
 
 async function signWorkerCallback(
 	privateKey: CryptoKey,
