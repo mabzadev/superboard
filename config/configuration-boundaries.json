@@ -8,6 +8,7 @@
       "runtimeRoots": [
         "apps/dashboard/src",
         "apps/mcp/src",
+        "apps/site/src",
         "packages",
         "scripts",
         "sdks",
@@ -96,10 +97,12 @@
     "localWranglerTemplates": [
       "workers/app/wrangler.jsonc",
       "workers/dynamic-links/wrangler.jsonc",
+      "workers/flows/wrangler.jsonc",
       "workers/identity/wrangler.jsonc",
       "workers/onboardings/wrangler.jsonc",
       "workers/paywalls/wrangler.jsonc",
       "workers/products/wrangler.jsonc"
+      ,"packages/marketplace/wrangler.jsonc"
     ]
   }
 }

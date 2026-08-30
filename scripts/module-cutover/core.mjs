@@ -4,7 +4,26 @@ import { dirname } from "node:path";
 
 export const CUTOVER_SCHEMA_VERSION = 1;
 export const CUTOVER_TOOL_VERSION = "1.0.0";
-export const MODULES = Object.freeze(["app", "products", "paywalls", "dynamic-links", "support"]);
+export const MODULES = Object.freeze([
+  "app",
+  "identity",
+  "settings",
+  "content",
+  "audit",
+  "gateway",
+  "products",
+  "paywalls",
+  "dynamic-links",
+  "support",
+  "flows",
+  "analytics",
+  "marketing",
+  "email",
+  "files",
+  "onboardings",
+  "observability",
+  "mcp",
+]);
 
 export function parseProjectRef(projectRef) {
   const match = /^(\d+)-(prod|test)$/u.exec(String(projectRef || ""));
@@ -66,7 +85,22 @@ function validateProductionPrerequisites(project, window, allowProduction) {
     const declaredRequired = window.backup_receipt?.required_artifacts;
     const requiredArtifacts = new Set(Array.isArray(declaredRequired) && declaredRequired.length > 0
       ? declaredRequired
-      : ["legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]);
+      : [
+        "site-emdash",
+        "legacy-api",
+        "legacy-messaging",
+        "service-email",
+        "service-identity",
+        "service-files",
+        "module-analytics",
+        "module-app",
+        "module-products",
+        "module-paywalls",
+        "module-dynamicLinks",
+        "module-support",
+        "module-marketing",
+        "module-onboardings",
+      ]);
     const validArtifacts = Array.isArray(artifacts) && artifacts.every((artifact) =>
       artifact && typeof artifact.name === "string" && Number(artifact.bytes) > 0 && /^[a-f0-9]{64}$/u.test(String(artifact.sha256 || "")));
     const observedArtifacts = new Set(Array.isArray(artifacts) ? artifacts.map((artifact) => artifact?.name) : []);
@@ -122,6 +156,21 @@ export function compareDatasets(expectedRows, actualRows, entity) {
   return { expected, actual, matches: expected.count === actual.count && expected.checksum === actual.checksum };
 }
 
+export function verifyShadowRead({ entity, sourceRows, targetRows, emitMetric = () => undefined }) {
+	const comparison = compareDatasets(sourceRows, targetRows, entity);
+	const metric = {
+		name: "emdash_store_shadow_read",
+		tags: { entity_id: entity.id, result: comparison.matches ? "match" : "mismatch" },
+		values: {
+			source_count: comparison.expected.count,
+			target_count: comparison.actual.count,
+		},
+	};
+	emitMetric(metric);
+	if (!comparison.matches) throw new CutoverMismatchError(entity.id, comparison);
+	return { rows: targetRows, evidence: comparison, metric };
+}
+
 export function sqlLiteral(value) {
   if (value === null || value === undefined) return "NULL";
   if (typeof value === "number") {
@@ -133,7 +182,13 @@ export function sqlLiteral(value) {
 }
 
 export function upsertSql(entity, rows) {
-  if (rows.length === 0) return "-- No rows to migrate.\n";
+	if (!entity.pluginId || !entity.storeId || !entity.repositoryId) {
+		throw new Error(`${entity.id}: EmDash plugin Store repository authority is missing`);
+	}
+	if (entity.repositoryOnly) {
+		return `-- plugin=${entity.pluginId} store=${entity.storeId} repository=${entity.repositoryId}\n-- Projection remains read-only during Store authority import.\n`;
+	}
+	if (rows.length === 0) return "-- No rows to migrate.\n";
   const columns = entity.columns;
   const mutable = entity.immutable ? [] : columns.filter((column) => !entity.keys.includes(column));
   const conflict = entity.keys.map((column) => `"${column}"`).join(", ");
@@ -163,7 +218,12 @@ export function upsertSql(entity, rows) {
   if (chunk.length) statements.push(`${prefix}${chunk.join(", ")}${suffix}`);
   // Wrangler D1 file imports are not atomic. Each statement is atomic, and the
   // project-scoped UPSERT plus checkpoint verification makes a partial import resumable.
-  return ["PRAGMA foreign_keys = ON;", ...statements, ""].join("\n");
+	return [
+		`-- plugin=${entity.pluginId} store=${entity.storeId} repository=${entity.repositoryId}`,
+		"PRAGMA foreign_keys = ON;",
+		...statements,
+		"",
+	].join("\n");
 }
 
 export async function buildPlan({ adapter, registry, guards = [], projectRef, modules = MODULES, entityIds }) {
@@ -185,15 +245,33 @@ export async function buildPlan({ adapter, registry, guards = [], projectRef, mo
     assertProjectIsolation(sourceRows, entity, context.project_id);
     const targetRows = normalizeRows(await adapter.readTarget(entity, context), entity);
     assertProjectIsolation(targetRows, entity, context.project_id);
-    const comparison = compareDatasets(sourceRows, targetRows, entity);
+    const repositoryRows = normalizeRows(await adapter.readRepository(entity, context), entity);
+    assertProjectIsolation(repositoryRows, entity, context.project_id);
+    const projection = compareDatasets(sourceRows, targetRows, entity);
+    const repository = compareDatasets(sourceRows, repositoryRows, entity);
+    const matches = projection.matches && repository.matches;
+    const action = !repository.matches && !projection.matches
+      ? "repository_and_projection_upsert"
+      : !repository.matches
+        ? "repository_upsert"
+        : !projection.matches
+          ? "projection_upsert"
+          : "none";
     entities.push({
       id: entity.id,
       module: entity.module,
+      plugin_id: entity.pluginId,
+      store_id: entity.storeId,
+      repository_id: entity.repositoryId,
       source_database: entity.source.database,
       source_table: entity.source.table,
       target_table: entity.target.table,
-      ...comparison,
-      action: comparison.matches ? "none" : "upsert",
+      expected: projection.expected,
+      actual: projection.actual,
+      matches,
+      projection,
+      repository,
+      action,
       rows: sourceRows,
     });
   }
@@ -228,28 +306,63 @@ export async function applyPlan({ adapter, registry, plan, safety, checkpoint = 
     if (!entity) throw new Error(`Unknown migration entity ${item.id}`);
     const prior = checkpoint.entities[item.id];
     let resumed = false;
-    if (!item.matches && prior?.source_checksum === item.expected.checksum && prior?.status === "verified") {
-      const targetRows = await adapter.readTarget(entity, plan.project);
-      if (compareDatasets(item.rows, targetRows, entity).matches) resumed = true;
+    let actualRows;
+    let repositoryRows;
+    if (prior?.source_checksum === item.expected.checksum && prior?.status === "verified") {
+      actualRows = await adapter.readTarget(entity, plan.project);
+      repositoryRows = await adapter.readRepository(entity, plan.project);
+      if (
+        compareDatasets(item.rows, actualRows, entity).matches &&
+        compareDatasets(item.rows, repositoryRows, entity).matches
+      ) {
+        resumed = true;
+      }
     }
-    if (!item.matches && !resumed) {
-      await adapter.upsert(entity, item.rows, plan.project, upsertSql(entity, item.rows));
+    if (!resumed) {
+      repositoryRows ??= await adapter.readRepository(entity, plan.project);
+      if (!compareDatasets(item.rows, repositoryRows, entity).matches) {
+        await adapter.upsertRepository(entity, item.rows, plan.project);
+        repositoryRows = await adapter.readRepository(entity, plan.project);
+      }
+      actualRows ??= await adapter.readTarget(entity, plan.project);
+      if (!compareDatasets(item.rows, actualRows, entity).matches) {
+        await adapter.upsert(entity, item.rows, plan.project, upsertSql(entity, item.rows));
+        actualRows = await adapter.readTarget(entity, plan.project);
+      }
     }
-    const actualRows = await adapter.readTarget(entity, plan.project);
-    const verification = compareDatasets(item.rows, actualRows, entity);
-    if (!verification.matches) {
-      throw new CutoverMismatchError(entity.id, verification);
+    actualRows ??= await adapter.readTarget(entity, plan.project);
+    repositoryRows ??= await adapter.readRepository(entity, plan.project);
+    const projection = compareDatasets(item.rows, actualRows, entity);
+    const repository = compareDatasets(item.rows, repositoryRows, entity);
+    if (!repository.matches) {
+      throw new CutoverMismatchError(`${entity.id}:repository`, repository);
+    }
+    if (!projection.matches) {
+      throw new CutoverMismatchError(`${entity.id}:projection`, projection);
     }
     checkpoint.entities[item.id] = {
       status: "verified",
       source_count: item.expected.count,
       source_checksum: item.expected.checksum,
-      target_checksum: verification.actual.checksum,
+      target_checksum: projection.actual.checksum,
+      repository_checksum: repository.actual.checksum,
       verified_at: new Date().toISOString(),
     };
     checkpoint.updated_at = new Date().toISOString();
     if (onCheckpoint) await onCheckpoint(checkpoint);
-    results.push({ id: item.id, module: item.module, resumed, ...verification });
+    results.push({
+      id: item.id,
+      module: item.module,
+      plugin_id: entity.pluginId,
+      store_id: entity.storeId,
+      repository_id: entity.repositoryId,
+      resumed,
+      expected: projection.expected,
+      actual: projection.actual,
+      matches: true,
+      projection,
+      repository,
+    });
   }
   return {
     ...plan,
@@ -275,8 +388,8 @@ export function createVerificationReport(plan) {
   const mismatches = plan.entities.filter((entity) => !entity.matches).map((entity) => ({
     id: entity.id,
     module: entity.module,
-    expected: entity.expected,
-    actual: entity.actual,
+    projection: entity.projection,
+    repository: entity.repository,
   }));
   return { ...stripRows(plan), mode: "verify", ready: mismatches.length === 0 && (plan.blockers?.length || 0) === 0, mismatches };
 }
@@ -323,8 +436,12 @@ export function reverseDeltaSql(delta, registry) {
 
 export function createBackupPlan({ target, environment, projectRef, resources, workers, outputDirectory }) {
   const databases = [
+    ["site-emdash", resources.siteD1],
     ["legacy-api", resources.d1],
     ...(resources.messagingD1?.name ? [["legacy-messaging", resources.messagingD1]] : []),
+    ...(resources.emailD1?.name ? [["service-email", resources.emailD1]] : []),
+    ...(resources.identityD1?.name ? [["service-identity", resources.identityD1]] : []),
+    ...(resources.filesD1?.name ? [["service-files", resources.filesD1]] : []),
     ...Object.entries(resources.moduleD1).map(([key, value]) => [`module-${key}`, value]),
   ].filter(([, database]) => database?.name);
   return {

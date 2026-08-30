@@ -1,5 +1,12 @@
 ## 3.0.0
 
+* Added the native Flows client, HTTP/WebSocket contracts, encrypted cache, reconnection, slots, overlays, anchors, navigation adapter, and debug panel
+* Added native Basics V2 Card, Checklist, Hint, Modal, Tooltip, Tour, and Survey renderers plus a custom component registry
+* Added native `superboard-commerce` rendering backed only by verified Products purchases and restorations, without duplicate revenue telemetry
+* Persisted triggered survey and tour progress for offline resume and matched upstream navigation, click, anchor, and wait semantics
+* Added workflow start/reset/fetch, identification, properties, project/environment/language context, and block streams
+* Added the canonical SuperBoard Support client, typed models, bounded uploads,
+  authenticated realtime reconnection, and native client routes
 * Renamed the public Flutter package and API to SuperBoard
 * Added one-major-version deprecated aliases for OpenGrow 2.x Dart symbols and files
 * Renamed the Android and iOS Flutter plugin registrants atomically

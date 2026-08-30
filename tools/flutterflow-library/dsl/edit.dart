@@ -1757,6 +1757,152 @@ Future<String> superboardSupportGetLastRealtimeEventJson() {
   );
 
   app.customAction(
+    'superboardSupportGetContactJson',
+    returns: string,
+    description: 'Returns the authenticated Support contact profile.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportGetContactJson() => support.superboardSupportGetContactJson();
+''',
+  );
+
+  app.customAction(
+    'superboardSupportUpdateContactJson',
+    args: {'name': string, 'email': string, 'phone': string, 'customAttributesJson': string.withDefault('{}'), 'idempotencyKey': string},
+    returns: string,
+    description: 'Updates the authenticated Support contact profile.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportUpdateContactJson(String name, String email, String phone, String customAttributesJson, String idempotencyKey) =>
+  support.superboardSupportUpdateContactJson(
+    name: name.trim().isEmpty ? null : name.trim(),
+    email: email.trim().isEmpty ? null : email.trim(),
+    phone: phone.trim().isEmpty ? null : phone.trim(),
+    customAttributesJson: customAttributesJson,
+    idempotencyKey: idempotencyKey,
+  );
+''',
+  );
+
+  app.customAction(
+    'superboardSupportTrackEventJson',
+    args: {'name': string, 'propertiesJson': string.withDefault('{}'), 'idempotencyKey': string},
+    returns: string,
+    description: 'Tracks one idempotent Support context event.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportTrackEventJson(String name, String propertiesJson, String idempotencyKey) =>
+  support.superboardSupportTrackEventJson(name: name, propertiesJson: propertiesJson, idempotencyKey: idempotencyKey);
+''',
+  );
+
+  app.customAction(
+    'superboardSupportInboxMembersJson',
+    args: {'inboxId': string},
+    returns: string,
+    description: 'Lists public members of one Support inbox.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportInboxMembersJson(String inboxId) => support.superboardSupportInboxMembersJson(inboxId);
+''',
+  );
+
+  app.customAction(
+    'superboardSupportProactiveSupportJson',
+    args: {'cursor': string, 'limit': int_.withDefault(50)},
+    returns: string,
+    description: 'Lists eligible proactive Support messages.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportProactiveSupportJson(String cursor, int limit) => support.superboardSupportProactiveSupportJson(
+  cursor: cursor.trim().isEmpty ? null : cursor.trim(), limit: limit);
+''',
+  );
+
+  app.customAction(
+    'superboardSupportConversationLabelsJson',
+    args: {'conversationId': string},
+    returns: string,
+    description: 'Lists public labels attached to a Support conversation.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportConversationLabelsJson(String conversationId) => support.superboardSupportConversationLabelsJson(conversationId);
+''',
+  );
+
+  app.customAction(
+    'superboardSupportRequestTranscriptJson',
+    args: {'conversationId': string, 'idempotencyKey': string},
+    returns: string,
+    description: 'Requests a public Support conversation transcript.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportRequestTranscriptJson(String conversationId, String idempotencyKey) =>
+  support.superboardSupportRequestTranscriptJson(conversationId: conversationId, idempotencyKey: idempotencyKey);
+''',
+  );
+
+  app.customAction(
+    'superboardSupportHelpCenterCategoriesJson',
+    args: {'portalSlug': string, 'locale': string},
+    returns: string,
+    description: 'Lists published Help Center categories.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportHelpCenterCategoriesJson(String portalSlug, String locale) =>
+  support.superboardSupportHelpCenterCategoriesJson(portalSlug: portalSlug, locale: locale.trim().isEmpty ? null : locale.trim());
+''',
+  );
+
+  app.customAction(
+    'superboardSupportSearchHelpCenterJson',
+    args: {'portalSlug': string, 'query': string, 'locale': string, 'limit': int_.withDefault(20)},
+    returns: string,
+    description: 'Searches published Help Center content.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportSearchHelpCenterJson(String portalSlug, String query, String locale, int limit) =>
+  support.superboardSupportSearchHelpCenterJson(portalSlug: portalSlug, query: query, locale: locale.trim().isEmpty ? null : locale.trim(), limit: limit);
+''',
+  );
+
+  app.customAction(
+    'superboardSupportHelpCenterArticleJson',
+    args: {'portalSlug': string, 'articleSlug': string, 'locale': string},
+    returns: string,
+    description: 'Returns one published Help Center article.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportHelpCenterArticleJson(String portalSlug, String articleSlug, String locale) =>
+  support.superboardSupportHelpCenterArticleJson(portalSlug: portalSlug, articleSlug: articleSlug, locale: locale.trim().isEmpty ? null : locale.trim());
+''',
+  );
+
+  app.customAction(
+    'superboardSupportRecordHelpCenterViewJson',
+    args: {'portalSlug': string, 'articleSlug': string, 'idempotencyKey': string},
+    returns: string,
+    description: 'Records one idempotent Help Center article view.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportRecordHelpCenterViewJson(String portalSlug, String articleSlug, String idempotencyKey) =>
+  support.superboardSupportRecordHelpCenterViewJson(portalSlug: portalSlug, articleSlug: articleSlug, idempotencyKey: idempotencyKey);
+''',
+  );
+
+  app.customAction(
+    'superboardSupportJoinMeetingJson',
+    args: {'conversationId': string, 'meetingId': string, 'idempotencyKey': string},
+    returns: string,
+    description: 'Joins a configured Support meeting.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
+Future<String> superboardSupportJoinMeetingJson(String conversationId, String meetingId, String idempotencyKey) =>
+  support.superboardSupportJoinMeetingJson(conversationId: conversationId, meetingId: meetingId.trim().isEmpty ? null : meetingId.trim(), idempotencyKey: idempotencyKey);
+''',
+  );
+
+  app.customAction(
     'superboardSupportDispose',
     returns: bool_,
     description: 'Disposes the canonical Support client.',
@@ -1765,6 +1911,392 @@ import 'package:superboard_flutterflow/superboard_flutterflow.dart' as support;
 
 Future<bool> superboardSupportDispose() {
   return support.superboardSupportDispose();
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsInitialize',
+    args: {
+      'apiUrl': string,
+      'projectId': string,
+      'environment': string,
+      'userId': string,
+      'language': string,
+      'userPropertiesJson': string,
+      'debug': bool_,
+      'realtime': bool_,
+    },
+    returns: bool_,
+    description:
+        'Initializes native Flows for the selected project and environment.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsInitialize(
+  String apiUrl,
+  String projectId,
+  String environment,
+  String userId,
+  String language,
+  String userPropertiesJson,
+  bool debug,
+  bool realtime,
+) {
+  if (apiUrl.isEmpty || projectId.isEmpty || environment.isEmpty) {
+    throw StateError('SuperBoard Flows configuration is incomplete.');
+  }
+  return superboard.superboardFlowsInitialize(
+    apiUrl: apiUrl,
+    projectId: projectId,
+    environment: environment,
+    userId: userId,
+    language: language,
+    userPropertiesJson: userPropertiesJson,
+    debug: debug,
+    realtime: realtime,
+  );
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsIdentify',
+    args: {'userId': string, 'userPropertiesJson': string},
+    returns: bool_,
+    description: 'Identifies the current native Flows user and properties.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsIdentify(
+  String userId,
+  String userPropertiesJson,
+) {
+  return superboard.superboardFlowsIdentify(
+    userId: userId,
+    userPropertiesJson: userPropertiesJson,
+  );
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsSetUserPropertiesJson',
+    args: {'userPropertiesJson': string, 'merge': bool_},
+    returns: bool_,
+    description: 'Updates typed Flows user properties from a JSON object.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsSetUserPropertiesJson(
+  String userPropertiesJson,
+  bool merge,
+) {
+  return superboard.superboardFlowsSetUserPropertiesJson(
+    userPropertiesJson,
+    merge: merge,
+  );
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsSetContext',
+    args: {'projectId': string, 'environment': string, 'language': string},
+    returns: bool_,
+    description: 'Switches the active Flows project and environment.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsSetContext(
+  String projectId,
+  String environment,
+  String language,
+) {
+  return superboard.superboardFlowsSetContext(
+    projectId: projectId,
+    environment: environment,
+    language: language,
+  );
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsSetLanguage',
+    args: {'language': string},
+    returns: bool_,
+    description: 'Changes the active Flows localization language.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsSetLanguage(String language) {
+  return superboard.superboardFlowsSetLanguage(language);
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsStartWorkflow',
+    args: {'blockKey': string},
+    returns: bool_,
+    description: 'Starts a workflow through a matching manual Start block.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsStartWorkflow(String blockKey) {
+  return superboard.superboardFlowsStartWorkflow(blockKey);
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsResetWorkflowProgress',
+    args: {'workflowId': string},
+    returns: bool_,
+    description: 'Resets one workflow for the current Flows user.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsResetWorkflowProgress(String workflowId) {
+  return superboard.superboardFlowsResetWorkflowProgress(workflowId);
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsResetAllWorkflowsProgress',
+    returns: bool_,
+    description: 'Resets every workflow for the current Flows user.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsResetAllWorkflowsProgress() {
+  return superboard.superboardFlowsResetAllWorkflowsProgress();
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsFetchWorkflowsJson',
+    returns: string,
+    description: 'Returns all active workflow states as stable JSON.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<String> superboardFlowsFetchWorkflowsJson() {
+  return superboard.superboardFlowsFetchWorkflowsJson();
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsNotifyNavigation',
+    args: {'location': string},
+    returns: bool_,
+    description: 'Re-evaluates route-targeted Flows after native navigation.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsNotifyNavigation(String location) {
+  return superboard.superboardFlowsNotifyNavigation(location);
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsNotifyAnchorInteraction',
+    args: {'anchorName': string},
+    returns: bool_,
+    description:
+        'Notifies native Flows that a named FlutterFlow target was clicked.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsNotifyAnchorInteraction(String anchorName) {
+  return superboard.superboardFlowsNotifyAnchorInteraction(anchorName);
+}
+''',
+  );
+
+  app.customAction(
+    'superboardFlowsDispose',
+    returns: bool_,
+    description: 'Closes native Flows realtime and local controllers.',
+    code: r'''
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+Future<bool> superboardFlowsDispose() {
+  return superboard.superboardFlowsDispose();
+}
+''',
+  );
+
+  app.customWidget(
+    'SuperBoardFlowsBootstrap',
+    parameters: {
+      'apiUrl': string,
+      'projectId': string,
+      'environment': string.withDefault('production'),
+      'userId': string,
+      'language': string.withDefault('disabled'),
+      'userPropertiesJson': string.withDefault('{}'),
+      'debug': bool_,
+      'realtime': bool_,
+    },
+    description:
+        'Initializes native Flows from application configuration and encrypted device state.',
+    code: r'''
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+class SuperBoardFlowsBootstrap extends StatelessWidget {
+  const SuperBoardFlowsBootstrap({
+    super.key,
+    this.width,
+    this.height,
+    required this.apiUrl,
+    required this.projectId,
+    this.environment = 'production',
+    required this.userId,
+    this.language = 'disabled',
+    this.userPropertiesJson = '{}',
+    required this.debug,
+    required this.realtime,
+  });
+
+  final double? width;
+  final double? height;
+  final String apiUrl;
+  final String projectId;
+  final String environment;
+  final String userId;
+  final String language;
+  final String userPropertiesJson;
+  final bool debug;
+  final bool realtime;
+
+  @override
+  Widget build(BuildContext context) {
+    if (apiUrl.isEmpty || projectId.isEmpty || environment.isEmpty) {
+      throw StateError('SuperBoard Flows configuration is incomplete.');
+    }
+    return superboard.SuperBoardFlowsBootstrap(
+      width: width,
+      height: height,
+      apiUrl: apiUrl,
+      projectId: projectId,
+      environment: environment,
+      userId: userId,
+      language: language,
+      userPropertiesJson: userPropertiesJson,
+      debug: debug,
+      realtime: realtime,
+      navigationAdapter: superboard.SuperBoardCallbackFlowNavigationAdapter(
+        location: () => GoRouterState.of(context).uri.toString(),
+        onNavigate: (location) => context.go(location),
+      ),
+    );
+  }
+}
+''',
+  );
+
+  app.customWidget(
+    'SuperBoardFlutterFlowFlowsSlot',
+    parameters: {'slotId': string},
+    description: 'Renders ordered native Flows blocks for a named slot.',
+    code: r'''
+import 'package:flutter/material.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+class SuperBoardFlutterFlowFlowsSlot extends StatelessWidget {
+  const SuperBoardFlutterFlowFlowsSlot({
+    super.key,
+    this.width,
+    this.height,
+    required this.slotId,
+  });
+
+  final double? width;
+  final double? height;
+  final String slotId;
+
+  @override
+  Widget build(BuildContext context) {
+    return superboard.SuperBoardFlutterFlowFlowsSlot(
+      width: width,
+      height: height,
+      slotId: slotId,
+    );
+  }
+}
+''',
+  );
+
+  app.customWidget(
+    'SuperBoardFlutterFlowFlowsOverlay',
+    parameters: {'showDebugOverlay': bool_},
+    description:
+        'Renders floating native Flows blocks and the optional debug panel.',
+    code: r'''
+import 'package:flutter/material.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+class SuperBoardFlutterFlowFlowsOverlay extends StatelessWidget {
+  const SuperBoardFlutterFlowFlowsOverlay({
+    super.key,
+    this.width,
+    this.height,
+    required this.showDebugOverlay,
+  });
+
+  final double? width;
+  final double? height;
+  final bool showDebugOverlay;
+
+  @override
+  Widget build(BuildContext context) {
+    return superboard.SuperBoardFlutterFlowFlowsOverlay(
+      width: width,
+      height: height,
+      showDebugOverlay: showDebugOverlay,
+    );
+  }
+}
+''',
+  );
+
+  app.customWidget(
+    'SuperBoardFlutterFlowFlowAnchor',
+    parameters: {'anchorName': string},
+    description:
+        'Names a native target region for Flows hints, tooltips, and tours without intercepting pointers.',
+    code: r'''
+import 'package:flutter/material.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart' as superboard;
+
+class SuperBoardFlutterFlowFlowAnchor extends StatelessWidget {
+  const SuperBoardFlutterFlowFlowAnchor({
+    super.key,
+    this.width,
+    this.height,
+    required this.anchorName,
+  });
+
+  final double? width;
+  final double? height;
+  final String anchorName;
+
+  @override
+  Widget build(BuildContext context) {
+    return superboard.SuperBoardFlutterFlowFlowAnchor(
+      width: width,
+      height: height,
+      anchorName: anchorName,
+    );
+  }
 }
 ''',
   );

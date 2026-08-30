@@ -7,20 +7,58 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
     secrets: [
       "INTERNAL_API_TOKEN",
       "INTERNAL_API_TOKEN_PREVIOUS",
+      "EMAIL_INTERNAL_TOKEN",
+      "SUPPORT_CREDENTIAL_ENCRYPTION_KEY",
+      "SUPPORT_CREDENTIAL_ENCRYPTION_KEY_PREVIOUS",
       "SUPPORT_WEBHOOK_ENCRYPTION_KEY",
     ],
     vars: ["CORS_ORIGIN", "ALLOWED_PROJECT_IDS"],
-    r2: [{ binding: "ATTACHMENTS", resourceKey: "support" }],
-    queue: {
-      binding: "SUPPORT_QUEUE",
-      resourceKey: "support",
-      maxBatchSize: 10,
-      maxBatchTimeout: 5,
-      maxRetries: 8,
+    staticVars: {
+      SUPPORT_EMBEDDING_MODEL: "@cf/qwen/qwen3-embedding-0.6b",
+      SUPPORT_GENERATION_MODEL: "@cf/zai-org/glm-4.7-flash",
     },
+    r2: [{ binding: "ATTACHMENTS", resourceKey: "support" }],
+    queues: [
+      {
+        binding: "SUPPORT_QUEUE",
+        resourceKey: "support",
+        nameVar: "SUPPORT_EVENTS_QUEUE_NAME",
+        dlqVar: "SUPPORT_EVENTS_DLQ_NAME",
+        maxBatchSize: 10,
+        maxBatchTimeout: 5,
+        maxRetries: 8,
+      },
+      {
+        binding: "SUPPORT_AI_QUEUE",
+        resourceKey: "supportAi",
+        nameVar: "SUPPORT_AI_QUEUE_NAME",
+        dlqVar: "SUPPORT_AI_DLQ_NAME",
+        maxBatchSize: 5,
+        maxBatchTimeout: 5,
+        maxRetries: 5,
+      },
+      {
+        binding: "SUPPORT_BULK_QUEUE",
+        resourceKey: "supportBulk",
+        nameVar: "SUPPORT_BULK_QUEUE_NAME",
+        dlqVar: "SUPPORT_BULK_DLQ_NAME",
+        maxBatchSize: 5,
+        maxBatchTimeout: 5,
+        maxRetries: 8,
+      },
+    ],
+    crons: ["* * * * *"],
+    ai: { binding: "AI" },
+    vectorize: [
+      { binding: "SUPPORT_KNOWLEDGE", resourceKey: "supportKnowledge" },
+    ],
     durableObjects: [{ name: "CONVERSATIONS", className: "ConversationRoom" }],
     durableObjectMigrations: [
       { tag: "v1", newSqliteClasses: ["ConversationRoom"] },
+    ],
+    services: [
+      { binding: "EMAIL_SERVICE", service: "email" },
+      { binding: "API_SERVICE", service: "api" },
     ],
   }),
   analytics: domainService("ANALYTICS_MODULE", "analytics", {
@@ -76,6 +114,48 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
     services: [{ binding: "EMAIL_SERVICE", service: "email" }],
   }),
   onboardings: domainService("ONBOARDINGS_MODULE", "onboardings"),
+  flows: domainService("FLOWS_MODULE", "flows", {
+    secrets: [
+      "INTERNAL_API_TOKEN",
+      "INTERNAL_API_TOKEN_PREVIOUS",
+      "FLOW_USER_ENCRYPTION_KEY",
+      "FLOW_USER_ENCRYPTION_KEY_PREVIOUS",
+      "FLOW_USER_HASH_KEY",
+    ],
+    vars: ["PUBLIC_API_URL"],
+    r2: [{ binding: "ARCHIVE", resourceKey: "flows" }],
+    queue: {
+      binding: "FLOW_EVENTS",
+      resourceKey: "flows",
+      maxBatchSize: 25,
+      maxBatchTimeout: 5,
+      maxRetries: 8,
+    },
+    crons: ["17 2 * * *"],
+    durableObjects: [
+      { name: "FLOW_USER_RUNTIME", className: "FlowUserRuntime" },
+      { name: "FLOW_REALTIME_HUB", className: "FlowRealtimeHub" },
+    ],
+    durableObjectMigrations: [
+      {
+        tag: "v1",
+        newSqliteClasses: ["FlowUserRuntime", "FlowRealtimeHub"],
+      },
+    ],
+    workflows: [
+      {
+        binding: "FLOW_DELAY_EXECUTION",
+        className: "FlowDelayExecution",
+        nameSuffix: "delay",
+      },
+      {
+        binding: "FLOW_MAINTENANCE_EXECUTION",
+        className: "FlowMaintenanceExecution",
+        nameSuffix: "maintenance",
+      },
+    ],
+    services: [{ binding: "PRODUCTS_MODULE", service: "products" }],
+  }),
 });
 
 export const DOMAIN_SERVICES = Object.freeze(
@@ -84,6 +164,7 @@ export const DOMAIN_SERVICES = Object.freeze(
 
 export const PLATFORM_SERVICES = Object.freeze([
   "api",
+  "site",
   "dashboard",
   "billing",
   "messaging",
@@ -109,6 +190,8 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
   api: Object.freeze([
     "JWT_SECRET",
     "MODULE_INTERNAL_TOKEN",
+    "SITE_OPERATOR_BRIDGE_TOKEN",
+    "FLOWS_INTERNAL_TOKEN",
     "EMAIL_INTERNAL_TOKEN",
     "OPENGROW_CUTOVER_TOKEN",
     "SENT_QUOTAS_WEBHOOK_KEY",
@@ -131,6 +214,12 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
     ...BILLING_SECRETS,
   ]),
   dashboard: Object.freeze(["CLIENT_SECRET"]),
+  site: Object.freeze([
+    "EMDASH_ENCRYPTION_KEY",
+    "SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",
+    "SUPERBOARD_RELEASE_PRIVATE_JWK",
+    "SITE_OPERATOR_BRIDGE_TOKEN",
+  ]),
   billing: Object.freeze([
     ...BILLING_SECRETS,
     "INTERNAL_API_TOKEN",
@@ -253,6 +342,7 @@ export function isServiceEnabled(target, service) {
   if (
     [
       "api",
+      "site",
       "dashboard",
       "email",
       "identity",
@@ -278,6 +368,7 @@ export function isOptionalSecretBinding(name) {
 }
 
 function domainService(binding, resourceKey, options = {}) {
+  const queues = options.queues ?? (options.queue ? [options.queue] : []);
   return Object.freeze({
     binding,
     resourceKey,
@@ -287,8 +378,18 @@ function domainService(binding, resourceKey, options = {}) {
       options.secrets ?? ["INTERNAL_API_TOKEN", "INTERNAL_API_TOKEN_PREVIOUS"],
     ),
     vars: Object.freeze(options.vars ?? []),
+    staticVars: Object.freeze({ ...(options.staticVars ?? {}) }),
     r2: Object.freeze(options.r2 ?? []),
-    queue: options.queue ? Object.freeze(options.queue) : null,
+    // `queue` remains as a compatibility alias while callers migrate to the
+    // complete `queues` collection.
+    queue: queues[0] ? Object.freeze({ ...queues[0] }) : null,
+    queues: Object.freeze(queues.map((queue) => Object.freeze({ ...queue }))),
+    ai: options.ai ? Object.freeze({ ...options.ai }) : null,
+    vectorize: Object.freeze(
+      (options.vectorize ?? []).map((binding) =>
+        Object.freeze({ ...binding }),
+      ),
+    ),
     crons: Object.freeze(options.crons ?? []),
     durableObjects: Object.freeze(options.durableObjects ?? []),
     services: Object.freeze(options.services ?? []),

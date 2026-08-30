@@ -4,7 +4,7 @@
 
 The reference project proves that a new application can consume SuperBoard with
 configuration only. It must stay generic: no VocoStar bundle ID, API origin,
-project key, product identifier, paywall ID, SMTP credential or Chatwoot URL is
+project key, product identifier, paywall ID, SMTP credential or external Support URL is
 allowed in shared code.
 
 ## Required pages
@@ -23,7 +23,7 @@ allowed in shared code.
 10. **Paywall** — remote placement resolution and tracked paywall events.
 11. **Dynamic links** — generate, open and inspect attribution/deep-link data.
 12. **Support inbox** — conversations, messages, attachments, realtime, typing,
-    read receipts and CSAT using SuperBoard Support, never Chatwoot directly.
+    read receipts and CSAT using SuperBoard Support through its canonical API.
 13. **Marketing consent** — newsletter opt-in/out and subscription preferences.
 14. **Onboarding** — remote flow resolution, progression and completion.
 15. **Custom extension** — authenticated create/list/detail cycle for a durable
@@ -46,7 +46,7 @@ allowed in shared code.
 | `projectKey`              | string      | secure/config      | application project setup               |
 | `applicationAccessToken`  | string      | secure storage     | application auth gateway                |
 | `applicationRefreshToken` | string      | secure storage     | rotating application session            |
-| `opengrowIdentityToken`   | string      | memory/refreshable | short-lived token exchange              |
+| `superboardIdentityToken` | string      | memory/refreshable | short-lived token exchange              |
 | `currentUserId`           | string      | session            | authenticated profile                   |
 | `lastDeepLinkJson`        | JSON string | memory             | SuperBoard callback                       |
 | `lastPurchaseResultJson`  | JSON string | memory             | verified purchase callback              |

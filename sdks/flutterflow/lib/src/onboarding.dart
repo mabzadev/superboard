@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -16,6 +18,8 @@ typedef SuperBoardMarketingConsentUpdater =
       String listIdsJson,
     });
 
+/// Compatibility widget backed by the Onboardings aliases served by Flows.
+@Deprecated('Use SuperBoardFlowsOverlay, SuperBoardFlowsSlot, or a tour Flow.')
 class SuperBoardOnboarding extends StatefulWidget {
   const SuperBoardOnboarding({
     super.key,

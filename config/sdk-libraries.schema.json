@@ -11,7 +11,7 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "schemaVersion": { "const": 4 },
+    "schemaVersion": { "const": 5 },
     "repository": { "type": "string", "format": "uri" },
     "developmentBranch": { "type": "string", "minLength": 1 },
     "releasePolicy": { "const": "immutable-tag" },
@@ -25,12 +25,76 @@
           {
             "if": {
               "properties": {
-                "lifecycle": { "enum": ["internal", "archived"] }
+                "lifecycle": { "const": "archived" }
               },
               "required": ["lifecycle"]
             },
             "then": {
               "properties": { "releaseStatus": { "const": "released" } }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "releaseStatus": { "const": "unreleased" }
+              },
+              "required": ["releaseStatus"]
+            },
+            "then": {
+              "required": ["publicationTarget"],
+              "properties": {
+                "publicationTarget": {},
+                "lifecycle": { "enum": ["active", "internal"] },
+                "latestReleaseVersion": false,
+                "releaseRef": false,
+                "releaseSha": false,
+                "install": false,
+                "candidatePackageName": false,
+                "candidateInstall": false,
+                "distribution": false
+              }
+            },
+            "else": {
+              "required": [
+                "latestReleaseVersion",
+                "releaseRef",
+                "releaseSha",
+                "install"
+              ],
+              "properties": {
+                "latestReleaseVersion": {},
+                "releaseRef": {},
+                "releaseSha": {},
+                "install": {}
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "publicationTarget": { "const": "public-npm" }
+              },
+              "required": ["publicationTarget"]
+            },
+            "then": {
+              "properties": {
+                "ecosystem": { "const": "npm" },
+                "lifecycle": { "const": "active" }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "publicationTarget": { "const": "workspace-only" }
+              },
+              "required": ["publicationTarget"]
+            },
+            "then": {
+              "properties": {
+                "lifecycle": { "const": "internal" },
+                "releaseStatus": { "const": "unreleased" }
+              }
             }
           },
           {
@@ -59,11 +123,7 @@
           "licensePath",
           "versionSource",
           "sourceVersion",
-          "latestReleaseVersion",
-          "releaseRef",
-          "releaseStatus",
-          "releaseSha",
-          "install"
+          "releaseStatus"
         ],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
@@ -85,13 +145,18 @@
             "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
           },
           "releaseRef": { "type": "string", "minLength": 1 },
-          "releaseStatus": { "enum": ["released", "pending-release"] },
+          "releaseStatus": {
+            "enum": ["released", "pending-release", "unreleased"]
+          },
           "releaseSha": {
             "type": "string",
             "pattern": "^[0-9a-f]{40}$"
           },
           "surfaceManifest": { "type": "string" },
           "notes": { "type": "string" },
+          "publicationTarget": {
+            "enum": ["public-npm", "workspace-only"]
+          },
           "install": { "type": "string", "minLength": 1 },
           "candidateInstall": { "type": "string", "minLength": 1 },
           "distribution": {

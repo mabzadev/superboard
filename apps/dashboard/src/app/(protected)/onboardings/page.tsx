@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { OnboardingsPage } from "@/components/modules/OnboardingPages";
-
-export const metadata: Metadata = { title: "Onboardings · SuperBoard" };
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <OnboardingsPage />;
+  redirect("/flows/workflows?origin=onboardings");
 }

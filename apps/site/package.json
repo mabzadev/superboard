@@ -1,0 +1,42 @@
+{
+	"name": "@superboard/site",
+	"version": "0.1.0",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "astro dev",
+		"prebuild": "pnpm --filter @superboard/supbrd-runtime-plugins build",
+		"build": "astro build",
+		"preview": "astro preview",
+		"typecheck": "astro check",
+		"types": "wrangler types",
+		"test": "vitest run --config vitest.config.ts && vitest run --config vitest.runtime.config.ts",
+		"test:runtime": "vitest run --config vitest.runtime.config.ts",
+		"dry-run": "astro build && wrangler deploy --dry-run"
+	},
+	"dependencies": {
+		"@astrojs/cloudflare": "catalog:",
+		"@astrojs/react": "catalog:",
+		"@emdash-cms/auth": "workspace:*",
+		"@emdash-cms/cloudflare": "workspace:*",
+		"@lingui/core": "catalog:",
+		"@noble/secp256k1": "^3.0.0",
+		"@superboard/supbrd-core": "workspace:*",
+		"@superboard/supbrd-plug-user": "workspace:*",
+		"astro": "catalog:",
+		"emdash": "workspace:*",
+		"layerr": "^3.0.0",
+		"react": "catalog:",
+		"react-dom": "catalog:"
+	},
+	"devDependencies": {
+		"@astrojs/check": "catalog:",
+		"@tailwindcss/postcss": "^4",
+		"@cloudflare/workers-types": "^5.20260808.1",
+		"@cloudflare/vitest-pool-workers": "0.20.3",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

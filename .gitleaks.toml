@@ -4,8 +4,8 @@ useDefault = true
 [allowlist]
 description = "Known vendored and runtime-test false positives"
 paths = [
-  '''(^|/)\.yarn/releases/yarn-3\.6\.1\.cjs$''',
-  '''(^|/)(\.backups|\.build|\.dart_tool|\.git|\.next|\.open-next|\.wrangler|build|coverage|node_modules)(/|$)''',
-  '''(^|/)\.yarn/cache(/|$)''',
+	'''(^|/)\.yarn/releases/yarn-3\.6\.1\.cjs$''',
+	'''(^|/)(\.backups|\.build|\.dart_tool|\.git|\.next|\.open-next|\.wrangler|build|coverage|dist|node_modules)(/|$)''',
+	'''(^|/)\.yarn/cache(/|$)''',
 ]
 regexes = ['''^attachments/foreign$''']

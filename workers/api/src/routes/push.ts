@@ -3,11 +3,25 @@ import { Env } from '../types';
 import { encryptCredential, timingSafeEqual } from '../lib/secrets';
 import { readJsonObjectLimited } from '../lib/http-limits';
 import {
+  parseSupportNotificationEvent,
+  SUPPORT_NOTIFICATION_INGRESS_PATH,
+  SUPPORT_NOTIFICATION_LIMITS,
+  SupportNotificationContractError,
+  type SupportNotificationEvent,
+  type SupportNotificationReceipt,
+} from '@superboard/contracts/support-notifications';
+import {
+  readJsonObjectLimited as readContractJsonObjectLimited,
+  RequestBodyError,
+} from '@superboard/contracts/request-body';
+import { enqueuePushNotifications } from './projects';
+import {
   migrateLegacyPushCredentials,
   requirePushCredential,
 } from '../lib/push-credentials';
 
 const push = new Hono<{ Bindings: Env }>();
+export const internalPush = new Hono<{ Bindings: Env }>();
 
 function base64url(input: ArrayBuffer | Uint8Array | string) {
   const bytes = typeof input === 'string'
@@ -244,6 +258,241 @@ export async function processPushNotifications(env: Env, limit = 25) {
   }
   return { processed: results.length, results };
 }
+
+type SupportIngressRow = {
+  payload_sha256: string;
+  notification_id: number | null;
+  status: 'processing' | 'completed';
+  browser_messages: number;
+  push_queued: number;
+};
+
+function internalJson(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'private, no-store',
+    },
+  });
+}
+
+async function isAuthorizedSupportCaller(request: Request, env: Env) {
+  const provided = request.headers.get('x-internal-token');
+  if (!provided) return false;
+  for (const expected of [env.MODULE_INTERNAL_TOKEN, env.MODULE_INTERNAL_TOKEN_PREVIOUS]) {
+    if (expected && await timingSafeEqual(provided, expected)) return true;
+  }
+  return false;
+}
+
+async function eventDigest(event: SupportNotificationEvent) {
+  return base64url(await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(JSON.stringify(event)),
+  ));
+}
+
+function supportReceipt(
+  eventId: string,
+  duplicate: boolean,
+  browserMessages: number,
+  pushQueued: number,
+): SupportNotificationReceipt {
+  return {
+    data: {
+      event_id: eventId,
+      duplicate,
+      browser_messages: browserMessages,
+      push_queued: pushQueued,
+    },
+  };
+}
+
+/**
+ * Materialize a private Support event into the existing notification inbox and
+ * RPush tables. Every write is keyed by event_id, so a Queue retry or a Worker
+ * restart can safely resume an event left in `processing`.
+ */
+export async function ingestSupportNotification(
+  env: Env,
+  event: SupportNotificationEvent,
+): Promise<SupportNotificationReceipt> {
+  const digest = await eventDigest(event);
+  const claim = await env.DB.prepare(`
+    INSERT INTO support_notification_ingress
+      (event_id, payload_sha256, project_id, recipient_user_id, status)
+    VALUES (?, ?, ?, ?, 'processing')
+    ON CONFLICT(event_id) DO NOTHING
+  `).bind(event.event_id, digest, event.project_id, event.recipient_user_id).run();
+  const duplicate = Number(claim.meta?.changes || 0) === 0;
+  const receipt = await env.DB.prepare(`
+    SELECT payload_sha256, notification_id, status, browser_messages, push_queued
+    FROM support_notification_ingress WHERE event_id = ?
+  `).bind(event.event_id).first<SupportIngressRow>();
+  if (!receipt) throw new Error('Support notification receipt was not persisted');
+  if (receipt.payload_sha256 !== digest) {
+    throw Object.assign(new Error('event_id was already used with another payload'), {
+      status: 409,
+      code: 'support_notification_idempotency_conflict',
+    });
+  }
+  if (receipt.status === 'completed') {
+    return supportReceipt(
+      event.event_id,
+      true,
+      Number(receipt.browser_messages || 0),
+      Number(receipt.push_queued || 0),
+    );
+  }
+
+  if (!event.channels.browser && !event.channels.push) {
+    await env.DB.prepare(`
+      UPDATE support_notification_ingress
+      SET status = 'completed', browser_messages = 0, push_queued = 0,
+          updated_at = datetime('now')
+      WHERE event_id = ? AND payload_sha256 = ?
+    `).bind(event.event_id, digest).run();
+    return supportReceipt(event.event_id, duplicate, 0, 0);
+  }
+
+  await env.DB.prepare(`
+    INSERT INTO notifications
+      (project_id, title, subtitle, html, send_push, auto_display, support_event_id)
+    VALUES (?, ?, ?, NULL, ?, ?, ?)
+    ON CONFLICT(support_event_id) DO NOTHING
+  `).bind(
+    event.project_id,
+    event.title,
+    event.body,
+    event.channels.push ? 1 : 0,
+    event.channels.browser ? 1 : 0,
+    event.event_id,
+  ).run();
+  const notification = await env.DB.prepare(`
+    SELECT id FROM notifications WHERE support_event_id = ? AND project_id = ?
+  `).bind(event.event_id, event.project_id).first<{ id: number }>();
+  if (!notification) throw new Error('Support notification was not materialized');
+
+  const platforms = [
+    ...(event.channels.browser ? ['web', 'desktop'] : []),
+    ...(event.channels.push ? ['ios', 'android'] : []),
+  ];
+  await env.DB.prepare(`
+    INSERT INTO notification_targets
+      (notification_id, existing_users, new_users, platforms)
+    SELECT ?, 1, 0, ?
+    WHERE NOT EXISTS (
+      SELECT 1 FROM notification_targets WHERE notification_id = ?
+    )
+  `).bind(String(notification.id), JSON.stringify(platforms), String(notification.id)).run();
+  await env.DB.prepare(`
+    INSERT INTO notification_messages (notification_id, visitor_id, device_id, read)
+    SELECT DISTINCT ?, visitor.id, visitor.device_id, 0
+    FROM visitors visitor
+    JOIN devices device ON device.id = visitor.device_id
+    WHERE visitor.project_id = ?
+      AND visitor.sdk_identifier = ?
+      AND visitor.device_id IS NOT NULL
+      AND (
+        (? = 1 AND device.platform IN ('web', 'desktop'))
+        OR (? = 1 AND device.platform IN ('ios', 'android'))
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM notification_messages existing
+        WHERE existing.notification_id = ? AND existing.visitor_id = visitor.id
+      )
+  `).bind(
+    notification.id,
+    String(event.project_id),
+    event.recipient_user_id,
+    event.channels.browser ? 1 : 0,
+    event.channels.push ? 1 : 0,
+    notification.id,
+  ).run();
+
+  if (event.channels.push) {
+    await enqueuePushNotifications(env.DB, notification.id, event.project_id);
+  }
+  const browserCount = await env.DB.prepare(`
+    SELECT COUNT(*) count
+    FROM notification_messages message
+    JOIN devices device ON device.id = message.device_id
+    WHERE message.notification_id = ? AND device.platform IN ('web', 'desktop')
+  `).bind(notification.id).first<{ count: number }>();
+  const pushData = JSON.stringify({
+    linksquared: 'true',
+    notification_id: String(notification.id),
+  });
+  const pushCount = event.channels.push
+    ? await env.DB.prepare(`
+        SELECT COUNT(*) count FROM rpush_notifications WHERE data = ?
+      `).bind(pushData).first<{ count: number }>()
+    : null;
+  const browserMessages = Number(browserCount?.count || 0);
+  const pushQueued = event.channels.push ? Number(pushCount?.count || 0) : 0;
+
+  // Queue signaling happens before completion. If it fails, the Support queue
+  // retry resumes this event and signals the processor again without creating
+  // duplicate notification or RPush rows.
+  if (pushQueued > 0) {
+    await env.PUSH_QUEUE.send({ type: 'push.process', limit: 25 }, { contentType: 'json' });
+  }
+  await env.DB.prepare(`
+    UPDATE support_notification_ingress
+    SET notification_id = ?, status = 'completed', browser_messages = ?,
+        push_queued = ?, updated_at = datetime('now')
+    WHERE event_id = ? AND payload_sha256 = ?
+  `).bind(notification.id, browserMessages, pushQueued, event.event_id, digest).run();
+  return supportReceipt(event.event_id, duplicate, browserMessages, pushQueued);
+}
+
+internalPush.post('/support-notifications', async (c) => {
+  if (!await isAuthorizedSupportCaller(c.req.raw, c.env)) {
+    return internalJson({
+      error: {
+        code: 'internal_auth_invalid',
+        message: 'Internal authentication is required',
+        retryable: false,
+      },
+    }, 403);
+  }
+  try {
+    const raw = await readContractJsonObjectLimited(
+      c.req.raw,
+      SUPPORT_NOTIFICATION_LIMITS.networkBodyBytesMaximum,
+    );
+    const event = parseSupportNotificationEvent(raw);
+    return internalJson(await ingestSupportNotification(c.env, event));
+  } catch (error) {
+    const status = error instanceof RequestBodyError
+      ? error.status
+      : error instanceof SupportNotificationContractError
+        ? 422
+        : Number((error as { status?: number }).status || 500);
+    const code = error instanceof RequestBodyError
+      ? error.code
+      : error instanceof SupportNotificationContractError
+        ? error.code
+        : String((error as { code?: string }).code || 'support_notification_ingress_failed');
+    if (status >= 500) {
+      console.error(JSON.stringify({
+        event: 'support_notification_ingress_failed',
+        code,
+        path: SUPPORT_NOTIFICATION_INGRESS_PATH,
+      }));
+    }
+    return internalJson({
+      error: {
+        code,
+        message: status >= 500
+          ? 'Support notification could not be accepted'
+          : error instanceof Error ? error.message : 'Support notification is invalid',
+        retryable: status === 429 || status >= 500,
+      },
+    }, status);
+  }
+});
 
 push.post('/process', async (c) => {
   const provided = c.req.header('X-API-KEY');

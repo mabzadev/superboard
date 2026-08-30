@@ -1,5 +1,5 @@
-import { signal } from '@preact/signals-react'
+import { signal } from "@preact/signals-core";
 
-const error = signal('')
+const error = signal("");
 
-export default error
+export default error;

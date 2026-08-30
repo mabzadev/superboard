@@ -1,0 +1,59 @@
+---
+import FrontPage from "../../../components/FrontPage.astro";
+import { hasPermission } from "@emdash-cms/auth";
+import { candidateEvidence, loadFrontPreview } from "../../../lib/front-workflow-repository.js";
+import { resolvePreviewFrontPage } from "../../../lib/front-page.js";
+import { getSiteEnv } from "../../../lib/site-env.js";
+import {
+	resolveUserFrontLocale,
+	userFrontMessage,
+} from "../../../lib/user-front-i18n.js";
+
+export const prerender = false;
+
+const env = getSiteEnv();
+const previewLocale = resolveUserFrontLocale(Astro.request.headers.get("accept-language"));
+Astro.response.headers.set("Content-Language", previewLocale);
+void userFrontMessage;
+if (!hasPermission(Astro.locals.user, "settings:manage")) {
+	return new Response(userFrontMessage(previewLocale, "site.preview.operator_required"), {
+		status: Astro.locals.user ? 403 : 401,
+	});
+}
+const previewId = Astro.params.previewId ?? "";
+const preview = await loadFrontPreview(env.DB, previewId, new Date().toISOString());
+if (!preview) {
+	return new Response(userFrontMessage(previewLocale, "site.preview.not_found"), {
+		status: 404,
+	});
+}
+const evidence = await candidateEvidence(env.DB, preview.candidate);
+if (evidence.signing_key_status !== "active" || !evidence.verification.valid) {
+	return new Response(
+		userFrontMessage(previewLocale, "site.preview.verification_failed"),
+		{ status: 409 },
+	);
+}
+const requestedPath = `/${Astro.params.path ?? ""}`;
+const model = await resolvePreviewFrontPage(
+	env,
+	preview.candidate.release,
+	requestedPath,
+	Astro.locals.user,
+);
+Astro.response.headers.set("Cache-Control", "private, no-store");
+Astro.response.headers.set("X-SuperBoard-Preview", "dry-run");
+if (model.resolution.result === "redirect") {
+	return Astro.redirect(
+		`/superboard-preview/${encodeURIComponent(previewId)}${model.resolution.location}`,
+		302,
+	);
+}
+if (model.resolution.result === "not_found") Astro.response.status = 404;
+if (model.resolution.result === "forbidden") Astro.response.status = 403;
+if (model.resolution.result === "maintenance" || model.resolution.result === "unavailable") {
+	Astro.response.status = 503;
+}
+---
+
+<FrontPage model={model} />

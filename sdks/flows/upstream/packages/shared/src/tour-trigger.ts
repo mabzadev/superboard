@@ -1,0 +1,92 @@
+import { log } from "./log";
+import { elementContains, pathnameMatch } from "./matchers";
+import { template } from "./template";
+import type { TourTrigger, UserProperties } from "./types";
+import { type Block, type TourTriggerType } from "./types";
+
+export interface BlockTriggerContext {
+  event?: Event;
+  pathname: string;
+  userProperties: UserProperties;
+}
+
+export const blockTriggerMatch = (
+  tourTrigger: TourTrigger | undefined,
+  context: BlockTriggerContext,
+): boolean => {
+  // Undefined tour trigger means the tour should start
+  if (!tourTrigger) return true;
+
+  // If the tour trigger doesn't match what current SDK supports, we never match it
+  if (!tourTrigger.$and) {
+    log.error(
+      "Aborting tour/survey start due to an unsupported trigger format. Try updating the SDK or changing the trigger configuration.",
+    );
+    return false;
+  }
+
+  return tourTrigger.$and.every((exp): boolean => {
+    const type: TourTriggerType | undefined = exp.type;
+    if (type === "navigation") {
+      // If the user doesn't fill in the operator, we treat it as a match
+      if (!exp.operator) return true;
+      const value = exp.values?.map((v) => template(v, context.userProperties));
+      // If the array is only list of empty strings, we treat it as a match
+      if (value?.every((v) => !v)) return true;
+
+      return pathnameMatch({
+        operator: exp.operator,
+        pathname: context.pathname,
+        value,
+      });
+    }
+    if (type === "dom-element") {
+      const value = exp.value;
+      // The dom-element type needs a value to match the selector
+      if (typeof value !== "string") return false;
+      if (!value) return true;
+
+      const interpolatedValue = template(value, context.userProperties);
+      return Boolean(document.querySelector(interpolatedValue));
+    }
+    if (type === "not-dom-element") {
+      const value = exp.value;
+      // The not-dom-element type needs a value to ensure no matching selector exists
+      if (typeof value !== "string") return false;
+      if (!value) return true;
+
+      const interpolatedValue = template(value, context.userProperties);
+      return !document.querySelector(interpolatedValue);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- we may add more types in the future
+    if (type === "click") {
+      const value = exp.value;
+      if (typeof value !== "string") return false;
+      // if the value is empty, we treat it as a match, even without an event to start the tour immediately
+      if (!value) return true;
+      // The click type needs an event to match the event target
+      if (!context.event || !(context.event instanceof MouseEvent)) return false;
+      // The click type needs a value to match the selector
+      const eventTarget = context.event.target;
+      if (!eventTarget || !(eventTarget instanceof Element)) return false;
+
+      const interpolatedValue = template(value, context.userProperties);
+      return elementContains({ eventTarget, value: interpolatedValue });
+    }
+
+    log.error(
+      `Aborting tour/survey start due to an unrecognized trigger type: ${type as string}. Try updating the SDK or changing the tour trigger configuration.`,
+    );
+    // When the expression isn't recognized, we treat it as non-matching and abort the tour start
+    return false;
+  });
+};
+
+export const tourTriggerMatch = (block: Block, context: BlockTriggerContext): boolean => {
+  const currentTourIndex = block.currentTourIndex ?? 0;
+
+  // If the tour has already started, we don't match the trigger again
+  if (currentTourIndex > 0) return true;
+
+  return blockTriggerMatch(block.tour_trigger, context);
+};

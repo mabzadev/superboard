@@ -1,0 +1,85 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "superboard-flows-template",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {
+    "ENVIRONMENT": "development",
+    "SERVICE_NAME": "flows",
+    "D1_EXPECTED_MIGRATION": "0007_project_scoped_flows.sql",
+    "AUTH_GATEWAY_ISSUER": "https://auth.example.invalid",
+    "AUTH_GATEWAY_AUDIENCE": "superboard",
+    "AUTH_GATEWAY_JWKS_URL": "https://auth.example.invalid/.well-known/jwks.json",
+    "PUBLIC_API_URL": "https://api.example.invalid",
+    "QUEUE_NAME": "superboard-flows-template-events",
+    "DLQ_NAME": "superboard-flows-template-events-dlq"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "superboard-flows-template-db",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "migrations",
+      "migrations_table": "d1_migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "ARCHIVE", "bucket_name": "superboard-flows-template-archive" }
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "FLOW_EVENTS", "queue": "superboard-flows-template-events" }
+    ],
+    "consumers": [
+      {
+        "queue": "superboard-flows-template-events",
+        "dead_letter_queue": "superboard-flows-template-events-dlq",
+        "max_batch_size": 25,
+        "max_batch_timeout": 5,
+        "max_retries": 8
+      },
+      {
+        "queue": "superboard-flows-template-events-dlq",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 100
+      }
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "FLOW_USER_RUNTIME", "class_name": "FlowUserRuntime" },
+      { "name": "FLOW_REALTIME_HUB", "class_name": "FlowRealtimeHub" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["FlowUserRuntime", "FlowRealtimeHub"]
+    }
+  ],
+  "workflows": [
+    {
+      "binding": "FLOW_DELAY_EXECUTION",
+      "name": "superboard-flows-template-delay",
+      "class_name": "FlowDelayExecution"
+    },
+    {
+      "binding": "FLOW_MAINTENANCE_EXECUTION",
+      "name": "superboard-flows-template-maintenance",
+      "class_name": "FlowMaintenanceExecution"
+    }
+  ],
+  "services": [
+    { "binding": "PRODUCTS_MODULE", "service": "superboard-products-template" }
+  ],
+  "triggers": { "crons": ["17 2 * * *"] },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true },
+    "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+  }
+}

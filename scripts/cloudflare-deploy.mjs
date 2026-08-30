@@ -24,6 +24,10 @@ import { migrationConfirmation } from "./cloudflare-d1-converge.mjs";
 import { readMigrationBatchReceipt } from "./cloudflare-migration-batch.mjs";
 import { runtimeBridgeDeploymentBlockers } from "./cloudflare-deploy-plan.mjs";
 import {
+  resolveSitePreviewRoute,
+  resolveSiteReleaseOperations,
+} from "./cloudflare-site-preview.mjs";
+import {
   enforceIdentityProjectCutover,
   resolveDeploymentRevision,
 } from "./cloudflare-identity-cutover.mjs";
@@ -35,6 +39,20 @@ const service = args.service ?? "api";
 const uploadOnly = Boolean(args["upload-only"] || args.preflight);
 
 const { target } = await loadTarget(targetName);
+const sitePreviewRoute = resolveSitePreviewRoute({
+  requested: Boolean(args["site-preview-route"]),
+  service,
+  environment,
+  hostname: target.domains.site,
+  noRoutes: Boolean(args["no-routes"]),
+  preflight: Boolean(args.preflight),
+});
+const siteReleaseOperations = resolveSiteReleaseOperations({
+  requested: Boolean(args["release-operations"]),
+  service,
+  environment,
+  sitePreviewRoute,
+});
 assertServiceForTarget(target, service);
 const blockers = runtimeBridgeDeploymentBlockers({
   target,
@@ -116,6 +134,22 @@ const configPath = resolve(
   `${targetName}-${service}-${environment}.jsonc`,
 );
 generateServiceConfig();
+
+if (service === "site") {
+  run(
+    process.execPath,
+    [
+      resolve(root, "scripts", "cloudflare-site-build.mjs"),
+      "--target",
+      targetName,
+      "--environment",
+      environment,
+      ...(sitePreviewRoute?.cliArgs ?? []),
+      ...siteReleaseOperations.cliArgs,
+    ],
+    targetCloudflareEnv,
+  );
+}
 
 if (service === "dashboard") {
   const apiUrl = publicApiUrl(target);
@@ -241,6 +275,17 @@ if (service === "dashboard") {
     targetCloudflareEnv,
     resolve(root, "apps", "dashboard"),
   );
+} else if (service === "site") {
+  run(
+    "npx",
+    [
+      "wrangler",
+      ...(uploadOnly ? ["versions", "upload"] : ["deploy"]),
+      "--config",
+      resolve(root, "apps/site/dist/server/wrangler.json"),
+    ],
+    targetCloudflareEnv,
+  );
 } else {
   run(
     "npx",
@@ -266,6 +311,8 @@ function generateServiceConfig() {
       "--environment",
       environment,
       ...(args["no-routes"] ? ["--no-routes"] : []),
+      ...(sitePreviewRoute?.cliArgs ?? []),
+      ...siteReleaseOperations.cliArgs,
       ...(args.preflight ? ["--preflight"] : []),
     ],
     targetCloudflareEnv,

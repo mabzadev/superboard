@@ -9,7 +9,7 @@ void main() {
     'emits validated server events and connection lifecycle events',
     () async {
       final socket = FakeMessagingConnection();
-      final realtime = SuperBoardMessagingRealtime.withConnectionFactory(
+      final realtime = SuperBoardSupportRealtime.withConnectionFactory(
         (_) async => socket.connection,
         retryDelays: const [Duration.zero],
       );
@@ -31,13 +31,9 @@ void main() {
       );
       await flushEvents();
 
-      expect(events.first, {
-        'type': 'connection.changed',
-        'status': 'connected',
-        'conversation_id': 'conversation-1',
-        'retrying': false,
-        'attempt': 0,
-      });
+      expect(events.first, containsPair('schema_version', 1));
+      expect(events.first, containsPair('type', 'connected'));
+      expect(events.first, containsPair('conversation_id', 'conversation-1'));
       expect(events.last['type'], 'message.created');
       expect(events.last['conversation_id'], 'conversation-1');
     },
@@ -45,9 +41,7 @@ void main() {
 
   test('reconnects after an unexpected socket close', () async {
     final sockets = <FakeMessagingConnection>[];
-    final realtime = SuperBoardMessagingRealtime.withConnectionFactory((
-      _,
-    ) async {
+    final realtime = SuperBoardSupportRealtime.withConnectionFactory((_) async {
       final socket = FakeMessagingConnection();
       sockets.add(socket);
       return socket.connection;
@@ -67,10 +61,12 @@ void main() {
     await flushEvents();
 
     expect(sockets, hasLength(2));
-    expect(
-      events.map((event) => event['status']).whereType<String>(),
-      containsAllInOrder(['connected', 'reconnecting', 'connected']),
-    );
+    expect(events.map((event) => event['type']), [
+      'connected',
+      'error',
+      'connected',
+    ]);
+    expect(((events[1]['error'] as Map)['details'] as Map)['attempt'], 1);
   });
 
   test(
@@ -78,7 +74,7 @@ void main() {
     () async {
       final openedConversations = <String>[];
       final sockets = <FakeMessagingConnection>[];
-      final realtime = SuperBoardMessagingRealtime.withConnectionFactory((
+      final realtime = SuperBoardSupportRealtime.withConnectionFactory((
         conversationId,
       ) async {
         openedConversations.add(conversationId);
@@ -109,7 +105,7 @@ class FakeMessagingConnection {
   final _controller = StreamController<dynamic>.broadcast();
   bool closedByClient = false;
 
-  late final connection = SuperBoardMessagingConnection(
+  late final connection = SuperBoardSupportConnection(
     _controller.stream,
     () async {
       closedByClient = true;

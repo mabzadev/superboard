@@ -1,4 +1,5 @@
 import { Env } from '../types';
+import { constantTimeEqual } from '@superboard/contracts/secret';
 import { signToken, verifyToken } from './crypto';
 import { tokenDigest } from './token-storage';
 
@@ -8,7 +9,7 @@ export type AuthContext = {
   instanceId: number | null;
   applicationId: number | null;
   scopes: string;
-  source: 'oauth' | 'jwt';
+  source: 'oauth' | 'jwt' | 'site';
   payload: Record<string, unknown>;
 };
 
@@ -147,7 +148,48 @@ export async function getAuthContext(
   };
 }
 
+export async function getRequestAuthContext(
+  env: Env,
+  headers: Headers,
+  options: { allowJwtFallback?: boolean } = {},
+): Promise<AuthContext | null> {
+  const siteOperatorEmail = (headers.get('X-SuperBoard-Site-Operator') || '')
+    .trim()
+    .toLowerCase();
+  const siteOperatorToken = (headers.get('X-SuperBoard-Internal-Token') || '').trim();
+  const expectedSiteToken = env.SITE_OPERATOR_BRIDGE_TOKEN?.trim() || '';
+  if (
+    siteOperatorEmail &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(siteOperatorEmail) &&
+    siteOperatorToken &&
+    expectedSiteToken &&
+    await constantTimeEqual(siteOperatorToken, expectedSiteToken)
+  ) {
+    const actor = await env.DB.prepare(
+      'SELECT id FROM users WHERE lower(email) = ? LIMIT 1',
+    ).bind(siteOperatorEmail).first<{ id: number }>();
+    const userId = Number(actor?.id);
+    if (Number.isSafeInteger(userId) && userId > 0) {
+      return {
+        token: '',
+        userId,
+        instanceId: await primaryInstanceId(env.DB, userId),
+        applicationId: null,
+        scopes: 'read write',
+        source: 'site',
+        payload: { operator_email: siteOperatorEmail },
+      };
+    }
+  }
+  return getAuthContext(env, headers.get('Authorization'), options);
+}
+
 export async function getAuthUserId(env: Env, authHeader: string | undefined | null): Promise<number | null> {
   const context = await getAuthContext(env, authHeader);
+  return context?.userId ?? null;
+}
+
+export async function getRequestAuthUserId(env: Env, headers: Headers): Promise<number | null> {
+  const context = await getRequestAuthContext(env, headers);
   return context?.userId ?? null;
 }

@@ -117,6 +117,11 @@ export function assertTargetPhysicalResourceNames(target, environment) {
   for (const [key, value] of Object.entries(resources.moduleR2 ?? {})) {
     add(`moduleR2.${key}`, value);
   }
+  for (const [key, value] of Object.entries(
+    resources.moduleVectorize ?? {},
+  )) {
+    add(`moduleVectorize.${key}`, value);
+  }
   for (const [key, value] of Object.entries(resources.queues ?? {})) {
     add(`queues.${key}`, value);
   }

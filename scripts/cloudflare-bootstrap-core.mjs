@@ -13,25 +13,40 @@ const KIND = {
     endpoint: "/d1/database",
     nameField: "name",
     idField: "uuid",
-    createBody: (name) => ({ name }),
+    createBody: (resource) => ({ name: resource.name }),
   },
   kv: {
     endpoint: "/storage/kv/namespaces",
     nameField: "title",
     idField: "id",
-    createBody: (name) => ({ title: name }),
+    createBody: (resource) => ({ title: resource.name }),
   },
   r2: {
     endpoint: "/r2/buckets",
     nameField: "name",
     idField: null,
-    createBody: (name) => ({ name }),
+    createBody: (resource) => ({ name: resource.name }),
   },
   queue: {
     endpoint: "/queues",
     nameField: "queue_name",
     idField: "queue_id",
-    createBody: (name) => ({ queue_name: name }),
+    createBody: (resource) => ({ queue_name: resource.name }),
+  },
+  vectorize: {
+    endpoint: "/vectorize/v2/indexes",
+    nameField: "name",
+    idField: null,
+    createBody: (resource) => ({
+      name: resource.name,
+      config: {
+        dimensions: resource.configuration.dimensions,
+        metric: resource.configuration.metric,
+      },
+      ...(resource.configuration.description
+        ? { description: resource.configuration.description }
+        : {}),
+    }),
   },
 };
 
@@ -42,7 +57,25 @@ export function desiredCloudflareResources(target, environment) {
   }
   const desired = [
     idResource("d1", "d1", "Central API D1", resources.d1, ["d1", "id"]),
+    idResource("siteD1", "d1", "Site EmDash D1", resources.siteD1, [
+      "siteD1",
+      "id",
+    ]),
     idResource("kv", "kv", "API KV", resources.kv, ["kv", "id"]),
+    idResource(
+      "siteSessionKv",
+      "kv",
+      "Site session KV",
+      resources.siteSessionKv,
+      ["siteSessionKv", "id"],
+    ),
+    idResource(
+      "siteReleaseKv",
+      "kv",
+      "Site Last Verified Release KV",
+      resources.siteReleaseKv,
+      ["siteReleaseKv", "id"],
+    ),
     idResource("emailD1", "d1", "Email D1", resources.emailD1, [
       "emailD1",
       "id",
@@ -101,6 +134,7 @@ export function desiredCloudflareResources(target, environment) {
     );
   }
   desired.push(
+    namedResource("siteMedia", "r2", "Site EmDash media R2", resources.siteMedia),
     namedResource("r2", "r2", "Application files R2", resources.r2),
     namedResource(
       "dashboardCache",
@@ -131,6 +165,25 @@ export function desiredCloudflareResources(target, environment) {
       ),
     );
   }
+  for (const [resourceKey, resource] of Object.entries(
+    resources.moduleVectorize ?? {},
+  ).filter(([resourceKey]) =>
+    DOMAIN_SERVICES.some(
+      (service) =>
+        target.features[service] &&
+        DOMAIN_SERVICE_REGISTRY[service].vectorize.some(
+          (binding) => binding.resourceKey === resourceKey,
+        ),
+    ),
+  )) {
+    desired.push(
+      vectorizeResource(
+        `moduleVectorize.${resourceKey}`,
+        `${resourceKey} Vectorize index`,
+        resource,
+      ),
+    );
+  }
   const queueKeys = [
     "events",
     "eventsDlq",
@@ -150,9 +203,17 @@ export function desiredCloudflareResources(target, environment) {
       }),
     );
   }
+  const enabledModuleQueueKeys = new Set(
+    DOMAIN_SERVICES.filter((service) => target.features[service]).flatMap(
+      (service) =>
+        DOMAIN_SERVICE_REGISTRY[service].queues.map(
+          (queue) => queue.resourceKey,
+        ),
+    ),
+  );
   for (const [moduleName, queue] of Object.entries(
     resources.moduleQueues ?? {},
-  ).filter(([moduleName]) => target.features[moduleName])) {
+  ).filter(([moduleName]) => enabledModuleQueueKeys.has(moduleName))) {
     desired.push(
       namedResource(
         `moduleQueues.${moduleName}.name`,
@@ -183,8 +244,14 @@ export function buildCloudflareBootstrapPlan({
   environment,
   accountId,
   inventories,
+  freshSupportInstall = false,
 }) {
-  const desired = desiredCloudflareResources(target, environment);
+  if (freshSupportInstall && !target.features?.support) {
+    throw new Error("fresh-support-install requires Support to be enabled");
+  }
+  const desired = desiredCloudflareResources(target, environment).filter(
+    (resource) => !freshSupportInstall || isFreshSupportResource(resource),
+  );
   const resources = [];
   const operations = [];
   const blockers = [];
@@ -209,6 +276,52 @@ export function buildCloudflareBootstrapPlan({
       continue;
     }
     const remoteByName = named[0] ?? null;
+    if (freshSupportInstall && resource.manifestId) {
+      blockers.push({
+        type: "fresh-resource-id-already-configured",
+        key: resource.key,
+        kind: resource.kind,
+        name: resource.name,
+      });
+      resources.push(resourceState(resource, "blocked", resource.manifestId));
+      continue;
+    }
+    if (freshSupportInstall && !resource.name.includes("-support-v2-")) {
+      blockers.push({
+        type: "fresh-resource-name-not-v2",
+        key: resource.key,
+        kind: resource.kind,
+        name: resource.name,
+      });
+      resources.push(resourceState(resource, "blocked", null));
+      continue;
+    }
+    if (freshSupportInstall && remoteByName) {
+      blockers.push({
+        type: "fresh-resource-already-exists",
+        key: resource.key,
+        kind: resource.kind,
+        name: resource.name,
+      });
+      resources.push(resourceState(resource, "blocked", null));
+      continue;
+    }
+    if (
+      remoteByName &&
+      resource.kind === "vectorize" &&
+      !sameVectorizeConfiguration(resource.configuration, remoteByName.config)
+    ) {
+      blockers.push({
+        type: "configured-resource-shape-mismatch",
+        key: resource.key,
+        kind: resource.kind,
+        name: resource.name,
+        expected: resource.configuration,
+        remote: remoteByName.config ?? null,
+      });
+      resources.push(resourceState(resource, "blocked", null));
+      continue;
+    }
     const remoteId =
       remoteByName && definition.idField
         ? String(remoteByName[definition.idField] ?? "") || null
@@ -275,7 +388,9 @@ export function buildCloudflareBootstrapPlan({
   }
   const plan = {
     schemaVersion: 1,
-    mode: "remote-read-only",
+    mode: freshSupportInstall
+      ? "remote-read-only-fresh-support"
+      : "remote-read-only",
     target: target.target,
     resourceIdentity: resourceIdentity(target),
     accountAlias: target.accountAlias,
@@ -288,6 +403,17 @@ export function buildCloudflareBootstrapPlan({
     blockers,
   };
   return { ...plan, confirmation: cloudflareBootstrapConfirmation(plan) };
+}
+
+function isFreshSupportResource(resource) {
+  return (
+    resource.key === "moduleD1.support" ||
+    resource.key === "moduleR2.support" ||
+    resource.key === "moduleVectorize.supportKnowledge" ||
+    resource.key.startsWith("moduleQueues.support.") ||
+    resource.key.startsWith("moduleQueues.supportAi.") ||
+    resource.key.startsWith("moduleQueues.supportBulk.")
+  );
 }
 
 export function cloudflareBootstrapConfirmation(plan) {
@@ -389,6 +515,24 @@ function namedResource(key, kind, label, resource) {
   };
 }
 
+function vectorizeResource(key, label, resource) {
+  if (!resource?.name) throw new Error(`${key} must declare a resource name`);
+  return {
+    key,
+    kind: "vectorize",
+    label,
+    name: resource.name,
+    configuration: {
+      dimensions: resource.dimensions,
+      metric: resource.metric,
+      ...(resource.description ? { description: resource.description } : {}),
+    },
+    manifestId: null,
+    legacyName: resource.legacyName === true,
+    idPath: null,
+  };
+}
+
 function operationFor(type, resource, remoteId) {
   const definition = KIND[resource.kind];
   return {
@@ -405,8 +549,15 @@ function operationFor(type, resource, remoteId) {
     idPath: resource.idPath,
     endpoint: definition.endpoint,
     idField: definition.idField,
-    body: definition.createBody(resource.name),
+    body: definition.createBody(resource),
   };
+}
+
+function sameVectorizeConfiguration(expected, actual) {
+  return (
+    Number(actual?.dimensions) === expected.dimensions &&
+    String(actual?.metric ?? "") === expected.metric
+  );
 }
 
 function resourceState(resource, state, remoteId) {
@@ -419,6 +570,9 @@ function resourceState(resource, state, remoteId) {
     physicalName: resource.physicalName,
     previousNames: resource.previousNames,
     migrationStrategy: resource.migrationStrategy,
+    ...(resource.configuration
+      ? { configuration: { ...resource.configuration } }
+      : {}),
     state,
     manifestIdConfigured: Boolean(resource.manifestId),
     remoteId: remoteId ?? null,

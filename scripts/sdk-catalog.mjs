@@ -11,7 +11,7 @@ import {
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const catalogPath = resolve(root, "config/sdk-libraries.json");
 const catalogSchemaPath = resolve(root, "config/sdk-libraries.schema.json");
-const catalogSchemaVersion = 4;
+const catalogSchemaVersion = 5;
 const canonicalRepository =
   "https://github.com/mabzadev/superboard";
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -34,6 +34,10 @@ const tagPrefixes = Object.freeze({
   android: "sdk-android-v",
   javascript: "sdk-js-v",
   "react-native": "sdk-react-native-v",
+  "flows-js": "sdk-flows-js-v",
+  "flows-react": "sdk-flows-react-v",
+  "flows-js-components": "sdk-flows-js-components-v",
+  "flows-react-components": "sdk-flows-react-components-v",
 });
 
 export async function loadSdkCatalog(path = catalogPath) {
@@ -64,6 +68,7 @@ export async function validateSdkCatalog(catalog, options = {}) {
     if (!lifecycles.has(library.lifecycle))
       errors.push(`${prefix}.lifecycle is invalid`);
     const active = library.lifecycle === "active";
+    const unreleased = library.releaseStatus === "unreleased";
     if (!library.packageName || packages.has(library.packageName))
       errors.push(`${prefix}.packageName is missing or duplicated`);
     packages.add(library.packageName);
@@ -126,40 +131,67 @@ export async function validateSdkCatalog(catalog, options = {}) {
         `${prefix} must stage a SuperBoard package coordinate before release`,
       );
     }
-    for (const key of ["sourceVersion", "latestReleaseVersion"]) {
-      if (!semver.test(library[key] ?? ""))
-        errors.push(`${prefix}.${key} is not SemVer`);
+    if (!semver.test(library.sourceVersion ?? ""))
+      errors.push(`${prefix}.sourceVersion is not SemVer`);
+    if (unreleased) {
+      if (library.lifecycle === "archived") {
+        errors.push(`${prefix}.archived libraries must have a published baseline`);
+      }
+      const expectedTarget = active ? "public-npm" : "workspace-only";
+      if (library.publicationTarget !== expectedTarget) {
+        errors.push(
+          `${prefix}.publicationTarget must be ${expectedTarget} while unreleased`,
+        );
+      }
+      for (const key of [
+        "latestReleaseVersion",
+        "releaseRef",
+        "releaseSha",
+        "install",
+        "candidatePackageName",
+        "candidateInstall",
+        "distribution",
+      ]) {
+        if (Object.hasOwn(library, key)) {
+          errors.push(
+            `${prefix}.${key} must be absent until the first release is published`,
+          );
+        }
+      }
+    } else {
+      if (!semver.test(library.latestReleaseVersion ?? ""))
+        errors.push(`${prefix}.latestReleaseVersion is not SemVer`);
+      const expectedStatus = active
+        ? library.sourceVersion === library.latestReleaseVersion
+          ? "released"
+          : "pending-release"
+        : "released";
+      if (library.releaseStatus !== expectedStatus)
+        errors.push(`${prefix}.releaseStatus must be ${expectedStatus}`);
+      if (!active && library.sourceVersion !== library.latestReleaseVersion) {
+        errors.push(
+          `${prefix}.sourceVersion must stay frozen at latestReleaseVersion for ${library.lifecycle} libraries`,
+        );
+      }
+      if (!commitSha.test(library.releaseSha ?? "")) {
+        errors.push(
+          `${prefix}.releaseSha must identify the latest published commit`,
+        );
+      }
+      if (!library.releaseRef || /^(?:dev|main)$/.test(library.releaseRef))
+        errors.push(`${prefix}.releaseRef must be immutable`);
+      const canonicalTag = tagPrefixes[library.id]
+        ? `${tagPrefixes[library.id]}${library.latestReleaseVersion}`
+        : null;
+      if (library.id === "ios") {
+        if (library.releaseRef !== library.latestReleaseVersion)
+          errors.push(`${prefix}.releaseRef must be the SwiftPM SemVer tag`);
+      } else if (canonicalTag && library.releaseRef !== canonicalTag) {
+        errors.push(`${prefix}.releaseRef must be ${canonicalTag}`);
+      }
+      if (!String(library.install ?? "").includes(library.latestReleaseVersion))
+        errors.push(`${prefix}.install must pin latestReleaseVersion`);
     }
-    const expectedStatus = active
-      ? library.sourceVersion === library.latestReleaseVersion
-        ? "released"
-        : "pending-release"
-      : "released";
-    if (library.releaseStatus !== expectedStatus)
-      errors.push(`${prefix}.releaseStatus must be ${expectedStatus}`);
-    if (!active && library.sourceVersion !== library.latestReleaseVersion) {
-      errors.push(
-        `${prefix}.sourceVersion must stay frozen at latestReleaseVersion for ${library.lifecycle} libraries`,
-      );
-    }
-    if (!commitSha.test(library.releaseSha ?? "")) {
-      errors.push(
-        `${prefix}.releaseSha must identify the latest published commit`,
-      );
-    }
-    if (!library.releaseRef || /^(?:dev|main)$/.test(library.releaseRef))
-      errors.push(`${prefix}.releaseRef must be immutable`);
-    const canonicalTag = tagPrefixes[library.id]
-      ? `${tagPrefixes[library.id]}${library.latestReleaseVersion}`
-      : null;
-    if (library.id === "ios") {
-      if (library.releaseRef !== library.latestReleaseVersion)
-        errors.push(`${prefix}.releaseRef must be the SwiftPM SemVer tag`);
-    } else if (canonicalTag && library.releaseRef !== canonicalTag) {
-      errors.push(`${prefix}.releaseRef must be ${canonicalTag}`);
-    }
-    if (!String(library.install ?? "").includes(library.latestReleaseVersion))
-      errors.push(`${prefix}.install must pin latestReleaseVersion`);
     validateDistributionContract(catalog, library, prefix, errors);
     const sourcePath = protectedRepoPath(
       library.sourcePath,
@@ -202,6 +234,12 @@ export async function validateSdkCatalog(catalog, options = {}) {
           errors.push(
             `${prefix}.source package name is ${String(manifest.name)}, expected ${expectedPackageName}`,
           );
+        }
+        if (library.publicationTarget === "workspace-only" && manifest.private !== true) {
+          errors.push(`${prefix}.workspace-only npm package must stay private`);
+        }
+        if (library.publicationTarget === "public-npm" && manifest.private === true) {
+          errors.push(`${prefix}.public npm release source cannot be private`);
         }
       }
       if (
@@ -470,9 +508,10 @@ function validateReleaseCandidateTag(catalog, history, tag, errors) {
   const pending =
     library.latestReleaseVersion !== version &&
     library.releaseStatus === "pending-release";
-  if (!alreadyPublished && !pending) {
+  const initial = library.releaseStatus === "unreleased";
+  if (!alreadyPublished && !pending && !initial) {
     errors.push(
-      `${tag} must identify either the declared pending source or its idempotent published release`,
+      `${tag} must identify the declared initial source, a pending source or its idempotent published release`,
     );
   }
 }
@@ -653,16 +692,20 @@ export function releaseRefFor(catalog, id) {
 export function releaseCandidateTagFor(catalog, id) {
   const library = catalog.libraries.find((item) => item.id === id);
   const prefix = tagPrefixes[id];
-  if (!library || !prefix) throw new Error(`Unknown SDK library: ${id}`);
+  if (!library) throw new Error(`Unknown SDK library: ${id}`);
   if (library.lifecycle !== "active")
     throw new Error(`${id} is ${library.lifecycle} and cannot be published`);
+  if (!prefix) throw new Error(`${id} has no immutable release namespace`);
   const pending =
     library.releaseStatus === "pending-release" &&
     library.sourceVersion !== library.latestReleaseVersion;
+  const initial =
+    library.releaseStatus === "unreleased" &&
+    library.publicationTarget === "public-npm";
   const catalogueRecovery =
     library.releaseStatus === "released" &&
     library.sourceVersion === library.latestReleaseVersion;
-  if (!pending && !catalogueRecovery)
+  if (!initial && !pending && !catalogueRecovery)
     throw new Error(`${id} has no valid immutable release candidate`);
   return `${prefix}${library.sourceVersion}`;
 }
@@ -678,10 +721,11 @@ export function releaseCandidateRefFor(catalog, id) {
 
 export function promoteSdkRelease(catalog, id, version, releaseSha) {
   const library = catalog.libraries.find((item) => item.id === id);
-  if (!library || !tagPrefixes[id])
-    throw new Error(`Unknown SDK library: ${id}`);
+  if (!library) throw new Error(`Unknown SDK library: ${id}`);
   if (library.lifecycle !== "active")
     throw new Error(`${id} is ${library.lifecycle} and cannot be published`);
+  if (!tagPrefixes[id])
+    throw new Error(`${id} has no immutable release namespace`);
   if (!semver.test(version ?? ""))
     throw new Error(`Invalid SDK release version: ${version}`);
   if (!commitSha.test(releaseSha ?? ""))
@@ -702,12 +746,16 @@ export function promoteSdkRelease(catalog, id, version, releaseSha) {
     }
     return structuredClone(catalog);
   }
-  if (library.releaseStatus !== "pending-release") {
-    throw new Error(`${id} is not pending release`);
+  if (
+    library.releaseStatus !== "pending-release" &&
+    library.releaseStatus !== "unreleased"
+  ) {
+    throw new Error(`${id} is not pending or awaiting its initial release`);
   }
   const promoted = structuredClone(catalog);
   const target = promoted.libraries.find((item) => item.id === id);
   const previousVersion = target.latestReleaseVersion;
+  const initialRelease = target.releaseStatus === "unreleased";
   target.latestReleaseVersion = version;
   target.releaseRef = id === "ios" ? version : `${tagPrefixes[id]}${version}`;
   target.releaseStatus = "released";
@@ -717,6 +765,11 @@ export function promoteSdkRelease(catalog, id, version, releaseSha) {
     target.install = target.candidateInstall;
     delete target.candidatePackageName;
     delete target.candidateInstall;
+  } else if (initialRelease) {
+    if (target.publicationTarget !== "public-npm" || target.ecosystem !== "npm") {
+      throw new Error(`${id} has no supported initial publication target`);
+    }
+    target.install = `npm install ${target.packageName}@${version}`;
   } else {
     target.install = target.install.replaceAll(previousVersion, version);
   }

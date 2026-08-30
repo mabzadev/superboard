@@ -1,0 +1,529 @@
+---
+title: Media Library
+description: Upload and manage images and files in EmDash.
+---
+
+import { Aside, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+import mediaLibraryImg from "../../../assets/screenshots/admin-media-library.png";
+
+EmDash includes a media library for managing images, documents, and other files. This guide covers uploading, finding, and using media in your content.
+
+## Accessing the Media Library
+
+Open the media library from the admin sidebar by clicking **Media**. The Main library shows folders
+and files that are not assigned to a folder. Open a folder to see its files.
+
+<img src={mediaLibraryImg.src} alt="EmDash media library showing image grid with upload button" />
+
+## Used in
+
+Open a file in EmDash's media library to see the content entries that reference it. While EmDash scans existing content, the list includes the references found so far and may be incomplete.
+
+### Turn on media usage tracking
+
+If media usage tracking is off, an administrator can turn it on:
+
+1. Finish any content edits. If another application writes directly to the content database, pause it and wait for any writes in progress to finish.
+2. Open **Settings → Media usage tracking**, select **Enable tracking**, then confirm.
+3. When the page shows **Indexing existing content**, editing and other database writes can resume.
+4. Keep the page open until it shows **Ready**. If you leave, return to continue from saved progress.
+
+Once media usage tracking is on, it cannot be turned off.
+
+<Aside type="caution">
+	The **Used in** list checks supported references in EmDash content. It does not inspect custom code
+	or external sites, so an empty list does not prove that a file is safe to delete.
+</Aside>
+
+## Uploading Files
+
+### From the Media Library
+
+1. Open **Media** in the admin sidebar.
+
+2. Select **Upload Files**, then **Browse files** to choose one or more files. You can also drag files anywhere onto the media library.
+
+3. Uploads start automatically. The dialog shows each file's status and lets you cancel or retry individual files.
+
+### From the Content Editor
+
+1. In the rich text editor, click the image button
+
+2. Click **Upload** in the media picker
+
+3. Select a file from your computer
+
+4. Add alt text and click **Insert**
+
+## Supported File Types
+
+EmDash accepts these file types by default:
+
+| Category  | Extensions                                      |
+| --------- | ----------------------------------------------- |
+| Images    | `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.avif` |
+| Documents | `.pdf`                                         |
+| Video     | `.mp4`, `.webm`, `.mov`                         |
+| Audio     | `.mp3`, `.wav`, `.ogg`                          |
+
+Image and file fields can allow other MIME types, including `image/svg+xml` for SVG files.
+
+<Aside type="caution">
+	The default limit is 50 MB per file. Set
+	[`maxUploadSize`](/reference/configuration/#maxuploadsize) to change it.
+</Aside>
+
+## Storage Backends
+
+EmDash supports multiple storage backends. Configure storage in your Astro config:
+
+<Tabs>
+  <TabItem label="Local Storage">
+```js title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash, { local } from "emdash/astro";
+
+export default defineConfig({
+  integrations: [
+    emdash({
+      storage: local({
+        directory: "./uploads",
+        baseUrl: "/_emdash/api/media/file",
+      }),
+    }),
+  ],
+});
+```
+
+Files are stored in the `./uploads` directory. Suitable for development and single-server deployments.
+
+  </TabItem>
+  <TabItem label="Cloudflare R2">
+```js title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash from "emdash/astro";
+import { r2 } from "@emdash-cms/cloudflare";
+
+export default defineConfig({
+  integrations: [
+    emdash({
+      storage: r2({
+        binding: "MEDIA_BUCKET",
+        publicUrl: "https://media.example.com",
+      }),
+    }),
+  ],
+});
+```
+
+Requires an R2 bucket configured in `wrangler.jsonc`:
+
+```jsonc title="wrangler.jsonc"
+{
+	"r2_buckets": [
+		{
+			"binding": "MEDIA_BUCKET",
+			"bucket_name": "my-media-bucket",
+		},
+	],
+}
+```
+
+  </TabItem>
+  <TabItem label="S3-Compatible">
+```js title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash, { s3 } from "emdash/astro";
+
+export default defineConfig({
+  integrations: [
+    emdash({
+      storage: s3({
+        endpoint: "https://s3.amazonaws.com",
+        bucket: "my-media-bucket",
+        accessKeyId: process.env.S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        region: "us-east-1",
+        publicUrl: "https://media.example.com",
+      }),
+    }),
+  ],
+});
+```
+
+Works with Cloudflare R2 (via S3 API), MinIO, and other S3-compatible services.
+
+  </TabItem>
+</Tabs>
+
+## How Uploads Work
+
+The admin uses the [upload target flow](/reference/rest-api/#upload-target-flow):
+
+1. The client requests an upload target, and EmDash creates a pending media item.
+
+2. The client uploads the file to the returned target.
+
+3. The client confirms the upload.
+
+4. EmDash validates the stored file and marks the media item as ready.
+
+S3-compatible storage returns a signed URL so the file can bypass the application runtime. Local
+storage and native R2 return a same-origin streaming endpoint instead.
+
+<Aside>
+	R2 bindings do not support pre-signed URLs. When using the R2 binding adapter, uploads go through
+	your Worker.
+</Aside>
+
+## Finding Media
+
+### Search
+
+Use the search box to find files by name. Search matches partial filenames.
+
+### Filter by type
+
+Use the type filter to show images, documents, video, or audio files.
+
+## Organizing media in folders
+
+Editors can select **Add new folder** from the Main library. Open a folder by selecting its name.
+Without a search term, folder pages show only the media assigned to that folder. Filename searches
+cover the whole library, including other folders and the Main library.
+
+To move a local file into a visible folder, drag its grid card or list row onto the folder. You can
+also open **Media Details**, choose a **Location**, and select **Save**. Use **Location** to return a
+file to the Main library or to move it without dragging.
+
+Authors can move local files they uploaded. Editors can move any local file. Files from external
+providers cannot be assigned to folders.
+
+Uploads enter the Main library. Move them into a folder after upload using either method above.
+
+Deleting a folder returns its media to the Main library. The media files, URLs, and content
+references remain unchanged.
+
+## Using Media in Content
+
+### In the Rich Text Editor
+
+1. Place your cursor where you want the image
+
+2. Click the image button in the toolbar
+
+3. Select an image from the media library or upload a new one
+
+4. Enter alt text
+
+5. Click **Insert**
+
+### As a Featured Image
+
+1. Open a content entry in the editor
+
+2. Find the **Featured Image** field in the sidebar
+
+3. Click **Select Image**
+
+4. Choose from the media library or upload
+
+5. Click **Save**
+
+### In Custom Fields
+
+For fields configured as image or file types, click the field to open the media picker.
+
+## Setting a focal point
+
+A focal point keeps the important part of a local image visible when a card, gallery, or other
+layout crops it to fill a fixed shape.
+
+1. Open **Media**, then select an image from the local library.
+2. Select **Focal point**.
+3. Click or drag the marker onto the important part of the image. You can also use the Arrow keys.
+4. Check the square, landscape, and portrait previews, then select **Save**.
+
+Select **Reset** to remove a custom focal point. The saved point is copied when you select
+the image for a content field or gallery. Content that already uses the image keeps its stored point
+until you select the image again.
+
+## Displaying Media in Templates
+
+Access media URLs from your content data:
+
+```astro title="src/pages/posts/[slug].astro"
+---
+import { getEmDashEntry } from "emdash";
+
+const { entry: post } = await getEmDashEntry("posts", Astro.params.slug);
+---
+
+{post?.data.featured_image && (
+  <img
+    src={post.data.featured_image}
+    alt={post.data.featured_image_alt ?? ""}
+  />
+)}
+```
+
+### Responsive Images
+
+For EmDash media fields, use the `Image` component from `emdash/ui`:
+
+```astro
+---
+import { Image } from "emdash/ui";
+import { getEmDashEntry } from "emdash";
+
+const { entry: post } = await getEmDashEntry("posts", Astro.params.slug);
+---
+
+{post?.data.featured_image && (
+  <Image
+    image={post.data.featured_image}
+    width={800}
+    height={450}
+    priority
+  />
+)}
+```
+
+`priority` is for the primary above-the-fold image. It sets `loading="eager"` and `fetchpriority="high"`: `loading` controls whether loading is deferred, and `fetchpriority` gives the browser a priority hint for the request.
+
+EmDash installs an image endpoint that produces the resized variants on request. On Cloudflare Workers that endpoint uses the `IMAGES` binding. [Image Transformation](/deployment/cloudflare/#image-transformation) covers where the binding comes from and what happens when it is absent.
+
+## Deleting Media
+
+1. Select the file(s) you want to delete
+
+2. Click **Delete**
+
+3. Confirm the deletion
+
+<Aside type="caution">
+	Deleting media does not remove references in your content. Ensure you update or remove content
+	that uses deleted files.
+</Aside>
+
+## Media API
+
+Use the REST API to upload, list, update, delete, and organize local media. The
+[media endpoint reference](/reference/rest-api/#media-endpoints) documents the direct multipart
+upload and upload target flows, request parameters, response shapes, permissions, and folder
+operations.
+
+## Media Providers
+
+In addition to local storage, EmDash supports external media providers for specialized image and video hosting. Media providers appear as tabs in the media picker, letting editors choose from multiple sources.
+
+### Available Providers
+
+<Tabs>
+  <TabItem label="Cloudflare Images">
+[Cloudflare Images](https://developers.cloudflare.com/images/) provides image hosting with automatic optimization, resizing, and format conversion.
+
+```js title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash from "emdash/astro";
+import { cloudflareImages } from "@emdash-cms/cloudflare";
+
+export default defineConfig({
+  integrations: [
+    emdash({
+      // ... database, storage config
+      mediaProviders: [
+        cloudflareImages({
+          accountId: import.meta.env.CF_ACCOUNT_ID,
+          apiToken: import.meta.env.CF_IMAGES_TOKEN,
+          // Optional: custom delivery domain
+          deliveryDomain: "images.example.com",
+        }),
+      ],
+    }),
+  ],
+});
+```
+
+**Features:**
+- Browse and upload images directly from the admin
+- Automatic image optimization and format conversion
+- URL-based transformations (resize, crop, format)
+- Flexible variants for responsive images
+
+</TabItem>
+<TabItem label="Cloudflare Stream">
+[Cloudflare Stream](https://developers.cloudflare.com/stream/) provides video hosting with HLS/DASH adaptive streaming.
+
+```js title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash from "emdash/astro";
+import { cloudflareStream } from "@emdash-cms/cloudflare";
+
+export default defineConfig({
+  integrations: [
+    emdash({
+      // ... database, storage config
+      mediaProviders: [
+        cloudflareStream({
+          accountId: import.meta.env.CF_ACCOUNT_ID,
+          apiToken: import.meta.env.CF_STREAM_TOKEN,
+          // Optional: player settings
+          controls: true,
+          autoplay: false,
+          loop: false,
+        }),
+      ],
+    }),
+  ],
+});
+```
+
+**Features:**
+- Browse, search, and upload videos from the admin
+- HLS and DASH adaptive streaming
+- Automatic thumbnail generation
+- Direct upload for large files
+
+</TabItem>
+</Tabs>
+
+### Using Multiple Providers
+
+You can configure multiple providers. Each appears as a tab in the media picker:
+
+```js title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash from "emdash/astro";
+import { cloudflareImages, cloudflareStream } from "@emdash-cms/cloudflare";
+
+export default defineConfig({
+  integrations: [
+    emdash({
+      database: d1({ binding: "DB" }),
+      storage: r2({ binding: "MEDIA" }),
+      mediaProviders: [
+        cloudflareImages({
+          accountId: import.meta.env.CF_ACCOUNT_ID,
+          apiToken: import.meta.env.CF_IMAGES_TOKEN,
+        }),
+        cloudflareStream({
+          accountId: import.meta.env.CF_ACCOUNT_ID,
+          apiToken: import.meta.env.CF_STREAM_TOKEN,
+        }),
+      ],
+    }),
+  ],
+});
+```
+
+The local media library ("Library" tab) is always available alongside any configured providers.
+
+### Rendering Provider Media
+
+Use the `Image` component to render media:
+
+```astro title="src/pages/posts/[slug].astro"
+---
+import { Image } from "emdash/ui";
+import { getEmDashEntry } from "emdash";
+
+const { entry: post } = await getEmDashEntry("posts", Astro.params.slug);
+---
+
+{post?.data.featured_image && (
+  <Image
+    image={post.data.featured_image}
+    width={800}
+    height={450}
+  />
+)}
+```
+
+The component automatically:
+- Detects the provider from the stored value
+- Renders an optimized `<img>` element
+- Applies provider-specific optimizations (e.g., Cloudflare Images transformations)
+
+### File Values and Current Metadata
+
+A file field stores a reference and a metadata snapshot. Cached fields such as `url`, `filename`,
+`mimeType`, and `size` are optional because persisted values may omit them:
+
+```ts
+interface FileValue {
+  id: string;
+  url?: string;        // Legacy cached URL
+  src?: string;        // Direct URL from an external provider
+  filename?: string;  // Cached original filename
+  mimeType?: string;  // Cached MIME type
+  size?: number;       // Cached size, when available
+  provider?: string;   // Defaults to "local"
+  meta?: Record<string, unknown>;
+}
+```
+
+`getEmDashEntry()` and `getEmDashCollection()` return this stored value without an extra media
+query. For current metadata, use the configured provider's `get()` method explicitly. Use
+`getEmbed()` for the provider-specific render URL:
+
+```astro
+---
+const file = post.data.attachment;
+const provider = file
+  ? Astro.locals.emdash?.getMediaProvider(file.provider ?? "local")
+  : undefined;
+const current = file ? await provider?.get?.(file.id) : null;
+const embed = file && provider ? await provider.getEmbed(file) : null;
+---
+```
+
+Authenticated HTTP clients can make the same explicit lookup through
+`GET /_emdash/api/media/:id` for local media or
+`GET /_emdash/api/media/providers/:providerId/:itemId` for another provider.
+
+For a local file URL, use the stored `meta.storageKey` with the public URL helper. This respects a
+configured R2 or S3 public domain without querying the media table:
+
+```astro
+---
+const storageKey =
+  typeof file?.meta?.storageKey === "string" ? file.meta.storageKey : undefined;
+const url = storageKey
+  ? Astro.locals.emdash?.getPublicMediaUrl?.(storageKey)
+  : file?.src ?? file?.url;
+---
+```
+
+Provider lookups may perform network or database work. Avoid one lookup per file on logged-out
+collection pages; use the stored snapshot and rendering components unless the request needs fresh
+metadata.
+
+### MediaValue Type
+
+Media fields store a `MediaValue` object containing provider information:
+
+```ts
+interface MediaValue {
+  provider?: string;    // Provider ID, defaults to "local"
+  id: string;           // Provider-specific ID
+  src?: string;         // Direct URL (for local media or plain-string values)
+  previewUrl?: string;  // Preview URL for admin display (external providers)
+  filename?: string;    // Original filename
+  mimeType?: string;    // MIME type
+  width?: number;       // Image/video width
+  height?: number;      // Image/video height
+  focalX?: number;      // Horizontal focal position from 0 to 1
+  focalY?: number;      // Vertical focal position from 0 to 1
+  alt?: string;         // Alt text
+  meta?: Record<string, unknown>; // Provider-specific metadata
+}
+```
+
+This allows EmDash to render media correctly regardless of where it's hosted.
+
+## Next Steps
+
+- [Working with Content](/guides/working-with-content/) - Use media in your content
+- [Create a Blog](/guides/create-a-blog/) - Add images to blog posts
+- [Querying Content](/guides/querying-content/) - Display media in templates

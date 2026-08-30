@@ -1,0 +1,424 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://superboard.dev/schemas/front-release-input.schema.json",
+	"title": "SuperBoard Front Release compiler input",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"schema_version",
+		"compiler_version",
+		"instance_id",
+		"front_draft_id",
+		"draft_snapshot_id",
+		"compilation_id",
+		"candidate_id",
+		"release_id",
+		"release_sequence",
+		"previous_release_id",
+		"created_at",
+		"front_route_manifest",
+		"gateway_manifest",
+		"presentation",
+		"renderers",
+		"plugin_lock",
+		"dependency_policies",
+		"rollback",
+		"core_concrete_pages"
+	],
+	"properties": {
+		"schema_version": { "$ref": "#/$defs/semver" },
+		"compiler_version": { "$ref": "#/$defs/semver" },
+		"instance_id": { "$ref": "#/$defs/namespacedId" },
+		"front_draft_id": { "$ref": "#/$defs/ulid" },
+		"draft_snapshot_id": { "$ref": "#/$defs/ulid" },
+		"compilation_id": { "$ref": "#/$defs/ulid" },
+		"candidate_id": { "$ref": "#/$defs/ulid" },
+		"release_id": { "$ref": "#/$defs/ulid" },
+		"release_sequence": { "type": "integer", "minimum": 1 },
+		"previous_release_id": {
+			"anyOf": [{ "$ref": "#/$defs/ulid" }, { "type": "null" }]
+		},
+		"created_at": {
+			"type": "string",
+			"pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+		},
+		"front_route_manifest": { "$ref": "#/$defs/frontRouteManifest" },
+		"gateway_manifest": { "$ref": "#/$defs/gatewayManifest" },
+		"presentation": { "$ref": "#/$defs/presentation" },
+		"renderers": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/renderer" }
+		},
+		"plugin_lock": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/pluginLockEntry" }
+		},
+		"dependency_policies": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/dependencyPolicy" }
+		},
+		"rollback": { "$ref": "#/$defs/rollback" },
+		"core_concrete_pages": { "type": "array", "maxItems": 0 }
+	},
+	"$defs": {
+		"semver": {
+			"type": "string",
+			"pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+		},
+		"ulid": {
+			"type": "string",
+			"pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+		},
+		"namespacedId": {
+			"type": "string",
+			"pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+		},
+		"checksum": {
+			"type": "string",
+			"pattern": "^sha256:[a-f0-9]{64}$"
+		},
+		"stringArray": {
+			"type": "array",
+			"items": { "type": "string", "minLength": 1 },
+			"uniqueItems": true
+		},
+		"jsonValue": {
+			"anyOf": [
+				{ "type": "null" },
+				{ "type": "boolean" },
+				{ "type": "number" },
+				{ "type": "string" },
+				{ "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+				{
+					"type": "object",
+					"additionalProperties": { "$ref": "#/$defs/jsonValue" }
+				}
+			]
+		},
+		"statePolicies": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"loading",
+				"empty",
+				"forbidden",
+				"not_found",
+				"error",
+				"unavailable",
+				"maintenance"
+			],
+			"properties": {
+				"loading": { "$ref": "#/$defs/namespacedId" },
+				"empty": { "$ref": "#/$defs/namespacedId" },
+				"forbidden": { "$ref": "#/$defs/namespacedId" },
+				"not_found": { "$ref": "#/$defs/namespacedId" },
+				"error": { "$ref": "#/$defs/namespacedId" },
+				"unavailable": { "$ref": "#/$defs/namespacedId" },
+				"maintenance": { "$ref": "#/$defs/namespacedId" }
+			}
+		},
+		"routeParameter": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["type", "required"],
+			"properties": {
+				"type": { "enum": ["string", "integer", "uuid", "slug", "path"] },
+				"required": { "type": "boolean" }
+			}
+		},
+		"queryParameter": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["type", "required"],
+			"properties": {
+				"type": { "enum": ["string", "integer", "boolean"] },
+				"required": { "type": "boolean" }
+			}
+		},
+		"route": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"route_id",
+				"path_pattern",
+				"route_kind",
+				"audience",
+				"auth_policy",
+				"permission_expression",
+				"priority",
+				"parameters",
+				"query",
+				"page_id",
+				"layout_ids",
+				"renderer_ids",
+				"state_policies",
+				"dependencies",
+				"redirect"
+			],
+			"properties": {
+				"route_id": { "$ref": "#/$defs/namespacedId" },
+				"path_pattern": { "type": "string", "pattern": "^/" },
+				"route_kind": { "enum": ["system", "page", "redirect"] },
+				"audience": { "enum": ["system", "emdash_admin", "superboard_front"] },
+				"auth_policy": { "enum": ["public", "anonymous_only", "authenticated"] },
+				"permission_expression": { "type": "string", "minLength": 1 },
+				"priority": { "type": "integer" },
+				"parameters": {
+					"type": "object",
+					"additionalProperties": { "$ref": "#/$defs/routeParameter" }
+				},
+				"query": {
+					"type": "object",
+					"additionalProperties": { "$ref": "#/$defs/queryParameter" }
+				},
+				"page_id": {
+					"anyOf": [{ "$ref": "#/$defs/namespacedId" }, { "type": "null" }]
+				},
+				"layout_ids": { "$ref": "#/$defs/stringArray" },
+				"renderer_ids": { "$ref": "#/$defs/stringArray" },
+				"state_policies": { "$ref": "#/$defs/statePolicies" },
+				"dependencies": { "$ref": "#/$defs/stringArray" },
+				"redirect": {
+					"anyOf": [
+						{ "type": "null" },
+						{
+							"type": "object",
+							"additionalProperties": false,
+							"required": ["route_id", "status"],
+							"properties": {
+								"route_id": { "$ref": "#/$defs/namespacedId" },
+								"status": { "enum": [301, 302, 307, 308] }
+							}
+						}
+					]
+				}
+			}
+		},
+		"frontRouteManifest": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"schema_version",
+				"manifest_id",
+				"normalization",
+				"auth_transitions",
+				"system_routes",
+				"routes"
+			],
+			"properties": {
+				"schema_version": { "$ref": "#/$defs/semver" },
+				"manifest_id": { "$ref": "#/$defs/ulid" },
+				"normalization": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["unicode", "case_sensitive", "trailing_slash", "percent_decoding"],
+					"properties": {
+						"unicode": { "const": "NFC" },
+						"case_sensitive": { "type": "boolean" },
+						"trailing_slash": { "enum": ["strip", "preserve"] },
+						"percent_decoding": { "const": "once" }
+					}
+				},
+				"auth_transitions": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["login_route_id", "authenticated_home_route_id"],
+					"properties": {
+						"login_route_id": { "$ref": "#/$defs/namespacedId" },
+						"authenticated_home_route_id": { "$ref": "#/$defs/namespacedId" }
+					}
+				},
+				"system_routes": { "type": "array", "items": { "$ref": "#/$defs/route" } },
+				"routes": { "type": "array", "items": { "$ref": "#/$defs/route" } }
+			}
+		},
+		"gatewayRoute": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"route_id",
+				"method",
+				"path_pattern",
+				"destination",
+				"auth_policy",
+				"audience",
+				"scopes",
+				"timeout_ms"
+			],
+			"properties": {
+				"route_id": { "$ref": "#/$defs/namespacedId" },
+				"method": { "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] },
+				"path_pattern": { "type": "string", "pattern": "^/" },
+				"destination": { "type": "string", "minLength": 1 },
+				"auth_policy": { "enum": ["public", "authenticated"] },
+				"audience": { "type": "string", "minLength": 1 },
+				"scopes": { "$ref": "#/$defs/stringArray" },
+				"timeout_ms": { "type": "integer", "minimum": 1, "maximum": 30000 }
+			}
+		},
+		"gatewayManifest": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["schema_version", "gateway_manifest_id", "routes"],
+			"properties": {
+				"schema_version": { "$ref": "#/$defs/semver" },
+				"gateway_manifest_id": { "$ref": "#/$defs/ulid" },
+				"routes": { "type": "array", "items": { "$ref": "#/$defs/gatewayRoute" } }
+			}
+		},
+		"presentation": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["pages", "layouts", "navigation", "translations", "media", "theme"],
+			"properties": {
+				"pages": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["page_id", "title", "root_renderer_id"],
+						"properties": {
+							"page_id": { "$ref": "#/$defs/namespacedId" },
+							"title": { "type": "string" },
+							"root_renderer_id": { "$ref": "#/$defs/namespacedId" }
+						}
+					}
+				},
+				"layouts": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["layout_id", "root_renderer_id"],
+						"properties": {
+							"layout_id": { "$ref": "#/$defs/namespacedId" },
+							"root_renderer_id": { "$ref": "#/$defs/namespacedId" }
+						}
+					}
+				},
+				"navigation": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+				"translations": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+				"media": { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+				"theme": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["theme_id", "tokens"],
+					"properties": {
+						"theme_id": { "$ref": "#/$defs/namespacedId" },
+						"tokens": {
+							"type": "object",
+							"additionalProperties": { "$ref": "#/$defs/jsonValue" }
+						}
+					}
+				}
+			}
+		},
+		"renderer": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"renderer_id",
+				"plugin_id",
+				"plugin_version",
+				"build_id",
+				"build_checksum",
+				"abi_version",
+				"runtime_range",
+				"props_schema",
+				"capabilities",
+				"slots",
+				"supported_states"
+			],
+			"properties": {
+				"renderer_id": { "$ref": "#/$defs/namespacedId" },
+				"plugin_id": { "$ref": "#/$defs/namespacedId" },
+				"plugin_version": { "$ref": "#/$defs/semver" },
+				"build_id": { "$ref": "#/$defs/ulid" },
+				"build_checksum": { "$ref": "#/$defs/checksum" },
+				"abi_version": { "$ref": "#/$defs/semver" },
+				"runtime_range": { "type": "string", "minLength": 1 },
+				"props_schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["schema_id", "version", "checksum"],
+					"properties": {
+						"schema_id": { "$ref": "#/$defs/namespacedId" },
+						"version": { "$ref": "#/$defs/semver" },
+						"checksum": { "$ref": "#/$defs/checksum" }
+					}
+				},
+				"capabilities": { "$ref": "#/$defs/stringArray" },
+				"slots": { "$ref": "#/$defs/stringArray" },
+				"supported_states": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": {
+						"enum": [
+							"loading",
+							"empty",
+							"forbidden",
+							"not_found",
+							"error",
+							"unavailable",
+							"maintenance"
+						]
+					}
+				}
+			}
+		},
+		"pluginLockEntry": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["plugin_id", "version", "artifact_checksum", "native"],
+			"properties": {
+				"plugin_id": { "$ref": "#/$defs/namespacedId" },
+				"version": { "$ref": "#/$defs/semver" },
+				"artifact_checksum": { "$ref": "#/$defs/checksum" },
+				"native": { "type": "boolean" }
+			}
+		},
+		"dependencyPolicy": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"dependency_id",
+				"kind",
+				"minimum_version",
+				"activation_policy",
+				"runtime_failure_policy",
+				"fallback_dependency_id"
+			],
+			"properties": {
+				"dependency_id": { "$ref": "#/$defs/namespacedId" },
+				"kind": { "enum": ["required", "optional", "fallback"] },
+				"minimum_version": { "$ref": "#/$defs/semver" },
+				"activation_policy": { "enum": ["ready", "degraded"] },
+				"runtime_failure_policy": {
+					"enum": ["fail_closed", "unavailable", "stale", "fallback"]
+				},
+				"fallback_dependency_id": {
+					"anyOf": [{ "$ref": "#/$defs/namespacedId" }, { "type": "null" }]
+				}
+			}
+		},
+		"rollback": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["classification", "restore_point_id", "conditions"],
+			"properties": {
+				"classification": {
+					"enum": [
+						"pointer_only",
+						"store_restore_required",
+						"instance_restore_required",
+						"rollback_forbidden_until_condition"
+					]
+				},
+				"restore_point_id": {
+					"anyOf": [{ "$ref": "#/$defs/ulid" }, { "type": "null" }]
+				},
+				"conditions": { "$ref": "#/$defs/stringArray" }
+			}
+		}
+	}
+}

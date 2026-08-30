@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { FixtureAdapter, RemoteD1Adapter, parseD1Rows } from "./adapters.mjs";
 import {
   CutoverMismatchError,
+	MODULES,
   applyPlan,
   buildPlan,
   buildReverseDelta,
@@ -14,14 +16,19 @@ import {
   reverseDeltaSql,
   sqlLiteral,
   upsertSql,
+	verifyShadowRead,
   validateApplySafety,
   validateMaintenanceEnableSafety,
 } from "./core.mjs";
 import { MODULE_CUTOVER_GUARDS, MODULE_CUTOVER_REGISTRY } from "./registry.mjs";
+import { buildPluginTopology } from "../emdash-parity-matrix.mjs";
 
 const exampleEntity = {
-  id: "app.example",
-  module: "app",
+	id: "app.example",
+	module: "app",
+	pluginId: "supbrd-plug-user",
+	storeId: "supbrd-plug-user.store.example",
+	repositoryId: "supbrd-plug-user.repository.example",
   columns: ["id", "project_id", "payload_json", "updated_at"],
   jsonColumns: ["payload_json"],
   keys: ["id"],
@@ -58,7 +65,7 @@ function testSafety(projectRef = "10-test") {
     maintenance: { enabled: true, window_id: "window-1234" },
     backup_receipt: {
       completed_at: "2026-08-07T09:10:00Z",
-      artifacts: ["legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
+      artifacts: ["site-emdash", "legacy-api", "legacy-messaging", "service-email", "service-identity", "service-files", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
         .map((name) => ({ name, bytes: 100, sha256: "a".repeat(64) })),
     },
   };
@@ -96,13 +103,47 @@ test("backfill apply is idempotent and resumes from a verified checkpoint", asyn
     adapter, registry: [exampleEntity], plan, safety: testSafety(),
     onCheckpoint: async (checkpoint) => { saved = structuredClone(checkpoint); },
   });
-  assert.equal(first.ready, true);
-  assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(first.ready, true);
+	assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(adapter.repositoryUpsertCalls.length, 1);
   const repeated = await applyPlan({ adapter, registry: [exampleEntity], plan, safety: testSafety(), checkpoint: saved });
   assert.equal(repeated.entities[0].resumed, true);
-  assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(adapter.upsertCalls.length, 1);
+	assert.equal(adapter.repositoryUpsertCalls.length, 1);
   const verification = await buildPlan({ adapter, registry: [exampleEntity], projectRef: "10-test", modules: ["app"] });
   assert.equal(verification.ready, true);
+});
+
+test("a matching Worker projection is not treated as a migrated EmDash Store", async () => {
+	const rows = [row()];
+	const adapter = new FixtureAdapter({
+		...fixture(rows, rows),
+		repository_rows: { [exampleEntity.id]: [] },
+	});
+	const plan = await buildPlan({
+		adapter,
+		registry: [exampleEntity],
+		projectRef: "10-test",
+		modules: ["app"],
+	});
+
+	assert.equal(plan.ready, false);
+	assert.equal(plan.entities[0].projection.matches, true);
+	assert.equal(plan.entities[0].repository.matches, false);
+	assert.equal(plan.entities[0].action, "repository_upsert");
+
+	await applyPlan({ adapter, registry: [exampleEntity], plan, safety: testSafety() });
+	assert.equal(adapter.upsertCalls.length, 0);
+	assert.equal(adapter.repositoryUpsertCalls.length, 1);
+
+	const verification = await buildPlan({
+		adapter,
+		registry: [exampleEntity],
+		projectRef: "10-test",
+		modules: ["app"],
+	});
+	assert.equal(verification.ready, true);
+	assert.equal(verification.entities[0].repository.matches, true);
 });
 
 test("an entity-scoped plan leaves unrelated live module rows outside the cutover", async () => {
@@ -137,6 +178,21 @@ test("a checksum mismatch aborts immediately and does not mark a checkpoint veri
     CutoverMismatchError,
   );
   assert.equal(checkpointWrites, 0);
+});
+
+test("shadow reads fail closed and emit mismatch metrics without PII", () => {
+	const metrics = [];
+	assert.throws(
+		() => verifyShadowRead({
+			entity: exampleEntity,
+			sourceRows: [row("a", { email: "private@example.com" })],
+			targetRows: [row("a", { email: "other@example.com" })],
+			emitMetric: (metric) => metrics.push(metric),
+		}),
+		CutoverMismatchError,
+	);
+	assert.equal(metrics[0].tags.result, "mismatch");
+	assert.equal(JSON.stringify(metrics).includes("example.com"), false);
 });
 
 test("a project/window checkpoint cannot be reused for another cutover", async () => {
@@ -187,7 +243,7 @@ test("production apply fails closed without explicit approval, maintenance and b
 function testSafetyWindowReceipt() {
   return {
     completed_at: "2026-08-07T09:10:00Z",
-    artifacts: ["legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
+    artifacts: ["site-emdash", "legacy-api", "legacy-messaging", "service-email", "service-identity", "service-files", "module-analytics", "module-app", "module-products", "module-paywalls", "module-dynamicLinks", "module-support", "module-marketing", "module-onboardings"]
       .map((name) => ({ name, bytes: 100, sha256: "a".repeat(64) })),
   };
 }
@@ -257,18 +313,120 @@ test("the remote adapter rejects every mutation while write authority is disable
     commandRunner: () => { commands += 1; return "[]"; },
     target: {
       accountId: "0".repeat(32), domains: { shortlinks: "example.test" },
-      environments: { production: { d1: { name: "api" }, messagingD1: { name: "messaging" }, moduleD1: { app: { name: "app" } } } },
+      environments: { production: { d1: { name: "api" }, siteD1: { name: "site" }, messagingD1: { name: "messaging" }, moduleD1: { app: { name: "app" } } } },
     },
   });
-  await assert.rejects(adapter.upsert(exampleEntity, [], fixture().project, "SELECT 1;"), /writes are disabled/u);
+	await assert.rejects(adapter.upsert(exampleEntity, [], fixture().project, "SELECT 1;"), /writes are disabled/u);
+	await assert.rejects(
+		adapter.upsertRepository(exampleEntity, [row()], fixture().project),
+		/repository writes are disabled/u,
+	);
   await assert.rejects(adapter.setMaintenance("10-test", { enabled: true }), /writes are disabled/u);
   assert.equal(commands, 0);
+});
+
+test("the remote adapter writes Stores under the canonical target instance id", async () => {
+	const adapter = new RemoteD1Adapter({
+		root: "/tmp",
+		targetName: "mbza-development",
+		environment: "development",
+		commandRunner: () =>
+			'[{"success":true,"results":[{"project_id":2,"instance_id":1,"identifier":"test","is_test":1}]}]',
+		target: {
+			accountId: "0".repeat(32),
+			domains: { shortlinks: "example.test" },
+			environments: {
+				development: {
+					d1: { name: "api" },
+					siteD1: { name: "site" },
+					moduleD1: { app: { name: "app" } },
+				},
+			},
+		},
+	});
+
+	const project = await adapter.resolveProject(parseProjectRef("1-test"));
+	assert.equal(project.instance_id, "mbza-development");
+	assert.equal(project.legacy_instance_id, 1);
+});
+
+test("the remote adapter uses Support v2 when legacy Messaging is decommissioned", async () => {
+	let invokedArgs = [];
+	const adapter = new RemoteD1Adapter({
+		root: "/tmp",
+		targetName: "mbza-development",
+		environment: "development",
+		commandRunner: (_command, args) => {
+			invokedArgs = args;
+			return '[{"success":true,"results":[]}]';
+		},
+		target: {
+			accountId: "0".repeat(32),
+			domains: { shortlinks: "example.test" },
+			environments: {
+				development: {
+					d1: { name: "api" },
+					siteD1: { name: "site" },
+					messagingD1: null,
+					moduleD1: { support: { name: "support-v2" } },
+				},
+			},
+		},
+	});
+	const supportEntity = {
+		module: "support",
+		source: { database: "messaging", query: "SELECT 'legacy'" },
+		target: { query: "SELECT 'support-v2'" },
+	};
+
+	await adapter.readSource(supportEntity, fixture().project);
+	assert.equal(invokedArgs.includes("support-v2"), true);
+	assert.equal(invokedArgs.includes("SELECT 'support-v2'"), true);
+});
+
+test("the remote adapter resolves active manifest authority before a Site repository write", async () => {
+	let repositorySql = "";
+	const adapter = new RemoteD1Adapter({
+		root: "/tmp",
+		targetName: "test",
+		environment: "production",
+		allowWrites: true,
+		repositoryEncryptionKey: Buffer.alloc(32, 7).toString("base64"),
+		commandRunner: (_command, args) => {
+			const commandIndex = args.indexOf("--command");
+			if (commandIndex >= 0) {
+				return '[{"success":true,"results":[{"artifact_checksum":"sha256:active-manifest"}]}]';
+			}
+			const fileIndex = args.indexOf("--file");
+			if (fileIndex >= 0) repositorySql = readFileSync(args[fileIndex + 1], "utf8");
+			return '[{"success":true,"results":[]}]';
+		},
+		target: {
+			accountId: "0".repeat(32),
+			domains: { shortlinks: "example.test" },
+			environments: {
+				production: {
+					d1: { name: "api" },
+					siteD1: { name: "site" },
+					messagingD1: { name: "messaging" },
+					moduleD1: { app: { name: "app" } },
+				},
+			},
+		},
+	});
+	await adapter.upsertRepository(exampleEntity, [row()], fixture().project);
+	assert.equal(repositorySql.includes("sha256:active-manifest"), true);
+	assert.equal(repositorySql.includes(exampleEntity.storeId), true);
+	assert.equal(repositorySql.includes("10-test:"), true);
 });
 
 test("the production registry is unique and a zero-row rehearsal covers every entity", async () => {
   const ids = MODULE_CUTOVER_REGISTRY.map((entity) => entity.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.deepEqual([...new Set(MODULE_CUTOVER_REGISTRY.map((entity) => entity.module))].sort(), ["app", "dynamic-links", "paywalls", "products", "support"]);
+  assert.deepEqual(
+		[...new Set(MODULE_CUTOVER_REGISTRY.map((entity) => entity.module))].sort(),
+		[...MODULES].sort(),
+	);
   const adapter = new FixtureAdapter({
     project: fixture().project,
     source_rows: Object.fromEntries(ids.map((id) => [id, []])),
@@ -278,6 +436,63 @@ test("the production registry is unique and a zero-row rehearsal covers every en
   const plan = await buildPlan({ adapter, registry: MODULE_CUTOVER_REGISTRY, guards: MODULE_CUTOVER_GUARDS, projectRef: "10-test" });
   assert.equal(plan.ready, true);
   assert.equal(plan.entities.length, ids.length);
+});
+
+test("every production migration write is bound to an EmDash plugin repository", () => {
+	for (const entity of MODULE_CUTOVER_REGISTRY) {
+		assert.match(entity.pluginId, /^supbrd-(?:plug|plugmod)-/u);
+		assert.equal(entity.storeId.startsWith(`${entity.pluginId}.store.`), true);
+		assert.equal(entity.repositoryId.startsWith(`${entity.pluginId}.repository.`), true);
+		const sql = upsertSql(entity, [Object.fromEntries(entity.columns.map((column) => [column, null]))]);
+		assert.equal(sql.includes(`repository=${entity.repositoryId}`), true);
+	}
+});
+
+test("every migrated entity writes into a declared canonical plugin Store", () => {
+  const declaredStoreIds = new Set(
+    buildPluginTopology().plugins.flatMap(({ manifest }) =>
+      manifest.stores.map(({ store_id: storeId }) => storeId),
+    ),
+  );
+  for (const entity of MODULE_CUTOVER_REGISTRY) {
+    assert.equal(declaredStoreIds.has(entity.storeId), true, entity.id);
+  }
+});
+
+test("every installable canonical plugin Store has a real migration entity", () => {
+	const declaredStoreIds = new Set(
+		buildPluginTopology().plugins
+			.filter(({ manifest }) => manifest.plugin_id !== "supbrd-plugmod-custom-*")
+			.flatMap(({ manifest }) => manifest.stores.map(({ store_id: storeId }) => storeId)),
+	);
+	const migratedStoreIds = new Set(
+		MODULE_CUTOVER_REGISTRY.map(({ storeId }) => storeId),
+	);
+	assert.deepEqual(
+		[...declaredStoreIds].filter((storeId) => !migratedStoreIds.has(storeId)),
+		[],
+	);
+});
+
+test("Products never owns Billing customers, purchases, subscriptions, refunds or entitlements", () => {
+  const billingTables = new Set([
+    "financial_customers",
+    "entitlements",
+    "entitlement_products",
+    "purchases",
+    "subscriptions",
+    "refunds",
+  ]);
+  for (const entity of MODULE_CUTOVER_REGISTRY.filter(({ target }) =>
+    billingTables.has(target.table),
+  )) {
+    assert.equal(entity.pluginId, "supbrd-plugmod-billing", entity.id);
+  }
+  for (const entity of MODULE_CUTOVER_REGISTRY.filter(
+    ({ pluginId }) => pluginId === "supbrd-plug-products",
+  )) {
+    assert.equal(billingTables.has(entity.target.table), false, entity.id);
+  }
 });
 
 test("legacy App access keys are project-specific hashes and never retain plaintext", () => {

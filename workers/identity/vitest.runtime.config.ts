@@ -5,6 +5,7 @@ import {
 import { exportJWK, generateKeyPair } from "jose";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import type { PluginOption } from "vite";
 import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
 // @ts-expect-error The Node-side generator is an ESM script with its own tests.
 import { generateMelodyAuthSecrets, serializeMelodyAuthSecrets } from "../../scripts/superboard-generate-melody-auth-secrets.mjs";
@@ -14,6 +15,8 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   root,
   plugins: [
+    // The Cloudflare pool currently resolves Vite 8 while Identity's client
+    // build remains on Vite 7. Both implement the same runtime plugin contract.
     cloudflareTest(async () => {
       const pair = await generateKeyPair("ES256", { extractable: true });
       const key = await exportJWK(pair.privateKey);
@@ -136,7 +139,7 @@ export default defineConfig({
           },
         },
       };
-    }),
+    }) as unknown as PluginOption,
   ],
   test: {
     include: ["runtime-tests/**/*.test.ts"],

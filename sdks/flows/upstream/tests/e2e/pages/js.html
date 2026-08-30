@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/reset.css" />
+  </head>
+  <body>
+    <h1>heading 1</h1>
+    <h2 class="age-10">Subtitle</h2>
+
+    <flows-slot data-slot-id="my-slot">
+      <div data-placeholder>
+        <p>Slot placeholder</p>
+      </div>
+    </flows-slot>
+
+    <button id="resetAllWorkflowsProgress">resetAllWorkflowsProgress</button>
+    <button id="resetWorkflowProgress">resetWorkflowProgress</button>
+    <button id="startWorkflow">startWorkflow</button>
+    <button id="changeLocation">changeLocation</button>
+    <button id="fetchWorkflows">fetchWorkflows</button>
+
+    <p class="current-blocks"></p>
+
+    <flows-floating-blocks></flows-floating-blocks>
+
+    <script type="module" src="/js.ts"></script>
+  </body>
+</html>

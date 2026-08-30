@@ -1,0 +1,35 @@
+import type { Block } from "@superboard/flows-shared";
+import test, { expect } from "@playwright/test";
+import { randomUUID } from "crypto";
+import { mockBlocksEndpoint } from "./utils";
+
+test.beforeEach(async ({ page }) => {
+  await page.routeWebSocket(
+    (url) => url.pathname === "/api/v1/flows/ws/sdk/block-updates",
+    () => {},
+  );
+});
+
+const getBlock = (props: { key: string }): Block => ({
+  id: randomUUID(),
+  workflowId: randomUUID(),
+  type: "component",
+  componentType: "Card",
+  data: { text: "My card" },
+  exitNodes: [],
+  slottable: true,
+  slotId: "my-slot",
+  key: props.key,
+  propertyMeta: [],
+});
+
+const run = (packageName: string) => {
+  test(`${packageName} - should pass block key to component props`, async ({ page }) => {
+    await mockBlocksEndpoint(page, [getBlock({ key: "my-block-key" })]);
+    await page.goto(`/${packageName}.html`);
+    await expect(page.getByText("key: my-block-key", { exact: true })).toBeVisible();
+  });
+};
+
+run("js");
+run("react");

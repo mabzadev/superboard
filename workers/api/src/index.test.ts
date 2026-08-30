@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
-import worker from "./index";
+import worker, { allowedEmbeddableSdkOrigin } from "./index";
 import { Env } from "./types";
 import { createFakeD1, FakeD1Call } from "./test/fake-d1";
 
@@ -76,6 +76,25 @@ function env(overrides: Partial<Env> = {}): Env {
     ...overrides,
   };
 }
+
+describe("Flows SDK CORS", () => {
+  it("allows exact HTTP(S) embedding origins and rejects malformed origins", () => {
+    expect(allowedEmbeddableSdkOrigin("https://customer.example")).toBe(
+      "https://customer.example",
+    );
+    expect(allowedEmbeddableSdkOrigin("http://localhost:3000")).toBe(
+      "http://localhost:3000",
+    );
+    expect(allowedEmbeddableSdkOrigin("https://customer.example/")).toBe(
+      "https://customer.example",
+    );
+    expect(
+      allowedEmbeddableSdkOrigin("https://customer.example/path"),
+    ).toBeUndefined();
+    expect(allowedEmbeddableSdkOrigin("null")).toBeUndefined();
+    expect(allowedEmbeddableSdkOrigin("javascript:alert(1)")).toBeUndefined();
+  });
+});
 
 describe("Worker scheduled and queue handlers", () => {
   it("reports real API dependency readiness and fails closed when D1 is unavailable", async () => {

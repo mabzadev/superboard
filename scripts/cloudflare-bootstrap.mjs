@@ -25,13 +25,14 @@ export async function fetchCloudflareBootstrapInventories({
 }) {
   if (!token) throw new Error("CLOUDFLARE_API_TOKEN is required for --remote");
   const client = cloudflareClient({ accountId, token, fetchImpl });
-  const [d1, kv, r2, queue] = await Promise.all([
+  const [d1, kv, r2, queue, vectorize] = await Promise.all([
     client.listPaged("/d1/database"),
     client.listPaged("/storage/kv/namespaces"),
     client.listR2Buckets(),
     client.listPaged("/queues"),
+    client.listUnpaged("/vectorize/v2/indexes"),
   ]);
-  return { d1, kv, r2, queue };
+  return { d1, kv, r2, queue, vectorize };
 }
 
 export function cloudflareClient({ accountId, token, fetchImpl = fetch }) {
@@ -54,6 +55,13 @@ export function cloudflareClient({ accountId, token, fetchImpl = fetch }) {
     return payload;
   };
   return {
+    async listUnpaged(endpoint) {
+      const payload = await request(endpoint);
+      if (!Array.isArray(payload.result)) {
+        throw new Error(`Cloudflare ${endpoint} returned a non-array result`);
+      }
+      return payload.result;
+    },
     async listPaged(endpoint) {
       const items = [];
       for (let page = 1; page <= 10_000; page += 1) {
@@ -111,6 +119,24 @@ export function cloudflareClient({ accountId, token, fetchImpl = fetch }) {
   };
 }
 
+export function assertBootstrapMode(
+  target,
+  environment,
+  { apply = false, freshSupportInstall = false } = {},
+) {
+  const supportDatabase = target.environments?.[environment]?.moduleD1?.support;
+  const pendingFreshSupport =
+    target.features?.support === true &&
+    String(supportDatabase?.name ?? "").includes("-support-v2-") &&
+    !supportDatabase?.id;
+  if (apply && pendingFreshSupport && !freshSupportInstall) {
+    throw new Error(
+      "Support v2 is unprovisioned; apply it only with --fresh-support-install so existing resources can never be adopted",
+    );
+  }
+  return true;
+}
+
 async function readJsonLimited(response, maxBytes) {
   const announced = Number(response.headers.get("content-length") ?? 0);
   if (announced > maxBytes) {
@@ -148,16 +174,28 @@ async function readJsonLimited(response, maxBytes) {
   return text ? JSON.parse(text) : {};
 }
 
-function offlineReport(target, environment) {
+function offlineReport(target, environment, { freshSupportInstall = false } = {}) {
+  const desired = desiredCloudflareResources(target, environment).filter(
+    ({ key }) =>
+      !freshSupportInstall ||
+      key === "moduleD1.support" ||
+      key === "moduleR2.support" ||
+      key === "moduleVectorize.supportKnowledge" ||
+      key.startsWith("moduleQueues.support.") ||
+      key.startsWith("moduleQueues.supportAi.") ||
+      key.startsWith("moduleQueues.supportBulk."),
+  );
   return {
     schemaVersion: 1,
-    mode: "offline-desired-state",
+    mode: freshSupportInstall
+      ? "offline-fresh-support-desired-state"
+      : "offline-desired-state",
     target: target.target,
     accountAlias: target.accountAlias,
     environment,
     remoteInspected: false,
     ready: false,
-    resources: desiredCloudflareResources(target, environment).map(
+    resources: desired.map(
       ({
         key,
         kind,
@@ -167,6 +205,7 @@ function offlineReport(target, environment) {
         physicalName,
         previousNames,
         migrationStrategy,
+        configuration,
         manifestId,
       }) => ({
         key,
@@ -177,6 +216,7 @@ function offlineReport(target, environment) {
         physicalName,
         previousNames,
         migrationStrategy,
+        ...(configuration ? { configuration } : {}),
         manifestIdConfigured: Boolean(manifestId),
         state: "not-inspected",
       }),
@@ -204,10 +244,15 @@ async function main() {
   const args = parseArgs();
   const targetName = targetNameFromArgs(args);
   const environment = environmentFromArgs(args);
+  const freshSupportInstall = Boolean(args["fresh-support-install"]);
   const { path, target } = await loadTarget(targetName);
+  assertBootstrapMode(target, environment, {
+    apply: Boolean(args.apply),
+    freshSupportInstall,
+  });
   if (!args.remote && !args.apply) {
     process.stdout.write(
-      `${JSON.stringify(offlineReport(target, environment), null, 2)}\n`,
+      `${JSON.stringify(offlineReport(target, environment, { freshSupportInstall }), null, 2)}\n`,
     );
     return;
   }
@@ -223,6 +268,7 @@ async function main() {
     environment,
     accountId,
     inventories,
+    freshSupportInstall,
   });
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
   if (!args.apply) {

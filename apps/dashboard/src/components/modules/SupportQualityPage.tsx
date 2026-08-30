@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, ShieldCheck, Star } from "lucide-react";
 import {
-  getMessagingCsat,
+  getSupportCsat,
   getSupportAudit,
   getSupportQuality,
-  type MessagingCsat,
+  type SupportCsat,
   type SupportAuditEvent,
   type SupportQuality,
 } from "@/api/messaging/operationsService";
@@ -24,7 +24,7 @@ import { EmptyProject, ModulePage, moduleErrorMessage } from "./ModulePage";
 export function SupportQualityPage() {
   const { selectedProject } = useProjectSelection();
   const [quality, setQuality] = useState<SupportQuality | null>(null);
-  const [responses, setResponses] = useState<MessagingCsat[]>([]);
+  const [responses, setResponses] = useState<SupportCsat[]>([]);
   const [audit, setAudit] = useState<SupportAuditEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export function SupportQualityPage() {
     try {
       const [summary, csat, trail] = await Promise.all([
         getSupportQuality(selectedProject.id),
-        getMessagingCsat(selectedProject.id),
+        getSupportCsat(selectedProject.id),
         getSupportAudit(selectedProject.id),
       ]);
       setQuality(summary.data);

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { generateApiKey, generateShortCode } from '../lib/crypto';
-import { getAuthUserId as getStrictAuthUserId } from '../lib/auth';
+import { getRequestAuthUserId } from '../lib/auth';
 import { getOrCreateProject, getOrCreateRedirectConfig, jsonArray, parseJsonObject, resolveProject } from '../lib/db';
 import { createMcpAuthorizationCode, findMcpClient, redirectUriAllowed, tokenDigest } from '../lib/mcp-oauth';
 import { readRequestObjectLimited } from '@superboard/contracts/request-body';
@@ -39,7 +39,7 @@ function supportedMcpPlatform(platform: string): platform is typeof MCP_PLATFORM
 }
 
 async function getAuthUserId(c: any): Promise<number | null> {
-  return getStrictAuthUserId(c.env, c.req.header('Authorization'));
+  return getRequestAuthUserId(c.env, c.req.raw.headers);
 }
 
 async function getMcpUserId(c: any): Promise<number | null> {

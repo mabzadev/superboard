@@ -1,0 +1,57 @@
+---
+title: Concepts
+description: Get a basic understanding of Flows so you can set up your project and start using Flows effectively.
+---
+
+![Workflows](/workflows/main.png)
+
+## Project
+
+Flows automatically uses the SuperBoard project currently selected in the dashboard. Workflows, environments, users, components and analytics remain isolated inside that project. There is no separate Flows tenant or membership model.
+
+### Environments
+
+[Environments](/environments) are isolated instances within your project where you can publish and test workflows independently. Each environment has a unique environment key used to configure the Flows SDK. Common environments include development, staging, and production.
+
+## Workflows
+
+A workflow is a series of steps executed in a specific sequence, defined by the connections between [blocks](/blocks) and their conditions. In the workflow editor, you can add blocks, connect them, and configure their properties.
+
+Workflows are version-controlled and can be published to individual environments.
+
+### Blocks
+
+[Blocks](/blocks) are the individual steps of a workflow. They can represent UI elements, logical steps, or actions. Each block has customizable properties that define its behavior and can be connected to other blocks to form a workflow.
+
+### Block properties
+
+[Block properties](/blocks/block-properties/overview) are the configurable fields available to editors when a block is added to a workflow. They map directly to the props defined in your components. For instance, a "banner block" might include properties like `title`, `description`, `button label`, `button link`, and `hide close button`.
+
+### Components
+
+[Components](/components/overview) are reusable UI elements that can be integrated into workflows within Flows to display information or interact with users. They contain properties and instructions, giving editors the power to create custom workflows. Each component must correspond to a matching component in your application.
+
+### Exit nodes
+
+Exit nodes are connectors that allow workflows to leave a block. They include logic to determine which path should be followed when exiting. For example, clicking a button might trigger an exit node that leads to another block.
+
+### Paths
+
+Paths connect blocks in a workflow, starting from an exit node of one block and ending at an entry node of another. They define the sequence of the workflow.
+
+## Users
+
+A user is any person your application identifies to the Flows SDK using a `userId`. Flows uses this identifier to track user progress through workflows and store their state between sessions.
+
+### User properties
+
+[User properties](/users/properties) are key-value pairs that describe a user, such as their plan, role, or account creation date. You can reference user properties in workflow conditions to control which users enter a given workflow.
+
+
+## Tours
+
+[Tours](/tours) are guided, step-by-step instructions designed to help users complete a specific task or understand a feature within your application. They are typically used for onboarding new users or highlighting new functionalities. Tours need to be part of a workflow.
+
+## Slot
+
+[Slots](/blocks/block-properties/slot) are places in your application where Flows can render components. They need to be defined manually in your codebase and then they can be referenced in the workflow editor to render Slottable components.

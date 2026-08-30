@@ -1,0 +1,21 @@
+{
+  "name": "lit",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@superboard/flows-js": "^1.22.0",
+    "@superboard/flows-js-components": "^2.10.0",
+    "lit": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
+  },
+  "license": "MIT"
+}

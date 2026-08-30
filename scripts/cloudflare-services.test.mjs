@@ -20,7 +20,7 @@ import { loadTarget } from "./cloudflare-target.mjs";
 
 const execFileAsync = promisify(execFile);
 
-test("the declarative registry exposes exactly eight domain services", () => {
+test("the declarative registry exposes exactly nine domain services", () => {
   assert.deepEqual(DOMAIN_SERVICES, [
     "app",
     "products",
@@ -30,8 +30,9 @@ test("the declarative registry exposes exactly eight domain services", () => {
     "analytics",
     "marketing",
     "onboardings",
+    "flows",
   ]);
-  assert.equal(Object.keys(DOMAIN_SERVICE_REGISTRY).length, 8);
+  assert.equal(Object.keys(DOMAIN_SERVICE_REGISTRY).length, 9);
   for (const service of DOMAIN_SERVICES) {
     const definition = DOMAIN_SERVICE_REGISTRY[service];
     assert.match(definition.binding, /^[A-Z_]+_MODULE$/);
@@ -65,10 +66,15 @@ test("the declarative registry exposes exactly eight domain services", () => {
   assert.deepEqual(PLATFORM_SERVICE_SECRETS.mcp, []);
   assert.ok(PLATFORM_SERVICE_SECRETS.api.includes("JWT_SECRET"));
   assert.ok(PLATFORM_SERVICE_SECRETS.api.includes("MODULE_INTERNAL_TOKEN"));
+  assert.ok(PLATFORM_SERVICE_SECRETS.api.includes("FLOWS_INTERNAL_TOKEN"));
   assert.ok(
     PLATFORM_SERVICE_SECRETS.billing.includes("PURCHASES_SIGNING_KEYSET"),
   );
   assert.ok(PLATFORM_SERVICE_SECRETS.email.includes("SMTP_PASSWORD"));
+  assert.equal(
+    PLATFORM_SERVICE_SECRETS.email.includes("FLOWS_EMAIL_INTERNAL_TOKEN"),
+    false,
+  );
   for (const secrets of Object.values(PLATFORM_SERVICE_SECRETS)) {
     assert.equal(
       secrets.some((name) => /vocostar|mbza/i.test(name)),
@@ -96,6 +102,214 @@ test("all domain services are accepted by shared service validation", () => {
     assert.doesNotThrow(() => assertService(service));
   }
   assert.throws(() => assertService("unknown"), /must be one of/);
+});
+
+test("generated Site config uses only explicit target resources and keeps public release disabled", async () => {
+  for (const [targetName, environment] of [
+    ["mbza-development", "development"],
+    ["vocostar", "production"],
+  ]) {
+    execFileSync(
+      process.execPath,
+      [
+        "scripts/cloudflare-config.mjs",
+        "--service",
+        "site",
+        "--target",
+        targetName,
+        "--environment",
+        environment,
+        "--allow-unprovisioned",
+      ],
+      { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+    );
+    const { target } = await loadTarget(targetName);
+    const resources = target.environments[environment];
+    const config = JSON.parse(
+      readFileSync(
+        new URL(
+          `../deploy/generated/${targetName}-site-${environment}.jsonc`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+
+    assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, target.target);
+    assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "disabled");
+    assert.match(config.vars.D1_EXPECTED_MIGRATION, /^\d+.*\.sql$/u);
+    assert.equal(config.compatibility_flags.includes("global_fetch_strictly_public"), false);
+    assert.equal(config.d1_databases[0].database_name, resources.siteD1.name);
+    assert.equal(config.d1_databases[0].database_id.length, 36);
+    assert.equal(config.r2_buckets[0].bucket_name, resources.siteMedia.name);
+    const namespaces = Object.fromEntries(
+      config.kv_namespaces.map(({ binding, id }) => [binding, id]),
+    );
+    assert.equal(namespaces.SESSION.length, 32);
+    assert.equal(namespaces.RELEASE_CACHE.length, 32);
+    assert.equal(
+      config.worker_loaders[0].binding,
+      target.siteRuntime.workerLoaderBinding,
+    );
+    assert.deepEqual(config.services, [
+      { binding: "API_SERVICE", service: target.workers.api[environment] },
+    ]);
+    assert.deepEqual(config.triggers, { crons: target.siteRuntime.crons });
+		assert.deepEqual(config.observability, target.siteRuntime.observability);
+		assert.deepEqual(config.send_email, [
+			{
+				name: "EMAIL",
+				allowed_destination_addresses: [target.operator.email],
+				allowed_sender_addresses: [target.mail.fromAddress],
+			},
+		]);
+		assert.equal(config.routes, undefined);
+
+    execFileSync(
+      process.execPath,
+      [
+        "scripts/cloudflare-config.mjs",
+        "--service",
+        "api",
+        "--target",
+        targetName,
+        "--environment",
+        environment,
+        "--allow-unprovisioned",
+        "--no-routes",
+      ],
+      { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+    );
+    const apiConfig = JSON.parse(
+      readFileSync(
+        new URL(
+          `../deploy/generated/${targetName}-api-${environment}.jsonc`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    const siteMonitor = JSON.parse(apiConfig.vars.PUBLIC_SURFACES_JSON).find(
+      ({ id }) => id === "site-preview",
+    );
+    assert.equal(siteMonitor.url, `https://${target.domains.site}`);
+    assert.equal(
+      JSON.parse(apiConfig.vars.PLATFORM_WORKERS_JSON).workers.find(
+        ({ id }) => id === "site",
+      ).publicSurfaceIds.includes("site-preview"),
+      true,
+    );
+  }
+});
+
+test("development Site preview routing is explicit and cannot acquire the Dashboard domain", () => {
+	execFileSync(
+		process.execPath,
+		[
+			"scripts/cloudflare-config.mjs",
+			"--service",
+			"site",
+			"--target",
+			"mbza-development",
+			"--environment",
+			"development",
+			"--site-preview-route",
+		],
+		{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+	);
+	const config = JSON.parse(
+		readFileSync(
+			new URL(
+				"../deploy/generated/mbza-development-site-development.jsonc",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	);
+	assert.deepEqual(config.routes, [
+		{ pattern: "site.mbza.dev", custom_domain: true },
+	]);
+	assert.equal(
+		JSON.stringify(config.routes).includes("board.mbza.dev"),
+		false,
+	);
+
+	for (const extraArgs of [
+		["--target", "vocostar", "--environment", "production", "--allow-unprovisioned"],
+		["--target", "mbza-development", "--environment", "development", "--no-routes"],
+	]) {
+		assert.throws(
+			() =>
+				execFileSync(
+					process.execPath,
+					[
+						"scripts/cloudflare-config.mjs",
+						"--service",
+						"site",
+						"--site-preview-route",
+						...extraArgs,
+					],
+					{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+				),
+			/site-preview-route/u,
+		);
+	}
+});
+
+test("development Front Release operations require the explicit Site preview route", () => {
+	execFileSync(
+		process.execPath,
+		[
+			"scripts/cloudflare-config.mjs",
+			"--service",
+			"site",
+			"--target",
+			"mbza-development",
+			"--environment",
+			"development",
+			"--site-preview-route",
+			"--release-operations",
+		],
+		{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+	);
+	const config = JSON.parse(
+		readFileSync(
+			new URL(
+				"../deploy/generated/mbza-development-site-development.jsonc",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	);
+	assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "enabled");
+
+	for (const extraArgs of [
+		["--target", "mbza-development", "--environment", "development"],
+		[
+			"--target",
+			"vocostar",
+			"--environment",
+			"production",
+			"--site-preview-route",
+			"--allow-unprovisioned",
+		],
+	]) {
+		assert.throws(
+			() =>
+				execFileSync(
+					process.execPath,
+					[
+						"scripts/cloudflare-config.mjs",
+						"--service",
+						"site",
+						"--release-operations",
+						...extraArgs,
+					],
+					{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+				),
+			/release-operations/u,
+		);
+	}
 });
 
 test("every D1 Worker receives the reviewed latest migration automatically", async () => {
@@ -210,6 +424,84 @@ test("generated Analytics config declares its complete durable pipeline", () => 
   ]);
 });
 
+test("generated Flows config declares its native Cloudflare runtime", () => {
+  execFileSync(
+    process.execPath,
+    [
+      "scripts/cloudflare-config.mjs",
+      "--service",
+      "flows",
+      "--target",
+      "mbza-development",
+      "--environment",
+      "development",
+      "--allow-unprovisioned",
+    ],
+    { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+  );
+  const config = JSON.parse(
+    readFileSync(
+      new URL(
+        "../deploy/generated/mbza-development-flows-development.jsonc",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  assert.equal(config.vars.SERVICE_NAME, "flows");
+  assert.equal(config.vars.PUBLIC_API_URL, "https://api.mbza.dev");
+  assert.equal(Object.hasOwn(config.vars, "PUBLIC_DASHBOARD_URL"), false);
+  assert.deepEqual(config.r2_buckets, [
+    {
+      binding: "ARCHIVE",
+      bucket_name: "superboard-dev-flows-archive",
+    },
+  ]);
+  assert.deepEqual(config.queues.producers, [
+    {
+      binding: "FLOW_EVENTS",
+      queue: "superboard-dev-flows-events",
+    },
+  ]);
+  assert.equal(
+    config.queues.consumers[0].dead_letter_queue,
+    "superboard-dev-flows-events-dlq",
+  );
+  assert.deepEqual(config.durable_objects.bindings, [
+    { name: "FLOW_USER_RUNTIME", class_name: "FlowUserRuntime" },
+    { name: "FLOW_REALTIME_HUB", class_name: "FlowRealtimeHub" },
+  ]);
+  assert.deepEqual(config.migrations, [
+    {
+      tag: "v1",
+      new_sqlite_classes: ["FlowUserRuntime", "FlowRealtimeHub"],
+    },
+  ]);
+  assert.deepEqual(config.workflows, [
+    {
+      name: "superboard-flows-dev-delay",
+      binding: "FLOW_DELAY_EXECUTION",
+      class_name: "FlowDelayExecution",
+    },
+    {
+      name: "superboard-flows-dev-maintenance",
+      binding: "FLOW_MAINTENANCE_EXECUTION",
+      class_name: "FlowMaintenanceExecution",
+    },
+  ]);
+  assert.deepEqual(config.triggers, { crons: ["17 2 * * *"] });
+  assert.deepEqual(config.services, [
+    { binding: "PRODUCTS_MODULE", service: "superboard-products-dev" },
+  ]);
+  assert.deepEqual(DOMAIN_SERVICE_REGISTRY.flows.secrets, [
+    "INTERNAL_API_TOKEN",
+    "INTERNAL_API_TOKEN_PREVIOUS",
+    "FLOW_USER_ENCRYPTION_KEY",
+    "FLOW_USER_ENCRYPTION_KEY_PREVIOUS",
+    "FLOW_USER_HASH_KEY",
+  ]);
+});
+
 test("generated domain config is private and has no static project allowlist", () => {
   execFileSync(
     process.execPath,
@@ -221,6 +513,7 @@ test("generated domain config is private and has no static project allowlist", (
       "vocostar",
       "--environment",
       "production",
+      "--allow-unprovisioned",
       "--preflight",
     ],
     { cwd: new URL("..", import.meta.url), stdio: "pipe" },
@@ -272,6 +565,7 @@ test("generated Support config includes its stateful runtime resources", () => {
       "vocostar",
       "--environment",
       "production",
+      "--allow-unprovisioned",
     ],
     { cwd: new URL("..", import.meta.url), stdio: "pipe" },
   );
@@ -285,29 +579,94 @@ test("generated Support config includes its stateful runtime resources", () => {
     ),
   );
   assert.deepEqual(config.r2_buckets, [
-    { binding: "ATTACHMENTS", bucket_name: "opengrow-support-attachments" },
+    {
+      binding: "ATTACHMENTS",
+      bucket_name: "opengrow-support-v2-attachments",
+    },
   ]);
   assert.deepEqual(config.durable_objects.bindings, [
     { name: "CONVERSATIONS", class_name: "ConversationRoom" },
   ]);
-  assert.equal(config.queues.consumers[0].queue, "opengrow-support-events");
+  assert.deepEqual(config.queues.producers, [
+    { binding: "SUPPORT_QUEUE", queue: "opengrow-support-v2-events" },
+    { binding: "SUPPORT_AI_QUEUE", queue: "opengrow-support-v2-ai" },
+    { binding: "SUPPORT_BULK_QUEUE", queue: "opengrow-support-v2-bulk" },
+  ]);
+  assert.equal(config.queues.consumers[0].queue, "opengrow-support-v2-events");
   assert.equal(
     config.queues.consumers[0].dead_letter_queue,
-    "opengrow-support-events-dlq",
+    "opengrow-support-v2-events-dlq",
   );
-  assert.equal(config.vars.QUEUE_NAME, "opengrow-support-events");
-  assert.equal(config.vars.DLQ_NAME, "opengrow-support-events-dlq");
-  assert.deepEqual(config.queues.consumers[1], {
-    queue: "opengrow-support-events-dlq",
+  assert.equal(config.queues.consumers[1].queue, "opengrow-support-v2-ai");
+  assert.equal(config.queues.consumers[1].max_retries, 5);
+  assert.equal(config.queues.consumers[2].queue, "opengrow-support-v2-bulk");
+  assert.equal(config.vars.QUEUE_NAME, "opengrow-support-v2-events");
+  assert.equal(config.vars.DLQ_NAME, "opengrow-support-v2-events-dlq");
+  assert.equal(
+    config.vars.SUPPORT_EVENTS_QUEUE_NAME,
+    "opengrow-support-v2-events",
+  );
+  assert.equal(
+    config.vars.SUPPORT_EVENTS_DLQ_NAME,
+    "opengrow-support-v2-events-dlq",
+  );
+  assert.equal(config.vars.SUPPORT_AI_QUEUE_NAME, "opengrow-support-v2-ai");
+  assert.equal(
+    config.vars.SUPPORT_AI_DLQ_NAME,
+    "opengrow-support-v2-ai-dlq",
+  );
+  assert.equal(
+    config.vars.SUPPORT_BULK_QUEUE_NAME,
+    "opengrow-support-v2-bulk",
+  );
+  assert.equal(
+    config.vars.SUPPORT_BULK_DLQ_NAME,
+    "opengrow-support-v2-bulk-dlq",
+  );
+  assert.deepEqual(config.queues.consumers[3], {
+    queue: "opengrow-support-v2-events-dlq",
     max_batch_size: 10,
     max_batch_timeout: 5,
     max_retries: 100,
   });
+  assert.deepEqual(config.ai, { binding: "AI" });
+  assert.deepEqual(config.vectorize, [
+    {
+      binding: "SUPPORT_KNOWLEDGE",
+      index_name: "opengrow-support-v2-knowledge",
+    },
+  ]);
+  assert.equal(
+    config.vars.SUPPORT_EMBEDDING_MODEL,
+    "@cf/qwen/qwen3-embedding-0.6b",
+  );
+  assert.equal(
+    config.vars.SUPPORT_GENERATION_MODEL,
+    "@cf/zai-org/glm-4.7-flash",
+  );
+  assert.deepEqual(config.services, [
+    { binding: "EMAIL_SERVICE", service: "opengrow-email" },
+    { binding: "API_SERVICE", service: "opengrow-api" },
+  ]);
+  assert.deepEqual(config.triggers, { crons: ["* * * * *"] });
+  assert.deepEqual(config.secrets.required, [
+    "EMAIL_INTERNAL_TOKEN",
+    "INTERNAL_API_TOKEN",
+    "SUPPORT_CREDENTIAL_ENCRYPTION_KEY",
+    "SUPPORT_WEBHOOK_ENCRYPTION_KEY",
+  ]);
   assert.deepEqual(DOMAIN_SERVICE_REGISTRY.support.secrets, [
     "INTERNAL_API_TOKEN",
     "INTERNAL_API_TOKEN_PREVIOUS",
+    "EMAIL_INTERNAL_TOKEN",
+    "SUPPORT_CREDENTIAL_ENCRYPTION_KEY",
+    "SUPPORT_CREDENTIAL_ENCRYPTION_KEY_PREVIOUS",
     "SUPPORT_WEBHOOK_ENCRYPTION_KEY",
   ]);
+  assert.deepEqual(
+    DOMAIN_SERVICE_REGISTRY.support.queue,
+    DOMAIN_SERVICE_REGISTRY.support.queues[0],
+  );
 });
 
 test("generated Files config enforces the selected target upload policy", () => {
@@ -763,9 +1122,10 @@ test("staged production API stays private while exposing service bindings", asyn
       "shortlinks",
       "files",
       "dashboard",
-      "mcp",
-      "mail-preview",
-      "reference",
+    "mcp",
+    "mail-preview",
+    "site-preview",
+    "reference",
     ],
   );
   assert.deepEqual(

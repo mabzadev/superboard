@@ -1,0 +1,193 @@
+import {
+  flip,
+  autoUpdate as floatingAutoUpdate,
+  offset,
+  shift,
+  useFloating,
+} from "@floating-ui/react-dom";
+import { type Action, log, type TooltipPlacement } from "@superboard/flows-shared";
+import { type FC, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+// eslint-disable-next-line import/no-named-as-default -- correct import
+import DOMPurify from "dompurify";
+import { useFirstRender } from "../hooks/use-first-render";
+import { useQuerySelector } from "../hooks/use-query-selector";
+import { Close16 } from "../icons/close16";
+import { ActionButton } from "./action-button";
+import { IconButton } from "./icon-button";
+import { Text } from "./text";
+import { Branding } from "./branding";
+
+interface Props {
+  title: string;
+  body: string;
+
+  targetElement: string;
+  placement?: TooltipPlacement;
+  offsetX?: number;
+  offsetY?: number;
+
+  dots?: ReactNode;
+  primaryButton?: Action;
+  secondaryButton?: Action;
+  onClose?: () => void;
+
+  showBranding: boolean;
+}
+
+const CLOSE_TIMEOUT = 300;
+const BOUNDARY_PADDING = 8;
+const DISTANCE = 4;
+const TARGET_ELEMENT_DATA_ATTRIBUTE = "data-flows-hint-target";
+
+const autoUpdate: typeof floatingAutoUpdate = (ref, floating, update) =>
+  floatingAutoUpdate(ref, floating, update, { animationFrame: true });
+
+export const BaseHint: FC<Props> = (props) => {
+  const firstRender = useFirstRender();
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const [tooltipClosing, setTooltipClosing] = useState(false);
+  const closeTimeoutRef = useRef<number>(null);
+  const handleOpen = useCallback(() => {
+    setTooltipOpen(true);
+    setTooltipClosing(false);
+    window.clearTimeout(closeTimeoutRef.current ?? undefined);
+    closeTimeoutRef.current = null;
+  }, []);
+  const handleClose = useCallback(() => {
+    setTooltipClosing(true);
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setTooltipOpen(false);
+      setTooltipClosing(false);
+      closeTimeoutRef.current = null;
+    }, CLOSE_TIMEOUT);
+  }, []);
+
+  const reference = useQuerySelector(props.targetElement);
+  const targetFloating = useFloating({
+    placement: props.placement,
+    elements: { reference },
+    whileElementsMounted: autoUpdate,
+    transform: false,
+  });
+  const dotRef = targetFloating.refs.floating;
+
+  const tooltipFloating = useFloating({
+    placement: "bottom",
+    elements: { reference: targetFloating.refs.floating.current },
+    whileElementsMounted: autoUpdate,
+    transform: false,
+    middleware: [
+      flip({ fallbackPlacements: ["top", "bottom", "left", "right"] }),
+      shift({ crossAxis: true, padding: BOUNDARY_PADDING }),
+      offset(DISTANCE),
+    ],
+  });
+  const tooltipRef = tooltipFloating.refs.floating;
+
+  useEffect(() => {
+    const handleWindowClick = (e: MouseEvent): void => {
+      const target = e.target as Node;
+      const tooltipEl = tooltipRef.current;
+      const dotEl = dotRef.current;
+
+      if (!tooltipEl || !target.isConnected) return;
+
+      const isOutside = !tooltipEl.contains(target) && !dotEl?.contains(target);
+      if (isOutside) handleClose();
+    };
+    window.addEventListener("click", handleWindowClick);
+
+    return () => {
+      window.removeEventListener("click", handleWindowClick);
+    };
+  }, [handleClose, dotRef, tooltipRef]);
+
+  useEffect(() => {
+    reference?.setAttribute(TARGET_ELEMENT_DATA_ATTRIBUTE, "true");
+    return () => {
+      reference?.removeAttribute(TARGET_ELEMENT_DATA_ATTRIBUTE);
+    };
+  }, [reference]);
+
+  useEffect(() => {
+    if (!props.targetElement) {
+      log.error("Cannot render Hint without target element");
+    }
+  }, [props.targetElement]);
+
+  if (!reference) return null;
+  // Avoid rendering on client render to prevent hydration issues
+  if (firstRender) return null;
+
+  const buttons = [];
+  if (props.secondaryButton)
+    buttons.push(
+      <ActionButton key="secondary" action={props.secondaryButton} variant="secondary" />,
+    );
+  if (props.primaryButton)
+    buttons.push(<ActionButton key="primary" action={props.primaryButton} variant="primary" />);
+
+  return (
+    <>
+      <button
+        ref={targetFloating.refs.setFloating}
+        style={{
+          left: targetFloating.x + (props.offsetX ?? 0),
+          top: targetFloating.y + (props.offsetY ?? 0),
+        }}
+        aria-label="Open hint"
+        type="button"
+        className="flows_basicsV2_hint_hotspot"
+        onClick={tooltipOpen && !tooltipClosing ? handleClose : handleOpen}
+      />
+
+      {tooltipOpen ? (
+        <div
+          className="flows_basicsV2_tooltip_tooltip flows_basicsV2_hint_tooltip"
+          data-open={!tooltipClosing ? "true" : "false"}
+          data-placement={tooltipFloating.placement}
+          ref={tooltipFloating.refs.setFloating}
+          style={{ left: tooltipFloating.x, top: tooltipFloating.y }}
+        >
+          <Text className="flows_basicsV2_tooltip_title" variant="title">
+            {props.title}
+          </Text>
+          <Text
+            variant="body"
+            className="flows_basicsV2_tooltip_body"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(props.body, {
+                FORCE_BODY: true,
+                ADD_ATTR: ["target"],
+              }),
+            }}
+          />
+          {(props.dots ?? buttons.length) ? (
+            <div className="flows_basicsV2_tooltip_footer">
+              {props.dots}
+              {buttons.length ? (
+                <div className="flows_basicsV2_tooltip_buttons_wrapper">
+                  <div className="flows_basicsV2_tooltip_buttons">{buttons}</div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {props.onClose ? (
+            <IconButton
+              aria-label="Close"
+              className="flows_basicsV2_tooltip_close"
+              onClick={props.onClose}
+            >
+              <Close16 />
+            </IconButton>
+          ) : null}
+
+          {props.showBranding ? (
+            <Branding className="flows_basicsV2_tooltip_branding" component="basicsV2-hint" />
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
+};

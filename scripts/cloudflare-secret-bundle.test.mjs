@@ -27,6 +27,7 @@ test("secret bundle plan expands shared members without values", async () => {
       { service: "api", name: "EMAIL_INTERNAL_TOKEN" },
       { service: "email", name: "EMAIL_INTERNAL_TOKEN" },
       { service: "identity", name: "EMAIL_INTERNAL_TOKEN" },
+      { service: "support", name: "EMAIL_INTERNAL_TOKEN" },
       { service: "marketing", name: "EMAIL_INTERNAL_TOKEN" },
     ],
   );
@@ -49,6 +50,7 @@ test("shared contract input assigns the exact same value to every Worker", async
     api: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
     email: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
     identity: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
+    support: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
     marketing: { EMAIL_INTERNAL_TOKEN: "coordinated-test-value" },
   });
 });
@@ -256,6 +258,7 @@ test("overlap assigns the old token only to accepting consumers", async () => {
       EMAIL_INTERNAL_TOKEN_PREVIOUS: "old-email-token",
     },
     identity: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
+    support: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
     marketing: { EMAIL_INTERNAL_TOKEN: "new-email-token" },
   });
   assert.throws(
@@ -270,4 +273,33 @@ test("overlap assigns the old token only to accepting consumers", async () => {
       }),
     /must differ/u,
   );
+});
+
+test("Flows cutover adds only its dedicated API pair without assigning platform email bindings", async () => {
+  const { target } = await loadTarget("mbza-development");
+  const internalPlan = buildSecretBundlePlan({
+    target,
+    targetName: "mbza-development",
+    environment: "development",
+    contractIds: ["flows-internal-token"],
+    overlap: true,
+  });
+  assert.deepEqual(
+    buildSecretAssignments(internalPlan, {
+      contracts: {
+        "flows-internal-token": {
+          value: "new-flows-token",
+          previousValue: "unchanged-platform-module-token",
+        },
+      },
+    }),
+    {
+      api: { FLOWS_INTERNAL_TOKEN: "new-flows-token" },
+      flows: {
+        INTERNAL_API_TOKEN: "new-flows-token",
+        INTERNAL_API_TOKEN_PREVIOUS: "unchanged-platform-module-token",
+      },
+    },
+  );
+
 });

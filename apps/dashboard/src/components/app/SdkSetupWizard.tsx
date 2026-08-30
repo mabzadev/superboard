@@ -138,6 +138,9 @@ function code(
 function library(id: "ios" | "android" | "javascript") {
   const value = sdkCatalog.libraries.find((item) => item.id === id);
   if (!value) throw new Error(`SDK catalogue entry ${id} is missing`);
+  if (!("install" in value) || typeof value.install !== "string") {
+    throw new Error(`SDK catalogue entry ${id} has no published installation`);
+  }
   return value;
 }
 
@@ -149,7 +152,12 @@ function registryLibrary(id: "android" | "javascript") {
   return value;
 }
 
-export function sdkInstallCode(platform: "android" | "web"): CodeBlockData[] {
+export function sdkInstallCode(
+  platform: "android" | "ios" | "web"
+): CodeBlockData[] {
+  if (platform === "ios") {
+    return code("swift", "Package.swift", library("ios").install);
+  }
   if (platform === "web") {
     const javascript = registryLibrary("javascript");
     const distribution = javascript.distribution;
@@ -227,8 +235,7 @@ function stepCode(
         "Info.plist",
         `<key>CFBundleURLTypes</key>\n<array>\n  <dict><key>CFBundleURLSchemes</key><array><string>opengrow</string></array></dict>\n</array>`
       );
-    if (step === 2)
-      return code("swift", "Package.swift", library("ios").install);
+    if (step === 2) return sdkInstallCode("ios");
     if (step === 3)
       return code(
         "swift",

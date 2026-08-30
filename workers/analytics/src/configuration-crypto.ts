@@ -80,7 +80,7 @@ function base64Url(bytes: Uint8Array): string {
     .replace(/=+$/u, "");
 }
 
-function fromBase64Url(value: string): Uint8Array {
+function fromBase64Url(value: string): Uint8Array<ArrayBuffer> {
   const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
   const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
   const binary = atob(`${normalized}${padding}`);

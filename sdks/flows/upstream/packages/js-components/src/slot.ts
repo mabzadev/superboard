@@ -1,0 +1,66 @@
+import { addSlotBlocksChangeListener, getCurrentSlotBlocks } from "@superboard/flows-js";
+import { LitElement } from "lit";
+import { property, query, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
+import { getBlockRenderKey, type ActiveBlock } from "@superboard/flows-shared";
+import { jsMethods } from "./components-store";
+import { Block } from "./block";
+
+export class FlowsSlot extends LitElement {
+  @state()
+  private _blocks: ActiveBlock[] = [];
+  private _changeListenerDispose?: () => void;
+
+  @property({ type: String, attribute: "data-slot-id" })
+  slotId: string;
+
+  /**
+   * Limit of how many blocks to render in this slot. Defaults to no limit.
+   *
+   * Useful when multiple blocks match the same slot.
+   *
+   * @default undefined
+   */
+  @property({ type: Number })
+  limit?: number;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    const _getCurrentSlotBlocks = jsMethods.getCurrentSlotBlocks ?? getCurrentSlotBlocks;
+    const _addSlotBlocksChangeListener =
+      jsMethods.addSlotBlocksChangeListener ?? addSlotBlocksChangeListener;
+
+    this._blocks = _getCurrentSlotBlocks(this.slotId);
+    this._changeListenerDispose = _addSlotBlocksChangeListener(this.slotId, (blocks) => {
+      this._blocks = blocks;
+    });
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+
+    this._changeListenerDispose?.();
+  }
+
+  @query("[data-placeholder]")
+  placeholderElement: HTMLElement | null;
+
+  createRenderRoot(): this {
+    return this;
+  }
+
+  render(): unknown {
+    if (this.placeholderElement) {
+      if (this._blocks.length) this.placeholderElement.hidden = true;
+      else this.placeholderElement.hidden = false;
+    }
+
+    const blocksToRender =
+      this.limit === undefined ? this._blocks : this._blocks.slice(0, this.limit);
+
+    return repeat(blocksToRender, getBlockRenderKey, (block) => {
+      return Block({ block });
+    });
+  }
+}

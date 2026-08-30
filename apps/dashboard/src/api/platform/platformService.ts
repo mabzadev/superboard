@@ -262,15 +262,16 @@ export type PlatformLibrary = {
   licensePath: string;
   versionSource: string;
   sourceVersion: string;
-  latestReleaseVersion: string;
-  releaseRef: string;
-  releaseStatus: "released" | "pending-release";
-  releaseSha: string;
+  latestReleaseVersion?: string;
+  releaseRef?: string;
+  releaseStatus: "released" | "pending-release" | "unreleased";
+  releaseSha?: string;
+  publicationTarget?: "public-npm" | "workspace-only";
   candidatePackageName?: string;
   candidateInstall?: string;
   surfaceManifest?: string;
   notes?: string;
-  install: string;
+  install?: string;
   distribution?: {
     registryKind: "github-packages-npm" | "github-packages-maven";
     registry: string;

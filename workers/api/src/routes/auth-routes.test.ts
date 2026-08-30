@@ -43,9 +43,14 @@ function json(body: unknown): RequestInit {
   };
 }
 
+const fixturePasswords = Promise.all([
+  hashPassword('secret-password'),
+  hashPassword('temporary-password'),
+]);
+const fixtureDashboardSecret = tokenDigest('dashboard-secret');
+
 async function authFixture() {
-  const ownerPassword = await hashPassword('secret-password');
-  const invitedPassword = await hashPassword('temporary-password');
+  const [ownerPassword, invitedPassword] = await fixturePasswords;
   const state = {
     users: [
       {
@@ -91,7 +96,7 @@ async function authFixture() {
     oauthApps: [{
       id: 20,
       uid: 'dashboard-client',
-      secret: await tokenDigest('dashboard-secret'),
+      secret: await fixtureDashboardSecret,
       previous_secret: null as string | null,
       previous_secret_valid: 0,
     }],

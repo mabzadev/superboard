@@ -9,8 +9,13 @@ export class RequestBodyError extends Error {
   }
 }
 
+type ReadableBodySource = {
+  readonly headers: Headers;
+  readonly body: ReadableStream<Uint8Array> | null;
+};
+
 export async function readBytesLimited(
-  source: Request | Response,
+  source: ReadableBodySource,
   maxBytes: number,
 ): Promise<Uint8Array> {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
@@ -38,7 +43,11 @@ export async function readBytesLimited(
       if (done) break;
       total += value.byteLength;
       if (total > maxBytes) {
-        await reader.cancel("body_too_large").catch(() => undefined);
+        // A cloned Request body is a tee. Awaiting cancellation of one branch
+        // can wait forever while the untouched downstream branch remains
+        // open; cancellation is therefore best-effort and the bounded reader
+        // rejects immediately without consuming more bytes.
+        void reader.cancel("body_too_large").catch(() => undefined);
         throw new RequestBodyError("body_too_large", `Body exceeds ${maxBytes} bytes`, 413);
       }
       chunks.push(value);
@@ -57,14 +66,14 @@ export async function readBytesLimited(
 }
 
 export async function readTextLimited(
-  source: Request | Response,
+  source: ReadableBodySource,
   maxBytes: number,
 ): Promise<string> {
   return new TextDecoder().decode(await readBytesLimited(source, maxBytes));
 }
 
 export async function readJsonLimited(
-  source: Request | Response,
+  source: ReadableBodySource,
   maxBytes: number,
 ): Promise<unknown> {
   const text = await readTextLimited(source, maxBytes);
@@ -76,7 +85,7 @@ export async function readJsonLimited(
 }
 
 export async function readJsonObjectLimited(
-  source: Request | Response,
+  source: ReadableBodySource,
   maxBytes: number,
 ): Promise<Record<string, unknown>> {
   const value = await readJsonLimited(source, maxBytes);

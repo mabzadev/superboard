@@ -1,6 +1,6 @@
 {
   "$schema": "./sdk-libraries.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "repository": "https://github.com/mabzadev/superboard",
   "developmentBranch": "dev",
   "releasePolicy": "immutable-tag",
@@ -170,6 +170,96 @@
           "tokenEnvironmentVariable": "OPENGROW_GITHUB_PACKAGES_TOKEN"
         }
       }
+    },
+    {
+      "id": "flows-js",
+      "lifecycle": "active",
+      "displayName": "SuperBoard Flows JavaScript",
+      "ecosystem": "npm",
+      "packageName": "@superboard/flows-js",
+      "sourcePath": "sdks/flows/upstream/packages/js",
+      "license": "MIT",
+      "licensePath": "sdks/flows/upstream/packages/js/LICENSE",
+      "versionSource": "sdks/flows/upstream/packages/js/package.json",
+      "sourceVersion": "1.23.3",
+      "releaseStatus": "unreleased",
+      "publicationTarget": "public-npm",
+      "notes": "Initial reviewed source import. No npm publication, immutable release tag, release ref or release SHA exists yet."
+    },
+    {
+      "id": "flows-react",
+      "lifecycle": "active",
+      "displayName": "SuperBoard Flows React",
+      "ecosystem": "npm",
+      "packageName": "@superboard/flows-react",
+      "sourcePath": "sdks/flows/upstream/packages/react",
+      "license": "MIT",
+      "licensePath": "sdks/flows/upstream/packages/react/LICENSE",
+      "versionSource": "sdks/flows/upstream/packages/react/package.json",
+      "sourceVersion": "1.26.3",
+      "releaseStatus": "unreleased",
+      "publicationTarget": "public-npm",
+      "notes": "Initial reviewed source import. No npm publication, immutable release tag, release ref or release SHA exists yet."
+    },
+    {
+      "id": "flows-js-components",
+      "lifecycle": "active",
+      "displayName": "SuperBoard Flows JavaScript Components",
+      "ecosystem": "npm",
+      "packageName": "@superboard/flows-js-components",
+      "sourcePath": "sdks/flows/upstream/packages/js-components",
+      "license": "MIT",
+      "licensePath": "sdks/flows/upstream/packages/js-components/LICENSE",
+      "versionSource": "sdks/flows/upstream/packages/js-components/package.json",
+      "sourceVersion": "2.10.4",
+      "releaseStatus": "unreleased",
+      "publicationTarget": "public-npm",
+      "notes": "Initial reviewed source import. No npm publication, immutable release tag, release ref or release SHA exists yet."
+    },
+    {
+      "id": "flows-react-components",
+      "lifecycle": "active",
+      "displayName": "SuperBoard Flows React Components",
+      "ecosystem": "npm",
+      "packageName": "@superboard/flows-react-components",
+      "sourcePath": "sdks/flows/upstream/packages/react-components",
+      "license": "MIT",
+      "licensePath": "sdks/flows/upstream/packages/react-components/LICENSE",
+      "versionSource": "sdks/flows/upstream/packages/react-components/package.json",
+      "sourceVersion": "2.9.4",
+      "releaseStatus": "unreleased",
+      "publicationTarget": "public-npm",
+      "notes": "Initial reviewed source import. No npm publication, immutable release tag, release ref or release SHA exists yet."
+    },
+    {
+      "id": "flows-shared",
+      "lifecycle": "internal",
+      "displayName": "SuperBoard Flows Shared",
+      "ecosystem": "npm",
+      "packageName": "@superboard/flows-shared",
+      "sourcePath": "sdks/flows/upstream/packages/shared",
+      "license": "MIT",
+      "licensePath": "sdks/flows/upstream/notices/flows-sdk-LICENSE",
+      "versionSource": "sdks/flows/upstream/packages/shared/package.json",
+      "sourceVersion": "1.0.0",
+      "releaseStatus": "unreleased",
+      "publicationTarget": "workspace-only",
+      "notes": "Private workspace dependency bundled into the public Flows SDKs. It has no standalone registry publication, tag, release ref or release SHA."
+    },
+    {
+      "id": "flows-styles",
+      "lifecycle": "internal",
+      "displayName": "SuperBoard Flows Styles",
+      "ecosystem": "npm",
+      "packageName": "@superboard/flows-styles",
+      "sourcePath": "sdks/flows/upstream/packages/styles",
+      "license": "MIT",
+      "licensePath": "sdks/flows/upstream/notices/flows-sdk-LICENSE",
+      "versionSource": "sdks/flows/upstream/packages/styles/package.json",
+      "sourceVersion": "1.0.0",
+      "releaseStatus": "unreleased",
+      "publicationTarget": "workspace-only",
+      "notes": "Private workspace stylesheet dependency bundled into the public Flows component SDKs. It has no standalone registry publication, tag, release ref or release SHA."
     }
   ]
 }

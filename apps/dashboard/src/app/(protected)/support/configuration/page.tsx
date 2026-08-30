@@ -1,5 +1,5 @@
-import SupportConfigurationPage from "@/components/modules/SupportConfigurationPage";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <SupportConfigurationPage />;
+  redirect("/support/settings");
 }

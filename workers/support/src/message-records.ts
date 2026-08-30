@@ -26,18 +26,31 @@ export type MessageAttachment = {
 export function localAttachment(
   messageId: string,
   input: {
+    attachments?: Array<{
+      key: string;
+      name: string | null;
+      content_type: string | null;
+    }>;
     attachment_key: string | null;
     attachment_name: string | null;
     attachment_content_type: string | null;
   },
 ): MessageAttachment[] {
-  if (!input.attachment_key) return [];
-  return [{
-    id: `${messageId}:attachment:0`,
-    storage_key: input.attachment_key,
-    file_name: input.attachment_name || 'attachment',
-    content_type: input.attachment_content_type || 'application/octet-stream',
+  const attachments = input.attachments?.length
+    ? input.attachments
+    : input.attachment_key
+      ? [{
+          key: input.attachment_key,
+          name: input.attachment_name,
+          content_type: input.attachment_content_type,
+        }]
+      : [];
+  return attachments.map((attachment, position) => ({
+    id: `${messageId}:attachment:${position}`,
+    storage_key: attachment.key,
+    file_name: attachment.name || 'attachment',
+    content_type: attachment.content_type || 'application/octet-stream',
     byte_size: null,
-    position: 0,
-  }];
+    position,
+  }));
 }

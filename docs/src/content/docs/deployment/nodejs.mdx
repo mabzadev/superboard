@@ -1,0 +1,239 @@
+---
+title: Deploy to Node.js
+description: Deploy EmDash to any Node.js hosting platform.
+---
+
+import { Aside, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+
+EmDash runs on Node.js 22.16 or later. This guide uses SQLite with local or S3-compatible storage; libSQL and PostgreSQL work the same way on Node.js — see [Database Options](/deployment/database/).
+
+## Prerequisites
+
+- Node.js v22.16.0 or higher
+- A Node.js hosting provider or VPS
+
+<Aside>
+	Node.js 22 prints `ExperimentalWarning: SQLite is an experimental feature` when a site uses the
+	built-in SQLite driver. The warning comes from Node.js and does not prevent the database from
+	opening. Node.js 24 does not print this warning.
+</Aside>
+
+## Configuration
+
+Configure EmDash for Node.js deployment:
+
+```js title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import node from "@astrojs/node";
+import emdash, { local, s3 } from "emdash/astro";
+import { sqlite } from "emdash/db";
+
+export default defineConfig({
+	output: "server",
+	adapter: node({ mode: "standalone" }),
+	integrations: [
+		emdash({
+			database: sqlite({ url: "file:./data/emdash.db" }),
+			storage: local({
+				directory: "./data/uploads",
+				baseUrl: "/_emdash/api/media/file",
+			}),
+		}),
+	],
+});
+```
+
+## Build and Run
+
+1. Build the project:
+
+   ```bash
+   npm run build
+   ```
+
+2. Start the server:
+
+   ```bash
+   node ./dist/server/entry.mjs
+   ```
+
+The server runs on `http://localhost:4321` by default. Migrations are applied on the first request. If the database is empty and setup hasn't been completed, your seed file (or the built-in default if you don't have one) is also applied on that first request.
+
+## Scheduled tasks
+
+The built-in scheduler runs only while a Node.js process is running. It handles scheduled publishing, plugin tasks, and general maintenance.
+
+Keep at least one Node.js process running continuously in production. Scheduled tasks pause when every process stops or sleeps.
+
+## Production Storage
+
+For production, use S3-compatible storage instead of local filesystem:
+
+```js title="astro.config.mjs"
+import emdash, { s3 } from "emdash/astro";
+
+export default defineConfig({
+	integrations: [
+		emdash({
+			database: sqlite({ url: `file:${process.env.DATABASE_PATH}` }),
+			storage: s3({
+				endpoint: process.env.S3_ENDPOINT,
+				bucket: process.env.S3_BUCKET,
+				accessKeyId: process.env.S3_ACCESS_KEY_ID,
+				secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+				publicUrl: process.env.S3_PUBLIC_URL, // Optional CDN URL
+			}),
+		}),
+	],
+});
+```
+
+<Aside>
+	S3-compatible storage works with Cloudflare R2 (via S3 API), MinIO, and other S3-compatible services.
+</Aside>
+
+## Docker
+
+Add a `.dockerignore` to keep the build context small:
+
+```plain title=".dockerignore"
+node_modules
+dist
+.git
+```
+
+Create a `Dockerfile`:
+
+```dockerfile title="Dockerfile"
+FROM node:22-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+
+RUN mkdir -p data
+
+ENV HOST=0.0.0.0
+ENV PORT=4321
+
+EXPOSE 4321
+CMD ["node", "./dist/server/entry.mjs"]
+```
+
+The seed file is read at build time and inlined into the bundle, so it does not need to be copied into the runtime image. Migrations run on the first request after a deploy; the seed applies only when the database has no collections and setup hasn't been completed — existing data is never overwritten.
+
+<Aside>
+	This Dockerfile builds **your own EmDash site** — a project that has `emdash` as a dependency. It is
+	not interchangeable with the `Dockerfile` in the root of the EmDash repository, which builds the whole
+	pnpm monorepo and packages the blog template from source.
+</Aside>
+
+Build the image and run the container:
+
+```bash
+docker build -t my-emdash-site .
+docker run -p 4321:4321 -v emdash-data:/app/data my-emdash-site
+```
+
+A Docker Compose file manages the same container with a named volume:
+
+```yaml title="compose.yaml"
+services:
+  emdash:
+    build: .
+    ports:
+      - "4321:4321"
+    volumes:
+      - emdash-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  emdash-data:
+```
+
+Start the stack in the background:
+
+```bash
+docker compose up -d
+```
+
+## Environment Variables
+
+### Recommended: encryption key
+
+`EMDASH_ENCRYPTION_KEY` is the key for encrypting plugin secrets at
+rest. The key is validated on startup; plugin secret encryption uses
+it once enabled. Set it on every deployment so secrets are protected
+without a later config change.
+
+Generate a key and add the result to your environment:
+
+```bash
+npx emdash secrets generate  # add the result to your environment
+```
+
+The key is provided by you and never stored in the database; only
+encrypted ciphertext is. Back it up somewhere durable (a password
+manager, KMS, or your team's secret store) — losing it means losing
+every secret encrypted with it.
+
+### Optional: stable-value overrides
+
+EmDash auto-generates the preview HMAC secret and commenter-IP hash
+salt and persists them in the database on first use. The env vars
+below pin them to a value you control — useful when a separate
+process needs to share a secret with your main site.
+
+| Variable | Description |
+| -------- | ----------- |
+| `EMDASH_PREVIEW_SECRET` | Override for the auto-generated preview HMAC secret. |
+| `EMDASH_IP_SALT` | Override for the auto-generated commenter-IP hash salt. |
+| `EMDASH_AUTH_SECRET` | Optional. If set, used as the IP-salt source (unless `EMDASH_IP_SALT` is also set, which takes precedence), keeping commenter-IP hashes stable for installs that already rely on it. Leave it unset for a new deployment. |
+
+### Database and Storage
+
+| Variable               | Description             | Example                    |
+| ---------------------- | ----------------------- | -------------------------- |
+| `DATABASE_PATH`        | Path to SQLite database | `/data/emdash.db`        |
+| `HOST`                 | Server host             | `0.0.0.0`                  |
+| `PORT`                 | Server port             | `4321`                     |
+| `S3_ENDPOINT`          | S3 endpoint URL         | `https://xxx.r2.cloudflarestorage.com` |
+| `S3_BUCKET`            | S3 bucket name          | `my-media-bucket`          |
+| `S3_ACCESS_KEY_ID`     | S3 access key           | `AKIA...`                  |
+| `S3_SECRET_ACCESS_KEY` | S3 secret key           | `...`                      |
+| `S3_PUBLIC_URL`        | Public URL for media    | `https://cdn.example.com`  |
+
+<Aside type="caution">
+Never commit secrets to your repository. Use your platform's secret management (environment variables, secret stores, etc.) for production.
+</Aside>
+
+## Persistent Storage
+
+SQLite requires persistent disk storage. Ensure your hosting platform provides:
+
+- A mounted volume or persistent disk
+- Write access to the database directory
+- Backup mechanisms for the database file
+
+<Aside type="caution">
+	Ephemeral filesystems will lose your database on restart. Use libSQL with a remote database or persistent storage.
+</Aside>
+
+## Health Checks
+
+Add a health check endpoint for load balancers:
+
+```astro title="src/pages/health.ts"
+export const GET = () => {
+  return new Response("OK", { status: 200 });
+};
+```
+
+Configure your platform to check `/health` for liveness probes.

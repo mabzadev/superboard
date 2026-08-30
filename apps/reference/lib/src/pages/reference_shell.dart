@@ -1,12 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 import '../model/reference_feature.dart';
 import '../services/reference_actions.dart';
 import '../state/reference_state.dart';
-import '../widgets/sdk_catalog_status.dart';
 
 class ReferenceShell extends StatefulWidget {
   const ReferenceShell({
@@ -66,7 +65,6 @@ class _ReferenceShellState extends State<ReferenceShell> {
           ],
         ),
         actions: [
-          const SdkCatalogueStatus(),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Chip(
@@ -420,7 +418,10 @@ class _ReferenceFeaturePageState extends State<ReferenceFeaturePage> {
               SizedBox(
                 height: 640,
                 child: widget.feature.id == ReferenceFeatureId.paywall
-                    ? OpenGrowPaywall(
+                    // The reference keeps this released widget covered until
+                    // its coordinated Flow replacement is published.
+                    // ignore: deprecated_member_use
+                    ? SuperBoardPaywall(
                         key: ValueKey(
                           'paywall-$liveExperienceGeneration-$resolvedPlacement',
                         ),
@@ -448,7 +449,8 @@ class _ReferenceFeaturePageState extends State<ReferenceFeaturePage> {
                           'placement': resolvedPlacement,
                         }),
                       )
-                    : OpenGrowOnboarding(
+                    // ignore: deprecated_member_use
+                    : SuperBoardOnboarding(
                         key: ValueKey(
                           'onboarding-$liveExperienceGeneration-$resolvedPlacement',
                         ),

@@ -29,6 +29,10 @@ test("required secrets adapt to AWS SES SMTP transports", async () => {
     "AWS_SES_SNS_TOPIC_ARN",
   ]);
   assert.ok(productionEmail.names.includes("AWS_SES_SMTP_PASSWORD"));
+  assert.equal(
+    productionEmail.names.includes("FLOWS_EMAIL_INTERNAL_TOKEN"),
+    false,
+  );
   assert.equal(productionEmail.names.includes("MAIL_PREVIEW_TOKEN"), false);
 });
 

@@ -1,0 +1,3994 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prototype jetable #48 — supbrd-plug-user dans EmDash</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #182235;
+        --muted: #626d80;
+        --paper: #f5f7fb;
+        --panel: #ffffff;
+        --line: #dce2ec;
+        --accent: #2f63cf;
+        --accent-soft: #eaf0ff;
+        --success: #147a51;
+        --success-soft: #e7f7ef;
+        --danger: #b72f48;
+        --danger-soft: #fff0f3;
+        --warning: #8b5b00;
+        --warning-soft: #fff6dc;
+        --shadow: 0 15px 40px rgba(26, 37, 69, 0.08);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        line-height: 1.52;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      code {
+        padding: 0.12rem 0.31rem;
+        border-radius: 0.32rem;
+        background: #eef1f7;
+        color: #314064;
+        font-size: 0.87em;
+        overflow-wrap: anywhere;
+      }
+
+      .page {
+        width: min(1280px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 64px;
+      }
+
+      .prototype-label {
+        display: inline-flex;
+        margin-bottom: 16px;
+        padding: 0.45rem 0.72rem;
+        border: 1px solid #efb8c2;
+        border-radius: 999px;
+        background: var(--danger-soft);
+        color: var(--danger);
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 990px;
+        margin-bottom: 14px;
+        font-size: clamp(2rem, 5vw, 3.65rem);
+        line-height: 1.04;
+        letter-spacing: -0.045em;
+      }
+
+      h2 {
+        margin-bottom: 10px;
+        font-size: 1.26rem;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+
+      .lede {
+        max-width: 980px;
+        margin-bottom: 24px;
+        color: var(--muted);
+        font-size: 1.08rem;
+      }
+
+      .callout {
+        margin-bottom: 12px;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+
+      .callout.limit {
+        margin-bottom: 28px;
+        border-left-color: var(--warning);
+        background: var(--warning-soft);
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+        gap: 16px;
+        margin-bottom: 26px;
+      }
+
+      .panel,
+      .hero-panel,
+      .procedure-shell {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .panel,
+      .hero-panel {
+        min-width: 0;
+        padding: 20px;
+      }
+
+      .hero-kicker {
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .hero-result {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 10px;
+        font-size: clamp(1.45rem, 4vw, 2.35rem);
+        font-weight: 850;
+        letter-spacing: -0.035em;
+      }
+
+      .hero-result::before {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: var(--muted);
+        content: "";
+      }
+
+      .hero-result.success::before {
+        background: var(--success);
+      }
+
+      .hero-result.danger::before {
+        background: var(--danger);
+      }
+
+      .hero-result.warning::before {
+        background: var(--warning);
+      }
+
+      .summary-list {
+        display: grid;
+        gap: 9px;
+        margin: 0;
+      }
+
+      .summary-list div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .summary-list div:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .summary-list dt {
+        color: var(--muted);
+      }
+
+      .summary-list dd {
+        min-width: 0;
+        margin: 0;
+        text-align: right;
+        font-weight: 750;
+        overflow-wrap: anywhere;
+      }
+
+      .section {
+        margin-top: 28px;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 12px;
+      }
+
+      .section-heading p {
+        max-width: 760px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .state-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .full {
+        grid-column: 1 / -1;
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: minmax(155px, 0.75fr) minmax(0, 1.25fr);
+        gap: 12px;
+        align-items: start;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .status-row:last-child {
+        border-bottom: 0;
+      }
+
+      .status-row > span:first-child {
+        color: var(--muted);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        max-width: 100%;
+        padding: 0.24rem 0.57rem;
+        border-radius: 999px;
+        background: #edf0f6;
+        color: #44516d;
+        font-size: 0.76rem;
+        font-weight: 850;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .badge.success {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .badge.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .badge.warning {
+        background: var(--warning-soft);
+        color: var(--warning);
+      }
+
+      .registry-table,
+      .page-table,
+      .receipt-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .registry-table th,
+      .registry-table td,
+      .page-table th,
+      .page-table td,
+      .receipt-table th,
+      .receipt-table td {
+        padding: 11px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      table th {
+        color: var(--muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .admin-frame {
+        display: grid;
+        grid-template-columns: 160px minmax(0, 1fr);
+        min-height: 300px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+
+      .admin-nav {
+        padding: 16px;
+        background: #242a45;
+        color: #fff;
+      }
+
+      .admin-nav strong {
+        display: block;
+        margin-bottom: 14px;
+      }
+
+      .admin-nav span {
+        display: block;
+        margin: 8px 0;
+        color: #ccd2eb;
+        font-size: 0.8rem;
+      }
+
+      .admin-content {
+        padding: 20px;
+      }
+
+      .field {
+        margin: 12px 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #fafbfe;
+      }
+
+      .field strong,
+      .field small {
+        display: block;
+      }
+
+      .field small {
+        margin-top: 4px;
+        color: var(--muted);
+      }
+
+      .page-preview {
+        min-height: 280px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fafbfe;
+      }
+
+      .page-shell {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        min-height: 220px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+      }
+
+      .page-nav {
+        padding: 15px;
+        background: #242a45;
+        color: #fff;
+      }
+
+      .page-nav span {
+        display: block;
+        margin: 8px 0;
+        color: #ccd2eb;
+        font-size: 0.8rem;
+      }
+
+      .page-content {
+        padding: 18px;
+      }
+
+      .element-card {
+        margin-top: 12px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      .action-button,
+      .tab-button,
+      .step-button {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+        font-weight: 750;
+      }
+
+      .action-button {
+        padding: 0.64rem 0.84rem;
+      }
+
+      .action-button.primary,
+      .step-button.current {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .action-button.danger {
+        border-color: #efb8c2;
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .action-button:hover,
+      .action-button:focus-visible,
+      .tab-button:hover,
+      .tab-button:focus-visible,
+      .step-button:hover:not(:disabled),
+      .step-button:focus-visible:not(:disabled) {
+        border-color: var(--accent);
+        outline: 3px solid var(--accent-soft);
+        outline-offset: 1px;
+      }
+
+      .procedure-shell {
+        overflow: hidden;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 7px;
+        padding: 12px;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--line);
+        background: #f9faff;
+      }
+
+      .tab-button {
+        flex: 0 0 auto;
+        padding: 0.54rem 0.78rem;
+        color: var(--muted);
+      }
+
+      .tab-button[aria-selected="true"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .procedure-body {
+        padding: 20px;
+      }
+
+      .procedure-body > p {
+        max-width: 850px;
+        color: var(--muted);
+      }
+
+      .steps {
+        display: grid;
+        gap: 9px;
+        counter-reset: steps;
+      }
+
+      .step-button {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        padding: 0.72rem 0.8rem;
+        text-align: left;
+        counter-increment: steps;
+      }
+
+      .step-button::before {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #edf0f6;
+        color: var(--muted);
+        content: counter(steps);
+        font-size: 0.74rem;
+      }
+
+      .step-button.current::before {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+
+      .step-button.done {
+        border-color: #bce3d0;
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .step-button.done::before {
+        background: var(--success);
+        color: #fff;
+        content: "✓";
+      }
+
+      .step-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+      }
+
+      .activity-list,
+      .compact-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .activity-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .activity-list li {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
+        gap: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .activity-list li:last-child {
+        border-bottom: 0;
+      }
+
+      .activity-list small {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      details {
+        margin-top: 20px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fafbfe;
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      footer {
+        margin-top: 34px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.87rem;
+      }
+
+      @media (max-width: 860px) {
+        .hero-grid,
+        .state-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .full {
+          grid-column: auto;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .page {
+          width: min(100% - 20px, 1280px);
+          padding-top: 20px;
+        }
+
+        .status-row,
+        .admin-frame,
+        .page-shell {
+          grid-template-columns: 1fr;
+        }
+
+        table thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+
+        table tr,
+        table td {
+          display: block;
+        }
+
+        table tr {
+          padding: 10px 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        table td {
+          padding: 4px 0;
+          border: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <span class="prototype-label">Prototype jetable — à supprimer</span>
+      <h1>
+        Un plugin full peut-il fournir toute la matière d’interface sans
+        posséder une seule route finale&nbsp;?
+      </h1>
+      <p class="lede">
+        Cette démo pilote <code>supbrd-plug-user</code> depuis son installation
+        jusqu’à une Release Front. Elle rend visibles le registre typé, les
+        réglages EmDash Admin, les compositions de pages, les bindings et la
+        frontière de propriété des routes.
+      </p>
+
+      <div class="callout">
+        <strong>Question du ticket #48</strong>
+        Enregistrer <code>user.login-form</code>,
+        <code>user.profile-card</code> et <code>user.members-table</code>, leurs
+        schémas, actions et sources de données; offrir leurs réglages dans
+        EmDash Admin; laisser ensuite l’Opérateur composer les pages d’une
+        Release Front sans que le plugin crée lui-même une route finale.
+      </div>
+
+      <div class="callout limit">
+        <strong>Portée et deux précisions de domaine</strong>
+        Les IDs courts demandés sont des aliases éditoriaux; le registre signe
+        des IDs canoniques
+        <code>supbrd-plug-user.renderer.*</code>. Le login renderer ne possède
+        pas l’identité de l’Opérateur&nbsp;: la page EmDash le lie à une action
+        core compatible. EmDash 0.35.0 fournit déjà settings, KV, storage et
+        Block Kit, mais pas le registre public ni la Release Front modélisés
+        ici. La preuve reste entièrement en mémoire.
+      </div>
+
+      <section class="hero-grid" aria-labelledby="gate-title">
+        <div class="hero-panel" aria-live="polite">
+          <p class="hero-kicker" id="gate-title">État de la preuve</p>
+          <div class="hero-result warning" id="hero-result">
+            Plugin disponible
+          </div>
+          <p id="hero-explanation">
+            Stager le manifest pour commencer le Plugin Installation Plan.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <p class="hero-kicker">Release Front et propriété</p>
+          <dl class="summary-list" id="release-summary"></dl>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="state-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="state-title">État actuel complet</h2>
+            <p>
+              Chaque action restitue le lifecycle, les réglages, le draft, les
+              références et les preuves.
+            </p>
+          </div>
+        </div>
+        <div class="state-grid">
+          <article class="panel" aria-labelledby="plugin-title">
+            <h3 id="plugin-title">Plugin full EmDash</h3>
+            <div id="plugin-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="settings-title">
+            <h3 id="settings-title">Réglages EmDash Admin</h3>
+            <div id="settings-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="draft-title">
+            <h3 id="draft-title">Front Draft</h3>
+            <div id="draft-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="promotion-title">
+            <h3 id="promotion-title">Promotion de release</h3>
+            <div id="promotion-state"></div>
+          </article>
+
+          <article class="panel full" aria-labelledby="registry-title">
+            <h3 id="registry-title">Registre de contributions</h3>
+            <table class="registry-table">
+              <thead>
+                <tr>
+                  <th>Alias éditorial</th>
+                  <th>Renderer Descriptor canonique</th>
+                  <th>Action slots</th>
+                  <th>Data source slots</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="registry-table-body"></tbody>
+            </table>
+          </article>
+
+          <article class="panel full" aria-labelledby="pages-title">
+            <h3 id="pages-title">Pages et routes composées par EmDash</h3>
+            <table class="page-table">
+              <thead>
+                <tr>
+                  <th>Route finale</th>
+                  <th>Page / élément</th>
+                  <th>Action liée</th>
+                  <th>Source liée</th>
+                  <th>Propriétaire</th>
+                </tr>
+              </thead>
+              <tbody id="page-table-body"></tbody>
+            </table>
+          </article>
+
+          <article class="panel" aria-labelledby="settings-preview-title">
+            <h3 id="settings-preview-title">Écran de réglages</h3>
+            <div id="settings-preview"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="page-preview-title">
+            <h3 id="page-preview-title">Dernière page composée</h3>
+            <div class="page-preview" id="page-preview"></div>
+          </article>
+
+          <article class="panel full" aria-labelledby="receipts-title">
+            <h3 id="receipts-title">Validation Receipts</h3>
+            <table class="receipt-table">
+              <thead>
+                <tr>
+                  <th>Couche</th>
+                  <th>État</th>
+                  <th>Preuve</th>
+                </tr>
+              </thead>
+              <tbody id="receipt-table-body"></tbody>
+            </table>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="free-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="free-title">Jeu libre</h2>
+            <p>
+              Toutes les actions restent disponibles; une transition illégale
+              est refusée et journalisée.
+            </p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="controls" id="free-play-controls"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="procedures-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="procedures-title">Procédures guidées</h2>
+            <p>
+              Choisir un onglet réinitialise tout, puis chaque étape applique un
+              événement du réducteur pur.
+            </p>
+          </div>
+        </div>
+        <div class="procedure-shell">
+          <div
+            class="tabs"
+            id="procedure-tabs"
+            role="tablist"
+            aria-label="Scénarios du prototype"
+          ></div>
+          <div class="procedure-body" id="procedure-body" role="tabpanel"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="activity-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="activity-title">Journal des décisions</h2>
+            <p>
+              Les dix derniers événements expliquent les enregistrements,
+              compositions, refus et invalidations.
+            </p>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="activity-list" id="activity-state" aria-live="polite"></ul>
+        </div>
+      </section>
+
+      <details>
+        <summary>Limites factuelles conservées</summary>
+        <ul class="compact-list">
+          <li>
+            Le formulaire settings Block Kit et le KV privé sont représentatifs
+            des primitives EmDash existantes.
+          </li>
+          <li>
+            Le registre public de renderers/actions/data sources et le
+            compilateur inter-plugins restent à développer.
+          </li>
+          <li>
+            Directory, credentials/providers, sessions applicatives et référence
+            de clé de signature sont des resources explicitement approuvées.
+          </li>
+          <li>
+            Les checksums et signatures sont déterministes mais représentatifs,
+            sans clé privée réelle.
+          </li>
+          <li>
+            Aucune donnée utilisateur, credential, token, secret ou ressource
+            distante n’est utilisée.
+          </li>
+        </ul>
+      </details>
+
+      <footer>
+        Ticket <code>#48</code> — logique pure dans le premier module
+        JavaScript; coque jetable sans framework, persistance, base de données,
+        serveur requis ni réseau.
+      </footer>
+    </main>
+
+    <script>
+      // Module logique portable. Il ne connaît pas le DOM.
+      const FullPluginPrototype = (() => {
+        const requiredStates = [
+          "loading",
+          "empty",
+          "forbidden",
+          "not_found",
+          "error",
+          "unavailable",
+          "maintenance",
+        ];
+
+        function canonicalize(value) {
+          if (Array.isArray(value)) return value.map(canonicalize);
+          if (value && typeof value === "object") {
+            return Object.keys(value)
+              .sort()
+              .reduce((result, key) => {
+                result[key] = canonicalize(value[key]);
+                return result;
+              }, {});
+          }
+          return value;
+        }
+
+        function representativeChecksum(value) {
+          const input = JSON.stringify(canonicalize(value));
+          const words = [];
+          for (let seed = 0; seed < 8; seed += 1) {
+            let hash = (2166136261 ^ seed) >>> 0;
+            for (let index = 0; index < input.length; index += 1) {
+              hash ^= input.charCodeAt(index);
+              hash = Math.imul(hash, 16777619) >>> 0;
+            }
+            words.push(hash.toString(16).padStart(8, "0"));
+          }
+          return `prototype-checksum:${words.join("")}`;
+        }
+
+        function clone(value) {
+          return JSON.parse(JSON.stringify(value));
+        }
+
+        function contributionPayload(descriptor) {
+          const payload = clone(descriptor);
+          delete payload.descriptorChecksum;
+          return payload;
+        }
+
+        function sealContribution(descriptor, capabilities = null) {
+          descriptor.descriptorVersion = "1.0.0";
+          if (capabilities) descriptor.capabilities = capabilities;
+          descriptor.descriptorChecksum = representativeChecksum(
+            contributionPayload(descriptor)
+          );
+          return descriptor;
+        }
+
+        function contributionChecksumMatches(descriptor) {
+          return (
+            descriptor.descriptorChecksum ===
+            representativeChecksum(contributionPayload(descriptor))
+          );
+        }
+
+        const closedObject = (required, properties) => ({
+          type: "object",
+          additionalProperties: false,
+          required,
+          properties,
+        });
+
+        const stringField = { type: "string" };
+        const booleanField = { type: "boolean" };
+
+        const settingsSchema = closedObject(
+          ["mfa_policy", "allow_anonymous_upgrade", "max_active_sessions"],
+          {
+            mfa_policy: { type: "string", enum: ["optional", "required"] },
+            allow_anonymous_upgrade: booleanField,
+            max_active_sessions: { type: "integer", minimum: 1, maximum: 20 },
+          }
+        );
+
+        const pluginSchemaDescriptors = [
+          {
+            schemaId: "supbrd-plug-user.schema.application_sign_in.v1",
+            schema: closedObject(["email", "password"], {
+              email: stringField,
+              password: stringField,
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.application_session.v1",
+            schema: closedObject(["session_id", "expires_at"], {
+              session_id: stringField,
+              expires_at: stringField,
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.user_profile_update.v1",
+            schema: closedObject(["user_id", "display_name"], {
+              user_id: stringField,
+              display_name: stringField,
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.user_profile.v1",
+            schema: closedObject(["user_id", "email", "display_name"], {
+              user_id: stringField,
+              email: stringField,
+              display_name: stringField,
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.user_member_suspend.v1",
+            schema: closedObject(["user_id", "reason"], {
+              user_id: stringField,
+              reason: stringField,
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.user_member.v1",
+            schema: closedObject(["user_id", "status"], {
+              user_id: stringField,
+              status: { type: "string", enum: ["active", "suspended"] },
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.empty.v1",
+            schema: closedObject([], {}),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.user_members_query.v1",
+            schema: closedObject(["page", "page_size"], {
+              page: { type: "integer", minimum: 1, maximum: 100000 },
+              page_size: { type: "integer", minimum: 10, maximum: 100 },
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.user_members_page.v1",
+            schema: closedObject(["items", "next_page"], {
+              items: {
+                type: "array",
+                items: { type: "string" },
+              },
+              next_page: { type: "integer", minimum: 1, maximum: 100000 },
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.provider_link.v1",
+            schema: closedObject(["user_id", "provider"], {
+              user_id: stringField,
+              provider: { type: "string", enum: ["apple", "google"] },
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.provider.v1",
+            schema: closedObject(["provider", "linked"], {
+              provider: { type: "string", enum: ["apple", "google"] },
+              linked: booleanField,
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.session_revoke.v1",
+            schema: closedObject(["session_id"], {
+              session_id: stringField,
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.providers.v1",
+            schema: closedObject(["providers"], {
+              providers: { type: "array", items: { type: "string" } },
+            }),
+          },
+          {
+            schemaId: "supbrd-plug-user.schema.sessions.v1",
+            schema: closedObject(["session_ids"], {
+              session_ids: { type: "array", items: { type: "string" } },
+            }),
+          },
+        ];
+
+        const coreSchemaDescriptors = [
+          {
+            schemaId: "supbrd-core.schema.admin_session_start.v1",
+            schema: closedObject(["email"], { email: stringField }),
+          },
+          {
+            schemaId: "supbrd-core.schema.admin_session.v1",
+            schema: closedObject(["session_id"], {
+              session_id: stringField,
+            }),
+          },
+        ];
+
+        const schemaRegistry = [
+          ...coreSchemaDescriptors,
+          ...pluginSchemaDescriptors,
+        ];
+
+        const rendererDescriptors = [
+          {
+            elementType: "user.login-form",
+            rendererId: "supbrd-plug-user.renderer.login_form",
+            buildId: "user-renderers-1.3.0",
+            buildChecksum: "sha256:user-login-form-1-3-0",
+            abiVersion: "superboard.renderer.v1",
+            propsSchema: closedObject(["title"], { title: stringField }),
+            actionSlots: [
+              {
+                slot: "submit",
+                schemaId: "supbrd-core.schema.admin_session_start.v1",
+                audience: "superboard_front",
+              },
+            ],
+            dataSourceSlots: [],
+            supportedStates: [...requiredStates],
+          },
+          {
+            elementType: "user.profile-card",
+            rendererId: "supbrd-plug-user.renderer.profile_card",
+            buildId: "user-renderers-1.3.0",
+            buildChecksum: "sha256:user-profile-card-1-3-0",
+            abiVersion: "superboard.renderer.v1",
+            propsSchema: closedObject(["show_devices"], {
+              show_devices: booleanField,
+            }),
+            actionSlots: [
+              {
+                slot: "update",
+                schemaId: "supbrd-plug-user.schema.user_profile_update.v1",
+                audience: "superboard_front",
+              },
+            ],
+            dataSourceSlots: [
+              {
+                slot: "profile",
+                schemaId: "supbrd-plug-user.schema.user_profile.v1",
+                audience: "superboard_front",
+              },
+            ],
+            supportedStates: [...requiredStates],
+          },
+          {
+            elementType: "user.members-table",
+            rendererId: "supbrd-plug-user.renderer.members_table",
+            buildId: "user-renderers-1.3.0",
+            buildChecksum: "sha256:user-members-table-1-3-0",
+            abiVersion: "superboard.renderer.v1",
+            propsSchema: closedObject(["page_size"], {
+              page_size: { type: "integer", minimum: 10, maximum: 100 },
+            }),
+            actionSlots: [
+              {
+                slot: "suspend",
+                schemaId: "supbrd-plug-user.schema.user_member_suspend.v1",
+                audience: "superboard_front",
+              },
+            ],
+            dataSourceSlots: [
+              {
+                slot: "members",
+                schemaId: "supbrd-plug-user.schema.user_members_page.v1",
+                audience: "superboard_front",
+              },
+            ],
+            supportedStates: [...requiredStates],
+          },
+        ];
+
+        for (const renderer of rendererDescriptors) {
+          const capabilities = ["renderer.mount"];
+          if (renderer.actionSlots.length > 0) capabilities.push("action.bind");
+          if (renderer.dataSourceSlots.length > 0) {
+            capabilities.push("data_source.bind");
+          }
+          sealContribution(renderer, capabilities);
+        }
+
+        const commandDescriptors = [
+          {
+            commandId: "supbrd-plug-user.command.application_sign_in",
+            inputSchemaId: "supbrd-plug-user.schema.application_sign_in.v1",
+            outputSchemaId: "supbrd-plug-user.schema.application_session.v1",
+            audience: "application_client",
+            permission: "application.identity.sign_in",
+            failurePolicy: "fail_closed",
+          },
+          {
+            commandId: "supbrd-plug-user.command.update_profile",
+            inputSchemaId: "supbrd-plug-user.schema.user_profile_update.v1",
+            outputSchemaId: "supbrd-plug-user.schema.user_profile.v1",
+            audience: "superboard_front",
+            permission: "users.write",
+            failurePolicy: "fail_closed",
+          },
+          {
+            commandId: "supbrd-plug-user.command.suspend_member",
+            inputSchemaId: "supbrd-plug-user.schema.user_member_suspend.v1",
+            outputSchemaId: "supbrd-plug-user.schema.user_member.v1",
+            audience: "superboard_front",
+            permission: "users.write",
+            failurePolicy: "fail_closed",
+          },
+          {
+            commandId: "supbrd-plug-user.command.link_provider",
+            inputSchemaId: "supbrd-plug-user.schema.provider_link.v1",
+            outputSchemaId: "supbrd-plug-user.schema.provider.v1",
+            audience: "application_client",
+            permission: "application.identity.providers.write",
+            failurePolicy: "fail_closed",
+          },
+          {
+            commandId: "supbrd-plug-user.command.revoke_application_session",
+            inputSchemaId: "supbrd-plug-user.schema.session_revoke.v1",
+            outputSchemaId: "supbrd-plug-user.schema.application_session.v1",
+            audience: "application_client",
+            permission: "application.identity.sessions.write",
+            failurePolicy: "fail_closed",
+          },
+        ];
+
+        for (const command of commandDescriptors) {
+          sealContribution(command);
+        }
+
+        const dataSourceDescriptors = [
+          {
+            dataSourceId: "supbrd-plug-user.data_source.current_profile",
+            inputSchemaId: "supbrd-plug-user.schema.empty.v1",
+            outputSchemaId: "supbrd-plug-user.schema.user_profile.v1",
+            audience: "superboard_front",
+            permission: "users.read",
+            storeId: "supbrd-plug-user.store.user_directory",
+            consistency: "strong",
+            unavailableState: "unavailable",
+          },
+          {
+            dataSourceId: "supbrd-plug-user.data_source.members",
+            inputSchemaId: "supbrd-plug-user.schema.user_members_query.v1",
+            outputSchemaId: "supbrd-plug-user.schema.user_members_page.v1",
+            audience: "superboard_front",
+            permission: "users.read",
+            storeId: "supbrd-plug-user.store.user_directory",
+            consistency: "strong",
+            unavailableState: "unavailable",
+          },
+          {
+            dataSourceId: "supbrd-plug-user.data_source.linked_providers",
+            inputSchemaId: "supbrd-plug-user.schema.empty.v1",
+            outputSchemaId: "supbrd-plug-user.schema.providers.v1",
+            audience: "application_client",
+            permission: "application.identity.providers.read",
+            storeId: "supbrd-plug-user.store.user_credentials",
+            consistency: "strong",
+            unavailableState: "unavailable",
+          },
+          {
+            dataSourceId: "supbrd-plug-user.data_source.application_sessions",
+            inputSchemaId: "supbrd-plug-user.schema.empty.v1",
+            outputSchemaId: "supbrd-plug-user.schema.sessions.v1",
+            audience: "application_client",
+            permission: "application.identity.sessions.read",
+            storeId: "supbrd-plug-user.store.user_sessions",
+            consistency: "strong",
+            unavailableState: "unavailable",
+          },
+        ];
+
+        for (const source of dataSourceDescriptors) {
+          sealContribution(source);
+        }
+
+        const pluginManifest = {
+          schemaVersion: "1.0.0",
+          pluginId: "supbrd-plug-user",
+          pluginKind: "full",
+          pluginVersion: "1.3.0",
+          artifactId: "supbrd-plug-user@1.3.0",
+          artifactChecksum: "sha256:supbrd-plug-user-1-3-0",
+          publisher: "superboard",
+          execution: {
+            backend: "sandboxed",
+            worker: "none",
+            renderer: "native_bundle",
+          },
+          capabilities: [
+            "plugin.storage",
+            "identity.directory.read",
+            "identity.directory.write",
+            "identity.credentials.read",
+            "identity.credentials.write",
+            "identity.providers.read",
+            "identity.providers.write",
+            "identity.sessions.read",
+            "identity.sessions.write",
+            "identity.tokens.sign",
+            "renderer.register",
+          ],
+          resources: [
+            "USER_DIRECTORY_STORE",
+            "USER_CREDENTIALS_STORE",
+            "USER_SESSIONS_STORE",
+            "PLUGIN_PRIVATE_KV",
+            "SECRET:APPLICATION_JWT_SIGNING_KEY",
+          ],
+          settings: {
+            renderMode: "block_kit",
+            storage: "plugin_kv",
+            schema: settingsSchema,
+          },
+          stores: [
+            {
+              storeId: "supbrd-plug-user.store.user_directory",
+              kind: "d1",
+              authority: "supbrd-plug-user",
+              schemaVersion: "1",
+              migrations: ["0001_user_directory"],
+              availability: "required",
+              classification: "restricted",
+              encryption: "required",
+            },
+            {
+              storeId: "supbrd-plug-user.store.user_credentials",
+              kind: "d1",
+              authority: "supbrd-plug-user",
+              schemaVersion: "1",
+              migrations: ["0002_user_credentials_providers"],
+              availability: "required",
+              classification: "secret",
+              encryption: "required",
+            },
+            {
+              storeId: "supbrd-plug-user.store.user_sessions",
+              kind: "d1",
+              authority: "supbrd-plug-user",
+              schemaVersion: "1",
+              migrations: ["0003_application_sessions"],
+              availability: "required",
+              classification: "restricted",
+              encryption: "required",
+            },
+          ],
+          schemas: pluginSchemaDescriptors,
+          renderers: rendererDescriptors,
+          commands: commandDescriptors,
+          dataSources: dataSourceDescriptors,
+          failurePolicies: { writes: "fail_closed", reads: "unavailable" },
+        };
+
+        for (const store of pluginManifest.stores) {
+          sealContribution(store);
+        }
+
+        const manifestKeys = [
+          "schemaVersion",
+          "pluginId",
+          "pluginKind",
+          "pluginVersion",
+          "artifactId",
+          "artifactChecksum",
+          "publisher",
+          "execution",
+          "capabilities",
+          "resources",
+          "settings",
+          "stores",
+          "schemas",
+          "renderers",
+          "commands",
+          "dataSources",
+          "failurePolicies",
+        ];
+
+        const executionKeys = ["backend", "worker", "renderer"];
+        const settingsKeys = ["renderMode", "storage", "schema"];
+        const storeKeys = [
+          "storeId",
+          "kind",
+          "authority",
+          "schemaVersion",
+          "migrations",
+          "availability",
+          "classification",
+          "encryption",
+          "descriptorVersion",
+          "descriptorChecksum",
+        ];
+        const schemaDescriptorKeys = ["schemaId", "schema"];
+        const rendererKeys = [
+          "elementType",
+          "rendererId",
+          "buildId",
+          "buildChecksum",
+          "abiVersion",
+          "propsSchema",
+          "actionSlots",
+          "dataSourceSlots",
+          "supportedStates",
+          "capabilities",
+          "descriptorVersion",
+          "descriptorChecksum",
+        ];
+        const slotKeys = ["slot", "schemaId", "audience"];
+        const commandKeys = [
+          "commandId",
+          "inputSchemaId",
+          "outputSchemaId",
+          "audience",
+          "permission",
+          "failurePolicy",
+          "descriptorVersion",
+          "descriptorChecksum",
+        ];
+        const dataSourceKeys = [
+          "dataSourceId",
+          "inputSchemaId",
+          "outputSchemaId",
+          "audience",
+          "permission",
+          "storeId",
+          "consistency",
+          "unavailableState",
+          "descriptorVersion",
+          "descriptorChecksum",
+        ];
+        const failurePolicyKeys = ["writes", "reads"];
+        const expectedRendererMappings = {
+          "user.login-form": "supbrd-plug-user.renderer.login_form",
+          "user.profile-card": "supbrd-plug-user.renderer.profile_card",
+          "user.members-table": "supbrd-plug-user.renderer.members_table",
+        };
+        const expectedStoreIds = [
+          "supbrd-plug-user.store.user_directory",
+          "supbrd-plug-user.store.user_credentials",
+          "supbrd-plug-user.store.user_sessions",
+        ];
+        const expectedCommandIds = commandDescriptors.map(
+          (command) => command.commandId
+        );
+        const expectedDataSourceIds = dataSourceDescriptors.map(
+          (source) => source.dataSourceId
+        );
+        const pageKeys = [
+          "pageId",
+          "routePath",
+          "routeOwner",
+          "authoredBy",
+          "audience",
+          "authPolicy",
+          "permission",
+          "layoutId",
+          "element",
+        ];
+        const elementKeys = [
+          "instanceId",
+          "elementType",
+          "rendererId",
+          "props",
+          "actionBindings",
+          "dataSourceBindings",
+        ];
+
+        const coreContributions = [
+          {
+            commandId: "supbrd-core.command.establish_admin_session",
+            inputSchemaId: "supbrd-core.schema.admin_session_start.v1",
+            outputSchemaId: "supbrd-core.schema.admin_session.v1",
+            audience: "superboard_front",
+            permission: "allow",
+          },
+        ];
+
+        const pagePermissionPolicy = {
+          anonymous_only: ["allow"],
+          authenticated: ["users.read"],
+        };
+
+        function validateClosedValue(value, schema, path = "value") {
+          if (schema.type === "object") {
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+              return `${path} doit être un objet`;
+            }
+            const unknown = Object.keys(value).find(
+              (key) => !(key in schema.properties)
+            );
+            if (schema.additionalProperties === false && unknown) {
+              return `${path}.${unknown} est inconnu`;
+            }
+            const missing = schema.required.find((key) => !(key in value));
+            if (missing) return `${path}.${missing} est requis`;
+            for (const key of Object.keys(value)) {
+              const error = validateClosedValue(
+                value[key],
+                schema.properties[key],
+                `${path}.${key}`
+              );
+              if (error) return error;
+            }
+            return null;
+          }
+          if (schema.type === "boolean") {
+            return typeof value === "boolean"
+              ? null
+              : `${path} doit être boolean`;
+          }
+          if (schema.type === "integer") {
+            if (!Number.isInteger(value)) return `${path} doit être integer`;
+            if (schema.minimum !== undefined && value < schema.minimum) {
+              return `${path} doit être >= ${schema.minimum}`;
+            }
+            if (schema.maximum !== undefined && value > schema.maximum) {
+              return `${path} doit être <= ${schema.maximum}`;
+            }
+            return null;
+          }
+          if (schema.type === "string") {
+            if (typeof value !== "string") return `${path} doit être string`;
+            if (schema.enum && !schema.enum.includes(value)) {
+              return `${path} doit valoir ${schema.enum.join(" ou ")}`;
+            }
+            return null;
+          }
+          return `${path} utilise un type de schéma inconnu`;
+        }
+
+        function exactObjectErrors(value, allowedKeys, path) {
+          if (!value || typeof value !== "object" || Array.isArray(value)) {
+            return [`${path} doit être un objet fermé`];
+          }
+          const errors = [];
+          const unknown = Object.keys(value).find(
+            (key) => !allowedKeys.includes(key)
+          );
+          const missing = allowedKeys.find((key) => !(key in value));
+          if (unknown) errors.push(`${path}.${unknown} est inconnu`);
+          if (missing) errors.push(`${path}.${missing} est requis`);
+          return errors;
+        }
+
+        function stringArrayErrors(value, path, allowEmpty = false) {
+          if (!Array.isArray(value)) return [`${path} doit être un tableau`];
+          if (!allowEmpty && value.length === 0) {
+            return [`${path} ne peut pas être vide`];
+          }
+          if (value.some((item) => typeof item !== "string")) {
+            return [`${path} doit contenir uniquement des chaînes`];
+          }
+          return [];
+        }
+
+        function schemaDefinitionErrors(schema, path) {
+          if (!schema || typeof schema !== "object" || Array.isArray(schema)) {
+            return [`${path} doit être un schéma fermé`];
+          }
+          const allowedByType = {
+            object: ["type", "additionalProperties", "required", "properties"],
+            string: ["type", "enum"],
+            boolean: ["type"],
+            integer: ["type", "minimum", "maximum"],
+            array: ["type", "items"],
+          };
+          const allowed = allowedByType[schema.type];
+          if (!allowed) return [`${path}.type est inconnu`];
+          const errors = [];
+          const unknown = Object.keys(schema).find(
+            (key) => !allowed.includes(key)
+          );
+          if (unknown) errors.push(`${path}.${unknown} est inconnu`);
+          if (schema.type === "object") {
+            if (schema.additionalProperties !== false) {
+              errors.push(`${path}.additionalProperties doit valoir false`);
+            }
+            errors.push(
+              ...stringArrayErrors(schema.required, `${path}.required`, true)
+            );
+            if (
+              !schema.properties ||
+              typeof schema.properties !== "object" ||
+              Array.isArray(schema.properties)
+            ) {
+              errors.push(`${path}.properties doit être un objet`);
+            } else {
+              for (const requiredKey of Array.isArray(schema.required)
+                ? schema.required
+                : []) {
+                if (!(requiredKey in schema.properties)) {
+                  errors.push(`${path}.properties.${requiredKey} manque`);
+                }
+              }
+              for (const [key, childSchema] of Object.entries(
+                schema.properties
+              )) {
+                errors.push(
+                  ...schemaDefinitionErrors(
+                    childSchema,
+                    `${path}.properties.${key}`
+                  )
+                );
+              }
+            }
+          }
+          if (
+            schema.type === "string" &&
+            schema.enum !== undefined &&
+            (stringArrayErrors(schema.enum, `${path}.enum`).length > 0 ||
+              new Set(schema.enum).size !== schema.enum.length)
+          ) {
+            errors.push(`${path}.enum doit être un ensemble fermé de chaînes`);
+          }
+          if (
+            schema.type === "integer" &&
+            ((!Number.isInteger(schema.minimum) &&
+              schema.minimum !== undefined) ||
+              (!Number.isInteger(schema.maximum) &&
+                schema.maximum !== undefined) ||
+              (schema.minimum !== undefined &&
+                schema.maximum !== undefined &&
+                schema.minimum > schema.maximum))
+          ) {
+            errors.push(`${path} possède des bornes invalides`);
+          }
+          if (schema.type === "array") {
+            errors.push(
+              ...schemaDefinitionErrors(schema.items, `${path}.items`)
+            );
+          }
+          return errors;
+        }
+
+        function validatePluginManifest(candidate) {
+          const errors = [];
+          if (
+            !candidate ||
+            typeof candidate !== "object" ||
+            Array.isArray(candidate)
+          ) {
+            return ["manifest doit être un objet fermé"];
+          }
+          const unknown = Object.keys(candidate).find(
+            (key) => !manifestKeys.includes(key)
+          );
+          const missing = manifestKeys.find((key) => !(key in candidate));
+          if (unknown) errors.push(`manifest.${unknown} est inconnu`);
+          if (missing) errors.push(`manifest.${missing} est requis`);
+          const stringRootKeys = [
+            "schemaVersion",
+            "pluginId",
+            "pluginKind",
+            "pluginVersion",
+            "artifactId",
+            "artifactChecksum",
+            "publisher",
+          ];
+          if (
+            stringRootKeys.some((key) => typeof candidate[key] !== "string")
+          ) {
+            errors.push("les identifiants racine doivent être textuels");
+          }
+          if (
+            candidate.pluginId !== "supbrd-plug-user" ||
+            candidate.pluginKind !== "full"
+          ) {
+            errors.push("identité ou pluginKind invalide");
+          }
+          if (
+            candidate.execution?.backend !== "sandboxed" ||
+            candidate.execution?.worker !== "none" ||
+            !["native_bundle", "block_kit"].includes(
+              candidate.execution?.renderer
+            )
+          ) {
+            errors.push(
+              "axes d’exécution invalides pour un Plugin full EmDash"
+            );
+          }
+          errors.push(
+            ...exactObjectErrors(
+              candidate.execution,
+              executionKeys,
+              "execution"
+            ),
+            ...stringArrayErrors(candidate.capabilities, "capabilities"),
+            ...stringArrayErrors(candidate.resources, "resources"),
+            ...exactObjectErrors(candidate.settings, settingsKeys, "settings")
+          );
+          if (
+            !Array.isArray(candidate.capabilities) ||
+            !Array.isArray(candidate.resources) ||
+            representativeChecksum([...candidate.capabilities].sort()) !==
+              representativeChecksum([...pluginManifest.capabilities].sort()) ||
+            representativeChecksum([...candidate.resources].sort()) !==
+              representativeChecksum([...pluginManifest.resources].sort())
+          ) {
+            errors.push(
+              "capabilities ou resources diffèrent du contrat approuvé"
+            );
+          }
+          if (
+            candidate.settings?.renderMode !== "block_kit" ||
+            candidate.settings?.storage !== "plugin_kv" ||
+            candidate.settings?.schema?.additionalProperties !== false
+          ) {
+            errors.push("settings sandboxed non fermés ou hors Block Kit/KV");
+          }
+          errors.push(
+            ...schemaDefinitionErrors(
+              candidate.settings?.schema,
+              "settings.schema"
+            )
+          );
+          if (
+            JSON.stringify(canonicalize(candidate.settings)) !==
+            JSON.stringify(canonicalize(pluginManifest.settings))
+          ) {
+            errors.push("settings diffèrent du descriptor canonique");
+          }
+          if (
+            !Array.isArray(candidate.stores) ||
+            candidate.stores.length !== expectedStoreIds.length
+          ) {
+            errors.push(
+              "les trois Store Descriptors du domaine User sont requis"
+            );
+          }
+          for (const store of Array.isArray(candidate.stores)
+            ? candidate.stores
+            : []) {
+            if (!store || typeof store !== "object" || Array.isArray(store)) {
+              errors.push("store doit être un objet fermé");
+              continue;
+            }
+            errors.push(
+              ...exactObjectErrors(store, storeKeys, store.storeId || "store"),
+              ...stringArrayErrors(
+                store.migrations,
+                `${store.storeId || "store"}.migrations`
+              )
+            );
+            if (
+              !expectedStoreIds.includes(store.storeId) ||
+              store.kind !== "d1" ||
+              store.authority !== "supbrd-plug-user" ||
+              store.availability !== "required" ||
+              !["restricted", "secret"].includes(store.classification) ||
+              store.encryption !== "required" ||
+              typeof store.schemaVersion !== "string" ||
+              store.descriptorVersion !== "1.0.0" ||
+              typeof store.descriptorChecksum !== "string" ||
+              !contributionChecksumMatches(store)
+            ) {
+              errors.push(`${store.storeId || "store"} est hors contrat`);
+            }
+          }
+          const storeIds = Array.isArray(candidate.stores)
+            ? candidate.stores
+                .filter((store) => store && typeof store === "object")
+                .map((store) => store.storeId)
+            : [];
+          if (
+            new Set(storeIds).size !== storeIds.length ||
+            !expectedStoreIds.every((storeId) => storeIds.includes(storeId))
+          ) {
+            errors.push("les Store IDs doivent être uniques et exacts");
+          }
+          for (const expectedStore of pluginManifest.stores) {
+            const actualStore = (
+              Array.isArray(candidate.stores) ? candidate.stores : []
+            ).find((store) => store?.storeId === expectedStore.storeId);
+            if (
+              !actualStore ||
+              JSON.stringify(canonicalize(actualStore)) !==
+                JSON.stringify(canonicalize(expectedStore))
+            ) {
+              errors.push(
+                `${expectedStore.storeId} diffère du Store Descriptor canonique`
+              );
+            }
+          }
+
+          if (
+            !Array.isArray(candidate.schemas) ||
+            candidate.schemas.length !== pluginSchemaDescriptors.length
+          ) {
+            errors.push("le registre complet des schémas User est requis");
+          }
+          const schemaIds = [];
+          for (const descriptor of Array.isArray(candidate.schemas)
+            ? candidate.schemas
+            : []) {
+            if (
+              !descriptor ||
+              typeof descriptor !== "object" ||
+              Array.isArray(descriptor)
+            ) {
+              errors.push("schema descriptor doit être un objet fermé");
+              continue;
+            }
+            errors.push(
+              ...exactObjectErrors(
+                descriptor,
+                schemaDescriptorKeys,
+                descriptor.schemaId || "schema"
+              ),
+              ...schemaDefinitionErrors(
+                descriptor.schema,
+                descriptor.schemaId || "schema"
+              )
+            );
+            if (
+              typeof descriptor.schemaId !== "string" ||
+              !descriptor.schemaId.startsWith("supbrd-plug-user.schema.")
+            ) {
+              errors.push(
+                `${descriptor.schemaId || "schema"} sort du namespace`
+              );
+            } else {
+              schemaIds.push(descriptor.schemaId);
+            }
+          }
+          const expectedSchemaIds = pluginSchemaDescriptors.map(
+            (descriptor) => descriptor.schemaId
+          );
+          if (
+            new Set(schemaIds).size !== schemaIds.length ||
+            !expectedSchemaIds.every((schemaId) => schemaIds.includes(schemaId))
+          ) {
+            errors.push("les Schema IDs doivent être uniques et exacts");
+          }
+          const availableSchemaIds = new Set([
+            ...coreSchemaDescriptors.map((descriptor) => descriptor.schemaId),
+            ...schemaIds,
+          ]);
+          for (const expectedSchema of pluginSchemaDescriptors) {
+            const actualSchema = (
+              Array.isArray(candidate.schemas) ? candidate.schemas : []
+            ).find(
+              (descriptor) => descriptor?.schemaId === expectedSchema.schemaId
+            );
+            if (
+              !actualSchema ||
+              JSON.stringify(canonicalize(actualSchema)) !==
+                JSON.stringify(canonicalize(expectedSchema))
+            ) {
+              errors.push(
+                `${expectedSchema.schemaId} diffère du schéma canonique`
+              );
+            }
+          }
+          if (
+            !Array.isArray(candidate.renderers) ||
+            candidate.renderers.length !== 3
+          ) {
+            errors.push("trois Renderer Descriptors sont requis");
+          }
+          for (const renderer of Array.isArray(candidate.renderers)
+            ? candidate.renderers
+            : []) {
+            if (
+              !renderer ||
+              typeof renderer !== "object" ||
+              Array.isArray(renderer)
+            ) {
+              errors.push("renderer doit être un objet fermé");
+              continue;
+            }
+            errors.push(
+              ...exactObjectErrors(
+                renderer,
+                rendererKeys,
+                renderer.rendererId || "renderer"
+              ),
+              ...schemaDefinitionErrors(
+                renderer.propsSchema,
+                `${renderer.rendererId || "renderer"}.propsSchema`
+              ),
+              ...stringArrayErrors(
+                renderer.supportedStates,
+                `${renderer.rendererId || "renderer"}.supportedStates`
+              ),
+              ...stringArrayErrors(
+                renderer.capabilities,
+                `${renderer.rendererId || "renderer"}.capabilities`
+              )
+            );
+            if (
+              [
+                renderer.elementType,
+                renderer.rendererId,
+                renderer.buildId,
+                renderer.buildChecksum,
+                renderer.abiVersion,
+                renderer.descriptorVersion,
+                renderer.descriptorChecksum,
+              ].some((value) => typeof value !== "string") ||
+              typeof renderer.rendererId !== "string" ||
+              !renderer.rendererId.startsWith("supbrd-plug-user.renderer.") ||
+              !renderer.propsSchema ||
+              renderer.propsSchema.additionalProperties !== false ||
+              !Array.isArray(renderer.supportedStates) ||
+              !requiredStates.every((state) =>
+                renderer.supportedStates.includes(state)
+              )
+            ) {
+              errors.push(`${renderer.rendererId || "renderer"} est invalide`);
+            }
+            if (
+              !Array.isArray(renderer.capabilities) ||
+              !Array.isArray(renderer.actionSlots) ||
+              !Array.isArray(renderer.dataSourceSlots) ||
+              renderer.descriptorVersion !== "1.0.0" ||
+              !contributionChecksumMatches(renderer) ||
+              !renderer.capabilities.includes("renderer.mount") ||
+              (renderer.actionSlots.length > 0 &&
+                !renderer.capabilities.includes("action.bind")) ||
+              (renderer.dataSourceSlots.length > 0 &&
+                !renderer.capabilities.includes("data_source.bind"))
+            ) {
+              errors.push(
+                `${renderer.rendererId || "renderer"} possède une version, un checksum ou des capabilities invalides`
+              );
+            }
+            if (
+              Array.isArray(renderer.supportedStates) &&
+              (renderer.supportedStates.length !== requiredStates.length ||
+                renderer.supportedStates.some(
+                  (state) => !requiredStates.includes(state)
+                ))
+            ) {
+              errors.push(
+                `${renderer.rendererId} possède des états non fermés`
+              );
+            }
+            for (const [slotKind, slots] of [
+              ["actionSlots", renderer.actionSlots],
+              ["dataSourceSlots", renderer.dataSourceSlots],
+            ]) {
+              if (!Array.isArray(slots)) {
+                errors.push(
+                  `${renderer.rendererId}.${slotKind} doit être un tableau`
+                );
+                continue;
+              }
+              for (const slot of slots) {
+                if (!slot || typeof slot !== "object" || Array.isArray(slot)) {
+                  errors.push(
+                    `${renderer.rendererId}.${slotKind} contient un slot non objet`
+                  );
+                  continue;
+                }
+                errors.push(
+                  ...exactObjectErrors(
+                    slot,
+                    slotKeys,
+                    `${renderer.rendererId}.${slotKind}`
+                  )
+                );
+                if (
+                  typeof slot.slot !== "string" ||
+                  typeof slot.schemaId !== "string" ||
+                  slot.audience !== "superboard_front"
+                ) {
+                  errors.push(
+                    `${renderer.rendererId}.${slotKind} contient un slot invalide`
+                  );
+                }
+                if (!availableSchemaIds.has(slot.schemaId)) {
+                  errors.push(
+                    `${renderer.rendererId}.${slotKind} référence un schéma absent`
+                  );
+                }
+              }
+            }
+          }
+          const rendererAliases = Array.isArray(candidate.renderers)
+            ? candidate.renderers
+                .filter((renderer) => renderer && typeof renderer === "object")
+                .map((renderer) => renderer.elementType)
+            : [];
+          const rendererIds = Array.isArray(candidate.renderers)
+            ? candidate.renderers
+                .filter((renderer) => renderer && typeof renderer === "object")
+                .map((renderer) => renderer.rendererId)
+            : [];
+          if (
+            new Set(rendererAliases).size !== rendererAliases.length ||
+            new Set(rendererIds).size !== rendererIds.length ||
+            !Object.entries(expectedRendererMappings).every(
+              ([alias, rendererId]) =>
+                (Array.isArray(candidate.renderers)
+                  ? candidate.renderers
+                  : []
+                ).some(
+                  (renderer) =>
+                    renderer?.elementType === alias &&
+                    renderer?.rendererId === rendererId
+                )
+            )
+          ) {
+            errors.push(
+              "les trois aliases et Renderer IDs doivent être uniques et exacts"
+            );
+          }
+          for (const expectedRenderer of rendererDescriptors) {
+            const actualRenderer = (
+              Array.isArray(candidate.renderers) ? candidate.renderers : []
+            ).find(
+              (renderer) => renderer?.rendererId === expectedRenderer.rendererId
+            );
+            if (
+              !actualRenderer ||
+              JSON.stringify(canonicalize(actualRenderer)) !==
+                JSON.stringify(canonicalize(expectedRenderer))
+            ) {
+              errors.push(
+                `${expectedRenderer.rendererId} diffère du Renderer Descriptor canonique`
+              );
+            }
+          }
+          if (
+            !Array.isArray(candidate.commands) ||
+            candidate.commands.length !== expectedCommandIds.length
+          ) {
+            errors.push(
+              "le registre complet des Command Descriptors est requis"
+            );
+          }
+          for (const command of Array.isArray(candidate.commands)
+            ? candidate.commands
+            : []) {
+            if (
+              !command ||
+              typeof command !== "object" ||
+              Array.isArray(command)
+            ) {
+              errors.push("command doit être un objet fermé");
+              continue;
+            }
+            errors.push(
+              ...exactObjectErrors(
+                command,
+                commandKeys,
+                command.commandId || "command"
+              )
+            );
+            if (
+              typeof command.commandId !== "string" ||
+              !command.commandId.startsWith("supbrd-plug-user.command.")
+            ) {
+              errors.push(
+                `${command.commandId || "command"} sort du namespace`
+              );
+            }
+            if (
+              !["application_client", "superboard_front"].includes(
+                command.audience
+              ) ||
+              command.failurePolicy !== "fail_closed" ||
+              [
+                command.commandId,
+                command.inputSchemaId,
+                command.outputSchemaId,
+                command.permission,
+                command.descriptorVersion,
+                command.descriptorChecksum,
+              ].some((value) => typeof value !== "string")
+            ) {
+              errors.push(`${command.commandId || "command"} est hors contrat`);
+            }
+            if (
+              command.descriptorVersion !== "1.0.0" ||
+              !contributionChecksumMatches(command)
+            ) {
+              errors.push(
+                `${command.commandId || "command"} possède une version ou un checksum invalide`
+              );
+            }
+            for (const schemaId of [
+              command.inputSchemaId,
+              command.outputSchemaId,
+            ]) {
+              if (!availableSchemaIds.has(schemaId)) {
+                errors.push(
+                  `${command.commandId || "command"} référence ${schemaId || "un schéma"} absent`
+                );
+              }
+            }
+          }
+          const commandIds = Array.isArray(candidate.commands)
+            ? candidate.commands
+                .filter((command) => command && typeof command === "object")
+                .map((command) => command.commandId)
+            : [];
+          if (
+            new Set(commandIds).size !== commandIds.length ||
+            !expectedCommandIds.every((commandId) =>
+              commandIds.includes(commandId)
+            )
+          ) {
+            errors.push("les Command IDs doivent être uniques et exacts");
+          }
+          for (const expectedCommand of commandDescriptors) {
+            const actualCommand = (
+              Array.isArray(candidate.commands) ? candidate.commands : []
+            ).find(
+              (command) => command?.commandId === expectedCommand.commandId
+            );
+            if (
+              !actualCommand ||
+              JSON.stringify(canonicalize(actualCommand)) !==
+                JSON.stringify(canonicalize(expectedCommand))
+            ) {
+              errors.push(
+                `${expectedCommand.commandId} diffère du Command Descriptor canonique`
+              );
+            }
+          }
+          if (
+            !Array.isArray(candidate.dataSources) ||
+            candidate.dataSources.length !== expectedDataSourceIds.length
+          ) {
+            errors.push(
+              "le registre complet des Data Source Descriptors est requis"
+            );
+          }
+          for (const source of Array.isArray(candidate.dataSources)
+            ? candidate.dataSources
+            : []) {
+            if (
+              !source ||
+              typeof source !== "object" ||
+              Array.isArray(source)
+            ) {
+              errors.push("data_source doit être un objet fermé");
+              continue;
+            }
+            errors.push(
+              ...exactObjectErrors(
+                source,
+                dataSourceKeys,
+                source.dataSourceId || "data_source"
+              )
+            );
+            if (
+              typeof source.dataSourceId !== "string" ||
+              !source.dataSourceId.startsWith("supbrd-plug-user.data_source.")
+            ) {
+              errors.push(
+                `${source.dataSourceId || "data_source"} sort du namespace`
+              );
+            }
+            if (
+              !["superboard_front", "application_client"].includes(
+                source.audience
+              ) ||
+              !expectedStoreIds.includes(source.storeId) ||
+              source.consistency !== "strong" ||
+              source.unavailableState !== "unavailable" ||
+              [
+                source.dataSourceId,
+                source.inputSchemaId,
+                source.outputSchemaId,
+                source.permission,
+                source.descriptorVersion,
+                source.descriptorChecksum,
+              ].some((value) => typeof value !== "string")
+            ) {
+              errors.push(
+                `${source.dataSourceId || "data_source"} est hors contrat`
+              );
+            }
+            if (
+              source.descriptorVersion !== "1.0.0" ||
+              !contributionChecksumMatches(source)
+            ) {
+              errors.push(
+                `${source.dataSourceId || "data_source"} possède une version ou un checksum invalide`
+              );
+            }
+            for (const schemaId of [
+              source.inputSchemaId,
+              source.outputSchemaId,
+            ]) {
+              if (!availableSchemaIds.has(schemaId)) {
+                errors.push(
+                  `${source.dataSourceId || "data_source"} référence ${schemaId || "un schéma"} absent`
+                );
+              }
+            }
+          }
+          const dataSourceIds = Array.isArray(candidate.dataSources)
+            ? candidate.dataSources
+                .filter((source) => source && typeof source === "object")
+                .map((source) => source.dataSourceId)
+            : [];
+          if (
+            new Set(dataSourceIds).size !== dataSourceIds.length ||
+            !expectedDataSourceIds.every((dataSourceId) =>
+              dataSourceIds.includes(dataSourceId)
+            )
+          ) {
+            errors.push("les Data Source IDs doivent être uniques et exacts");
+          }
+          for (const expectedSource of dataSourceDescriptors) {
+            const actualSource = (
+              Array.isArray(candidate.dataSources) ? candidate.dataSources : []
+            ).find(
+              (source) => source?.dataSourceId === expectedSource.dataSourceId
+            );
+            if (
+              !actualSource ||
+              JSON.stringify(canonicalize(actualSource)) !==
+                JSON.stringify(canonicalize(expectedSource))
+            ) {
+              errors.push(
+                `${expectedSource.dataSourceId} diffère du Data Source Descriptor canonique`
+              );
+            }
+          }
+          errors.push(
+            ...exactObjectErrors(
+              candidate.failurePolicies,
+              failurePolicyKeys,
+              "failurePolicies"
+            )
+          );
+          if (
+            candidate.failurePolicies?.writes !== "fail_closed" ||
+            candidate.failurePolicies?.reads !== "unavailable"
+          ) {
+            errors.push("Failure Policies invalides");
+          }
+          if ("routes" in candidate || "finalRoutes" in candidate) {
+            errors.push(
+              "un Plugin full EmDash ne peut déclarer aucune route finale"
+            );
+          }
+          return errors;
+        }
+
+        function capabilityApprovalFor(manifest) {
+          return {
+            status: "approved",
+            artifactChecksum: manifest.artifactChecksum,
+            capabilitySetChecksum: representativeChecksum(
+              manifest.capabilities
+            ),
+            resourceSetChecksum: representativeChecksum(manifest.resources),
+          };
+        }
+
+        function capabilityApprovalMatches(state) {
+          const expected = capabilityApprovalFor(pluginManifest);
+          return Object.keys(expected).every(
+            (key) => state.plugin.capabilityApproval[key] === expected[key]
+          );
+        }
+
+        function previousActiveRelease() {
+          const payload = {
+            schemaVersion: "1.0.0",
+            instanceId: "vocostar",
+            releaseId: "front_release_000047",
+            draftSnapshotId: "draft_snapshot_000047",
+            pages: [],
+          };
+          const contentChecksum = representativeChecksum(payload);
+          const signature = signatureForRelease(
+            payload.instanceId,
+            payload.schemaVersion,
+            payload.releaseId,
+            contentChecksum
+          );
+          const receiptProof = {
+            id: "previous_release",
+            candidateId: "front_candidate_000047",
+            contentChecksum,
+            status: "passed",
+            level: "info",
+            message: "Previous Release Front verified.",
+          };
+          const validationReceipts = [
+            {
+              ...receiptProof,
+              receiptChecksum: representativeChecksum(receiptProof),
+            },
+          ];
+          const validationSetChecksum = representativeChecksum(
+            validationReceipts.map((receipt) => receipt.receiptChecksum)
+          );
+          const releaseApproval = {
+            operator: "superboard-operator",
+            candidateId: "front_candidate_000047",
+            releaseId: payload.releaseId,
+            draftSnapshotId: payload.draftSnapshotId,
+            contentChecksum,
+            signature,
+            validationSetChecksum,
+            previewStatus: "verified",
+          };
+          const draftSnapshot = {
+            snapshotId: payload.draftSnapshotId,
+            draftRevision: 0,
+            pluginManifestChecksum: null,
+            settingsChecksum: null,
+            effectiveSettings: null,
+            pages: [],
+          };
+          return {
+            releaseId: payload.releaseId,
+            status: "verified",
+            pageCount: 0,
+            pluginLockVersion: null,
+            draftSnapshotId: payload.draftSnapshotId,
+            contentChecksum,
+            signature,
+            validationSetChecksum,
+            approvalStatus: "verified",
+            validationReceipts,
+            releaseApproval,
+            draftSnapshot,
+            candidatePayload: clone(payload),
+          };
+        }
+
+        function createInitialState() {
+          return {
+            sequence: 0,
+            plugin: {
+              lifecycle: "available",
+              manifestStatus: "not_validated",
+              manifestChecksum: representativeChecksum(pluginManifest),
+              capabilityApproval: {
+                status: "missing",
+                artifactChecksum: null,
+                capabilitySetChecksum: null,
+                resourceSetChecksum: null,
+              },
+              storeStatus: "absent",
+              migrationStatus: "pending",
+              registryStatus: "empty",
+              registeredRenderers: [],
+              registeredCommands: [],
+              registeredDataSources: [],
+              ownedFinalRoutes: [],
+              lastManifestAttempt: "none",
+              lastManifestErrors: [],
+            },
+            settings: {
+              screen: "closed",
+              status: "missing",
+              values: null,
+              checksum: null,
+              storageScope: "supbrd-plug-user:*",
+              lastError: null,
+            },
+            frontDraft: {
+              revision: 0,
+              status: "empty",
+              pages: [],
+              selectedPageId: null,
+              validationErrors: [],
+            },
+            promotion: {
+              candidateId: "front_candidate_000048",
+              status: "not_started",
+              previewStatus: "not_run",
+              releaseId: "front_release_000048",
+              contentChecksum: null,
+              signature: null,
+              receipts: [],
+              validationSetChecksum: null,
+              approval: null,
+              draftSnapshot: null,
+              candidatePayload: null,
+            },
+            activeRelease: previousActiveRelease(),
+            activity: [
+              {
+                sequence: 0,
+                level: "info",
+                message: "Plugin disponible",
+                detail:
+                  "Aucune contribution, aucun réglage et aucune page ne sont actifs.",
+              },
+            ],
+          };
+        }
+
+        function record(state, level, message, detail) {
+          state.activity.push({
+            sequence: state.sequence,
+            level,
+            message,
+            detail,
+          });
+        }
+
+        function reject(state, message, detail) {
+          record(state, "error", message, detail);
+          return state;
+        }
+
+        function invalidatePromotion(state, reason) {
+          state.frontDraft.revision += 1;
+          state.frontDraft.status =
+            state.frontDraft.pages.length > 0 ? "changed" : "empty";
+          state.promotion = {
+            candidateId: "front_candidate_000048",
+            status: "not_started",
+            previewStatus: "not_run",
+            releaseId: "front_release_000048",
+            contentChecksum: null,
+            signature: null,
+            receipts: [],
+            validationSetChecksum: null,
+            approval: null,
+            draftSnapshot: null,
+            candidatePayload: null,
+          };
+          if (reason) {
+            record(state, "info", "Front Draft modifié", reason);
+          }
+        }
+
+        function registerContributions(state) {
+          state.plugin.registeredRenderers = pluginManifest.renderers.map(
+            (renderer) => renderer.rendererId
+          );
+          state.plugin.registeredCommands = pluginManifest.commands.map(
+            (command) => command.commandId
+          );
+          state.plugin.registeredDataSources = pluginManifest.dataSources.map(
+            (source) => source.dataSourceId
+          );
+          state.plugin.registryStatus = "registered_inactive";
+        }
+
+        function findRenderer(elementType) {
+          return pluginManifest.renderers.find(
+            (renderer) => renderer.elementType === elementType
+          );
+        }
+
+        function emdashPage({
+          pageId,
+          routePath,
+          audience,
+          authPolicy,
+          permission,
+          elementType,
+          props,
+          actionBindings,
+          dataSourceBindings,
+        }) {
+          const renderer = findRenderer(elementType);
+          return {
+            pageId,
+            routePath,
+            routeOwner: "emdash_presentation",
+            authoredBy: "superboard_operator",
+            audience,
+            authPolicy,
+            permission,
+            layoutId:
+              authPolicy === "anonymous_only"
+                ? "layout.superboard_public"
+                : "layout.superboard_admin_shell",
+            element: {
+              instanceId: `${pageId}.primary`,
+              elementType,
+              rendererId: renderer.rendererId,
+              props,
+              actionBindings,
+              dataSourceBindings,
+            },
+          };
+        }
+
+        function composeLoginPage(actionId) {
+          return emdashPage({
+            pageId: "page.superboard_login",
+            routePath: "/login",
+            audience: "superboard_front",
+            authPolicy: "anonymous_only",
+            permission: "allow",
+            elementType: "user.login-form",
+            props: { title: "Connexion opérateur" },
+            actionBindings: { submit: actionId },
+            dataSourceBindings: {},
+          });
+        }
+
+        function composeProfilePage() {
+          return emdashPage({
+            pageId: "page.user_profile",
+            routePath: "/app/profile",
+            audience: "superboard_front",
+            authPolicy: "authenticated",
+            permission: "users.read",
+            elementType: "user.profile-card",
+            props: { show_devices: true },
+            actionBindings: {
+              update: "supbrd-plug-user.command.update_profile",
+            },
+            dataSourceBindings: {
+              profile: "supbrd-plug-user.data_source.current_profile",
+            },
+          });
+        }
+
+        function composeMembersPage(extraProp = false) {
+          return emdashPage({
+            pageId: "page.user_members",
+            routePath: "/app/users",
+            audience: "superboard_front",
+            authPolicy: "authenticated",
+            permission: "users.read",
+            elementType: "user.members-table",
+            props: extraProp
+              ? { page_size: 25, secret_column: true }
+              : { page_size: 25 },
+            actionBindings: {
+              suspend: "supbrd-plug-user.command.suspend_member",
+            },
+            dataSourceBindings: {
+              members: "supbrd-plug-user.data_source.members",
+            },
+          });
+        }
+
+        function upsertPage(state, page) {
+          state.frontDraft.pages = state.frontDraft.pages.filter(
+            (candidate) => candidate.pageId !== page.pageId
+          );
+          state.frontDraft.pages.push(page);
+          state.frontDraft.selectedPageId = page.pageId;
+          invalidatePromotion(
+            state,
+            `${page.pageId} et sa route ${page.routePath} appartiennent à EmDash.`
+          );
+        }
+
+        function validatePage(page) {
+          const errors = [];
+          if (!page || typeof page !== "object" || Array.isArray(page)) {
+            return ["page doit être un objet fermé"];
+          }
+          errors.push(
+            ...exactObjectErrors(page, pageKeys, page.pageId || "page")
+          );
+          const pageStringKeys = pageKeys.filter((key) => key !== "element");
+          if (pageStringKeys.some((key) => typeof page[key] !== "string")) {
+            errors.push(`${page.pageId || "page"} contient un type invalide`);
+          }
+          if (page.routeOwner !== "emdash_presentation") {
+            errors.push(`${page.pageId} possède une route hors EmDash`);
+          }
+          if (
+            page.audience !== "superboard_front" ||
+            !["anonymous_only", "authenticated"].includes(page.authPolicy)
+          ) {
+            errors.push(
+              `${page.pageId} possède une audience ou auth policy inconnue`
+            );
+          }
+          if (
+            !pagePermissionPolicy[page.authPolicy]?.includes(page.permission)
+          ) {
+            errors.push(
+              `${page.pageId} possède une permission inconnue ou hors audience`
+            );
+          }
+          if (
+            !page.element ||
+            typeof page.element !== "object" ||
+            Array.isArray(page.element)
+          ) {
+            errors.push(`${page.pageId}.element doit être un objet fermé`);
+            return errors;
+          }
+          errors.push(
+            ...exactObjectErrors(
+              page.element,
+              elementKeys,
+              `${page.pageId}.element`
+            )
+          );
+          if (
+            [
+              page.element.instanceId,
+              page.element.elementType,
+              page.element.rendererId,
+            ].some((value) => typeof value !== "string") ||
+            !page.element.props ||
+            typeof page.element.props !== "object" ||
+            Array.isArray(page.element.props) ||
+            !page.element.actionBindings ||
+            typeof page.element.actionBindings !== "object" ||
+            Array.isArray(page.element.actionBindings) ||
+            !page.element.dataSourceBindings ||
+            typeof page.element.dataSourceBindings !== "object" ||
+            Array.isArray(page.element.dataSourceBindings)
+          ) {
+            errors.push(`${page.pageId}.element contient un type invalide`);
+            return errors;
+          }
+          const renderer = findRenderer(page.element.elementType);
+          if (!renderer || renderer.rendererId !== page.element.rendererId) {
+            errors.push(`${page.pageId} référence un renderer absent`);
+            return errors;
+          }
+          const propsError = validateClosedValue(
+            page.element.props,
+            renderer.propsSchema,
+            `${page.pageId}.props`
+          );
+          if (propsError) errors.push(propsError);
+
+          const allCommands = [
+            ...coreContributions,
+            ...pluginManifest.commands,
+          ];
+          const allowedActionSlots = renderer.actionSlots.map(
+            (slot) => slot.slot
+          );
+          const unknownActionBinding = Object.keys(
+            page.element.actionBindings
+          ).find((slot) => !allowedActionSlots.includes(slot));
+          if (unknownActionBinding) {
+            errors.push(
+              `${page.pageId}.${unknownActionBinding} action slot inconnu`
+            );
+          }
+          for (const slot of renderer.actionSlots) {
+            const commandId = page.element.actionBindings[slot.slot];
+            const command = allCommands.find(
+              (candidate) => candidate.commandId === commandId
+            );
+            if (!command) {
+              errors.push(`${page.pageId}.${slot.slot} action absente`);
+              continue;
+            }
+            if (
+              command.inputSchemaId !== slot.schemaId ||
+              command.audience !== page.audience ||
+              slot.audience !== page.audience ||
+              !schemaRegistry.some(
+                (descriptor) => descriptor.schemaId === command.inputSchemaId
+              )
+            ) {
+              errors.push(`${page.pageId}.${slot.slot} action incompatible`);
+            }
+          }
+          const allowedDataSourceSlots = renderer.dataSourceSlots.map(
+            (slot) => slot.slot
+          );
+          const unknownDataSourceBinding = Object.keys(
+            page.element.dataSourceBindings
+          ).find((slot) => !allowedDataSourceSlots.includes(slot));
+          if (unknownDataSourceBinding) {
+            errors.push(
+              `${page.pageId}.${unknownDataSourceBinding} data source slot inconnu`
+            );
+          }
+          for (const slot of renderer.dataSourceSlots) {
+            const sourceId = page.element.dataSourceBindings[slot.slot];
+            const source = pluginManifest.dataSources.find(
+              (candidate) => candidate.dataSourceId === sourceId
+            );
+            if (!source) {
+              errors.push(`${page.pageId}.${slot.slot} data source absente`);
+              continue;
+            }
+            if (
+              source.outputSchemaId !== slot.schemaId ||
+              source.audience !== page.audience ||
+              slot.audience !== page.audience ||
+              !schemaRegistry.some(
+                (descriptor) => descriptor.schemaId === source.outputSchemaId
+              )
+            ) {
+              errors.push(
+                `${page.pageId}.${slot.slot} data source incompatible`
+              );
+            }
+          }
+          return errors;
+        }
+
+        function pluginIsInstalled(state) {
+          return ["installed", "active"].includes(state.plugin.lifecycle);
+        }
+
+        function validateFrontDraft(state) {
+          const errors = [];
+          const pages = Array.isArray(state.frontDraft.pages)
+            ? state.frontDraft.pages
+            : [];
+          if (!Array.isArray(state.frontDraft.pages)) {
+            errors.push("frontDraft.pages doit être un tableau");
+          }
+          if (!pluginIsInstalled(state)) {
+            errors.push("supbrd-plug-user doit être installed");
+          }
+          if (state.settings.status !== "valid") {
+            errors.push("les réglages EmDash requis ne sont pas valides");
+          }
+          if (state.plugin.ownedFinalRoutes.length > 0) {
+            errors.push("le plugin possède une route finale interdite");
+          }
+          const requiredPages = [
+            "page.superboard_login",
+            "page.user_profile",
+            "page.user_members",
+          ];
+          for (const pageId of requiredPages) {
+            if (
+              !pages.some(
+                (page) =>
+                  page &&
+                  typeof page === "object" &&
+                  !Array.isArray(page) &&
+                  page.pageId === pageId
+              )
+            ) {
+              errors.push(`${pageId} manque au Front Draft`);
+            }
+          }
+          const paths = new Set();
+          for (const page of pages) {
+            if (!page || typeof page !== "object" || Array.isArray(page)) {
+              errors.push(...validatePage(page));
+              continue;
+            }
+            if (typeof page.routePath !== "string") {
+              errors.push(
+                `${page.pageId || "page"}.routePath doit être string`
+              );
+              errors.push(...validatePage(page));
+              continue;
+            }
+            const normalized = page.routePath.replace(/\/+$/, "") || "/";
+            if (paths.has(normalized)) {
+              errors.push(`collision de route: ${page.routePath}`);
+            }
+            paths.add(normalized);
+            errors.push(...validatePage(page));
+          }
+          return errors;
+        }
+
+        function captureDraftSnapshot(state) {
+          return {
+            snapshotId: `draft_snapshot_000048_r${state.frontDraft.revision}`,
+            draftRevision: state.frontDraft.revision,
+            pluginManifestChecksum: state.plugin.manifestChecksum,
+            settingsChecksum: state.settings.checksum,
+            effectiveSettings: clone(state.settings.values),
+            pages: clone(state.frontDraft.pages),
+          };
+        }
+
+        function releasePayloadFromSnapshot(state, snapshot) {
+          return {
+            schemaVersion: "1.0.0",
+            instanceId: "vocostar",
+            releaseId: state.promotion.releaseId,
+            draftSnapshotId: snapshot.snapshotId,
+            draftRevision: snapshot.draftRevision,
+            pluginLock: [
+              {
+                pluginId: pluginManifest.pluginId,
+                pluginVersion: pluginManifest.pluginVersion,
+                artifactChecksum: pluginManifest.artifactChecksum,
+                manifestChecksum: snapshot.pluginManifestChecksum,
+              },
+            ],
+            settingsChecksum: snapshot.settingsChecksum,
+            effectiveSettings: snapshot.effectiveSettings,
+            pages: snapshot.pages,
+          };
+        }
+
+        function signatureForRelease(
+          instanceId,
+          schemaVersion,
+          releaseId,
+          contentChecksum
+        ) {
+          return `ES256.prototype.${representativeChecksum({
+            instanceId,
+            schemaVersion,
+            releaseId,
+            contentChecksum,
+          }).slice(-40)}`;
+        }
+
+        function releaseSignatureFor(state, contentChecksum) {
+          return signatureForRelease(
+            "vocostar",
+            "1.0.0",
+            state.promotion.releaseId,
+            contentChecksum
+          );
+        }
+
+        function validationReceipt(state, id, passed, message) {
+          const proof = {
+            id,
+            candidateId: state.promotion.candidateId,
+            contentChecksum: state.promotion.contentChecksum,
+            status: passed ? "passed" : "failed",
+            level: passed ? "info" : "error",
+            message,
+          };
+          return { ...proof, receiptChecksum: representativeChecksum(proof) };
+        }
+
+        function compileCandidate(state) {
+          const errors = validateFrontDraft(state);
+          const manifestErrors = validatePluginManifest(pluginManifest);
+          errors.push(...manifestErrors);
+          state.frontDraft.validationErrors = errors;
+          state.promotion.draftSnapshot = captureDraftSnapshot(state);
+          state.promotion.candidatePayload = releasePayloadFromSnapshot(
+            state,
+            state.promotion.draftSnapshot
+          );
+          state.promotion.contentChecksum = representativeChecksum(
+            state.promotion.candidatePayload
+          );
+          state.promotion.signature = releaseSignatureFor(
+            state,
+            state.promotion.contentChecksum
+          );
+          const integrityPassed =
+            state.promotion.contentChecksum ===
+              representativeChecksum(state.promotion.candidatePayload) &&
+            state.promotion.signature ===
+              releaseSignatureFor(state, state.promotion.contentChecksum);
+          const schemaRegistryPassed =
+            manifestErrors.length === 0 &&
+            pluginManifest.schemas.every(
+              (descriptor) =>
+                schemaDefinitionErrors(descriptor.schema, descriptor.schemaId)
+                  .length === 0
+            );
+          const checks = [
+            [
+              "plugin_manifest",
+              state.plugin.manifestStatus === "valid",
+              "Plugin manifest fermé et exact.",
+            ],
+            [
+              "registry",
+              state.plugin.registryStatus === "registered_inactive",
+              "Renderers, commands et data sources sont résolus.",
+            ],
+            [
+              "schema_registry",
+              schemaRegistryPassed,
+              "Tous les schémas fermés référencés sont enregistrés.",
+            ],
+            [
+              "settings",
+              state.settings.status === "valid",
+              "Réglages Block Kit/KV complets et checksumés.",
+            ],
+            [
+              "references",
+              !errors.some(
+                (error) =>
+                  error.includes("absente") ||
+                  error.includes("incompatible") ||
+                  error.includes("props")
+              ),
+              "Schémas et bindings sont compatibles.",
+            ],
+            [
+              "route_ownership",
+              state.plugin.ownedFinalRoutes.length === 0 &&
+                state.frontDraft.pages.every(
+                  (page) => page.routeOwner === "emdash_presentation"
+                ),
+              "Toutes les routes finales appartiennent à EmDash.",
+            ],
+            [
+              "front_draft",
+              errors.length === 0,
+              "Les trois pages requises sont complètes.",
+            ],
+            [
+              "integrity",
+              integrityPassed,
+              "Canonical payload, checksum et signature sont liés.",
+            ],
+          ];
+          state.promotion.receipts = checks.map(([id, passed, message]) =>
+            validationReceipt(
+              state,
+              id,
+              passed,
+              passed ? message : errors.join("; ") || message
+            )
+          );
+          state.promotion.validationSetChecksum = representativeChecksum(
+            state.promotion.receipts.map((receipt) => receipt.receiptChecksum)
+          );
+          if (errors.length > 0) {
+            state.promotion.status = "validation_failed";
+            return errors;
+          }
+          state.promotion.status = "validated";
+          return [];
+        }
+
+        function approvalFor(state) {
+          return {
+            operator: "superboard-operator",
+            candidateId: state.promotion.candidateId,
+            releaseId: state.promotion.releaseId,
+            draftSnapshotId: state.promotion.draftSnapshot?.snapshotId,
+            contentChecksum: state.promotion.contentChecksum,
+            signature: state.promotion.signature,
+            validationSetChecksum: state.promotion.validationSetChecksum,
+            previewStatus: state.promotion.previewStatus,
+          };
+        }
+
+        function approvalMatches(state) {
+          if (!state.promotion.approval) return false;
+          const expected = approvalFor(state);
+          return Object.keys(expected).every(
+            (key) => state.promotion.approval[key] === expected[key]
+          );
+        }
+
+        function transition(currentState, event) {
+          if (event.type === "RESET") return createInitialState();
+          const state = clone(currentState);
+          state.sequence += 1;
+
+          switch (event.type) {
+            case "STAGE_PLUGIN": {
+              const errors = validatePluginManifest(pluginManifest);
+              if (errors.length > 0) {
+                state.plugin.manifestStatus = "invalid";
+                return reject(state, "Manifest refusé", errors.join("; "));
+              }
+              state.plugin.lifecycle = "staged";
+              state.plugin.manifestStatus = "valid";
+              record(
+                state,
+                "success",
+                "Plugin staged",
+                "Manifest full/sandboxed/worker none validé avec trois renderers namespacés."
+              );
+              break;
+            }
+
+            case "APPROVE_CAPABILITIES": {
+              if (state.plugin.manifestStatus !== "valid") {
+                return reject(
+                  state,
+                  "Approval refusée",
+                  "Le manifest doit être valid avant consentement."
+                );
+              }
+              state.plugin.capabilityApproval =
+                capabilityApprovalFor(pluginManifest);
+              record(
+                state,
+                "success",
+                "Capabilities approuvées",
+                "Approval liée à l’artefact, aux capabilities et aux resources exactes."
+              );
+              break;
+            }
+
+            case "INSTALL_PLUGIN": {
+              if (
+                state.plugin.lifecycle !== "staged" ||
+                !capabilityApprovalMatches(state)
+              ) {
+                return reject(
+                  state,
+                  "Installation refusée",
+                  "Le plugin doit être staged avec une Capability Approval exacte."
+                );
+              }
+              state.plugin.lifecycle = "installed";
+              state.plugin.storeStatus = "ready";
+              state.plugin.migrationStatus = "applied";
+              registerContributions(state);
+              record(
+                state,
+                "success",
+                "Plugin installé",
+                "Stores directory/credentials/sessions, migrations, réglages Block Kit et registres inactifs sont prêts; aucun Worker n’existe."
+              );
+              break;
+            }
+
+            case "OPEN_SETTINGS": {
+              if (!pluginIsInstalled(state)) {
+                return reject(
+                  state,
+                  "Réglages indisponibles",
+                  "Installer le plugin avant d’ouvrir ses réglages."
+                );
+              }
+              state.settings.screen = "open";
+              record(
+                state,
+                "success",
+                "Réglages ouverts dans EmDash Admin",
+                "Block Kit rend le schéma; les valeurs seront stockées dans le KV privé du plugin."
+              );
+              break;
+            }
+
+            case "SAVE_VALID_SETTINGS": {
+              if (state.settings.screen !== "open") {
+                return reject(
+                  state,
+                  "Sauvegarde refusée",
+                  "Ouvrir d’abord les réglages EmDash Admin."
+                );
+              }
+              const values = {
+                mfa_policy: "required",
+                allow_anonymous_upgrade: true,
+                max_active_sessions: 5,
+              };
+              const error = validateClosedValue(
+                values,
+                settingsSchema,
+                "settings"
+              );
+              if (error) return reject(state, "Réglages invalides", error);
+              state.settings.status = "valid";
+              state.settings.values = values;
+              state.settings.checksum = representativeChecksum(values);
+              state.settings.lastError = null;
+              invalidatePromotion(
+                state,
+                "Les effective settings ont changé; tout candidate antérieur est invalide."
+              );
+              record(
+                state,
+                "success",
+                "Réglages sauvegardés",
+                "Valeurs non secrètes checksumées dans le KV privé supbrd-plug-user:*."
+              );
+              break;
+            }
+
+            case "SAVE_ALTERNATE_SETTINGS": {
+              if (state.settings.screen !== "open") {
+                return reject(
+                  state,
+                  "Sauvegarde refusée",
+                  "Ouvrir d’abord les réglages EmDash Admin."
+                );
+              }
+              const values = {
+                mfa_policy: "optional",
+                allow_anonymous_upgrade: false,
+                max_active_sessions: 3,
+              };
+              const error = validateClosedValue(
+                values,
+                settingsSchema,
+                "settings"
+              );
+              if (error) return reject(state, "Réglages invalides", error);
+              state.settings.status = "valid";
+              state.settings.values = values;
+              state.settings.checksum = representativeChecksum(values);
+              invalidatePromotion(
+                state,
+                "Modification postérieure aux preuves: preview et Release Approval sont annulées."
+              );
+              record(
+                state,
+                "success",
+                "Réglages alternatifs sauvegardés",
+                "Le Front Draft exige une nouvelle compilation."
+              );
+              break;
+            }
+
+            case "SAVE_SECRET_SETTING": {
+              const values = {
+                mfa_policy: "required",
+                allow_anonymous_upgrade: true,
+                max_active_sessions: 5,
+                jwt_private_key: "secret-interdit",
+              };
+              const error = validateClosedValue(
+                values,
+                settingsSchema,
+                "settings"
+              );
+              state.settings.status = "invalid";
+              state.settings.lastError = error;
+              return reject(
+                state,
+                "Secret refusé dans les réglages",
+                `${error}. Les secrets restent dans le gestionnaire du déploiement.`
+              );
+            }
+
+            case "COMPOSE_LOGIN_PAGE":
+              if (!pluginIsInstalled(state)) {
+                return reject(
+                  state,
+                  "Composition refusée",
+                  "Installer le plugin avant de référencer son renderer."
+                );
+              }
+              upsertPage(
+                state,
+                composeLoginPage("supbrd-core.command.establish_admin_session")
+              );
+              break;
+
+            case "COMPOSE_WRONG_LOGIN_ACTION":
+              if (!pluginIsInstalled(state)) {
+                return reject(
+                  state,
+                  "Composition refusée",
+                  "Installer le plugin avant de référencer son renderer."
+                );
+              }
+              upsertPage(
+                state,
+                composeLoginPage("supbrd-plug-user.command.application_sign_in")
+              );
+              break;
+
+            case "COMPOSE_PROFILE_PAGE":
+              if (!pluginIsInstalled(state)) {
+                return reject(
+                  state,
+                  "Composition refusée",
+                  "Installer le plugin avant de référencer son renderer."
+                );
+              }
+              upsertPage(state, composeProfilePage());
+              break;
+
+            case "COMPOSE_MEMBERS_PAGE":
+              if (!pluginIsInstalled(state)) {
+                return reject(
+                  state,
+                  "Composition refusée",
+                  "Installer le plugin avant de référencer son renderer."
+                );
+              }
+              upsertPage(state, composeMembersPage(false));
+              break;
+
+            case "COMPOSE_MEMBERS_UNKNOWN_PROP":
+              if (!pluginIsInstalled(state)) {
+                return reject(
+                  state,
+                  "Composition refusée",
+                  "Installer le plugin avant de référencer son renderer."
+                );
+              }
+              upsertPage(state, composeMembersPage(true));
+              break;
+
+            case "PLUGIN_DECLARE_FINAL_ROUTE": {
+              const maliciousManifest = clone(pluginManifest);
+              maliciousManifest.finalRoutes = ["/users-owned-by-plugin"];
+              const errors = validatePluginManifest(maliciousManifest);
+              state.plugin.lastManifestAttempt = "rejected";
+              state.plugin.lastManifestErrors = errors;
+              return reject(
+                state,
+                "Route plugin refusée",
+                `${errors.join("; ")}. Le manifest installé et le Front Draft restent inchangés.`
+              );
+            }
+
+            case "PLUGIN_ADD_UNKNOWN_RENDERER_FIELD": {
+              const maliciousManifest = clone(pluginManifest);
+              maliciousManifest.renderers[0].unexpected = true;
+              const errors = validatePluginManifest(maliciousManifest);
+              state.plugin.lastManifestAttempt = "rejected";
+              state.plugin.lastManifestErrors = errors;
+              return reject(
+                state,
+                "Renderer Descriptor refusé",
+                `${errors.join("; ")}. Le manifest installé reste inchangé.`
+              );
+            }
+
+            case "PLUGIN_ADD_NULL_COMMAND": {
+              const maliciousManifest = clone(pluginManifest);
+              maliciousManifest.commands[0] = null;
+              const errors = validatePluginManifest(maliciousManifest);
+              state.plugin.lastManifestAttempt = "rejected";
+              state.plugin.lastManifestErrors = errors;
+              return reject(
+                state,
+                "Command Descriptor refusé",
+                `${errors.join("; ")}. Le validateur retourne des erreurs sans exception.`
+              );
+            }
+
+            case "PLUGIN_REMOVE_SCHEMA_DEFINITION": {
+              const maliciousManifest = clone(pluginManifest);
+              maliciousManifest.schemas = maliciousManifest.schemas.filter(
+                (descriptor) =>
+                  descriptor.schemaId !==
+                  "supbrd-plug-user.schema.user_profile.v1"
+              );
+              const errors = validatePluginManifest(maliciousManifest);
+              state.plugin.lastManifestAttempt = "rejected";
+              state.plugin.lastManifestErrors = errors;
+              return reject(
+                state,
+                "Schéma référencé absent",
+                `${errors.join("; ")}. Commands, sources et slots ne peuvent jamais référencer un ID orphelin.`
+              );
+            }
+
+            case "COMPILE_RELEASE": {
+              const errors = compileCandidate(state);
+              if (errors.length > 0) {
+                return reject(state, "Compilation bloquée", errors.join("; "));
+              }
+              record(
+                state,
+                "success",
+                "Front Release Candidate validé",
+                "Huit receipts lient schémas, registres, settings, pages, routes et payload exact."
+              );
+              break;
+            }
+
+            case "PREVIEW_RELEASE":
+              if (state.promotion.status !== "validated") {
+                return reject(
+                  state,
+                  "Preview refusée",
+                  "Compiler un candidate valide avant preview."
+                );
+              }
+              state.promotion.previewStatus = "verified";
+              state.promotion.status = "previewed";
+              record(
+                state,
+                "success",
+                "Preview exacte vérifiée",
+                "Les trois pages utilisent le payload et les builds qui seront activés."
+              );
+              break;
+
+            case "APPROVE_RELEASE":
+              if (
+                state.promotion.status !== "previewed" ||
+                state.promotion.previewStatus !== "verified"
+              ) {
+                return reject(
+                  state,
+                  "Approval refusée",
+                  "La preview exacte doit être vérifiée."
+                );
+              }
+              state.promotion.status = "approved";
+              state.promotion.approval = approvalFor(state);
+              record(
+                state,
+                "success",
+                "Release Approval enregistrée",
+                "L’Opérateur approuve le checksum, la signature et les receipts exacts."
+              );
+              break;
+
+            case "ACTIVATE_RELEASE": {
+              const candidatePayload = state.promotion.candidatePayload;
+              const currentPayloadChecksum = candidatePayload
+                ? representativeChecksum(candidatePayload)
+                : null;
+              const currentSignature = currentPayloadChecksum
+                ? releaseSignatureFor(state, currentPayloadChecksum)
+                : null;
+              const currentValidationSetChecksum = representativeChecksum(
+                state.promotion.receipts.map(
+                  (receipt) => receipt.receiptChecksum
+                )
+              );
+              const proofsMatch =
+                candidatePayload !== null &&
+                state.promotion.draftSnapshot !== null &&
+                state.promotion.status === "approved" &&
+                state.promotion.previewStatus === "verified" &&
+                state.promotion.contentChecksum === currentPayloadChecksum &&
+                state.promotion.signature === currentSignature &&
+                state.promotion.validationSetChecksum ===
+                  currentValidationSetChecksum &&
+                approvalMatches(state) &&
+                state.promotion.receipts.every(
+                  (receipt) =>
+                    receipt.status === "passed" &&
+                    receipt.candidateId === state.promotion.candidateId &&
+                    receipt.contentChecksum === currentPayloadChecksum
+                );
+              if (!proofsMatch) {
+                return reject(
+                  state,
+                  "Activation refusée",
+                  "Candidate, settings, payload, preview, receipts ou approval ne correspondent plus."
+                );
+              }
+              state.promotion.status = "activated";
+              state.activeRelease = {
+                releaseId: state.promotion.releaseId,
+                status: "verified",
+                pageCount: candidatePayload.pages.length,
+                pluginLockVersion: pluginManifest.pluginVersion,
+                draftSnapshotId: state.promotion.draftSnapshot.snapshotId,
+                contentChecksum: currentPayloadChecksum,
+                signature: currentSignature,
+                validationSetChecksum: currentValidationSetChecksum,
+                approvalStatus: "verified",
+                validationReceipts: clone(state.promotion.receipts),
+                releaseApproval: clone(state.promotion.approval),
+                draftSnapshot: clone(state.promotion.draftSnapshot),
+                candidatePayload: clone(candidatePayload),
+              };
+              state.plugin.lifecycle = "active";
+              state.plugin.registryStatus = "active_in_release";
+              record(
+                state,
+                "success",
+                "Release Front activée",
+                "Les trois pages deviennent actives ensemble; le plugin possède toujours zéro route finale."
+              );
+              break;
+            }
+
+            default:
+              return reject(state, "Événement inconnu", event.type);
+          }
+          return state;
+        }
+
+        return {
+          createInitialState,
+          pluginManifest,
+          transition,
+        };
+      })();
+
+      // Coque jetable. Elle seule connaît le DOM.
+      (() => {
+        const actions = [
+          { type: "STAGE_PLUGIN", label: "Stager le plugin", primary: true },
+          { type: "APPROVE_CAPABILITIES", label: "Approuver les capabilities" },
+          { type: "INSTALL_PLUGIN", label: "Installer le plugin" },
+          { type: "OPEN_SETTINGS", label: "Ouvrir les réglages" },
+          { type: "SAVE_VALID_SETTINGS", label: "Sauvegarder les réglages" },
+          { type: "SAVE_ALTERNATE_SETTINGS", label: "Modifier les réglages" },
+          {
+            type: "SAVE_SECRET_SETTING",
+            label: "Ajouter une clé privée",
+            danger: true,
+          },
+          { type: "COMPOSE_LOGIN_PAGE", label: "Composer /login" },
+          { type: "COMPOSE_PROFILE_PAGE", label: "Composer /app/profile" },
+          { type: "COMPOSE_MEMBERS_PAGE", label: "Composer /app/users" },
+          {
+            type: "COMPOSE_WRONG_LOGIN_ACTION",
+            label: "Lier le login applicatif",
+            danger: true,
+          },
+          {
+            type: "COMPOSE_MEMBERS_UNKNOWN_PROP",
+            label: "Ajouter secret_column",
+            danger: true,
+          },
+          {
+            type: "PLUGIN_DECLARE_FINAL_ROUTE",
+            label: "Faire déclarer /users au plugin",
+            danger: true,
+          },
+          {
+            type: "PLUGIN_ADD_UNKNOWN_RENDERER_FIELD",
+            label: "Ajouter renderer.unexpected",
+            danger: true,
+          },
+          {
+            type: "PLUGIN_ADD_NULL_COMMAND",
+            label: "Remplacer une command par null",
+            danger: true,
+          },
+          {
+            type: "PLUGIN_REMOVE_SCHEMA_DEFINITION",
+            label: "Retirer le schéma user_profile",
+            danger: true,
+          },
+          { type: "COMPILE_RELEASE", label: "Compiler la Release Front" },
+          { type: "PREVIEW_RELEASE", label: "Prévisualiser le candidate" },
+          { type: "APPROVE_RELEASE", label: "Approuver la release" },
+          { type: "ACTIVATE_RELEASE", label: "Activer la release" },
+          { type: "RESET", label: "Réinitialiser" },
+        ];
+
+        const installSteps = [
+          ["STAGE_PLUGIN", "Valider le SuperBoard Plugin Manifest fermé"],
+          [
+            "APPROVE_CAPABILITIES",
+            "Approuver artefact, capabilities et resources",
+          ],
+          [
+            "INSTALL_PLUGIN",
+            "Installer Store, migration, settings et registres inactifs",
+          ],
+        ];
+
+        const settingsSteps = [
+          ["OPEN_SETTINGS", "Ouvrir le formulaire Block Kit dans EmDash Admin"],
+          [
+            "SAVE_VALID_SETTINGS",
+            "Sauvegarder les valeurs non secrètes dans le KV privé",
+          ],
+        ];
+
+        const compositionSteps = [
+          [
+            "COMPOSE_LOGIN_PAGE",
+            "Composer /login avec l’action core opérateur",
+          ],
+          ["COMPOSE_PROFILE_PAGE", "Composer /app/profile"],
+          ["COMPOSE_MEMBERS_PAGE", "Composer /app/users"],
+        ];
+
+        const releaseSteps = [
+          ["COMPILE_RELEASE", "Compiler et produire huit Validation Receipts"],
+          ["PREVIEW_RELEASE", "Prévisualiser le candidate exact"],
+          ["APPROVE_RELEASE", "Lier la Release Approval aux preuves"],
+          ["ACTIVATE_RELEASE", "Activer atomiquement les trois pages"],
+        ];
+
+        const procedures = [
+          {
+            id: "happy",
+            label: "Chemin complet",
+            description:
+              "Installez le plugin, configurez-le, composez trois pages EmDash puis activez une Release Front sans route appartenant au plugin.",
+            steps: [
+              ...installSteps,
+              ...settingsSteps,
+              ...compositionSteps,
+              ...releaseSteps,
+            ],
+          },
+          {
+            id: "settings",
+            label: "Réglages Admin",
+            description:
+              "Ouvrez les settings Block Kit, tentez d’y placer une clé privée, puis sauvegardez uniquement les valeurs fermées autorisées.",
+            steps: [
+              ...installSteps,
+              ["OPEN_SETTINGS", "Ouvrir les réglages EmDash Admin"],
+              ["SAVE_SECRET_SETTING", "Tenter de persister jwt_private_key"],
+              ["SAVE_VALID_SETTINGS", "Sauvegarder le schéma valide"],
+            ],
+          },
+          {
+            id: "registry",
+            label: "Registre typé",
+            description:
+              "Installez le plugin et observez la traduction des aliases user.* vers les trois Renderer Descriptors canoniques, sans activation implicite.",
+            steps: [...installSteps],
+          },
+          {
+            id: "ownership",
+            label: "Propriété des routes",
+            description:
+              "Composez les trois routes comme Données EmDash, puis tentez de faire déclarer une route finale par le plugin.",
+            steps: [
+              ...installSteps,
+              ...settingsSteps,
+              ...compositionSteps,
+              [
+                "PLUGIN_DECLARE_FINAL_ROUTE",
+                "Ajouter finalRoutes au manifest plugin",
+              ],
+            ],
+          },
+          {
+            id: "wrong-action",
+            label: "Action incompatible",
+            description:
+              "Liez au login opérateur l’action application_sign_in de mauvaise audience et de mauvais schéma; la compilation doit fermer.",
+            steps: [
+              ...installSteps,
+              ...settingsSteps,
+              [
+                "COMPOSE_WRONG_LOGIN_ACTION",
+                "Composer /login avec application_sign_in",
+              ],
+              ["COMPOSE_PROFILE_PAGE", "Composer /app/profile"],
+              ["COMPOSE_MEMBERS_PAGE", "Composer /app/users"],
+              ["COMPILE_RELEASE", "Compiler le Front Draft incompatible"],
+            ],
+          },
+          {
+            id: "missing-settings",
+            label: "Réglages manquants",
+            description:
+              "Installez et composez toutes les pages sans enregistrer les effective settings; le gate settings doit bloquer.",
+            steps: [
+              ...installSteps,
+              ...compositionSteps,
+              ["COMPILE_RELEASE", "Compiler sans réglages valides"],
+            ],
+          },
+          {
+            id: "closed-props",
+            label: "Props fermées",
+            description:
+              "Ajoutez secret_column aux props de members-table; le schéma fermé du Renderer Descriptor doit bloquer la compilation.",
+            steps: [
+              ...installSteps,
+              ...settingsSteps,
+              ["COMPOSE_LOGIN_PAGE", "Composer /login"],
+              ["COMPOSE_PROFILE_PAGE", "Composer /app/profile"],
+              [
+                "COMPOSE_MEMBERS_UNKNOWN_PROP",
+                "Composer /app/users avec secret_column",
+              ],
+              ["COMPILE_RELEASE", "Compiler les props inconnues"],
+            ],
+          },
+          {
+            id: "invalidation",
+            label: "Approval invalidée",
+            description:
+              "Allez jusqu’à l’approval, changez les réglages, puis vérifiez que l’activation refuse les preuves obsolètes.",
+            steps: [
+              ...installSteps,
+              ...settingsSteps,
+              ...compositionSteps,
+              ["COMPILE_RELEASE", "Compiler le candidate"],
+              ["PREVIEW_RELEASE", "Prévisualiser le candidate"],
+              ["APPROVE_RELEASE", "Approuver les preuves"],
+              ["SAVE_ALTERNATE_SETTINGS", "Modifier les effective settings"],
+              [
+                "ACTIVATE_RELEASE",
+                "Tenter l’activation avec l’approval obsolète",
+              ],
+            ],
+          },
+          {
+            id: "closed-manifest",
+            label: "Manifest fermé",
+            description:
+              "Injectez un champ imbriqué inconnu puis une command null. Le validateur doit refuser les deux sans modifier le manifest installé ni lever d’exception.",
+            steps: [
+              [
+                "PLUGIN_ADD_UNKNOWN_RENDERER_FIELD",
+                "Ajouter unexpected au Renderer Descriptor login_form",
+              ],
+              [
+                "PLUGIN_ADD_NULL_COMMAND",
+                "Remplacer application_sign_in par null",
+              ],
+              [
+                "PLUGIN_REMOVE_SCHEMA_DEFINITION",
+                "Retirer une définition encore référencée",
+              ],
+            ],
+          },
+          {
+            id: "active-immutable",
+            label: "Release active immuable",
+            description:
+              "Activez la release, puis modifiez les réglages du draft. Le candidate en préparation disparaît, mais le payload et les trois pages de la Release Front active restent inchangés.",
+            steps: [
+              ...installSteps,
+              ...settingsSteps,
+              ...compositionSteps,
+              ...releaseSteps,
+              ["SAVE_ALTERNATE_SETTINGS", "Modifier le draft après activation"],
+              [
+                "COMPOSE_MEMBERS_UNKNOWN_PROP",
+                "Modifier la page draft avec secret_column",
+              ],
+            ],
+          },
+        ];
+
+        let state = FullPluginPrototype.createInitialState();
+        let activeProcedureIndex = 0;
+        let activeStepIndex = 0;
+
+        const escapeHtml = (value) =>
+          String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        const shortProof = (value) =>
+          value ? `${value.slice(0, 21)}…${value.slice(-8)}` : "none";
+
+        function toneFor(value) {
+          if (
+            [
+              "valid",
+              "ready",
+              "applied",
+              "installed",
+              "active",
+              "registered_inactive",
+              "active_in_release",
+              "validated",
+              "previewed",
+              "approved",
+              "activated",
+              "passed",
+              "bound",
+            ].includes(value)
+          )
+            return "success";
+          if (
+            [
+              "invalid",
+              "validation_failed",
+              "failed",
+              "rejected",
+              "blocked",
+            ].includes(value)
+          )
+            return "danger";
+          if (
+            [
+              "available",
+              "staged",
+              "missing",
+              "pending",
+              "not_started",
+              "not_run",
+              "empty",
+            ].includes(value)
+          )
+            return "warning";
+          return "neutral";
+        }
+
+        function badge(value) {
+          return `<span class="badge ${toneFor(value)}">${escapeHtml(value)}</span>`;
+        }
+
+        function row(label, value) {
+          return `<div class="status-row"><span>${escapeHtml(label)}</span>${badge(value)}</div>`;
+        }
+
+        function renderHero() {
+          const hero = document.querySelector("#hero-result");
+          const result =
+            state.promotion.status === "activated"
+              ? "Release Front activée"
+              : state.promotion.status === "validation_failed"
+                ? "Compilation bloquée"
+                : state.plugin.lifecycle === "active"
+                  ? "Release active conservée — draft modifié"
+                  : state.plugin.lifecycle === "installed"
+                    ? "Plugin installé — contributions inactives"
+                    : state.plugin.lifecycle === "staged"
+                      ? "Plugin staged"
+                      : "Plugin disponible";
+          const tone =
+            state.promotion.status === "activated"
+              ? "success"
+              : state.promotion.status === "validation_failed"
+                ? "danger"
+                : state.plugin.lifecycle === "active"
+                  ? "success"
+                  : "warning";
+          hero.className = `hero-result ${tone}`;
+          hero.textContent = result;
+          document.querySelector("#hero-explanation").textContent =
+            state.activity[state.activity.length - 1].detail;
+
+          document.querySelector("#release-summary").innerHTML = [
+            ["Release active", state.activeRelease.releaseId],
+            ["Pages actives", String(state.activeRelease.pageCount)],
+            ["Plugin lock", state.activeRelease.pluginLockVersion || "none"],
+            ["Snapshot actif", state.activeRelease.draftSnapshotId],
+            ["Checksum actif", shortProof(state.activeRelease.contentChecksum)],
+            ["Approval active", state.activeRelease.approvalStatus],
+            [
+              "Receipts actifs",
+              String(state.activeRelease.validationReceipts.length),
+            ],
+            [
+              "MFA active",
+              state.activeRelease.draftSnapshot.effectiveSettings?.mfa_policy ||
+                "none",
+            ],
+            [
+              "Routes finales du plugin",
+              String(state.plugin.ownedFinalRoutes.length),
+            ],
+            ["Candidate", state.promotion.candidateId],
+            ["Candidate status", state.promotion.status],
+          ]
+            .map(
+              ([label, value]) =>
+                `<div><dt>${escapeHtml(label)}</dt><dd><code>${escapeHtml(value)}</code></dd></div>`
+            )
+            .join("");
+        }
+
+        function renderState() {
+          document.querySelector("#plugin-state").innerHTML = [
+            row("Plugin Lifecycle", state.plugin.lifecycle),
+            row("Plugin kind", "full"),
+            row("Backend", "sandboxed"),
+            row("Worker", "none"),
+            row("Manifest", state.plugin.manifestStatus),
+            row("Capability Approval", state.plugin.capabilityApproval.status),
+            row(
+              "Stores directory/credentials/sessions",
+              state.plugin.storeStatus
+            ),
+            row("Migration", state.plugin.migrationStatus),
+            row(
+              "Store Descriptors",
+              String(FullPluginPrototype.pluginManifest.stores.length)
+            ),
+            row(
+              "Schemas enregistrés",
+              String(FullPluginPrototype.pluginManifest.schemas.length)
+            ),
+            row(
+              "Commands enregistrées",
+              String(FullPluginPrototype.pluginManifest.commands.length)
+            ),
+            row(
+              "Data sources enregistrées",
+              String(FullPluginPrototype.pluginManifest.dataSources.length)
+            ),
+            row("Registre", state.plugin.registryStatus),
+            row(
+              "Routes finales possédées",
+              String(state.plugin.ownedFinalRoutes.length)
+            ),
+            row("Dernier manifest hostile", state.plugin.lastManifestAttempt),
+          ].join("");
+
+          document.querySelector("#settings-state").innerHTML = [
+            row("Écran EmDash Admin", state.settings.screen),
+            row("Renderer settings", "block_kit"),
+            row("Stockage", "plugin_kv"),
+            row("Scope KV", state.settings.storageScope),
+            row("Statut", state.settings.status),
+            row("Checksum", shortProof(state.settings.checksum)),
+            row("Dernière erreur", state.settings.lastError || "none"),
+          ].join("");
+
+          document.querySelector("#draft-state").innerHTML = [
+            row("Révision", String(state.frontDraft.revision)),
+            row("Statut", state.frontDraft.status),
+            row("Pages", String(state.frontDraft.pages.length)),
+            row("Routes EmDash", String(state.frontDraft.pages.length)),
+            row("Routes plugin", String(state.plugin.ownedFinalRoutes.length)),
+            row("Page sélectionnée", state.frontDraft.selectedPageId || "none"),
+            row("Erreurs", String(state.frontDraft.validationErrors.length)),
+          ].join("");
+
+          document.querySelector("#promotion-state").innerHTML = [
+            row("Candidate", state.promotion.candidateId),
+            row(
+              "Draft Snapshot",
+              state.promotion.draftSnapshot?.snapshotId || "none"
+            ),
+            row("Status", state.promotion.status),
+            row("Preview", state.promotion.previewStatus),
+            row(
+              "Content checksum",
+              shortProof(state.promotion.contentChecksum)
+            ),
+            row("Signature", shortProof(state.promotion.signature)),
+            row("Receipts", String(state.promotion.receipts.length)),
+            row(
+              "Validation set",
+              shortProof(state.promotion.validationSetChecksum)
+            ),
+            row(
+              "Release Approval",
+              state.promotion.approval ? "bound" : "none"
+            ),
+          ].join("");
+        }
+
+        function renderRegistry() {
+          const manifest = FullPluginPrototype.pluginManifest;
+          document.querySelector("#registry-table-body").innerHTML =
+            manifest.renderers
+              .map(
+                (renderer) =>
+                  `<tr><td><code>${escapeHtml(renderer.elementType)}</code></td><td><code>${escapeHtml(
+                    renderer.rendererId
+                  )}</code><br /><small>v${escapeHtml(
+                    renderer.descriptorVersion
+                  )} · ${escapeHtml(
+                    shortProof(renderer.descriptorChecksum)
+                  )}<br />${escapeHtml(renderer.capabilities.join(", "))}</small></td><td>${renderer.actionSlots.length > 0 ? renderer.actionSlots.map((slot) => `<code>${escapeHtml(slot.slot)}</code>`).join(" ") : "—"}</td><td>${renderer.dataSourceSlots.length > 0 ? renderer.dataSourceSlots.map((slot) => `<code>${escapeHtml(slot.slot)}</code>`).join(" ") : "—"}</td><td>${badge(
+                    state.plugin.registeredRenderers.includes(
+                      renderer.rendererId
+                    )
+                      ? state.plugin.registryStatus
+                      : "not_registered"
+                  )}</td></tr>`
+              )
+              .join("");
+        }
+
+        function renderedPages() {
+          if (
+            state.plugin.lifecycle === "active" &&
+            state.activeRelease.candidatePayload &&
+            Array.isArray(state.activeRelease.candidatePayload.pages)
+          ) {
+            return state.activeRelease.candidatePayload.pages;
+          }
+          return state.frontDraft.pages;
+        }
+
+        function renderPages() {
+          const pages = renderedPages();
+          document.querySelector("#page-table-body").innerHTML =
+            pages.length === 0
+              ? '<tr><td colspan="5">Aucune page composée.</td></tr>'
+              : pages
+                  .map(
+                    (page) =>
+                      `<tr><td><code>${escapeHtml(page.routePath)}</code></td><td>${escapeHtml(
+                        page.pageId
+                      )}<br /><code>${escapeHtml(page.element.elementType)}</code></td><td><code>${escapeHtml(
+                        Object.values(page.element.actionBindings)[0] || "none"
+                      )}</code></td><td><code>${escapeHtml(
+                        Object.values(page.element.dataSourceBindings)[0] ||
+                          "none"
+                      )}</code></td><td>${badge(page.routeOwner)}</td></tr>`
+                  )
+                  .join("");
+        }
+
+        function renderSettingsPreview() {
+          const target = document.querySelector("#settings-preview");
+          if (state.settings.screen !== "open") {
+            target.innerHTML =
+              "<p>Installer le plugin puis ouvrir ses réglages.</p>";
+            return;
+          }
+          const values = state.settings.values || {
+            mfa_policy: "—",
+            allow_anonymous_upgrade: "—",
+            max_active_sessions: "—",
+          };
+          target.innerHTML = `<div class="admin-frame"><aside class="admin-nav"><strong>EmDash Admin</strong><span>Plugins</span><span>supbrd-plug-user</span><span>Settings</span></aside><div class="admin-content"><p class="hero-kicker">Block Kit · KV privé</p><h3>Réglages des Utilisateurs d’application</h3><div class="field"><strong>MFA policy</strong><small>${escapeHtml(
+            values.mfa_policy
+          )}</small></div><div class="field"><strong>Anonymous upgrade</strong><small>${escapeHtml(
+            values.allow_anonymous_upgrade
+          )}</small></div><div class="field"><strong>Maximum active sessions</strong><small>${escapeHtml(
+            values.max_active_sessions
+          )}</small></div></div></div>`;
+        }
+
+        function renderPagePreview() {
+          const target = document.querySelector("#page-preview");
+          const pages = renderedPages();
+          const page =
+            pages.find(
+              (candidate) =>
+                candidate.pageId === state.frontDraft.selectedPageId
+            ) || pages[pages.length - 1];
+          if (!page) {
+            target.innerHTML = "<p>Aucune page composée.</p>";
+            return;
+          }
+          target.innerHTML = `<div class="page-shell"><aside class="page-nav"><strong>SuperBoard</strong><span>Vue d’ensemble</span><span>Profil</span><span>Utilisateurs</span></aside><div class="page-content"><p class="hero-kicker">Route EmDash ${escapeHtml(
+            page.routePath
+          )}</p><h3>${escapeHtml(page.pageId)}</h3><div class="element-card"><code>${escapeHtml(
+            page.element.elementType
+          )}</code><br />Renderer&nbsp;: <code>${escapeHtml(
+            page.element.rendererId
+          )}</code><br />Owner&nbsp;: <code>${escapeHtml(page.routeOwner)}</code></div></div></div>`;
+        }
+
+        function renderReceipts() {
+          const receipts = state.promotion.receipts;
+          document.querySelector("#receipt-table-body").innerHTML =
+            receipts.length === 0
+              ? '<tr><td colspan="3">Aucune compilation.</td></tr>'
+              : receipts
+                  .map(
+                    (receipt) =>
+                      `<tr><td><code>${escapeHtml(
+                        receipt.id
+                      )}</code></td><td>${badge(receipt.status)}</td><td>${escapeHtml(
+                        receipt.message
+                      )}<br /><small><code>${escapeHtml(shortProof(receipt.receiptChecksum))}</code></small></td></tr>`
+                  )
+                  .join("");
+        }
+
+        function renderActivity() {
+          document.querySelector("#activity-state").innerHTML = [
+            ...state.activity,
+          ]
+            .reverse()
+            .slice(0, 10)
+            .map(
+              (item) =>
+                `<li><small>#${String(item.sequence).padStart(3, "0")}</small><div><strong>${escapeHtml(
+                  item.message
+                )}</strong><br /><span>${escapeHtml(item.detail)}</span></div></li>`
+            )
+            .join("");
+        }
+
+        function renderProcedures() {
+          document.querySelector("#procedure-tabs").innerHTML = procedures
+            .map(
+              (procedure, index) =>
+                `<button type="button" class="tab-button" role="tab" data-procedure-index="${index}" aria-selected="${
+                  index === activeProcedureIndex
+                }" id="tab-${escapeHtml(procedure.id)}">${escapeHtml(procedure.label)}</button>`
+            )
+            .join("");
+          const procedure = procedures[activeProcedureIndex];
+          const body = document.querySelector("#procedure-body");
+          body.setAttribute("aria-labelledby", `tab-${procedure.id}`);
+          body.innerHTML = `<h3>${escapeHtml(procedure.label)}</h3><p>${escapeHtml(
+            procedure.description
+          )}</p><div class="steps">${procedure.steps
+            .map(([type, label], index) => {
+              const status =
+                index < activeStepIndex
+                  ? "done"
+                  : index === activeStepIndex
+                    ? "current"
+                    : "";
+              const disabled = index !== activeStepIndex ? "disabled" : "";
+              return `<button type="button" class="step-button ${status}" data-step-index="${index}" data-event-type="${escapeHtml(
+                type
+              )}" ${disabled}>${escapeHtml(label)}</button>`;
+            })
+            .join("")}</div>`;
+
+          document
+            .querySelectorAll("[data-procedure-index]")
+            .forEach((button) => {
+              button.addEventListener("click", () => {
+                activeProcedureIndex = Number(button.dataset.procedureIndex);
+                activeStepIndex = 0;
+                state = FullPluginPrototype.createInitialState();
+                render();
+              });
+            });
+          document.querySelectorAll("[data-step-index]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state = FullPluginPrototype.transition(state, {
+                type: button.dataset.eventType,
+              });
+              activeStepIndex += 1;
+              render();
+            });
+          });
+        }
+
+        function render() {
+          renderHero();
+          renderState();
+          renderRegistry();
+          renderPages();
+          renderSettingsPreview();
+          renderPagePreview();
+          renderReceipts();
+          renderActivity();
+          renderProcedures();
+        }
+
+        document.querySelector("#free-play-controls").innerHTML = actions
+          .map(
+            (action) =>
+              `<button type="button" class="action-button ${action.primary ? "primary" : ""} ${
+                action.danger ? "danger" : ""
+              }" data-free-event="${escapeHtml(action.type)}">${escapeHtml(action.label)}</button>`
+          )
+          .join("");
+
+        document.querySelectorAll("[data-free-event]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state = FullPluginPrototype.transition(state, {
+              type: button.dataset.freeEvent,
+            });
+            activeStepIndex = 0;
+            render();
+          });
+        });
+
+        render();
+      })();
+    </script>
+  </body>
+</html>

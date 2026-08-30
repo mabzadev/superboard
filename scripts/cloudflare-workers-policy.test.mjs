@@ -299,8 +299,11 @@ function sourcePackageManifests(directory) {
           "build",
           "coverage",
           "dist",
+          "fixtures",
           "lib",
           "node_modules",
+          "test",
+          "tests",
         ].includes(entry.name)
       ) {
         continue;
@@ -336,9 +339,18 @@ function assertWorkerPolicy(config, target, service) {
   assert.ok(config.main, `${service} must declare its entrypoint`);
   assertCurrentCompatibilityDate(config.compatibility_date, service);
   assert.ok(config.compatibility_flags?.includes("nodejs_compat"));
-  assert.ok(
-    config.compatibility_flags?.includes("global_fetch_strictly_public"),
-  );
+  if (service === "site") {
+    assert.equal(
+      config.compatibility_flags?.includes("global_fetch_strictly_public"),
+      false,
+      "site must omit global_fetch_strictly_public while its D1 session policy is disabled",
+    );
+  } else {
+    assert.ok(
+      config.compatibility_flags?.includes("global_fetch_strictly_public"),
+      `${service} must enable global_fetch_strictly_public`,
+    );
+  }
   assert.deepEqual(config.observability, {
     enabled: true,
     logs: { enabled: true, head_sampling_rate: 1, invocation_logs: true },

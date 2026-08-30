@@ -1,0 +1,65 @@
+<p align="center">
+  <a href="https://flows.sh">
+    <img src="https://raw.githubusercontent.com/RBND-studio/flows-sdk/refs/heads/main/docs/avatar.png" height="96">
+    <h3 align="center">Flows SDKs</h3>
+  </a>
+</p>
+
+<p align="center">
+  The better way to build product adoption.
+</p>
+
+<p align="center">
+  <a href="https://flows.sh/docs"><strong>Documentation</strong></a> ·
+  <a href="https://flows.sh/changelog"><strong>Changelog</strong></a> ·
+  <a href="https://flows.sh/examples"><strong>Examples</strong></a> ·
+  <a href="https://flows.sh/docs/sdk-overview"><strong>SDKs</strong></a>
+</p>
+
+## Flows
+
+Meet Flows, the flexible platform for building in-app experiences. Focus on your product, not creating one-off logic.
+
+- Build powerful in-app experiences to drive product growth
+- Create surveys and collect feedback
+- Embed components directly into your app
+- Create onboarding, product adoption, in-app messaging, growth experiments, and more
+- Bring your own UI components or use Flows' built-in components
+
+Visit our [website](https://flows.sh) to learn more about Flows
+
+## Packages
+
+This repository contains the SDKs for Flows and accompanying built-in components.
+
+- [React SDK](./workspaces/react)
+- [React components](./workspaces/react-components)
+- [JavaScript SDK](./workspaces/js)
+- [JavaScript components](./workspaces/js-components)
+
+## Templates
+
+We provide a set of templates to help you get started with Flows.
+
+- [Next.js template](./examples/react/next)
+- [React Router template](./examples/react/vite)
+- [TanStack Start template](./examples/react/tanstack)
+- [Vue Nuxt template](./examples/vue/nuxt)
+- [Angular template](./examples/angular)
+- [Svelte template](./examples/svelte)
+- [Lit template](./examples/lit)
+- [SolidJS template](./examples/solid)
+- [Ember template](./examples/ember)
+- [Astro template](./examples/astro)
+- [Electron React template](./examples/electron/electron-forge-react)
+
+## Get started for free
+
+
+## Contributing
+
+We ❤️ contributions big and small. If you have any ideas for improvements, either submit an issue or create a pull request.
+
+---
+
+Created by [rbnd.studio](https://rbnd.studio/).

@@ -116,7 +116,7 @@ test("GitHub control-plane manifest is strict and contains names, never secret v
     manifest.repositories.platform.environments[
       "sdk-release"
     ].protection.deploymentPolicies.filter(({ type }) => type === "tag").length,
-    7,
+    11,
   );
   assert.doesNotMatch(
     serialized,

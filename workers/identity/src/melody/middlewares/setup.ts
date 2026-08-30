@@ -36,10 +36,9 @@ export const session = async (
       httpOnly: true,
     },
   })
-  return session(
-    c,
-    next,
-  )
+  // hono-sessions currently resolves its Hono peer independently. The runtime
+  // Context is compatible, but its private request symbol differs by version.
+  return session(c as unknown as Parameters<typeof session>[0], next)
 }
 
 export const validOrigin = async (

@@ -61,7 +61,7 @@ async function hmac(secret: string, value: string) {
 
 async function verifyHmac(secret: string, value: string, signature: string) {
   if (!secret) return false;
-  let bytes: Uint8Array;
+  let bytes: Uint8Array<ArrayBuffer>;
   try { bytes = base64UrlDecode(signature); } catch { return false; }
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
   return crypto.subtle.verify('HMAC', key, bytes, new TextEncoder().encode(value));
@@ -71,7 +71,7 @@ function base64Url(bytes: Uint8Array) {
   let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
-function base64UrlDecode(value: string) {
+function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('invalid base64url');
   const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
   return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));

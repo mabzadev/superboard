@@ -3,20 +3,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, Plus, RefreshCw, Save, Search, Trash2 } from "lucide-react";
 import {
-  createMessagingCompany,
-  createMessagingContact,
-  createMessagingContactNote,
-  deleteMessagingContactNote,
-  getMessagingCompanies,
-  getMessagingContact,
-  getMessagingContactNotes,
-  getMessagingContacts,
-  updateMessagingContact,
-  type MessagingCompany,
-  type MessagingContact,
-  type MessagingContactDetail,
-  type MessagingContactNote,
-} from "@/api/messaging/operationsService";
+  createSupportCompany,
+  createSupportContact,
+  createSupportContactNote,
+  deleteSupportContactNote,
+  getSupportCompanies,
+  getSupportContact,
+  getSupportContactNotes,
+  getSupportContacts,
+  updateSupportContact,
+  type SupportCompany,
+  type SupportContact,
+  type SupportContactDetail,
+  type SupportContactNote,
+} from "@/api/support/operationsService";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,7 +36,7 @@ type Draft = {
   phone: string;
   company_id: string;
   blocked: boolean;
-  custom_attributes: string;
+  custom_attributes: Array<{ id: string; key: string; value: string }>;
 };
 const emptyDraft: Draft = {
   external_user_id: "",
@@ -45,17 +45,17 @@ const emptyDraft: Draft = {
   phone: "",
   company_id: "",
   blocked: false,
-  custom_attributes: "{}",
+  custom_attributes: [],
 };
 
 export default function SupportContactsPage() {
   const { selectedProject } = useProjectSelection();
   const projectId = selectedProject?.id;
-  const [contacts, setContacts] = useState<MessagingContact[]>([]);
-  const [companies, setCompanies] = useState<MessagingCompany[]>([]);
-  const [notes, setNotes] = useState<MessagingContactNote[]>([]);
+  const [contacts, setContacts] = useState<SupportContact[]>([]);
+  const [companies, setCompanies] = useState<SupportCompany[]>([]);
+  const [notes, setNotes] = useState<SupportContactNote[]>([]);
   const [conversations, setConversations] = useState<
-    MessagingContactDetail["conversations"]
+    SupportContactDetail["conversations"]
   >([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -75,8 +75,8 @@ export default function SupportContactsPage() {
       setBusy(true);
       try {
         const [result, companyResult] = await Promise.all([
-          getMessagingContacts(projectId, search.trim()),
-          getMessagingCompanies(projectId),
+          getSupportContacts(projectId, search.trim()),
+          getSupportCompanies(projectId),
         ]);
         setContacts(result.data || []);
         setCompanies(companyResult.data || []);
@@ -101,8 +101,8 @@ export default function SupportContactsPage() {
       return;
     }
     void Promise.all([
-      getMessagingContactNotes(projectId, selectedId),
-      getMessagingContact(projectId, selectedId),
+      getSupportContactNotes(projectId, selectedId),
+      getSupportContact(projectId, selectedId),
     ])
       .then(([noteResult, contactResult]) => {
         setNotes(noteResult.data || []);
@@ -117,7 +117,7 @@ export default function SupportContactsPage() {
       );
   }, [projectId, selectedId]);
 
-  const select = (contact: MessagingContact) => {
+  const select = (contact: SupportContact) => {
     setSelectedId(contact.id);
     setDraft({
       external_user_id: contact.external_user_id,
@@ -126,10 +126,12 @@ export default function SupportContactsPage() {
       phone: contact.phone || "",
       company_id: contact.company_id || "",
       blocked: contact.blocked,
-      custom_attributes: JSON.stringify(
-        contact.custom_attributes || {},
-        null,
-        2
+      custom_attributes: Object.entries(contact.custom_attributes || {}).map(
+        ([key, value]) => ({
+          id: crypto.randomUUID(),
+          key,
+          value: value == null ? "" : String(value),
+        })
       ),
     });
   };
@@ -144,13 +146,11 @@ export default function SupportContactsPage() {
     if (!projectId) return;
     setBusy(true);
     try {
-      const customAttributes = JSON.parse(draft.custom_attributes) as unknown;
-      if (
-        !customAttributes ||
-        typeof customAttributes !== "object" ||
-        Array.isArray(customAttributes)
-      )
-        throw new Error("Custom attributes must be a JSON object");
+      const customAttributes = Object.fromEntries(
+        draft.custom_attributes
+          .filter((attribute) => attribute.key.trim())
+          .map((attribute) => [attribute.key.trim(), attribute.value])
+      );
       const payload = {
         external_user_id: draft.external_user_id.trim(),
         name: draft.name.trim() || null,
@@ -161,8 +161,8 @@ export default function SupportContactsPage() {
         custom_attributes: customAttributes,
       };
       if (selectedId)
-        await updateMessagingContact(projectId, selectedId, payload);
-      else await createMessagingContact(projectId, payload);
+        await updateSupportContact(projectId, selectedId, payload);
+      else await createSupportContact(projectId, payload);
       showSuccessNotification("Contact saved");
       await load(query);
       startNew();
@@ -178,10 +178,10 @@ export default function SupportContactsPage() {
   const addNote = async () => {
     if (!projectId || !selectedId || !note.trim()) return;
     try {
-      await createMessagingContactNote(projectId, selectedId, note.trim());
+      await createSupportContactNote(projectId, selectedId, note.trim());
       setNote("");
       setNotes(
-        (await getMessagingContactNotes(projectId, selectedId)).data || []
+        (await getSupportContactNotes(projectId, selectedId)).data || []
       );
     } catch (error) {
       showErrorNotification(
@@ -193,7 +193,7 @@ export default function SupportContactsPage() {
   const removeNote = async (noteId: string) => {
     if (!projectId || !selectedId) return;
     try {
-      await deleteMessagingContactNote(projectId, selectedId, noteId);
+      await deleteSupportContactNote(projectId, selectedId, noteId);
       setNotes((current) => current.filter((item) => item.id !== noteId));
     } catch (error) {
       showErrorNotification(
@@ -206,7 +206,7 @@ export default function SupportContactsPage() {
     if (!projectId || !companyName.trim()) return;
     setBusy(true);
     try {
-      await createMessagingCompany(projectId, {
+      await createSupportCompany(projectId, {
         name: companyName.trim(),
         domain: companyDomain.trim() || null,
         description: null,
@@ -358,19 +358,88 @@ export default function SupportContactsPage() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact-attributes">Custom attributes</Label>
-                <textarea
-                  id="contact-attributes"
-                  className="min-h-28 w-full rounded-md border bg-background p-3 font-mono text-sm"
-                  value={draft.custom_attributes}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      custom_attributes: event.target.value,
-                    })
-                  }
-                />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label>Custom attributes</Label>
+                  <Button
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        custom_attributes: [
+                          ...draft.custom_attributes,
+                          { id: crypto.randomUUID(), key: "", value: "" },
+                        ],
+                      })
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add attribute
+                  </Button>
+                </div>
+                {draft.custom_attributes.length === 0 ? (
+                  <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                    No custom attributes on this contact.
+                  </p>
+                ) : (
+                  draft.custom_attributes.map((attribute, index) => (
+                    <div
+                      className="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+                      key={attribute.id}
+                    >
+                      <Input
+                        aria-label={`Attribute ${index + 1} name`}
+                        placeholder="Attribute name"
+                        value={attribute.key}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            custom_attributes: draft.custom_attributes.map(
+                              (item) =>
+                                item.id === attribute.id
+                                  ? { ...item, key: event.target.value }
+                                  : item
+                            ),
+                          })
+                        }
+                      />
+                      <Input
+                        aria-label={`Attribute ${index + 1} value`}
+                        placeholder="Value"
+                        value={attribute.value}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            custom_attributes: draft.custom_attributes.map(
+                              (item) =>
+                                item.id === attribute.id
+                                  ? { ...item, value: event.target.value }
+                                  : item
+                            ),
+                          })
+                        }
+                      />
+                      <Button
+                        aria-label={`Remove attribute ${index + 1}`}
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            custom_attributes: draft.custom_attributes.filter(
+                              (item) => item.id !== attribute.id
+                            ),
+                          })
+                        }
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
               <div className="flex justify-end">
                 <Button

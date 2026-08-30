@@ -1,0 +1,91 @@
+{
+	"schemaVersion": 1,
+	"upstream": {
+		"remote": "https://github.com/emdash-cms/emdash.git",
+		"commit": "1717d31b351164a5f78e95fe004ee582c7c50f40",
+		"version": "0.35.0"
+	},
+	"overlay": {
+		"root": "config/emdash-root.overlay.json",
+		"generatedFiles": [
+			"package.json",
+			"pnpm-workspace.yaml",
+			".gitignore",
+			"README.md",
+			".github/workflows/superboard-ci.yml"
+		],
+		"excludedWorktreePaths": [
+			".github/dependabot.yml",
+			".github/workflows/ci.yml",
+			".gitignore",
+			".prettierrc",
+			"AGENTS.md",
+			"CONTRIBUTING.md",
+			"LICENSE",
+			"README.md",
+			"SECURITY.md",
+			"package-lock.json",
+			"package.json",
+			"pnpm-lock.yaml",
+			"pnpm-workspace.yaml"
+		]
+	},
+	"compatibility": {
+		"eslintImportResolverTypescript": "4.4.5",
+		"allowBuilds": {
+			"@evilmartians/lefthook": false,
+			"@swc/core": true,
+			"core-js": false,
+			"unrs-resolver": true
+		},
+		"additionalOverrides": {
+			"@conventional-changelog/git-client": "2.0.0",
+			"@cloudflare/vitest-plugin@1.0.0>@cloudflare/workers-types": "4.20260305.1",
+			"@octokit/plugin-paginate-rest": "11.4.1",
+			"@vitest/coverage-v8": "4.1.5",
+			"@vitest/expect": "4.1.5",
+			"@vitest/mocker": "4.1.5",
+			"@vitest/pretty-format": "4.1.5",
+			"@vitest/runner": "4.1.5",
+			"@vitest/snapshot": "4.1.5",
+			"@vitest/spy": "4.1.5",
+			"@vitest/utils": "4.1.5",
+			"ajv@^6.12.4": "6.14.0",
+			"ajv@^8.11.0": "8.18.0",
+			"diff@^4.0.1": "4.0.4",
+			"eslint-config-prettier": "10.1.8",
+			"eslint-plugin-prettier": "5.5.6",
+			"fast-xml-parser": "5.7.0",
+			"image-size@^1.0.2": "1.2.1",
+			"ip-address": "10.3.1",
+			"joi@^17.2.1": "17.13.4",
+			"lodash": "4.18.1",
+			"release-it@18.1.2>undici": "6.28.0",
+			"tmp": "0.2.7",
+			"vitest": "4.1.5",
+			"wrangler@4.124.0>@cloudflare/workers-types": "4.20260305.1",
+			"zod@^4.4.1": "4.4.1"
+		},
+		"patchedDependencies": {
+			"image-size@1.2.1": "sdks/react-native/.yarn/patches/image-size-npm-1.2.1-e285f3c080.patch"
+		},
+		"trustPolicyExclude": ["semver@5.7.2"],
+		"virtualStoreType": "project",
+		"verifyDepsBeforeRun": "warn",
+		"hoistPattern": ["*", "!@cloudflare/workers-types"],
+		"resolvePeersFromWorkspaceRoot": false,
+		"dedupePeerDependents": false,
+		"packageExtensions": {
+			"@cloudflare/vitest-plugin@1.0.0": {
+				"dependencies": {
+					"@cloudflare/workers-types": "4.20260305.1",
+					"jsdom": "26.1.0"
+				}
+			}
+		},
+		"supportedArchitectures": {
+			"os": ["current", "darwin", "linux"],
+			"cpu": ["x64", "arm64"]
+		}
+	}
+}

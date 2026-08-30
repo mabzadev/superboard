@@ -1,0 +1,17 @@
+{
+	"useTabs": true,
+	"experimentalSortImports": {},
+	"ignorePatterns": [
+		"**/dist/**",
+		"**/node_modules/**",
+		"**/*.mdx",
+		"**/package.json",
+		"**/emdash-env.d.ts",
+		"**/worker-configuration.d.ts",
+		"packages/registry-lexicons/src/generated/**",
+		"packages/plugin-cli/schemas/**",
+		"sdks/flows/upstream/reference/product-templates/web-content/content.tsx",
+		"infra/emdash-bot/.flue/lib/machine.json",
+		"infra/emdash-bot/BOT_STATE_MACHINE.md"
+	]
+}

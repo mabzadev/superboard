@@ -1,0 +1,39 @@
+import test, { expect } from "@playwright/test";
+import { mockBlocksEndpoint } from "./utils";
+
+test.beforeEach(async ({ page }) => {
+  await page.routeWebSocket(
+    (url) => url.pathname === "/api/v1/flows/ws/sdk/block-updates",
+    () => {},
+  );
+  await mockBlocksEndpoint(page, []);
+});
+
+const run = (packageName: string) => {
+  test(`${packageName} - shouldn't initialize without user id`, async ({ page }) => {
+    await page.goto(`/${packageName}.html?noUserId=true`);
+
+    let reqWasSent = false;
+    page.on("request", (req) => {
+      if (req.url() === "http://localhost:3000/api/v1/flows/v2/sdk/blocks") reqWasSent = true;
+    });
+
+    await new Promise((res) => setTimeout(res, 500));
+
+    expect(reqWasSent).toBe(false);
+  });
+  test(`${packageName} - should initialize with user id`, async ({ page }) => {
+    await page.goto(`/${packageName}.html`);
+
+    let reqWasSent = false;
+    page.on("request", (req) => {
+      if (req.url() === "http://localhost:3000/api/v1/flows/v2/sdk/blocks") reqWasSent = true;
+    });
+
+    await new Promise((res) => setTimeout(res, 500));
+
+    await expect(() => expect(reqWasSent).toBe(true)).toPass();
+  });
+};
+
+run("react");

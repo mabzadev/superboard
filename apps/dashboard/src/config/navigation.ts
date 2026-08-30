@@ -3,26 +3,24 @@ import {
   AppWindow,
   Boxes,
   ChartNoAxesCombined,
-  CreditCard,
   Fingerprint,
   Link2,
   LayoutDashboard,
   LifeBuoy,
   Megaphone,
-  PanelsTopLeft,
+  Workflow,
 } from "lucide-react";
 
 export type SectionSlug =
   | "dashboard"
   | "app"
   | "products"
-  | "paywalls"
+  | "flows"
   | "dynamic-links"
   | "support"
   | "identity"
   | "marketing"
-  | "analytics"
-  | "onboardings";
+  | "analytics";
 
 export type SectionPage = Readonly<{
   label: string;
@@ -97,13 +95,19 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     ],
   },
   {
-    slug: "paywalls",
-    label: "Paywalls",
-    icon: CreditCard,
-    href: "/paywalls",
+    slug: "flows",
+    label: "Flows",
+    icon: Workflow,
+    href: "/flows",
     pages: [
-      page("Paywalls", "/paywalls"),
-      page("Statistics", "/paywalls/statistics"),
+      page("Overview", "/flows"),
+      page("Workflows", "/flows/workflows"),
+      page("Launchpad", "/flows/launchpad"),
+      page("Users", "/flows/users"),
+      page("Components", "/flows/components"),
+      page("Environments", "/flows/settings/environments"),
+      page("Localization", "/flows/settings/localization"),
+      page("SDK", "/flows/settings/sdk"),
     ],
   },
   {
@@ -127,9 +131,16 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     href: "/support/inbox",
     pages: [
       page("Inbox", "/support/inbox"),
-      page("Configuration", "/support/configuration"),
       page("Contacts", "/support/contacts"),
-      page("Quality", "/support/quality"),
+      page("Workforce", "/support/workforce"),
+      page("Channels", "/support/channels"),
+      page("Automations", "/support/automations"),
+      page("Proactive Support", "/support/proactive-support"),
+      page("Help Center", "/support/help-center"),
+      page("Captain", "/support/captain"),
+      page("Integrations", "/support/integrations"),
+      page("Reports", "/support/reports"),
+      page("Settings", "/support/settings"),
     ],
   },
   {
@@ -169,16 +180,6 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
       page("Alerts", "/analytics/alerts"),
       page("Reports & Exports", "/analytics/reports"),
       page("Settings", "/analytics/settings"),
-    ],
-  },
-  {
-    slug: "onboardings",
-    label: "Onboardings",
-    icon: PanelsTopLeft,
-    href: "/onboardings",
-    pages: [
-      page("Onboardings", "/onboardings"),
-      page("Statistics", "/onboardings/statistics"),
     ],
   },
 ] as const;

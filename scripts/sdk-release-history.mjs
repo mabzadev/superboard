@@ -17,6 +17,10 @@ const tagPrefixes = Object.freeze({
   android: "sdk-android-v",
   javascript: "sdk-js-v",
   "react-native": "sdk-react-native-v",
+  "flows-js": "sdk-flows-js-v",
+  "flows-react": "sdk-flows-react-v",
+  "flows-js-components": "sdk-flows-js-components-v",
+  "flows-react-components": "sdk-flows-react-components-v",
 });
 
 export async function loadSdkReleaseHistory(path = historyPath) {
