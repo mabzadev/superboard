@@ -105,9 +105,10 @@ CREATE TABLE IF NOT EXISTS superboard_worker_execution_leases (
   callback_token_hash TEXT NOT NULL,
   issued_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
+  superseded_at TEXT,
   consumed_at TEXT,
   UNIQUE(plugin_id, operation_id, attempt_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_worker_execution_leases_expiry
-  ON superboard_worker_execution_leases(plugin_id, expires_at, consumed_at);
+  ON superboard_worker_execution_leases(plugin_id, expires_at, superseded_at, consumed_at);

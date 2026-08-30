@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:superboard_flutter/superboard_flows.dart';
 
 void main() {
-  test('Flutter preserves the public contract across EmDash Store authority', () {
+  test('Flutter round-trips the shared fixture with the real SDK model', () {
     final fixture =
         jsonDecode(
               File(
@@ -12,14 +13,14 @@ void main() {
               ).readAsStringSync(),
             )
             as Map<String, dynamic>;
-    expect(fixture['after'], fixture['before']);
-    expect(
-      (fixture['aliases'] as Map<String, dynamic>)['projectId'],
-      fixture['instance_id'],
+    final state = SuperBoardFlowPersistedState.fromJson(
+      (fixture['flow_state'] as Map).cast<String, dynamic>(),
     );
+    expect(state.toJson(), fixture['flow_state']);
+    expect(state.projectId, fixture['instance_id']);
     expect(
       (fixture['aliases'] as Map<String, dynamic>)['pid'],
-      fixture['instance_id'],
+      state.projectId,
     );
   });
 }

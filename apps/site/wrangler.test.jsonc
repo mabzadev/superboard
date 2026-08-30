@@ -10,5 +10,6 @@
 			"migrations_dir": "migrations"
 		}
 	],
+	"r2_buckets": [{ "binding": "MEDIA", "bucket_name": "superboard-site-runtime-media" }],
 	"kv_namespaces": [{ "binding": "RELEASE_CACHE", "id": "00000000000000000000000000000000" }]
 }

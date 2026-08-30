@@ -138,7 +138,7 @@
 		"support-sdk:check": "pnpm run javascript:check && cd sdks/flutter && flutter analyze && flutter test && cd ../flutterflow && flutter analyze && flutter test && cd ../.. && pnpm run flutterflow-library:check && pnpm run flutterflow-applications:check && pnpm run flutterflow-messaging:check && pnpm run support:parity:check",
 		"module-cutover:test": "node --test scripts/module-cutover/*.test.mjs",
 		"emdash:parity:generate": "node scripts/emdash-parity-matrix.mjs --write",
-		"emdash:parity:check": "node scripts/emdash-parity-matrix.mjs && node --test scripts/emdash-parity-matrix.test.mjs",
+		"emdash:parity:check": "pnpm --filter @superboard/supbrd-core build && node scripts/emdash-parity-matrix.mjs && node --test scripts/emdash-parity-matrix.test.mjs",
 		"emdash:store-restore:test": "node scripts/emdash-store-restore-proof.mjs && node --test scripts/emdash-store-restore.test.mjs",
 		"emdash:migration-rehearsal:test": "node scripts/emdash-migration-rehearsal-proof.mjs && node --test scripts/emdash-migration-rehearsal-proof.test.mjs",
 		"flutter-purchases:check": "node --test scripts/flutter-android-build-contract.test.mjs scripts/flutter-ios-embedded-sources.test.mjs && cd sdks/flutter && flutter analyze && flutter test",

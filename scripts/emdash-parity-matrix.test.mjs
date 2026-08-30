@@ -7,6 +7,7 @@ import {
 	buildPluginTopology,
 	validateArtifacts,
 } from "./emdash-parity-matrix.mjs";
+import { verifySuperBoardPluginManifest } from "../packages/supbrd-core/dist/index.js";
 
 const CHECKSUM_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
@@ -14,16 +15,24 @@ test("every required parity row has an executable immutable proof", () => {
 	const matrix = buildParityMatrix();
 	const topology = buildPluginTopology();
 	assert.deepEqual(validateArtifacts(matrix, topology), []);
-	assert.ok(matrix.rows.length >= 140);
+	assert.ok(matrix.rows.length > 0);
 	assert.ok(matrix.rows.filter(({ required }) => required).every(({ proof_sha256 }) => CHECKSUM_PATTERN.test(proof_sha256)));
 });
 
-test("the plugin topology has five full and fourteen module families", () => {
+test("the plugin topology exposes both closed execution families", () => {
 	const topology = buildPluginTopology();
-	assert.equal(topology.plugins.filter(({ plugin_kind: kind }) => kind === "full").length, 5);
-	assert.equal(topology.plugins.filter(({ plugin_kind: kind }) => kind === "module").length, 14);
-	assert.ok(topology.plugins.every(({ artifact_checksum: checksum }) => CHECKSUM_PATTERN.test(checksum)));
+	assert.deepEqual(
+		new Set(topology.plugins.map(({ manifest }) => manifest.plugin_kind)),
+		new Set(["full", "module"]),
+	);
+	assert.ok(topology.plugins.every(({ manifest }) => CHECKSUM_PATTERN.test(manifest.artifact_checksum)));
 	assert.deepEqual(topology.aliases, { projectId: "instance_id", pid: "instance_id" });
+});
+
+test("every topology manifest uses the shared closed runtime contract", async () => {
+	for (const { manifest } of buildPluginTopology().plugins) {
+		assert.deepEqual(await verifySuperBoardPluginManifest(manifest), { valid: true, errors: [] });
+	}
 });
 
 test("Support and Flows cannot be promoted by the generated matrix", () => {

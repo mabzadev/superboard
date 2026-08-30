@@ -114,6 +114,9 @@
           "<rootDir>/example/node_modules",
           "<rootDir>/example_old_arch/node_modules",
           "<rootDir>/lib/"
+        ],
+        "transformIgnorePatterns": [
+          "node_modules/(?!((@react-native|react-native)/|\\.pnpm/(@react-native\\+|react-native@)))"
         ]
       },
       {

@@ -148,7 +148,10 @@ export function sqlLiteral(value) {
 }
 
 export function upsertSql(entity, rows) {
-  if (rows.length === 0) return "-- No rows to migrate.\n";
+	if (!entity.pluginId || !entity.storeId || !entity.repositoryId) {
+		throw new Error(`${entity.id}: EmDash plugin Store repository authority is missing`);
+	}
+	if (rows.length === 0) return "-- No rows to migrate.\n";
   const columns = entity.columns;
   const mutable = entity.immutable ? [] : columns.filter((column) => !entity.keys.includes(column));
   const conflict = entity.keys.map((column) => `"${column}"`).join(", ");
@@ -178,7 +181,12 @@ export function upsertSql(entity, rows) {
   if (chunk.length) statements.push(`${prefix}${chunk.join(", ")}${suffix}`);
   // Wrangler D1 file imports are not atomic. Each statement is atomic, and the
   // project-scoped UPSERT plus checkpoint verification makes a partial import resumable.
-  return ["PRAGMA foreign_keys = ON;", ...statements, ""].join("\n");
+	return [
+		`-- plugin=${entity.pluginId} store=${entity.storeId} repository=${entity.repositoryId}`,
+		"PRAGMA foreign_keys = ON;",
+		...statements,
+		"",
+	].join("\n");
 }
 
 export async function buildPlan({ adapter, registry, guards = [], projectRef, modules = MODULES, entityIds }) {
@@ -204,6 +212,9 @@ export async function buildPlan({ adapter, registry, guards = [], projectRef, mo
     entities.push({
       id: entity.id,
       module: entity.module,
+      plugin_id: entity.pluginId,
+      store_id: entity.storeId,
+      repository_id: entity.repositoryId,
       source_database: entity.source.database,
       source_table: entity.source.table,
       target_table: entity.target.table,
@@ -264,7 +275,15 @@ export async function applyPlan({ adapter, registry, plan, safety, checkpoint = 
     };
     checkpoint.updated_at = new Date().toISOString();
     if (onCheckpoint) await onCheckpoint(checkpoint);
-    results.push({ id: item.id, module: item.module, resumed, ...verification });
+    results.push({
+      id: item.id,
+      module: item.module,
+      plugin_id: entity.pluginId,
+      store_id: entity.storeId,
+      repository_id: entity.repositoryId,
+      resumed,
+      ...verification,
+    });
   }
   return {
     ...plan,

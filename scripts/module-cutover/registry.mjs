@@ -6,7 +6,31 @@ import { createHash } from "node:crypto";
 const j = (...columns) => columns;
 
 function entity(definition) {
-  return Object.freeze({ jsonColumns: [], keys: ["id"], ...definition });
+  const owner = pluginOwner(definition);
+  const targetTable = definition.target?.table ?? definition.id.split(".").at(-1);
+  return Object.freeze({
+    jsonColumns: [],
+    keys: ["id"],
+    ...definition,
+    pluginId: owner,
+    storeId: `${owner}.store.${targetTable}`,
+    repositoryId: `${owner}.repository.${targetTable}`,
+  });
+}
+
+function pluginOwner(definition) {
+  if (definition.module === "products") return "supbrd-plug-products";
+  if (definition.module === "paywalls") return "supbrd-plugmod-paywalls";
+  if (definition.module === "dynamic-links") return "supbrd-plugmod-dynamic-links";
+  if (definition.module === "support") return "supbrd-plugmod-support";
+  if (definition.module === "analytics") return "supbrd-plugmod-analytics";
+  if (definition.module === "marketing") return "supbrd-plugmod-marketing";
+  if (definition.module === "onboardings") return "supbrd-plugmod-onboardings";
+  if (definition.id === "app.sdk_configurations") return "supbrd-plug-settings";
+  if (definition.id.includes("events") || definition.id.includes("metrics")) {
+    return "supbrd-plugmod-analytics";
+  }
+  return "supbrd-plug-user";
 }
 
 function copySupport(id, sourceTable, targetTable, columns, options = {}) {

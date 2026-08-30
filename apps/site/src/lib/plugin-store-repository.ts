@@ -14,6 +14,7 @@ interface StoreRecordInput {
 	operation_id: string;
 	payload: unknown;
 	updated_at: string;
+	encryption_key: CryptoKey;
 }
 
 interface StoreRecordRow {
@@ -32,16 +33,43 @@ interface StoreRecordRow {
 export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInput) {
 	assertPlugin(input.plugin_id);
 	const instanceId = resolveInstanceAlias(input);
-	const payloadJson = canonicalizeReleasePayload(input.payload);
-	const payloadChecksum = await sha256(payloadJson);
+	const canonicalPayload = canonicalizeReleasePayload(input.payload);
 	const priorOperation = await db
-		.prepare("SELECT payload_checksum FROM superboard_plugin_store_outbox WHERE operation_id = ?")
+		.prepare(
+			`SELECT plugin_id, store_id, instance_id, entity_type, entity_id
+			 FROM superboard_plugin_store_outbox WHERE operation_id = ?`,
+		)
 		.bind(input.operation_id)
-		.first<{ payload_checksum: string }>();
+		.first<{
+			plugin_id: string;
+			store_id: string;
+			instance_id: string;
+			entity_type: string;
+			entity_id: string;
+		}>();
 	if (priorOperation) {
-		if (priorOperation.payload_checksum !== payloadChecksum) throw new Error("IDEMPOTENCY_CONFLICT");
-		const existing = await loadPluginStoreRecord(db, input.plugin_id, input.store_id, instanceId, input.entity_type, input.entity_id);
+		if (
+			priorOperation.plugin_id !== input.plugin_id ||
+			priorOperation.store_id !== input.store_id ||
+			priorOperation.instance_id !== instanceId ||
+			priorOperation.entity_type !== input.entity_type ||
+			priorOperation.entity_id !== input.entity_id
+		) {
+			throw new Error("IDEMPOTENCY_TARGET_CONFLICT");
+		}
+		const existing = await loadPluginStoreRecord(
+			db,
+			input.plugin_id,
+			input.store_id,
+			instanceId,
+			input.entity_type,
+			input.entity_id,
+			input.encryption_key,
+		);
 		if (!existing) throw new Error("IDEMPOTENCY_RECEIPT_WITHOUT_RECORD");
+		if (canonicalizeReleasePayload(existing.payload) !== canonicalPayload) {
+			throw new Error("IDEMPOTENCY_PAYLOAD_CONFLICT");
+		}
 		return { ...existing, idempotent: true };
 	}
 	const current = await loadPluginStoreRecord(
@@ -51,6 +79,7 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 		instanceId,
 		input.entity_type,
 		input.entity_id,
+		input.encryption_key,
 	);
 	if (
 		(current === null && input.expected_revision !== null) ||
@@ -60,6 +89,10 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 	}
 
 	const nextRevision = (input.expected_revision ?? 0) + 1;
+	const payloadJson = canonicalizeReleasePayload(
+		await encryptPayload(input.encryption_key, canonicalPayload),
+	);
+	const payloadChecksum = await sha256(payloadJson);
 	const row = await db
 		.prepare(
 			`INSERT INTO superboard_plugin_store_records (
@@ -90,7 +123,7 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 		)
 		.first<StoreRecordRow>();
 	if (!row) throw new Error("STORE_REVISION_CONFLICT");
-	return { ...toRecord(row), idempotent: false };
+	return { ...(await toRecord(row, input.encryption_key)), idempotent: false };
 }
 
 export async function loadPluginStoreRecord(
@@ -100,6 +133,7 @@ export async function loadPluginStoreRecord(
 	instanceId: string,
 	entityType: string,
 	entityId: string,
+	encryptionKey: CryptoKey,
 ) {
 	const row = await db
 		.prepare(
@@ -109,7 +143,7 @@ export async function loadPluginStoreRecord(
 		)
 		.bind(pluginId, storeId, instanceId, entityType, entityId)
 		.first<StoreRecordRow>();
-	return row ? toRecord(row) : null;
+	return row ? toRecord(row, encryptionKey) : null;
 }
 
 export async function verifyPluginStoreShadowRead(db: D1Database, input: {
@@ -138,6 +172,7 @@ export async function exportPluginStoreReverseDelta(db: D1Database, input: {
 	plugin_id: string;
 	instance_id: string;
 	updated_after: string;
+	encryption_key: CryptoKey;
 }) {
 	const rows = await db
 		.prepare(
@@ -149,10 +184,14 @@ export async function exportPluginStoreReverseDelta(db: D1Database, input: {
 		)
 		.bind(input.plugin_id, input.instance_id, input.updated_after)
 		.all<Omit<StoreRecordRow, "last_operation_id">>();
-	const records = rows.results.map(({ payload_json: payloadJson, ...row }) => ({
-		...row,
-		payload: JSON.parse(payloadJson) as unknown,
-	}));
+	const records = await Promise.all(
+		rows.results.map(async ({ payload_json: payloadJson, ...row }) => ({
+			...row,
+			payload: JSON.parse(
+				await decryptPayload(input.encryption_key, JSON.parse(payloadJson) as EncryptedPayload),
+			) as unknown,
+		})),
+	);
 	return { records, checksum: await sha256(canonicalizeReleasePayload(records)), deletes: [] as never[] };
 }
 
@@ -165,14 +204,31 @@ export async function issueWorkerExecutionLease(db: D1Database, input: {
 	expires_at: string;
 }) {
 	assertPlugin(input.plugin_id);
-	await db
-		.prepare(
-			`INSERT INTO superboard_worker_execution_leases
-			 (attempt_id, plugin_id, operation_id, callback_token_hash, issued_at, expires_at, consumed_at)
-			 VALUES (?, ?, ?, ?, ?, ?, NULL)`,
-		)
-		.bind(input.attempt_id, input.plugin_id, input.operation_id, await sha256(input.callback_token), input.issued_at, input.expires_at)
-		.run();
+	await db.batch([
+		db
+			.prepare(
+				`UPDATE superboard_worker_execution_leases
+				 SET superseded_at = ?
+				 WHERE plugin_id = ? AND operation_id = ?
+				   AND consumed_at IS NULL AND superseded_at IS NULL`,
+			)
+			.bind(input.issued_at, input.plugin_id, input.operation_id),
+		db
+			.prepare(
+				`INSERT INTO superboard_worker_execution_leases
+				 (attempt_id, plugin_id, operation_id, callback_token_hash, issued_at, expires_at,
+				  superseded_at, consumed_at)
+				 VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`,
+			)
+			.bind(
+				input.attempt_id,
+				input.plugin_id,
+				input.operation_id,
+				await sha256(input.callback_token),
+				input.issued_at,
+				input.expires_at,
+			),
+	]);
 }
 
 export async function acceptWorkerCallback(db: D1Database, input: {
@@ -186,7 +242,7 @@ export async function acceptWorkerCallback(db: D1Database, input: {
 			`UPDATE superboard_worker_execution_leases
 			 SET consumed_at = ?
 			 WHERE attempt_id = ? AND plugin_id = ? AND callback_token_hash = ?
-			   AND consumed_at IS NULL AND expires_at >= ?
+			   AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at >= ?
 			 RETURNING operation_id`,
 		)
 		.bind(input.completed_at, input.attempt_id, input.plugin_id, await sha256(input.callback_token), input.completed_at)
@@ -201,7 +257,11 @@ function resolveInstanceAlias(input: Pick<StoreRecordInput, "instance_id" | "pro
 	return values[0]!;
 }
 
-function toRecord(row: StoreRecordRow) {
+async function toRecord(row: StoreRecordRow, encryptionKey: CryptoKey) {
+	const payloadJson = await decryptPayload(
+		encryptionKey,
+		JSON.parse(row.payload_json) as EncryptedPayload,
+	);
 	return {
 		plugin_id: row.plugin_id,
 		store_id: row.store_id,
@@ -209,10 +269,48 @@ function toRecord(row: StoreRecordRow) {
 		entity_type: row.entity_type,
 		entity_id: row.entity_id,
 		revision: row.revision,
-		payload: JSON.parse(row.payload_json) as unknown,
+		payload: JSON.parse(payloadJson) as unknown,
 		payload_checksum: row.payload_checksum,
 		updated_at: row.updated_at,
 	};
+}
+
+interface EncryptedPayload {
+	algorithm: "AES-GCM";
+	iv: string;
+	ciphertext: string;
+}
+
+async function encryptPayload(key: CryptoKey, plaintext: string): Promise<EncryptedPayload> {
+	const iv = crypto.getRandomValues(new Uint8Array(12));
+	const ciphertext = await crypto.subtle.encrypt(
+		{ name: "AES-GCM", iv },
+		key,
+		new TextEncoder().encode(plaintext),
+	);
+	return {
+		algorithm: "AES-GCM",
+		iv: bytesToBase64(iv),
+		ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
+	};
+}
+
+async function decryptPayload(key: CryptoKey, payload: EncryptedPayload): Promise<string> {
+	if (payload.algorithm !== "AES-GCM") throw new Error("STORE_PAYLOAD_ENCRYPTION_INVALID");
+	const plaintext = await crypto.subtle.decrypt(
+		{ name: "AES-GCM", iv: base64ToBytes(payload.iv) },
+		key,
+		base64ToBytes(payload.ciphertext),
+	);
+	return new TextDecoder().decode(plaintext);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+	return btoa(String.fromCodePoint(...bytes));
+}
+
+function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
+	return Uint8Array.from(atob(value), (character) => character.codePointAt(0) ?? 0);
 }
 
 function assertPlugin(pluginId: string): void {

@@ -5,7 +5,7 @@ Cette livraison prépare la migration vers les Stores propriétaires des plugins
 ## Artefacts d’autorité
 
 - `config/emdash-parity-matrix.json` contient 143 lignes exécutables générées depuis les surfaces Dashboard, API, Worker, JavaScript, React Native, Flutter et FlutterFlow. Chaque ligne `required` lie une baseline, une cible, un test existant et le SHA-256 exact de ce test.
-- `config/emdash-plugin-topology.json` contient cinq manifests full et quatorze manifests de famille module. Chaque manifest possède un Store, un repository et des checksums canoniques. Les modules possèdent en plus un Worker Descriptor transitoire : aucune autorité d’écriture, lease liée à la tentative, idempotence et outbox obligatoires, callback signé et lié à la lease.
+- `config/emdash-plugin-topology.json` contient cinq manifests full et quatorze manifests de famille module. Ils utilisent tous le contrat commun fermé `SuperBoardPluginManifest` et passent son validateur runtime. Leurs 85 Stores correspondent aux domaines déclarés et aux vraies tables cibles du registre de cutover ; chaque Store possède son repository et ses checksums canoniques. Les modules possèdent en plus un Worker Descriptor transitoire : aucune autorité d’écriture directe, lease liée à la tentative, idempotence et outbox obligatoires, callback signé et lié à la lease.
 - `docs/evidence/issue-54/parity-matrix.receipt.json` lie par checksum les deux artefacts précédents, leur nombre total de lignes et leur nombre de lignes requises.
 - `docs/evidence/issue-54/isolated-store-restore.receipt.json` prouve hors production la restauration logique d’un D1 contenant FTS5, d’objets R2 et de valeurs KV.
 
@@ -20,15 +20,16 @@ La migration D1 Site `0005_plugin_store_authority.sql` introduit le repository c
 - idempotence par `operation_id` ;
 - outbox créée par trigger dans la même écriture que le record ;
 - payload JSON canonique et checksum SHA-256 ;
+- chiffrement AES-256-GCM obligatoire avant toute écriture D1 ; aucun e-mail, credential ou payload sensible n’est stocké en clair ;
 - index de lecture par instance/plugin/type ;
 - métriques de shadow read limitées au plugin, type, résultat et comptages, sans payload ni PII ;
-- leases Worker à usage unique, liées à une tentative, une opération, une expiration et un token callback stocké uniquement sous forme de hash.
+- leases Worker à usage unique, liées à une tentative, une opération, une expiration et un token callback stocké uniquement sous forme de hash ; une nouvelle tentative invalide atomiquement la précédente.
 
-Les aliases publics `projectId` et `pid` sont résolus vers l’`instance_id` canonique. Une divergence entre aliases ferme l’écriture. Les contrats publics ne changent pas : la fixture commune `packages/contracts/fixtures/emdash-store-parity/v1.json` est exécutée par JavaScript, React Native, Flutter et FlutterFlow avant/après le changement d’autorité.
+Les aliases publics `projectId` et `pid` sont résolus vers l’`instance_id` canonique. Une divergence entre aliases ferme l’écriture. Les contrats publics ne changent pas : la fixture commune `packages/contracts/fixtures/emdash-store-parity/v1.json` traverse les vrais encodeurs, bridges ou modèles de JavaScript, React Native, Flutter et FlutterFlow.
 
 ## Migration et rollback
 
-Le moteur existant `scripts/module-cutover/` reste read-only par défaut et conserve ses gardes de production. Les tests prouvent :
+Le moteur existant `scripts/module-cutover/` reste read-only par défaut et conserve ses gardes de production. Chaque entité réelle du registre porte désormais son `pluginId`, son `storeId` et son `repositoryId`; le moteur refuse toute écriture qui n’est pas liée à cette autorité et l’inscrit dans le SQL de migration. Les tests prouvent :
 
 - comptages et checksums déterministes ;
 - double import sans duplication ;
@@ -39,7 +40,7 @@ Le moteur existant `scripts/module-cutover/` reste read-only par défaut et cons
 - rollback bloqué tant qu’un backup, une version Worker ou un reverse delta manque ;
 - aucune instruction de suppression dans les deltas produits par le repository EmDash.
 
-La sauvegarde D1 avec FTS5 suit un chemin séparé de `wrangler d1 export` : les tables autoritatives sont exportées logiquement et checksumées, les tables FTS5 sont recréées puis reconstruites depuis les tables restaurées. Le test restaure également R2 et KV dans des Stores mémoire isolés, effectue une vraie requête `MATCH`, compare les comptages et produit un reçu immuable. Aucune ressource distante ou production n’est lue ou modifiée.
+La sauvegarde D1 avec FTS5 suit un chemin séparé de `wrangler d1 export` : les tables autoritatives sont exportées logiquement et checksumées, les tables FTS5 sont recréées puis reconstruites depuis les tables restaurées. La preuve déterministe effectue une vraie requête `MATCH`. Un test Worker supplémentaire sauvegarde et restaure les mêmes artefacts au travers de vrais bindings Miniflare R2 et KV, puis relit leurs octets. Aucune ressource distante ou production n’est lue ou modifiée.
 
 ## Commandes de preuve
 

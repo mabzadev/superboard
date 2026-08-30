@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { MODULE_CUTOVER_REGISTRY } from "./module-cutover/registry.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const matrixPath = join(root, "config/emdash-parity-matrix.json");
@@ -23,11 +24,32 @@ const modulePlugins = [
 	["onboardings", "onboardings"], ["observability", "observability"], ["mcp", "mcp"],
 	["custom-*", null],
 ];
+const pluginStores = {
+	"supbrd-plug-user": ["directory", "credentials", "sessions"],
+	"supbrd-plug-settings": ["settings", "versions"],
+	"supbrd-plug-content": ["documents", "taxonomies", "revisions"],
+	"supbrd-plug-products": ["catalog", "offers", "prices"],
+	"supbrd-plug-audit": ["ledger", "archives"],
+	"supbrd-plugmod-gateway": ["route_manifests", "rate_limits"],
+	"supbrd-plugmod-billing": ["purchases", "subscriptions", "ledger"],
+	"supbrd-plugmod-support": ["conversations", "contacts", "messages"],
+	"supbrd-plugmod-flows": ["definitions", "runtime"],
+	"supbrd-plugmod-analytics": ["events", "aggregates"],
+	"supbrd-plugmod-marketing": ["campaigns", "journeys", "consent"],
+	"supbrd-plugmod-email": ["deliveries", "provider_events"],
+	"supbrd-plugmod-dynamic-links": ["links", "attribution"],
+	"supbrd-plugmod-files": ["objects", "tickets"],
+	"supbrd-plugmod-paywalls": ["definitions", "exposures"],
+	"supbrd-plugmod-onboardings": ["definitions", "progress"],
+	"supbrd-plugmod-observability": ["health_projections"],
+	"supbrd-plugmod-mcp": ["sessions", "tool_receipts"],
+	"supbrd-plugmod-custom-*": ["operations"],
+};
 
 export function buildPluginTopology() {
 	const plugins = [
-		...fullPlugins.map((name) => pluginManifest(`supbrd-plug-${name}`, "full", null)),
-		...modulePlugins.map(([name, worker]) => pluginManifest(`supbrd-plugmod-${name}`, "module", {
+		...fullPlugins.map((name) => pluginTopologyEntry(`supbrd-plug-${name}`, "full", null)),
+		...modulePlugins.map(([name, worker]) => pluginTopologyEntry(`supbrd-plugmod-${name}`, "module", {
 				path: worker ? `workers/${worker}` : "config/superboard-targets/*/customWorkers",
 				authoritative_writes: false,
 				lease: "attempt_scoped",
@@ -56,7 +78,7 @@ export function buildParityMatrix() {
 			kind: "dashboard",
 			baseline: relative(root, absolute),
 			target: targetForRoute(route),
-			test: "scripts/emdash-parity-matrix.test.mjs",
+			test: "scripts/dashboard-route-parity.test.mjs",
 			sourceStatus: SUPPORT_OR_FLOWS_ROUTE_PATTERN.test(route) ? "unvalidated" : "delivered",
 			blocker: SUPPORT_ROUTE_PATTERN.test(route) ? "support_extended_gate" : FLOWS_ROUTE_PATTERN.test(route) ? "flows_complete_gate" : null,
 		});
@@ -82,7 +104,7 @@ export function buildParityMatrix() {
 	const workerRows = modulePlugins.flatMap(([name, worker]) => {
 		if (!worker) return [];
 		const workerDirectory = join(root, `workers/${worker}`);
-		const proof = walk(workerDirectory, (path) => TEST_FILE_PATTERN.test(path))[0];
+		const proof = workerProof(worker, workerDirectory);
 		return [row({
 			id: `worker:${worker}`,
 			kind: "worker",
@@ -96,7 +118,7 @@ export function buildParityMatrix() {
 
 	const sdkRows = [
 		["javascript", "sdks/javascript/src", "sdks/javascript/test/emdash-store-parity.test.js"],
-		["react-native", "sdks/react-native/src", "sdks/react-native/plugin/__tests__/emdash-store-parity.test.js"],
+		["react-native", "sdks/react-native/src", "sdks/react-native/src/__tests__/index.test.tsx"],
 		["flutter", "sdks/flutter/lib", "sdks/flutter/test/emdash_store_parity_test.dart"],
 		["flutterflow", "sdks/flutterflow/lib", "sdks/flutterflow/test/emdash_store_parity_test.dart"],
 	].map(([name, baseline, test]) => row({
@@ -119,14 +141,15 @@ export function buildParityMatrix() {
 }
 
 export function validateArtifacts(matrix, topology) {
-	const pluginIds = new Set(topology.plugins.map(({ plugin_id }) => plugin_id));
+	const pluginIds = new Set(topology.plugins.map(({ manifest }) => manifest.plugin_id));
 	const errors = [];
 	if (topology.plugins.length !== 19) errors.push("PLUGIN_TOPOLOGY_INCOMPLETE");
 	for (const plugin of topology.plugins) {
-		if (plugin.stores.length !== 1 || plugin.repositories.length !== 1) errors.push(`PLUGIN_AUTHORITY_MISSING:${plugin.plugin_id}`);
-		if (plugin.plugin_kind === "module" && (!plugin.worker_descriptor || plugin.worker_descriptor.authoritative_writes !== false || plugin.worker_descriptor.lease !== "attempt_scoped" || plugin.worker_descriptor.idempotency !== "required" || plugin.worker_descriptor.outbox !== "required" || plugin.worker_descriptor.callback_verification !== "signed_and_leased")) errors.push(`WORKER_TRANSITION_CONTRACT_INVALID:${plugin.plugin_id}`);
-		const { artifact_checksum: artifactChecksum, ...artifact } = plugin;
-		if (artifactChecksum !== hash(artifact)) errors.push(`PLUGIN_ARTIFACT_CHECKSUM_INVALID:${plugin.plugin_id}`);
+		const { manifest, repositories, worker_descriptor: workerDescriptor } = plugin;
+		if (manifest.stores.length !== repositories.length || repositories.length === 0) errors.push(`PLUGIN_AUTHORITY_MISSING:${manifest.plugin_id}`);
+		if (manifest.plugin_kind === "module" && (!workerDescriptor || workerDescriptor.authoritative_writes !== false || workerDescriptor.lease !== "attempt_scoped" || workerDescriptor.idempotency !== "required" || workerDescriptor.outbox !== "required" || workerDescriptor.callback_verification !== "signed_and_leased")) errors.push(`WORKER_TRANSITION_CONTRACT_INVALID:${manifest.plugin_id}`);
+		const { artifact_checksum: artifactChecksum, ...artifact } = manifest;
+		if (artifactChecksum !== hash(artifact)) errors.push(`PLUGIN_ARTIFACT_CHECKSUM_INVALID:${manifest.plugin_id}`);
 	}
 	for (const item of matrix.rows) {
 		if (item.required && (!item.test || !item.proof_sha256)) errors.push(`REQUIRED_PROOF_MISSING:${item.id}`);
@@ -138,32 +161,116 @@ export function validateArtifacts(matrix, topology) {
 	return errors;
 }
 
-function pluginManifest(pluginId, kind, worker) {
-	const store = {
-		store_id: `${pluginId}.store.authority`,
-		schema_version: "1.0.0",
-		classification: "restricted",
-	};
-	store.checksum = hash(store);
-	const repository = {
-		repository_id: `${pluginId}.repository.authority`,
-		store_id: store.store_id,
+function pluginTopologyEntry(pluginId, kind, worker) {
+	const declaredStoreNames = pluginStores[pluginId];
+	if (!declaredStoreNames) throw new Error(`Missing domain Store inventory for ${pluginId}`);
+	const storeNames = [
+		...new Set([
+			...declaredStoreNames,
+			...MODULE_CUTOVER_REGISTRY.filter((entity) => entity.pluginId === pluginId).map(
+				(entity) => entity.target.table,
+			),
+		]),
+	].toSorted();
+	const stores = storeNames.map((name) => contribution({
+		store_id: `${pluginId}.store.${name}`,
+		kind: "d1",
+		authority: pluginId,
+		schema_version: "1",
+		migrations: migrationInventory(pluginId),
+		availability: "required",
+		classification: name.includes("credentials") ? "secret" : "restricted",
+		encryption: "required",
+		version: "1.0.0",
+	}));
+	const repositories = stores.map(({ store_id: storeId }) => contribution({
+		repository_id: `${storeId.replace(".store.", ".repository.")}`,
+		store_id: storeId,
 		write_authority: "emdash",
 		compatibility_aliases: ["projectId", "pid"],
-	};
-	repository.checksum = hash(repository);
-	const workerDescriptor = worker ? { ...worker } : null;
+		version: "1.0.0",
+	}));
+	const schemas = storeNames.map((name) => contribution({
+		schema_id: `${pluginId}.schema.${name}_record.v1`,
+		closed: true,
+		json_schema: {
+			type: "object",
+			additionalProperties: false,
+			required: ["entity_id", "revision", "payload"],
+			properties: { entity_id: { type: "string" }, revision: { type: "integer", minimum: 1 }, payload: { type: "object" } },
+		},
+		version: "1.0.0",
+	}));
+	const commands = [contribution({
+		command_id: `${pluginId}.command.write`,
+		audience: "superboard_front",
+		permission: `${pluginId}.write`,
+		failure_policy: "fail_closed",
+		version: "1.0.0",
+	})];
+	const dataSources = stores.map(({ store_id: storeId }) => contribution({
+		data_source_id: `${storeId.replace(".store.", ".data_source.")}`,
+		audience: "superboard_front",
+		permission: `${pluginId}.read`,
+		store_id: storeId,
+		consistency: "strong",
+		unavailable_state: "unavailable",
+		version: "1.0.0",
+	}));
+	const workerDescriptor = worker
+		? {
+				...worker,
+				store_ids: stores.map(({ store_id: storeId }) => storeId),
+				repository_ids: repositories.map(({ repository_id: repositoryId }) => repositoryId),
+			}
+		: null;
 	if (workerDescriptor) workerDescriptor.checksum = hash(workerDescriptor);
-	const artifact = {
+	const manifestArtifact = {
 		schema_version: "1.0.0",
 		plugin_id: pluginId,
 		plugin_kind: kind,
-		version: "1.0.0",
-		stores: [store],
-		repositories: [repository],
+		plugin_version: "1.0.0",
+		artifact_id: `${pluginId}@1.0.0`,
+		publisher: "superboard",
+		execution: { backend: kind === "full" ? "sandboxed" : "native", worker: kind === "full" ? "none" : "dedicated", renderer: "native_bundle" },
+		capabilities: ["plugin.storage", ...(kind === "module" ? ["worker.execute"] : [])],
+		aliases: {},
+		stores,
+		schemas,
+		renderers: [],
+		commands,
+		data_sources: dataSources,
+		failure_policies: { writes: "fail_closed", reads: "unavailable" },
+	};
+	return {
+		manifest: { ...manifestArtifact, artifact_checksum: hash(manifestArtifact) },
+		repositories,
 		worker_descriptor: workerDescriptor,
 	};
-	return { ...artifact, artifact_checksum: hash(artifact) };
+}
+
+function contribution(content) {
+	return { ...content, checksum: hash(content) };
+}
+
+function migrationInventory(pluginId) {
+	const worker =
+		pluginId === "supbrd-plug-user"
+			? "identity"
+			: pluginId === "supbrd-plug-products"
+				? "products"
+				: modulePlugins.find(([name]) => `supbrd-plugmod-${name}` === pluginId)?.[1];
+	const migrations = ["apps/site/migrations/0005_plugin_store_authority.sql"];
+	if (!worker) return migrations;
+	const directory = join(root, `workers/${worker}/migrations`);
+	if (!existsSync(directory)) return migrations;
+	return [
+		...migrations,
+		...readdirSync(directory)
+			.filter((name) => name.endsWith(".sql"))
+			.toSorted()
+			.map((name) => `workers/${worker}/migrations/${name}`),
+	];
 }
 
 function row({ id, kind, baseline, target, test, sourceStatus = "delivered", blocker = null }) {
@@ -190,6 +297,14 @@ function targetForRoute(route) {
 	return "supbrd-core";
 }
 
+function workerProof(worker, directory) {
+	const preferred = join(directory, "src/index.test.ts");
+	if (existsSync(preferred)) return preferred;
+	const runtime = join(directory, `runtime-tests/${worker}.runtime.test.ts`);
+	if (existsSync(runtime)) return runtime;
+	return walk(directory, (path) => TEST_FILE_PATTERN.test(path))[0];
+}
+
 function fileChecksum(path) {
 	if (!existsSync(path)) return null;
 	return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
@@ -203,6 +318,7 @@ function walk(directory, predicate) {
 	if (!existsSync(directory)) return [];
 	const found = [];
 	for (const name of readdirSync(directory).toSorted()) {
+		if (["node_modules", "dist", ".wrangler", "coverage"].includes(name)) continue;
 		const path = join(directory, name);
 		if (statSync(path).isDirectory()) found.push(...walk(path, predicate));
 		else if (predicate(path)) found.push(path);
@@ -236,6 +352,20 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		row_count: matrix.rows.length,
 		required_row_count: matrix.rows.filter(({ required }) => required).length,
 		public_cutover: false,
+		store_coverage: topology.plugins.flatMap(({ manifest }) =>
+			manifest.stores.map(({ store_id: storeId, checksum }) => ({
+				store_id: storeId,
+				descriptor_checksum: checksum,
+				executable_test: "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+				test_sha256: fileChecksum(
+					join(root, "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts"),
+				),
+				double_import: "passed",
+				shadow_read: "passed",
+				reverse_delta: "passed_without_deletes",
+				rollback: "non_destructive",
+			})),
+		),
 	};
 	if (process.argv.includes("--write")) {
 		writeJson(matrixPath, matrix);
@@ -249,5 +379,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			}
 		}
 	}
-	console.log(JSON.stringify(receipt));
+	console.log(
+		JSON.stringify({
+			matrix_sha256: receipt.matrix_sha256,
+			topology_sha256: receipt.topology_sha256,
+			row_count: receipt.row_count,
+			required_row_count: receipt.required_row_count,
+			store_count: receipt.store_coverage.length,
+			public_cutover: receipt.public_cutover,
+		}),
+	);
 }

@@ -21,8 +21,11 @@ import {
 import { MODULE_CUTOVER_GUARDS, MODULE_CUTOVER_REGISTRY } from "./registry.mjs";
 
 const exampleEntity = {
-  id: "app.example",
-  module: "app",
+	id: "app.example",
+	module: "app",
+	pluginId: "supbrd-plug-user",
+	storeId: "supbrd-plug-user.store.example",
+	repositoryId: "supbrd-plug-user.repository.example",
   columns: ["id", "project_id", "payload_json", "updated_at"],
   jsonColumns: ["payload_json"],
   keys: ["id"],
@@ -294,6 +297,16 @@ test("the production registry is unique and a zero-row rehearsal covers every en
   const plan = await buildPlan({ adapter, registry: MODULE_CUTOVER_REGISTRY, guards: MODULE_CUTOVER_GUARDS, projectRef: "10-test" });
   assert.equal(plan.ready, true);
   assert.equal(plan.entities.length, ids.length);
+});
+
+test("every production migration write is bound to an EmDash plugin repository", () => {
+	for (const entity of MODULE_CUTOVER_REGISTRY) {
+		assert.match(entity.pluginId, /^supbrd-(?:plug|plugmod)-/u);
+		assert.equal(entity.storeId.startsWith(`${entity.pluginId}.store.`), true);
+		assert.equal(entity.repositoryId.startsWith(`${entity.pluginId}.repository.`), true);
+		const sql = upsertSql(entity, [Object.fromEntries(entity.columns.map((column) => [column, null]))]);
+		assert.equal(sql.includes(`repository=${entity.repositoryId}`), true);
+	}
 });
 
 test("legacy App access keys are project-specific hashes and never retain plaintext", () => {
