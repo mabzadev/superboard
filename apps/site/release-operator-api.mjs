@@ -7,6 +7,15 @@ export function superboardReleaseOperatorApi() {
 		name: "superboard-release-operator-api",
 		hooks: {
 			"astro:config:setup": ({ injectRoute }) => {
+				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/user/install",
+					entrypoint: fileURLToPath(
+						new URL(
+							"./src/pages/_superboard/api/plugins/user/install.ts",
+							import.meta.url,
+						),
+					),
+				});
 				for (const endpoint of RELEASE_ENDPOINTS) {
 					injectRoute({
 						pattern: `/_emdash/api/superboard/releases/${endpoint}`,

@@ -1,6 +1,7 @@
 import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
+import { userPluginManifest } from "@superboard/supbrd-plug-user";
 
 import topology from "../../../config/emdash-plugin-topology.json";
 import {
@@ -14,8 +15,48 @@ import {
 	putPluginStoreRecord,
 	verifyPluginStoreShadowRead,
 } from "../src/lib/plugin-store-repository.js";
+import { installCompiledUserPlugin } from "../src/lib/user-plugin-installation.js";
 
 describe("EmDash plugin Store authority", () => {
+	test("installs the exact compiled user plugin and publishes bounded dependency health", async () => {
+		const receipt = await installCompiledUserPlugin(env.DB, {
+			instance_id: "vocostar",
+			checked_at: "2026-08-30T08:30:00.000Z",
+			expires_at: "2026-08-30T09:30:00.000Z",
+		});
+		expect(receipt).toMatchObject({
+			plugin_id: userPluginManifest.plugin_id,
+			plugin_version: userPluginManifest.plugin_version,
+			artifact_checksum: userPluginManifest.artifact_checksum,
+			dependency_id: "dependency.supbrd_plug_user",
+			status: "ready",
+		});
+		expect(receipt.evidence_checksum).toMatch(/^sha256:[a-f0-9]{64}$/u);
+
+		const installed = await env.DB.prepare(
+			`SELECT artifact_checksum, manifest_json
+			 FROM superboard_plugin_manifest_artifacts
+			 WHERE plugin_id = ? AND artifact_checksum = ?`,
+		)
+			.bind(userPluginManifest.plugin_id, userPluginManifest.artifact_checksum)
+			.first<{ artifact_checksum: string; manifest_json: string }>();
+		expect(installed?.artifact_checksum).toBe(userPluginManifest.artifact_checksum);
+		expect(JSON.parse(installed?.manifest_json ?? "{}")).toMatchObject({
+			plugin_version: "1.3.0",
+		});
+
+		const health = await env.DB.prepare(
+			"SELECT status, evidence_checksum, expires_at FROM superboard_dependency_health WHERE instance_id = ? AND dependency_id = ?",
+		)
+			.bind("vocostar", "dependency.supbrd_plug_user")
+			.first();
+		expect(health).toEqual({
+			status: "ready",
+			evidence_checksum: receipt.evidence_checksum,
+			expires_at: receipt.expires_at,
+		});
+	});
+
 	test("writes through the repository with stable aliases, CAS, idempotence and outbox", async () => {
 		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
 			"encrypt",
