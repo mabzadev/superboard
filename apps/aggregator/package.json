@@ -1,6 +1,7 @@
 {
 	"name": "@emdash-cms/aggregator",
 	"version": "0.0.0",
+	"license": "MIT",
 	"private": true,
 	"description": "EmDash plugin registry aggregator. Indexes com.emdashcms.experimental.package.* records via Jetstream + PDS-verified ingest, exposes XRPC reads.",
 	"type": "module",

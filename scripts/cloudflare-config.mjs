@@ -242,7 +242,7 @@ function siteConfig() {
     ],
     worker_loaders: [{ binding: target.siteRuntime.workerLoaderBinding }],
     images: { binding: "IMAGES" },
-    triggers: { crons: [...target.siteRuntime.crons] },
+    ...(preflight ? {} : { triggers: { crons: [...target.siteRuntime.crons] } }),
     observability: target.siteRuntime.observability,
   };
 }

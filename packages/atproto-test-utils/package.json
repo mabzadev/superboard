@@ -1,6 +1,7 @@
 {
 	"name": "@emdash-cms/atproto-test-utils",
 	"version": "0.0.0",
+	"license": "MIT",
 	"private": true,
 	"description": "In-memory atproto fakes for EmDash tests: a real-crypto MockPds, a driveable MockJetstream, and a MockDidResolver. Used by both the registry CLI and the aggregator so verification code paths run in tests against the same primitives production sees.",
 	"type": "module",

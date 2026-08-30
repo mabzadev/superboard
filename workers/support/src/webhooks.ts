@@ -689,7 +689,11 @@ async function roomJson(
     body: JSON.stringify(body),
   }));
   let payload: Record<string, unknown> = {};
-  try { payload = asObject(await response.json()); } catch { /* normalized below */ }
+  try {
+    payload = asObject(JSON.parse(await readTextLimited(response, 64_000)));
+  } catch {
+    // Normalized below.
+  }
   if (!response.ok) {
     const error = asObject(payload.error);
     throw failure(

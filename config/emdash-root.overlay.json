@@ -294,7 +294,8 @@
 			"prettier": "^3.9.6",
 			"@types/react": "catalog:",
 			"@types/react-dom": "catalog:",
-			"vitest": "catalog:"
+			"vitest": "catalog:",
+			"wrangler": "catalog:"
 		},
 		"optionalDependencies": {
 			"@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260421.2"

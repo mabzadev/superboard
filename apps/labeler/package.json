@@ -1,6 +1,7 @@
 {
 	"name": "@emdash-cms/labeler",
 	"version": "0.0.0",
+	"license": "MIT",
 	"private": true,
 	"description": "Metadata-only moderation labeler for the EmDash plugin registry.",
 	"type": "module",
