@@ -3,6 +3,7 @@
   "target": "mbza-development",
   "environment": "development",
   "created_at": "2026-08-30T15:20:48Z",
+  "finalized_at": "2026-08-30T18:42:23.892Z",
   "public_cutover": false,
   "production_target_mutated": false,
   "site_version_id": "2e5c2eb0-6df3-44e9-8c2d-7718d937490b",
@@ -101,7 +102,35 @@
     "content_checksum": "sha256:2aad752715597eb1c2e59209dfd5ef6d7e2ab91189b7080a523c0057aae04495",
     "validation_set_checksum": "sha256:3596b8485b170004b985dd4a22207bd02eff1bed1a894b3387293b9329fd1dd6",
     "validation_receipts": 13,
+    "plugin_lock_count": 19,
+    "route_count": 114,
     "preview_id": "94a6c950-7fbc-4728-9a96-228946c99090",
-    "status": "validated"
+    "status": "activated",
+    "approved_at": "2026-08-30T18:42:04.691Z",
+    "activated_at": "2026-08-30T18:42:23.892Z",
+    "activation_id": "5f12f930-1a18-40eb-9744-e639d0094990",
+    "previous_release_id": "01M190CCWS162J978MKGDEYS0Z",
+    "pointer_revision": 6,
+    "approval_reauthentication_receipts": 1,
+    "activation_reauthentication_receipts": 1,
+    "activation_history_receipts": 1,
+    "activation_outbox_receipts": 1,
+    "vivaldi_active_surfaces": [
+      "/analytics",
+      "/identity/en/users",
+      "/marketing/settings",
+      "/products/offerings",
+      "/support/inbox",
+      "/flows/workflows",
+      "/infrastructure"
+    ],
+    "vivaldi_console_errors": 0
+  },
+  "temporary_access": {
+    "revoked_token_names": [
+      "codex-final-front-rehearsal",
+      "codex-full-front-rehearsal"
+    ],
+    "remaining_tokens": 0
   }
 }
