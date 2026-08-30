@@ -13,6 +13,7 @@ test("injects every release operator endpoint below the authenticated EmDash API
 		routes.map(({ pattern }) => pattern),
 		[
 			"/_emdash/api/superboard/plugins/user/install",
+			"/_emdash/api/superboard/plugins/sync",
 			"/_emdash/superboard/releases/[candidateId]",
 			"/_emdash/superboard/activations/[candidateId]",
 			"/_emdash/superboard/rollbacks",

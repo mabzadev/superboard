@@ -17,6 +17,12 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/sync",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/api/plugins/sync.ts", import.meta.url),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/superboard/releases/[candidateId]",
 					entrypoint: fileURLToPath(
 						new URL(

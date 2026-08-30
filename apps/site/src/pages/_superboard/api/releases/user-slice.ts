@@ -9,6 +9,7 @@ import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-g
 import { createD1FrontReleaseRepository } from "../../../../lib/release-repository.js";
 import { isRecord, isUlid } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
+import { loadActiveSuperBoardPluginLock } from "../../../../lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../../../../lib/user-front-release.js";
 
 export const prerender = false;
@@ -47,11 +48,13 @@ export const POST: APIRoute = async (context) => {
 		}
 		const releaseSequence = (predecessor?.release.payload.release_sequence ?? 0) + 1;
 		const previousReleaseId = active?.active_release_id ?? null;
+		const pluginLock = await loadActiveSuperBoardPluginLock(env.DB);
 		const input = await composeUserFrontReleaseInput({
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			...identifiers,
 			release_sequence: releaseSequence,
 			previous_release_id: previousReleaseId,
+			plugin_lock: pluginLock,
 			created_at: now,
 		});
 		await createFrontDraftWithSnapshot(env.DB, {

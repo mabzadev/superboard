@@ -52,6 +52,20 @@ export async function installCompiledUserPlugin(
 			),
 		db
 			.prepare(
+				`INSERT INTO superboard_active_plugin_manifests
+				 (plugin_id, artifact_checksum, activated_at)
+				 VALUES (?, ?, ?)
+				 ON CONFLICT(plugin_id) DO UPDATE SET
+				   artifact_checksum = excluded.artifact_checksum,
+				   activated_at = excluded.activated_at`,
+			)
+			.bind(
+				userPluginManifest.plugin_id,
+				userPluginManifest.artifact_checksum,
+				input.checked_at,
+			),
+		db
+			.prepare(
 				`INSERT INTO superboard_dependency_health
 				 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
 				 VALUES (?, ?, 'ready', ?, ?, ?)

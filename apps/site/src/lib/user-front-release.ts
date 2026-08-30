@@ -40,6 +40,7 @@ export async function composeUserFrontReleaseInput(input: {
 	release_id: string;
 	release_sequence: number;
 	previous_release_id: string | null;
+	plugin_lock: FrontReleaseInput["plugin_lock"];
 	created_at: string;
 }): Promise<FrontReleaseInput> {
 	const statePolicies: Record<FrontState, string> = {
@@ -160,23 +161,18 @@ export async function composeUserFrontReleaseInput(input: {
 				artifact_checksum: SUPBRD_CORE_ARTIFACT_CHECKSUM,
 				native: true,
 			},
-			{
-				plugin_id: userPluginManifest.plugin_id,
-				version: userPluginManifest.plugin_version,
-				artifact_checksum: userPluginManifest.artifact_checksum,
-				native: false,
-			},
+			...input.plugin_lock
+				.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
+				.toSorted((left, right) => left.plugin_id.localeCompare(right.plugin_id)),
 		],
-		dependency_policies: [
-			{
-				dependency_id: "dependency.supbrd_plug_user",
-				kind: "required",
-				minimum_version: userPluginManifest.plugin_version,
-				activation_policy: "ready",
-				runtime_failure_policy: "unavailable",
-				fallback_dependency_id: null,
-			},
-		],
+		dependency_policies: input.plugin_lock.map(({ plugin_id: pluginId, version }) => ({
+			dependency_id: `dependency.${pluginId.replaceAll("-", "_")}`,
+			kind: "required" as const,
+			minimum_version: version,
+			activation_policy: "ready" as const,
+			runtime_failure_policy: "unavailable" as const,
+			fallback_dependency_id: null,
+		})),
 		rollback: { classification: "pointer_only", restore_point_id: null, conditions: [] },
 		core_concrete_pages: [],
 	};

@@ -117,9 +117,12 @@ const rendererBuilds: RendererBuildDefinition[] = [
 
 const renderers = await Promise.all(rendererBuilds.map(async (definition) => rendererDescriptor(definition)));
 const stores = await Promise.all([
-	contribution("store", "user_directory", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0001_user_directory"], availability: "required", classification: "restricted", encryption: "required" }),
-	contribution("store", "user_credentials", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0002_user_credentials_providers"], availability: "required", classification: "secret", encryption: "required" }),
-	contribution("store", "user_sessions", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0003_application_sessions"], availability: "required", classification: "restricted", encryption: "required" }),
+	contribution("store", "access_keys", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0001_access_keys"], availability: "required", classification: "secret", encryption: "required" }),
+	contribution("store", "credentials", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0002_credentials_providers"], availability: "required", classification: "secret", encryption: "required" }),
+	contribution("store", "customers", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0003_customers"], availability: "required", classification: "restricted", encryption: "required" }),
+	contribution("store", "directory", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0004_directory"], availability: "required", classification: "restricted", encryption: "required" }),
+	contribution("store", "referrals", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0005_referrals"], availability: "required", classification: "restricted", encryption: "required" }),
+	contribution("store", "sessions", { kind: "d1", authority: pluginId, schema_version: "1", migrations: ["0006_application_sessions"], availability: "required", classification: "restricted", encryption: "required" }),
 ]);
 const schemas = [
 	...propsSchemas,
@@ -135,8 +138,8 @@ const commands = await Promise.all([
 	contribution("command", "suspend_member", { audience: "superboard_front", permission: "users.write", failure_policy: "fail_closed" }),
 ]);
 const dataSources = await Promise.all([
-	contribution("data_source", "current_profile", { audience: "superboard_front", permission: "users.read", store_id: `${pluginId}.store.user_directory`, consistency: "strong", unavailable_state: "unavailable" }),
-	contribution("data_source", "members", { audience: "superboard_front", permission: "users.read", store_id: `${pluginId}.store.user_directory`, consistency: "strong", unavailable_state: "unavailable" }),
+	contribution("data_source", "current_profile", { audience: "superboard_front", permission: "users.read", store_id: `${pluginId}.store.directory`, consistency: "strong", unavailable_state: "unavailable" }),
+	contribution("data_source", "members", { audience: "superboard_front", permission: "users.read", store_id: `${pluginId}.store.directory`, consistency: "strong", unavailable_state: "unavailable" }),
 ]);
 
 const manifestArtifact = {

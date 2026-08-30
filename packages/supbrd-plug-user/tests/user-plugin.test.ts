@@ -16,6 +16,22 @@ const operator = {
 };
 
 describe("supbrd-plug-user", () => {
+	test("preserves every canonical Store authority while upgrading the Front artifact", () => {
+		expect(userPluginManifest.stores.map(({ store_id }) => store_id).toSorted()).toEqual([
+			"supbrd-plug-user.store.access_keys",
+			"supbrd-plug-user.store.credentials",
+			"supbrd-plug-user.store.customers",
+			"supbrd-plug-user.store.directory",
+			"supbrd-plug-user.store.referrals",
+			"supbrd-plug-user.store.sessions",
+		]);
+		expect(
+			userPluginManifest.data_sources
+				.map(({ store_id }) => store_id)
+				.every((storeId) => userPluginManifest.stores.some(({ store_id }) => store_id === storeId)),
+		).toBe(true);
+	});
+
 	test("detects mutation of the packaged implementation contract", async () => {
 		expect(await validateUserPluginManifest(userPluginManifest)).toEqual({ valid: true, errors: [] });
 		const drifted = structuredClone(userPluginManifest);

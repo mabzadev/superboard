@@ -15,9 +15,50 @@ import {
 	putPluginStoreRecord,
 	verifyPluginStoreShadowRead,
 } from "../src/lib/plugin-store-repository.js";
+import { synchronizeSuperBoardPluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 import { installCompiledUserPlugin } from "../src/lib/user-plugin-installation.js";
 
 describe("EmDash plugin Store authority", () => {
+	test("synchronizes every concrete SuperBoard plugin into the EmDash runtime lifecycle", async () => {
+		await env.DB.prepare(
+			`CREATE TABLE IF NOT EXISTS _plugin_state (
+			  plugin_id TEXT PRIMARY KEY, version TEXT NOT NULL,
+			  status TEXT NOT NULL DEFAULT 'installed', installed_at TEXT DEFAULT (datetime('now')),
+			  activated_at TEXT, deactivated_at TEXT, data TEXT,
+			  source TEXT NOT NULL DEFAULT 'config', marketplace_version TEXT,
+			  display_name TEXT, description TEXT, registry_publisher_did TEXT,
+			  registry_slug TEXT, mcp_tools_enabled INTEGER NOT NULL DEFAULT 0,
+			  mcp_tools_consent TEXT
+			)`,
+		).run();
+		const receipt = await synchronizeSuperBoardPluginCatalog(env.DB, {
+			instance_id: "vocostar",
+			checked_at: "2026-08-30T08:20:00.000Z",
+			expires_at: "2026-08-31T08:20:00.000Z",
+		});
+		expect(receipt.installed).toHaveLength(18);
+		expect(receipt.templates).toEqual(["supbrd-plugmod-custom-*"]);
+		expect(receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user")).toMatchObject({
+			plugin_version: "1.3.0",
+			status: "active",
+		});
+
+		const states = await env.DB.prepare(
+			"SELECT COUNT(*) count FROM _plugin_state WHERE source = 'config' AND status = 'active' AND plugin_id LIKE 'supbrd-%'",
+		).first<{ count: number }>();
+		expect(states?.count).toBe(18);
+		const manifests = await env.DB.prepare(
+			"SELECT COUNT(*) count FROM superboard_active_plugin_manifests WHERE plugin_id NOT LIKE '%*%'",
+		).first<{ count: number }>();
+		expect(manifests?.count).toBe(18);
+		const health = await env.DB.prepare(
+			"SELECT COUNT(*) count FROM superboard_dependency_health WHERE instance_id = ? AND status = 'ready'",
+		)
+			.bind("vocostar")
+			.first<{ count: number }>();
+		expect(health?.count).toBe(18);
+	});
+
 	test("installs the exact compiled user plugin and publishes bounded dependency health", async () => {
 		const receipt = await installCompiledUserPlugin(env.DB, {
 			instance_id: "vocostar",
@@ -34,9 +75,11 @@ describe("EmDash plugin Store authority", () => {
 		expect(receipt.evidence_checksum).toMatch(/^sha256:[a-f0-9]{64}$/u);
 
 		const installed = await env.DB.prepare(
-			`SELECT artifact_checksum, manifest_json
-			 FROM superboard_plugin_manifest_artifacts
-			 WHERE plugin_id = ? AND artifact_checksum = ?`,
+			`SELECT artifact.artifact_checksum, artifact.manifest_json
+			 FROM superboard_active_plugin_manifests active
+			 JOIN superboard_plugin_manifest_artifacts artifact
+			   ON artifact.artifact_checksum = active.artifact_checksum
+			 WHERE active.plugin_id = ? AND active.artifact_checksum = ?`,
 		)
 			.bind(userPluginManifest.plugin_id, userPluginManifest.artifact_checksum)
 			.first<{ artifact_checksum: string; manifest_json: string }>();

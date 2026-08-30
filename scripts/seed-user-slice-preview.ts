@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
 import { compileFrontRelease } from "../packages/supbrd-core/dist/index.js";
+import { userPluginManifest } from "../packages/supbrd-plug-user/src/index.js";
 import { composeUserFrontReleaseInput } from "../apps/site/src/lib/user-front-release.js";
 
 const root = resolve(import.meta.dirname, "..");
@@ -22,6 +23,14 @@ const release = await compileFrontRelease(
 		release_id: "01J00000000000000000000305",
 		release_sequence: 1,
 		previous_release_id: null,
+		plugin_lock: [
+			{
+				plugin_id: userPluginManifest.plugin_id,
+				version: userPluginManifest.plugin_version,
+				artifact_checksum: userPluginManifest.artifact_checksum,
+				native: false,
+			},
+		],
 		created_at: "2026-08-30T00:45:00.000Z",
 	}),
 	{ kid: "user-slice-local-key", private_key: keys.privateKey },

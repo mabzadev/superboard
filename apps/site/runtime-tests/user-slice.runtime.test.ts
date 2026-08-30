@@ -6,6 +6,7 @@ import {
 	createOperatorReauthenticationReceipt,
 	validateFrontReleaseCandidate,
 } from "@superboard/supbrd-core";
+import { userPluginManifest } from "@superboard/supbrd-plug-user";
 import { env } from "cloudflare:workers";
 import { expect, test } from "vitest";
 
@@ -39,6 +40,14 @@ test("produces candidate, preview, approval and activation evidence for the user
 			release_id: "01J00000000000000000000405",
 			release_sequence: 1,
 			previous_release_id: null,
+			plugin_lock: [
+				{
+					plugin_id: userPluginManifest.plugin_id,
+					version: userPluginManifest.plugin_version,
+					artifact_checksum: userPluginManifest.artifact_checksum,
+					native: false,
+				},
+			],
 			created_at: "2026-08-30T00:55:00.000Z",
 		}),
 		{ kid: "user-slice-runtime-key", private_key: keys.privateKey },

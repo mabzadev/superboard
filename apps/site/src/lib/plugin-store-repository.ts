@@ -2,6 +2,7 @@ import {
 	canonicalizeReleasePayload,
 	verifySuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
+import { validateUserPluginManifest } from "@superboard/supbrd-plug-user";
 
 const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9*]+(?:-[a-z0-9*]+)*$/u;
 
@@ -48,7 +49,10 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 		.first<{ manifest_json: string; artifact_checksum: string }>();
 	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	const manifest: unknown = JSON.parse(installed.manifest_json);
-	const manifestVerification = await verifySuperBoardPluginManifest(manifest);
+	const manifestVerification =
+		input.plugin_id === "supbrd-plug-user"
+			? await validateUserPluginManifest(manifest)
+			: await verifySuperBoardPluginManifest(manifest);
 	if (
 		!manifestVerification.valid ||
 		!isManifest(manifest) ||

@@ -6,6 +6,7 @@ import {
 	compileFrontRelease,
 	resolveFrontRequest,
 } from "@superboard/supbrd-core";
+import { userPluginManifest } from "@superboard/supbrd-plug-user";
 import { expect, test } from "vitest";
 
 import {
@@ -14,6 +15,7 @@ import {
 	composeUserFrontReleaseInput,
 	visibleUserNavigation,
 } from "../src/lib/user-front-release.js";
+import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 
 const identifiers = {
 	instance_id: "vocostar",
@@ -24,8 +26,34 @@ const identifiers = {
 	release_id: "01J00000000000000000000205",
 	release_sequence: 1,
 	previous_release_id: null,
+	plugin_lock: [
+		{
+			plugin_id: userPluginManifest.plugin_id,
+			version: userPluginManifest.plugin_version,
+			artifact_checksum: userPluginManifest.artifact_checksum,
+			native: false,
+		},
+	],
 	created_at: "2026-08-30T00:30:00.000Z",
 };
+
+test("locks Core plus every concrete runtime plugin with explicit dependency policies", async () => {
+	const catalog = superBoardRuntimePluginCatalog();
+	const input = await composeUserFrontReleaseInput({
+		...identifiers,
+		plugin_lock: catalog.plugins.map(({ manifest }) => ({
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: manifest.execution.backend === "native",
+		})),
+	});
+	expect(input.plugin_lock).toHaveLength(19);
+	expect(new Set(input.plugin_lock.map(({ plugin_id }) => plugin_id)).size).toBe(19);
+	expect(input.dependency_policies).toHaveLength(18);
+	expect(input.dependency_policies.every(({ kind }) => kind === "required")).toBe(true);
+	expect(input.plugin_lock.some(({ plugin_id }) => plugin_id.includes("*"))).toBe(false);
+});
 
 test("composes the next release against the exact active predecessor", async () => {
 	const input = await composeUserFrontReleaseInput({
