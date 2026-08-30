@@ -36,6 +36,7 @@ function requiredString(value: unknown): string {
 }
 
 function requiredInteger(value: unknown): number {
-	if (!Number.isSafeInteger(value) || Number(value) < 0) throw new Error("revision must be non-negative");
+	if (!Number.isSafeInteger(value) || Number(value) < 0)
+		throw new Error("revision must be non-negative");
 	return Number(value);
 }

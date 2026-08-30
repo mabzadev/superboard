@@ -2,11 +2,8 @@ import { assertFrontReleaseInput, compileFrontRelease } from "@superboard/supbrd
 import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
+import { loadDraftSnapshot, recordCompilation } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
-import {
-	loadDraftSnapshot,
-	recordCompilation,
-} from "../../../../lib/front-workflow-repository.js";
 import { stageCompiledFrontRelease } from "../../../../lib/release-repository.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
@@ -91,7 +88,12 @@ export const POST: APIRoute = async (context) => {
 			kid: privateJwk.kid,
 			private_key: privateKey,
 		});
-		await stageCompiledFrontRelease(env.DB, release, publicJwk(privateJwk), new Date().toISOString());
+		await stageCompiledFrontRelease(
+			env.DB,
+			release,
+			publicJwk(privateJwk),
+			new Date().toISOString(),
+		);
 		await recordCompilation(env.DB, {
 			compilation_id: input.compilation_id,
 			draft_snapshot_id: snapshot.draft_snapshot_id,

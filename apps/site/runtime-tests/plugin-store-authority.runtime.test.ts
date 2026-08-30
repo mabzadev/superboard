@@ -1,8 +1,12 @@
+import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
-import topology from "../../../config/emdash-plugin-topology.json";
-import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
 
+import topology from "../../../config/emdash-plugin-topology.json";
+import {
+	restorePluginObjectStores,
+	snapshotPluginObjectStores,
+} from "../src/lib/plugin-store-object-backup.js";
 import {
 	acceptWorkerCallback,
 	exportPluginStoreReverseDelta,
@@ -10,14 +14,13 @@ import {
 	putPluginStoreRecord,
 	verifyPluginStoreShadowRead,
 } from "../src/lib/plugin-store-repository.js";
-import {
-	restorePluginObjectStores,
-	snapshotPluginObjectStores,
-} from "../src/lib/plugin-store-object-backup.js";
 
 describe("EmDash plugin Store authority", () => {
 	test("writes through the repository with stable aliases, CAS, idempotence and outbox", async () => {
-		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+			"encrypt",
+			"decrypt",
+		]);
 		const input = {
 			plugin_id: "supbrd-plug-user",
 			store_id: "supbrd-plug-user.store.directory",
@@ -33,13 +36,30 @@ describe("EmDash plugin Store authority", () => {
 		};
 		const created = await putPluginStoreRecord(env.DB, input);
 		expect(created).toMatchObject({ revision: 1, instance_id: "vocostar", idempotent: false });
-		expect(await putPluginStoreRecord(env.DB, input)).toMatchObject({ revision: 1, idempotent: true });
-		await expect(putPluginStoreRecord(env.DB, { ...input, operation_id: "operation-stale", expected_revision: 9 })).rejects.toThrow(/REVISION_CONFLICT/u);
-		const receipt = await env.DB.prepare("SELECT COUNT(*) count FROM superboard_plugin_store_outbox WHERE operation_id = ?").bind(input.operation_id).first<{ count: number }>();
+		expect(await putPluginStoreRecord(env.DB, input)).toMatchObject({
+			revision: 1,
+			idempotent: true,
+		});
+		await expect(
+			putPluginStoreRecord(env.DB, {
+				...input,
+				operation_id: "operation-stale",
+				expected_revision: 9,
+			}),
+		).rejects.toThrow(/REVISION_CONFLICT/u);
+		const receipt = await env.DB.prepare(
+			"SELECT COUNT(*) count FROM superboard_plugin_store_outbox WHERE operation_id = ?",
+		)
+			.bind(input.operation_id)
+			.first<{ count: number }>();
 		expect(receipt?.count).toBe(1);
-		const stored = await env.DB.prepare("SELECT payload_json FROM superboard_plugin_store_records WHERE entity_id = 'user-1'").first<{ payload_json: string }>();
+		const stored = await env.DB.prepare(
+			"SELECT payload_json FROM superboard_plugin_store_records WHERE entity_id = 'user-1'",
+		).first<{ payload_json: string }>();
 		expect(stored?.payload_json).not.toContain("user@example.com");
-		await expect(putPluginStoreRecord(env.DB, { ...input, entity_id: "user-2" })).rejects.toThrow(/IDEMPOTENCY_TARGET_CONFLICT/u);
+		await expect(putPluginStoreRecord(env.DB, { ...input, entity_id: "user-2" })).rejects.toThrow(
+			/IDEMPOTENCY_TARGET_CONFLICT/u,
+		);
 		await expect(
 			putPluginStoreRecord(env.DB, {
 				...input,
@@ -50,20 +70,27 @@ describe("EmDash plugin Store authority", () => {
 	});
 
 	test("fails shadow mismatches closed with metrics that contain no payload", async () => {
-		await expect(verifyPluginStoreShadowRead(env.DB, {
-			plugin_id: "supbrd-plug-user",
-			entity_type: "user",
-			source: [{ email: "private@example.com" }],
-			target: [{ email: "different@example.com" }],
-			observed_at: "2026-08-30T02:01:00.000Z",
-		})).rejects.toThrow(/SHADOW_READ_MISMATCH/u);
-		const metric = await env.DB.prepare("SELECT * FROM superboard_plugin_shadow_read_metrics ORDER BY metric_id DESC LIMIT 1").first<Record<string, unknown>>();
+		await expect(
+			verifyPluginStoreShadowRead(env.DB, {
+				plugin_id: "supbrd-plug-user",
+				entity_type: "user",
+				source: [{ email: "private@example.com" }],
+				target: [{ email: "different@example.com" }],
+				observed_at: "2026-08-30T02:01:00.000Z",
+			}),
+		).rejects.toThrow(/SHADOW_READ_MISMATCH/u);
+		const metric = await env.DB.prepare(
+			"SELECT * FROM superboard_plugin_shadow_read_metrics ORDER BY metric_id DESC LIMIT 1",
+		).first();
 		expect(metric).toMatchObject({ result: "mismatch", source_count: 1, target_count: 1 });
 		expect(JSON.stringify(metric)).not.toContain("example.com");
 	});
 
 	test("exports a reverse delta without delete instructions", async () => {
-		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+			"encrypt",
+			"decrypt",
+		]);
 		await putPluginStoreRecord(env.DB, {
 			plugin_id: "supbrd-plug-settings",
 			store_id: "supbrd-plug-settings.store.settings",
@@ -103,14 +130,16 @@ describe("EmDash plugin Store authority", () => {
 			issued_at: "2026-08-30T02:00:00.000Z",
 			expires_at: "2026-08-30T02:10:00.000Z",
 		});
-		await expect(acceptWorkerCallback(env.DB, {
-			attempt_id: "attempt-billing-1",
-			plugin_id: "supbrd-plugmod-billing",
-			callback_token: "wrong",
-			payload_checksum: `sha256:${"a".repeat(64)}`,
-			signature: "invalid",
-			completed_at: "2026-08-30T02:01:00.000Z",
-		})).rejects.toThrow(/CALLBACK_REJECTED/u);
+		await expect(
+			acceptWorkerCallback(env.DB, {
+				attempt_id: "attempt-billing-1",
+				plugin_id: "supbrd-plugmod-billing",
+				callback_token: "wrong",
+				payload_checksum: `sha256:${"a".repeat(64)}`,
+				signature: "invalid",
+				completed_at: "2026-08-30T02:01:00.000Z",
+			}),
+		).rejects.toThrow(/CALLBACK_REJECTED/u);
 		await issueWorkerExecutionLease(env.DB, {
 			attempt_id: "attempt-billing-2",
 			plugin_id: "supbrd-plugmod-billing",
@@ -120,14 +149,16 @@ describe("EmDash plugin Store authority", () => {
 			issued_at: "2026-08-30T02:02:00.000Z",
 			expires_at: "2026-08-30T02:10:00.000Z",
 		});
-		await expect(acceptWorkerCallback(env.DB, {
-			attempt_id: "attempt-billing-1",
-			plugin_id: "supbrd-plugmod-billing",
-			callback_token: "callback-secret",
-			payload_checksum: `sha256:${"a".repeat(64)}`,
-			signature: "invalid",
-			completed_at: "2026-08-30T02:03:00.000Z",
-		})).rejects.toThrow(/CALLBACK_REJECTED/u);
+		await expect(
+			acceptWorkerCallback(env.DB, {
+				attempt_id: "attempt-billing-1",
+				plugin_id: "supbrd-plugmod-billing",
+				callback_token: "callback-secret",
+				payload_checksum: `sha256:${"a".repeat(64)}`,
+				signature: "invalid",
+				completed_at: "2026-08-30T02:03:00.000Z",
+			}),
+		).rejects.toThrow(/CALLBACK_REJECTED/u);
 		const completedAt = "2026-08-30T02:03:00.000Z";
 		const payloadChecksum = `sha256:${"a".repeat(64)}`;
 		const signature = await signWorkerCallback(callbackKeys.privateKey, {
@@ -137,22 +168,26 @@ describe("EmDash plugin Store authority", () => {
 			payload_checksum: payloadChecksum,
 			completed_at: completedAt,
 		});
-		expect(await acceptWorkerCallback(env.DB, {
-			attempt_id: "attempt-billing-2",
-			plugin_id: "supbrd-plugmod-billing",
-			callback_token: "replacement-secret",
-			payload_checksum: payloadChecksum,
-			signature,
-			completed_at: completedAt,
-		})).toEqual({ operation_id: "billing-operation-1" });
-		await expect(acceptWorkerCallback(env.DB, {
-			attempt_id: "attempt-billing-2",
-			plugin_id: "supbrd-plugmod-billing",
-			callback_token: "replacement-secret",
-			payload_checksum: payloadChecksum,
-			signature,
-			completed_at: "2026-08-30T02:04:00.000Z",
-		})).rejects.toThrow(/CALLBACK_REJECTED/u);
+		expect(
+			await acceptWorkerCallback(env.DB, {
+				attempt_id: "attempt-billing-2",
+				plugin_id: "supbrd-plugmod-billing",
+				callback_token: "replacement-secret",
+				payload_checksum: payloadChecksum,
+				signature,
+				completed_at: completedAt,
+			}),
+		).toEqual({ operation_id: "billing-operation-1" });
+		await expect(
+			acceptWorkerCallback(env.DB, {
+				attempt_id: "attempt-billing-2",
+				plugin_id: "supbrd-plugmod-billing",
+				callback_token: "replacement-secret",
+				payload_checksum: payloadChecksum,
+				signature,
+				completed_at: "2026-08-30T02:04:00.000Z",
+			}),
+		).rejects.toThrow(/CALLBACK_REJECTED/u);
 	});
 
 	test("backs up and restores through real Miniflare R2 and KV bindings", async () => {
@@ -171,16 +206,17 @@ describe("EmDash plugin Store authority", () => {
 			target_prefix: "isolated-restore/",
 		});
 		expect(receipt).toMatchObject({ r2_count: 1, kv_count: 1, production_mutated: false });
-		expect(await (await env.MEDIA.get("isolated-restore/source/attachment.txt"))?.text()).toBe("attachment");
+		expect(await (await env.MEDIA.get("isolated-restore/source/attachment.txt"))?.text()).toBe(
+			"attachment",
+		);
 		expect(await env.RELEASE_CACHE.get("isolated-restore/source/pointer")).toBe("release-1");
 	});
 
 	test("rehearses encrypted idempotent authority for every declared domain Store", async () => {
-		const encryptionKey = await crypto.subtle.generateKey(
-			{ name: "AES-GCM", length: 256 },
-			false,
-			["encrypt", "decrypt"],
-		);
+		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+			"encrypt",
+			"decrypt",
+		]);
 		let storeCount = 0;
 		for (const { manifest } of topology.plugins) {
 			for (const store of manifest.stores) {

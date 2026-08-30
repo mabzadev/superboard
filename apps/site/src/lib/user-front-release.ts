@@ -1,7 +1,4 @@
-import {
-	REQUIRED_FRONT_STATES,
-	sha256Canonical,
-} from "@superboard/supbrd-core";
+import { REQUIRED_FRONT_STATES, sha256Canonical } from "@superboard/supbrd-core";
 import type { FrontReleaseInput, FrontState, RendererDescriptor } from "@superboard/supbrd-core";
 import { USER_RENDERER_IDS, userPluginManifest } from "@superboard/supbrd-plug-user";
 
@@ -10,7 +7,7 @@ import { USER_FRONT_CATALOGS } from "./user-front-i18n.js";
 export const CORE_ADMIN_SHELL_BUILD_CHECKSUM =
 	"sha256:2a4948fa1c9ccfb2e9488a1e9ade131e6775f8a5f0eb773d45a9cc44b5dd6ffd";
 export const SUPBRD_CORE_ARTIFACT_CHECKSUM =
-	"sha256:5d46c1cf733d58f282c82cb145f7731cf7cb422ef8f8c9eb4260b43ae7203547";
+	"sha256:aa1b66a07aa1734b74cd13ca4cf87bc130e0e94073d6e9a69d07c7b3f3c75565";
 
 export const CORE_ADMIN_SHELL_DESCRIPTOR: RendererDescriptor = {
 	renderer_id: "emdash.core.renderer.admin_shell",
@@ -23,7 +20,11 @@ export const CORE_ADMIN_SHELL_DESCRIPTOR: RendererDescriptor = {
 	props_schema: {
 		schema_id: "emdash.core.schema.admin_shell_props.v1",
 		version: "1.0.0",
-		checksum: await sha256Canonical({ type: "object", additionalProperties: false, properties: {} }),
+		checksum: await sha256Canonical({
+			type: "object",
+			additionalProperties: false,
+			properties: {},
+		}),
 	},
 	capabilities: ["renderer.mount"],
 	slots: ["content"],
@@ -39,9 +40,15 @@ export async function composeUserFrontReleaseInput(input: {
 	release_id: string;
 	created_at: string;
 }): Promise<FrontReleaseInput> {
-	const statePolicies = Object.fromEntries(
-		REQUIRED_FRONT_STATES.map((state) => [state, `emdash.core.state.${state}`]),
-	) as Record<FrontState, string>;
+	const statePolicies: Record<FrontState, string> = {
+		loading: "emdash.core.state.loading",
+		empty: "emdash.core.state.empty",
+		forbidden: "emdash.core.state.forbidden",
+		not_found: "emdash.core.state.not_found",
+		error: "emdash.core.state.error",
+		unavailable: "emdash.core.state.unavailable",
+		maintenance: "emdash.core.state.maintenance",
+	};
 	const route = (
 		routeId: string,
 		path: string,
@@ -75,17 +82,50 @@ export async function composeUserFrontReleaseInput(input: {
 		front_route_manifest: {
 			schema_version: "1.0.0",
 			manifest_id: "01J00000000000000000000220",
-			normalization: { unicode: "NFC", case_sensitive: true, trailing_slash: "strip", percent_decoding: "once" },
-			auth_transitions: { login_route_id: "superboard.login", authenticated_home_route_id: "superboard.app_shell" },
+			normalization: {
+				unicode: "NFC",
+				case_sensitive: true,
+				trailing_slash: "strip",
+				percent_decoding: "once",
+			},
+			auth_transitions: {
+				login_route_id: "superboard.login",
+				authenticated_home_route_id: "superboard.app_shell",
+			},
 			system_routes: [],
 			routes: [
-				route("superboard.login", "/login", "page.superboard_login", [USER_RENDERER_IDS.login], "anonymous_only", "allow"),
+				route(
+					"superboard.login",
+					"/login",
+					"page.superboard_login",
+					[USER_RENDERER_IDS.login],
+					"anonymous_only",
+					"allow",
+				),
 				route("superboard.app_shell", "/app", "page.superboard_app", [], "authenticated", "allow"),
-				route("superboard.profile", "/app/profile", "page.superboard_profile", [USER_RENDERER_IDS.profile], "authenticated", "users.read"),
-				route("superboard.users", "/app/users", "page.superboard_users", [USER_RENDERER_IDS.members], "authenticated", "users.read"),
+				route(
+					"superboard.profile",
+					"/app/profile",
+					"page.superboard_profile",
+					[USER_RENDERER_IDS.profile],
+					"authenticated",
+					"users.read",
+				),
+				route(
+					"superboard.users",
+					"/app/users",
+					"page.superboard_users",
+					[USER_RENDERER_IDS.members],
+					"authenticated",
+					"users.read",
+				),
 			],
 		},
-		gateway_manifest: { schema_version: "1.0.0", gateway_manifest_id: "01J00000000000000000000221", routes: [] },
+		gateway_manifest: {
+			schema_version: "1.0.0",
+			gateway_manifest_id: "01J00000000000000000000221",
+			routes: [],
+		},
 		presentation: {
 			pages: [
 				page("page.superboard_login", "user.page.sign_in", USER_RENDERER_IDS.login),
@@ -93,21 +133,48 @@ export async function composeUserFrontReleaseInput(input: {
 				page("page.superboard_profile", "user.page.profile", USER_RENDERER_IDS.profile),
 				page("page.superboard_users", "user.page.users", USER_RENDERER_IDS.members),
 			],
-			layouts: [{ layout_id: "layout.superboard_admin", root_renderer_id: CORE_ADMIN_SHELL_DESCRIPTOR.renderer_id }],
+			layouts: [
+				{
+					layout_id: "layout.superboard_admin",
+					root_renderer_id: CORE_ADMIN_SHELL_DESCRIPTOR.renderer_id,
+				},
+			],
 			navigation: [
 				{ route_id: "superboard.profile", label: "user.page.profile", permission: "users.read" },
 				{ route_id: "superboard.users", label: "user.page.users", permission: "users.read" },
 			],
-			translations: Object.entries(USER_FRONT_CATALOGS).map(([locale, messages]) => ({ locale, messages })),
+			translations: Object.entries(USER_FRONT_CATALOGS).map(([locale, messages]) => ({
+				locale,
+				messages,
+			})),
 			media: [],
 			theme: { theme_id: "theme.superboard", tokens: {} },
 		},
 		renderers: userPluginManifest.renderers,
 		plugin_lock: [
-			{ plugin_id: "supbrd-core", version: "0.1.0", artifact_checksum: SUPBRD_CORE_ARTIFACT_CHECKSUM, native: true },
-			{ plugin_id: userPluginManifest.plugin_id, version: userPluginManifest.plugin_version, artifact_checksum: userPluginManifest.artifact_checksum, native: false },
+			{
+				plugin_id: "supbrd-core",
+				version: "0.1.0",
+				artifact_checksum: SUPBRD_CORE_ARTIFACT_CHECKSUM,
+				native: true,
+			},
+			{
+				plugin_id: userPluginManifest.plugin_id,
+				version: userPluginManifest.plugin_version,
+				artifact_checksum: userPluginManifest.artifact_checksum,
+				native: false,
+			},
 		],
-		dependency_policies: [{ dependency_id: "dependency.supbrd_plug_user", kind: "required", minimum_version: userPluginManifest.plugin_version, activation_policy: "ready", runtime_failure_policy: "unavailable", fallback_dependency_id: null }],
+		dependency_policies: [
+			{
+				dependency_id: "dependency.supbrd_plug_user",
+				kind: "required",
+				minimum_version: userPluginManifest.plugin_version,
+				activation_policy: "ready",
+				runtime_failure_policy: "unavailable",
+				fallback_dependency_id: null,
+			},
+		],
 		rollback: { classification: "pointer_only", restore_point_id: null, conditions: [] },
 		core_concrete_pages: [],
 	};
@@ -116,7 +183,12 @@ export async function composeUserFrontReleaseInput(input: {
 export function visibleUserNavigation(input: FrontReleaseInput, permissions: readonly string[]) {
 	const routeIds = new Set(input.front_route_manifest.routes.map(({ route_id }) => route_id));
 	return input.presentation.navigation.flatMap((entry) =>
-		isRecord(entry) && typeof entry.route_id === "string" && typeof entry.label === "string" && typeof entry.permission === "string" && routeIds.has(entry.route_id) && permissions.includes(entry.permission)
+		isRecord(entry) &&
+		typeof entry.route_id === "string" &&
+		typeof entry.label === "string" &&
+		typeof entry.permission === "string" &&
+		routeIds.has(entry.route_id) &&
+		permissions.includes(entry.permission)
 			? [{ route_id: entry.route_id, label: entry.label }]
 			: [],
 	);

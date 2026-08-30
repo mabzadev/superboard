@@ -5,13 +5,13 @@ import {
 	type ImageModerationDerivativeTransformer,
 } from "../src/ai/image-resize.js";
 import { IMAGE_PROMPT_HASH } from "../src/ai/prompts.js";
-import { toOwnedArrayBuffer } from "../src/bytes.js";
 import {
 	createWorkersAiImageAdapter,
 	workersAiBindingFromEnv,
 	WORKERS_AI_IMAGE_MODEL_CANDIDATE,
 	type WorkersAiBinding,
 } from "../src/ai/workers-ai.js";
+import { toOwnedArrayBuffer } from "../src/bytes.js";
 
 const IMAGE_DATA_URL_RE = /^data:image\/(?:gif|jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/;
 const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;

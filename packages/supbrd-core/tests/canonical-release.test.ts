@@ -7,7 +7,7 @@ describe("Canonical Release Payload", () => {
 		const payload = {
 			// oxlint-disable-next-line eslint/no-loss-of-precision -- RFC 8785 intentionally demonstrates IEEE-754 rounding.
 			numbers: [333333333.33333329, 1e30, 4.5, 0.002, 1e-27],
-			string: "€$\u000f\nA'B\"\\\"/",
+			string: '€$\u000f\nA\'B"\\"/',
 			literals: [null, true, false],
 		};
 

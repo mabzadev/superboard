@@ -77,9 +77,22 @@ export async function verifySuperBoardPluginManifest(
 	const errors: string[] = [];
 	if (!isRecord(value)) return { valid: false, errors: ["MANIFEST_NOT_OBJECT"] };
 	const expectedKeys = [
-		"aliases", "artifact_checksum", "artifact_id", "capabilities", "commands", "data_sources",
-		"execution", "failure_policies", "plugin_id", "plugin_kind", "plugin_version", "publisher",
-		"renderers", "schema_version", "schemas", "stores",
+		"aliases",
+		"artifact_checksum",
+		"artifact_id",
+		"capabilities",
+		"commands",
+		"data_sources",
+		"execution",
+		"failure_policies",
+		"plugin_id",
+		"plugin_kind",
+		"plugin_version",
+		"publisher",
+		"renderers",
+		"schema_version",
+		"schemas",
+		"stores",
 	].toSorted();
 	if (JSON.stringify(Object.keys(value).toSorted()) !== JSON.stringify(expectedKeys)) {
 		errors.push("MANIFEST_NOT_CLOSED");
@@ -108,7 +121,8 @@ export async function verifySuperBoardPluginManifest(
 				continue;
 			}
 			const id = contributionId(contribution);
-			if (!id?.startsWith(`${String(value.plugin_id)}.`)) errors.push("CONTRIBUTION_NAMESPACE_INVALID");
+			if (!id?.startsWith(`${String(value.plugin_id)}.`))
+				errors.push("CONTRIBUTION_NAMESPACE_INVALID");
 			if (!hasExactKeys(contribution, contributionKeys(collectionName))) {
 				errors.push("CONTRIBUTION_NOT_CLOSED");
 			}
@@ -142,11 +156,43 @@ function contributionKeys(
 	collection: "stores" | "schemas" | "renderers" | "commands" | "data_sources",
 ): string[] {
 	return {
-		stores: ["availability", "authority", "checksum", "classification", "encryption", "kind", "migrations", "schema_version", "store_id", "version"],
+		stores: [
+			"availability",
+			"authority",
+			"checksum",
+			"classification",
+			"encryption",
+			"kind",
+			"migrations",
+			"schema_version",
+			"store_id",
+			"version",
+		],
 		schemas: ["checksum", "closed", "json_schema", "schema_id", "version"],
-		renderers: ["abi_version", "build_checksum", "build_id", "capabilities", "plugin_id", "plugin_version", "props_schema", "renderer_id", "runtime_range", "slots", "supported_states"],
+		renderers: [
+			"abi_version",
+			"build_checksum",
+			"build_id",
+			"capabilities",
+			"plugin_id",
+			"plugin_version",
+			"props_schema",
+			"renderer_id",
+			"runtime_range",
+			"slots",
+			"supported_states",
+		],
 		commands: ["audience", "checksum", "command_id", "failure_policy", "permission", "version"],
-		data_sources: ["audience", "checksum", "consistency", "data_source_id", "permission", "store_id", "unavailable_state", "version"],
+		data_sources: [
+			"audience",
+			"checksum",
+			"consistency",
+			"data_source_id",
+			"permission",
+			"store_id",
+			"unavailable_state",
+			"version",
+		],
 	}[collection];
 }
 
@@ -158,7 +204,13 @@ function hasExactKeys(value: unknown, expected: string[]): boolean {
 }
 
 function contributionId(value: Record<string, unknown>): string | null {
-	for (const key of ["renderer_id", "command_id", "data_source_id", "schema_id", "store_id"] as const) {
+	for (const key of [
+		"renderer_id",
+		"command_id",
+		"data_source_id",
+		"schema_id",
+		"store_id",
+	] as const) {
 		if (typeof value[key] === "string") return value[key];
 	}
 	return null;

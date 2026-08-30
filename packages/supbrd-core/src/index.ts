@@ -3,10 +3,7 @@ export {
 	type CanonicalJsonPrimitive,
 	type CanonicalJsonValue,
 } from "./canonical-json.js";
-export {
-	sha256Canonical,
-	verifySuperBoardPluginManifest,
-} from "./plugin-manifest.js";
+export { sha256Canonical, verifySuperBoardPluginManifest } from "./plugin-manifest.js";
 export type {
 	SuperBoardCommandDescriptor,
 	SuperBoardContributionDescriptor,

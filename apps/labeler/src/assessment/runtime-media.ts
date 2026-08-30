@@ -1,5 +1,4 @@
 import { toOwnedArrayBuffer } from "../bytes.js";
-
 import type { DisplayMediaDecoder, GuardedMediaTransport, MediaContentStore } from "./media.js";
 
 const HEADER_END = new Uint8Array([13, 10, 13, 10]);

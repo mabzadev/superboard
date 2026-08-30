@@ -10,6 +10,7 @@ import {
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 
+import { resolvePreviewFrontPage, resolveSiteFrontPage } from "../src/lib/front-page.js";
 import {
 	createDraftSnapshotCas,
 	getCandidateByReleaseId,
@@ -24,7 +25,6 @@ import {
 	stageCompiledFrontRelease,
 	verifyActivationReceipts,
 } from "../src/lib/release-repository.js";
-import { resolvePreviewFrontPage, resolveSiteFrontPage } from "../src/lib/front-page.js";
 import { loadLastVerifiedFrontRelease } from "../src/lib/release-source.js";
 
 function release(): CompiledFrontRelease {
@@ -71,11 +71,11 @@ describe("Site Front Release D1 workflow", () => {
 		expect(conflict).toEqual({ status: "conflict", current_revision: 1 });
 		expect(
 			await createDraftSnapshotCas(env.DB, {
-			draft_snapshot_id: "snapshot-runtime",
-			front_draft_id: "draft-runtime",
-			instance_id: "vocostar",
-			expected_draft_revision: 1,
-			created_at: "2026-08-30T00:02:00.000Z",
+				draft_snapshot_id: "snapshot-runtime",
+				front_draft_id: "draft-runtime",
+				instance_id: "vocostar",
+				expected_draft_revision: 1,
+				created_at: "2026-08-30T00:02:00.000Z",
 			}),
 		).toMatchObject({ status: "created", snapshot: { draft_revision: 1 } });
 		expect(await loadDraftSnapshot(env.DB, "snapshot-runtime")).toMatchObject({
@@ -140,12 +140,10 @@ describe("Site Front Release D1 workflow", () => {
 	});
 
 	test("smokes preview, activation cache reload and pointer rollback without recompilation", async () => {
-		const keys = await crypto.subtle.generateKey(
-			{ name: "ECDSA", namedCurve: "P-256" },
-			true,
-			["sign", "verify"],
-		);
-		const privateJwk = await crypto.subtle.exportKey("jwk", keys.privateKey);
+		const keys = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+			"sign",
+			"verify",
+		]);
 		const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 		const first = await compileFrontRelease(
 			frontReleaseInput({
@@ -156,7 +154,12 @@ describe("Site Front Release D1 workflow", () => {
 			}),
 			{ kid: "smoke-key", private_key: keys.privateKey },
 		);
-		await stageCompiledFrontRelease(env.DB, first, { ...publicJwk, kid: "smoke-key" }, "2026-08-30T00:10:00.000Z");
+		await stageCompiledFrontRelease(
+			env.DB,
+			first,
+			{ ...publicJwk, kid: "smoke-key" },
+			"2026-08-30T00:10:00.000Z",
+		);
 		const firstApproval = approvalFor(first, "2026-08-30T00:10:30.000Z");
 		expect(await persistReleaseApproval(env.DB, firstApproval)).toBe(true);
 		const repository = createD1FrontReleaseRepository(env.DB);
@@ -185,7 +188,12 @@ describe("Site Front Release D1 workflow", () => {
 			}),
 			{ kid: "smoke-key", private_key: keys.privateKey },
 		);
-		await stageCompiledFrontRelease(env.DB, second, { ...publicJwk, kid: "smoke-key" }, "2026-08-30T00:12:00.000Z");
+		await stageCompiledFrontRelease(
+			env.DB,
+			second,
+			{ ...publicJwk, kid: "smoke-key" },
+			"2026-08-30T00:12:00.000Z",
+		);
 		const secondStored = await repository.getCandidate(second.payload.candidate_id);
 		if (!secondStored) throw new Error("second candidate missing");
 		const preview = createFrontPreview(secondStored, {
@@ -194,17 +202,15 @@ describe("Site Front Release D1 workflow", () => {
 			expires_at: "2026-08-30T01:12:00.000Z",
 		});
 		await persistFrontPreview(env.DB, preview);
-		const loadedPreview = await loadFrontPreview(env.DB, "smoke-preview", "2026-08-30T00:13:00.000Z");
+		const loadedPreview = await loadFrontPreview(
+			env.DB,
+			"smoke-preview",
+			"2026-08-30T00:13:00.000Z",
+		);
 		if (!loadedPreview) throw new Error("preview missing");
 		expect(
-			(
-				await resolvePreviewFrontPage(
-					env,
-					loadedPreview.candidate.release,
-					"/login",
-					undefined,
-				)
-			).resolution.result,
+			(await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/login", undefined))
+				.resolution.result,
 		).toBe("rendered");
 
 		const secondApproval = approvalFor(second, "2026-08-30T00:13:30.000Z");

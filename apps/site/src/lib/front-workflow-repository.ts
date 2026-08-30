@@ -47,7 +47,9 @@ export async function saveFrontDraft(
 		value: unknown;
 		updated_at: string;
 	},
-): Promise<{ status: "updated"; draft: FrontDraft } | { status: "conflict"; current_revision: number }> {
+): Promise<
+	{ status: "updated"; draft: FrontDraft } | { status: "conflict"; current_revision: number }
+> {
 	const valueJson = canonicalizeReleasePayload(input.value);
 	if (input.expected_draft_revision === 0) {
 		const inserted = await db
@@ -83,7 +85,10 @@ export async function saveFrontDraft(
 	return { status: "conflict", current_revision: current?.revision ?? 0 };
 }
 
-export async function loadFrontDraft(db: D1Database, frontDraftId: string): Promise<FrontDraft | null> {
+export async function loadFrontDraft(
+	db: D1Database,
+	frontDraftId: string,
+): Promise<FrontDraft | null> {
 	const row = await db
 		.prepare(
 			`SELECT front_draft_id, instance_id, revision, input_json, updated_at
@@ -104,8 +109,7 @@ export async function createDraftSnapshotCas(
 		created_at: string;
 	},
 ): Promise<
-	| { status: "created"; snapshot: DraftSnapshot }
-	| { status: "conflict"; current_revision: number }
+	{ status: "created"; snapshot: DraftSnapshot } | { status: "conflict"; current_revision: number }
 > {
 	const row = await db
 		.prepare(
@@ -162,12 +166,7 @@ export async function createFrontDraftWithSnapshot(
 				 FROM superboard_front_drafts
 				 WHERE front_draft_id = ? AND instance_id = ? AND revision = 1`,
 			)
-			.bind(
-				input.draft_snapshot_id,
-				input.created_at,
-				input.front_draft_id,
-				input.instance_id,
-			),
+			.bind(input.draft_snapshot_id, input.created_at, input.front_draft_id, input.instance_id),
 	]);
 }
 
@@ -196,7 +195,8 @@ export async function recordCompilation(
 		created_at: string;
 	},
 ): Promise<void> {
-	const insert = db.prepare(
+	const insert = db
+		.prepare(
 			`INSERT INTO superboard_front_compilations (
 			   compilation_id, draft_snapshot_id, candidate_id, status, error_code, created_at
 			 ) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -208,7 +208,7 @@ export async function recordCompilation(
 			input.status,
 			input.error_code,
 			input.created_at,
-		)
+		);
 	if (input.status === "compiled") {
 		await db.batch([
 			db

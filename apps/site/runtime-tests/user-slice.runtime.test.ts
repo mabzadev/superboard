@@ -24,11 +24,10 @@ import {
 import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 
 test("produces candidate, preview, approval and activation evidence for the user slice", async () => {
-	const keys = await crypto.subtle.generateKey(
-		{ name: "ECDSA", namedCurve: "P-256" },
-		true,
-		["sign", "verify"],
-	);
+	const keys = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+		"sign",
+		"verify",
+	]);
 	const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 	const release = await compileFrontRelease(
 		await composeUserFrontReleaseInput({
@@ -88,15 +87,13 @@ test("produces candidate, preview, approval and activation evidence for the user
 	if (approvalResult.status !== "approved") throw new Error("user approval failed");
 	await persistReauthenticationReceipt(env.DB, reauthentication, "2026-08-30T00:56:00.000Z");
 	expect(
-		await persistReleaseApproval(
-			env.DB,
-			approvalResult.approval,
-			reauthentication.receipt_id,
-		),
+		await persistReleaseApproval(env.DB, approvalResult.approval, reauthentication.receipt_id),
 	).toBe(true);
 	const approved = await getFrontReleaseCandidate(env.DB, release.payload.candidate_id);
 	if (!approved) throw new Error("approved user candidate missing");
-	expect(validateFrontReleaseCandidate(approved, await candidateEvidence(env.DB, approved))).toEqual({
+	expect(
+		validateFrontReleaseCandidate(approved, await candidateEvidence(env.DB, approved)),
+	).toEqual({
 		valid: true,
 		errors: [],
 	});

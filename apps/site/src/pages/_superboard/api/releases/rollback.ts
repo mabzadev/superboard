@@ -45,9 +45,15 @@ export const POST: APIRoute = async (context) => {
 	if (!receipt) return jsonResponse({ error: { code: "STRONG_REAUTH_REQUIRED" } }, 403);
 	const plan = await planPointerRollback(active, target, receipt, now);
 	if (plan.status === "rejected") return jsonResponse({ error: plan }, 409);
-	const verification = validateFrontReleaseCandidate(target, await candidateEvidence(env.DB, target));
+	const verification = validateFrontReleaseCandidate(
+		target,
+		await candidateEvidence(env.DB, target),
+	);
 	if (!verification.valid) {
-		return jsonResponse({ error: { code: "ROLLBACK_PREFLIGHT_FAILED", errors: verification.errors } }, 409);
+		return jsonResponse(
+			{ error: { code: "ROLLBACK_PREFLIGHT_FAILED", errors: verification.errors } },
+			409,
+		);
 	}
 	await persistReauthenticationReceipt(env.DB, receipt, now);
 	const result = await repository.compareAndSwapActive({

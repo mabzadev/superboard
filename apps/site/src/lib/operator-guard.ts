@@ -1,9 +1,9 @@
-import type { APIContext } from "astro";
 import { hasPermission } from "@emdash-cms/auth";
 import {
 	createOperatorReauthenticationReceipt,
 	type OperatorReauthenticationReceipt,
 } from "@superboard/supbrd-core";
+import type { APIContext } from "astro";
 
 import type { SuperBoardSiteEnv } from "./site-env.js";
 

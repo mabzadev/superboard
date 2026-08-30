@@ -66,7 +66,10 @@ export async function activateFrontRelease(
 	if (candidate.status !== "approved" && candidate.status !== "activated") {
 		return { status: "rejected", code: "CANDIDATE_NOT_APPROVED" };
 	}
-	if (!candidate.approval || !approvalMatches(candidate.release, candidate.approval, command.approval)) {
+	if (
+		!candidate.approval ||
+		!approvalMatches(candidate.release, candidate.approval, command.approval)
+	) {
 		return { status: "rejected", code: "APPROVAL_MISMATCH" };
 	}
 	if (candidate.release.payload.instance_id !== command.instance_id) {
@@ -82,7 +85,10 @@ export function createInMemoryFrontReleaseRepository(
 	candidates: FrontReleaseCandidateRecord[] = [],
 ): FrontReleaseRepository {
 	const candidateRecords = new Map(
-		candidates.map((candidate) => [candidate.release.payload.candidate_id, structuredClone(candidate)]),
+		candidates.map((candidate) => [
+			candidate.release.payload.candidate_id,
+			structuredClone(candidate),
+		]),
 	);
 	const activePointers = new Map<string, ActiveFrontReleasePointer>();
 

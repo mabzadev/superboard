@@ -1,14 +1,18 @@
+import { hasPermission, type RoleLevel } from "@emdash-cms/auth";
 import {
 	assertRendererCompatibility,
 	resolveFrontRequest,
 	type CompiledFrontRelease,
 	type FrontRequestResolution,
 } from "@superboard/supbrd-core";
-import { hasPermission, type RoleLevel } from "@emdash-cms/auth";
-
-import { loadDependencyHealth, loadLastVerifiedFrontRelease, type LoadedFrontRelease } from "./release-source.js";
-import type { SuperBoardSiteEnv } from "./site-env.js";
 import type { UserMember } from "@superboard/supbrd-plug-user";
+
+import {
+	loadDependencyHealth,
+	loadLastVerifiedFrontRelease,
+	type LoadedFrontRelease,
+} from "./release-source.js";
+import type { SuperBoardSiteEnv } from "./site-env.js";
 import { CORE_ADMIN_SHELL_DESCRIPTOR } from "./user-front-release.js";
 
 interface EmDashUser {
@@ -107,14 +111,18 @@ async function resolveFrontPageFromRelease(
 	}
 	const pageTitle =
 		resolution.result === "rendered" && release
-			? release.release.payload.presentation.pages.find((page) => page.page_id === resolution.page_id)
-					?.title ?? null
+			? (release.release.payload.presentation.pages.find(
+					(page) => page.page_id === resolution.page_id,
+				)?.title ?? null)
 			: null;
 	const operator = user
 		? { id: user.id, email: user.email, name: user.name, role: user.role, disabled: user.disabled }
 		: null;
 	let members: UserMember[] = [];
-	if (resolution.result === "rendered" && resolution.renderer_ids.includes("supbrd-plug-user.renderer.members_table")) {
+	if (
+		resolution.result === "rendered" &&
+		resolution.renderer_ids.includes("supbrd-plug-user.renderer.members_table")
+	) {
 		try {
 			const rows = await env.DB.prepare(
 				"SELECT id, email, name, role, disabled FROM users ORDER BY email LIMIT 100",

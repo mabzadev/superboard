@@ -1,9 +1,7 @@
 import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
-import {
-	createFrontDraftWithSnapshot,
-} from "../../../../lib/front-workflow-repository.js";
+import { createFrontDraftWithSnapshot } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
@@ -17,7 +15,8 @@ export const POST: APIRoute = async (context) => {
 	if (denied) return denied;
 	try {
 		const body: unknown = await context.request.json();
-		if (!isRecord(body)) return jsonResponse({ error: { code: "INVALID_USER_SLICE_REQUEST" } }, 422);
+		if (!isRecord(body))
+			return jsonResponse({ error: { code: "INVALID_USER_SLICE_REQUEST" } }, 422);
 		const identifiers = {
 			front_draft_id: stringField(body.front_draft_id),
 			draft_snapshot_id: stringField(body.draft_snapshot_id),
@@ -53,6 +52,7 @@ export const POST: APIRoute = async (context) => {
 };
 
 function stringField(value: unknown): string {
-	if (typeof value !== "string" || value === "") throw new Error("A release identifier is required");
+	if (typeof value !== "string" || value === "")
+		throw new Error("A release identifier is required");
 	return value;
 }

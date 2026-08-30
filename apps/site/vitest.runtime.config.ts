@@ -1,5 +1,6 @@
-import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
 import { fileURLToPath } from "node:url";
+
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
 
 import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";

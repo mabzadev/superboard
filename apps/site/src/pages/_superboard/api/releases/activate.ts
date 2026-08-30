@@ -6,12 +6,12 @@ import {
 	getFrontReleaseCandidate,
 } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
-import { isRecord } from "../../../../lib/request-validation.js";
 import {
 	createD1FrontReleaseRepository,
 	verifyActivationReceipts,
 } from "../../../../lib/release-repository.js";
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
+import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 
 export const prerender = false;
@@ -21,7 +21,11 @@ export const POST: APIRoute = async (context) => {
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
 	const body: unknown = await context.request.json();
-	if (!isRecord(body) || typeof body.candidate_id !== "string" || typeof body.activation_id !== "string") {
+	if (
+		!isRecord(body) ||
+		typeof body.candidate_id !== "string" ||
+		typeof body.activation_id !== "string"
+	) {
 		return jsonResponse({ error: { code: "INVALID_ACTIVATION_REQUEST" } }, 422);
 	}
 	const candidate = await getFrontReleaseCandidate(env.DB, body.candidate_id);
@@ -33,7 +37,10 @@ export const POST: APIRoute = async (context) => {
 		await candidateEvidence(env.DB, candidate),
 	);
 	if (!verification.valid) {
-		return jsonResponse({ error: { code: "ACTIVATION_PREFLIGHT_FAILED", errors: verification.errors } }, 409);
+		return jsonResponse(
+			{ error: { code: "ACTIVATION_PREFLIGHT_FAILED", errors: verification.errors } },
+			409,
+		);
 	}
 	const activatedAt = new Date().toISOString();
 	const result = await activateFrontRelease(createD1FrontReleaseRepository(env.DB), {

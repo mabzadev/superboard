@@ -279,7 +279,6 @@ function parseImageMimeType(value: string): ImageModerationRequest["mimeType"] {
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
 	return Array.from(
 		new Uint8Array(await crypto.subtle.digest("SHA-256", toOwnedArrayBuffer(bytes))),
-		(value) =>
-		value.toString(16).padStart(2, "0"),
+		(value) => value.toString(16).padStart(2, "0"),
 	).join("");
 }

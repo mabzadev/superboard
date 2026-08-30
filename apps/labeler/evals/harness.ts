@@ -14,7 +14,6 @@ import type {
 	ModerationModelIdentity,
 	TextModerationAdapter,
 } from "../src/ai/types.js";
-import { toOwnedArrayBuffer } from "../src/bytes.js";
 import { buildCanonicalAssessmentInput } from "../src/assessment/canonical.js";
 import { checkModerationLinks } from "../src/assessment/links.js";
 import { createGuardedMediaAcquirer } from "../src/assessment/media.js";
@@ -23,6 +22,7 @@ import {
 	type AssessmentPolicyResolution,
 } from "../src/assessment/policy.js";
 import { verifyExactRegistryRecord } from "../src/assessment/records.js";
+import { toOwnedArrayBuffer } from "../src/bytes.js";
 import { assertSealedEvalDataset, readSealedEvalAsset } from "./dataset.js";
 import type {
 	EvalBudgetEvaluation,

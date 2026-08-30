@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { MODULE_CUTOVER_REGISTRY } from "./module-cutover/registry.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -19,10 +20,19 @@ const APP_USER_ROUTE_PATTERN = /^\/app\/(?:users|customers)/u;
 
 const fullPlugins = ["user", "settings", "content", "products", "audit"];
 const modulePlugins = [
-	["gateway", "api"], ["billing", "billing"], ["support", "support"], ["flows", "flows"],
-	["analytics", "analytics"], ["marketing", "marketing"], ["email", "email"],
-	["dynamic-links", "dynamic-links"], ["files", "files"], ["paywalls", "paywalls"],
-	["onboardings", "onboardings"], ["observability", "observability"], ["mcp", "mcp"],
+	["gateway", "api"],
+	["billing", "billing"],
+	["support", "support"],
+	["flows", "flows"],
+	["analytics", "analytics"],
+	["marketing", "marketing"],
+	["email", "email"],
+	["dynamic-links", "dynamic-links"],
+	["files", "files"],
+	["paywalls", "paywalls"],
+	["onboardings", "onboardings"],
+	["observability", "observability"],
+	["mcp", "mcp"],
 	["custom-*", null],
 ];
 const pluginStores = {
@@ -51,11 +61,7 @@ export function buildPluginTopology() {
 	const plugins = [
 		...fullPlugins.map((name) => pluginTopologyEntry(`supbrd-plug-${name}`, "full", null)),
 		...modulePlugins.map(([name, worker]) =>
-			pluginTopologyEntry(
-				`supbrd-plugmod-${name}`,
-				"module",
-				workerRuntimeContract(name, worker),
-			),
+			pluginTopologyEntry(`supbrd-plugmod-${name}`, "module", workerRuntimeContract(name, worker)),
 		),
 	];
 	return {
@@ -66,7 +72,9 @@ export function buildPluginTopology() {
 }
 
 export function buildParityMatrix() {
-	const dashboardPages = walk(join(root, "apps/dashboard/src/app"), (path) => path.replaceAll(sep, "/").endsWith(PAGE_SUFFIX));
+	const dashboardPages = walk(join(root, "apps/dashboard/src/app"), (path) =>
+		path.replaceAll(sep, "/").endsWith(PAGE_SUFFIX),
+	);
 	const dashboardRows = dashboardPages.map((absolute) => {
 		const path = relative(join(root, "apps/dashboard/src/app"), absolute)
 			.replaceAll(sep, "/")
@@ -80,40 +88,62 @@ export function buildParityMatrix() {
 			target: targetForRoute(route),
 			test: "scripts/dashboard-route-parity.test.mjs",
 			sourceStatus: SUPPORT_OR_FLOWS_ROUTE_PATTERN.test(route) ? "unvalidated" : "delivered",
-			blocker: SUPPORT_ROUTE_PATTERN.test(route) ? "support_extended_gate" : FLOWS_ROUTE_PATTERN.test(route) ? "flows_complete_gate" : null,
+			blocker: SUPPORT_ROUTE_PATTERN.test(route)
+				? "support_extended_gate"
+				: FLOWS_ROUTE_PATTERN.test(route)
+					? "flows_complete_gate"
+					: null,
 		});
 	});
 
 	const apiNamespaces = [
-		"/health|/.well-known/*", "/oauth/*|/api/v1/auth/*|/api/v1/users/*", "/auth/*",
-		"/api/v1/instances/*|projects/*|links/*", "/api/v1/sdk/*", "/api/v1/{domain}/*",
-		"/api/v1/support-client/*|support/realtime/*", "/api/v1/app-files/*", "/api/v1/billing/*|/api/v2/purchases/*|/api/v1/iap/*",
-		"/api/v1/platform/*", "/api/v1/mcp/*", "/api/v1/admin/*|automation/*|diagnostics/*",
-		"/api/v1/marketing/tracking/*|opt-in/*|webhooks/*", "/short-links/*",
+		"/health|/.well-known/*",
+		"/oauth/*|/api/v1/auth/*|/api/v1/users/*",
+		"/auth/*",
+		"/api/v1/instances/*|projects/*|links/*",
+		"/api/v1/sdk/*",
+		"/api/v1/{domain}/*",
+		"/api/v1/support-client/*|support/realtime/*",
+		"/api/v1/app-files/*",
+		"/api/v1/billing/*|/api/v2/purchases/*|/api/v1/iap/*",
+		"/api/v1/platform/*",
+		"/api/v1/mcp/*",
+		"/api/v1/admin/*|automation/*|diagnostics/*",
+		"/api/v1/marketing/tracking/*|opt-in/*|webhooks/*",
+		"/short-links/*",
 	];
-	const apiRows = apiNamespaces.map((namespace) => row({
-		id: `api:${namespace}`,
-		kind: "api",
-		baseline: "workers/api/src/index.ts",
-		target: "supbrd-plugmod-gateway",
-		test: apiProof(namespace),
-		sourceStatus: namespace.includes("support") ? "unvalidated" : "delivered",
-		blocker: namespace.includes("support") ? "support_extended_gate" : null,
-	}));
+	const apiRows = apiNamespaces.map((namespace) =>
+		row({
+			id: `api:${namespace}`,
+			kind: "api",
+			baseline: "workers/api/src/index.ts",
+			target: "supbrd-plugmod-gateway",
+			test: apiProof(namespace),
+			sourceStatus: namespace.includes("support") ? "unvalidated" : "delivered",
+			blocker: namespace.includes("support") ? "support_extended_gate" : null,
+		}),
+	);
 
 	const workerRows = modulePlugins.flatMap(([name, worker]) => {
 		if (!worker) return [];
 		const workerDirectory = join(root, `workers/${worker}`);
 		const proof = workerProof(worker, workerDirectory);
-		return [row({
-			id: `worker:${worker}`,
-			kind: "worker",
-			baseline: `workers/${worker}/src/index.ts`,
-			target: `supbrd-plugmod-${name}`,
-			test: proof ? relative(root, proof) : "scripts/emdash-parity-matrix.test.mjs",
-			sourceStatus: name === "support" || name === "flows" ? "unvalidated" : "delivered",
-			blocker: name === "support" ? "support_extended_gate" : name === "flows" ? "flows_complete_gate" : null,
-		})];
+		return [
+			row({
+				id: `worker:${worker}`,
+				kind: "worker",
+				baseline: `workers/${worker}/src/index.ts`,
+				target: `supbrd-plugmod-${name}`,
+				test: proof ? relative(root, proof) : "scripts/emdash-parity-matrix.test.mjs",
+				sourceStatus: name === "support" || name === "flows" ? "unvalidated" : "delivered",
+				blocker:
+					name === "support"
+						? "support_extended_gate"
+						: name === "flows"
+							? "flows_complete_gate"
+							: null,
+			}),
+		];
 	});
 
 	const sdkRows = [
@@ -121,15 +151,19 @@ export function buildParityMatrix() {
 		["react-native", "sdks/react-native/src", "sdks/react-native/src/__tests__/index.test.tsx"],
 		["flutter", "sdks/flutter/lib", "sdks/flutter/test/emdash_store_parity_test.dart"],
 		["flutterflow", "sdks/flutterflow/lib", "sdks/flutterflow/test/emdash_store_parity_test.dart"],
-	].map(([name, baseline, test]) => row({
-		id: `sdk:${name}`,
-		kind: "sdk",
-		baseline,
-		target: "external-client-contract",
-		test,
-	}));
+	].map(([name, baseline, test]) =>
+		row({
+			id: `sdk:${name}`,
+			kind: "sdk",
+			baseline,
+			target: "external-client-contract",
+			test,
+		}),
+	);
 
-	const rows = [...dashboardRows, ...apiRows, ...workerRows, ...sdkRows].toSorted((a, b) => a.id.localeCompare(b.id));
+	const rows = [...dashboardRows, ...apiRows, ...workerRows, ...sdkRows].toSorted((a, b) =>
+		a.id.localeCompare(b.id),
+	);
 	return {
 		schema_version: 1,
 		inventory_source: "docs/SUPERBOARD_CURRENT_STATE_INVENTORY_2026-08-29.md",
@@ -146,27 +180,40 @@ export function validateArtifacts(matrix, topology) {
 	if (topology.plugins.length !== 19) errors.push("PLUGIN_TOPOLOGY_INCOMPLETE");
 	for (const plugin of topology.plugins) {
 		const { manifest, repositories, worker_descriptor: workerDescriptor } = plugin;
-		if (manifest.stores.length !== repositories.length || repositories.length === 0) errors.push(`PLUGIN_AUTHORITY_MISSING:${manifest.plugin_id}`);
+		if (manifest.stores.length !== repositories.length || repositories.length === 0)
+			errors.push(`PLUGIN_AUTHORITY_MISSING:${manifest.plugin_id}`);
 		if (
 			manifest.plugin_kind === "module" &&
 			(!workerDescriptor ||
 				workerDescriptor.authoritative_writes !== false ||
 				workerDescriptor.idempotency !== "required" ||
 				(workerDescriptor.execution_mode === "asynchronous" &&
-					(workerDescriptor.lease !== "attempt_scoped" || workerDescriptor.outbox !== "required")) ||
+					(workerDescriptor.lease !== "attempt_scoped" ||
+						workerDescriptor.outbox !== "required")) ||
 				!workerDescriptor.evidence_sha256)
 		) {
 			errors.push(`WORKER_TRANSITION_CONTRACT_INVALID:${manifest.plugin_id}`);
 		}
 		const { artifact_checksum: artifactChecksum, ...artifact } = manifest;
-		if (artifactChecksum !== hash(artifact)) errors.push(`PLUGIN_ARTIFACT_CHECKSUM_INVALID:${manifest.plugin_id}`);
+		if (artifactChecksum !== hash(artifact))
+			errors.push(`PLUGIN_ARTIFACT_CHECKSUM_INVALID:${manifest.plugin_id}`);
 	}
 	for (const item of matrix.rows) {
-		if (item.required && (!item.test || !item.proof_sha256)) errors.push(`REQUIRED_PROOF_MISSING:${item.id}`);
+		if (item.required && (!item.test || !item.proof_sha256))
+			errors.push(`REQUIRED_PROOF_MISSING:${item.id}`);
 		if (!existsSync(join(root, item.baseline))) errors.push(`BASELINE_MISSING:${item.id}`);
 		if (!existsSync(join(root, item.test))) errors.push(`TEST_MISSING:${item.id}`);
-		if (item.target.startsWith("supbrd-") && !pluginIds.has(item.target) && item.target !== "supbrd-core") errors.push(`TARGET_UNKNOWN:${item.id}`);
-		if ((item.id.includes("support") || item.id.includes("flows")) && item.source_status !== "unvalidated") errors.push(`SOURCE_STATUS_INVALID:${item.id}`);
+		if (
+			item.target.startsWith("supbrd-") &&
+			!pluginIds.has(item.target) &&
+			item.target !== "supbrd-core"
+		)
+			errors.push(`TARGET_UNKNOWN:${item.id}`);
+		if (
+			(item.id.includes("support") || item.id.includes("flows")) &&
+			item.source_status !== "unvalidated"
+		)
+			errors.push(`SOURCE_STATUS_INVALID:${item.id}`);
 	}
 	return errors;
 }
@@ -182,51 +229,65 @@ function pluginTopologyEntry(pluginId, kind, worker) {
 			),
 		]),
 	].toSorted();
-	const stores = storeNames.map((name) => contribution({
-		store_id: `${pluginId}.store.${name}`,
-		kind: "d1",
-		authority: pluginId,
-		schema_version: "1",
-		migrations: migrationInventory(pluginId),
-		availability: "required",
-		classification: name.includes("credentials") ? "secret" : "restricted",
-		encryption: "required",
-		version: "1.0.0",
-	}));
-	const repositories = stores.map(({ store_id: storeId }) => contribution({
-		repository_id: `${storeId.replace(".store.", ".repository.")}`,
-		store_id: storeId,
-		write_authority: "emdash",
-		compatibility_aliases: ["projectId", "pid"],
-		version: "1.0.0",
-	}));
-	const schemas = storeNames.map((name) => contribution({
-		schema_id: `${pluginId}.schema.${name}_record.v1`,
-		closed: true,
-		json_schema: {
-			type: "object",
-			additionalProperties: false,
-			required: ["entity_id", "revision", "payload"],
-			properties: { entity_id: { type: "string" }, revision: { type: "integer", minimum: 1 }, payload: { type: "object" } },
-		},
-		version: "1.0.0",
-	}));
-	const commands = [contribution({
-		command_id: `${pluginId}.command.write`,
-		audience: "superboard_front",
-		permission: `${pluginId}.write`,
-		failure_policy: "fail_closed",
-		version: "1.0.0",
-	})];
-	const dataSources = stores.map(({ store_id: storeId }) => contribution({
-		data_source_id: `${storeId.replace(".store.", ".data_source.")}`,
-		audience: "superboard_front",
-		permission: `${pluginId}.read`,
-		store_id: storeId,
-		consistency: "strong",
-		unavailable_state: "unavailable",
-		version: "1.0.0",
-	}));
+	const stores = storeNames.map((name) =>
+		contribution({
+			store_id: `${pluginId}.store.${name}`,
+			kind: "d1",
+			authority: pluginId,
+			schema_version: "1",
+			migrations: migrationInventory(pluginId),
+			availability: "required",
+			classification: name.includes("credentials") ? "secret" : "restricted",
+			encryption: "required",
+			version: "1.0.0",
+		}),
+	);
+	const repositories = stores.map(({ store_id: storeId }) =>
+		contribution({
+			repository_id: `${storeId.replace(".store.", ".repository.")}`,
+			store_id: storeId,
+			write_authority: "emdash",
+			compatibility_aliases: ["projectId", "pid"],
+			version: "1.0.0",
+		}),
+	);
+	const schemas = storeNames.map((name) =>
+		contribution({
+			schema_id: `${pluginId}.schema.${name}_record.v1`,
+			closed: true,
+			json_schema: {
+				type: "object",
+				additionalProperties: false,
+				required: ["entity_id", "revision", "payload"],
+				properties: {
+					entity_id: { type: "string" },
+					revision: { type: "integer", minimum: 1 },
+					payload: { type: "object" },
+				},
+			},
+			version: "1.0.0",
+		}),
+	);
+	const commands = [
+		contribution({
+			command_id: `${pluginId}.command.write`,
+			audience: "superboard_front",
+			permission: `${pluginId}.write`,
+			failure_policy: "fail_closed",
+			version: "1.0.0",
+		}),
+	];
+	const dataSources = stores.map(({ store_id: storeId }) =>
+		contribution({
+			data_source_id: `${storeId.replace(".store.", ".data_source.")}`,
+			audience: "superboard_front",
+			permission: `${pluginId}.read`,
+			store_id: storeId,
+			consistency: "strong",
+			unavailable_state: "unavailable",
+			version: "1.0.0",
+		}),
+	);
 	const workerDescriptor = worker
 		? {
 				...worker,
@@ -242,7 +303,11 @@ function pluginTopologyEntry(pluginId, kind, worker) {
 		plugin_version: "1.0.0",
 		artifact_id: `${pluginId}@1.0.0`,
 		publisher: "superboard",
-		execution: { backend: kind === "full" ? "sandboxed" : "native", worker: kind === "full" ? "none" : "dedicated", renderer: "native_bundle" },
+		execution: {
+			backend: kind === "full" ? "sandboxed" : "native",
+			worker: kind === "full" ? "none" : "dedicated",
+			renderer: "native_bundle",
+		},
 		capabilities: ["plugin.storage", ...(kind === "module" ? ["worker.execute"] : [])],
 		aliases: {},
 		stores,
@@ -284,8 +349,7 @@ function workerRuntimeContract(name, worker) {
 		lease: asynchronous ? "attempt_scoped" : "not_applicable",
 		idempotency: "required",
 		outbox: asynchronous ? "required" : "not_applicable",
-		callback_verification:
-			name === "custom-*" ? "blocked_legacy_gateway" : "not_applicable",
+		callback_verification: name === "custom-*" ? "blocked_legacy_gateway" : "not_applicable",
 		deployment_status: name === "custom-*" ? "not_ready" : "ready",
 		evidence: relative(root, proof),
 		evidence_sha256: fileChecksum(proof),
@@ -330,7 +394,8 @@ function row({ id, kind, baseline, target, test, sourceStatus = "delivered", blo
 }
 
 function targetForRoute(route) {
-	if (route.startsWith("/identity") || APP_USER_ROUTE_PATTERN.test(route)) return "supbrd-plug-user";
+	if (route.startsWith("/identity") || APP_USER_ROUTE_PATTERN.test(route))
+		return "supbrd-plug-user";
 	if (route.startsWith("/products")) return "supbrd-plug-products";
 	for (const name of ["paywalls", "support", "analytics", "marketing", "onboardings", "flows"]) {
 		if (route.startsWith(`/${name}`)) return `supbrd-plugmod-${name}`;
@@ -341,16 +406,28 @@ function targetForRoute(route) {
 
 function apiProof(namespace) {
 	if (namespace.includes("support")) return "workers/api/src/lib/support-gateway.test.ts";
-	if (namespace.includes("billing") || namespace.includes("purchases") || namespace.includes("iap")) {
+	if (
+		namespace.includes("billing") ||
+		namespace.includes("purchases") ||
+		namespace.includes("iap")
+	) {
 		return "workers/api/src/lib/purchases-v2.test.ts";
 	}
 	if (namespace.includes("mcp")) return "workers/api/src/routes/mcp.test.ts";
 	if (namespace.includes("marketing")) return "workers/api/src/routes/marketing-sdk.test.ts";
 	if (namespace.includes("platform")) return "workers/api/src/routes/platform-status.test.ts";
-	if (namespace.includes("admin") || namespace.includes("automation") || namespace.includes("diagnostics")) {
+	if (
+		namespace.includes("admin") ||
+		namespace.includes("automation") ||
+		namespace.includes("diagnostics")
+	) {
 		return "workers/api/src/routes/admin-cutover-flows-routing.test.ts";
 	}
-	if (namespace.includes("instances") || namespace.includes("projects") || namespace.includes("links")) {
+	if (
+		namespace.includes("instances") ||
+		namespace.includes("projects") ||
+		namespace.includes("links")
+	) {
 		return "workers/api/src/routes/projects-visitors.test.ts";
 	}
 	if (namespace.includes("sdk")) return "workers/api/src/routes/sdk-auth.test.ts";
@@ -394,7 +471,11 @@ function walk(directory, predicate) {
 
 function canonical(value) {
 	if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-	if (value && typeof value === "object") return `{${Object.keys(value).toSorted().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+	if (value && typeof value === "object")
+		return `{${Object.keys(value)
+			.toSorted()
+			.map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`)
+			.join(",")}}`;
 	return JSON.stringify(value);
 }
 
@@ -456,8 +537,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		writeJson(receiptPath, receipt);
 		writeFileSync(manifestMigrationPath, manifestRegistryMigration(topology));
 	} else {
-		for (const [path, value] of [[matrixPath, matrix], [topologyPath, topology], [receiptPath, receipt]]) {
-			if (!existsSync(path) || readFileSync(path, "utf8") !== `${JSON.stringify(value, null, 2)}\n`) {
+		for (const [path, value] of [
+			[matrixPath, matrix],
+			[topologyPath, topology],
+			[receiptPath, receipt],
+		]) {
+			if (
+				!existsSync(path) ||
+				readFileSync(path, "utf8") !== `${JSON.stringify(value, null, 2)}\n`
+			) {
 				console.error(`Generated artifact drift: ${relative(root, path)}`);
 				process.exitCode = 1;
 			}

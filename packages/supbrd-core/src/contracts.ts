@@ -175,7 +175,10 @@ export interface FrontReleaseInput {
 	core_concrete_pages: [];
 }
 
-export interface FrontReleasePayload extends Omit<FrontReleaseInput, "front_route_manifest" | "gateway_manifest"> {
+export interface FrontReleasePayload extends Omit<
+	FrontReleaseInput,
+	"front_route_manifest" | "gateway_manifest"
+> {
 	front_route_manifest: FrontRouteManifest;
 	gateway_manifest: GatewayManifest;
 }

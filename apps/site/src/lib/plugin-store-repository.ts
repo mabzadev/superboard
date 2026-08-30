@@ -193,13 +193,16 @@ export async function loadPluginStoreRecord(
 	return row ? toRecord(row, encryptionKey) : null;
 }
 
-export async function verifyPluginStoreShadowRead(db: D1Database, input: {
-	plugin_id: string;
-	entity_type: string;
-	source: unknown[];
-	target: unknown[];
-	observed_at: string;
-}) {
+export async function verifyPluginStoreShadowRead(
+	db: D1Database,
+	input: {
+		plugin_id: string;
+		entity_type: string;
+		source: unknown[];
+		target: unknown[];
+		observed_at: string;
+	},
+) {
 	const sourceChecksum = await sha256(canonicalizeReleasePayload(input.source));
 	const targetChecksum = await sha256(canonicalizeReleasePayload(input.target));
 	const matches = input.source.length === input.target.length && sourceChecksum === targetChecksum;
@@ -209,18 +212,28 @@ export async function verifyPluginStoreShadowRead(db: D1Database, input: {
 			 (plugin_id, entity_type, result, source_count, target_count, observed_at)
 			 VALUES (?, ?, ?, ?, ?, ?)`,
 		)
-		.bind(input.plugin_id, input.entity_type, matches ? "match" : "mismatch", input.source.length, input.target.length, input.observed_at)
+		.bind(
+			input.plugin_id,
+			input.entity_type,
+			matches ? "match" : "mismatch",
+			input.source.length,
+			input.target.length,
+			input.observed_at,
+		)
 		.run();
 	if (!matches) throw new Error("SHADOW_READ_MISMATCH");
 	return { rows: input.target, source_checksum: sourceChecksum, target_checksum: targetChecksum };
 }
 
-export async function exportPluginStoreReverseDelta(db: D1Database, input: {
-	plugin_id: string;
-	instance_id: string;
-	updated_after: string;
-	encryption_key: CryptoKey;
-}) {
+export async function exportPluginStoreReverseDelta(
+	db: D1Database,
+	input: {
+		plugin_id: string;
+		instance_id: string;
+		updated_after: string;
+		encryption_key: CryptoKey;
+	},
+) {
 	const rows = await db
 		.prepare(
 			`SELECT plugin_id, store_id, instance_id, entity_type, entity_id, revision,
@@ -234,23 +247,30 @@ export async function exportPluginStoreReverseDelta(db: D1Database, input: {
 	const records = await Promise.all(
 		rows.results.map(async ({ payload_json: payloadJson, ...row }) => ({
 			...row,
-			payload: JSON.parse(
-				await decryptPayload(input.encryption_key, JSON.parse(payloadJson) as EncryptedPayload),
-			) as unknown,
+			payload: parseJsonValue(
+				await decryptPayload(input.encryption_key, parseEncryptedPayload(payloadJson)),
+			),
 		})),
 	);
-	return { records, checksum: await sha256(canonicalizeReleasePayload(records)), deletes: [] as never[] };
+	return {
+		records,
+		checksum: await sha256(canonicalizeReleasePayload(records)),
+		deletes: [] as never[],
+	};
 }
 
-export async function issueWorkerExecutionLease(db: D1Database, input: {
-	attempt_id: string;
-	plugin_id: string;
-	operation_id: string;
-	callback_token: string;
-	callback_public_jwk: JsonWebKey;
-	issued_at: string;
-	expires_at: string;
-}) {
+export async function issueWorkerExecutionLease(
+	db: D1Database,
+	input: {
+		attempt_id: string;
+		plugin_id: string;
+		operation_id: string;
+		callback_token: string;
+		callback_public_jwk: JsonWebKey;
+		issued_at: string;
+		expires_at: string;
+	},
+) {
 	assertPlugin(input.plugin_id);
 	await db.batch([
 		db
@@ -281,14 +301,17 @@ export async function issueWorkerExecutionLease(db: D1Database, input: {
 	]);
 }
 
-export async function acceptWorkerCallback(db: D1Database, input: {
-	attempt_id: string;
-	plugin_id: string;
-	callback_token: string;
-	payload_checksum: string;
-	signature: string;
-	completed_at: string;
-}) {
+export async function acceptWorkerCallback(
+	db: D1Database,
+	input: {
+		attempt_id: string;
+		plugin_id: string;
+		callback_token: string;
+		payload_checksum: string;
+		signature: string;
+		completed_at: string;
+	},
+) {
 	const lease = await db
 		.prepare(
 			`SELECT operation_id, callback_public_jwk
@@ -296,17 +319,12 @@ export async function acceptWorkerCallback(db: D1Database, input: {
 			 WHERE attempt_id = ? AND plugin_id = ? AND callback_token_hash = ?
 			   AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at >= ?`,
 		)
-		.bind(
-			input.attempt_id,
-			input.plugin_id,
-			await sha256(input.callback_token),
-			input.completed_at,
-		)
+		.bind(input.attempt_id, input.plugin_id, await sha256(input.callback_token), input.completed_at)
 		.first<{ operation_id: string; callback_public_jwk: string }>();
 	if (!lease) throw new Error("WORKER_CALLBACK_REJECTED");
 	const publicKey = await crypto.subtle.importKey(
 		"jwk",
-		JSON.parse(lease.callback_public_jwk) as JsonWebKey,
+		parsePublicJwk(lease.callback_public_jwk),
 		{ name: "ECDSA", namedCurve: "P-256" },
 		false,
 		["verify"],
@@ -347,17 +365,19 @@ export async function acceptWorkerCallback(db: D1Database, input: {
 	return result;
 }
 
-function resolveInstanceAlias(input: Pick<StoreRecordInput, "instance_id" | "projectId" | "pid">): string {
-	const values = [input.instance_id, input.projectId, input.pid].filter((value): value is string => typeof value === "string" && value !== "");
-	if (values.length === 0 || new Set(values).size !== 1) throw new Error("INSTANCE_ALIAS_CONFLICT");
-	return values[0]!;
+function resolveInstanceAlias(
+	input: Pick<StoreRecordInput, "instance_id" | "projectId" | "pid">,
+): string {
+	const values = [input.instance_id, input.projectId, input.pid].filter(
+		(value): value is string => typeof value === "string" && value !== "",
+	);
+	const [instanceId] = values;
+	if (!instanceId || new Set(values).size !== 1) throw new Error("INSTANCE_ALIAS_CONFLICT");
+	return instanceId;
 }
 
 async function toRecord(row: StoreRecordRow, encryptionKey: CryptoKey) {
-	const payloadJson = await decryptPayload(
-		encryptionKey,
-		JSON.parse(row.payload_json) as EncryptedPayload,
-	);
+	const payloadJson = await decryptPayload(encryptionKey, parseEncryptedPayload(row.payload_json));
 	return {
 		plugin_id: row.plugin_id,
 		store_id: row.store_id,
@@ -365,7 +385,7 @@ async function toRecord(row: StoreRecordRow, encryptionKey: CryptoKey) {
 		entity_type: row.entity_type,
 		entity_id: row.entity_id,
 		revision: row.revision,
-		payload: JSON.parse(payloadJson) as unknown,
+		payload: parseJsonValue(payloadJson),
 		payload_checksum: row.payload_checksum,
 		manifest_artifact_checksum: row.manifest_artifact_checksum,
 		updated_at: row.updated_at,
@@ -376,6 +396,47 @@ interface EncryptedPayload {
 	algorithm: "AES-GCM";
 	iv: string;
 	ciphertext: string;
+}
+
+function parseEncryptedPayload(value: string): EncryptedPayload {
+	const parsed: unknown = JSON.parse(value);
+	if (
+		parsed === null ||
+		typeof parsed !== "object" ||
+		!("algorithm" in parsed) ||
+		parsed.algorithm !== "AES-GCM" ||
+		!("iv" in parsed) ||
+		typeof parsed.iv !== "string" ||
+		!("ciphertext" in parsed) ||
+		typeof parsed.ciphertext !== "string"
+	) {
+		throw new Error("STORE_ENCRYPTED_PAYLOAD_INVALID");
+	}
+	return { algorithm: "AES-GCM", iv: parsed.iv, ciphertext: parsed.ciphertext };
+}
+
+function parsePublicJwk(value: string): JsonWebKey {
+	const parsed: unknown = JSON.parse(value);
+	if (
+		parsed === null ||
+		typeof parsed !== "object" ||
+		!("kty" in parsed) ||
+		parsed.kty !== "EC" ||
+		!("crv" in parsed) ||
+		parsed.crv !== "P-256" ||
+		!("x" in parsed) ||
+		typeof parsed.x !== "string" ||
+		!("y" in parsed) ||
+		typeof parsed.y !== "string"
+	) {
+		throw new Error("WORKER_CALLBACK_PUBLIC_KEY_INVALID");
+	}
+	return { kty: "EC", crv: "P-256", x: parsed.x, y: parsed.y };
+}
+
+function parseJsonValue(value: string): unknown {
+	const parsed: unknown = JSON.parse(value);
+	return parsed;
 }
 
 async function encryptPayload(key: CryptoKey, plaintext: string): Promise<EncryptedPayload> {

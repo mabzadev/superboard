@@ -51,9 +51,7 @@ export interface FrontReleaseCandidateEvidence {
 export function updateFrontDraft(
 	current: FrontDraft,
 	command: { expected_draft_revision: number; input: unknown; updated_at: string },
-):
-	| { status: "updated"; draft: FrontDraft }
-	| { status: "conflict"; current_revision: number } {
+): { status: "updated"; draft: FrontDraft } | { status: "conflict"; current_revision: number } {
 	if (command.expected_draft_revision !== current.revision) {
 		return { status: "conflict", current_revision: current.revision };
 	}
@@ -199,7 +197,12 @@ export async function planPointerRollback(
 	reauthentication: OperatorReauthenticationReceipt,
 	rolledBackAt: string,
 ): Promise<
-	| { status: "ready"; target_release_id: string; expected_active_release_id: string; pointer_revision: number }
+	| {
+			status: "ready";
+			target_release_id: string;
+			expected_active_release_id: string;
+			pointer_revision: number;
+	  }
 	| { status: "rejected"; code: string }
 > {
 	const rollbackAt = timestamp(rolledBackAt, "rolled_back_at");
@@ -249,7 +252,7 @@ async function validateReauthentication(
 }
 
 function cloneJson<T>(value: T): T {
-	return JSON.parse(canonicalizeReleasePayload(value)) as T;
+	return structuredClone(value);
 }
 
 function required(value: string, field: string): string {

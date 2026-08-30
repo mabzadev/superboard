@@ -1,9 +1,9 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { spawnSync } from "node:child_process";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 export const repositoryRoot = resolve(scriptDirectory, "..");
@@ -46,7 +46,9 @@ function rootOverlayPath(config) {
 }
 
 function copyDefinedKeys(source, keys) {
-	return Object.fromEntries(keys.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]));
+	return Object.fromEntries(
+		keys.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]),
+	);
 }
 
 const npmPrefixCiPattern = /\bnpm --prefix ([^\s]+) ci\b/g;
@@ -63,13 +65,34 @@ const packageLockCachePathPattern = /apps\/reference\/package-lock\.json/g;
 const yarnInstallPattern = /\byarn install --immutable\b/g;
 const yarnCheckPattern = /\byarn check\b/g;
 const lintSourcePattern = /\.[cm]?[jt]sx?$/;
+const formatSourcePattern = /\.(?:[cm]?[jt]sx?|jsonc?|ya?ml|toml|css|scss|md)$/;
 const overlayLintSources = [
+	".github/scripts/check-no-major.test.mjs",
 	"apps/labeler/src/bytes.ts",
 	"apps/labeler/test/bytes.test.ts",
 	"scripts/emdash-overlay.mjs",
 	"scripts/emdash-overlay.test.mjs",
 ];
 const overlayLintRoots = ["apps/site", "packages/supbrd-core"];
+const overlayFormatSources = [
+	...overlayLintSources,
+	".github/workflows/superboard-ci.yml",
+	".gitleaks.toml",
+	".lintstagedrc",
+	".oxfmtrc.json",
+	"README.md",
+	"config/emdash-integration.json",
+	"config/emdash-integration.schema.json",
+	"config/emdash-root.overlay.json",
+	"scripts/cloudflare-site-build.mjs",
+	"scripts/cloudflare-site-build.test.mjs",
+	"scripts/emdash-migration-rehearsal-proof.mjs",
+	"scripts/emdash-migration-rehearsal-proof.test.mjs",
+	"scripts/emdash-parity-matrix.mjs",
+	"scripts/emdash-parity-matrix.test.mjs",
+	"scripts/emdash-store-restore-proof.mjs",
+	"scripts/emdash-store-restore.test.mjs",
+];
 const upstreamLintBaselineExclusions = new Set(["packages/plugins/forms/src/admin.tsx"]);
 
 export function normalizePnpmScript(script) {
@@ -139,7 +162,7 @@ export function renderSuperboardCi(source) {
 		.replace("    timeout-minutes: 10", "    timeout-minutes: 20")
 		.replace(
 			setupNodeActionPattern,
-			'$1- uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8\n$1- uses: actions/setup-node@',
+			"$1- uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8\n$1- uses: actions/setup-node@",
 		);
 	const installStep = "      - run: pnpm install --frozen-lockfile\n";
 	if (!rendered.includes(installStep)) {
@@ -164,7 +187,8 @@ export function renderRootPackage(upstreamPackage, overlay) {
 		scripts[`emdash:${key}`] = upstreamPackage.scripts[key];
 	}
 	for (const [key, value] of Object.entries(product.scripts)) {
-		scripts[scriptCollisions.includes(key) ? `superboard:${key}` : key] = normalizePnpmScript(value);
+		scripts[scriptCollisions.includes(key) ? `superboard:${key}` : key] =
+			normalizePnpmScript(value);
 	}
 	for (const key of scriptCollisions) {
 		scripts[key] = `pnpm run emdash:${key} && pnpm run superboard:${key}`;
@@ -175,6 +199,10 @@ export function renderRootPackage(upstreamPackage, overlay) {
 	scripts["emdash:lint"] = "node scripts/emdash-overlay.mjs lint-upstream";
 	scripts["emdash:workspace-deps"] = "node scripts/emdash-overlay.mjs workspace-deps";
 	scripts["emdash:workspace-deps:check"] = "node scripts/emdash-overlay.mjs workspace-deps --check";
+	scripts["emdash:format:full"] = scripts.format;
+	scripts["emdash:format:check:full"] = scripts["format:check"];
+	scripts.format = "node scripts/emdash-overlay.mjs format";
+	scripts["format:check"] = "node scripts/emdash-overlay.mjs format-check";
 
 	return {
 		...upstreamPackage,
@@ -267,7 +295,9 @@ export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
 		allowBuildsAnchor,
 		`${allowBuildsAnchor}  # SuperBoard reviewed dependency scripts.\n${allowBuildLines}\n`,
 	);
-	const workspaces = overlay.package.workspaces.filter((path) => !isCoveredByUpstreamWorkspace(path));
+	const workspaces = overlay.package.workspaces.filter(
+		(path) => !isCoveredByUpstreamWorkspace(path),
+	);
 	const workspaceAnchor = "  - infra/*\ncatalog:";
 	if (!rendered.includes(workspaceAnchor)) {
 		throw new Error("The pinned pnpm workspace package anchor has drifted");
@@ -329,19 +359,62 @@ export async function lintUpstream() {
 		config.upstream.commit,
 	]).stdout.split("\n");
 	const overlayRootSources = (
-		await Promise.all(overlayLintRoots.map((root) => listLintSources(resolve(repositoryRoot, root))))
+		await Promise.all(
+			overlayLintRoots.map((root) => listLintSources(resolve(repositoryRoot, root))),
+		)
 	)
 		.flat()
 		.map((path) => relative(repositoryRoot, path));
-	const paths = [...new Set([...upstreamPaths, ...overlayLintSources, ...overlayRootSources])].filter(
-		(path) => isLintSourcePath(path) && existsSync(resolve(repositoryRoot, path)),
-	);
+	const paths = [
+		...new Set([...upstreamPaths, ...overlayLintSources, ...overlayRootSources]),
+	].filter((path) => isLintSourcePath(path) && existsSync(resolve(repositoryRoot, path)));
 	const executable = resolve(repositoryRoot, "node_modules/.bin/oxlint");
 	const result = spawnSync(executable, ["--type-aware", "--deny-warnings", ...paths], {
 		cwd: repositoryRoot,
 		stdio: "inherit",
 	});
 	return result.status ?? 1;
+}
+
+export async function formatIntegrated({ write = false } = {}) {
+	const config = await readIntegrationConfig();
+	const upstreamPaths = runGit([
+		"ls-tree",
+		"-r",
+		"--name-only",
+		config.upstream.commit,
+	]).stdout.split("\n");
+	const overlayRootSources = (
+		await Promise.all(
+			overlayLintRoots.map((root) => listLintSources(resolve(repositoryRoot, root))),
+		)
+	)
+		.flat()
+		.map((path) => relative(repositoryRoot, path));
+	const paths = [
+		...new Set([...upstreamPaths, ...overlayFormatSources, ...overlayRootSources]),
+	].filter(
+		(path) =>
+			formatSourcePattern.test(path) &&
+			existsSync(resolve(repositoryRoot, path)) &&
+			!path.includes("/generated/") &&
+			!path.endsWith("worker-configuration.d.ts"),
+	);
+	const astroPaths = paths.filter((path) => path.endsWith(".astro"));
+	const oxfmtPaths = paths.filter((path) => !path.endsWith(".astro"));
+	const oxfmt = spawnSync(
+		resolve(repositoryRoot, "node_modules/.bin/oxfmt"),
+		["--ignore-path", ".gitignore", ...(write ? [] : ["--check"]), ...oxfmtPaths],
+		{ cwd: repositoryRoot, stdio: "inherit" },
+	);
+	if ((oxfmt.status ?? 1) !== 0) return oxfmt.status ?? 1;
+	if (astroPaths.length === 0) return 0;
+	const prettier = spawnSync(
+		resolve(repositoryRoot, "node_modules/.bin/prettier"),
+		[write ? "--write" : "--check", ...astroPaths],
+		{ cwd: repositoryRoot, stdio: "inherit" },
+	);
+	return prettier.status ?? 1;
 }
 
 async function listLintSources(root) {
@@ -359,7 +432,12 @@ async function listLintSources(root) {
 	return paths;
 }
 
-const dependencySections = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+const dependencySections = [
+	"dependencies",
+	"devDependencies",
+	"optionalDependencies",
+	"peerDependencies",
+];
 
 export function normalizeLocalWorkspaceDependencies(packageJson, localPackageNames) {
 	let changed = false;
@@ -414,14 +492,19 @@ async function discoverPackageJsonFiles(directory) {
 }
 
 export function isIntegratedWorkspaceDirectory(directory, exactWorkspaces) {
-	return exactWorkspaces.has(directory) || integratedWorkspacePatterns.some((pattern) => pattern.test(directory));
+	return (
+		exactWorkspaces.has(directory) ||
+		integratedWorkspacePatterns.some((pattern) => pattern.test(directory))
+	);
 }
 
 export async function reconcileLocalWorkspaceDependencies({ check = false } = {}) {
 	const config = await readIntegrationConfig();
 	const overlay = await readJson(rootOverlayPath(config));
 	const exactWorkspaces = new Set(overlay.package.workspaces);
-	const roots = ["apps", "packages", "workers", "sdks"].map((path) => resolve(repositoryRoot, path));
+	const roots = ["apps", "packages", "workers", "sdks"].map((path) =>
+		resolve(repositoryRoot, path),
+	);
 	const packageFiles = (await Promise.all(roots.map(discoverPackageJsonFiles))).flat();
 	const discoveredPackages = await Promise.all(
 		packageFiles.map(async (path) => ({ path, source: await readFile(path, "utf8") })),
@@ -443,7 +526,7 @@ export async function reconcileLocalWorkspaceDependencies({ check = false } = {}
 		const path = relative(repositoryRoot, entry.path);
 		changed.push(path);
 		if (!check) {
-			const indentation = entry.source.includes("\n\t\"") ? "\t" : 2;
+			const indentation = entry.source.includes('\n\t"') ? "\t" : 2;
 			await writeFile(entry.path, `${JSON.stringify(packageJson, null, indentation)}\n`);
 		}
 	}
@@ -514,9 +597,13 @@ async function verifyUpstreamAncestry(config) {
 	if (object !== "commit") {
 		throw new Error(`Pinned upstream object is ${object}, expected commit`);
 	}
-	const ancestry = runGit(["merge-base", "--is-ancestor", config.upstream.commit, "HEAD"], repositoryRoot, {
-		allowFailure: true,
-	});
+	const ancestry = runGit(
+		["merge-base", "--is-ancestor", config.upstream.commit, "HEAD"],
+		repositoryRoot,
+		{
+			allowFailure: true,
+		},
+	);
 	if (ancestry.status !== 0) {
 		throw new Error(`Pinned upstream commit ${config.upstream.commit} is not an ancestor of HEAD`);
 	}
@@ -647,6 +734,14 @@ async function main() {
 		process.exitCode = await lintUpstream();
 		return;
 	}
+	if (command === "format-check") {
+		process.exitCode = await formatIntegrated();
+		return;
+	}
+	if (command === "format") {
+		process.exitCode = await formatIntegrated({ write: true });
+		return;
+	}
 	if (command === "check") {
 		const mismatches = await checkOverlay();
 		if (mismatches.length > 0) {
@@ -658,7 +753,7 @@ async function main() {
 		return;
 	}
 	throw new Error(
-		"Usage: emdash-overlay.mjs <capture|copy-worktree|apply|check|workspace-deps|lint-upstream>",
+		"Usage: emdash-overlay.mjs <capture|copy-worktree|apply|check|workspace-deps|lint-upstream|format|format-check>",
 	);
 }
 

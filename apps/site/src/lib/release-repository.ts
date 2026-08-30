@@ -156,7 +156,8 @@ export async function persistReleaseApproval(
 	approval: ReleaseApproval,
 	reauthenticationReceiptId?: string,
 ): Promise<boolean> {
-	const update = db.prepare(
+	const update = db
+		.prepare(
 			`UPDATE superboard_front_release_candidates
 			 SET status = 'approved', approval_json = ?, approved_at = ?
 			 WHERE candidate_id = ? AND release_id = ? AND content_checksum = ?
@@ -169,7 +170,7 @@ export async function persistReleaseApproval(
 			approval.release_id,
 			approval.content_checksum,
 			approval.validation_set_checksum,
-		)
+		);
 	if (!reauthenticationReceiptId) {
 		const result = await update.run();
 		return (result.meta.changes ?? 0) === 1;
@@ -188,11 +189,7 @@ export async function persistReleaseApproval(
 				     WHERE linked.candidate_id = superboard_front_release_candidates.candidate_id
 				   )`,
 			)
-			.bind(
-				reauthenticationReceiptId,
-				approval.approved_at,
-				approval.candidate_id,
-			),
+			.bind(reauthenticationReceiptId, approval.approved_at, approval.candidate_id),
 	]);
 	return (result.meta.changes ?? 0) === 1;
 }

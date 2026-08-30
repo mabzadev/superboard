@@ -85,7 +85,13 @@ async function loadFromD1(
 
 	const release = parseCompiledFrontReleaseJson(row.release_json);
 	const publicJwk = parsePublicReleaseJwk(row.public_jwk);
-	await assertVerifiedRelease(release, publicJwk, row.signing_kid, instanceId, row.active_release_id);
+	await assertVerifiedRelease(
+		release,
+		publicJwk,
+		row.signing_kid,
+		instanceId,
+		row.active_release_id,
+	);
 	const cache: LastVerifiedCacheEntry = {
 		schema_version: 1,
 		instance_id: instanceId,
@@ -155,7 +161,8 @@ async function assertVerifiedRelease(
 		["verify"],
 	);
 	const verification = await verifyFrontRelease(release, { kid, public_key: publicKey });
-	if (!verification.valid) throw new Error(`Active release verification failed: ${verification.errors.join(",")}`);
+	if (!verification.valid)
+		throw new Error(`Active release verification failed: ${verification.errors.join(",")}`);
 }
 
 function toLoaded(

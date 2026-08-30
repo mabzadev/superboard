@@ -28,17 +28,17 @@ function validReleaseInput() {
 		front_route_manifest: {
 			schema_version: "1.0.0",
 			manifest_id: "01J00000000000000000000006",
-				normalization: {
+			normalization: {
 				unicode: "NFC",
 				case_sensitive: true,
 				trailing_slash: "strip",
-					percent_decoding: "once",
-				},
-				auth_transitions: {
-					login_route_id: "superboard.login",
-					authenticated_home_route_id: "superboard.login",
-				},
-				system_routes: [
+				percent_decoding: "once",
+			},
+			auth_transitions: {
+				login_route_id: "superboard.login",
+				authenticated_home_route_id: "superboard.login",
+			},
+			system_routes: [
 				{
 					route_id: "system.superboard_health",
 					path_pattern: "/superboard-system/health",
@@ -170,11 +170,10 @@ function validReleaseInput() {
 
 describe("Front Release compiler", () => {
 	test("binds the exact canonical payload to an ES256 signature", async () => {
-		const keys = await crypto.subtle.generateKey(
-			{ name: "ECDSA", namedCurve: "P-256" },
-			true,
-			["sign", "verify"],
-		);
+		const keys = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+			"sign",
+			"verify",
+		]);
 		const release = await compileFrontRelease(validReleaseInput(), {
 			kid: "release-key-2026-08",
 			private_key: keys.privateKey,
@@ -209,11 +208,10 @@ describe("Front Release compiler", () => {
 	});
 
 	test("rejects unknown fields instead of signing an open payload", async () => {
-		const keys = await crypto.subtle.generateKey(
-			{ name: "ECDSA", namedCurve: "P-256" },
-			true,
-			["sign", "verify"],
-		);
+		const keys = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+			"sign",
+			"verify",
+		]);
 		const input = validReleaseInput() as ReturnType<typeof validReleaseInput> & {
 			unexpected?: boolean;
 		};

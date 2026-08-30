@@ -2,20 +2,18 @@ import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { toOwnedArrayBuffer } from "../src/bytes.js";
 import {
 	createR2MediaContentStore,
 	purgeExpiredMediaQuarantine,
 } from "../src/assessment/runtime-media.js";
+import { toOwnedArrayBuffer } from "../src/bytes.js";
 
 const MEDIA_BYTES = new TextEncoder().encode("display media evidence");
 const IDEMPOTENCY_KEY = "release-icon";
 const CONTENT_ADDRESS = "sha256:display-media-evidence";
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-	const digest = new Uint8Array(
-		await crypto.subtle.digest("SHA-256", toOwnedArrayBuffer(bytes)),
-	);
+	const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", toOwnedArrayBuffer(bytes)));
 	return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 

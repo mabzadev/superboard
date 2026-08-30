@@ -1,10 +1,11 @@
+import { createHash } from "node:crypto";
+import { readFile, readdir } from "node:fs/promises";
+
 import {
 	assertRendererCompatibility,
 	compileFrontRelease,
 	resolveFrontRequest,
 } from "@superboard/supbrd-core";
-import { createHash } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
 import { expect, test } from "vitest";
 
 import {
@@ -54,11 +55,10 @@ test("the Site composes a permission-filtered user slice from plugin contributio
 });
 
 test("compiles the complete Site composition with every validation receipt passing", async () => {
-	const keys = await crypto.subtle.generateKey(
-		{ name: "ECDSA", namedCurve: "P-256" },
-		true,
-		["sign", "verify"],
-	);
+	const keys = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+		"sign",
+		"verify",
+	]);
 	const release = await compileFrontRelease(await composeUserFrontReleaseInput(identifiers), {
 		kid: "user-slice-test-key",
 		private_key: keys.privateKey,

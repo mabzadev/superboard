@@ -16,11 +16,11 @@ import {
 	createWorkersAiTextAdapter,
 	workersAiBindingFromEnv,
 } from "../ai/workers-ai.js";
+import { toOwnedArrayBuffer } from "../bytes.js";
 import { createD1ListingLabelIssuer, type ListingLabelIssuer } from "../labels/issuer.js";
 import { readLabelerRuntimeConfig, type LabelerRuntimeConfig } from "../runtime-config.js";
 import { createDohHostnameResolver } from "../runtime-network.js";
 import { createLabelPublicationTarget } from "../subscriptions/publisher.js";
-import { toOwnedArrayBuffer } from "../bytes.js";
 import { createD1AssessmentLifecycleStore } from "./lifecycle.js";
 import { createGuardedMediaAcquirer } from "./media.js";
 import { createAtprotoExactRecordVerifier } from "./records.js";

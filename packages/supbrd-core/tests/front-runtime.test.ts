@@ -108,10 +108,10 @@ describe("Front SuperBoard runtime", () => {
 				dependency_health: { "dependency.analytics": "ready" },
 			}),
 		).toMatchObject({
-				result: "forbidden",
-				route_id: home.route_id,
-				state_renderer_id: "emdash.core.state.forbidden",
-			});
+			result: "forbidden",
+			route_id: home.route_id,
+			state_renderer_id: "emdash.core.state.forbidden",
+		});
 		expect(
 			resolveFrontRequest({
 				last_verified_release: release,
@@ -121,9 +121,9 @@ describe("Front SuperBoard runtime", () => {
 				dependency_health: { "dependency.analytics": "unavailable" },
 			}),
 		).toMatchObject({
-				result: "unavailable",
-				route_id: home.route_id,
-				state_renderer_id: "emdash.core.state.unavailable",
-			});
+			result: "unavailable",
+			route_id: home.route_id,
+			state_renderer_id: "emdash.core.state.unavailable",
+		});
 	});
 });

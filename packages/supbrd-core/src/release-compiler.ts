@@ -151,7 +151,10 @@ export function assertFrontReleaseInput(input: unknown): asserts input is FrontR
 	if (!Number.isSafeInteger(input.release_sequence) || input.release_sequence < 1) {
 		throw new TypeError("release_sequence must be a positive safe integer");
 	}
-	if (Number.isNaN(Date.parse(input.created_at)) || new Date(input.created_at).toISOString() !== input.created_at) {
+	if (
+		Number.isNaN(Date.parse(input.created_at)) ||
+		new Date(input.created_at).toISOString() !== input.created_at
+	) {
 		throw new TypeError("created_at must be a canonical UTC timestamp");
 	}
 	const allRoutes = [
@@ -162,7 +165,8 @@ export function assertFrontReleaseInput(input: unknown): asserts input is FrontR
 	const paths = new Set<string>();
 	for (const route of allRoutes) {
 		if (routeIds.has(route.route_id)) throw new TypeError(`Duplicate route_id: ${route.route_id}`);
-		if (paths.has(route.path_pattern)) throw new TypeError(`Route collision: ${route.path_pattern}`);
+		if (paths.has(route.path_pattern))
+			throw new TypeError(`Route collision: ${route.path_pattern}`);
 		routeIds.add(route.route_id);
 		paths.add(route.path_pattern);
 		for (const state of REQUIRED_FRONT_STATES) {
@@ -204,7 +208,10 @@ async function signReleaseIdentity(
 	};
 }
 
-async function verifyReleaseIdentity(release: CompiledFrontRelease, publicKey: CryptoKey): Promise<boolean> {
+async function verifyReleaseIdentity(
+	release: CompiledFrontRelease,
+	publicKey: CryptoKey,
+): Promise<boolean> {
 	assertEs256Key(publicKey, "public");
 	const bytes = new TextEncoder().encode(
 		canonicalizeReleasePayload(releaseSignatureIdentity(release.payload, release.content_checksum)),
@@ -266,10 +273,7 @@ function assertEs256Key(key: CryptoKey, expectedType: "private" | "public"): voi
 function toBase64Url(bytes: Uint8Array): string {
 	let binary = "";
 	for (const byte of bytes) binary += String.fromCharCode(byte);
-	return btoa(binary)
-		.replaceAll("+", "-")
-		.replaceAll("/", "_")
-		.replace(BASE64_PADDING_PATTERN, "");
+	return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(BASE64_PADDING_PATTERN, "");
 }
 
 function fromBase64Url(value: string): Uint8Array<ArrayBuffer> {

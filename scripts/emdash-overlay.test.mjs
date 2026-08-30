@@ -56,7 +56,8 @@ void test("root package keeps the EmDash base and composes colliding gates", () 
 });
 
 void test("pnpm workspace retains upstream projects and adds uncovered SuperBoard projects", () => {
-	const upstream = "trustPolicyExclude:\n  - vite@6.4.1\nallowBuilds:\n  esbuild: true\npackages:\n  - apps/*\n  - packages/*\n  - infra/*\ncatalog:\n  zod: 4.4.1\noverrides:\n  zod: 4.4.1\npatchedDependencies:\n  image-size@2.0.2: patches/image-size.patch\n";
+	const upstream =
+		"trustPolicyExclude:\n  - vite@6.4.1\nallowBuilds:\n  esbuild: true\npackages:\n  - apps/*\n  - packages/*\n  - infra/*\ncatalog:\n  zod: 4.4.1\noverrides:\n  zod: 4.4.1\npatchedDependencies:\n  image-size@2.0.2: patches/image-size.patch\n";
 	const result = renderPnpmWorkspace(upstream, overlay, {
 		eslintImportResolverTypescript: "4.4.5",
 		allowBuilds: {
@@ -101,7 +102,9 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	assert.ok(result.includes('"core-js": false'));
 	assert.ok(result.includes('"unrs-resolver": true'));
 	assert.ok(result.includes('"eslint-config-prettier": "10.1.8"'));
-	assert.ok(result.includes('"image-size@1.2.1": sdks/react-native/.yarn/patches/image-size.patch'));
+	assert.ok(
+		result.includes('"image-size@1.2.1": sdks/react-native/.yarn/patches/image-size.patch'),
+	);
 	assert.ok(result.includes('- "semver@5.7.2"'));
 	assert.ok(result.includes("virtualStoreType: project"));
 	assert.ok(result.includes('  - "!@cloudflare/workers-types"'));
@@ -112,7 +115,10 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	assert.ok(result.includes('"jsdom": "26.1.0"'));
 	assert.ok(result.includes("supportedArchitectures:"));
 	assert.ok(result.includes('    - "arm64"'));
-	assert.equal(result.split("\n").some((line) => TRAILING_WHITESPACE_PATTERN.test(line)), false);
+	assert.equal(
+		result.split("\n").some((line) => TRAILING_WHITESPACE_PATTERN.test(line)),
+		false,
+	);
 });
 
 void test("gitignore keeps the pnpm lock authoritative", () => {
@@ -136,29 +142,32 @@ void test("local SuperBoard packages cannot fall back to the npm registry", () =
 			"@superboard/email-transport": "1.0.0",
 		},
 	};
-	const changed = normalizeLocalWorkspaceDependencies(packageJson, new Set([
-		"@superboard/contracts",
-		"@superboard/email-transport",
-	]));
+	const changed = normalizeLocalWorkspaceDependencies(
+		packageJson,
+		new Set(["@superboard/contracts", "@superboard/email-transport"]),
+	);
 
 	assert.equal(changed, true);
 	assert.equal(packageJson.dependencies["@superboard/contracts"], "workspace:*");
 	assert.equal(packageJson.devDependencies["@superboard/email-transport"], "workspace:*");
 	assert.equal(packageJson.dependencies.zod, "^4.0.0");
-	assert.equal(normalizeLocalWorkspaceDependencies(packageJson, new Set(["@superboard/contracts"])), false);
+	assert.equal(
+		normalizeLocalWorkspaceDependencies(packageJson, new Set(["@superboard/contracts"])),
+		false,
+	);
 });
 
 void test("workspace dependency normalization excludes vendored examples", () => {
-	const exact = new Set([
-		"workers/api",
-		"sdks/flows/upstream/packages/js",
-	]);
+	const exact = new Set(["workers/api", "sdks/flows/upstream/packages/js"]);
 
 	assert.equal(isIntegratedWorkspaceDirectory("apps/dashboard", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("packages/contracts", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("workers/api", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("sdks/flows/upstream/packages/js", exact), true);
-	assert.equal(isIntegratedWorkspaceDirectory("sdks/flows/upstream/reference/framework-examples/astro", exact), false);
+	assert.equal(
+		isIntegratedWorkspaceDirectory("sdks/flows/upstream/reference/framework-examples/astro", exact),
+		false,
+	);
 });
 
 void test("SuperBoard root scripts execute through pnpm", () => {

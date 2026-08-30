@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { FixtureAdapter } from "./module-cutover/adapters.mjs";
 import {
 	applyPlan,
@@ -109,16 +110,11 @@ export async function buildMigrationRehearsalProof() {
 					),
 					registry: proofEntities,
 				});
-				doubleImport = adapter.repositoryUpsertCalls.length === proofEntities.length
-					? "passed"
-					: "failed";
-				checkpointResume = repeated.entities.every(({ resumed }) => resumed)
-					? "passed"
-					: "failed";
+				doubleImport =
+					adapter.repositoryUpsertCalls.length === proofEntities.length ? "passed" : "failed";
+				checkpointResume = repeated.entities.every(({ resumed }) => resumed) ? "passed" : "failed";
 				shadowRead = "passed";
-				reverseDelta = delta.replayable
-					? "replayable_without_deletes"
-					: "failed";
+				reverseDelta = delta.replayable ? "replayable_without_deletes" : "failed";
 			}
 			stores.push({
 				plugin_id: manifest.plugin_id,
@@ -161,7 +157,11 @@ function sampleRow(entity, index) {
 			if (/(?:_at|date|time)$/u.test(column)) {
 				return [column, `2026-08-30T00:00:${String(index).padStart(2, "0")}.000Z`];
 			}
-			if (/(?:count|cents|price|amount|position|priority|active|enabled|quantity|revision)$/u.test(column)) {
+			if (
+				/(?:count|cents|price|amount|position|priority|active|enabled|quantity|revision)$/u.test(
+					column,
+				)
+			) {
 				return [column, 1];
 			}
 			return [column, `${entity.id}-${column}-${index + 1}`];
@@ -197,5 +197,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		mkdirSync(dirname(path), { recursive: true });
 		writeFileSync(path, `${JSON.stringify(proof, null, 2)}\n`);
 	}
-	console.log(JSON.stringify({ store_count: proof.store_count, receipt_checksum: proof.receipt_checksum }));
+	console.log(
+		JSON.stringify({ store_count: proof.store_count, receipt_checksum: proof.receipt_checksum }),
+	);
 }

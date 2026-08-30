@@ -12,7 +12,11 @@ export const POST: APIRoute = async (context) => {
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
 	const body: unknown = await context.request.json();
-	if (!isRecord(body) || typeof body.front_draft_id !== "string" || typeof body.draft_snapshot_id !== "string") {
+	if (
+		!isRecord(body) ||
+		typeof body.front_draft_id !== "string" ||
+		typeof body.draft_snapshot_id !== "string"
+	) {
 		return jsonResponse({ error: { code: "INVALID_SNAPSHOT_REQUEST" } }, 422);
 	}
 	if (!Number.isSafeInteger(body.expected_draft_revision)) {

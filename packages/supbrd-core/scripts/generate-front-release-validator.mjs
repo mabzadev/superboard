@@ -8,12 +8,7 @@ import standaloneCode from "ajv/dist/standalone/index.js";
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaPath = join(packageRoot, "schemas", "front-release-input.schema.json");
 const outputPath = join(packageRoot, "src", "generated", "front-release-input-validator.js");
-const declarationPath = join(
-	packageRoot,
-	"src",
-	"generated",
-	"front-release-input-validator.d.ts",
-);
+const declarationPath = join(packageRoot, "src", "generated", "front-release-input-validator.d.ts");
 const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
 const ajv = new Ajv2020({
 	allErrors: true,

@@ -70,7 +70,10 @@ function normalizeFrontPath(
 	} catch {
 		return null;
 	}
-	if (decoded.includes("\0") || decoded.split("/").some((segment) => segment === "." || segment === "..")) {
+	if (
+		decoded.includes("\0") ||
+		decoded.split("/").some((segment) => segment === "." || segment === "..")
+	) {
 		return null;
 	}
 	let normalized = decoded.normalize(policy.unicode);
