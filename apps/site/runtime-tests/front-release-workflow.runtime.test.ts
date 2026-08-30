@@ -107,6 +107,15 @@ describe("Site Front Release D1 workflow", () => {
 		const repository = createD1FrontReleaseRepository(env.DB);
 		const stored = await repository.getCandidate(candidate.payload.candidate_id);
 		if (!stored) throw new Error("candidate was not persisted");
+		const reauthentication = await createOperatorReauthenticationReceipt({
+			receipt_id: "activation-runtime-reauth",
+			operator_id: approval.operator_id,
+			instance_id: "vocostar",
+			action: "front_release.activate",
+			candidate_id: candidate.payload.candidate_id,
+			reauthenticated_at: "2026-08-30T00:01:30.000Z",
+			expires_at: "2026-08-30T00:06:30.000Z",
+		});
 		expect(
 			await repository.compareAndSwapActive({
 				candidate: stored,
@@ -116,6 +125,7 @@ describe("Site Front Release D1 workflow", () => {
 					activation_id: "activation-runtime",
 					expected_active_release_id: null,
 					approval,
+					reauthentication,
 					activated_at: "2026-08-30T00:02:00.000Z",
 				},
 			}),
@@ -129,6 +139,7 @@ describe("Site Front Release D1 workflow", () => {
 					activation_id: "activation-stale",
 					expected_active_release_id: null,
 					approval,
+					reauthentication,
 					activated_at: "2026-08-30T00:03:00.000Z",
 				},
 			}),
@@ -165,6 +176,15 @@ describe("Site Front Release D1 workflow", () => {
 		const repository = createD1FrontReleaseRepository(env.DB);
 		const firstStored = await repository.getCandidate(first.payload.candidate_id);
 		if (!firstStored) throw new Error("first candidate missing");
+		const firstActivationReauthentication = await createOperatorReauthenticationReceipt({
+			receipt_id: "smoke-activation-a-reauth",
+			operator_id: firstApproval.operator_id,
+			instance_id: "vocostar",
+			action: "front_release.activate",
+			candidate_id: first.payload.candidate_id,
+			reauthenticated_at: "2026-08-30T00:10:30.000Z",
+			expires_at: "2026-08-30T00:15:30.000Z",
+		});
 		expect(
 			await repository.compareAndSwapActive({
 				candidate: firstStored,
@@ -174,6 +194,7 @@ describe("Site Front Release D1 workflow", () => {
 					activation_id: "smoke-activation-a",
 					expected_active_release_id: "release-runtime",
 					approval: firstApproval,
+					reauthentication: firstActivationReauthentication,
 					activated_at: "2026-08-30T00:11:00.000Z",
 				},
 			}),
@@ -215,6 +236,15 @@ describe("Site Front Release D1 workflow", () => {
 
 		const secondApproval = approvalFor(second, "2026-08-30T00:13:30.000Z");
 		expect(await persistReleaseApproval(env.DB, secondApproval)).toBe(true);
+		const secondActivationReauthentication = await createOperatorReauthenticationReceipt({
+			receipt_id: "smoke-activation-b-reauth",
+			operator_id: secondApproval.operator_id,
+			instance_id: "vocostar",
+			action: "front_release.activate",
+			candidate_id: second.payload.candidate_id,
+			reauthenticated_at: "2026-08-30T00:13:30.000Z",
+			expires_at: "2026-08-30T00:18:30.000Z",
+		});
 		expect(
 			await repository.compareAndSwapActive({
 				candidate: { ...secondStored, status: "approved", approval: secondApproval },
@@ -224,6 +254,7 @@ describe("Site Front Release D1 workflow", () => {
 					activation_id: "smoke-activation-b",
 					expected_active_release_id: first.payload.release_id,
 					approval: secondApproval,
+					reauthentication: secondActivationReauthentication,
 					activated_at: "2026-08-30T00:14:00.000Z",
 				},
 			}),
@@ -270,6 +301,7 @@ describe("Site Front Release D1 workflow", () => {
 					activation_id: "smoke-rollback-a",
 					expected_active_release_id: rollbackPlan.expected_active_release_id,
 					approval: firstApproval,
+					reauthentication: receipt,
 					activated_at: "2026-08-30T00:15:00.000Z",
 				},
 			}),

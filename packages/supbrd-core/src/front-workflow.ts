@@ -124,6 +124,24 @@ export async function createOperatorReauthenticationReceipt(
 	return { ...content, receipt_checksum: await checksum(content) };
 }
 
+export async function validateOperatorReauthenticationReceipt(
+	receipt: OperatorReauthenticationReceipt,
+	candidate: FrontReleaseCandidateRecord,
+	input: {
+		action: OperatorReauthenticationReceipt["action"];
+		operator_id: string;
+		action_at: string;
+	},
+): Promise<string | null> {
+	if (receipt.operator_id !== input.operator_id) return "REAUTHENTICATION_RECEIPT_INVALID";
+	return validateReauthentication(
+		receipt,
+		candidate,
+		input.action,
+		timestamp(input.action_at, "action_at"),
+	);
+}
+
 export async function approveFrontReleaseCandidate(
 	candidate: FrontReleaseCandidateRecord,
 	input: {

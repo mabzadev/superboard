@@ -67,6 +67,7 @@ export {
 	approveFrontReleaseCandidate,
 	createFrontPreview,
 	createOperatorReauthenticationReceipt,
+	validateOperatorReauthenticationReceipt,
 	planPointerRollback,
 	snapshotFrontDraft,
 	updateFrontDraft,

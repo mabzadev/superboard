@@ -1,5 +1,9 @@
 import { canonicalizeReleasePayload } from "./canonical-json.js";
 import type { CompiledFrontRelease, ReleaseSignature } from "./contracts.js";
+import {
+	validateOperatorReauthenticationReceipt,
+	type OperatorReauthenticationReceipt,
+} from "./front-workflow.js";
 
 export interface ReleaseApproval {
 	operator_id: string;
@@ -34,6 +38,7 @@ export interface FrontReleaseActivationCommand {
 	activation_id: string;
 	expected_active_release_id: string | null;
 	approval: ReleaseApproval;
+	reauthentication: OperatorReauthenticationReceipt;
 	activated_at: string;
 }
 
@@ -75,9 +80,16 @@ export async function activateFrontRelease(
 	if (candidate.release.payload.instance_id !== command.instance_id) {
 		return { status: "rejected", code: "INSTANCE_MISMATCH" };
 	}
-	if (!isFreshReauthentication(command.approval.reauthenticated_at, command.activated_at)) {
-		return { status: "rejected", code: "STRONG_REAUTH_REQUIRED" };
-	}
+	const reauthenticationError = await validateOperatorReauthenticationReceipt(
+		command.reauthentication,
+		candidate,
+		{
+			action: "front_release.activate",
+			operator_id: candidate.approval.operator_id,
+			action_at: command.activated_at,
+		},
+	);
+	if (reauthenticationError) return { status: "rejected", code: reauthenticationError };
 	return repository.compareAndSwapActive({ candidate, command });
 }
 
@@ -154,17 +166,5 @@ function approvalMatches(
 	return (
 		canonicalizeReleasePayload(expected) === canonicalizeReleasePayload(storedIdentity) &&
 		canonicalizeReleasePayload(stored) === canonicalizeReleasePayload(presented)
-	);
-}
-
-function isFreshReauthentication(reauthenticatedAt: string, activatedAt: string): boolean {
-	const reauthenticated = Date.parse(reauthenticatedAt);
-	const activated = Date.parse(activatedAt);
-	const maximumAgeMilliseconds = 5 * 60 * 1_000;
-	return (
-		Number.isFinite(reauthenticated) &&
-		Number.isFinite(activated) &&
-		reauthenticated <= activated &&
-		activated - reauthenticated <= maximumAgeMilliseconds
 	);
 }

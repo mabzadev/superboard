@@ -99,12 +99,22 @@ test("produces candidate, preview, approval and activation evidence for the user
 	});
 	const repository = createD1FrontReleaseRepository(env.DB);
 	const active = await repository.getActive("vocostar");
+	const activationReauthentication = await createOperatorReauthenticationReceipt({
+		receipt_id: "user-slice-runtime-activation-reauth",
+		operator_id: "operator-runtime",
+		instance_id: "vocostar",
+		action: "front_release.activate",
+		candidate_id: release.payload.candidate_id,
+		reauthenticated_at: "2026-08-30T00:56:30.000Z",
+		expires_at: "2026-08-30T01:01:30.000Z",
+	});
 	const activation = await activateFrontRelease(repository, {
 		instance_id: "vocostar",
 		candidate_id: release.payload.candidate_id,
 		activation_id: "user-slice-runtime-activation",
 		expected_active_release_id: active?.active_release_id ?? null,
 		approval: approvalResult.approval,
+		reauthentication: activationReauthentication,
 		activated_at: "2026-08-30T00:57:00.000Z",
 	});
 	expect(activation.status).toBe("activated");
@@ -117,4 +127,20 @@ test("produces candidate, preview, approval and activation evidence for the user
 			pointer_revision: activation.pointer_revision,
 		}),
 	).toBe(true);
+	const activationReauthenticationLink = await env.DB.prepare(
+		`SELECT linked.activation_id, receipt.action, receipt.candidate_id,
+		        receipt.receipt_checksum
+		 FROM superboard_front_activation_reauthentication linked
+		 JOIN superboard_operator_reauthentication_receipts receipt
+		   ON receipt.receipt_id = linked.receipt_id
+		 WHERE linked.activation_id = ?`,
+	)
+		.bind(activation.activation_id)
+		.first();
+	expect(activationReauthenticationLink).toEqual({
+		activation_id: activation.activation_id,
+		action: "front_release.activate",
+		candidate_id: release.payload.candidate_id,
+		receipt_checksum: activationReauthentication.receipt_checksum,
+	});
 });

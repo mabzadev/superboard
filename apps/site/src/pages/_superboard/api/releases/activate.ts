@@ -5,7 +5,11 @@ import {
 	candidateEvidence,
 	getFrontReleaseCandidate,
 } from "../../../../lib/front-workflow-repository.js";
-import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import {
+	jsonResponse,
+	recentOperatorReauthentication,
+	requireReleaseOperator,
+} from "../../../../lib/operator-guard.js";
 import {
 	createD1FrontReleaseRepository,
 	verifyActivationReceipts,
@@ -43,6 +47,15 @@ export const POST: APIRoute = async (context) => {
 		);
 	}
 	const activatedAt = new Date().toISOString();
+	const reauthentication = await recentOperatorReauthentication(context, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		candidate_id: body.candidate_id,
+		action: "front_release.activate",
+		now: activatedAt,
+	});
+	if (!reauthentication) {
+		return jsonResponse({ error: { code: "STRONG_REAUTH_REQUIRED" } }, 403);
+	}
 	const result = await activateFrontRelease(createD1FrontReleaseRepository(env.DB), {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		candidate_id: body.candidate_id,
@@ -50,6 +63,7 @@ export const POST: APIRoute = async (context) => {
 		expected_active_release_id:
 			typeof body.expected_active_release_id === "string" ? body.expected_active_release_id : null,
 		approval: candidate.approval,
+		reauthentication,
 		activated_at: activatedAt,
 	});
 	if (result.status !== "activated") return jsonResponse({ error: result }, 409);

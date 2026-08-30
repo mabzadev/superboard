@@ -7,7 +7,7 @@ import { USER_FRONT_CATALOGS } from "./user-front-i18n.js";
 export const CORE_ADMIN_SHELL_BUILD_CHECKSUM =
 	"sha256:2a4948fa1c9ccfb2e9488a1e9ade131e6775f8a5f0eb773d45a9cc44b5dd6ffd";
 export const SUPBRD_CORE_ARTIFACT_CHECKSUM =
-	"sha256:aa1b66a07aa1734b74cd13ca4cf87bc130e0e94073d6e9a69d07c7b3f3c75565";
+	"sha256:1a0533cd2668a54fb7969ded48701f1b9b2021e87c95a2fee946f5944261c768";
 
 export const CORE_ADMIN_SHELL_DESCRIPTOR: RendererDescriptor = {
 	renderer_id: "emdash.core.renderer.admin_shell",

@@ -61,30 +61,60 @@ export function createD1FrontReleaseRepository(db: D1Database): FrontReleaseRepo
 					pointer_revision: before?.pointer_revision ?? 0,
 				};
 			}
-			const row = await db
-				.prepare(
-					`INSERT INTO superboard_front_active_releases (
-					   instance_id, active_release_id, previous_release_id,
-					   pointer_revision, activation_id, activated_at
-					 ) VALUES (?, ?, NULL, 1, ?, ?)
-					 ON CONFLICT(instance_id) DO UPDATE SET
-					   previous_release_id = superboard_front_active_releases.active_release_id,
-					   active_release_id = excluded.active_release_id,
-					   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
-					   activation_id = excluded.activation_id,
-					   activated_at = excluded.activated_at
-					 WHERE superboard_front_active_releases.active_release_id IS ?
-					 RETURNING instance_id, active_release_id, previous_release_id,
-					           pointer_revision, activation_id, activated_at`,
-				)
-				.bind(
-					command.instance_id,
-					candidate.release.payload.release_id,
-					command.activation_id,
-					command.activated_at,
-					command.expected_active_release_id,
-				)
-				.first<ActiveRow>();
+			const receipt = command.reauthentication;
+			const [, activationResult] = await db.batch([
+				db
+					.prepare(
+						`INSERT INTO superboard_operator_reauthentication_receipts (
+						   receipt_id, operator_id, instance_id, action, candidate_id,
+						   reauthenticated_at, expires_at, receipt_checksum, created_at
+						 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					)
+					.bind(
+						receipt.receipt_id,
+						receipt.operator_id,
+						receipt.instance_id,
+						receipt.action,
+						receipt.candidate_id,
+						receipt.reauthenticated_at,
+						receipt.expires_at,
+						receipt.receipt_checksum,
+						command.activated_at,
+					),
+				db
+					.prepare(
+						`INSERT INTO superboard_front_active_releases (
+						   instance_id, active_release_id, previous_release_id,
+						   pointer_revision, activation_id, activated_at
+						 ) VALUES (?, ?, NULL, 1, ?, ?)
+						 ON CONFLICT(instance_id) DO UPDATE SET
+						   previous_release_id = superboard_front_active_releases.active_release_id,
+						   active_release_id = excluded.active_release_id,
+						   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
+						   activation_id = excluded.activation_id,
+						   activated_at = excluded.activated_at
+						 WHERE superboard_front_active_releases.active_release_id IS ?
+						 RETURNING instance_id, active_release_id, previous_release_id,
+						           pointer_revision, activation_id, activated_at`,
+					)
+					.bind(
+						command.instance_id,
+						candidate.release.payload.release_id,
+						command.activation_id,
+						command.activated_at,
+						command.expected_active_release_id,
+					),
+				db
+					.prepare(
+						`INSERT INTO superboard_front_activation_reauthentication (
+						   activation_id, receipt_id, linked_at
+						 ) SELECT activation_id, ?, ?
+						 FROM superboard_front_activations
+						 WHERE activation_id = ?`,
+					)
+					.bind(receipt.receipt_id, command.activated_at, command.activation_id),
+			]);
+			const row = activationResult.results[0] as ActiveRow | undefined;
 			if (!row) {
 				const current = await this.getActive(command.instance_id);
 				return {
@@ -216,7 +246,14 @@ export async function verifyActivationReceipts(
 			     WHERE event_type = 'front_release.activated' AND instance_id = ?
 			       AND release_id = ? AND pointer_revision = ?
 			       AND json_extract(payload_json, '$.activation_id') = ?
-			   ) AS outbox_exists`,
+			   ) AS outbox_exists,
+			   EXISTS(
+			     SELECT 1 FROM superboard_front_activation_reauthentication linked
+			     JOIN superboard_operator_reauthentication_receipts receipt
+			       ON receipt.receipt_id = linked.receipt_id
+			     WHERE linked.activation_id = ?
+			       AND receipt.action = 'front_release.activate'
+			   ) AS reauthentication_exists`,
 		)
 		.bind(
 			input.activation_id,
@@ -227,9 +264,12 @@ export async function verifyActivationReceipts(
 			input.active_release_id,
 			input.pointer_revision,
 			input.activation_id,
+			input.activation_id,
 		)
-		.first<{ history_exists: number; outbox_exists: number }>();
-	return row?.history_exists === 1 && row.outbox_exists === 1;
+		.first<{ history_exists: number; outbox_exists: number; reauthentication_exists: number }>();
+	return (
+		row?.history_exists === 1 && row.outbox_exists === 1 && row.reauthentication_exists === 1
+	);
 }
 
 function candidateFromRow(row: CandidateRow): FrontReleaseCandidateRecord {

@@ -4,7 +4,6 @@ import type { APIRoute } from "astro";
 import {
 	candidateEvidence,
 	getCandidateByReleaseId,
-	persistReauthenticationReceipt,
 } from "../../../../lib/front-workflow-repository.js";
 import {
 	jsonResponse,
@@ -55,7 +54,6 @@ export const POST: APIRoute = async (context) => {
 			409,
 		);
 	}
-	await persistReauthenticationReceipt(env.DB, receipt, now);
 	const result = await repository.compareAndSwapActive({
 		candidate: target,
 		command: {
@@ -64,6 +62,7 @@ export const POST: APIRoute = async (context) => {
 			activation_id: body.activation_id,
 			expected_active_release_id: plan.expected_active_release_id,
 			approval: target.approval,
+			reauthentication: receipt,
 			activated_at: now,
 		},
 	});
