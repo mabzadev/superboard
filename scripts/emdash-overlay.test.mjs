@@ -57,7 +57,7 @@ void test("root package keeps the EmDash base and composes colliding gates", () 
 
 void test("pnpm workspace retains upstream projects and adds uncovered SuperBoard projects", () => {
 	const upstream =
-		"trustPolicyExclude:\n  - vite@6.4.1\nallowBuilds:\n  esbuild: true\npackages:\n  - apps/*\n  - packages/*\n  - infra/*\ncatalog:\n  zod: 4.4.1\noverrides:\n  zod: 4.4.1\npatchedDependencies:\n  image-size@2.0.2: patches/image-size.patch\n";
+		"verifyDepsBeforeRun: error\ntrustPolicyExclude:\n  - vite@6.4.1\nallowBuilds:\n  esbuild: true\npackages:\n  - apps/*\n  - packages/*\n  - infra/*\ncatalog:\n  zod: 4.4.1\noverrides:\n  zod: 4.4.1\npatchedDependencies:\n  image-size@2.0.2: patches/image-size.patch\n";
 	const result = renderPnpmWorkspace(upstream, overlay, {
 		eslintImportResolverTypescript: "4.4.5",
 		allowBuilds: {
@@ -74,6 +74,7 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 		},
 		trustPolicyExclude: ["semver@5.7.2"],
 		virtualStoreType: "project",
+		verifyDepsBeforeRun: "warn",
 		hoistPattern: ["*", "!@cloudflare/workers-types"],
 		resolvePeersFromWorkspaceRoot: false,
 		dedupePeerDependents: false,
@@ -107,6 +108,8 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	);
 	assert.ok(result.includes('- "semver@5.7.2"'));
 	assert.ok(result.includes("virtualStoreType: project"));
+	assert.ok(result.includes("verifyDepsBeforeRun: warn"));
+	assert.ok(!result.includes("verifyDepsBeforeRun: error"));
 	assert.ok(result.includes('  - "!@cloudflare/workers-types"'));
 	assert.ok(result.includes("resolvePeersFromWorkspaceRoot: false"));
 	assert.ok(result.includes("dedupePeerDependents: false"));

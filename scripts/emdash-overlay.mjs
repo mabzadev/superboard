@@ -256,6 +256,10 @@ function flattenPnpmOverrides(overrides, parent = "") {
 }
 
 export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
+	const normalizedUpstreamWorkspace = upstreamWorkspace.replace(
+		/^verifyDepsBeforeRun:[^\n]*\n/mu,
+		"",
+	);
 	const hoistPatternLines = compatibility.hoistPattern
 		.map((value) => `  - ${JSON.stringify(value)}`)
 		.join("\n");
@@ -272,7 +276,7 @@ export function renderPnpmWorkspace(upstreamWorkspace, overlay, compatibility) {
 			return `  ${JSON.stringify(key)}:${separator}${renderedValue}`;
 		})
 		.join("\n");
-	let rendered = `# SuperBoard keeps the virtual store deterministic and package peer graphs isolated.\nvirtualStoreType: ${compatibility.virtualStoreType}\nresolvePeersFromWorkspaceRoot: ${String(compatibility.resolvePeersFromWorkspaceRoot)}\ndedupePeerDependents: ${String(compatibility.dedupePeerDependents)}\nsupportedArchitectures:\n  os:\n${supportedOperatingSystems}\n  cpu:\n${supportedCpus}\nhoistPattern:\n${hoistPatternLines}\npackageExtensions:\n${packageExtensionLines}\n\n${upstreamWorkspace}`;
+	let rendered = `# SuperBoard keeps the virtual store deterministic and package peer graphs isolated.\nvirtualStoreType: ${compatibility.virtualStoreType}\nresolvePeersFromWorkspaceRoot: ${String(compatibility.resolvePeersFromWorkspaceRoot)}\ndedupePeerDependents: ${String(compatibility.dedupePeerDependents)}\nverifyDepsBeforeRun: ${compatibility.verifyDepsBeforeRun}\nsupportedArchitectures:\n  os:\n${supportedOperatingSystems}\n  cpu:\n${supportedCpus}\nhoistPattern:\n${hoistPatternLines}\npackageExtensions:\n${packageExtensionLines}\n\n${normalizedUpstreamWorkspace}`;
 	const trustPolicyAnchor = "trustPolicyExclude:\n";
 	if (!rendered.includes(trustPolicyAnchor)) {
 		throw new Error("The pinned pnpm trustPolicyExclude anchor has drifted");

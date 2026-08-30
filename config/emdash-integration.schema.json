@@ -46,6 +46,7 @@
 				"patchedDependencies",
 				"trustPolicyExclude",
 				"virtualStoreType",
+				"verifyDepsBeforeRun",
 				"hoistPattern",
 				"resolvePeersFromWorkspaceRoot",
 				"dedupePeerDependents",
@@ -76,6 +77,7 @@
 					"items": { "type": "string", "pattern": "^[^@]+@[^@]+$" }
 				},
 				"virtualStoreType": { "const": "project" },
+				"verifyDepsBeforeRun": { "const": "warn" },
 				"hoistPattern": {
 					"type": "array",
 					"minItems": 1,

@@ -71,6 +71,7 @@
 		},
 		"trustPolicyExclude": ["semver@5.7.2"],
 		"virtualStoreType": "project",
+		"verifyDepsBeforeRun": "warn",
 		"hoistPattern": ["*", "!@cloudflare/workers-types"],
 		"resolvePeersFromWorkspaceRoot": false,
 		"dedupePeerDependents": false,
