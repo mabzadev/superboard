@@ -6,6 +6,7 @@ export default defineConfig({
 	outExtensions: () => ({ js: ".js" }),
 	dts: true,
 	clean: true,
+	inlineOnly: false,
 	platform: "neutral",
 	target: "es2024",
 });
