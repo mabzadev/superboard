@@ -1,7 +1,7 @@
 import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
+import { userPluginManifest } from "@superboard/supbrd-plug-user";
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
-import { userPluginManifest } from "@superboard/supbrd-plug-user";
 
 import topology from "../../../config/emdash-plugin-topology.json";
 import {
@@ -12,6 +12,7 @@ import {
 	acceptWorkerCallback,
 	exportPluginStoreReverseDelta,
 	issueWorkerExecutionLease,
+	listPluginStoreRecords,
 	putPluginStoreRecord,
 	verifyPluginStoreShadowRead,
 } from "../src/lib/plugin-store-repository.js";
@@ -38,7 +39,9 @@ describe("EmDash plugin Store authority", () => {
 		});
 		expect(receipt.installed).toHaveLength(18);
 		expect(receipt.templates).toEqual(["supbrd-plugmod-custom-*"]);
-		expect(receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user")).toMatchObject({
+		expect(
+			receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user"),
+		).toMatchObject({
 			plugin_version: "1.3.0",
 			status: "active",
 		});
@@ -110,6 +113,7 @@ describe("EmDash plugin Store authority", () => {
 			store_id: "supbrd-plug-user.store.user_directory",
 			projectId: "vocostar",
 			pid: "vocostar",
+			project_ref: "10-test",
 			entity_type: "user",
 			entity_id: "user-1",
 			expected_revision: null,
@@ -138,9 +142,21 @@ describe("EmDash plugin Store authority", () => {
 			.first<{ count: number }>();
 		expect(receipt?.count).toBe(1);
 		const stored = await env.DB.prepare(
-			"SELECT payload_json FROM superboard_plugin_store_records WHERE entity_id = 'user-1'",
+			"SELECT payload_json FROM superboard_plugin_store_records WHERE entity_id = '10-test:user-1'",
 		).first<{ payload_json: string }>();
 		expect(stored?.payload_json).not.toContain("user@example.com");
+		const page = await listPluginStoreRecords(env.DB, {
+			plugin_id: input.plugin_id,
+			store_id: input.store_id,
+			instance_id: "vocostar",
+			project_ref: "10-test",
+			limit: 10,
+			encryption_key: encryptionKey,
+		});
+		expect(page).toMatchObject({ next_cursor: null });
+		expect(page.items).toContainEqual(
+			expect.objectContaining({ entity_id: "user-1", payload: input.payload }),
+		);
 		await expect(putPluginStoreRecord(env.DB, { ...input, entity_id: "user-2" })).rejects.toThrow(
 			/IDEMPOTENCY_TARGET_CONFLICT/u,
 		);

@@ -87,11 +87,8 @@ import { SupportQualityPage } from "../../../dashboard/src/components/modules/Su
 import SupportReportsPage from "../../../dashboard/src/components/modules/SupportReportsPage";
 import SupportSettingsPage from "../../../dashboard/src/components/modules/SupportSettingsPage";
 import SupportWorkforcePage from "../../../dashboard/src/components/modules/SupportWorkforcePage";
-import CreateCampaignGlobalDialogProvider from "../../../dashboard/src/context/useCreateCampaignDialogContext";
-import LinkDialogProvider from "../../../dashboard/src/context/useLinkDialogContext";
 import { ComponentsPage } from "../../../dashboard/src/features/flows/ComponentsPage";
 import { WorkflowEditorPage } from "../../../dashboard/src/features/flows/editor/WorkflowEditorPage";
-import { FlowsProvider } from "../../../dashboard/src/features/flows/FlowsContext";
 import { LaunchpadPage } from "../../../dashboard/src/features/flows/LaunchpadPage";
 import { FlowsOverviewPage } from "../../../dashboard/src/features/flows/OverviewPage";
 import {
@@ -106,10 +103,9 @@ import IdentityIntlProvider from "../../../dashboard/src/identity/IdentityIntlPr
 import IdentitySetup from "../../../dashboard/src/identity/Setup";
 import identityEnglish from "../../../dashboard/src/identity/translations/en.json";
 import identityFrench from "../../../dashboard/src/identity/translations/fr.json";
-import QueryProvider from "../../../dashboard/src/lib/QueryProvider";
 import { POST } from "../compat/dashboard-api";
-import { ProjectSelectionProvider } from "../compat/dashboard-project-context";
 import { frontSurfaceComponent } from "../lib/front-surface-registry";
+import { SuperBoardFrontProviders } from "./SuperBoardFrontProviders";
 
 import "../../../dashboard/src/app/openflow-tokens.css";
 import "../../../dashboard/src/app/globals.css";
@@ -119,11 +115,13 @@ export function SuperBoardFrontApp({
 	instanceId,
 	apiUrl,
 	operator,
+	projectRefs,
 }: {
 	path: string;
 	instanceId: string;
 	apiUrl?: string;
 	operator?: { email: string; name: string | null; role: number } | null;
+	projectRefs?: { production: string; test: string } | null;
 }) {
 	if (typeof window !== "undefined" && apiUrl) window.__SUPERBOARD_API_URL__ = apiUrl;
 	if (typeof window !== "undefined") {
@@ -132,19 +130,15 @@ export function SuperBoardFrontApp({
 		).__SUPERBOARD_OPERATOR_AUTHENTICATED__ = Boolean(operator);
 	}
 	return (
-		<ProjectSelectionProvider instanceId={instanceId}>
-			<FlowsProvider>
-				<LinkDialogProvider>
-					<CreateCampaignGlobalDialogProvider>
-						<QueryProvider>
-							<SuperBoardShell path={path} operator={operator}>
-								<Surface path={path} operator={operator} />
-							</SuperBoardShell>
-						</QueryProvider>
-					</CreateCampaignGlobalDialogProvider>
-				</LinkDialogProvider>
-			</FlowsProvider>
-		</ProjectSelectionProvider>
+		<SuperBoardFrontProviders
+			instanceId={instanceId}
+			productionProjectRef={projectRefs?.production}
+			testProjectRef={projectRefs?.test}
+		>
+			<SuperBoardShell path={path} operator={operator}>
+				<Surface path={path} operator={operator} />
+			</SuperBoardShell>
+		</SuperBoardFrontProviders>
 	);
 }
 

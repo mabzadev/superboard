@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import {
-  getAuthUserId,
   getOrCreateRedirectConfig,
   jsonArray,
   parseJsonObject,
   resolveProject,
 } from '../lib/db';
+import { getRequestAuthUserId } from '../lib/auth';
 import { generateShortCode } from '../lib/crypto';
 import { readCsvDownload, storeCsvDownload } from '../lib/files';
 import { downloadFileMessage, sendMail } from '../lib/mail';
@@ -15,7 +15,7 @@ import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 const projects = new Hono<{ Bindings: Env }>();
 
 async function currentUserId(c: any): Promise<number | null> {
-  return getAuthUserId(c.env, c.req.header('Authorization'));
+  return getRequestAuthUserId(c.env, c.req.raw.headers);
 }
 
 async function readBody(c: any): Promise<Record<string, any>> {

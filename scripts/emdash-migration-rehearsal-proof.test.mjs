@@ -5,7 +5,7 @@ import { buildMigrationRehearsalProof } from "./emdash-migration-rehearsal-proof
 
 const CHECKSUM_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
-test("every declared Store has deterministic source/target and non-destructive evidence", async () => {
+test("every declared Store has deterministic source/Store and non-destructive evidence", async () => {
 	const proof = await buildMigrationRehearsalProof();
 	assert.ok(proof.stores.length > 0);
 	assert.equal(proof.store_count, proof.stores.length);
@@ -14,7 +14,7 @@ test("every declared Store has deterministic source/target and non-destructive e
 		assert.match(store.fixture_source.checksum, CHECKSUM_PATTERN);
 		assert.match(store.schema_proof.checksum, CHECKSUM_PATTERN);
 		assert.match(store.runtime_proof.checksum, CHECKSUM_PATTERN);
-		if (store.migration_kind === "source_to_target") {
+		if (store.migration_kind === "source_to_store") {
 			assert.ok(store.entity_ids.length > 0);
 			assert.ok(store.fixture_source.count > 0);
 			assert.notEqual(store.deterministic_sample, null);

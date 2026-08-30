@@ -216,6 +216,7 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
   dashboard: Object.freeze(["CLIENT_SECRET"]),
   site: Object.freeze([
     "EMDASH_ENCRYPTION_KEY",
+    "SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",
     "SUPERBOARD_RELEASE_PRIVATE_JWK",
     "SITE_OPERATOR_BRIDGE_TOKEN",
   ]),

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../lib/auth", () => ({ getAuthContext: vi.fn() }));
+vi.mock("../lib/auth", () => ({ getRequestAuthContext: vi.fn() }));
 
-import { getAuthContext } from "../lib/auth";
+import { getRequestAuthContext } from "../lib/auth";
 import platform from "./platform-status";
 import sdkCatalog from "../../../../config/sdk-libraries.json";
 
-const auth = vi.mocked(getAuthContext);
+const auth = vi.mocked(getRequestAuthContext);
 
 describe("platform status", () => {
   beforeEach(() => {

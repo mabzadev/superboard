@@ -79,14 +79,37 @@ test("static plans can be restricted to explicit analytics entities", () => {
   assert.deepEqual(report.entities.map((entity) => entity.id), report.entity_ids);
 });
 
-test("backup-plan covers both legacy D1s, all eight module D1s and every deployed Worker", () => {
-  const output = execFileSync(process.execPath, [cli, "backup-plan", "--project-ref", "10-test", "--output-directory", "/secure/backups", ...targetArgs], {
+test("backup-plan covers the Site authority and every service/module D1", () => {
+	const output = execFileSync(process.execPath, [
+		cli,
+		"backup-plan",
+		"--project-ref",
+		"10-test",
+		"--output-directory",
+		"/secure/backups",
+		"--target",
+		"mbza-development",
+		"--environment",
+		"development",
+	], {
     cwd: repositoryRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
   });
   const report = JSON.parse(output);
   assert.deepEqual(report.database_exports.map((item) => item.name).sort(), [
-    "legacy-api", "legacy-messaging", "module-analytics", "module-app", "module-dynamicLinks", "module-marketing",
-    "module-onboardings", "module-paywalls", "module-products", "module-support",
+		"legacy-api",
+		"module-analytics",
+		"module-app",
+		"module-dynamicLinks",
+		"module-flows",
+		"module-marketing",
+		"module-onboardings",
+		"module-paywalls",
+		"module-products",
+		"module-support",
+		"service-email",
+		"service-files",
+		"service-identity",
+		"site-emdash",
   ]);
   assert.equal(new Set(report.worker_versions.map((item) => item.service)).has("dashboard"), true);
   assert.equal(report.database_exports.every((item) => item.command.includes("--remote")), true);

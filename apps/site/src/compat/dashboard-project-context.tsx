@@ -47,29 +47,34 @@ const ProjectSelectionContext = createContext<ProjectSelectionContextValue | und
 export function ProjectSelectionProvider({
 	children,
 	instanceId = "local",
+	productionProjectRef,
+	testProjectRef,
 }: {
 	children: ReactNode;
 	instanceId?: string;
+	productionProjectRef?: string;
+	testProjectRef?: string;
 }) {
+	const legacyInstanceId = productionProjectRef?.match(/^(\d+)-prod$/u)?.[1] ?? instanceId;
 	const production = useMemo<Project>(
 		() => ({
-			id: instanceId,
+			id: productionProjectRef ?? instanceId,
 			name: "Production",
 			domain: globalThis.location?.hostname ?? "local",
 		}),
-		[instanceId],
+		[instanceId, productionProjectRef],
 	);
 	const test = useMemo<Project>(
 		() => ({
-			id: `${instanceId}-test`,
+			id: testProjectRef ?? `${instanceId}-test`,
 			name: "Test",
 			domain: globalThis.location?.hostname ?? "local",
 		}),
-		[instanceId],
+		[instanceId, testProjectRef],
 	);
 	const initialInstance = useMemo<Instance>(
 		() => ({
-			id: instanceId,
+			id: legacyInstanceId,
 			name: instanceId,
 			role: "owner",
 			updated_at: new Date(0).toISOString(),
@@ -83,7 +88,7 @@ export function ProjectSelectionProvider({
 			production,
 			test,
 		}),
-		[instanceId, production, test],
+		[instanceId, legacyInstanceId, production, test],
 	);
 	const [selectedInstance, setSelectedInstance] = useState<Instance | undefined>(initialInstance);
 	const [selectedProject, setSelectedProject] = useState<Project | undefined>(production);

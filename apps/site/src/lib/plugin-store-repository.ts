@@ -5,6 +5,7 @@ import {
 import { validateUserPluginManifest } from "@superboard/supbrd-plug-user";
 
 const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9*]+(?:-[a-z0-9*]+)*$/u;
+const projectRefPattern = /^\d+-(?:test|prod)$/u;
 
 interface StoreRecordInput {
 	plugin_id: string;
@@ -12,6 +13,7 @@ interface StoreRecordInput {
 	instance_id?: string;
 	projectId?: string;
 	pid?: string;
+	project_ref?: string;
 	entity_type: string;
 	entity_id: string;
 	expected_revision: number | null;
@@ -25,6 +27,7 @@ interface StoreRecordRow {
 	plugin_id: string;
 	store_id: string;
 	instance_id: string;
+	project_ref: string;
 	entity_type: string;
 	entity_id: string;
 	revision: number;
@@ -67,6 +70,8 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 		throw new Error("STORE_NAMESPACE_REJECTED");
 	}
 	const instanceId = resolveInstanceAlias(input);
+	const projectRef = normalizeProjectRef(input.project_ref);
+	const storedEntityId = qualifyEntityId(projectRef, input.entity_id);
 	const canonicalPayload = canonicalizeReleasePayload(input.payload);
 	const priorOperation = await db
 		.prepare(
@@ -87,7 +92,7 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 			priorOperation.store_id !== input.store_id ||
 			priorOperation.instance_id !== instanceId ||
 			priorOperation.entity_type !== input.entity_type ||
-			priorOperation.entity_id !== input.entity_id
+			priorOperation.entity_id !== storedEntityId
 		) {
 			throw new Error("IDEMPOTENCY_TARGET_CONFLICT");
 		}
@@ -99,6 +104,7 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 			input.entity_type,
 			input.entity_id,
 			input.encryption_key,
+			projectRef,
 		);
 		if (!existing) throw new Error("IDEMPOTENCY_RECEIPT_WITHOUT_RECORD");
 		if (canonicalizeReleasePayload(existing.payload) !== canonicalPayload) {
@@ -114,6 +120,7 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 		input.entity_type,
 		input.entity_id,
 		input.encryption_key,
+		projectRef,
 	);
 	if (
 		(current === null && input.expected_revision !== null) ||
@@ -130,11 +137,12 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 	const row = await db
 		.prepare(
 			`INSERT INTO superboard_plugin_store_records (
-			   plugin_id, store_id, instance_id, entity_type, entity_id, revision,
+			   plugin_id, store_id, instance_id, project_ref, entity_type, entity_id, revision,
 			   payload_json, payload_checksum, manifest_artifact_checksum,
 			   last_operation_id, updated_at
-			 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			 ON CONFLICT(plugin_id, store_id, instance_id, entity_type, entity_id) DO UPDATE SET
+			   project_ref = excluded.project_ref,
 			   revision = excluded.revision,
 			   payload_json = excluded.payload_json,
 			   payload_checksum = excluded.payload_checksum,
@@ -148,8 +156,9 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 			input.plugin_id,
 			input.store_id,
 			instanceId,
+			projectRef,
 			input.entity_type,
-			input.entity_id,
+			storedEntityId,
 			nextRevision,
 			payloadJson,
 			payloadChecksum,
@@ -185,16 +194,121 @@ export async function loadPluginStoreRecord(
 	entityType: string,
 	entityId: string,
 	encryptionKey: CryptoKey,
+	projectRef = "legacy-unscoped",
 ) {
+	const normalizedProjectRef = normalizeProjectRef(projectRef);
 	const row = await db
 		.prepare(
 			`SELECT * FROM superboard_plugin_store_records
 			 WHERE plugin_id = ? AND store_id = ? AND instance_id = ?
 			   AND entity_type = ? AND entity_id = ?`,
 		)
-		.bind(pluginId, storeId, instanceId, entityType, entityId)
+		.bind(
+			pluginId,
+			storeId,
+			instanceId,
+			entityType,
+			qualifyEntityId(normalizedProjectRef, entityId),
+		)
 		.first<StoreRecordRow>();
 	return row ? toRecord(row, encryptionKey) : null;
+}
+
+export async function listPluginStoreRecords(
+	db: D1Database,
+	input: {
+		plugin_id: string;
+		store_id: string;
+		instance_id: string;
+		project_ref: string;
+		entity_type?: string;
+		limit?: number;
+		cursor?: string;
+		encryption_key: CryptoKey;
+	},
+) {
+	assertPlugin(input.plugin_id);
+	if (!input.store_id.startsWith(`${input.plugin_id}.store.`)) {
+		throw new Error("STORE_NAMESPACE_REJECTED");
+	}
+	const projectRef = normalizeProjectRef(input.project_ref);
+	if (projectRef === "legacy-unscoped") throw new Error("PROJECT_REF_REQUIRED");
+	const limit = Math.min(Math.max(Math.trunc(input.limit ?? 50), 1), 100);
+	const entityType = input.entity_type?.trim() ?? "";
+	if (entityType.length > 160) throw new Error("ENTITY_TYPE_INVALID");
+	const cursor = decodeStoreCursor(input.cursor);
+	const rows = await db
+		.prepare(
+			`SELECT * FROM superboard_plugin_store_records
+			 WHERE plugin_id = ? AND store_id = ? AND instance_id = ? AND project_ref = ?
+			   AND (? = '' OR entity_type = ?)
+			   AND (entity_type > ? OR (entity_type = ? AND entity_id > ?))
+			 ORDER BY entity_type, entity_id
+			 LIMIT ?`,
+		)
+		.bind(
+			input.plugin_id,
+			input.store_id,
+			input.instance_id,
+			projectRef,
+			entityType,
+			entityType,
+			cursor.entity_type,
+			cursor.entity_type,
+			cursor.entity_id,
+			limit + 1,
+		)
+		.all<StoreRecordRow>();
+	const page = rows.results.slice(0, limit);
+	const items = await Promise.all(page.map((row) => toRecord(row, input.encryption_key)));
+	const last = page.at(-1);
+	return {
+		items,
+		next_cursor:
+			rows.results.length > limit && last
+				? encodeStoreCursor(last.entity_type, last.entity_id)
+				: null,
+	};
+}
+
+export async function summarizePluginStores(
+	db: D1Database,
+	input: { instance_id: string; project_ref: string },
+) {
+	const projectRef = normalizeProjectRef(input.project_ref);
+	if (projectRef === "legacy-unscoped") throw new Error("PROJECT_REF_REQUIRED");
+	const rows = await db
+		.prepare(
+			`SELECT plugin_id, store_id, COUNT(*) record_count,
+			        COUNT(DISTINCT entity_type) entity_type_count, MAX(updated_at) latest_update
+			 FROM superboard_plugin_store_records
+			 WHERE instance_id = ? AND project_ref = ?
+			 GROUP BY plugin_id, store_id
+			 ORDER BY plugin_id, store_id`,
+		)
+		.bind(input.instance_id, projectRef)
+		.all<{
+			plugin_id: string;
+			store_id: string;
+			record_count: number;
+			entity_type_count: number;
+			latest_update: string | null;
+		}>();
+	return rows.results;
+}
+
+export async function importPluginStoreEncryptionKey(encodedKey: string): Promise<CryptoKey> {
+	let raw: Uint8Array;
+	try {
+		raw = base64ToBytes(encodedKey);
+	} catch {
+		throw new Error("PLUGIN_STORE_ENCRYPTION_KEY_INVALID");
+	}
+	if (raw.byteLength !== 32) throw new Error("PLUGIN_STORE_ENCRYPTION_KEY_INVALID");
+	return crypto.subtle.importKey("raw", Uint8Array.from(raw).buffer, { name: "AES-GCM" }, false, [
+		"encrypt",
+		"decrypt",
+	]);
 }
 
 export async function verifyPluginStoreShadowRead(
@@ -380,14 +494,55 @@ function resolveInstanceAlias(
 	return instanceId;
 }
 
+function normalizeProjectRef(value: string | undefined): string {
+	if (value === undefined || value === "legacy-unscoped") return "legacy-unscoped";
+	if (!projectRefPattern.test(value)) throw new Error("PROJECT_REF_INVALID");
+	return value;
+}
+
+function qualifyEntityId(projectRef: string, entityId: string): string {
+	if (!entityId) throw new Error("ENTITY_ID_REQUIRED");
+	if (projectRef === "legacy-unscoped") return entityId;
+	return entityId.startsWith(`${projectRef}:`) ? entityId : `${projectRef}:${entityId}`;
+}
+
+function logicalEntityId(projectRef: string, entityId: string): string {
+	const prefix = `${projectRef}:`;
+	return projectRef !== "legacy-unscoped" && entityId.startsWith(prefix)
+		? entityId.slice(prefix.length)
+		: entityId;
+}
+
+function encodeStoreCursor(entityType: string, entityId: string): string {
+	return bytesToBase64(new TextEncoder().encode(JSON.stringify([entityType, entityId])));
+}
+
+function decodeStoreCursor(value: string | undefined): { entity_type: string; entity_id: string } {
+	if (!value) return { entity_type: "", entity_id: "" };
+	try {
+		const parsed: unknown = JSON.parse(new TextDecoder().decode(base64ToBytes(value)));
+		if (
+			!Array.isArray(parsed) ||
+			parsed.length !== 2 ||
+			parsed.some((item) => typeof item !== "string")
+		) {
+			throw new Error("invalid");
+		}
+		return { entity_type: parsed[0] as string, entity_id: parsed[1] as string };
+	} catch {
+		throw new Error("STORE_CURSOR_INVALID");
+	}
+}
+
 async function toRecord(row: StoreRecordRow, encryptionKey: CryptoKey) {
 	const payloadJson = await decryptPayload(encryptionKey, parseEncryptedPayload(row.payload_json));
 	return {
 		plugin_id: row.plugin_id,
 		store_id: row.store_id,
 		instance_id: row.instance_id,
+		project_ref: row.project_ref,
 		entity_type: row.entity_type,
-		entity_id: row.entity_id,
+		entity_id: logicalEntityId(row.project_ref, row.entity_id),
 		revision: row.revision,
 		payload: parseJsonValue(payloadJson),
 		payload_checksum: row.payload_checksum,

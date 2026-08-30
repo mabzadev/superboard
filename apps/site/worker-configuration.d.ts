@@ -15,6 +15,7 @@ interface __BaseEnv_Env {
 	D1_EXPECTED_MIGRATION: string;
 	EMDASH_ENCRYPTION_KEY: string;
 	SITE_OPERATOR_BRIDGE_TOKEN: string;
+	SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: string;
 	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
@@ -28,7 +29,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_RELEASE_OPERATIONS" | "D1_EXPECTED_MIGRATION" | "EMDASH_ENCRYPTION_KEY" | "SITE_OPERATOR_BRIDGE_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_RELEASE_OPERATIONS" | "D1_EXPECTED_MIGRATION" | "EMDASH_ENCRYPTION_KEY" | "SITE_OPERATOR_BRIDGE_TOKEN" | "SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY">> {}
 }
 
 // Begin runtime types
@@ -14853,12 +14854,14 @@ declare abstract class WorkflowInstance {
 declare namespace Cloudflare {
 	interface Env {
 	EMDASH_ENCRYPTION_KEY: string;
+	SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: string;
 	SUPERBOARD_RELEASE_PRIVATE_JWK?: string;
 	SITE_OPERATOR_BRIDGE_TOKEN: string;
 	}
 }
 interface Env {
 	EMDASH_ENCRYPTION_KEY: string;
+	SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: string;
 	SUPERBOARD_RELEASE_PRIVATE_JWK?: string;
 	SITE_OPERATOR_BRIDGE_TOKEN: string;
 }

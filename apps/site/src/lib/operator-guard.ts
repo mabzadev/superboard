@@ -26,6 +26,24 @@ export function requireReleaseOperator(
 	return null;
 }
 
+export function requirePluginOperator(
+	context: Pick<APIContext, "locals" | "request" | "url">,
+	options: { mutation?: boolean } = {},
+): Response | null {
+	if (!context.locals.user) return errorResponse("AUTHENTICATION_REQUIRED", 401);
+	if (!hasPermission(context.locals.user, "settings:manage")) {
+		return errorResponse("OPERATOR_REQUIRED", 403);
+	}
+	if (options.mutation) {
+		if (context.request.headers.get("X-EmDash-Request") !== "1") {
+			return errorResponse("CSRF_HEADER_REQUIRED", 403);
+		}
+		const origin = context.request.headers.get("Origin");
+		if (origin !== context.url.origin) return errorResponse("CSRF_ORIGIN_REJECTED", 403);
+	}
+	return null;
+}
+
 export function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,

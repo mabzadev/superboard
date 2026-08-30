@@ -32,6 +32,7 @@ export interface FrontPageModel {
 	page_title: string | null;
 	operator: UserMember | null;
 	members: UserMember[];
+	project_refs: { production: string; test: string } | null;
 }
 
 export async function resolveSiteFrontPage(
@@ -119,6 +120,25 @@ async function resolveFrontPageFromRelease(
 		? { id: user.id, email: user.email, name: user.name, role: user.role, disabled: user.disabled }
 		: null;
 	let members: UserMember[] = [];
+	let projectRefs: { production: string; test: string } | null = null;
+	if (user && resolution.result === "rendered") {
+		try {
+			const rows = await env.DB.prepare(
+				`SELECT DISTINCT project_ref FROM superboard_plugin_store_records
+				 WHERE instance_id = ? AND project_ref <> 'legacy-unscoped'
+				 ORDER BY project_ref`,
+			)
+				.bind(env.SUPERBOARD_INSTANCE_ID)
+				.all<{ project_ref: string }>();
+			const production = rows.results.find(({ project_ref: value }) => value.endsWith("-prod"));
+			const test = rows.results.find(({ project_ref: value }) => value.endsWith("-test"));
+			if (production && test) {
+				projectRefs = { production: production.project_ref, test: test.project_ref };
+			}
+		} catch {
+			projectRefs = null;
+		}
+	}
 	if (
 		resolution.result === "rendered" &&
 		resolution.renderer_ids.includes("supbrd-plug-user.renderer.members_table")
@@ -141,6 +161,7 @@ async function resolveFrontPageFromRelease(
 		page_title: pageTitle,
 		operator,
 		members,
+		project_refs: projectRefs,
 	};
 }
 

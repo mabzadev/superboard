@@ -19,7 +19,23 @@ function entity(definition) {
   });
 }
 
+function repositoryJsonEntity(definition) {
+  return entity({
+    ...definition,
+    repositoryOnly: true,
+    columns: j("entity_id", "project_id", "payload_json"),
+    jsonColumns: ["payload_json"],
+    keys: ["entity_id"],
+    projectColumn: "project_id",
+    target: {
+      table: definition.source.table,
+      query: definition.source.query,
+    },
+  });
+}
+
 function canonicalStoreName(definition, owner, targetTable) {
+  if (definition.storeName) return definition.storeName;
   if (owner === "supbrd-plug-user") {
     return targetTable === "access_keys" ? "user_credentials" : "user_directory";
   }
@@ -52,6 +68,7 @@ function canonicalStoreName(definition, owner, targetTable) {
 }
 
 function pluginOwner(definition) {
+  if (definition.pluginId) return definition.pluginId;
   if (definition.module === "products") {
     const billingTables = new Set([
       "financial_customers",
@@ -556,6 +573,393 @@ export const MODULE_CUTOVER_REGISTRY = Object.freeze([
   copySupport("operations_audit", "messaging_operations_audit_events", "support_operations_audit_events", j("id", "project_id", "resource_type", "resource_id", "action", "actor_id", "payload_json", "created_at"), { immutable: true }),
   copySupport("rule_executions", "messaging_rule_executions", "support_rule_executions", j("id", "project_id", "rule_id", "event_id", "conversation_id", "event_name", "result_json", "created_at")),
   copySupport("webhook_deliveries", "messaging_webhook_deliveries", "support_webhook_deliveries", j("id", "project_id", "webhook_id", "event_id", "event_name", "attempt_count", "response_status", "last_error", "delivered_at", "created_at", "updated_at")),
+
+  repositoryJsonEntity({
+    id: "identity.application_sessions",
+    module: "identity",
+    pluginId: "supbrd-plug-user",
+    storeName: "user_sessions",
+    source: {
+      database: "identity",
+      table: "application_sessions",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'user_id',user_id,'refresh_token_hash',refresh_token_hash,
+          'expires_at',expires_at,'revoked_at',revoked_at,'created_at',created_at,
+          'rotated_from_id',rotated_from_id) payload_json
+        FROM application_sessions WHERE project_id=:project_id ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "settings.front_draft_versions",
+    module: "settings",
+    pluginId: "supbrd-plug-settings",
+    storeName: "versions",
+    source: {
+      database: "site",
+      table: "superboard_front_draft_snapshots",
+      query: `SELECT draft_snapshot_id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('draft_snapshot_id',draft_snapshot_id,'front_draft_id',front_draft_id,
+          'draft_revision',draft_revision,'input_json',json(input_json),'created_at',created_at) payload_json
+        FROM superboard_front_draft_snapshots WHERE instance_id=:canonical_instance_id
+        ORDER BY front_draft_id,draft_revision`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "content.documents",
+    module: "content",
+    pluginId: "supbrd-plug-content",
+    storeName: "documents",
+    source: {
+      database: "site",
+      table: "revisions",
+      query: `SELECT collection||':'||entry_id||':'||id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('collection',collection,'entry_id',entry_id,'revision_id',id,
+          'data',json(data),'author_id',author_id,'created_at',created_at) payload_json
+        FROM revisions ORDER BY collection,entry_id,created_at,id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "content.revisions",
+    module: "content",
+    pluginId: "supbrd-plug-content",
+    storeName: "revisions",
+    source: {
+      database: "site",
+      table: "revisions",
+      query: `SELECT id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',id,'collection',collection,'entry_id',entry_id,'data',json(data),
+          'author_id',author_id,'created_at',created_at) payload_json
+        FROM revisions ORDER BY collection,entry_id,created_at,id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "content.taxonomies",
+    module: "content",
+    pluginId: "supbrd-plug-content",
+    storeName: "taxonomies",
+    source: {
+      database: "site",
+      table: "taxonomies",
+      query: `SELECT id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',id,'name',name,'slug',slug,'label',label,'parent_id',parent_id,
+          'data',CASE WHEN data IS NULL THEN NULL WHEN json_valid(data) THEN json(data) ELSE data END) payload_json
+        FROM taxonomies ORDER BY name,slug,id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "audit.archives",
+    module: "audit",
+    pluginId: "supbrd-plug-audit",
+    storeName: "archives",
+    sourceStatus: "new_empty_store",
+    source: {
+      database: "site",
+      table: "audit_logs",
+      query: `SELECT id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',id,'timestamp',timestamp,'actor_id',actor_id,'actor_ip',actor_ip,
+          'action',action,'resource_type',resource_type,'resource_id',resource_id,
+          'details',details,'status',status) payload_json
+        FROM audit_logs WHERE 0 ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "audit.ledger",
+    module: "audit",
+    pluginId: "supbrd-plug-audit",
+    storeName: "ledger",
+    source: {
+      database: "site",
+      table: "audit_logs",
+      query: `SELECT id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',id,'timestamp',timestamp,'actor_id',actor_id,'actor_ip',actor_ip,
+          'action',action,'resource_type',resource_type,'resource_id',resource_id,
+          'details',details,'status',status) payload_json
+        FROM audit_logs ORDER BY timestamp,id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "gateway.rate_limits",
+    module: "gateway",
+    pluginId: "supbrd-plugmod-gateway",
+    storeName: "rate_limits",
+    source: {
+      database: "site",
+      table: "_emdash_rate_limits",
+      query: `SELECT key||':'||window entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('key',key,'window',window,'count',count) payload_json
+        FROM _emdash_rate_limits ORDER BY key,window`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "gateway.route_manifests",
+    module: "gateway",
+    pluginId: "supbrd-plugmod-gateway",
+    storeName: "route_manifests",
+    source: {
+      database: "site",
+      table: "superboard_front_release_candidates",
+      query: `SELECT candidate_id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('candidate_id',candidate_id,'release_id',release_id,'release',json(release_json),
+          'content_checksum',content_checksum,'validation_set_checksum',validation_set_checksum,
+          'status',status,'created_at',created_at,'approved_at',approved_at,'activated_at',activated_at) payload_json
+        FROM superboard_front_release_candidates WHERE instance_id=:canonical_instance_id
+        ORDER BY created_at,candidate_id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "flows.definitions",
+    module: "flows",
+    pluginId: "supbrd-plugmod-flows",
+    storeName: "definitions",
+    source: {
+      database: "flows",
+      table: "flow_workflows",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'identifier',identifier,'name',name,'description',description,
+          'frequency',frequency,'status',status,'origin',origin,'legacy_id',legacy_id,
+          'draft_revision',draft_revision,'created_by',created_by,'created_at',created_at,
+          'updated_at',updated_at,'archived_at',archived_at) payload_json
+        FROM flow_workflows WHERE project_id=:project_id ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "flows.runtime",
+    module: "flows",
+    pluginId: "supbrd-plugmod-flows",
+    storeName: "runtime",
+    source: {
+      database: "flows",
+      table: "flow_user_workflow_states",
+      query: `SELECT environment_id||':'||user_id_hash||':'||workflow_id entity_id,
+        CAST(project_id AS TEXT) project_id,
+        json_object('environment_id',environment_id,'user_id_hash',user_id_hash,
+          'workflow_id',workflow_id,'workflow_version_id',workflow_version_id,'state',state,
+          'active_block_ids_json',json(active_block_ids_json),'tour_indexes_json',json(tour_indexes_json),
+          'entered_at',entered_at,'exited_at',exited_at,'generation',generation,
+          'revision',revision,'updated_at',updated_at) payload_json
+        FROM flow_user_workflow_states WHERE project_id=:project_id
+        ORDER BY environment_id,user_id_hash,workflow_id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "analytics.authoritative_events",
+    module: "analytics",
+    pluginId: "supbrd-plugmod-analytics",
+    storeName: "events",
+    source: {
+      database: "analytics",
+      table: "analytics_event_receipts",
+      query: `SELECT event_id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('event_id',event_id,'payload_sha256',payload_sha256,'event_name',event_name,
+          'event_source',event_source,'application_id',application_id,'occurred_at',occurred_at,
+          'status',status,'archive_key',archive_key,'received_at',received_at,
+          'projected_at',projected_at,'updated_at',updated_at) payload_json
+        FROM analytics_event_receipts WHERE project_id=CAST(:project_id AS TEXT)
+        ORDER BY event_id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "analytics.daily_aggregates",
+    module: "analytics",
+    pluginId: "supbrd-plugmod-analytics",
+    storeName: "aggregates",
+    source: {
+      database: "analytics",
+      table: "analytics_daily_metrics",
+      query: `SELECT metric_date||':'||application_id||':'||metric_name||':'||dimension_key entity_id,
+        CAST(project_id AS TEXT) project_id,
+        json_object('metric_date',metric_date,'application_id',application_id,
+          'metric_name',metric_name,'dimension_key',dimension_key,'event_count',event_count,
+          'value_micros',value_micros,'updated_at',updated_at) payload_json
+        FROM analytics_daily_metrics WHERE project_id=CAST(:project_id AS TEXT)
+        ORDER BY metric_date,application_id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "marketing.campaigns",
+    module: "marketing",
+    pluginId: "supbrd-plugmod-marketing",
+    storeName: "campaigns",
+    source: {
+      database: "marketing",
+      table: "campaigns",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'name',name,'status',status,'tracking_enabled',tracking_enabled,
+          'updated_at',updated_at) payload_json
+        FROM campaigns WHERE project_id=:project_id ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "marketing.consent",
+    module: "marketing",
+    pluginId: "supbrd-plugmod-marketing",
+    storeName: "consent",
+    source: {
+      database: "marketing",
+      table: "subscribers",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'email',email,'status',status,'attributes',json(attributes_json)) payload_json
+        FROM subscribers WHERE project_id=:project_id ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "marketing.journeys",
+    module: "marketing",
+    pluginId: "supbrd-plugmod-marketing",
+    storeName: "journeys",
+    source: {
+      database: "marketing",
+      table: "marketing_journeys",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'name',name,'description',description,'status',status,
+          'trigger_event_name',trigger_event_name,'trigger',json(trigger_json),
+          'definition',json(definition_json),'current_version',current_version,
+          'reentry_policy',reentry_policy,'entry_segment_id',entry_segment_id,
+          'created_by',created_by,'activated_at',activated_at,'paused_at',paused_at,
+          'archived_at',archived_at,'created_at',created_at,'updated_at',updated_at) payload_json
+        FROM marketing_journeys WHERE project_id=:project_id ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "email.deliveries",
+    module: "email",
+    pluginId: "supbrd-plugmod-email",
+    storeName: "deliveries",
+    source: {
+      database: "email",
+      table: "email_deliveries",
+      query: `SELECT d.id entity_id,CAST(m.project_id AS TEXT) project_id,
+        json_object('id',d.id,'message_id',d.message_id,'recipient',d.recipient,'status',d.status,
+          'attempt_count',d.attempt_count,'provider_message_id',d.provider_message_id,
+          'provider_response',d.provider_response,'last_error',d.last_error,
+          'provider_status',d.provider_status,'provider_event_at',d.provider_event_at,
+          'provider_diagnostic',d.provider_diagnostic,'created_at',d.created_at,
+          'updated_at',d.updated_at,'sent_at',d.sent_at) payload_json
+        FROM email_deliveries d JOIN email_messages m ON m.id=d.message_id
+        WHERE m.project_id=:project_id ORDER BY d.id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "email.provider_events",
+    module: "email",
+    pluginId: "supbrd-plugmod-email",
+    storeName: "provider_events",
+    source: {
+      database: "email",
+      table: "email_provider_events",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'provider',provider,'provider_message_id',provider_message_id,
+          'source',source,'reference_id',reference_id,'event_type',event_type,
+          'occurred_at',occurred_at,'metadata',json(metadata_json),
+          'correlation_status',correlation_status,'consumer_status',consumer_status,
+          'received_at',received_at,'consumed_at',consumed_at) payload_json
+        FROM email_provider_events WHERE project_id=:project_id ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "files.objects",
+    module: "files",
+    pluginId: "supbrd-plugmod-files",
+    storeName: "objects",
+    source: {
+      database: "files",
+      table: "application_files",
+      query: `SELECT id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',id,'user_id',user_id,'object_key',object_key,'filename',filename,
+          'content_type',content_type,'byte_size',byte_size,'etag',etag,
+          'created_at',created_at,'updated_at',updated_at) payload_json
+        FROM application_files ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "files.tickets",
+    module: "files",
+    pluginId: "supbrd-plugmod-files",
+    storeName: "tickets",
+    sourceStatus: "new_empty_store",
+    source: {
+      database: "files",
+      table: "application_files",
+      query: `SELECT id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',id) payload_json FROM application_files WHERE 0 ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "onboardings.definitions",
+    module: "onboardings",
+    pluginId: "supbrd-plugmod-onboardings",
+    storeName: "definitions",
+    source: {
+      database: "onboardings",
+      table: "onboardings",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'name',name,'description',description,'created_at',created_at,
+          'updated_at',updated_at) payload_json
+        FROM onboardings WHERE project_id=CAST(:project_id AS TEXT) ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "onboardings.progress",
+    module: "onboardings",
+    pluginId: "supbrd-plugmod-onboardings",
+    storeName: "progress",
+    source: {
+      database: "onboardings",
+      table: "events",
+      query: `SELECT id entity_id,CAST(project_id AS TEXT) project_id,
+        json_object('id',id,'placement',placement,'event_type',event_type,
+          'occurred_at',occurred_at,'payload',json(payload_json),'platform',platform,
+          'onboarding_id',onboarding_id,'version_id',version_id,'experience_id',experience_id,
+          'variant_id',variant_id,'step_id',step_id,'customer_id',customer_id) payload_json
+        FROM events WHERE project_id=CAST(:project_id AS TEXT) ORDER BY id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "observability.health_projections",
+    module: "observability",
+    pluginId: "supbrd-plugmod-observability",
+    storeName: "health_projections",
+    source: {
+      database: "site",
+      table: "superboard_dependency_health",
+      query: `SELECT dependency_id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('dependency_id',dependency_id,'status',status,
+          'evidence_checksum',evidence_checksum,'checked_at',checked_at,'expires_at',expires_at) payload_json
+        FROM superboard_dependency_health WHERE instance_id=:canonical_instance_id
+        ORDER BY dependency_id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "mcp.sessions",
+    module: "mcp",
+    pluginId: "supbrd-plugmod-mcp",
+    storeName: "sessions",
+    source: {
+      database: "api",
+      table: "mcp_tokens",
+      query: `SELECT t.id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',t.id,'mcp_client_id',t.mcp_client_id,'user_id',t.user_id,
+          'access_token',t.access_token,'refresh_token',t.refresh_token,'scopes',t.scopes,
+          'expires_at',t.expires_at,'revoked_at',t.revoked_at,
+          'created_at',t.created_at,'updated_at',t.updated_at) payload_json
+        FROM mcp_tokens t JOIN mcp_clients c ON c.id=t.mcp_client_id
+        WHERE c.instance_id=:instance_id ORDER BY t.id`,
+    },
+  }),
+  repositoryJsonEntity({
+    id: "mcp.tool_receipts",
+    module: "mcp",
+    pluginId: "supbrd-plugmod-mcp",
+    storeName: "tool_receipts",
+    source: {
+      database: "site",
+      table: "audit_logs",
+      query: `SELECT id entity_id,CAST(:project_id AS TEXT) project_id,
+        json_object('id',id,'timestamp',timestamp,'actor_id',actor_id,'action',action,
+          'resource_type',resource_type,'resource_id',resource_id,'details',details,'status',status) payload_json
+        FROM audit_logs WHERE action LIKE 'mcp.%' ORDER BY timestamp,id`,
+    },
+  }),
 ]);
 
 export const MODULE_CUTOVER_GUARDS = Object.freeze([

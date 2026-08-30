@@ -11,7 +11,7 @@
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
       "test": "workers/api/src/lib/domain-modules.test.ts",
-      "proof_sha256": "sha256:1fb1724cdc9a9a412c85903239c1a5a37e150d49f2f09b575e4f70ca4ed8759d",
+      "proof_sha256": "sha256:e826da9dd30c81ba4abf26d3f12adcbb841a371c2f40575abf05ce658f44304a",
       "source_status": "delivered",
       "blocker": null,
       "required": true
@@ -88,7 +88,7 @@
       "baseline": "workers/api/src/index.ts",
       "target": "supbrd-plugmod-gateway",
       "test": "workers/api/src/routes/platform-status.test.ts",
-      "proof_sha256": "sha256:fac6b2fb5b28b7766d93a4dd6e24f332e1a960b87fe9e2fbd81f83100005546e",
+      "proof_sha256": "sha256:6c51a9b89b5e74d8ccb7b95ed353c6b20664651f8acabfd92d27b0327f384c93",
       "source_status": "delivered",
       "blocker": null,
       "required": true

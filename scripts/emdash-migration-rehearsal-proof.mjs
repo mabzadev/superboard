@@ -25,10 +25,17 @@ export async function buildMigrationRehearsalProof() {
 			const entities = MODULE_CUTOVER_REGISTRY.filter(
 				(entity) => entity.storeId === store.store_id,
 			);
+			const migratableEntities = entities.filter(
+				(entity) => entity.sourceStatus !== "new_empty_store",
+			);
 			const schemaProof = "scripts/module-cutover/registry-schema.test.mjs";
 			const runtimeProof = "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts";
-			const migrationKind = entities.length > 0 ? "source_to_target" : "new_empty_store";
-			const proofEntities = entities.map((entity) => ({ ...entity, transform: undefined }));
+			const migrationKind =
+				migratableEntities.length > 0 ? "source_to_store" : "new_empty_store";
+			const proofEntities = migratableEntities.map((entity) => ({
+				...entity,
+				transform: undefined,
+			}));
 			const sourceRows = Object.fromEntries(
 				proofEntities.map((entity, index) => [entity.id, [sampleRow(entity, index)]]),
 			);
@@ -83,11 +90,11 @@ export async function buildMigrationRehearsalProof() {
 				});
 				sourceSamples = proofEntities.flatMap((entity) => sourceRows[entity.id]);
 				targetSamples = proofEntities.flatMap(
-					(entity) => adapter.fixture.target_rows[entity.id] ?? [],
+					(entity) => adapter.fixture.repository_rows[entity.id] ?? [],
 				);
 				for (const entity of proofEntities) {
 					const source = sourceRows[entity.id];
-					const target = adapter.fixture.target_rows[entity.id] ?? [];
+					const target = adapter.fixture.repository_rows[entity.id] ?? [];
 					if (!compareDatasets(source, target, entity).matches) {
 						throw new Error(`${entity.id}: rehearsal mismatch`);
 					}
@@ -105,7 +112,7 @@ export async function buildMigrationRehearsalProof() {
 					currentRowsByEntity: Object.fromEntries(
 						proofEntities.map((entity) => [
 							entity.id,
-							adapter.fixture.target_rows[entity.id] ?? [],
+							adapter.fixture.repository_rows[entity.id] ?? [],
 						]),
 					),
 					registry: proofEntities,
@@ -123,7 +130,11 @@ export async function buildMigrationRehearsalProof() {
 				migration_kind: migrationKind,
 				entity_ids: entities.map(({ id }) => id),
 				source_tables: entities.map(({ source }) => source.table).filter(Boolean),
-				target_tables: entities.map(({ target }) => target.table).filter(Boolean),
+				target_tables: migratableEntities.length > 0 ? ["superboard_plugin_store_records"] : [],
+				projection_tables: entities
+					.filter(({ repositoryOnly }) => !repositoryOnly)
+					.map(({ target }) => target.table)
+					.filter(Boolean),
 				schema_proof: { path: schemaProof, checksum: fileHash(schemaProof) },
 				runtime_proof: { path: runtimeProof, checksum: fileHash(runtimeProof) },
 				fixture_source: { count: sourceSamples.length, checksum: hash(sourceSamples) },

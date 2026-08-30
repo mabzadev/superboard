@@ -23,6 +23,22 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/stores",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/api/plugins/stores.ts", import.meta.url),
+					),
+				});
+				injectRoute({
+					pattern:
+						"/_emdash/api/superboard/plugins/[pluginId]/data-sources/[dataSourceId]",
+					entrypoint: fileURLToPath(
+						new URL(
+							"./src/pages/_superboard/api/plugins/[pluginId]/data-sources/[dataSourceId].ts",
+							import.meta.url,
+						),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/superboard/releases/[candidateId]",
 					entrypoint: fileURLToPath(
 						new URL(

@@ -116,6 +116,7 @@ export async function generateDevelopmentSecretAssignments({
 }) {
   const token = () => randomBytes(48).toString("base64url");
   const moduleToken = token();
+  const siteOperatorBridgeToken = token();
   const emailToken = token();
   const flowsModuleToken = token();
   const filesToken = token();
@@ -136,10 +137,13 @@ export async function generateDevelopmentSecretAssignments({
   const assignments = {
     site: {
       EMDASH_ENCRYPTION_KEY: `emdash_enc_v1_${randomBytes(32).toString("base64url")}`,
+      SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
+      SITE_OPERATOR_BRIDGE_TOKEN: siteOperatorBridgeToken,
     },
     api: {
       JWT_SECRET: token(),
       MODULE_INTERNAL_TOKEN: moduleToken,
+      SITE_OPERATOR_BRIDGE_TOKEN: siteOperatorBridgeToken,
       ...(target.features?.flows
         ? { FLOWS_INTERNAL_TOKEN: flowsModuleToken }
         : {}),

@@ -3,8 +3,6 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { MODULE_CUTOVER_REGISTRY } from "./module-cutover/registry.mjs";
-
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
@@ -12,7 +10,7 @@ const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.jso
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
 const manifestMigrationPath = join(
 	root,
-	"apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+	"apps/site/migrations/0012_functional_front_contracts.sql",
 );
 const PAGE_SUFFIX = "/page.tsx";
 const PAGE_SUFFIX_PATTERN = /\/page\.tsx$/u;
@@ -942,6 +940,9 @@ function migrationInventory(pluginId) {
 		"apps/site/migrations/0006_plugin_manifest_registry.sql",
 		"apps/site/migrations/0008_canonical_plugin_contracts.sql",
 		"apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+		"apps/site/migrations/0010_plugin_store_project_scope.sql",
+		"apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+		"apps/site/migrations/0012_functional_front_contracts.sql",
 	];
 	if (!worker) return migrations;
 	const directory = join(root, `workers/${worker}/migrations`);

@@ -89,6 +89,28 @@ describe("domain module route contract", () => {
 });
 
 describe("gateway to domain service binding", () => {
+  it("accepts the signed Site operator bridge on module routes", async () => {
+    const fetch = vi.fn(async () => Response.json({ data: [] }));
+    const testEnv = gatewayEnv({
+      SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret",
+      ANALYTICS_MODULE: { fetch } as unknown as Fetcher,
+    });
+
+    const response = await app.request(
+      "/api/v1/analytics/projects/10-prod/overview",
+      {
+        headers: {
+          "X-SuperBoard-Site-Operator": "operator@example.test",
+          "X-SuperBoard-Internal-Token": "site-bridge-secret",
+        },
+      },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("blocks module writes while allowing reads during project cutover", async () => {
     const fetch = vi.fn(async () => Response.json({ data: [] }));
     const testEnv = gatewayEnv(
@@ -1058,6 +1080,9 @@ function gatewayEnv(
   flowsCutover = Boolean(overrides.FLOWS_MODULE),
 ): Env {
   const db = createFakeD1((call: FakeD1Call) => {
+    if (call.sql.includes("SELECT id FROM users WHERE lower(email)")) {
+      return { id: 7 };
+    }
     if (call.sql.includes("FROM oauth_access_tokens")) {
       return {
         resource_owner_id: 7,

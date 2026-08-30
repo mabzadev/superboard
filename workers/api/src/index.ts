@@ -43,7 +43,7 @@ import {
 } from "./lib/billing-service";
 import { isBillingQueueJob } from "./lib/billing-dispatch";
 import { readTextLimited } from "./lib/http-limits";
-import { getAuthContext } from "./lib/auth";
+import { getAuthContext, getRequestAuthContext } from "./lib/auth";
 import { refreshAppleNotificationConfigurationsIfDue } from "./lib/apple-notification-configuration";
 import {
   DOMAIN_MODULES,
@@ -754,7 +754,7 @@ async function proxyBillingAdmin(
   if (!billingServiceEnabled(c.env)) return next();
   const pathname = new URL(c.req.url).pathname;
   if (c.req.method === "POST" && /\/connections$/.test(pathname)) return next();
-  const auth = await getAuthContext(c.env, c.req.header("Authorization"));
+  const auth = await getRequestAuthContext(c.env, c.req.raw.headers);
   if (!auth) return c.json({ error: "Invalid or expired token" }, 401);
   if (!c.env.BILLING)
     return c.json(

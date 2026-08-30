@@ -7,7 +7,7 @@ import {
   type ProjectEnvironment,
 } from "@superboard/contracts/project-context";
 import type { Env } from "../types";
-import { getAuthContext } from "./auth";
+import { getRequestAuthContext } from "./auth";
 import { flowsInternalToken } from "./flows-internal-auth";
 import { isFlowsLegacyCutoverEnabled } from "./flows-cutover-state";
 import { readJsonObjectLimited } from "./http-limits";
@@ -185,7 +185,7 @@ async function proxyDomainModuleRequest(
     legacyModuleName?: LegacyDomainModuleName;
   } = {},
 ): Promise<Response> {
-  const auth = await getAuthContext(c.env, c.req.header("Authorization"));
+  const auth = await getRequestAuthContext(c.env, c.req.raw.headers);
   if (!auth) {
     return domainError(
       requestId,

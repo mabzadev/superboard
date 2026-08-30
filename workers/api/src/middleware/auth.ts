@@ -1,29 +1,8 @@
 import { Context, Next } from 'hono';
-import { constantTimeEqual } from '@superboard/contracts/secret';
 import { AppVariables, Env } from '../types';
-import { getAuthContext } from '../lib/auth';
+import { getRequestAuthContext } from '../lib/auth';
 
 export async function authMiddleware(c: Context<{ Bindings: Env; Variables: AppVariables }>, next: Next) {
-  const siteOperatorEmail = (c.req.header('X-SuperBoard-Site-Operator') || '').trim().toLowerCase();
-  const siteOperatorToken = (c.req.header('X-SuperBoard-Internal-Token') || '').trim();
-  const expectedSiteToken = c.env.SITE_OPERATOR_BRIDGE_TOKEN?.trim() || '';
-  if (
-    siteOperatorEmail &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(siteOperatorEmail) &&
-    siteOperatorToken &&
-    expectedSiteToken &&
-    await constantTimeEqual(siteOperatorToken, expectedSiteToken)
-  ) {
-    const actor = await c.env.DB.prepare(
-      'SELECT id FROM users WHERE lower(email) = ? LIMIT 1',
-    ).bind(siteOperatorEmail).first<{ id: number }>();
-    const actorId = Number(actor?.id);
-    if (Number.isSafeInteger(actorId) && actorId > 0) {
-      c.set('userId', actorId);
-      await next();
-      return;
-    }
-  }
   if (c.env.CREDENTIAL_KEY_SCOPE === 'billing') {
     const actor = (c.req.header('X-OpenGrow-Internal-Actor') || '').trim();
     if (/^[1-9][0-9]{0,18}$/.test(actor)) {
@@ -32,7 +11,7 @@ export async function authMiddleware(c: Context<{ Bindings: Env; Variables: AppV
       return;
     }
   }
-  const auth = await getAuthContext(c.env, c.req.header('Authorization'));
+  const auth = await getRequestAuthContext(c.env, c.req.raw.headers);
   if (!auth) {
     return c.json({ error: 'Invalid or expired token' }, 401);
   }
