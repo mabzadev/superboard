@@ -19,9 +19,6 @@ interface __BaseEnv_Env {
 	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
-	interface GlobalProps {
-		mainModule: typeof import("./dist/server/entry");
-	}
 	interface Env extends __BaseEnv_Env {}
 }
 interface Env extends __BaseEnv_Env {}
