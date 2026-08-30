@@ -42,6 +42,8 @@ Le moteur existant `scripts/module-cutover/` reste read-only par défaut et cons
 - rollback bloqué tant qu’un backup, une version Worker ou un reverse delta manque ;
 - aucune instruction de suppression dans les deltas produits par le repository EmDash.
 
+Le reçu de répétition distingue 46 Stores `source_to_target` de 39 nouveaux Stores vides. Pour chaque Store migré, il exécute un import non vide sur les vraies définitions d’entité, répète l’import sans nouvelle écriture, reprend depuis le checkpoint, compare comptage/checksum source et cible, conserve un échantillon canonique et exerce shadow read et reverse delta sans suppression. Les nouveaux Stores vides sont explicitement marqués `not_applicable_empty_store`, sans fabriquer de source historique.
+
 La sauvegarde D1 avec FTS5 suit un chemin séparé de `wrangler d1 export` : les tables autoritatives sont exportées logiquement et checksumées, les tables FTS5 sont recréées puis reconstruites depuis les tables restaurées. La preuve déterministe effectue une vraie requête `MATCH`. Un test Worker supplémentaire sauvegarde et restaure les mêmes artefacts au travers de vrais bindings Miniflare R2 et KV, puis relit leurs octets. Aucune ressource distante ou production n’est lue ou modifiée.
 
 ## Commandes de preuve

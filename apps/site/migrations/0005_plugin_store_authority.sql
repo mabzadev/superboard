@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS superboard_active_plugin_manifests (
   activated_at TEXT NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_active_plugin_manifests_artifact
+  ON superboard_active_plugin_manifests(artifact_checksum);
+
 CREATE TRIGGER IF NOT EXISTS superboard_plugin_manifest_artifact_immutable_update
 BEFORE UPDATE ON superboard_plugin_manifest_artifacts
 BEGIN
@@ -77,6 +80,8 @@ END;
 
 CREATE INDEX IF NOT EXISTS idx_plugin_store_records_instance
   ON superboard_plugin_store_records(instance_id, plugin_id, entity_type, updated_at);
+CREATE INDEX IF NOT EXISTS idx_plugin_store_records_manifest
+  ON superboard_plugin_store_records(manifest_artifact_checksum);
 
 CREATE TABLE IF NOT EXISTS superboard_plugin_store_outbox (
   operation_id TEXT PRIMARY KEY,
@@ -87,13 +92,16 @@ CREATE TABLE IF NOT EXISTS superboard_plugin_store_outbox (
   entity_id TEXT NOT NULL,
   revision INTEGER NOT NULL,
   payload_checksum TEXT NOT NULL,
-  manifest_artifact_checksum TEXT NOT NULL,
+  manifest_artifact_checksum TEXT NOT NULL
+    REFERENCES superboard_plugin_manifest_artifacts(artifact_checksum),
   created_at TEXT NOT NULL,
   delivered_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_plugin_store_outbox_delivery
   ON superboard_plugin_store_outbox(delivered_at, created_at);
+CREATE INDEX IF NOT EXISTS idx_plugin_store_outbox_manifest
+  ON superboard_plugin_store_outbox(manifest_artifact_checksum);
 
 CREATE TRIGGER IF NOT EXISTS superboard_plugin_store_outbox_immutable_delete
 BEFORE DELETE ON superboard_plugin_store_outbox
