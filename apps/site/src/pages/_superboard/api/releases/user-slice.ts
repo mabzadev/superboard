@@ -3,7 +3,7 @@ import { handleError } from "emdash/api/error";
 
 import { createFrontDraftWithSnapshot } from "../../../../lib/front-workflow-repository.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
-import { isRecord } from "../../../../lib/request-validation.js";
+import { isRecord, isUlid } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 import { composeUserFrontReleaseInput } from "../../../../lib/user-front-release.js";
 
@@ -15,14 +15,21 @@ export const POST: APIRoute = async (context) => {
 	if (denied) return denied;
 	try {
 		const body: unknown = await context.request.json();
-		if (!isRecord(body))
+		if (
+			!isRecord(body) ||
+			!isUlid(body.front_draft_id) ||
+			!isUlid(body.draft_snapshot_id) ||
+			!isUlid(body.compilation_id) ||
+			!isUlid(body.candidate_id) ||
+			!isUlid(body.release_id)
+		)
 			return jsonResponse({ error: { code: "INVALID_USER_SLICE_REQUEST" } }, 422);
 		const identifiers = {
-			front_draft_id: stringField(body.front_draft_id),
-			draft_snapshot_id: stringField(body.draft_snapshot_id),
-			compilation_id: stringField(body.compilation_id),
-			candidate_id: stringField(body.candidate_id),
-			release_id: stringField(body.release_id),
+			front_draft_id: body.front_draft_id,
+			draft_snapshot_id: body.draft_snapshot_id,
+			compilation_id: body.compilation_id,
+			candidate_id: body.candidate_id,
+			release_id: body.release_id,
 		};
 		const now = new Date().toISOString();
 		const input = await composeUserFrontReleaseInput({
@@ -50,9 +57,3 @@ export const POST: APIRoute = async (context) => {
 		return handleError(error, "User Front slice creation failed", "USER_SLICE_CREATE_FAILED");
 	}
 };
-
-function stringField(value: unknown): string {
-	if (typeof value !== "string" || value === "")
-		throw new Error("A release identifier is required");
-	return value;
-}
