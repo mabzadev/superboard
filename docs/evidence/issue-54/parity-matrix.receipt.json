@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "matrix_sha256": "sha256:d717bf49f2719aa66c2355b902db05bf5c520e63d97a220458046ab8fbbfc762",
-  "topology_sha256": "sha256:1c4479512d5196cf88f4ec31c4e4b64df1da345dce447fb7f165aabf3f482c59",
+  "topology_sha256": "sha256:5039a52ff9f019799ee58a46004ba3294606653c09bf6a0af6ec66060f0d35a8",
   "row_count": 143,
   "required_row_count": 117,
   "public_cutover": false,
@@ -14,7 +14,7 @@
   "store_coverage": [
     {
       "store_id": "supbrd-plug-user.store.user_credentials",
-      "descriptor_checksum": "sha256:bfcf764a5b37acac59a5ab80c4ec671b29f504d2bbc3e20e11c04f3134936424",
+      "descriptor_checksum": "sha256:011448c485e36f2ac834689b44954a551be9c44ade8bef27b759c7335ededa09",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -24,7 +24,7 @@
     },
     {
       "store_id": "supbrd-plug-user.store.user_directory",
-      "descriptor_checksum": "sha256:69892e311146023f1614f5f5d80099d7e9fe84dc1c38154c2ec3a84ebc832c46",
+      "descriptor_checksum": "sha256:044d944a619f08ccfbc5c6f4c702734cdde39988814004222dc115a5b9901292",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -34,7 +34,7 @@
     },
     {
       "store_id": "supbrd-plug-user.store.user_sessions",
-      "descriptor_checksum": "sha256:d1bf5e1e0d9a7ab0b79c38d09f8aa9f26758b132e15347d753113324b08ba9b1",
+      "descriptor_checksum": "sha256:e6ad59f2a114747b9426547855bdbd08c954c9714e7887a5457cf73663e79cf8",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -44,7 +44,7 @@
     },
     {
       "store_id": "supbrd-plug-settings.store.settings",
-      "descriptor_checksum": "sha256:1ffdcd0304a9ab6ac449ac61ac70ccd430ec9e53e022754e72d62131c181c81d",
+      "descriptor_checksum": "sha256:b053a766144ff881a17bd99157f83e81ffa1b845159efa92a5c649412d5af723",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -54,7 +54,7 @@
     },
     {
       "store_id": "supbrd-plug-settings.store.versions",
-      "descriptor_checksum": "sha256:c0834fc2f7842146d9c7388dec1e3f55a9980b1d75f2ffaf2c2b4e477cd61577",
+      "descriptor_checksum": "sha256:b31d2fdba6dfa2a96609d8170d0bcd7a19d55633451cc9c51de159d1fba0d997",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -64,7 +64,7 @@
     },
     {
       "store_id": "supbrd-plug-content.store.documents",
-      "descriptor_checksum": "sha256:80223e384fb9963490a2df69641e828b333ccb7a69785e5f2c708b3f625fc3d7",
+      "descriptor_checksum": "sha256:c7c4e79882f8e15a5214288a0dc52ec9e9be937519918dd11db634dcb2df3e0b",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -74,7 +74,7 @@
     },
     {
       "store_id": "supbrd-plug-content.store.revisions",
-      "descriptor_checksum": "sha256:97da22d3e955af1118ef7cf75fa78aa9291cab69a53005903d989d1077c7ea59",
+      "descriptor_checksum": "sha256:c7a1fd513b7be13bb055f70fb744ff01408750829eda612a766de6700bf86a8a",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -84,7 +84,7 @@
     },
     {
       "store_id": "supbrd-plug-content.store.taxonomies",
-      "descriptor_checksum": "sha256:b140a9667bc33d33bd535779c40906c40c3345c6584575be3e5ff54c92d116c1",
+      "descriptor_checksum": "sha256:e4aeffbd581ffc9ac29cee3415e82be58f61ec036f9ab02bca095513d6da7d89",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -94,7 +94,7 @@
     },
     {
       "store_id": "supbrd-plug-products.store.catalog",
-      "descriptor_checksum": "sha256:a155359e76a332d5b00fbf4a3a2c9aa957bb00b7a24325972b29c71f7a987dde",
+      "descriptor_checksum": "sha256:feca1107c971c98cb2fc3ee93563a218f09259c1c1829f1ee6f5a8d9db7b1a4d",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -104,7 +104,7 @@
     },
     {
       "store_id": "supbrd-plug-products.store.offers",
-      "descriptor_checksum": "sha256:e707e054cc57d737b0c0d05823f971cbe6f3fe8a5f8a001ca093859f98fc5052",
+      "descriptor_checksum": "sha256:4f6db16d5cf37f45ac94c6d77ee02447a66abd21ced056972ea4855a3025f55a",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -114,7 +114,7 @@
     },
     {
       "store_id": "supbrd-plug-products.store.prices",
-      "descriptor_checksum": "sha256:4496103a12c44b9941d1d1f14e58d7691df6b884335ae69b0ba0a456398d74fd",
+      "descriptor_checksum": "sha256:0ee1d54fbe76552cf7a659190809940dbfeb37e31af23a6b1d73b377571243cb",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -124,7 +124,7 @@
     },
     {
       "store_id": "supbrd-plug-audit.store.archives",
-      "descriptor_checksum": "sha256:81cb2cd3f93e7f504ba0d57778d60fd74fe7d1c8d7b5c8282a658ed0fcedecf0",
+      "descriptor_checksum": "sha256:cc4c1e6db1a46881a63a38f6eee861d4c7a1aa7c3aaad4496596dd2c63a0c621",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -134,7 +134,7 @@
     },
     {
       "store_id": "supbrd-plug-audit.store.ledger",
-      "descriptor_checksum": "sha256:14e39206112fe7f435b15e51efa6507c46e5e35f742556923dce82892405f282",
+      "descriptor_checksum": "sha256:8f2b1f55c9226c0f3fa119ca5ee8dcf0652d6e53f4404a8f61901c60589a2dc1",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -144,7 +144,7 @@
     },
     {
       "store_id": "supbrd-plugmod-gateway.store.rate_limits",
-      "descriptor_checksum": "sha256:69a9f9f7be01c4c07eb3571772c4ef187dcfe8ffc9c41eac0c3cf03155535a46",
+      "descriptor_checksum": "sha256:fafe3dfb660b55482ef99fa2e8352cbf9e24a35b48b1d75db9e6a904e3a3663e",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -154,7 +154,7 @@
     },
     {
       "store_id": "supbrd-plugmod-gateway.store.route_manifests",
-      "descriptor_checksum": "sha256:79c313dcd908972e06c9b080a6269c34e1f83cb23d96af1fbaa64ea9dc3398b9",
+      "descriptor_checksum": "sha256:b2918be3db7a9a5523bd1c602226b83bc3984906567f2067b0cb58ac2fa14b61",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -164,7 +164,7 @@
     },
     {
       "store_id": "supbrd-plugmod-billing.store.ledger",
-      "descriptor_checksum": "sha256:c2929c6e7ad5dd875e0e10794551f674ff6e6f4ee44e55ee9ff40a4788898b8d",
+      "descriptor_checksum": "sha256:23034946fcc61e65dc53488b0f7e7c8927f4bdb196533cc3e005366004d15c74",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -174,7 +174,7 @@
     },
     {
       "store_id": "supbrd-plugmod-billing.store.purchases",
-      "descriptor_checksum": "sha256:f6b970c6699c5c2adaee9a0fa26fb899578ee4ffabc68f2a2ab261ae50a9ea31",
+      "descriptor_checksum": "sha256:cd772acabb77b06272b755960a1ef7cf09ad3503a7c87db47615d0ec94701bd2",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -184,7 +184,7 @@
     },
     {
       "store_id": "supbrd-plugmod-billing.store.subscriptions",
-      "descriptor_checksum": "sha256:e8a8640065340670a8b3efee8252740600d9c0a7a9d9395a9af3affb08240640",
+      "descriptor_checksum": "sha256:745b69d8d6d4ea256766aa03186c0964ab75fe19a5a6d74fcf9ec581a698d791",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -194,7 +194,7 @@
     },
     {
       "store_id": "supbrd-plugmod-support.store.contacts",
-      "descriptor_checksum": "sha256:b8a8ccc213362b7061ce1300f17a52f305f1680bdded551554d66ec28eb8398b",
+      "descriptor_checksum": "sha256:2947fdf4291de7596debe29ad32bf60eb5a9f06058a7d742ebf99f9967f43c0d",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -204,7 +204,7 @@
     },
     {
       "store_id": "supbrd-plugmod-support.store.conversations",
-      "descriptor_checksum": "sha256:d4a6d92f4eef09f4cc6ca22d94edf72357714cd40853e357afb6e4fbf0b128fe",
+      "descriptor_checksum": "sha256:d25b2d284ed533b07749d6142e7a7e4dc2f0dc9b2f6b31b5d69ad02596e9e2ad",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -214,7 +214,7 @@
     },
     {
       "store_id": "supbrd-plugmod-support.store.messages",
-      "descriptor_checksum": "sha256:7abe8d648f46d5e89bcc5ce6363d608a09da097f2c80f202b9eb21dd50f81677",
+      "descriptor_checksum": "sha256:bd6a27e57869a078e15e311b324ebde7ebdfd516f7bbf58cd484582e64e1016e",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -224,7 +224,7 @@
     },
     {
       "store_id": "supbrd-plugmod-flows.store.definitions",
-      "descriptor_checksum": "sha256:baac172efeaf5fd058b51ee2e5cf28dabe5ea2b42c4a6d3da294c7f51808443c",
+      "descriptor_checksum": "sha256:d72bf0b0822c625f89b67c8dcdcae225c89244364e960f8bafcc239f1b534fff",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -234,7 +234,7 @@
     },
     {
       "store_id": "supbrd-plugmod-flows.store.runtime",
-      "descriptor_checksum": "sha256:898a02407068f183e138fcbd7369db601f3c87dbc7a5ffa83be62dfbdd773518",
+      "descriptor_checksum": "sha256:2d72c43ce85ec793b94df879af423cbba4cfc5579c47540490d60156f739c816",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -244,7 +244,7 @@
     },
     {
       "store_id": "supbrd-plugmod-analytics.store.aggregates",
-      "descriptor_checksum": "sha256:d2d28765733d04999ae8b9c9aafc10077454ea386ac28146d75c88b189b273ca",
+      "descriptor_checksum": "sha256:c9a020683f4b1c65eade2af9f29617cffa5eeb2658ee57d956e87690b4b1d91e",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -254,7 +254,7 @@
     },
     {
       "store_id": "supbrd-plugmod-analytics.store.events",
-      "descriptor_checksum": "sha256:a801679d501dc6db0ade62a87427d89ce077dbf895811668eaa7b8ea12248cb4",
+      "descriptor_checksum": "sha256:fac5df1d1c9050ab090a3573fe2439ce317fac8d5eda5828f690ed20befe082f",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -264,7 +264,7 @@
     },
     {
       "store_id": "supbrd-plugmod-marketing.store.campaigns",
-      "descriptor_checksum": "sha256:2633278f2186a5815e9f7113262c5fd4036a8434537cec559b0d3ab41623e1f8",
+      "descriptor_checksum": "sha256:c07147af99f558426cde465a10296df9c96d6c694668226de40343553aabce75",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -274,7 +274,7 @@
     },
     {
       "store_id": "supbrd-plugmod-marketing.store.consent",
-      "descriptor_checksum": "sha256:fb59e299fe6967b5ba0a5166e3779f05e25175885692487b3a14a8d509e9a8a2",
+      "descriptor_checksum": "sha256:753a23bbe66f50e6530a1b70b60f8efc632b1d336ae3681af1c2542e3c17e526",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -284,7 +284,7 @@
     },
     {
       "store_id": "supbrd-plugmod-marketing.store.journeys",
-      "descriptor_checksum": "sha256:af383bb1ee5e78faa946eee275099ca24296bce04a807c2de78e74f3bf413771",
+      "descriptor_checksum": "sha256:3ef4ef2e1859c09771bced6381abde36bebbefc141df96ecdc611308cda0ae58",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -294,7 +294,7 @@
     },
     {
       "store_id": "supbrd-plugmod-email.store.deliveries",
-      "descriptor_checksum": "sha256:91b050db19260988a13e85cdb41d4c20b9bc4f8ee99b6d98c0734bab3e248f47",
+      "descriptor_checksum": "sha256:58740ca4e2c0c9f2a67b506e0eb922cd5890f3a8abfa08d0e9d89c9fe676226e",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -304,7 +304,7 @@
     },
     {
       "store_id": "supbrd-plugmod-email.store.provider_events",
-      "descriptor_checksum": "sha256:3c216311f35ae0ad884f3e4fa72a4847e0a919dab8e0604351c32178305c68d5",
+      "descriptor_checksum": "sha256:264428270148a439455da7303789e2015b7f8541ed384f28f4f1e65603caf7b2",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -314,7 +314,7 @@
     },
     {
       "store_id": "supbrd-plugmod-dynamic-links.store.attribution",
-      "descriptor_checksum": "sha256:dee804028522c02da1746c464920d6899ae6928889ed8061151ba343bc23da06",
+      "descriptor_checksum": "sha256:1c87bbde858a97f5357af0cce87e9594fee4372b022eacb532e70fc2f6d491e6",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -324,7 +324,7 @@
     },
     {
       "store_id": "supbrd-plugmod-dynamic-links.store.links",
-      "descriptor_checksum": "sha256:6255a386471f553900b4a007561af661ddc3453b9773b0fc26e9d2644c4d023d",
+      "descriptor_checksum": "sha256:ef01430e75d6b88540e022532f8a5e4b1882e15c2b5aa94c0aa5e33583562a65",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -334,7 +334,7 @@
     },
     {
       "store_id": "supbrd-plugmod-files.store.objects",
-      "descriptor_checksum": "sha256:3ba9e6fad24c57c1a65528bef487bd9d6a4230843f252313c8d9e92d34b00367",
+      "descriptor_checksum": "sha256:2d087fd6a930766f1a70c08cd9cc45d17cf830b9aa6ea3c4ab994983df98bfe4",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -344,7 +344,7 @@
     },
     {
       "store_id": "supbrd-plugmod-files.store.tickets",
-      "descriptor_checksum": "sha256:99ee762209926bd5c967f655c1df22f53175dce99f490dae92380bf94e7988b9",
+      "descriptor_checksum": "sha256:9e6116b717ab691d827992781e6f0ab1d8ffab392a3b2e324db2e749d5ac0edb",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -354,7 +354,7 @@
     },
     {
       "store_id": "supbrd-plugmod-paywalls.store.definitions",
-      "descriptor_checksum": "sha256:8476edf3e20917d5fd9f298f175837a7dc02e115c91b2a196899e117e356a766",
+      "descriptor_checksum": "sha256:52dff3d5e8212a9005f19786a5307eac1e16b49a2cb9d95abcf6667c5bb5e6b4",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -364,7 +364,7 @@
     },
     {
       "store_id": "supbrd-plugmod-paywalls.store.exposures",
-      "descriptor_checksum": "sha256:c799e4f9cf9e6e0c8fd54fe4d1e772ac95daa5a3d862b21e9e9e6f896dc5ce1e",
+      "descriptor_checksum": "sha256:16e6a25d87469705b86c2ab1d77b9c0ed1d95222f14f153b2aa8c4ba7bde20a1",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -374,7 +374,7 @@
     },
     {
       "store_id": "supbrd-plugmod-onboardings.store.definitions",
-      "descriptor_checksum": "sha256:b0fec48324a0578eff784d89bc80c7d649d4b9c100b90453808694b3770ca6e8",
+      "descriptor_checksum": "sha256:59a462adcb9ca5ea2b16ba4a361b31f54616e189c30a6a708a8ef3ddf4ad73a2",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -384,7 +384,7 @@
     },
     {
       "store_id": "supbrd-plugmod-onboardings.store.progress",
-      "descriptor_checksum": "sha256:2298406b48bd45e076587d9c15a746b48e4a07c67968eaef8ac992d018d853ee",
+      "descriptor_checksum": "sha256:905f4884bf87aa11ebcf918d0a2d8ab9867b038f865c2a49058d3839fa47d642",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -394,7 +394,7 @@
     },
     {
       "store_id": "supbrd-plugmod-observability.store.health_projections",
-      "descriptor_checksum": "sha256:027181bff0dcbce5dc68d3f6235df5cd2ebaf35175e5209e86ffb53133981a4d",
+      "descriptor_checksum": "sha256:a93a4415f300e25d7a18e4b8a3f4dc2da969a360e8a4934b98766ec623ffb4fe",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -404,7 +404,7 @@
     },
     {
       "store_id": "supbrd-plugmod-mcp.store.sessions",
-      "descriptor_checksum": "sha256:647be6c14b4d521fdab6dc26443231e7470cd549430d9b1aa8606f844758839f",
+      "descriptor_checksum": "sha256:296411028e13ede6859837f50821cd0fba82e7e6c3e9ca29e0012ff6b902b398",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -414,7 +414,7 @@
     },
     {
       "store_id": "supbrd-plugmod-mcp.store.tool_receipts",
-      "descriptor_checksum": "sha256:8295cd74402380e8c1aaa46ae1ea6b2c3e32cff5c3e5932eea6045d4a76ea46d",
+      "descriptor_checksum": "sha256:72ccff5afb106212d9f80c865d887e05cae3032b16d9ef202f95118e0f7f1c28",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",
@@ -424,7 +424,7 @@
     },
     {
       "store_id": "supbrd-plugmod-custom-*.store.operations",
-      "descriptor_checksum": "sha256:db48d22cfb02ea54ccca3d6139913228405df83b96a685f3e387c9817e1f13cf",
+      "descriptor_checksum": "sha256:b6d02299ab5a8448a67c154a0ade863c818a2625a60eb27d1baa5501e45608ac",
       "executable_test": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
       "test_sha256": "sha256:2a359cd35ed97dcfd6bb7ea4a6a89bb3294da53988aa1ae222e7286137fe21ca",
       "double_import": "passed",

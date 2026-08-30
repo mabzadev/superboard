@@ -38,6 +38,7 @@ test("the plugin topology exposes both closed execution families", () => {
 test("every topology manifest uses the shared closed runtime contract", async () => {
 	for (const { manifest } of buildPluginTopology().plugins) {
 		assert.deepEqual(await verifySuperBoardPluginManifest(manifest), { valid: true, errors: [] });
+		assert.equal(manifest.execution.backend, "sandboxed", manifest.plugin_id);
 	}
 });
 

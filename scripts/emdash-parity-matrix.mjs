@@ -12,7 +12,7 @@ const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.jso
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
 const manifestMigrationPath = join(
 	root,
-	"apps/site/migrations/0008_canonical_plugin_contracts.sql",
+	"apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
 );
 const PAGE_SUFFIX = "/page.tsx";
 const PAGE_SUFFIX_PATTERN = /\/page\.tsx$/u;
@@ -830,7 +830,7 @@ function pluginTopologyEntry(pluginId, kind, worker) {
 			},
 		},
 		execution: {
-			backend: kind === "full" ? "sandboxed" : "native",
+			backend: "sandboxed",
 			worker: kind === "full" ? "none" : "dedicated",
 			renderer: "native_bundle",
 		},
@@ -941,6 +941,7 @@ function migrationInventory(pluginId) {
 		"apps/site/migrations/0005_plugin_store_authority.sql",
 		"apps/site/migrations/0006_plugin_manifest_registry.sql",
 		"apps/site/migrations/0008_canonical_plugin_contracts.sql",
+		"apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
 	];
 	if (!worker) return migrations;
 	const directory = join(root, `workers/${worker}/migrations`);

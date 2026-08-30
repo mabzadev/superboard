@@ -1,6 +1,3 @@
-import { userPluginManifest } from "@superboard/supbrd-plug-user";
-import { definePlugin } from "emdash";
-
 import topology from "../../../config/emdash-plugin-topology.json";
 
 interface JsonSetting {
@@ -33,6 +30,10 @@ interface RuntimeManifest {
 	renderers: Array<{ renderer_id: string }>;
 }
 
+interface RuntimeRouteContext {
+	kv: { get<T>(key: string): Promise<T | null> };
+}
+
 const topologyManifests = new Map(
 	topology.plugins.map(({ manifest }) => [
 		manifest.plugin_id,
@@ -41,24 +42,26 @@ const topologyManifests = new Map(
 );
 
 export function createConfiguredSuperBoardPlugin(pluginId: string) {
-	const manifest = (
-		pluginId === userPluginManifest.plugin_id ? userPluginManifest : topologyManifests.get(pluginId)
-	) as RuntimeManifest | undefined;
+	const manifest = topologyManifests.get(pluginId);
 	if (!manifest) throw new Error(`Unknown SuperBoard plugin manifest: ${pluginId}`);
+	const version = pluginId === "supbrd-plug-user" ? "1.3.0" : manifest.plugin_version;
 	const settingsSchema = toEmDashSettingsSchema(manifest.settings.schema.properties);
 	const storage = Object.fromEntries(
 		manifest.stores.map(({ store_id: storeId }) => [storeId.split(".").at(-1)!, { indexes: [] }]),
 	);
 
-	return definePlugin({
+	return {
 		id: manifest.plugin_id,
-		version: manifest.plugin_version,
+		version,
+		capabilities: [],
+		allowedHosts: [],
 		storage,
+		hooks: {},
 		routes: {
 			admin: { handler: async () => adminBlocks(manifest) },
 			contract: { handler: async () => manifest },
 			health: {
-				handler: async (ctx) => ({
+				handler: async (ctx: RuntimeRouteContext) => ({
 					plugin_id: manifest.plugin_id,
 					plugin_version: manifest.plugin_version,
 					artifact_checksum: manifest.artifact_checksum,
@@ -71,7 +74,8 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 				}),
 			},
 			"settings/effective": {
-				handler: async (ctx) => effectiveSettings(ctx.kv, manifest.settings.schema.properties),
+				handler: async (ctx: RuntimeRouteContext) =>
+					effectiveSettings(ctx.kv, manifest.settings.schema.properties),
 			},
 			"commands/catalog": { handler: async () => ({ items: manifest.commands }) },
 			"data-sources/catalog": { handler: async () => ({ items: manifest.data_sources }) },
@@ -80,7 +84,7 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 			settingsSchema,
 			pages: [{ path: "/", label: pluginLabel(manifest.plugin_id), icon: "settings" }],
 		},
-	});
+	};
 }
 
 function adminBlocks(manifest: RuntimeManifest) {
