@@ -130,6 +130,56 @@ corrigée avant la clôture finale.
   `f5fddd59-1781-4cbf-88bf-fbd699147c2e`. Le commit d’implémentation est
   `912a8fd`.
 
+## Correction fonctionnelle finale des plugins
+
+La correction catalogue ci-dessus prouvait le lifecycle runtime, mais ses
+adaptateurs restaient trop minces pour prouver la parité produit. La reprise
+fonctionnelle suivante remplace cette preuve incomplète.
+
+- Les 18 plugins installables exposent des paramètres typés, une page Admin,
+  un Renderer Front, leurs catalogues de Commands et Data Sources, ainsi que
+  leurs Stores réels. Le template wildcard `supbrd-plugmod-custom-*` reste
+  volontairement non installable.
+- Le catalogue couvre 41 Stores installables et 74 entités de migration. Sur
+  `1-test`, 36 lignes source sont présentes dans 6 Stores peuplés ; sur
+  `1-prod` du compte development, 37 lignes source sont présentes dans 7
+  Stores peuplés. Les deux passages vérifient 74/74 entités côté repository et
+  projection. Les deux reverse deltas sont replayable, avec zéro changement et
+  zéro suppression.
+- La Data Source live
+  `supbrd-plugmod-flows.data_source.workflows` lit le Store EmDash, déchiffre
+  ses enregistrements et retourne un objet métier réel avec HTTP 200.
+- La release fonctionnelle `01M19MG9YN6KQ4KQVF4FRETW1Q`, candidat
+  `01M19MG9YNYYMM0M4VJZK7GAY7`, contient 19 entrées de Plugin Lock, 114 routes
+  et 13 reçus de validation. Son content checksum est
+  `sha256:2aad752715597eb1c2e59209dfd5ef6d7e2ab91189b7080a523c0057aae04495`
+  et son validation set est
+  `sha256:3596b8485b170004b985dd4a22207bd02eff1bed1a894b3387293b9329fd1dd6`.
+- Après réauthentification forte par magic link de `mabzadev@gmail.com`, la
+  release a été approuvée le `2026-08-30T18:42:04.691Z`, puis activée par
+  `5f12f930-1a18-40eb-9744-e639d0094990` le
+  `2026-08-30T18:42:23.892Z`, en révision 6. Les reçus de réauthentification,
+  historique et outbox sont tous présents.
+- Les routes actives `/analytics`, `/identity/en/users`,
+  `/marketing/settings`, `/products/offerings`, `/support/inbox`,
+  `/flows/workflows` et `/infrastructure` ont été rendues directement dans
+  Vivaldi, sans erreur console ni alerte d'erreur. L'écran Plugins expose 18
+  plugins SuperBoard distincts ; la page User affiche notamment `Mfa Policy`,
+  `Allow Anonymous Upgrade` et `Max Active Sessions`.
+- Les deux jetons opérateur temporaires créés pour le rehearsal ont été
+  révoqués ; le compte development en contient zéro. Aucune cible
+  `vocostar/production` n'a été lue ou mutée.
+
+Le reçu valeur-free complet est versionné dans
+`docs/evidence/issue-54/development-store-authority.receipt.json`. Les commits
+de la reprise fonctionnelle sont `aa63f660` et `9b898bc5`.
+
+Cette preuve clôt l'écart « plugins runtime vides » qui avait motivé la seconde
+réouverture de #55. Elle ne prétend pas, à elle seule, satisfaire la dépendance
+#54 : le déplacement de toutes les mutations métier vers les repositories
+EmDash reste une gate distincte tant que les chemins publics historiques
+continuent d'écrire directement dans les Workers de domaine.
+
 ## Commande de preview versionnée
 
 Après initialisation opérateur et satisfaction des gates Release Front, le Site
