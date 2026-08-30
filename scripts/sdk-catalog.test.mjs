@@ -12,17 +12,17 @@ import {
 
 const candidateSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-test("schema v4 records the SuperBoard transition without rewriting releases", async () => {
+test("schema v5 records published baselines and honest initial Flows packages", async () => {
   const catalog = await loadSdkCatalog();
   const result = await validateSdkCatalog(catalog);
 
   assert.deepEqual(result.errors, []);
-  assert.equal(catalog.schemaVersion, 4);
+  assert.equal(catalog.schemaVersion, 5);
   assert.equal(
     catalog.repository,
     "https://github.com/mabzadev/superboard",
   );
-  assert.equal(result.libraries, 7);
+  assert.equal(result.libraries, 13);
   assert.deepEqual(
     Object.fromEntries(
       catalog.libraries.map(({ id, lifecycle }) => [id, lifecycle]),
@@ -35,13 +35,19 @@ test("schema v4 records the SuperBoard transition without rewriting releases", a
       android: "internal",
       javascript: "archived",
       "react-native": "archived",
+      "flows-js": "active",
+      "flows-react": "active",
+      "flows-js-components": "active",
+      "flows-react-components": "active",
+      "flows-shared": "internal",
+      "flows-styles": "internal",
     },
   );
   assert.ok(catalog.libraries.every((library) => library.license === "MIT"));
   assert.ok(
-    catalog.libraries.every((library) =>
-      /^[0-9a-f]{40}$/u.test(library.releaseSha),
-    ),
+    catalog.libraries
+      .filter((library) => library.releaseStatus !== "unreleased")
+      .every((library) => /^[0-9a-f]{40}$/u.test(library.releaseSha)),
   );
 
   const flutter = catalog.libraries.find(({ id }) => id === "flutter");
@@ -84,7 +90,10 @@ test("schema v4 records the SuperBoard transition without rewriting releases", a
 
   const immutableCoordinates = Object.fromEntries(
     catalog.libraries
-      .filter(({ lifecycle }) => lifecycle !== "active")
+      .filter(
+        ({ lifecycle, releaseStatus }) =>
+          lifecycle !== "active" && releaseStatus === "released",
+      )
       .map(({ id, packageName, latestReleaseVersion, releaseRef, releaseSha }) => [
         id,
         { packageName, latestReleaseVersion, releaseRef, releaseSha },
@@ -134,6 +143,71 @@ test("schema v4 records the SuperBoard transition without rewriting releases", a
     catalog.libraries.find(({ id }) => id === "ios").install,
     '.package(url: "https://github.com/mabzadev/superboard.git", exact: "1.0.3")',
   );
+
+  const flows = catalog.libraries.filter(({ id }) => id.startsWith("flows-"));
+  assert.equal(flows.length, 6);
+  assert.deepEqual(
+    Object.fromEntries(
+      flows.map(
+        ({ id, packageName, sourceVersion, releaseStatus, publicationTarget }) => [
+          id,
+          { packageName, sourceVersion, releaseStatus, publicationTarget },
+        ],
+      ),
+    ),
+    {
+      "flows-js": {
+        packageName: "@superboard/flows-js",
+        sourceVersion: "1.23.3",
+        releaseStatus: "unreleased",
+        publicationTarget: "public-npm",
+      },
+      "flows-react": {
+        packageName: "@superboard/flows-react",
+        sourceVersion: "1.26.3",
+        releaseStatus: "unreleased",
+        publicationTarget: "public-npm",
+      },
+      "flows-js-components": {
+        packageName: "@superboard/flows-js-components",
+        sourceVersion: "2.10.4",
+        releaseStatus: "unreleased",
+        publicationTarget: "public-npm",
+      },
+      "flows-react-components": {
+        packageName: "@superboard/flows-react-components",
+        sourceVersion: "2.9.4",
+        releaseStatus: "unreleased",
+        publicationTarget: "public-npm",
+      },
+      "flows-shared": {
+        packageName: "@superboard/flows-shared",
+        sourceVersion: "1.0.0",
+        releaseStatus: "unreleased",
+        publicationTarget: "workspace-only",
+      },
+      "flows-styles": {
+        packageName: "@superboard/flows-styles",
+        sourceVersion: "1.0.0",
+        releaseStatus: "unreleased",
+        publicationTarget: "workspace-only",
+      },
+    },
+  );
+  for (const library of flows) {
+    for (const field of [
+      "latestReleaseVersion",
+      "releaseRef",
+      "releaseSha",
+      "install",
+    ]) {
+      assert.equal(
+        Object.hasOwn(library, field),
+        false,
+        `${library.id}.${field} must not claim an unpublished artifact`,
+      );
+    }
+  }
 });
 
 test("only active libraries can resolve candidates or be promoted", async () => {
@@ -148,6 +222,10 @@ test("only active libraries can resolve candidates or be promoted", async () => 
     "sdk-flutterflow-v3.0.0",
   );
   assert.equal(
+    releaseCandidateTagFor(catalog, "flows-js"),
+    "sdk-flows-js-v1.23.3",
+  );
+  assert.equal(
     releaseTagFor(catalog, "javascript"),
     "sdk-js-v1.0.2",
   );
@@ -158,6 +236,8 @@ test("only active libraries can resolve candidates or be promoted", async () => 
     "android",
     "javascript",
     "react-native",
+    "flows-shared",
+    "flows-styles",
   ]) {
     assert.throws(
       () => releaseCandidateTagFor(catalog, id),
@@ -172,6 +252,71 @@ test("only active libraries can resolve candidates or be promoted", async () => 
           candidateSha,
         ),
       /cannot be published/u,
+    );
+  }
+});
+
+test("an initial Flows release gains its immutable metadata only on promotion", async () => {
+  const catalog = await loadSdkCatalog();
+
+  assert.throws(
+    () => releaseTagFor(catalog, "flows-react"),
+    /not marked ready/u,
+  );
+  assert.equal(
+    releaseCandidateRefFor(catalog, "flows-react"),
+    "sdk-flows-react-v1.26.3",
+  );
+  assert.deepEqual(
+    (
+      await validateSdkCatalog(catalog, {
+        releaseCandidateTag: "sdk-flows-react-v1.26.3",
+      })
+    ).errors,
+    [],
+  );
+
+  const promoted = promoteSdkRelease(
+    catalog,
+    "flows-react",
+    "1.26.3",
+    candidateSha,
+  );
+  const library = promoted.libraries.find(({ id }) => id === "flows-react");
+  assert.equal(library.latestReleaseVersion, "1.26.3");
+  assert.equal(library.releaseRef, "sdk-flows-react-v1.26.3");
+  assert.equal(library.releaseStatus, "released");
+  assert.equal(library.releaseSha, candidateSha);
+  assert.equal(
+    library.install,
+    "npm install @superboard/flows-react@1.26.3",
+  );
+  assert.equal(releaseTagFor(promoted, "flows-react"), library.releaseRef);
+  assert.deepEqual((await validateSdkCatalog(promoted)).errors, []);
+});
+
+test("unreleased entries cannot smuggle fake publication metadata", async () => {
+  const catalog = await loadSdkCatalog();
+  const forged = structuredClone(catalog);
+  const library = forged.libraries.find(({ id }) => id === "flows-js");
+  Object.assign(library, {
+    latestReleaseVersion: library.sourceVersion,
+    releaseRef: `sdk-flows-js-v${library.sourceVersion}`,
+    releaseSha: candidateSha,
+    install: `npm install ${library.packageName}@${library.sourceVersion}`,
+  });
+  const result = await validateSdkCatalog(forged);
+
+  for (const field of [
+    "latestReleaseVersion",
+    "releaseRef",
+    "releaseSha",
+    "install",
+  ]) {
+    assert.ok(
+      result.errors.includes(
+        `libraries.flows-js.${field} must be absent until the first release is published`,
+      ),
     );
   }
 });

@@ -21,14 +21,14 @@ function normalizedRepository(value) {
   return String(value).replace(/\.git$/u, "");
 }
 
-export function parseLockedGitDependencies(lockSource) {
+function parseLockedDependencies(lockSource, expectedSource) {
   const lines = lockSource.split("\n");
   const dependencies = new Map();
   let currentName;
   let current;
 
   function commitCurrent() {
-    if (currentName && current?.source === "git") {
+    if (currentName && current?.source === expectedSource) {
       dependencies.set(currentName, current);
     }
   }
@@ -61,6 +61,14 @@ export function parseLockedGitDependencies(lockSource) {
   }
   commitCurrent();
   return dependencies;
+}
+
+export function parseLockedGitDependencies(lockSource) {
+  return parseLockedDependencies(lockSource, "git");
+}
+
+export function parseLockedPathDependencies(lockSource) {
+  return parseLockedDependencies(lockSource, "path");
 }
 
 export function immutableSdkLocks(project, lockSource) {
@@ -97,8 +105,34 @@ export function immutableSdkLocks(project, lockSource) {
       resolvedRef: dependency["resolved-ref"],
     });
   }
-  if (result.length === 0) {
-    throw new Error("No fully published SDK dependency is locked");
+  return result;
+}
+
+export function candidateSdkLocks(project, lockSource) {
+  const locked = parseLockedPathDependencies(lockSource);
+  const result = [];
+  for (const [packageName, library] of Object.entries(project.libraries ?? {})) {
+    if (library.sourceVersion === library.releaseVersion) continue;
+    const dependency = locked.get(packageName);
+    if (!dependency) {
+      throw new Error(`${packageName} is missing from pubspec.lock as a path dependency`);
+    }
+    const expectedPath = `../../${library.path}`;
+    if (dependency.path !== expectedPath) {
+      throw new Error(
+        `${packageName} lock path must be ${expectedPath}, got ${dependency.path ?? "none"}`,
+      );
+    }
+    if (dependency.version !== library.sourceVersion) {
+      throw new Error(
+        `${packageName} lock version must be ${library.sourceVersion}, got ${dependency.version ?? "none"}`,
+      );
+    }
+    result.push({
+      packageName,
+      sourceVersion: library.sourceVersion,
+      path: dependency.path,
+    });
   }
   return result;
 }
@@ -173,7 +207,10 @@ async function run() {
     command === "verify-remote"
       ? await verifyRemoteImmutableSdkTags({ project, lockSource })
       : immutableSdkLocks(project, lockSource);
-  process.stdout.write(`${JSON.stringify({ immutableSdkLocks: entries }, null, 2)}\n`);
+  const candidates = candidateSdkLocks(project, lockSource);
+  process.stdout.write(
+    `${JSON.stringify({ immutableSdkLocks: entries, candidateSdkLocks: candidates }, null, 2)}\n`,
+  );
 }
 
 const invokedPath = process.argv[1]

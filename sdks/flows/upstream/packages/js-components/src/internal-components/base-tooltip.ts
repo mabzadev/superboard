@@ -1,0 +1,284 @@
+import {
+  arrow,
+  autoUpdate,
+  computePosition,
+  flip,
+  offset,
+  shift,
+  type Side,
+} from "@floating-ui/dom";
+import type { TooltipScrollPosition } from "@superboard/flows-shared";
+import {
+  type Action,
+  log,
+  type TooltipPlacement,
+  tooltipScrollPositionToScrollLogicalPosition,
+  tooltipScrollToTarget,
+} from "@superboard/flows-shared";
+import { clsx } from "clsx";
+// eslint-disable-next-line import/no-named-as-default -- correct import
+import DOMPurify from "dompurify";
+import type { TemplateResult } from "lit";
+import { html, LitElement, type PropertyValues } from "lit";
+import { property, query, queryAll, state } from "lit/decorators.js";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
+import { Close16 } from "../icons/close-16";
+import { observeQuerySelector } from "../lib/query-selector";
+import { ActionButton } from "./action-button";
+import { IconButton } from "./icon-button";
+import { Text } from "./text";
+import { Branding } from "./branding";
+
+const TARGET_ELEMENT_DATA_ATTRIBUTE = "data-flows-tooltip-target";
+
+class BaseTooltip extends LitElement {
+  @property()
+  title: string;
+  @property()
+  body: string;
+  @property()
+  targetElement: string;
+  @property()
+  placement?: TooltipPlacement;
+  @property()
+  scrollPosition?: TooltipScrollPosition;
+  @property({ type: Boolean })
+  overlay?: boolean;
+
+  @property({ attribute: false })
+  dots?: unknown;
+  @property({ attribute: false })
+  primaryButton?: Action;
+  @property({ attribute: false })
+  secondaryButton?: Action;
+  @property({ attribute: false })
+  onClose?: () => void;
+
+  @property({ type: Boolean })
+  showBranding: boolean;
+
+  get blockScrollPosition(): ScrollLogicalPosition | undefined {
+    return tooltipScrollPositionToScrollLogicalPosition(this.scrollPosition);
+  }
+
+  @query(".flows_basicsV2_tooltip_tooltip")
+  tooltip: HTMLElement;
+
+  @queryAll(".flows_basicsV2_tooltip_arrow")
+  arrows: [HTMLElement, HTMLElement];
+
+  @query(".flows_basicsV2_tooltip_overlay")
+  overlayElement: HTMLElement | null;
+
+  @state()
+  private _reference: Element | null = null;
+  @state()
+  private _isTargetInView = false;
+
+  autoUpdateCleanup: (() => void) | null = null;
+  observerCleanup: (() => void) | null = null;
+  scrollToTargetCleanup: (() => void) | null = null;
+
+  updated(changedProperties: PropertyValues): void {
+    if (changedProperties.has("_reference") && this._reference && this.blockScrollPosition) {
+      this.scrollToTargetCleanup = tooltipScrollToTarget({
+        reference: this._reference,
+        blockScrollPosition: this.blockScrollPosition,
+        onTargetInView: () => {
+          this._isTargetInView = true;
+        },
+      });
+    }
+
+    const tooltip = this.tooltip;
+    const reference = this._reference;
+    if (!this.autoUpdateCleanup && tooltip && reference) {
+      this.autoUpdateCleanup = autoUpdate(
+        reference,
+        tooltip,
+        () =>
+          void updateTooltip({
+            reference,
+            tooltip,
+            arrowEls: this.arrows,
+            overlay: this.overlayElement,
+            placement: this.placement,
+          }),
+        { animationFrame: true },
+      );
+    }
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    this.observerCleanup = observeQuerySelector(this.targetElement, (el) => {
+      const isEqual = this._reference === el;
+      if (isEqual) return;
+
+      const oldReference = this._reference;
+      oldReference?.removeAttribute(TARGET_ELEMENT_DATA_ATTRIBUTE);
+
+      this._reference = el;
+      this._reference?.setAttribute(TARGET_ELEMENT_DATA_ATTRIBUTE, "true");
+    });
+  }
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+
+    this._reference?.removeAttribute(TARGET_ELEMENT_DATA_ATTRIBUTE);
+
+    this.autoUpdateCleanup?.();
+    this.observerCleanup?.();
+    this.scrollToTargetCleanup?.();
+  }
+
+  firstUpdated(_changedProperties: PropertyValues): void {
+    if (!this.targetElement) {
+      log.error("Cannot render Tooltip without target element");
+    }
+  }
+
+  createRenderRoot(): this {
+    return this;
+  }
+
+  render(): TemplateResult | null {
+    const reference = this._reference;
+    if (!reference) {
+      log.error("Cannot render Tooltip without target element");
+      return null;
+    }
+    // Avoid rendering the tooltip when scrollPosition is defined and the target element is not in view
+    if (this.blockScrollPosition && !this._isTargetInView) return null;
+
+    const buttons = [];
+    if (this.secondaryButton)
+      buttons.push(ActionButton({ action: this.secondaryButton, variant: "secondary" }));
+    if (this.primaryButton)
+      buttons.push(ActionButton({ action: this.primaryButton, variant: "primary" }));
+
+    return html`
+      <div class="flows_basicsV2_tooltip_root">
+        ${this.overlay ? html` <div class="flows_basicsV2_tooltip_overlay"></div> ` : null}
+        <div class="flows_basicsV2_tooltip_tooltip" data-overlay=${this.overlay ? "true" : "false"}>
+          ${Text({
+            variant: "title",
+            className: "flows_basicsV2_tooltip_title",
+            children: this.title,
+          })}
+          ${Text({
+            variant: "body",
+            className: "flows_basicsV2_tooltip_body",
+            children: unsafeHTML(
+              DOMPurify.sanitize(this.body, {
+                FORCE_BODY: true,
+                ADD_ATTR: ["target"],
+              }),
+            ),
+          })}
+          ${this.dots || Boolean(buttons.length)
+            ? html`<div class="flows_basicsV2_tooltip_footer">
+                ${this.dots}
+                ${buttons.length
+                  ? html`<div className="flows_basicsV2_tooltip_buttons_wrapper">
+                      <div className="flows_basicsV2_tooltip_buttons">${buttons}</div>
+                    </div>`
+                  : null}
+              </div>`
+            : null}
+          ${this.onClose
+            ? IconButton({
+                "aria-label": "Close",
+                className: "flows_basicsV2_tooltip_close",
+                children: Close16(),
+                onClick: this.onClose,
+              })
+            : null}
+          ${this.showBranding
+            ? Branding({
+                className: "flows_basicsV2_tooltip_branding",
+                component: "basicsV2-tooltip",
+              })
+            : null}
+
+          <div
+            class=${clsx("flows_basicsV2_tooltip_arrow", "flows_basicsV2_tooltip_arrow-bottom")}
+          ></div>
+          <div
+            class=${clsx("flows_basicsV2_tooltip_arrow", "flows_basicsV2_tooltip_arrow-top")}
+          ></div>
+        </div>
+      </div>
+    `;
+  }
+}
+const baseTooltipTagName = "flows-base-tooltip";
+export const defineBaseTooltip = (): void => {
+  if (!customElements.get(baseTooltipTagName))
+    customElements.define(baseTooltipTagName, BaseTooltip);
+};
+
+const DISTANCE = 4;
+const ARROW_SIZE = 6;
+const OFFSET_DISTANCE = DISTANCE + ARROW_SIZE;
+const BOUNDARY_PADDING = 8;
+const ARROW_EDGE_PADDING = 8;
+
+export const updateTooltip = ({
+  reference,
+  tooltip,
+  placement,
+  arrowEls,
+  overlay,
+}: {
+  reference: Element;
+  tooltip: HTMLElement;
+  placement?: TooltipPlacement;
+  arrowEls: [HTMLElement, HTMLElement];
+  overlay: HTMLElement | null;
+}): Promise<void> => {
+  if (overlay) {
+    const targetPosition = reference.getBoundingClientRect();
+    overlay.style.top = `${targetPosition.top}px`;
+    overlay.style.left = `${targetPosition.left}px`;
+    overlay.style.width = `${targetPosition.width}px`;
+    overlay.style.height = `${targetPosition.height}px`;
+  }
+
+  return computePosition(reference, tooltip, {
+    placement,
+    middleware: [
+      flip({ fallbackPlacements: ["top", "bottom", "left", "right"] }),
+      shift({ crossAxis: true, padding: BOUNDARY_PADDING }),
+      arrow({ element: arrowEls[0], padding: ARROW_EDGE_PADDING }),
+      offset(OFFSET_DISTANCE),
+    ],
+  }).then(({ x, y, middlewareData, placement: finalPlacement }) => {
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+
+    tooltip.setAttribute("data-placement", finalPlacement);
+
+    if (middlewareData.arrow) {
+      const staticSide = ((): Side => {
+        if (finalPlacement.includes("top")) return "bottom";
+        if (finalPlacement.includes("bottom")) return "top";
+        if (finalPlacement.includes("left")) return "right";
+        return "left";
+      })();
+      const arrowX = middlewareData.arrow.x;
+      const arrowY = middlewareData.arrow.y;
+
+      arrowEls.forEach((arrowEl) => {
+        // eslint-disable-next-line eqeqeq -- null check is intended here
+        arrowEl.style.left = arrowX != null ? `${arrowX}px` : "";
+        // eslint-disable-next-line eqeqeq -- null check is intended here
+        arrowEl.style.top = arrowY != null ? `${arrowY}px` : "";
+        arrowEl.style.right = "";
+        arrowEl.style.bottom = "";
+        arrowEl.style[staticSide] = `${-ARROW_SIZE}px`;
+      });
+    }
+  });
+};

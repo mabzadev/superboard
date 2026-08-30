@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "target": "mbza-development",
+  "environment": "development",
+  "created_at": "2026-08-30T15:20:48Z",
+  "finalized_at": "2026-08-30T19:04:51.168Z",
+  "public_cutover": false,
+  "production_target_mutated": false,
+  "site_version_id": "56cbb24d-7a74-4b4a-b599-4a39c6e41f2a",
+  "api_version_id": "82cb54f7-b843-4792-ad7a-900d5734f1ec",
+  "migrations": [
+    "0010_plugin_store_project_scope.sql",
+    "0011_project_scoped_plugin_contracts.sql",
+    "0012_functional_front_contracts.sql",
+    "0013_repository_first_plugin_commands.sql"
+  ],
+  "secret_promotion": {
+    "bundle_confirmation": "CLOUDFLARE:SECRET-BUNDLE:mbza-development:development:bf4c986a39a9",
+    "promotion_confirmation": "CLOUDFLARE:SECRET-PROMOTE:mbza-development:development:efb788de7788",
+    "receipt_sha256": "sha256:cffd76a2cf824b7a13151090918703ed2e29a6a63070f343da0cadcc2ee3a3ca"
+  },
+  "backup": {
+    "artifact_count": 14,
+    "site_fts5_strategy": "d1_time_travel_bookmark",
+    "site_time_travel_bookmark": "00000002-00000dd4-000050d7-31b44dcdd25f9c5bf0662b6a947b56c2",
+    "test_receipt_sha256": "sha256:e1a0098ac8c3d62396cdd198af569b911c0f863f73303367b0bf5d07920bb9be",
+    "production_mode_receipt_sha256": "sha256:2f3a72b26eaa1a05a6f0d809da3604bc9cc06970fc0ab418748e6d37a88321ee"
+  },
+  "registry": {
+    "installable_plugins": 18,
+    "installable_stores": 41,
+    "migration_entities": 74,
+    "runtime_states_active": 18
+  },
+  "projects": [
+    {
+      "project_ref": "1-test",
+      "window_id": "store-authority-20260830-1-test",
+      "maintenance_disabled_at": "2026-08-30T13:58:06.968Z",
+      "source_rows": 36,
+      "stored_records": 36,
+      "populated_stores": 6,
+      "first_pass": {
+        "verified_entities": 74,
+        "repository_matches": 74,
+        "projection_matches": 74,
+        "receipt_sha256": "sha256:7ad8b1498a4113eca7bf8eaebc1f1574fd9c15b1d8f4773b1c733a406acb0381"
+      },
+      "second_pass": {
+        "resumed_entities": 74,
+        "repository_matches": 74,
+        "projection_matches": 74,
+        "receipt_sha256": "sha256:7f9535ba1c6d0aa2d19523a428c090142cfc54c478db8feb74c63db8129e05cc"
+      },
+      "reverse_delta": {
+        "replayable": true,
+        "changed": 0,
+        "deleted": 0,
+        "receipt_sha256": "sha256:28c4b7bf426b3c0b646ee73ed409b8484ec9bd04ba1ff234b8bb2edd00cdda9a"
+      },
+      "baseline_sha256": "sha256:004b6a390eeec40a15d10179e1b6633576eb96c3dbf9f1a67876889479d554ca"
+    },
+    {
+      "project_ref": "1-prod",
+      "window_id": "store-authority-20260830-1-prod",
+      "maintenance_disabled_at": "2026-08-30T14:30:51.025Z",
+      "source_rows": 37,
+      "stored_records": 37,
+      "populated_stores": 7,
+      "first_pass": {
+        "verified_entities": 74,
+        "repository_matches": 74,
+        "projection_matches": 74,
+        "receipt_sha256": "sha256:4580bae697f08c7503014bc0f293e9542515517e180bffc475129c48de7ec819"
+      },
+      "second_pass": {
+        "resumed_entities": 74,
+        "repository_matches": 74,
+        "projection_matches": 74,
+        "receipt_sha256": "sha256:28c59fa9cab19ad8fe66aea1afb4cb9fd1f5020b42d0e03746a396aef38f1595"
+      },
+      "reverse_delta": {
+        "replayable": true,
+        "changed": 0,
+        "deleted": 0,
+        "receipt_sha256": "sha256:c86a26c65d1d1e0aae9ce57cfc37233d6c9e5fad8e9502d2a0cd4fa5b73e41c3"
+      },
+      "baseline_sha256": "sha256:35d047988ad047de5ee2414642e7aac14eb07b915dd9cb392153f742ad021a18"
+    }
+  ],
+  "live_data_source_check": {
+    "plugin_id": "supbrd-plugmod-flows",
+    "data_source_id": "supbrd-plugmod-flows.data_source.workflows",
+    "store_id": "supbrd-plugmod-flows.store.definitions",
+    "project_ref": "1-prod",
+    "status": 200,
+    "items": 1,
+    "payload_shape": "business_object"
+  },
+  "repository_first_commands": {
+    "authority": "site_d1_before_transient_api_worker",
+    "failure_policy": "fail_closed",
+    "request_and_response_encryption": "AES-GCM",
+    "idempotency": "caller_operation_id",
+    "outbox": "append_only",
+    "migration_converged": true,
+    "site_version_id": "56cbb24d-7a74-4b4a-b599-4a39c6e41f2a",
+    "compatibility_routes": ["/api/v1/*", "/api/v2/*"],
+    "runtime_tests": {
+      "site_unit_files": 10,
+      "site_unit_tests": 24,
+      "site_runtime_files": 3,
+      "site_runtime_tests": 15,
+      "worker_dispatch_after_repository_acceptance": true,
+      "idempotent_replay_without_second_worker_dispatch": true
+    },
+    "vivaldi_smoke": {
+      "project_ref": "1-prod",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "created_operation_id": "4d74095c-a60b-477f-802c-74902ead2a73",
+      "created_status": 201,
+      "deleted_operation_id": "294a84a6-acf2-4439-9c82-afdd11ea9efe",
+      "deleted_status": 200,
+      "completed_operations": 2,
+      "outbox_events": 4,
+      "plaintext_payload_leaks": 0,
+      "smoke_record_removed": true,
+      "api_v2_surface": "/products/customers",
+      "api_v2_surface_rendered": true
+    }
+  },
+  "front_candidate": {
+    "candidate_id": "01M19MG9YNYYMM0M4VJZK7GAY7",
+    "release_id": "01M19MG9YN6KQ4KQVF4FRETW1Q",
+    "content_checksum": "sha256:2aad752715597eb1c2e59209dfd5ef6d7e2ab91189b7080a523c0057aae04495",
+    "validation_set_checksum": "sha256:3596b8485b170004b985dd4a22207bd02eff1bed1a894b3387293b9329fd1dd6",
+    "validation_receipts": 13,
+    "plugin_lock_count": 19,
+    "route_count": 114,
+    "preview_id": "94a6c950-7fbc-4728-9a96-228946c99090",
+    "status": "activated",
+    "approved_at": "2026-08-30T18:42:04.691Z",
+    "activated_at": "2026-08-30T18:42:23.892Z",
+    "activation_id": "5f12f930-1a18-40eb-9744-e639d0094990",
+    "previous_release_id": "01M190CCWS162J978MKGDEYS0Z",
+    "pointer_revision": 6,
+    "approval_reauthentication_receipts": 1,
+    "activation_reauthentication_receipts": 1,
+    "activation_history_receipts": 1,
+    "activation_outbox_receipts": 1,
+    "vivaldi_active_surfaces": [
+      "/analytics",
+      "/identity/en/users",
+      "/marketing/settings",
+      "/products/offerings",
+      "/support/inbox",
+      "/flows/workflows",
+      "/infrastructure"
+    ],
+    "vivaldi_console_errors": 0
+  },
+  "temporary_access": {
+    "revoked_token_names": [
+      "codex-final-front-rehearsal",
+      "codex-full-front-rehearsal"
+    ],
+    "remaining_tokens": 0
+  }
+}

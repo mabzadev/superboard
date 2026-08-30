@@ -1,13 +1,4 @@
-# Add these as public Git dependencies in FlutterFlow during development.
-# Replace `dev` with immutable SDK tags before a production release.
-opengrow_flutterflow:
-  git:
-    url: https://github.com/mabzadev/superboard.git
-    ref: sdk-flutterflow-v2.2.5
-    path: sdks/flutterflow
-
-opengrow_flutterflow_messaging:
-  git:
-    url: https://github.com/mabzadev/superboard.git
-    ref: sdk-flutterflow-messaging-v1.3.0
-    path: sdks/flutterflow_messaging
+# Use the reviewed SuperBoard workspace package while developing the reference app.
+# The release gate replaces this path with the immutable coordinated SDK tag.
+superboard_flutterflow:
+  path: ../../sdks/flutterflow

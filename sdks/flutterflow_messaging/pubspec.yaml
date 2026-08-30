@@ -1,5 +1,5 @@
 name: opengrow_flutterflow_messaging
-description: FlutterFlow client for canonical OpenGrow Support, with Messaging compatibility aliases.
+description: SuperBoard Support client source retained for pinned FlutterFlow builds.
 version: 1.3.0
 publish_to: none
 

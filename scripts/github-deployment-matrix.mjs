@@ -108,16 +108,16 @@ export function validateDeploymentConfiguration(configuration) {
         "identity",
         "app",
         "products",
-        "paywalls",
         "dynamic-links",
         "support",
         "analytics",
         "marketing",
-        "onboardings",
+        "flows",
         "billing",
         "custom",
         "api",
         "mcp",
+        "site",
         "dashboard",
       ];
       if (

@@ -16,7 +16,17 @@ before(() => {
   databases.api = createDatabase("api", "workers/api/migrations");
   databases.billing = databases.api;
   databases.messaging = createDatabase("messaging", "workers/messaging/migrations");
-  for (const module of ["app", "products", "paywalls", "dynamic-links", "support"]) {
+  databases.identity = createDatabase("identity", "workers/identity/migrations");
+  databases.email = createDatabase("email", "workers/email/migrations");
+  databases.files = createDatabase("files", "workers/files/migrations");
+  databases.site = createDatabase("site", "apps/site/migrations");
+  execute(databases.site, `
+    CREATE TABLE revisions(id TEXT PRIMARY KEY,collection TEXT NOT NULL,entry_id TEXT NOT NULL,data TEXT NOT NULL,author_id TEXT,created_at TEXT);
+    CREATE TABLE taxonomies(id TEXT PRIMARY KEY,name TEXT NOT NULL,slug TEXT NOT NULL,label TEXT NOT NULL,parent_id TEXT,data TEXT);
+    CREATE TABLE audit_logs(id TEXT PRIMARY KEY,timestamp TEXT,actor_id TEXT,actor_ip TEXT,action TEXT NOT NULL,resource_type TEXT,resource_id TEXT,details TEXT,status TEXT);
+    CREATE TABLE _emdash_rate_limits(key TEXT NOT NULL,window TEXT NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(key,window));
+  `);
+  for (const module of ["app", "products", "paywalls", "dynamic-links", "support", "flows", "analytics", "marketing", "onboardings"]) {
     databases[module] = createDatabase(module, `workers/${module}/migrations`);
   }
 });
@@ -26,7 +36,10 @@ after(() => rmSync(temporary, { recursive: true, force: true }));
 test("every registry extraction and destination query matches the checked-in D1 schemas", () => {
   for (const entity of MODULE_CUTOVER_REGISTRY) {
     assert.doesNotThrow(() => query(databases[entity.source.database], render(entity.source.query)), `${entity.id} source query`);
-    assert.doesNotThrow(() => query(databases[entity.module], render(entity.target.query)), `${entity.id} target query`);
+    const targetDatabase = entity.repositoryOnly
+      ? databases[entity.source.database]
+      : databases[entity.module];
+    assert.doesNotThrow(() => query(targetDatabase, render(entity.target.query)), `${entity.id} target query`);
   }
   for (const guard of MODULE_CUTOVER_GUARDS) {
     assert.doesNotThrow(() => query(databases[guard.source.database], render(guard.source.query)), `${guard.id} guard query`);
@@ -35,6 +48,7 @@ test("every registry extraction and destination query matches the checked-in D1 
 
 test("every registry upsert conflict target matches a real destination constraint", () => {
   for (const entity of MODULE_CUTOVER_REGISTRY) {
+    if (entity.repositoryOnly) continue;
     const values = Object.fromEntries(entity.columns.map((column) => [column, null]));
     const sql = upsertSql(entity, [values]);
     const conflict = entity.keys.map((column) => `"${column}"`).join(", ");
@@ -156,5 +170,9 @@ function sourceRows(id) {
 }
 
 function render(sql) {
-  return sql.replaceAll(":project_id", "12").replaceAll(":instance_id", "10").replaceAll(":is_test", "1");
+  return sql
+    .replaceAll(":project_id", "12")
+    .replaceAll(":instance_id", "10")
+    .replaceAll(":canonical_instance_id", "'test-instance'")
+    .replaceAll(":is_test", "1");
 }

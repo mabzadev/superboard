@@ -1,0 +1,88 @@
+import type { Block } from "@superboard/flows-shared";
+import { expect, test } from "@playwright/test";
+import { randomUUID } from "crypto";
+import { mockBlocksEndpoint } from "./utils";
+
+test.beforeEach(async ({ page }) => {
+  await page.routeWebSocket(
+    (url) => url.pathname === "/api/v1/flows/ws/sdk/block-updates",
+    () => {},
+  );
+});
+
+const getBlocks = (): Block[] => {
+  const workflowId = randomUUID();
+  const blockStateValue: Block = {
+    id: randomUUID(),
+    workflowId,
+    data: {
+      title: "Block State Title",
+    },
+    propertyMeta: [{ key: "checked2", type: "state-memory", value: false }],
+    slottable: false,
+    exitNodes: [],
+    type: "component",
+    componentType: "BlockStateCmp",
+  };
+
+  return [
+    {
+      id: randomUUID(),
+      workflowId,
+      data: {
+        title: "Modal Title",
+      },
+      propertyMeta: [
+        {
+          key: "blockState",
+          type: "block-state",
+          value: blockStateValue,
+        },
+      ],
+      slottable: false,
+      exitNodes: [],
+      type: "component",
+      componentType: "BasicsV2Modal",
+    },
+  ];
+};
+
+const run = (packageName: string) => {
+  test(`${packageName} - should pass block state to the component props`, async ({ page }) => {
+    const blocks = getBlocks();
+    await mockBlocksEndpoint(page, blocks);
+    await page.goto(`/${packageName}.html`);
+    await expect(page.locator(".current-blocks")).toHaveText(
+      JSON.stringify([
+        {
+          id: blocks[0]?.id,
+          type: "component",
+          component: "BasicsV2Modal",
+          props: {
+            __flows: {
+              id: blocks[0]?.id,
+              workflowId: blocks[0]?.workflowId,
+              legacyBranding: false,
+            },
+            title: "Modal Title",
+            blockState: {
+              __flows: {
+                id: (blocks[0]?.propertyMeta?.[0]?.value as any)?.id,
+                workflowId: blocks[0]?.workflowId,
+                legacyBranding: false,
+              },
+              title: "Block State Title",
+              checked2: {
+                value: false,
+                triggers: [],
+              },
+            },
+          },
+        },
+      ]),
+    );
+  });
+};
+
+run("js");
+run("react");

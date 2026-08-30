@@ -4,7 +4,7 @@ import {
   signProjectContext,
   type InternalProjectContext,
 } from "@superboard/contracts/project-context";
-import { getAuthContext } from "../lib/auth";
+import { getRequestAuthContext } from "../lib/auth";
 import {
   domainError,
   resolveAuthorizedProjectContext,
@@ -45,7 +45,7 @@ async function authorize(
   c: AdminContext,
 ): Promise<InternalProjectContext | Response> {
   const requestId = c.req.header("x-request-id") || crypto.randomUUID();
-  const auth = await getAuthContext(c.env, c.req.header("authorization"));
+  const auth = await getRequestAuthContext(c.env, c.req.raw.headers);
   if (!auth) {
     return domainError(
       requestId,

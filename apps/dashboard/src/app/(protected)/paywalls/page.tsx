@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { PaywallsPage } from "@/components/modules/PaywallsPage";
-
-export const metadata: Metadata = { title: "Paywalls · SuperBoard" };
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <PaywallsPage />;
+  redirect("/flows/workflows?origin=paywalls");
 }

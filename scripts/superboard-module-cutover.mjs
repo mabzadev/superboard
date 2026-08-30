@@ -164,6 +164,7 @@ async function selectAdapter(args, context) {
     environment: context.environment,
     allowWrites: args.apply === true,
     gatewayToken: process.env.OPENGROW_CUTOVER_TOKEN,
+    repositoryEncryptionKey: process.env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY,
   });
 }
 

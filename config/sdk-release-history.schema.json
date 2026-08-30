@@ -34,7 +34,11 @@
               "ios",
               "android",
               "javascript",
-              "react-native"
+              "react-native",
+              "flows-js",
+              "flows-react",
+              "flows-js-components",
+              "flows-react-components"
             ]
           },
           "version": {

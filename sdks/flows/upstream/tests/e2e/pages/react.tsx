@@ -1,0 +1,196 @@
+import type {
+  ComponentProps,
+  StateMemory as IStateMemory,
+  Action as IAction,
+  LinkComponentType,
+  CustomFetch,
+  LanguageOption,
+} from "@superboard/flows-react";
+import {
+  FlowsProvider,
+  FlowsSlot,
+  resetAllWorkflowsProgress,
+  resetWorkflowProgress,
+  startWorkflow,
+  useCurrentFloatingBlocks,
+  fetchWorkflows,
+} from "@superboard/flows-react";
+import type { FC } from "react";
+import { StrictMode, useState } from "react";
+import { createRoot } from "react-dom/client";
+
+import { HashRouter, Link, Route, Routes } from "react-router";
+
+import * as components from "@superboard/flows-react-components";
+import * as tourComponents from "@superboard/flows-react-components/tour";
+import * as surveyComponents from "@superboard/flows-react-components/survey";
+import "@superboard/flows-react-components/index.css";
+
+const customFetchFn: CustomFetch = (url, options) => {
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...(options?.headers as Record<string, string>),
+      "x-test-header": "my-custom-value",
+    },
+  });
+};
+
+const apiUrl = new URLSearchParams(window.location.search).get("apiUrl") ?? undefined;
+const customFetch =
+  new URLSearchParams(window.location.search).get("customFetch") === "true"
+    ? customFetchFn
+    : undefined;
+const noUserId = new URLSearchParams(window.location.search).get("noUserId") === "true";
+const noCurrentBlocks =
+  new URLSearchParams(window.location.search).get("noCurrentBlocks") === "true";
+const language = new URLSearchParams(window.location.search).get("language") as LanguageOption;
+const projectId = new URLSearchParams(window.location.search).get("projectId");
+const enableLinkComponent =
+  new URLSearchParams(window.location.search).get("customNavigation") === "true";
+const slotLimit = new URLSearchParams(window.location.search).get("slotLimit");
+
+const Card: FC<ComponentProps<{ text: string }>> = (props) => (
+  <div
+    className="flows-card"
+    style={{
+      border: "1px solid black",
+      padding: "16px",
+      borderRadius: "4px",
+    }}
+  >
+    <p className="card-text">{props.text}</p>
+    <p>key: {props.__flows.key}</p>
+  </div>
+);
+
+const BlockTrigger: FC<
+  ComponentProps<{
+    title: string;
+    trigger: () => void;
+    items: { text: string; trigger?: () => void }[];
+  }>
+> = (props) => (
+  <div className="flows-card">
+    <p>{props.title}</p>
+    <button onClick={props.trigger}>Trigger</button>
+    <ul>
+      {props.items.map((item) => (
+        <li key={item.text}>
+          <button onClick={item.trigger}>{item.text}</button>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const StateMemory: FC<
+  ComponentProps<{
+    title: string;
+    checked: IStateMemory;
+  }>
+> = (props) => (
+  <div className="flows-card">
+    <p>{props.title}</p>
+    <p>checked: {props.checked.value.toString()}</p>
+    <button onClick={() => props.checked.setValue(true)}>true</button>
+    <button onClick={() => props.checked.setValue(false)}>false</button>
+  </div>
+);
+
+const Action: FC<ComponentProps<{ title: string; action: IAction }>> = (props) => {
+  const ActionEl = props.action.url ? "a" : "button";
+  return (
+    <div className="flows-card">
+      <p>{props.title}</p>
+      <ActionEl
+        href={props.action.url}
+        target={props.action.openInNew ? "_blank" : undefined}
+        onClick={props.action.callAction}
+      >
+        {props.action.label}
+      </ActionEl>
+    </div>
+  );
+};
+
+const Home: FC = () => {
+  const floatingBlocks = useCurrentFloatingBlocks();
+
+  const handleChangeLocation = () => {
+    window.history.pushState({}, "", window.location.pathname + "?v=1");
+  };
+
+  return (
+    <>
+      <h1>heading 1</h1>
+      <h2 className="age-10">Subtitle</h2>
+
+      <FlowsSlot
+        id="my-slot"
+        limit={slotLimit ? Number(slotLimit) : undefined}
+        placeholder={<p>Slot placeholder</p>}
+      />
+
+      {!noCurrentBlocks && <p className="current-blocks">{JSON.stringify(floatingBlocks)}</p>}
+
+      <button onClick={() => resetAllWorkflowsProgress()}>resetAllWorkflowsProgress</button>
+      <button onClick={() => resetWorkflowProgress("my-workflow-id")}>resetWorkflowProgress</button>
+      <button onClick={() => startWorkflow("my-start-block")}>startWorkflow</button>
+      <button onClick={handleChangeLocation}>changeLocation</button>
+      <button onClick={() => fetchWorkflows()}>fetchWorkflows</button>
+    </>
+  );
+};
+
+const AnotherPage: FC = () => {
+  return (
+    <>
+      <h1>Another Page</h1>
+    </>
+  );
+};
+
+const LinkComponent: LinkComponentType = ({ href, children, className, onClick }) => (
+  <Link to={href} className={className} onClick={onClick}>
+    {children}
+  </Link>
+);
+
+const App: FC = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <HashRouter>
+      <FlowsProvider
+        projectId={projectId ?? "projectId"}
+        environment="prod"
+        userId={noUserId ? null : "testUserId"}
+        language={language}
+        userProperties={{
+          email: "test@flows.sh",
+          age: 10,
+          count,
+        }}
+        apiUrl={apiUrl}
+        customFetch={customFetch}
+        components={{ ...components, Card, BlockTrigger, StateMemory, Action }}
+        tourComponents={{ ...tourComponents, Card, Action }}
+        surveyComponents={{ ...surveyComponents }}
+        LinkComponent={enableLinkComponent ? LinkComponent : undefined}
+      >
+        <Routes>
+          <Route index element={<Home />} />
+          <Route path="/another-page" element={<AnotherPage />} />
+        </Routes>
+        <button onClick={() => setCount((p) => p + 1)}>Increment</button>
+      </FlowsProvider>
+    </HashRouter>
+  );
+};
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

@@ -69,6 +69,45 @@ Available APIs: `configure`, `logIn`, `logOut`, `getOfferings`,
 `getCustomerInfo`, `isEntitled`, `purchasePackage`, `restorePurchases`,
 `syncPurchases`, `customerInfoStream`, and `purchaseResultStream`.
 
+## SuperBoard Support
+
+Use the gateway URL exactly as configured for the application. The Support
+client appends native resource paths such as `/conversations`; callers must not
+append an additional API version.
+
+```dart
+import 'package:superboard_flutter/superboard_support.dart';
+
+final support = SuperBoardSupportClient(
+  baseUri: Uri.parse(
+    'https://api.example.com/api/v1/support-client',
+  ),
+  projectId: 42,
+  identityToken: identityToken,
+  identityTokenProvider: refreshIdentityToken,
+);
+
+final conversation = await support.createConversation(
+  clientConversationId: 'support-${DateTime.now().microsecondsSinceEpoch}',
+  subject: 'Account question',
+);
+await support.sendMessage(
+  conversation.id,
+  body: 'Hello',
+  clientMessageId: 'message-${DateTime.now().microsecondsSinceEpoch}',
+);
+
+final realtime = SuperBoardSupportRealtime(support);
+realtime.events.listen(handleSupportEvent);
+await realtime.connect(conversation.id);
+```
+
+The same client covers contact attributes, events, inbox members, eligible
+proactive support, conversation labels, transcripts, Help Center content, CSAT,
+attachments, and configured meetings. Errors are exposed as
+`SuperBoardSupportException` with stable `code`, `retryable`, `requestId`, and
+redacted `details` fields.
+
 The SDK sends StoreKit 2 JWS transactions or Google purchase tokens to SuperBoard.
 It stores unfinished transactions in an encrypted outbox, verifies the ES256
 CustomerInfo JWS, and completes a purchase only after server verification and
@@ -399,6 +438,47 @@ await superboard.logCustomPurchase(
 ```
 
 Use `.cancel` and `.refund` transaction types for cancellations and refunds. For store purchases, these are detected automatically via platform server notifications.
+
+## Flows
+
+Flows is native Dart code and connects directly to the SuperBoard Flows Worker.
+It does not embed a web view or depend on an external Flows runtime. Supply the
+absolute SuperBoard API URL for the active target:
+
+```dart
+await SuperBoardFlows.initialize(
+  apiUrl: 'https://your-board.example/api/v1/flows',
+  projectId: 'project_ref',
+  environment: 'production',
+  sdkKey: 'environment_sdk_key',
+  userId: currentUser.id,
+  language: 'fr-CH',
+  userProperties: {'plan': 'pro'},
+);
+```
+
+The environment key is sent only in the dedicated HTTP header and in the
+WebSocket authentication query. It is not written to encrypted block storage,
+event payloads, analytics, or debug logs. Rotating the key and calling
+`setContext` with the new value reconnects realtime with the new credential.
+
+Place `SuperBoardFlowsOverlay` around the application content for floating
+blocks and use `SuperBoardFlowsSlot(slotId: 'home')` for inline blocks. Wrap
+native targets with `SuperBoardFlowAnchor(name: 'settings-button')` so tours,
+hints, and tooltips can locate them without DOM selectors.
+
+The SDK provides native Card, Floating Checklist, Hint, Modal, Tooltip, Survey,
+Tour, and `superboard-commerce` rendering. The commerce component delegates
+offer loading, checkout, receipt validation, and restoration to
+`SuperBoardPurchases`; configure Purchases before rendering it. Flows receives
+only the verified outcome transition and never reports price or revenue.
+Register application-specific components with
+`SuperBoardFlowBuilderRegistry.instance.register`. The client exposes
+`startWorkflow`, individual/global reset, `fetchWorkflows`, language and user
+property updates, as well as floating/slot streams. Blocks and progress context
+are cached in encrypted device storage, including running tours and triggered
+surveys; HTTP recovery does not depend on the WebSocket, and realtime updates
+reconnect with bounded backoff.
 
 ## API Reference
 

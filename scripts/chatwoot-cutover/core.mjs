@@ -16,6 +16,15 @@ const CONFIGURATION_TYPES = Object.freeze({
   agent_bots: "agent_bot",
 });
 
+const SUPPORT_PLUGIN_ID = "supbrd-plugmod-support";
+const SUPPORT_STORE_BY_ENTITY = Object.freeze({
+  contacts: "contacts",
+  configuration: "conversations",
+  conversations: "conversations",
+  messages: "messages",
+  attachments: "messages",
+});
+
 export const CHATWOOT_TABLES = Object.freeze([
   entity("contacts", "support_contacts", [
     "id", "project_id", "external_user_id", "name", "email", "phone",
@@ -327,7 +336,19 @@ export function renderChatwootSql(transformation) {
 }
 
 function entity(id, table, columns, keys, jsonColumns = []) {
-  return { id, module: "support", target: { table }, columns, keys, jsonColumns };
+  const storeName = SUPPORT_STORE_BY_ENTITY[id];
+  if (!storeName) throw new Error(`Chatwoot entity ${id} has no canonical support Store`);
+  return {
+    id,
+    module: "support",
+    target: { table },
+    columns,
+    keys,
+    jsonColumns,
+    pluginId: SUPPORT_PLUGIN_ID,
+    storeId: `${SUPPORT_PLUGIN_ID}.store.${storeName}`,
+    repositoryId: `${SUPPORT_PLUGIN_ID}.repository.${table}`,
+  };
 }
 
 function datasetEvidence(rows) {

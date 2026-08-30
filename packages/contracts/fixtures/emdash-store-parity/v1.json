@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "instance_id": "vocostar",
+  "aliases": { "projectId": "vocostar", "pid": "vocostar" },
+  "application_user": { "identifier": "user-1", "attributes": { "active": true } },
+  "flow_state": {
+    "projectId": "vocostar",
+    "environment": "production",
+    "userId": "user-1",
+    "language": "fr",
+    "userProperties": { "active": true },
+    "blocks": [],
+    "tourProgress": {},
+    "activeSurveyBlockStates": [],
+    "pendingCommands": []
+  },
+  "customer_event": {
+    "id": "event-1",
+    "customer_id": "user-1",
+    "type": "app_open",
+    "platform": "ios",
+    "occurred_at": "2026-08-30T00:00:00.000Z",
+    "metadata": { "authority": "emdash" }
+  }
+}

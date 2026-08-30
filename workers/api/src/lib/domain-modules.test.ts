@@ -14,6 +14,7 @@ import {
 } from "./domain-modules";
 
 const INTERNAL_SECRET = "internal-module-secret-for-unit-tests";
+const FLOWS_INTERNAL_SECRET = "flows-dedicated-secret-for-unit-tests";
 
 describe("domain module route contract", () => {
   it.each([
@@ -88,6 +89,28 @@ describe("domain module route contract", () => {
 });
 
 describe("gateway to domain service binding", () => {
+  it("accepts the signed Site operator bridge on module routes", async () => {
+    const fetch = vi.fn(async () => Response.json({ data: [] }));
+    const testEnv = gatewayEnv({
+      SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret",
+      ANALYTICS_MODULE: { fetch } as unknown as Fetcher,
+    });
+
+    const response = await app.request(
+      "/api/v1/analytics/projects/10-prod/overview",
+      {
+        headers: {
+          "X-SuperBoard-Site-Operator": "operator@example.test",
+          "X-SuperBoard-Internal-Token": "site-bridge-secret",
+        },
+      },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("blocks module writes while allowing reads during project cutover", async () => {
     const fetch = vi.fn(async () => Response.json({ data: [] }));
     const testEnv = gatewayEnv(
@@ -242,6 +265,7 @@ describe("gateway to domain service binding", () => {
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
+      message: "Project access denied",
       error: {
         code: "project_forbidden",
         message: "Project access denied",
@@ -322,6 +346,7 @@ describe("gateway to domain service binding", () => {
 
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({
+      message: "app service request failed",
       error: {
         code: "module_request_failed",
         message: "app service request failed",
@@ -330,6 +355,149 @@ describe("gateway to domain service binding", () => {
         retryable: true,
       },
     });
+  });
+
+  it("serves legacy dashboard routes from Flows after the MBZA cutover", async () => {
+    let internalRequest: Request | undefined;
+    const testEnv = gatewayEnv({
+      FLOWS_MODULE: {
+        fetch: vi.fn(async (request: Request) => {
+          internalRequest = request;
+          return Response.json({ data: [] });
+        }),
+      } as unknown as Fetcher,
+    });
+    const token = await accessToken(testEnv);
+    const response = await app.request(
+      "/api/v1/paywalls/projects/10-prod/statistics?from=2026-08-01",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Request-Id": "legacy-flows-admin",
+        },
+      },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(internalRequest?.url).toBe(
+      "https://flows.internal/internal/v1/legacy/paywalls/statistics?from=2026-08-01",
+    );
+    const verification = await verifyInternalProjectContextRequest(
+      internalRequest!,
+      FLOWS_INTERNAL_SECRET,
+      "flows",
+    );
+    expect(verification).toMatchObject({
+      ok: true,
+      context: {
+        module: "flows",
+        projectId: 11,
+        projectRef: "10-prod",
+      },
+    });
+  });
+
+  it("keeps legacy dashboard traffic on the old Worker until this project is verified and enabled", async () => {
+    let internalRequest: Request | undefined;
+    const oldFetch = vi.fn(async (request: Request) => {
+      internalRequest = request;
+      return Response.json({ data: [] });
+    });
+    const flowsFetch = vi.fn(async () => Response.json({ data: [] }));
+    const testEnv = gatewayEnv(
+      {
+        PAYWALLS_MODULE: { fetch: oldFetch } as unknown as Fetcher,
+        FLOWS_MODULE: { fetch: flowsFetch } as unknown as Fetcher,
+      },
+      true,
+      false,
+      false,
+    );
+    const token = await accessToken(testEnv);
+    const response = await app.request(
+      "/api/v1/paywalls/projects/10-prod/statistics",
+      { headers: { Authorization: `Bearer ${token}` } },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(oldFetch).toHaveBeenCalledOnce();
+    expect(flowsFetch).not.toHaveBeenCalled();
+    expect(internalRequest?.url).toBe(
+      "https://paywalls.internal/internal/v1/statistics",
+    );
+  });
+
+  it("preserves the canonical project-ref segment for native Flows admin routes", async () => {
+    let internalRequest: Request | undefined;
+    const testEnv = gatewayEnv({
+      FLOWS_MODULE: {
+        fetch: vi.fn(async (request: Request) => {
+          internalRequest = request;
+          return Response.json({ data: [] });
+        }),
+      } as unknown as Fetcher,
+    });
+    const token = await accessToken(testEnv);
+    const response = await app.request(
+      "/api/v1/flows/projects/10-prod/workflows",
+      { headers: { Authorization: `Bearer ${token}` } },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(internalRequest?.url).toBe(
+      "https://flows.internal/internal/v1/projects/10-prod/workflows",
+    );
+    await expect(
+      verifyInternalProjectContextRequest(
+        internalRequest!,
+        FLOWS_INTERNAL_SECRET,
+        "flows",
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      context: { projectRef: "10-prod", module: "flows" },
+    });
+    await expect(
+      verifyInternalProjectContextRequest(
+        internalRequest!,
+        INTERNAL_SECRET,
+        "flows",
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      code: "internal_auth_invalid",
+    });
+  });
+
+  it("uses the platform module token only as a Flows rollout fallback", async () => {
+    let internalRequest: Request | undefined;
+    const testEnv = gatewayEnv({
+      FLOWS_INTERNAL_TOKEN: undefined,
+      FLOWS_MODULE: {
+        fetch: vi.fn(async (request: Request) => {
+          internalRequest = request;
+          return Response.json({ data: [] });
+        }),
+      } as unknown as Fetcher,
+    });
+    const token = await accessToken(testEnv);
+    const response = await app.request(
+      "/api/v1/flows/projects/10-prod/workflows",
+      { headers: { Authorization: `Bearer ${token}` } },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(
+      verifyInternalProjectContextRequest(
+        internalRequest!,
+        INTERNAL_SECRET,
+        "flows",
+      ),
+    ).resolves.toMatchObject({ ok: true });
   });
 });
 
@@ -440,6 +608,71 @@ describe("Access Key SDK module gateway", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "sdk_credentials_required" },
     });
+  });
+
+  it("serves legacy SDK aliases from Flows after cutover", async () => {
+    let internalRequest: Request | undefined;
+    const testEnv = sdkGatewayEnv({
+      FLOWS_MODULE: {
+        fetch: vi.fn(async (request: Request) => {
+          internalRequest = request;
+          return Response.json({ data: null });
+        }),
+      } as unknown as Fetcher,
+    });
+    const response = await app.request(
+      "https://sdk.test/api/v1/onboardings/resolve",
+      {
+        method: "POST",
+        headers: sdkHeaders(),
+        body: JSON.stringify({ placement: "first-run" }),
+      },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(internalRequest?.url).toBe(
+      "https://flows.internal/internal/v1/legacy/onboardings/placements/resolve",
+    );
+    await expect(
+      verifyInternalProjectContextRequest(
+        internalRequest!,
+        FLOWS_INTERNAL_SECRET,
+        "flows",
+      ),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
+  it("keeps legacy SDK traffic on the old Worker while the project routing gate is disabled", async () => {
+    let internalRequest: Request | undefined;
+    const oldFetch = vi.fn(async (request: Request) => {
+      internalRequest = request;
+      return Response.json({ data: null });
+    });
+    const flowsFetch = vi.fn(async () => Response.json({ data: null }));
+    const testEnv = sdkGatewayEnv(
+      {
+        ONBOARDINGS_MODULE: { fetch: oldFetch } as unknown as Fetcher,
+        FLOWS_MODULE: { fetch: flowsFetch } as unknown as Fetcher,
+      },
+      { flowsCutover: false },
+    );
+    const response = await app.request(
+      "https://sdk.test/api/v1/onboardings/resolve",
+      {
+        method: "POST",
+        headers: sdkHeaders(),
+        body: JSON.stringify({ placement: "first-run" }),
+      },
+      testEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(oldFetch).toHaveBeenCalledOnce();
+    expect(flowsFetch).not.toHaveBeenCalled();
+    expect(internalRequest?.url).toBe(
+      "https://onboardings.internal/internal/v1/placements/resolve",
+    );
   });
 
   it.each([
@@ -600,6 +833,124 @@ describe("Access Key SDK module gateway", () => {
   );
 });
 
+describe("public Flows SDK gateway", () => {
+  it.each([
+    ["POST", "/api/v1/flows/v2/sdk/blocks", "/v2/sdk/blocks"],
+    [
+      "GET",
+      "/api/v1/flows/ws/sdk/block-updates?projectId=11&environment=production&userId=user-1",
+      "/ws/sdk/block-updates?projectId=11&environment=production&userId=user-1",
+    ],
+  ])(
+    "streams %s %s to the private Flows binding without Dashboard auth",
+    async (method, publicPath, internalPath) => {
+      let forwarded: Request | undefined;
+      const environment = gatewayEnv({
+        FLOWS_MODULE: {
+          fetch: vi.fn(async (request: Request) => {
+            forwarded = request;
+            return Response.json({ blocks: [] });
+          }),
+        } as unknown as Fetcher,
+      });
+      const response = await app.request(
+        publicPath,
+        {
+          method,
+          headers: {
+            Authorization: "Bearer must-not-leak",
+            Cookie: "session=must-not-leak",
+            "X-Internal-Token": "must-not-leak",
+            "X-Flows-Version": "@superboard/flows-js@1.0.0",
+            "X-SuperBoard-Flows-SDK-Key": "environment-secret",
+            Origin: "https://customer.example",
+            ...(method === "GET"
+              ? { Upgrade: "websocket", Connection: "Upgrade" }
+              : { "Content-Type": "application/json" }),
+          },
+          ...(method === "POST"
+            ? {
+                body: JSON.stringify({
+                  projectId: 11,
+                  environment: "production",
+                  userId: "user-1",
+                }),
+              }
+            : {}),
+        },
+        environment,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("access-control-allow-origin")).toBe(
+        "https://customer.example",
+      );
+      const target = new URL(forwarded!.url);
+      expect(`${target.pathname}${target.search}`).toBe(internalPath);
+      expect(forwarded?.headers.get("authorization")).toBeNull();
+      expect(forwarded?.headers.get("cookie")).toBeNull();
+      expect(forwarded?.headers.get("x-internal-token")).toBeNull();
+      expect(forwarded?.headers.get("x-flows-version")).toBe(
+        "@superboard/flows-js@1.0.0",
+      );
+      expect(forwarded?.headers.get("x-superboard-flows-sdk-key")).toBe(
+        "environment-secret",
+      );
+      expect(forwarded?.headers.get("upgrade")).toBe(
+        method === "GET" ? "websocket" : null,
+      );
+    },
+  );
+
+  it("rejects the removed organizationId SDK contract before it reaches Flows", async () => {
+    const fetch = vi.fn(async () => Response.json({ blocks: [] }));
+    const response = await app.request(
+      "/api/v1/flows/v2/sdk/blocks",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-SuperBoard-Flows-SDK-Key": "environment-secret",
+        },
+        body: JSON.stringify({
+          organizationId: "removed-scope",
+          environment: "production",
+          userId: "user-1",
+        }),
+      },
+      gatewayEnv({
+        FLOWS_MODULE: { fetch } as unknown as Fetcher,
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "flows_project_context_required", retryable: false },
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns both the Flows and SuperBoard error envelopes", async () => {
+    const response = await app.request(
+      "/api/v1/flows/v2/sdk/blocks",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      },
+      gatewayEnv(),
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      message: "Flows service is unavailable",
+      error: {
+        code: "module_unavailable",
+        message: "Flows service is unavailable",
+      },
+    });
+  });
+});
+
 describe("public Marketing gateway", () => {
   it.each([
     [
@@ -726,8 +1077,12 @@ function gatewayEnv(
   overrides: Partial<Env> = {},
   hasAccess = true,
   maintenance = false,
+  flowsCutover = Boolean(overrides.FLOWS_MODULE),
 ): Env {
   const db = createFakeD1((call: FakeD1Call) => {
+    if (call.sql.includes("SELECT id FROM users WHERE lower(email)")) {
+      return { id: 7 };
+    }
     if (call.sql.includes("FROM oauth_access_tokens")) {
       return {
         resource_owner_id: 7,
@@ -754,6 +1109,9 @@ function gatewayEnv(
     if (call.sql.includes("FROM module_cutover_maintenance")) {
       return maintenance ? { enabled: 1 } : null;
     }
+    if (call.sql.includes("FROM flows_legacy_cutover_state")) {
+      return flowsCutover ? { enabled: 1 } : null;
+    }
     throw new Error(`Unexpected D1 query: ${call.sql}`);
   });
   return {
@@ -766,6 +1124,7 @@ function gatewayEnv(
     CORS_ORIGIN: "*",
     JWT_SECRET: "gateway-jwt-secret",
     MODULE_INTERNAL_TOKEN: INTERNAL_SECRET,
+    FLOWS_INTERNAL_TOKEN: FLOWS_INTERNAL_SECRET,
     ...overrides,
   };
 }
@@ -780,7 +1139,11 @@ async function accessToken(environment: Env): Promise<string> {
 
 function sdkGatewayEnv(
   overrides: Partial<Env>,
-  options: { validProject?: boolean; validApplication?: boolean } = {},
+  options: {
+    validProject?: boolean;
+    validApplication?: boolean;
+    flowsCutover?: boolean;
+  } = {},
 ): Env {
   const db = createFakeD1((call: FakeD1Call) => {
     if (
@@ -804,6 +1167,11 @@ function sdkGatewayEnv(
       expect(call.args[0]).toBe(10);
       return options.validApplication === false ? null : { id: 1 };
     }
+    if (call.sql.includes("FROM flows_legacy_cutover_state")) {
+      return (options.flowsCutover ?? Boolean(overrides.FLOWS_MODULE))
+        ? { enabled: 1 }
+        : null;
+    }
     throw new Error(`Unexpected SDK D1 query: ${call.sql}`);
   });
   return {
@@ -816,6 +1184,7 @@ function sdkGatewayEnv(
     CORS_ORIGIN: "*",
     JWT_SECRET: "gateway-jwt-secret",
     MODULE_INTERNAL_TOKEN: INTERNAL_SECRET,
+    FLOWS_INTERNAL_TOKEN: FLOWS_INTERNAL_SECRET,
     ...overrides,
   };
 }

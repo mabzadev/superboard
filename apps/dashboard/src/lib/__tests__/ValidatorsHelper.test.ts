@@ -7,7 +7,7 @@ import {
   bundleIdSchema,
   shaSchema,
 } from "@/schemas/shared";
-import { isUrlSchemeValid } from "@/lib/validation";
+import { isSafePublicHttpsUrl, isUrlSchemeValid } from "@/lib/validation";
 
 describe("emailSchema", () => {
   it("accepts valid emails", () => {
@@ -59,6 +59,27 @@ describe("isUrlSchemeValid", () => {
     expect(isUrlSchemeValid("")).toBe(false);
     expect(isUrlSchemeValid("example.com")).toBe(false);
     expect(isUrlSchemeValid("://missing")).toBe(false);
+  });
+});
+
+describe("isSafePublicHttpsUrl", () => {
+  it("accepts public HTTPS destinations", () => {
+    expect(isSafePublicHttpsUrl("https://hooks.example.com/support")).toBe(
+      true
+    );
+  });
+
+  it("rejects private, credentialed and non-HTTPS destinations", () => {
+    expect(isSafePublicHttpsUrl("http://hooks.example.com/support")).toBe(
+      false
+    );
+    expect(isSafePublicHttpsUrl("https://127.0.0.1/support")).toBe(false);
+    expect(
+      isSafePublicHttpsUrl("https://user:secret@example.com/support")
+    ).toBe(false);
+    expect(
+      isSafePublicHttpsUrl("https://hooks.example.com/support#secret")
+    ).toBe(false);
   });
 });
 

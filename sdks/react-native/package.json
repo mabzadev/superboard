@@ -40,8 +40,7 @@
   ],
   "scripts": {
     "check": "yarn security:test && yarn security:audit && yarn typecheck && yarn test --runInBand && yarn prepare && yarn pack:check",
-    "example": "yarn workspace @mbzadev/opengrow-react-native-example",
-    "example-old-arch": "yarn workspace @mbzadev/opengrow-react-native-example-old-arch",
+    "example": "pnpm --filter @mbzadev/opengrow-react-native-example",
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -115,15 +114,11 @@
     "undici": "6.28.0",
     "yaml@^2.2.1": "2.8.3"
   },
+  "packageManager": "yarn@3.6.1",
   "peerDependencies": {
     "react": "*",
     "react-native": "*"
   },
-  "workspaces": [
-    "example",
-    "example_old_arch"
-  ],
-  "packageManager": "yarn@3.6.1",
   "jest": {
     "projects": [
       {
@@ -136,6 +131,9 @@
           "<rootDir>/example/node_modules",
           "<rootDir>/example_old_arch/node_modules",
           "<rootDir>/lib/"
+        ],
+        "transformIgnorePatterns": [
+          "node_modules/(?!((@react-native|react-native)/|\\.pnpm/(@react-native\\+|react-native@)))"
         ]
       },
       {

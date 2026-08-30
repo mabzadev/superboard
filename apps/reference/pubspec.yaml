@@ -12,16 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   http: ">=1.2.0 <2.0.0"
-  opengrow_flutterflow:
-    git:
-      url: https://github.com/mabzadev/superboard.git
-      ref: sdk-flutterflow-v2.2.5
-      path: sdks/flutterflow
-  opengrow_flutterflow_messaging:
-    git:
-      url: https://github.com/mabzadev/superboard.git
-      ref: sdk-flutterflow-messaging-v1.3.0
-      path: sdks/flutterflow_messaging
+  superboard_flutterflow:
+    path: ../../sdks/flutterflow
   url_launcher: ">=6.3.1 <7.0.0"
 
 dev_dependencies:
@@ -29,17 +21,9 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
 
-# FlutterFlow 2.2.5 was released before Flutter 2.1.4. Keep the immutable
-# FlutterFlow tag while converging its transitive Flutter SDK to the separately
-# published immutable Flutter release.
 dependency_overrides:
-  opengrow_flutter:
-    git:
-      url: https://github.com/mabzadev/superboard.git
-      ref: sdk-flutter-v2.1.4
-      path: sdks/flutter
+  superboard_flutter:
+    path: ../../sdks/flutter
 
 flutter:
   uses-material-design: true
-  assets:
-    - config/sdk-coverage.json

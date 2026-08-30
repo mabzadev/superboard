@@ -1,0 +1,20 @@
+{
+	"name": "@superboard/supbrd-runtime-plugins",
+	"version": "1.0.0",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./*": "./dist/*.js"
+	},
+	"files": ["dist"],
+	"scripts": {
+		"build": "node scripts/build.mjs",
+		"typecheck": "tsgo --noEmit"
+	},
+	"devDependencies": {
+		"esbuild": "0.25.4",
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	}
+}

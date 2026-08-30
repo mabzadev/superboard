@@ -20,6 +20,7 @@ export function deploymentOrder(target) {
     ...(target.customWorker ? ["custom"] : []),
     "api",
     "mcp",
+    "site",
     "dashboard",
   ];
 }

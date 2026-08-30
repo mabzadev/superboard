@@ -1,0 +1,68 @@
+{
+  "success": {
+    "data": {
+      "id": "conversation-1",
+      "display_id": 1001,
+      "status": "open",
+      "priority": "normal",
+      "unread_count": 1,
+      "subject": "Account question",
+      "inbox_id": "inbox-1",
+      "assigned_agent_id": null,
+      "assigned_team_id": "team-1",
+      "custom_attributes": {
+        "plan": "plus"
+      },
+      "snoozed_until": null,
+      "last_message_preview": "Hello",
+      "last_message_at": "2026-08-13T10:00:00.000Z"
+    },
+    "meta": {
+      "request_id": "request-1"
+    }
+  },
+  "error": {
+    "error": {
+      "code": "configuration_required",
+      "message": "This channel is not configured",
+      "retryable": false,
+      "request_id": "request-2",
+      "details": {
+        "provider": "email"
+      }
+    }
+  },
+  "realtime": {
+    "schema_version": 1,
+    "type": "message.created",
+    "event_id": "event-1",
+    "conversation_id": "conversation-1",
+    "occurred_at": "2026-08-13T10:00:00.000Z",
+    "message": {
+      "id": "message-1",
+      "conversation_id": "conversation-1",
+      "sender_kind": "user",
+      "sequence": 1,
+      "body": "Hello",
+      "attachments": [],
+      "visibility": "public",
+      "content_type": "text",
+      "metadata": {},
+      "delivery_status": "sent",
+      "created_at": "2026-08-13T10:00:00.000Z"
+    }
+  },
+  "queue": {
+    "schema_version": 1,
+    "type": "support.message.created.v1",
+    "event_id": "event-1",
+    "project_id": 11,
+    "occurred_at": "2026-08-13T10:00:00.000Z",
+    "attempt": 0,
+    "idempotency_key": "message:conversation-1:message-1",
+    "payload": {
+      "conversation_id": "conversation-1",
+      "message_id": "message-1"
+    }
+  }
+}

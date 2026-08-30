@@ -155,7 +155,7 @@ function base32Encode(bytes: Uint8Array): string {
   return output;
 }
 
-function base32Decode(input: string): Uint8Array {
+function base32Decode(input: string): Uint8Array<ArrayBuffer> {
   const clean = input.toUpperCase().replace(/=+$/g, "").replace(/\s/g, "");
   const bytes: number[] = [];
   let bits = 0;
@@ -175,7 +175,10 @@ function base32Decode(input: string): Uint8Array {
   return new Uint8Array(bytes);
 }
 
-async function hotp(keyBytes: Uint8Array, counter: number): Promise<string> {
+async function hotp(
+  keyBytes: Uint8Array<ArrayBuffer>,
+  counter: number,
+): Promise<string> {
   const counterBytes = new ArrayBuffer(8);
   const view = new DataView(counterBytes);
   view.setUint32(4, counter);

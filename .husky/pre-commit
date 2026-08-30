@@ -1,0 +1,4 @@
+pnpm exec lint-staged
+gitleaks git . --staged --no-banner --redact
+pnpm run typecheck
+pnpm run test

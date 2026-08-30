@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   parseLockedGitDependencies,
+  parseLockedPathDependencies,
   resolveRemoteTag,
 } from "./reference-sdk-lock.mjs";
 
@@ -20,7 +21,8 @@ export const sdkContracts = Object.freeze({
     candidatePackageName: "superboard_flutter",
     sourcePath: "sdks/flutter",
     releasePrefix: "sdk-flutter-v",
-    coverageMode: "dart-transitive-override",
+    coverageMode: "dart-candidate-transitive",
+    promotedCoverageMode: "dart-transitive-override",
   }),
   flutterflow: Object.freeze({
     lifecycle: "active",
@@ -28,15 +30,15 @@ export const sdkContracts = Object.freeze({
     candidatePackageName: "superboard_flutterflow",
     sourcePath: "sdks/flutterflow",
     releasePrefix: "sdk-flutterflow-v",
-    coverageMode: "dart-direct",
+    coverageMode: "dart-candidate-direct",
+    promotedCoverageMode: "dart-direct",
   }),
   "flutterflow-support": Object.freeze({
     lifecycle: "archived",
     packageName: "opengrow_flutterflow_messaging",
     sourcePath: "sdks/flutterflow_messaging",
     releasePrefix: "sdk-flutterflow-messaging-v",
-    coverageMode: "dart-legacy-direct",
-    promotedCoverageMode: "historical-release",
+    coverageMode: "historical-release",
   }),
   ios: Object.freeze({
     lifecycle: "internal",
@@ -166,8 +168,8 @@ export function validateSdkCoverage(manifest) {
   if (manifest?.schemaVersion !== 2) {
     throw new Error("SDK coverage schemaVersion must be 2");
   }
-  if (manifest?.catalogueSchemaVersion !== 4) {
-    throw new Error("SDK coverage catalogueSchemaVersion must be 4");
+  if (manifest?.catalogueSchemaVersion !== 5) {
+    throw new Error("SDK coverage catalogueSchemaVersion must be 5");
   }
   if (manifest?.promotionPolicy !== "complete-active-set") {
     throw new Error("SDK coverage promotionPolicy must be complete-active-set");
@@ -277,12 +279,9 @@ export function validateSdkCoverage(manifest) {
     throw new Error("SDK active set must advance atomically");
   }
   const support = manifest.libraries.find(({ id }) => id === "flutterflow-support");
-  const expectedSupportCoverage = readiness.promotionReady
-    ? "historical-release"
-    : "dart-legacy-direct";
-  if (support.coverageMode !== expectedSupportCoverage) {
+  if (support.coverageMode !== "historical-release") {
     throw new Error(
-      `flutterflow-support.coverageMode must be ${expectedSupportCoverage}`,
+      "flutterflow-support.coverageMode must be historical-release",
     );
   }
   return manifest.libraries;
@@ -307,21 +306,35 @@ export function verifyReferenceCoverage({ manifest, project, pubspec, lockSource
       throw new Error(`reference.project.json sdkCatalogue.${lifecycle} is stale`);
     }
   }
-  const locked = parseLockedGitDependencies(lockSource);
+  const lockedGit = parseLockedGitDependencies(lockSource);
+  const lockedPath = parseLockedPathDependencies(lockSource);
   for (const library of libraries.filter(({ coverageMode }) =>
     coverageMode.startsWith("dart-"),
   )) {
-    const dependency = locked.get(library.packageName);
+    const candidateMode = library.coverageMode.startsWith("dart-candidate-");
+    const packageName = candidateMode
+      ? library.candidatePackageName
+      : library.packageName;
+    const dependency = candidateMode
+      ? lockedPath.get(packageName)
+      : lockedGit.get(packageName);
     if (!dependency) {
-      throw new Error(`${library.id} must be a Git dependency in pubspec.lock`);
+      throw new Error(
+        `${library.id} must be a ${candidateMode ? "path" : "Git"} dependency in pubspec.lock`,
+      );
     }
-    const expected = {
-      url: `${manifest.platformRepository}.git`,
-      ref: library.baselineRef,
-      path: library.sourcePath,
-      version: library.baselineVersion,
-      "resolved-ref": library.baselineSha,
-    };
+    const expected = candidateMode
+      ? {
+          path: `../../${library.sourcePath}`,
+          version: library.sourceVersion,
+        }
+      : {
+          url: `${manifest.platformRepository}.git`,
+          ref: library.baselineRef,
+          path: library.sourcePath,
+          version: library.baselineVersion,
+          "resolved-ref": library.baselineSha,
+        };
     for (const [key, value] of Object.entries(expected)) {
       const actual =
         key === "url" ? `${normalizedRepository(dependency[key])}.git` : dependency[key];
@@ -331,34 +344,51 @@ export function verifyReferenceCoverage({ manifest, project, pubspec, lockSource
         );
       }
     }
-    const section =
-      library.coverageMode === "dart-transitive-override"
-        ? "dependency_overrides"
-        : "dependencies";
-    const declaration = gitDependency(pubspec, section, library.packageName);
-    for (const [key, value] of Object.entries({
-      url: `${manifest.platformRepository}.git`,
-      ref: library.baselineRef,
-      path: library.sourcePath,
-    })) {
-      const actual =
-        key === "url" ? `${normalizedRepository(declaration[key])}.git` : declaration[key];
-      if (actual !== value) {
-        throw new Error(`${library.id} pubspec ${key} must be ${value}`);
+    const directMode = new Set(["dart-direct", "dart-candidate-direct"]);
+    if (directMode.has(library.coverageMode)) {
+      if (candidateMode) {
+        const expectedDeclaration = `  ${packageName}:\n    path: ../../${library.sourcePath}`;
+        if (!pubspec.includes(expectedDeclaration)) {
+          throw new Error(
+            `${library.id} pubspec path must be ../../${library.sourcePath}`,
+          );
+        }
+      } else {
+        const declaration = gitDependency(pubspec, "dependencies", packageName);
+        for (const [key, value] of Object.entries({
+          url: `${manifest.platformRepository}.git`,
+          ref: library.baselineRef,
+          path: library.sourcePath,
+        })) {
+          const actual =
+            key === "url"
+              ? `${normalizedRepository(declaration[key])}.git`
+              : declaration[key];
+          if (actual !== value) {
+            throw new Error(`${library.id} pubspec ${key} must be ${value}`);
+          }
+        }
       }
     }
-    if (library.coverageMode !== "dart-transitive-override") {
-      const declared = project.libraries?.[library.packageName];
+    if (directMode.has(library.coverageMode)) {
+      const declared = project.libraries?.[packageName];
       if (
         !declared ||
         declared.path !== library.sourcePath ||
-        declared.sourceVersion !== library.baselineVersion ||
+        declared.sourceVersion !==
+          (candidateMode ? library.sourceVersion : library.baselineVersion) ||
         declared.releaseVersion !== library.baselineVersion ||
         declared.releaseRef !== library.baselineRef
       ) {
         throw new Error(`${library.id} baseline must match reference.project.json`);
       }
     }
+  }
+  if (
+    pubspec.includes("opengrow_flutterflow_messaging:") ||
+    lockSource.includes("\n  opengrow_flutterflow_messaging:\n")
+  ) {
+    throw new Error("archived Support package must not be consumed by the reference app");
   }
   return libraries;
 }
@@ -384,10 +414,9 @@ export function verifyCatalogueCoverage(manifest, catalogue) {
   );
   if (
     !Array.isArray(catalogue.libraries) ||
-    catalogue.libraries.length !== libraries.length ||
-    catalogueLibraries.size !== libraries.length
+    catalogueLibraries.size !== catalogue.libraries.length
   ) {
-    throw new Error("SDK catalogue must contain exactly the seven governed libraries");
+    throw new Error("SDK catalogue must not contain duplicate library ids");
   }
   for (const library of libraries) {
     const catalogued = catalogueLibraries.get(library.id);

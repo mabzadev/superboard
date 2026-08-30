@@ -1,0 +1,225 @@
+import { createParams } from "./create-params";
+
+/**
+ * @deprecated use `links` from `lib/links` to get links with domain support
+ */
+export const links = (domain = "flows.sh") =>
+  ({
+    homePage: `https://${domain}`,
+    twitter: `https://x.com/flows_sh`,
+    linkedin: `https://www.linkedin.com/company/flows-sh`,
+    rbnd: `https://rbnd.studio`,
+    rbndGithub: `https://github.com/RBND-studio`,
+    publicRepo: `https://github.com/RBND-studio/flows.sh`,
+    sdkRepo: `https://github.com/RBND-studio/flows-sdk`,
+    status: `https://status.flows.sh`,
+    youtube: `https://www.youtube.com/@flows-sh`,
+    slack: `https://flows.sh/join-slack`,
+    app: `https://app.${domain}`,
+    signUp: `https://app.${domain}/signup`,
+    logIn: `https://app.${domain}/login`,
+    nextJsDemo: `https://nextjs.flows.sh`,
+    privacy: `https://${domain}/legal/privacy`,
+    terms: `https://${domain}/legal/terms`,
+    cookies: `https://${domain}/legal/cookies`,
+    dpa: `https://${domain}/legal/dpa`,
+    changelog: `https://${domain}/changelog`,
+    examplesList: `https://${domain}/examples`,
+    affiliate: `https://${domain}/affiliate`,
+    affiliatePortal: `https://flows-sh.lemonsqueezy.com/affiliates`,
+    scheduleCall: "https://cal.com/flows-ondra/session",
+    contact: `https://${domain}/contact`,
+    sdk: {
+      overview: `https://github.com/RBND-studio/flows-sdk/tree/main/examples`,
+      reactTemplate: `https://github.com/RBND-studio/flows-sdk/tree/main/examples/react/vite`,
+      nextTemplate: `https://github.com/RBND-studio/flows-sdk/tree/main/examples/react/next`,
+      nuxtTemplate: "https://github.com/RBND-studio/flows-sdk/tree/main/examples/vue/nuxt",
+      angularTemplate: "https://github.com/RBND-studio/flows-sdk/tree/main/examples/angular",
+      svelteTemplate: "https://github.com/RBND-studio/flows-sdk/tree/main/examples/svelte",
+      solidTemplate: "https://github.com/RBND-studio/flows-sdk/tree/main/examples/solid",
+      astroTemplate: "https://github.com/RBND-studio/flows-sdk/tree/main/examples/astro",
+      emberTemplate: "https://github.com/RBND-studio/flows-sdk/tree/main/examples/ember",
+      tanstackTemplate:
+        "https://github.com/RBND-studio/flows-sdk/tree/main/examples/react/tanstack",
+    },
+    projectDetail: (params: { projectId: string }) =>
+      `https://app.${domain}/flows/projects/${params.projectId}`,
+    duplicateExample: (params: { workflowId: string }) =>
+      `https://app.${domain}/duplicate-example/${params.workflowId}`,
+    examples: {
+      card: "https://card.examples.flows.sh",
+      cardSource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/card",
+      tour: "https://tour.examples.flows.sh",
+      tourSource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/tour",
+      hint: "https://hint.examples.flows.sh",
+      hintSource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/hint",
+      embeddedTips: "https://embedded-tips.examples.flows.sh",
+      embeddedTipsSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/embedded-tips",
+      modal: "https://modal.examples.flows.sh",
+      modalSource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/modal",
+      interactiveFeatureAnnouncement: "https://interactive-feature-announcement.examples.flows.sh",
+      interactiveFeatureAnnouncementSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/interactive-feature-announcement",
+      newFeatureBadge: "https://new-feature-badge.examples.flows.sh",
+      newFeatureBadgeSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/new-feature-badge",
+      enterpriseUpsell: "https://enterprise-upsell.examples.flows.sh",
+      enterpriseUpsellSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/enterprise-upsell",
+      newFeatureCard: "https://new-feature-card.examples.flows.sh",
+      newFeatureCardSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/new-feature-card",
+      floatingChecklist: "https://floating-checklist.examples.flows.sh",
+      floatingChecklistSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/floating-checklist",
+      featureHint: "https://feature-hint.examples.flows.sh",
+      featureHintSource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/feature-hint",
+      productHuntLaunchAnnouncement: "https://product-hunt-launch-announcement.examples.flows.sh",
+      productHuntLaunchAnnouncementSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/product-hunt-launch-announcement",
+      onboardingHub: "https://onboarding-hub.examples.flows.sh",
+      onboardingHubSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/onboarding-hub",
+      featureAnnouncement: "https://feature-announcement.examples.flows.sh",
+      featureAnnouncementSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/feature-announcement",
+      gettingStartedDashboard: "https://getting-started-dashboard.examples.flows.sh",
+      gettingStartedDashboardSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/getting-started-dashboard",
+      surveyPopover: "https://survey-popover.examples.flows.sh",
+      surveyPopoverSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/survey-popover",
+      pmfSurvey: "https://pmf-survey.examples.flows.sh",
+      pmfSurveySource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/pmf-survey",
+      csatSurvey: "https://csat-survey.examples.flows.sh",
+      csatSurveySource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/csat-survey",
+      npsSurvey: "https://nps-survey.examples.flows.sh",
+      npsSurveySource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/nps-survey",
+      cesSurvey: "https://ces-survey.examples.flows.sh",
+      cesSurveySource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/ces-survey",
+      announcementBanner: "https://announcement-banner.examples.flows.sh",
+      announcementBannerSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/announcement-banner",
+      inAppChangelog: "https://in-app-changelog.examples.flows.sh",
+      inAppChangelogSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/in-app-changelog",
+      tooltip: "https://tooltip.examples.flows.sh",
+      tooltipSource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/tooltip",
+      churnPreventionFlow: "https://churn-prevention-flow.examples.flows.sh",
+      churnPreventionFlowSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/churn-prevention-flow",
+      microsurvey: "https://microsurvey.examples.flows.sh",
+      microsurveySource: "https://github.com/RBND-studio/flows.sh/tree/main/examples/microsurvey",
+      welcomeScreen: "https://welcome-screen.examples.flows.sh",
+      welcomeScreenSource:
+        "https://github.com/RBND-studio/flows.sh/tree/main/examples/welcome-screen",
+      // --PLOP_NEW_EXAMPLE_LINK--
+    },
+    docs: {
+      home: `https://${domain}/docs`,
+      users: {
+        main: `https://${domain}/docs/users/overview`,
+        properties: `https://${domain}/docs/users/properties`,
+        defaultProperties: `https://${domain}/docs/users/properties#default-user-properties`,
+      },
+      workflows: {
+        main: `https://${domain}/docs/workflows/overview`,
+        publish: `https://${domain}/docs/workflows/publishing`,
+        environments: `https://${domain}/docs/workflows/publishing#managing-active-versions`,
+        frequency: `https://${domain}/docs/workflows/overview#workflow-frequency`,
+        versionHistory: `https://${domain}/docs/workflows/overview#workflow-versions`,
+      },
+      components: {
+        main: `https://${domain}/docs/components/overview`,
+        updateInstances: `https://${domain}/docs/components/managing#updating-component-instances`,
+        manageLibraries: `https://${domain}/docs/components/managing#libraries`,
+      },
+      environments: `https://${domain}/docs/environments`,
+      blocks: {
+        start: `https://${domain}/docs/blocks/start-blocks/automatic-start`,
+        "manual-start": `https://${domain}/docs/blocks/start-blocks/manual-start`,
+        tour: `https://${domain}/docs/blocks/tour-block`,
+        survey: `https://${domain}/docs/surveys/overview`,
+        filter: `https://${domain}/docs/blocks/logic-blocks/filter`,
+        "workflow-trigger": `https://${domain}/docs/blocks/action-blocks/workflow-trigger`,
+        delay: `https://${domain}/docs/blocks/logic-blocks/delay`,
+        end: `https://${domain}/docs/blocks/end-block`,
+        components: {
+          custom: `https://${domain}/docs/components/custom`,
+        },
+        note: `https://${domain}/docs/blocks/other-blocks/note`,
+      },
+      blockProperties: {
+        overview: `https://${domain}/docs/blocks/block-properties/overview`,
+        slot: `https://${domain}/docs/blocks/block-properties/slot`,
+        pageTargeting: `https://${domain}/docs/blocks/block-properties/page-targeting`,
+        userProperties: `https://${domain}/docs/blocks/block-properties/user-properties`,
+        waitProperty: `https://${domain}/docs/blocks/block-properties/wait`,
+        array: `https://${domain}/docs/blocks/block-properties/array`,
+        stateMemory: `https://${domain}/docs/blocks/block-properties/state-memory`,
+        blockTrigger: `https://${domain}/docs/blocks/block-properties/block-trigger`,
+        blockState: `https://${domain}/docs/blocks/block-properties/block-state`,
+        blockKey: `https://${domain}/docs/blocks/block-properties/block-key`,
+        tourTrigger: `https://${domain}/docs/blocks/tour-block#tour-trigger`,
+        action: `https://${domain}/docs/blocks/block-properties/action`,
+      },
+      configureBlocks: {
+        exitNodes: `https://${domain}/docs/workflows/configure-blocks#exit-nodes`,
+      },
+      tour: {
+        steps: `https://${domain}/docs/blocks/tour-block#tour-steps`,
+        waitStep: `https://${domain}/docs/blocks/tour-block#wait-step`,
+      },
+      sdk: {
+        overview: `https://${domain}/docs/sdk`,
+        reactInstallation: `https://${domain}/docs/sdk/react/installation`,
+        javascriptInstallation: `https://${domain}/docs/sdk/javascript/installation`,
+        frameworks: {
+          nextjs: `https://${domain}/docs/sdk/frameworks/next`,
+          angular: `https://${domain}/docs/sdk/frameworks/angular`,
+          vue: `https://${domain}/docs/sdk/frameworks/nuxt`,
+          svelte: `https://${domain}/docs/sdk/frameworks/svelte`,
+          solid: `https://${domain}/docs/sdk/frameworks/solid`,
+        },
+      },
+      localization: {
+        main: `https://${domain}/docs/localization`,
+      },
+      launchpad: {
+        main: `https://${domain}/docs/launchpad`,
+        workflowPriority: `https://${domain}/docs/launchpad#workflow-priority`,
+        concurrency: `https://${domain}/docs/launchpad#concurrency`,
+      },
+      guide: {
+        tour: {
+          main: `https://${domain}/docs/guides/create-product-tour`,
+          addSteps: `https://${domain}/docs/guides/create-product-tour#add-and-customize-tour-steps`,
+        },
+        targetNewUsers: `https://${domain}/docs/guides/how-to-target-only-new-users`,
+      },
+      survey: {
+        main: `https://${domain}/docs/surveys/overview`,
+        analytics: `https://${domain}/docs/surveys/analytics`,
+        presentation: `https://${domain}/docs/surveys/overview#presentation`,
+        trigger: `https://${domain}/docs/surveys/overview#trigger`,
+        questionTypes: {
+          freeform: `https://${domain}/docs/surveys/overview#freeform`,
+          "single-choice": `https://${domain}/docs/surveys/overview#single-choice`,
+          "multiple-choice": `https://${domain}/docs/surveys/overview#multiple-choice`,
+          rating: `https://${domain}/docs/surveys/overview#rating`,
+          "end-screen": `https://${domain}/docs/surveys/overview#end-screen`,
+          link: `https://${domain}/docs/surveys/overview#link`,
+        },
+      },
+      agentSkills: `https://${domain}/docs/agent-skills`,
+    },
+    /**
+     * Helper function to generate Open Graph image URLs
+     *
+     * See `apps/web/src/app/api/og/route.tsx` for implementation details
+     */
+    ogImage: (params: { title: string; type?: string }) => {
+      return `https://${domain}/api/og${createParams(params)}`;
+    },
+  }) as const;

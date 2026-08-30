@@ -92,6 +92,14 @@ test("generated assignments satisfy every private cross-service contract without
     assignments.api.MODULE_INTERNAL_TOKEN,
     assignments.analytics.INTERNAL_API_TOKEN,
   );
+  assert.equal(
+    assignments.api.FLOWS_INTERNAL_TOKEN,
+    assignments.flows.INTERNAL_API_TOKEN,
+  );
+  assert.notEqual(
+    assignments.api.MODULE_INTERNAL_TOKEN,
+    assignments.api.FLOWS_INTERNAL_TOKEN,
+  );
   assert.equal(typeof assignments.analytics.ANALYTICS_ID_HASH_KEY, "string");
   assert.equal(
     typeof assignments.analytics.ANALYTICS_CONFIG_ENCRYPTION_KEY,
@@ -113,6 +121,14 @@ test("generated assignments satisfy every private cross-service contract without
     assignments.api.EMAIL_INTERNAL_TOKEN,
     assignments.marketing.EMAIL_INTERNAL_TOKEN,
   );
+  assert.equal(Object.hasOwn(assignments.email, "FLOWS_EMAIL_INTERNAL_TOKEN"), false);
+  assert.equal(Object.hasOwn(assignments.flows, "EMAIL_INTERNAL_TOKEN"), false);
+  assert.equal(typeof assignments.flows.FLOW_USER_ENCRYPTION_KEY, "string");
+  assert.equal(typeof assignments.flows.FLOW_USER_HASH_KEY, "string");
+  assert.notEqual(
+    assignments.flows.FLOW_USER_HASH_KEY,
+    assignments.flows.FLOW_USER_ENCRYPTION_KEY,
+  );
   assert.equal(
     assignments.identity.FILES_INTERNAL_TOKEN,
     assignments.files.FILES_INTERNAL_TOKEN,
@@ -130,6 +146,10 @@ test("generated assignments satisfy every private cross-service contract without
     "OBSERVABILITY_INTERNAL_TOKEN",
   ]);
   assert.equal(Object.hasOwn(assignments, "dashboard"), false);
+  assert.match(
+    assignments.site.EMDASH_ENCRYPTION_KEY,
+    /^emdash_enc_v1_[A-Za-z0-9_-]{43}$/u,
+  );
 });
 
 test("development assignments include analytics credentials only when supplied", async () => {

@@ -17,7 +17,7 @@ import projectsRoutes from "./routes/projects";
 import mcpRoutes from "./routes/mcp";
 import mcpOauthRoutes from "./routes/mcp-oauth";
 import sdkRoutes from "./routes/sdk";
-import pushRoutes from "./routes/push";
+import pushRoutes, { internalPush } from "./routes/push";
 import iapRoutes from "./routes/iap";
 import identitySsoRoutes from "./routes/identity-sso";
 import automationRoutes from "./routes/automation";
@@ -43,18 +43,26 @@ import {
 } from "./lib/billing-service";
 import { isBillingQueueJob } from "./lib/billing-dispatch";
 import { readTextLimited } from "./lib/http-limits";
-import { getAuthContext } from "./lib/auth";
+import { getAuthContext, getRequestAuthContext } from "./lib/auth";
 import { refreshAppleNotificationConfigurationsIfDue } from "./lib/apple-notification-configuration";
 import {
   DOMAIN_MODULES,
   DOMAIN_SDK_ROUTES,
+  PUBLIC_FLOWS_SDK_ROUTES,
   isDomainSdkRoutePath,
+  isPublicFlowsSdkRoutePath,
   proxyDomainModule,
   proxyDomainSdkModule,
+  proxyLegacyDomainModule,
+  proxyPublicFlows,
   proxyPublicMarketing,
-  proxyPublicSupport,
   resolveSdkProjectContext,
 } from "./lib/domain-modules";
+import {
+  isSupportWidgetPath,
+  proxySupportProviderEvent,
+  proxySupportSurface,
+} from "./lib/support-gateway";
 import { quarantinePlatformDeadLetter } from "./lib/platform-dead-letters";
 import { resumePendingAccountErasures } from "./lib/account-erasure";
 import { drainAnalyticsFactOutbox } from "./lib/analytics-facts";
@@ -88,7 +96,11 @@ app.onError((error, c) => {
 app.use(
   "*",
   cors({
-    origin: (origin, c) => allowedCorsOrigin(origin, c.env.CORS_ORIGINS_JSON),
+    origin: (origin, c) =>
+      isPublicFlowsSdkRoutePath(new URL(c.req.url).pathname) ||
+      isSupportWidgetPath(new URL(c.req.url).pathname)
+        ? allowedEmbeddableSdkOrigin(origin)
+        : allowedCorsOrigin(origin, c.env.CORS_ORIGINS_JSON),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: [
       "Content-Type",
@@ -116,6 +128,12 @@ app.use(
       "X-SuperBoard-Campaign",
       "X-SuperBoard-Project-Id",
       "Idempotency-Key",
+      "X-Flows-Version",
+      "X-SuperBoard-Flows-SDK-Key",
+      "X-SuperBoard-Widget-Key",
+      "X-SuperBoard-Widget-Visitor",
+      "X-SuperBoard-Widget-Signature",
+      "X-SuperBoard-Widget-Timestamp",
       "X-Filename",
       "ENVIRONMENT",
       "LINKSQUARED",
@@ -141,6 +159,31 @@ export function allowedCorsOrigin(
     )
       ? candidate
       : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Flows environment keys are intentionally public client credentials. Its web
+ * SDK must therefore work on the customer origins where a flow is embedded,
+ * while still rejecting malformed/non-HTTP Origin values.
+ */
+export function allowedEmbeddableSdkOrigin(
+  origin: string,
+): string | undefined {
+  try {
+    const candidate = new URL(origin);
+    const normalized = origin.replace(/\/$/u, "");
+    if (
+      candidate.origin !== normalized ||
+      !new Set(["https:", "http:"]).has(candidate.protocol) ||
+      candidate.username ||
+      candidate.password
+    ) {
+      return undefined;
+    }
+    return candidate.origin;
   } catch {
     return undefined;
   }
@@ -318,7 +361,7 @@ app.all("*", async (c, next) => {
 // =====================================
 app.route("/api/v1/auth", authRoutes);
 app.all("/auth", (c) => proxyIdentityAuth(c.req.raw, c.env, "/auth"));
-app.all("/auth/*", (c) => {
+app.all("/auth/*", async (c) => {
   const url = new URL(c.req.url);
   if (c.req.method === "DELETE" && url.pathname === "/auth/me") {
     return c.json(
@@ -334,7 +377,11 @@ app.all("/auth/*", (c) => {
       { "cache-control": "private, no-store" },
     );
   }
-  return proxyIdentityAuth(c.req.raw, c.env, `${url.pathname}${url.search}`);
+  return await proxyIdentityAuth(
+    c.req.raw,
+    c.env,
+    `${url.pathname}${url.search}`,
+  );
 });
 app.all("/api/v1/app-files", (c) =>
   proxyFilesAlias(c.req.raw, c.env.FILES_SERVICE),
@@ -349,6 +396,7 @@ app.route("/api/v1/mcp", mcpRoutes);
 app.route("/api/v1/links", linksRoutes);
 app.route("/api/v1/sdk", sdkRoutes);
 app.route("/api/v1/push", pushRoutes);
+app.route("/internal/v1/push", internalPush);
 app.route("/api/v1/iap", iapRoutes);
 app.use("/api/v1/identity/sso/*", async (c, next) => {
   if (!isSsoEnabled(c.env)) return c.notFound();
@@ -383,22 +431,81 @@ app.post("/api/v1/email/aws-ses/events", (c) =>
   proxyAwsSesEvent(c.env, c.req.raw),
 );
 app.get("/api/v1/support/realtime/:ticket", (c) =>
-  proxyPublicSupport(c, `/public/v1/realtime/${c.req.param("ticket")}`),
+  proxySupportSurface(
+    c,
+    `/public/v1/realtime/${encodeURIComponent(c.req.param("ticket"))}`,
+    "realtime",
+  ),
 );
-app.all("/api/v1/support-client", (c) => proxyPublicSupport(c, "/v1"));
+app.post("/api/v1/support/providers/:provider/:endpointId/events", (c) =>
+  proxySupportProviderEvent(
+    c,
+    c.req.param("provider"),
+    c.req.param("endpointId"),
+  ),
+);
+app.get("/api/v1/support/providers/:provider/:endpointId/events", (c) =>
+  proxySupportProviderEvent(
+    c,
+    c.req.param("provider"),
+    c.req.param("endpointId"),
+  ),
+);
+app.get("/api/v1/support/providers/:provider/oauth/callback", (c) =>
+  proxySupportSurface(
+    c,
+    `/public/v1/providers/${encodeURIComponent(c.req.param("provider"))}/oauth/callback`,
+    "oauth",
+  ),
+);
+app.all("/api/v1/support-widget", (c) =>
+  proxySupportSurface(c, "/public/v1/widget", "widget"),
+);
+app.all("/api/v1/support-widget/*", (c) => {
+  const url = new URL(c.req.url);
+  const suffix = url.pathname.slice("/api/v1/support-widget".length);
+  return proxySupportSurface(c, `/public/v1/widget${suffix}`, "widget");
+});
+app.all("/api/v1/support/help-center", (c) =>
+  proxySupportSurface(c, "/public/v1/help-center", "help-center"),
+);
+app.all("/api/v1/support/help-center/*", (c) => {
+  const url = new URL(c.req.url);
+  const suffix = url.pathname.slice("/api/v1/support/help-center".length);
+  return proxySupportSurface(
+    c,
+    `/public/v1/help-center${suffix}`,
+    "help-center",
+  );
+});
+app.all("/api/v1/support-client", (c) =>
+  proxySupportSurface(c, "/v1", "client"),
+);
 app.all("/api/v1/support-client/*", (c) => {
   const url = new URL(c.req.url);
   const suffix = url.pathname.slice("/api/v1/support-client".length);
-  return proxyPublicSupport(c, `/v1${suffix}`);
+  return proxySupportSurface(c, `/v1${suffix}`, "client");
 });
 for (const route of DOMAIN_SDK_ROUTES) {
   app.post(route.publicPath, (c) => proxyDomainSdkModule(c, route));
 }
+for (const route of PUBLIC_FLOWS_SDK_ROUTES) {
+  if (route.method === "POST") {
+    app.post(route.publicPath, (c) => proxyPublicFlows(c, route.internalPath));
+  } else {
+    app.get(route.publicPath, (c) => proxyPublicFlows(c, route.internalPath));
+  }
+}
 for (const [moduleName, bindingName] of Object.entries(DOMAIN_MODULES)) {
   const name = moduleName as keyof typeof DOMAIN_MODULES;
   const binding = bindingName as (typeof DOMAIN_MODULES)[typeof name];
-  app.all(`/api/v1/${name}`, (c) => proxyDomainModule(c, name, binding));
-  app.all(`/api/v1/${name}/*`, (c) => proxyDomainModule(c, name, binding));
+  if (name === "paywalls" || name === "onboardings") {
+    app.all(`/api/v1/${name}`, (c) => proxyLegacyDomainModule(c, name));
+    app.all(`/api/v1/${name}/*`, (c) => proxyLegacyDomainModule(c, name));
+  } else {
+    app.all(`/api/v1/${name}`, (c) => proxyDomainModule(c, name, binding));
+    app.all(`/api/v1/${name}/*`, (c) => proxyDomainModule(c, name, binding));
+  }
 }
 app.use("/api/v1/billing/*", async (c, next) =>
   proxyBillingAdmin(c, next, "/api/v1/billing", "/internal/v1/admin/billing"),
@@ -647,7 +754,7 @@ async function proxyBillingAdmin(
   if (!billingServiceEnabled(c.env)) return next();
   const pathname = new URL(c.req.url).pathname;
   if (c.req.method === "POST" && /\/connections$/.test(pathname)) return next();
-  const auth = await getAuthContext(c.env, c.req.header("Authorization"));
+  const auth = await getRequestAuthContext(c.env, c.req.raw.headers);
   if (!auth) return c.json({ error: "Invalid or expired token" }, 401);
   if (!c.env.BILLING)
     return c.json(

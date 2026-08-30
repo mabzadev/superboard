@@ -1,0 +1,2080 @@
+{
+  "schema_version": 1,
+  "environment": "isolated_fixture",
+  "stores": [
+    {
+      "plugin_id": "supbrd-plug-user",
+      "store_id": "supbrd-plug-user.store.user_credentials",
+      "descriptor_checksum": "sha256:f3436433ed4332fdb9342652f907938cfef2abfba9e3bed9872da153201c0b39",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "app.access_keys"
+      ],
+      "source_tables": [
+        "instances"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "access_keys"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:58c279f173f2eca02e21271b6d6c274fdfe68c117507bf0afd4cad9dd1f7fde2"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:58c279f173f2eca02e21271b6d6c274fdfe68c117507bf0afd4cad9dd1f7fde2"
+      },
+      "deterministic_sample": {
+        "id": "app.access_keys-id-1",
+        "project_id": "12",
+        "key_hash": "app.access_keys-key_hash-1",
+        "prefix": "app.access_keys-prefix-1",
+        "created_by": "app.access_keys-created_by-1",
+        "last_used_at": "2026-08-30T00:00:00.000Z",
+        "revoked_at": "2026-08-30T00:00:00.000Z",
+        "created_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:afb672b8860997636fc1f6871f7c088ffb377865e2f6b674c68e42e3c649c772",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "store_id": "supbrd-plug-user.store.user_directory",
+      "descriptor_checksum": "sha256:7e4e69decf75bb68e18555b454b9a057efaf214b132af51dfc21207302372928",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "app.customers",
+        "app.referrals"
+      ],
+      "source_tables": [
+        "visitors",
+        "links"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "customers",
+        "referrals"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 2,
+        "checksum": "sha256:4a0b2df6a32be97174dc6041bd29ef79d9e5ef71b155a4ad290bd1c912fc5943"
+      },
+      "fixture_target": {
+        "count": 2,
+        "checksum": "sha256:4a0b2df6a32be97174dc6041bd29ef79d9e5ef71b155a4ad290bd1c912fc5943"
+      },
+      "deterministic_sample": {
+        "id": "app.customers-id-1",
+        "project_id": "12",
+        "external_id": "app.customers-external_id-1",
+        "attributes_json": "{}",
+        "email": "app.customers-email-1",
+        "name": "app.customers-name-1",
+        "platform": "app.customers-platform-1",
+        "country_code": "app.customers-country_code-1",
+        "first_seen_at": "2026-08-30T00:00:00.000Z",
+        "last_seen_at": "2026-08-30T00:00:00.000Z",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:0bedc7fae02f98b8da9468f334e3427c2d906c0d5c87102d5c61c65e682f5dd0",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "store_id": "supbrd-plug-user.store.user_sessions",
+      "descriptor_checksum": "sha256:fccd524ac296c9c90bff992591136b683379dfa3a3710c1464213f7df1a9480d",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "identity.application_sessions"
+      ],
+      "source_tables": [
+        "application_sessions"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:7a1f2970d92028bf525fc3ecf3e41e73ece7236b41e23a59a5a73dafcf87a206"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:7a1f2970d92028bf525fc3ecf3e41e73ece7236b41e23a59a5a73dafcf87a206"
+      },
+      "deterministic_sample": {
+        "entity_id": "identity.application_sessions-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:e5eef15ee7817d62b5e1ec8bf8004420e317b28103c27814c30f687b4bf2b51d",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "store_id": "supbrd-plug-settings.store.settings",
+      "descriptor_checksum": "sha256:b6c44e9a8c9d318cfe0558f494819e8b7b8c565798862b9b5d0250cf244605a6",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "app.sdk_configurations"
+      ],
+      "source_tables": [
+        "applications"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "sdk_configurations"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:dbb861e0f519d232542fa7ef4fee8633383fc3f22a35832cabe5df7e703a9cbe"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:dbb861e0f519d232542fa7ef4fee8633383fc3f22a35832cabe5df7e703a9cbe"
+      },
+      "deterministic_sample": {
+        "id": "app.sdk_configurations-id-1",
+        "project_id": "12",
+        "platform": "app.sdk_configurations-platform-1",
+        "status": "app.sdk_configurations-status-1",
+        "configuration_json": "{}",
+        "verified_at": "2026-08-30T00:00:00.000Z",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:a3c1c77f3d0e2d36d159357428b0d52b9615dd550e604653f676964599dadcf4",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "store_id": "supbrd-plug-settings.store.versions",
+      "descriptor_checksum": "sha256:97b2ad95e404daed80c2df2973ce7d32b3acb5a4210c2a06945be88f28063009",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "settings.front_draft_versions"
+      ],
+      "source_tables": [
+        "superboard_front_draft_snapshots"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:6a46fb08fe613a4dcf40c75d13304d2d0845add846dee477fd49518d9abaf8d9"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:6a46fb08fe613a4dcf40c75d13304d2d0845add846dee477fd49518d9abaf8d9"
+      },
+      "deterministic_sample": {
+        "entity_id": "settings.front_draft_versions-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:1faaf422a62e631395f6d420005d3e410d3bf5b934dbf92c3b4179ca2fffceb7",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-content",
+      "store_id": "supbrd-plug-content.store.documents",
+      "descriptor_checksum": "sha256:e0040fc99cf418e9f46157eaf313113c5e12ebd22d42b7b24622b9f9ef5c0c37",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "content.documents"
+      ],
+      "source_tables": [
+        "revisions"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:49a9e446196ff5b5a2dd25c0f9b903283c9a309670a5ca7f74ed12bb09e253d1"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:49a9e446196ff5b5a2dd25c0f9b903283c9a309670a5ca7f74ed12bb09e253d1"
+      },
+      "deterministic_sample": {
+        "entity_id": "content.documents-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:6cb7ef08f04c6a384f34758315cb88e6ffac8d38dc5299a624b6e7df70d48637",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-content",
+      "store_id": "supbrd-plug-content.store.revisions",
+      "descriptor_checksum": "sha256:c8b3c7375627a58fb248d1f7d59034c3e61407aa8eba2d1b7b1d98fb5d8aac2f",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "content.revisions"
+      ],
+      "source_tables": [
+        "revisions"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:2121c51f1153d053bccaf7bbbc38b6d8d481ce494f51286ef9cbe5acba3d742c"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:2121c51f1153d053bccaf7bbbc38b6d8d481ce494f51286ef9cbe5acba3d742c"
+      },
+      "deterministic_sample": {
+        "entity_id": "content.revisions-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:6b3d5977e6b0cc009117a79cf94589376edfb6dfac2fb599991148a6bb63d0e4",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-content",
+      "store_id": "supbrd-plug-content.store.taxonomies",
+      "descriptor_checksum": "sha256:962378748ca4ccd4ee79492d7c19b93d4078c6c1653739e194ea6f573727b58b",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "content.taxonomies"
+      ],
+      "source_tables": [
+        "taxonomies"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:f8d1ce261d36dd0e801a6c49aac6302f43da49c1ad80b2c834c12076236a16b1"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:f8d1ce261d36dd0e801a6c49aac6302f43da49c1ad80b2c834c12076236a16b1"
+      },
+      "deterministic_sample": {
+        "entity_id": "content.taxonomies-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:f30c0b01c4f7bb3f604735672f782dd5c2d8c5a2f4abb3d63672767903bac0dc",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-products",
+      "store_id": "supbrd-plug-products.store.catalog",
+      "descriptor_checksum": "sha256:82196b3a2b69c812fee8b62d19b66f3c54b5fe89963c546b821ac8c9c8fbe25f",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "products.products"
+      ],
+      "source_tables": [
+        "billing_products"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "products"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:b82d1104a312b4e86f7d627f500b3ac5ba943a0828eaffc28022b69bdd19038b"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:b82d1104a312b4e86f7d627f500b3ac5ba943a0828eaffc28022b69bdd19038b"
+      },
+      "deterministic_sample": {
+        "id": "products.products-id-1",
+        "project_id": "12",
+        "identifier": "products.products-identifier-1",
+        "display_name": "products.products-display_name-1",
+        "description": "products.products-description-1",
+        "product_type": "products.products-product_type-1",
+        "status": "products.products-status-1",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:c56ae70b18470878fd11e13debee420dcdb67be98ada133805383793fba85d9d",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-products",
+      "store_id": "supbrd-plug-products.store.offers",
+      "descriptor_checksum": "sha256:1b62598cab5583ff81bf84e2e70ce81d4d5b97524ab94ac0a3fc66782e5619b3",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "products.offerings",
+        "products.packages",
+        "products.offering_packages"
+      ],
+      "source_tables": [
+        "billing_offerings",
+        "billing_packages",
+        "billing_packages"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "offerings",
+        "packages",
+        "offering_packages"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 3,
+        "checksum": "sha256:1941a54ab437f01ff5e02928c72168740c67adefa6c25100dee6f0176e10e16f"
+      },
+      "fixture_target": {
+        "count": 3,
+        "checksum": "sha256:1941a54ab437f01ff5e02928c72168740c67adefa6c25100dee6f0176e10e16f"
+      },
+      "deterministic_sample": {
+        "id": "products.offerings-id-1",
+        "project_id": "12",
+        "placement": "products.offerings-placement-1",
+        "name": "products.offerings-name-1",
+        "packages_json": "{}",
+        "priority": 1,
+        "active": 1,
+        "updated_at": "2026-08-30T00:00:00.000Z",
+        "identifier": "products.offerings-identifier-1",
+        "description": "products.offerings-description-1",
+        "created_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:db57b4af0f193d2452763096dc4b0572ae082282f83a5582a93e817d0c2fb00c",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-products",
+      "store_id": "supbrd-plug-products.store.prices",
+      "descriptor_checksum": "sha256:7bcaad93a6f4f4c7ac340ba8cbcf1cda2d402331a171605406ab6a89ba6fddf8",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "products.store_products"
+      ],
+      "source_tables": [
+        "billing_products"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "store_products"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:952df50f4f7ba90c55a3955ecfaaf3f0ac3fee1513de252d01726de9babe0285"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:952df50f4f7ba90c55a3955ecfaaf3f0ac3fee1513de252d01726de9babe0285"
+      },
+      "deterministic_sample": {
+        "id": "products.store_products-id-1",
+        "project_id": "12",
+        "product_id": "products.store_products-product_id-1",
+        "store": "products.store_products-store-1",
+        "environment": "products.store_products-environment-1",
+        "store_product_id": "products.store_products-store_product_id-1",
+        "title": "products.store_products-title-1",
+        "description": "products.store_products-description-1",
+        "price_micros": "products.store_products-price_micros-1",
+        "currency": "products.store_products-currency-1",
+        "billing_period": "products.store_products-billing_period-1",
+        "trial_period": "products.store_products-trial_period-1",
+        "active": 1,
+        "metadata_json": "{}",
+        "synced_at": "2026-08-30T00:00:00.000Z",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:2276806a11de1a143d368dab09e0b9b6c73e957ee738afa4c9bec29e232c31fe",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-audit",
+      "store_id": "supbrd-plug-audit.store.archives",
+      "descriptor_checksum": "sha256:4b318cca40e50b136098b87004a11265c5ed7b9ba7b720bf078b6a11245a5ea3",
+      "migration_kind": "new_empty_store",
+      "entity_ids": [
+        "audit.archives"
+      ],
+      "source_tables": [
+        "audit_logs"
+      ],
+      "target_tables": [],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 0,
+        "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "fixture_target": {
+        "count": 0,
+        "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "deterministic_sample": null,
+      "sample_checksum": null,
+      "double_import": "not_applicable_empty_store",
+      "checkpoint_resume": "not_applicable_empty_store",
+      "shadow_read": "not_applicable_empty_store",
+      "reverse_delta": "not_applicable_empty_store",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plug-audit",
+      "store_id": "supbrd-plug-audit.store.ledger",
+      "descriptor_checksum": "sha256:d71e34a6c5e5fc8cc8521feed3b6ce83b0b4c9f86770abac0d955d4bbaf25192",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "audit.ledger"
+      ],
+      "source_tables": [
+        "audit_logs"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:ed2235df04d4a5bf2e2057036a9addf1e299a534f028a394e3f9149a955f4477"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:ed2235df04d4a5bf2e2057036a9addf1e299a534f028a394e3f9149a955f4477"
+      },
+      "deterministic_sample": {
+        "entity_id": "audit.ledger-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:1581fbf8fa2677b321e9c8af7ad093abb9eeaed99c4394c1826aa648cead6654",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-gateway",
+      "store_id": "supbrd-plugmod-gateway.store.rate_limits",
+      "descriptor_checksum": "sha256:f1e19a90e387ae1662a7d37246855c1d4431903f892cf4933be44f6cab8a6b41",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "gateway.rate_limits"
+      ],
+      "source_tables": [
+        "_emdash_rate_limits"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:afee60ede12c146cf5968a51ca53bdba2322b6a9ac1f0c1916a7f47d0fced01b"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:afee60ede12c146cf5968a51ca53bdba2322b6a9ac1f0c1916a7f47d0fced01b"
+      },
+      "deterministic_sample": {
+        "entity_id": "gateway.rate_limits-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:bc8919f847dba31ea9126df6c0379164636fa09c144071b37aa16eed524d0a02",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-gateway",
+      "store_id": "supbrd-plugmod-gateway.store.route_manifests",
+      "descriptor_checksum": "sha256:a218dcc4cc26db57f030bed48c817fcf66056bca1b7a715c351a1d6cb57250b8",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "gateway.route_manifests"
+      ],
+      "source_tables": [
+        "superboard_front_release_candidates"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:03755c440e2a2e225d084108fb574a993383c3411a1a218912fbb1727ed9832b"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:03755c440e2a2e225d084108fb574a993383c3411a1a218912fbb1727ed9832b"
+      },
+      "deterministic_sample": {
+        "entity_id": "gateway.route_manifests-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:204cb9f5375af64d0a51b4fa5633857085339cd009fe14566cdc7735563f0dde",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "store_id": "supbrd-plugmod-billing.store.ledger",
+      "descriptor_checksum": "sha256:0a733744dd071118039e9f26b6187679dce935d8f2b346e61d50ed207079d934",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "products.financial_customers",
+        "products.entitlements",
+        "products.entitlement_products"
+      ],
+      "source_tables": [
+        "billing_customers",
+        "billing_entitlements",
+        "billing_product_entitlements"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "financial_customers",
+        "entitlements",
+        "entitlement_products"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 3,
+        "checksum": "sha256:ccb62dc651eb29afeb48839061d624b85fa6817206135c7a63c240366c6f6ba8"
+      },
+      "fixture_target": {
+        "count": 3,
+        "checksum": "sha256:ccb62dc651eb29afeb48839061d624b85fa6817206135c7a63c240366c6f6ba8"
+      },
+      "deterministic_sample": {
+        "id": "products.financial_customers-id-1",
+        "project_id": "12",
+        "external_customer_id": "products.financial_customers-external_customer_id-1",
+        "attributes_json": "{}",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:b163d9ed7fb5d8135faabe51a82221f67140e8224c1650f350cd80c64ee5180e",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "store_id": "supbrd-plugmod-billing.store.purchases",
+      "descriptor_checksum": "sha256:5d35bd750a536f1ea85d24b37873a2a5a71e0b5022e46b304ceb8259f34009a6",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "products.purchases",
+        "products.refunds"
+      ],
+      "source_tables": [
+        "billing_transactions",
+        "billing_refund_cases"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "purchases",
+        "refunds"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 2,
+        "checksum": "sha256:b74f1bf86a235e7410026167b22d1e95ddd23271dc2e3411afe6e877c4320033"
+      },
+      "fixture_target": {
+        "count": 2,
+        "checksum": "sha256:b74f1bf86a235e7410026167b22d1e95ddd23271dc2e3411afe6e877c4320033"
+      },
+      "deterministic_sample": {
+        "id": "products.purchases-id-1",
+        "project_id": "12",
+        "financial_customer_id": "products.purchases-financial_customer_id-1",
+        "product_id": "products.purchases-product_id-1",
+        "status": "products.purchases-status-1",
+        "purchased_at": "2026-08-30T00:00:00.000Z",
+        "payload_json": "{}",
+        "store": "products.purchases-store-1",
+        "environment": "products.purchases-environment-1",
+        "external_transaction_id": "products.purchases-external_transaction_id-1",
+        "original_transaction_id": "products.purchases-original_transaction_id-1",
+        "purchased_price_micros": "products.purchases-purchased_price_micros-1",
+        "currency": "products.purchases-currency-1",
+        "expires_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:e0a179d2110bf1ebbac095a4892e09ea4abd0cd975b3569e5de74790a1a898c3",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "store_id": "supbrd-plugmod-billing.store.subscriptions",
+      "descriptor_checksum": "sha256:662f0305c280ce2481886c9b2668716bfffd1b565713d2d9e153519cb95cd0bf",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "products.subscriptions"
+      ],
+      "source_tables": [
+        "billing_subscriptions"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "subscriptions"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:85c9536d3fa7a3ec369992d4dae43e9c30818c2502a3cc7fa4389f17851ba4ba"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:85c9536d3fa7a3ec369992d4dae43e9c30818c2502a3cc7fa4389f17851ba4ba"
+      },
+      "deterministic_sample": {
+        "id": "products.subscriptions-id-1",
+        "project_id": "12",
+        "financial_customer_id": "products.subscriptions-financial_customer_id-1",
+        "product_id": "products.subscriptions-product_id-1",
+        "latest_purchase_id": "products.subscriptions-latest_purchase_id-1",
+        "store": "products.subscriptions-store-1",
+        "environment": "products.subscriptions-environment-1",
+        "original_transaction_id": "products.subscriptions-original_transaction_id-1",
+        "status": "products.subscriptions-status-1",
+        "current_period_started_at": "2026-08-30T00:00:00.000Z",
+        "current_period_ends_at": "2026-08-30T00:00:00.000Z",
+        "auto_renew": "products.subscriptions-auto_renew-1",
+        "cancelled_at": "2026-08-30T00:00:00.000Z",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:68fcd9f9ed6e265f37e5d0d783876d9657a28fee60513b314ff50ab253e1f7c6",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "store_id": "supbrd-plugmod-support.store.contacts",
+      "descriptor_checksum": "sha256:430dfe44507af2593dcda7619c1c320d80891f9db0cb23384d072d5802a59d58",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "support.companies",
+        "support.contacts",
+        "support.contact_notes"
+      ],
+      "source_tables": [
+        "messaging_companies",
+        "messaging_contacts",
+        "messaging_contact_notes"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "support_companies",
+        "support_contacts",
+        "support_contact_notes"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 3,
+        "checksum": "sha256:73b05bbcba950c66da87a30dcfd9ece23836e1d73b2e78062f09d5f04568711f"
+      },
+      "fixture_target": {
+        "count": 3,
+        "checksum": "sha256:73b05bbcba950c66da87a30dcfd9ece23836e1d73b2e78062f09d5f04568711f"
+      },
+      "deterministic_sample": {
+        "id": "support.companies-id-1",
+        "project_id": "12",
+        "name": "support.companies-name-1",
+        "domain": "support.companies-domain-1",
+        "description": "support.companies-description-1",
+        "custom_attributes_json": "{}",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:54ccb0c3fbfb85a481742a15513e20b7575998866b82d2ab2d690e0c8ead77a2",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "store_id": "supbrd-plugmod-support.store.conversations",
+      "descriptor_checksum": "sha256:1aef27f284dbcc9b24a9d1fab984ae14ee22f5296935db48acf8bc8822ee07fd",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "support.conversations",
+        "support.audit",
+        "support.settings",
+        "support.configuration",
+        "support.configuration_audit",
+        "support.csat",
+        "support.operations_audit",
+        "support.rule_executions",
+        "support.webhook_deliveries"
+      ],
+      "source_tables": [
+        "conversations",
+        "messaging_audit_events",
+        "messaging_project_settings",
+        "messaging_configuration_entities",
+        "messaging_configuration_audit_events",
+        "messaging_csat_responses",
+        "messaging_operations_audit_events",
+        "messaging_rule_executions",
+        "messaging_webhook_deliveries"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "conversations",
+        "support_audit_events",
+        "support_project_settings",
+        "support_configuration_entities",
+        "support_configuration_audit_events",
+        "support_csat_responses",
+        "support_operations_audit_events",
+        "support_rule_executions",
+        "support_webhook_deliveries"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 9,
+        "checksum": "sha256:8d894f182b4b1b702e12b3961a2ae4561b1d9cca714d95d8577c1ffb9b4e3d20"
+      },
+      "fixture_target": {
+        "count": 9,
+        "checksum": "sha256:8d894f182b4b1b702e12b3961a2ae4561b1d9cca714d95d8577c1ffb9b4e3d20"
+      },
+      "deterministic_sample": {
+        "id": "support.conversations-id-1",
+        "project_id": "12",
+        "external_user_id": "support.conversations-external_user_id-1",
+        "client_conversation_id": "support.conversations-client_conversation_id-1",
+        "subject": "support.conversations-subject-1",
+        "status": "support.conversations-status-1",
+        "priority": 1,
+        "assigned_user_id": "support.conversations-assigned_user_id-1",
+        "labels_json": "{}",
+        "last_message_preview": "support.conversations-last_message_preview-1",
+        "last_message_at": "2026-08-30T00:00:00.000Z",
+        "user_last_read_at": "2026-08-30T00:00:00.000Z",
+        "agent_last_read_at": "2026-08-30T00:00:00.000Z",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z",
+        "inbox_id": "support.conversations-inbox_id-1",
+        "assigned_team_id": "support.conversations-assigned_team_id-1",
+        "custom_attributes_json": "{}",
+        "snoozed_until": "support.conversations-snoozed_until-1",
+        "first_reply_at": "2026-08-30T00:00:00.000Z",
+        "resolved_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:8fa0e4acb6741d9f86411f14a55f8fc9c694ebfc4935d082d0796a7e3278037d",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "store_id": "supbrd-plugmod-support.store.messages",
+      "descriptor_checksum": "sha256:c9183b55ca0ed1bd83b02c016fb005b811fb5b34301f8185c1ddef67d32c3cca",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "support.messages",
+        "support.participants",
+        "support.drafts",
+        "support.notifications"
+      ],
+      "source_tables": [
+        "messages",
+        "messaging_conversation_participants",
+        "messaging_conversation_drafts",
+        "messaging_agent_notifications"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "messages",
+        "support_conversation_participants",
+        "support_conversation_drafts",
+        "support_agent_notifications"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 4,
+        "checksum": "sha256:5975cd3ea1684da9c8047af8063f3a241b230007cbb79ccfdf683164460b244b"
+      },
+      "fixture_target": {
+        "count": 4,
+        "checksum": "sha256:5975cd3ea1684da9c8047af8063f3a241b230007cbb79ccfdf683164460b244b"
+      },
+      "deterministic_sample": {
+        "id": "support.messages-id-1",
+        "conversation_id": "support.messages-conversation_id-1",
+        "sender_kind": "support.messages-sender_kind-1",
+        "sender_id": "support.messages-sender_id-1",
+        "body": "support.messages-body-1",
+        "attachment_key": "support.messages-attachment_key-1",
+        "attachment_name": "support.messages-attachment_name-1",
+        "attachment_content_type": "support.messages-attachment_content_type-1",
+        "client_message_id": "support.messages-client_message_id-1",
+        "sequence": "support.messages-sequence-1",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "visibility": "support.messages-visibility-1",
+        "content_type": "support.messages-content_type-1",
+        "reply_to_message_id": "support.messages-reply_to_message_id-1",
+        "metadata_json": "{}",
+        "delivery_status": "support.messages-delivery_status-1"
+      },
+      "sample_checksum": "sha256:a1aeb0c037db4ce68d38d0827bfa783e14c5ca12f9bd305ca4312b01af8e2503",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "store_id": "supbrd-plugmod-flows.store.definitions",
+      "descriptor_checksum": "sha256:bac926a899687bcba1ab14eddc2d4fc19061f4a3b04b4d187082a797b1f9b4b2",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "flows.definitions"
+      ],
+      "source_tables": [
+        "flow_workflows"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:5793a1047cdbc9f7fd9a6d2ab3e3d13848ab5eff508e0d48df1fb7206ecc7078"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:5793a1047cdbc9f7fd9a6d2ab3e3d13848ab5eff508e0d48df1fb7206ecc7078"
+      },
+      "deterministic_sample": {
+        "entity_id": "flows.definitions-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:7ab0731553d1eb77f44abbb05cadba54c7b07ea6bb45ee9b2e2291caaa2521b2",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "store_id": "supbrd-plugmod-flows.store.runtime",
+      "descriptor_checksum": "sha256:636a31d09bbfbbda72c5c2577c7e504cec8160dd23edc304f7b3c6a426ebeed2",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "flows.runtime"
+      ],
+      "source_tables": [
+        "flow_user_workflow_states"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:8d005c99f7f8424e6ca595098c6c52aeefc07bf233b5c25dfc4fb959603c34fc"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:8d005c99f7f8424e6ca595098c6c52aeefc07bf233b5c25dfc4fb959603c34fc"
+      },
+      "deterministic_sample": {
+        "entity_id": "flows.runtime-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:935fa93f3a3a64b9324cd5b67e5c9520b4ad0e6da2888c5dd21336914f0874e4",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "store_id": "supbrd-plugmod-analytics.store.aggregates",
+      "descriptor_checksum": "sha256:6f2b75995879352f9b7165023d15da7e36dccd8ca38bbbe6e140570563bc9176",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "app.daily_metrics",
+        "analytics.daily_aggregates"
+      ],
+      "source_tables": [
+        "visitor_daily_statistics",
+        "analytics_daily_metrics"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "daily_metrics"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 2,
+        "checksum": "sha256:d5e904f425d65e48c3e25e0203a2afe9f8b1e99c329d995c6c95881629b9c3ec"
+      },
+      "fixture_target": {
+        "count": 2,
+        "checksum": "sha256:d5e904f425d65e48c3e25e0203a2afe9f8b1e99c329d995c6c95881629b9c3ec"
+      },
+      "deterministic_sample": {
+        "project_id": "12",
+        "metric_date": "2026-08-30T00:00:00.000Z",
+        "platform": "app.daily_metrics-platform-1",
+        "active_customers": "app.daily_metrics-active_customers-1",
+        "new_customers": "app.daily_metrics-new_customers-1",
+        "referrals": "app.daily_metrics-referrals-1",
+        "installs": "app.daily_metrics-installs-1",
+        "opens": "app.daily_metrics-opens-1"
+      },
+      "sample_checksum": "sha256:a4814765d1a14621c340aa999cbbcf5468de9c96de4b8eaef8e6d1d1ee4ae1ea",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "store_id": "supbrd-plugmod-analytics.store.events",
+      "descriptor_checksum": "sha256:a7f5b4b21495b60ff5f80779ccf3fb35086d85a07c85c333f8857e7cb150504f",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "app.customer_events",
+        "app.customer_purchase_events",
+        "analytics.authoritative_events"
+      ],
+      "source_tables": [
+        "events",
+        "purchase_events",
+        "analytics_event_receipts"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "customer_events",
+        "customer_events"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 3,
+        "checksum": "sha256:d5c67398727595d4dacdeeb31d247bccf8dd002536fa0bb6625688950b78e100"
+      },
+      "fixture_target": {
+        "count": 3,
+        "checksum": "sha256:d5c67398727595d4dacdeeb31d247bccf8dd002536fa0bb6625688950b78e100"
+      },
+      "deterministic_sample": {
+        "id": "app.customer_events-id-1",
+        "project_id": "12",
+        "customer_id": "app.customer_events-customer_id-1",
+        "referrer_customer_id": "app.customer_events-referrer_customer_id-1",
+        "event_type": "app.customer_events-event_type-1",
+        "platform": "app.customer_events-platform-1",
+        "occurred_at": "2026-08-30T00:00:00.000Z",
+        "revenue_cents": 1,
+        "engagement_time": "2026-08-30T00:00:00.000Z",
+        "metadata_json": "{}"
+      },
+      "sample_checksum": "sha256:421b0318bc9662354e24390d21303338642cbedcc86f7c18f791834b28871af0",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "store_id": "supbrd-plugmod-marketing.store.campaigns",
+      "descriptor_checksum": "sha256:2a3c118d11e010542e214c4a0215ab24e884f11fbc5fd67ee53852cd5b8aba60",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "marketing.campaigns"
+      ],
+      "source_tables": [
+        "campaigns"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:bfe34c590baf93842dbbebe3ac47c2e81cd43ca1a65bb4b7e1cfcaeebe1db928"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:bfe34c590baf93842dbbebe3ac47c2e81cd43ca1a65bb4b7e1cfcaeebe1db928"
+      },
+      "deterministic_sample": {
+        "entity_id": "marketing.campaigns-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:c0af0c465d4f681d8143cdeee1d467f1a4a5e29d2fe1d7dc6d3b89446c968df6",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "store_id": "supbrd-plugmod-marketing.store.consent",
+      "descriptor_checksum": "sha256:5457d4c8fdaa337f2f610b240974995aa191b14f24f431da3d7700899bb997c9",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "marketing.consent"
+      ],
+      "source_tables": [
+        "subscribers"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:a742c2a0c2706db0ad9bcc7d710f2f689df6be5587d4b9f3580146973614f2b0"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:a742c2a0c2706db0ad9bcc7d710f2f689df6be5587d4b9f3580146973614f2b0"
+      },
+      "deterministic_sample": {
+        "entity_id": "marketing.consent-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:75b9f48aac3015c585993ab03a40c847f289f635bbb4bfd3053c473f554072f0",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "store_id": "supbrd-plugmod-marketing.store.journeys",
+      "descriptor_checksum": "sha256:697d866a983e8b28ec73ee25ce8aeeb2c7943e4f4bcf3193f94e420cfda4d033",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "marketing.journeys"
+      ],
+      "source_tables": [
+        "marketing_journeys"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:7fa92940d3727012dd4f948702d3807bb5c8291ba405931b411e490600317349"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:7fa92940d3727012dd4f948702d3807bb5c8291ba405931b411e490600317349"
+      },
+      "deterministic_sample": {
+        "entity_id": "marketing.journeys-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:ddadb1de9a0c1e013acf40c4d0a32a24a89552c94b83e0247b45d87aa9fe278b",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-email",
+      "store_id": "supbrd-plugmod-email.store.deliveries",
+      "descriptor_checksum": "sha256:2ed1232ee64be699e8d542af2261d97ed5c2620494e7752652ac5f19d2579fc3",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "email.deliveries"
+      ],
+      "source_tables": [
+        "email_deliveries"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:dd3842112d003ed311f37deb2d3d9a32a6bd73916152760aef38bc8d3ed1f044"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:dd3842112d003ed311f37deb2d3d9a32a6bd73916152760aef38bc8d3ed1f044"
+      },
+      "deterministic_sample": {
+        "entity_id": "email.deliveries-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:ca20170accdbde32e82618aa8a0f7d3a63fbea816d5d3b7faa26e6052b5bb9a9",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-email",
+      "store_id": "supbrd-plugmod-email.store.provider_events",
+      "descriptor_checksum": "sha256:206b8d71053fc27000353e299c859486fd67de48bc1a2b72bac0602b9971a30b",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "email.provider_events"
+      ],
+      "source_tables": [
+        "email_provider_events"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:eaf065f1adcca350a0f162e01b333faa8e392b1cfc487c3e42e49c6dc560ad1d"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:eaf065f1adcca350a0f162e01b333faa8e392b1cfc487c3e42e49c6dc560ad1d"
+      },
+      "deterministic_sample": {
+        "entity_id": "email.provider_events-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:19420e4d5ba68afc4e18c132e0b9da8c1203965006a8c95909684e8a14cd3dcb",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "store_id": "supbrd-plugmod-dynamic-links.store.attribution",
+      "descriptor_checksum": "sha256:44ba805585521b4898cbdb5d0bb366805757c572754f701344533925610caa19",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "dynamic-links.events",
+        "dynamic-links.analytics_events",
+        "dynamic-links.purchase_events"
+      ],
+      "source_tables": [
+        "actions",
+        "events",
+        "purchase_events"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "link_events",
+        "link_events",
+        "link_events"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 3,
+        "checksum": "sha256:bd2bb9cb272be355f55fde6ad5af8663b73e936959e2f2952c6ab26827f1e032"
+      },
+      "fixture_target": {
+        "count": 3,
+        "checksum": "sha256:bd2bb9cb272be355f55fde6ad5af8663b73e936959e2f2952c6ab26827f1e032"
+      },
+      "deterministic_sample": {
+        "id": "dynamic-links.events-id-1",
+        "project_id": "12",
+        "link_id": "dynamic-links.events-link_id-1",
+        "campaign_id": "dynamic-links.events-campaign_id-1",
+        "event_type": "dynamic-links.events-event_type-1",
+        "platform": "dynamic-links.events-platform-1",
+        "country_code": "dynamic-links.events-country_code-1",
+        "occurred_at": "2026-08-30T00:00:00.000Z",
+        "metadata_json": "{}",
+        "revenue_cents": 1,
+        "engagement_time": "2026-08-30T00:00:00.000Z",
+        "customer_id": "dynamic-links.events-customer_id-1",
+        "session_id": "dynamic-links.events-session_id-1"
+      },
+      "sample_checksum": "sha256:f7394402c84f7f22fd0feaa934075e9bab6e5ae53502b191c542b0ab2ccd647e",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "store_id": "supbrd-plugmod-dynamic-links.store.links",
+      "descriptor_checksum": "sha256:cf0695f2178eebcd713023c842dcafd1407d1cd82298144724c3d541c891ed32",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "dynamic-links.campaigns",
+        "dynamic-links.links",
+        "dynamic-links.redirect_rules",
+        "dynamic-links.domains",
+        "dynamic-links.social_preview",
+        "dynamic-links.tracking_settings"
+      ],
+      "source_tables": [
+        "campaigns",
+        "links",
+        "redirects",
+        "domains",
+        "domains",
+        "redirect_configs"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "campaigns",
+        "links",
+        "redirect_rules",
+        "domains",
+        "social_previews",
+        "tracking_settings"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 6,
+        "checksum": "sha256:4a8a465c0790612cfb6a61bac2eb0053b0d01d6d5e15f0efae8c86e0a85e2415"
+      },
+      "fixture_target": {
+        "count": 6,
+        "checksum": "sha256:4a8a465c0790612cfb6a61bac2eb0053b0d01d6d5e15f0efae8c86e0a85e2415"
+      },
+      "deterministic_sample": {
+        "id": "dynamic-links.campaigns-id-1",
+        "project_id": "12",
+        "name": "dynamic-links.campaigns-name-1",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "slug": "dynamic-links.campaigns-slug-1",
+        "status": "dynamic-links.campaigns-status-1",
+        "metadata_json": "{}",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:a80ff743af6a59825e38be734a35284e3cf71185de1c224c8a2ded2337b74925",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-files",
+      "store_id": "supbrd-plugmod-files.store.objects",
+      "descriptor_checksum": "sha256:1cd514ff509eceb08303450f9fcdd43c7591fd2c21ee41a7a6c704041646c6f5",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "files.objects"
+      ],
+      "source_tables": [
+        "application_files"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:99ea31a0575ec857163f3b327a42e6a2fc166528082aeff3144e8b77133a9fe3"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:99ea31a0575ec857163f3b327a42e6a2fc166528082aeff3144e8b77133a9fe3"
+      },
+      "deterministic_sample": {
+        "entity_id": "files.objects-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:6e661638e811c090e38f4ce3944de2df273bd27837be8498a83a78800908f27d",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-files",
+      "store_id": "supbrd-plugmod-files.store.tickets",
+      "descriptor_checksum": "sha256:85a36f3a3f7ab4c5d8035235ab906791a502b958b55cf69c293f21d2102058e3",
+      "migration_kind": "new_empty_store",
+      "entity_ids": [
+        "files.tickets"
+      ],
+      "source_tables": [
+        "application_files"
+      ],
+      "target_tables": [],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 0,
+        "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "fixture_target": {
+        "count": 0,
+        "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "deterministic_sample": null,
+      "sample_checksum": null,
+      "double_import": "not_applicable_empty_store",
+      "checkpoint_resume": "not_applicable_empty_store",
+      "shadow_read": "not_applicable_empty_store",
+      "reverse_delta": "not_applicable_empty_store",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "store_id": "supbrd-plugmod-paywalls.store.definitions",
+      "descriptor_checksum": "sha256:85c5bd869bfe5dbe3b2c96def4ddae8974d57c505d1e38518bd76e6fb521683e",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "paywalls.paywalls",
+        "paywalls.versions",
+        "paywalls.placements",
+        "paywalls.experiences",
+        "paywalls.variants"
+      ],
+      "source_tables": [
+        "billing_paywalls",
+        "billing_paywall_versions",
+        "billing_placements",
+        "billing_experiments",
+        "billing_experiment_variants"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "paywalls",
+        "paywall_versions",
+        "placements",
+        "experiences",
+        "variants"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 5,
+        "checksum": "sha256:72ed3be68ef4ef0d63fc8867e9ef112f4800385235ecc6f3a7a70e1903b3ac98"
+      },
+      "fixture_target": {
+        "count": 5,
+        "checksum": "sha256:72ed3be68ef4ef0d63fc8867e9ef112f4800385235ecc6f3a7a70e1903b3ac98"
+      },
+      "deterministic_sample": {
+        "id": "paywalls.paywalls-id-1",
+        "project_id": "12",
+        "name": "paywalls.paywalls-name-1",
+        "created_at": "2026-08-30T00:00:00.000Z",
+        "identifier": "paywalls.paywalls-identifier-1",
+        "description": "paywalls.paywalls-description-1",
+        "archived_at": "2026-08-30T00:00:00.000Z",
+        "updated_at": "2026-08-30T00:00:00.000Z"
+      },
+      "sample_checksum": "sha256:eb6a50b28488d007d5ef76dfd169c2e854c7d50e0201ad6c6a4500bf4317d711",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "store_id": "supbrd-plugmod-paywalls.store.exposures",
+      "descriptor_checksum": "sha256:71013112295838516524667fa7d86efa9a602b5d98e72d0603cc66f5f10ac223",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "paywalls.events"
+      ],
+      "source_tables": [
+        "billing_paywall_events"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [
+        "events"
+      ],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:80cf5b7b65ded74df80399342bbb7289c5441334ad421b232687348eeb1e7878"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:80cf5b7b65ded74df80399342bbb7289c5441334ad421b232687348eeb1e7878"
+      },
+      "deterministic_sample": {
+        "id": "paywalls.events-id-1",
+        "project_id": "12",
+        "placement": "paywalls.events-placement-1",
+        "event_type": "paywalls.events-event_type-1",
+        "occurred_at": "2026-08-30T00:00:00.000Z",
+        "payload_json": "{}",
+        "paywall_id": "paywalls.events-paywall_id-1",
+        "version_id": "paywalls.events-version_id-1",
+        "experience_id": "paywalls.events-experience_id-1",
+        "variant_id": "paywalls.events-variant_id-1",
+        "platform": "paywalls.events-platform-1",
+        "customer_id": "paywalls.events-customer_id-1",
+        "session_id": "paywalls.events-session_id-1",
+        "revenue_micros": "paywalls.events-revenue_micros-1",
+        "currency": "paywalls.events-currency-1"
+      },
+      "sample_checksum": "sha256:7a56ec55069d9a867d9d60840c4255f4d1eeeb2bb4c7d23c5e6ae8c06b60d651",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "store_id": "supbrd-plugmod-onboardings.store.definitions",
+      "descriptor_checksum": "sha256:5aa038271c3796eb7589eb958cdf402e7ce0f54ac7e713dbc71964e812fc8b0a",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "onboardings.definitions"
+      ],
+      "source_tables": [
+        "onboardings"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:483b1b6e343b575a46831dc56e322a4dbfdf6f918bc72e0892a715225e64e9ba"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:483b1b6e343b575a46831dc56e322a4dbfdf6f918bc72e0892a715225e64e9ba"
+      },
+      "deterministic_sample": {
+        "entity_id": "onboardings.definitions-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:fbe400f1fd28bb67ef61f7f77d88d27e45051aef01ae06b798a4850bd5e3c578",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "store_id": "supbrd-plugmod-onboardings.store.progress",
+      "descriptor_checksum": "sha256:9357600a1ca76d5aa96600bd0adfa7843bc86e97493637fbd42589f05a8f35d1",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "onboardings.progress"
+      ],
+      "source_tables": [
+        "events"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:1c45d31bb35499bf4d4fbcdd86c8c2583672cb465babbdc2383e285da37cb227"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:1c45d31bb35499bf4d4fbcdd86c8c2583672cb465babbdc2383e285da37cb227"
+      },
+      "deterministic_sample": {
+        "entity_id": "onboardings.progress-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:ea12bb5d2ccf327a68d747d33be8885046bddee666ce8f42ef14d564d6804b6d",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-observability",
+      "store_id": "supbrd-plugmod-observability.store.health_projections",
+      "descriptor_checksum": "sha256:b54d0b3505f714f9164b2bc8cb8f11a990d8528304c728932e388d52cc449e72",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "observability.health_projections"
+      ],
+      "source_tables": [
+        "superboard_dependency_health"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:58d3a283c348789068ca585d4b6a97978613cdb45baa08656a51323a92eb8ebf"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:58d3a283c348789068ca585d4b6a97978613cdb45baa08656a51323a92eb8ebf"
+      },
+      "deterministic_sample": {
+        "entity_id": "observability.health_projections-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:5fc86822444b6ffa35f0cda3a17c1f0897399d1b50cbbabc7c680b1511902871",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "store_id": "supbrd-plugmod-mcp.store.sessions",
+      "descriptor_checksum": "sha256:82cba6fba50672551cf122d1340a3cced8ad3d1f65bb12f992b410cd47cff4b0",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "mcp.sessions"
+      ],
+      "source_tables": [
+        "mcp_tokens"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:3a116175545acd8b64fba4f1c16114ed12c3714b16a356885abf19e41d22a3eb"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:3a116175545acd8b64fba4f1c16114ed12c3714b16a356885abf19e41d22a3eb"
+      },
+      "deterministic_sample": {
+        "entity_id": "mcp.sessions-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:88fd33a572c9fc74cdfd4cc651145108eafd754c837cd99eb7daac532b4c590c",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "store_id": "supbrd-plugmod-mcp.store.tool_receipts",
+      "descriptor_checksum": "sha256:03ad526c3e1818a8d1b6ffe295e93683bc37f5eeda8d8fb954ade2b5db8ca6a6",
+      "migration_kind": "source_to_store",
+      "entity_ids": [
+        "mcp.tool_receipts"
+      ],
+      "source_tables": [
+        "audit_logs"
+      ],
+      "target_tables": [
+        "superboard_plugin_store_records"
+      ],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 1,
+        "checksum": "sha256:823ce47e2a188e0d0263ffd1c901da2674e4964b0e858e75ce4aa81f1bd53606"
+      },
+      "fixture_target": {
+        "count": 1,
+        "checksum": "sha256:823ce47e2a188e0d0263ffd1c901da2674e4964b0e858e75ce4aa81f1bd53606"
+      },
+      "deterministic_sample": {
+        "entity_id": "mcp.tool_receipts-entity_id-1",
+        "project_id": "12",
+        "payload_json": "{}"
+      },
+      "sample_checksum": "sha256:4cbcf3cbabf3101d00aef049a7c65809750cceda17f69601963dafc704a30feb",
+      "double_import": "passed",
+      "checkpoint_resume": "passed",
+      "shadow_read": "passed",
+      "reverse_delta": "replayable_without_deletes",
+      "rollback": "non_destructive"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-custom-*",
+      "store_id": "supbrd-plugmod-custom-*.store.operations",
+      "descriptor_checksum": "sha256:9fe34d69030a7e77cec46d37728be8598282db6550fe6b902d5736184c3be64a",
+      "migration_kind": "new_empty_store",
+      "entity_ids": [],
+      "source_tables": [],
+      "target_tables": [],
+      "projection_tables": [],
+      "schema_proof": {
+        "path": "scripts/module-cutover/registry-schema.test.mjs",
+        "checksum": "sha256:05e14d66629b6fb632ede505976e158beedfe20bdddf40266946773084e25040"
+      },
+      "runtime_proof": {
+        "path": "apps/site/runtime-tests/plugin-store-authority.runtime.test.ts",
+        "checksum": "sha256:61455a03d2e6efedd873d413d7b8fd3569bc5d136592490eb95a2d2473768dc2"
+      },
+      "fixture_source": {
+        "count": 0,
+        "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "fixture_target": {
+        "count": 0,
+        "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "deterministic_sample": null,
+      "sample_checksum": null,
+      "double_import": "not_applicable_empty_store",
+      "checkpoint_resume": "not_applicable_empty_store",
+      "shadow_read": "not_applicable_empty_store",
+      "reverse_delta": "not_applicable_empty_store",
+      "rollback": "non_destructive"
+    }
+  ],
+  "store_count": 42,
+  "public_cutover": false,
+  "receipt_checksum": "sha256:7d48eda66778f64ee2bd94355d03d1fff2da6f48a5a3da3dbc678a765f441cdd"
+}

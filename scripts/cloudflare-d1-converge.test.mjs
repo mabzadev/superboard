@@ -200,7 +200,10 @@ test("D1 mutation requires an exact confirmation and protected production backup
 });
 
 test("production convergence backs up every database before applying any migration", async () => {
-  const { target } = await loadTarget("vocostar");
+  const { target: source } = await loadTarget("vocostar");
+  const target = structuredClone(source);
+  target.environments.production.moduleD1.support.id =
+    "13171470-dfb5-46ce-b047-c9b151c34ae2";
   const events = [];
   const result = await applyD1Convergence({
     target,

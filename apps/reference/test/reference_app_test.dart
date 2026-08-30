@@ -37,19 +37,10 @@ void main() {
 
     expect(find.text('SuperBoard Reference'), findsOneWidget);
     expect(find.text('platform local · reference local'), findsOneWidget);
-    expect(find.text('2 active · v3 pending'), findsOneWidget);
     expect(find.text('Bootstrap'), findsWidgets);
     expect(find.text('Safe demo mode'), findsOneWidget);
-    await tester.tap(find.text('2 active · v3 pending'));
-    await tester.pumpAndSettle();
-    expect(find.text('SuperBoard SDK catalogue'), findsOneWidget);
-    expect(
-      find.text('opengrow_flutter 2.1.4 → superboard_flutter 3.0.0'),
-      findsOneWidget,
-    );
-    expect(find.text('archived'), findsNWidgets(3));
-    await tester.tap(find.text('Close'));
-    await tester.pumpAndSettle();
+    expect(find.textContaining('pending'), findsNothing);
+    expect(find.textContaining('archived'), findsNothing);
     await tester.tap(find.text('Run reference action'));
     await tester.pumpAndSettle();
     expect(
@@ -105,7 +96,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Live widget acceptance'), findsOneWidget);
       expect(find.text('Render live widget'), findsOneWidget);
-      expect(find.text('OpenGrowPaywall'), findsOneWidget);
+      expect(find.text('SuperBoardPaywall'), findsOneWidget);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -123,7 +114,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Live widget acceptance'), findsOneWidget);
       expect(find.text('Render live widget'), findsOneWidget);
-      expect(find.text('OpenGrowOnboarding'), findsOneWidget);
+      expect(find.text('SuperBoardOnboarding'), findsOneWidget);
       await tester.binding.setSurfaceSize(null);
     },
   );

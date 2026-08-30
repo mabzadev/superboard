@@ -168,6 +168,7 @@ test("the new-application template produces a complete valid custom target", asy
       "max-file-bytes": "20971520",
       "allowed-file-content-types": "application/pdf,image/png,text/plain",
       "operator-docs-url": "https://github.com/example/superboard-platform/docs",
+      "operator-email": "operator@sample.dev",
       "operator-support-email": "support@sample.dev",
       "auth-gateway-issuer": "https://auth.sample.dev",
       "auth-gateway-audience": "opengrow",

@@ -9,14 +9,14 @@
     "test": "vitest run && INTERNAL_API_TOKEN=onboarding-runtime-secret vitest run --config vitest.runtime.config.ts"
   },
   "dependencies": {
-    "@superboard/contracts": "*",
+    "@superboard/contracts": "workspace:*",
     "hono": "^4.7.4"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.20.3",
     "@cloudflare/workers-types": "^5.20260808.1",
     "typescript": "^5.8.3",
-    "vitest": "^4.1.10",
+    "vitest": "catalog:",
     "wrangler": "^4.120.0"
   }
 }

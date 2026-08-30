@@ -1,0 +1,97 @@
+import type { CustomFetch, LanguageOption, OnNavigate, UserProperties } from "@superboard/flows-shared";
+
+export interface FlowsOptions {
+  /**
+   * Your project ID. Find this in Settings \> General.
+   */
+  projectId: string;
+  /**
+   * The environment key. Find this in Settings \> Environments.
+   */
+  environment: string;
+  /**
+   * Unique ID used to identify the user.
+   */
+  userId: string;
+  /**
+   * Object with custom [user properties](https://flows.sh/docs/users/properties). Values can be string, number, boolean, or date.
+   */
+  userProperties?: UserProperties;
+  /**
+   * Custom API URL useful when using proxy to send Flows requests through your own domain.
+   */
+  apiUrl?: string;
+  /** Environment SDK key. */
+  sdkKey?: string;
+  /**
+   * Custom fetch implementation useful when you need to customize api requests with custom headers, credentials, etc.
+   */
+  customFetch?: CustomFetch;
+  /**
+   * Language used to enable [localization](https://flows.sh/docs/localization). Based on the set language, the correct translation for the block data will be selected.
+   * - `disabled` (default) - The user will be served content in the default language group of your project.
+   * - `automatic` - Automatically detect the user's language and use the matching language group. The language is determined by the `Navigator.language` property in the browser.
+   * - Manual - A specific language string, e.g. `en-US`, `fr-FR`, etc. This will use the matching language group for the specified language. See [https://www.localeplanet.com/icu/](https://www.localeplanet.com/icu/) for a full list of supported languages.
+   * @default `disabled`
+   */
+  language?: LanguageOption;
+  /**
+   * Enables the debug panel. Can be also invoked by pressing `Cmd + Option + Shift + F` on Mac or `Ctrl + Alt + Shift + F` on Windows/Linux.
+   *
+   * Disabled by default. Defaults to `true` when running on `localhost`.
+   *
+   * Passing `false` here will NOT disable the shortcut.
+   */
+  debug?: boolean;
+  /**
+   * Custom keyboard shortcut handler for opening the debug panel.
+   *
+   * By default, the debug panel opens with `Cmd + Option + Shift + F` on Mac or `Ctrl + Alt + Shift + F` on Windows/Linux.
+   *
+   * Use this function to customize the shortcut or disable it entirely.
+   *
+   * @param event - The `keydown` keyboard event to evaluate
+   * @returns `true` to open the debug panel, `false` to ignore the shortcut
+   *
+   * @example
+   * ```ts
+   * // Disable debug panel shortcut
+   * onDebugShortcut: () => false
+   *
+   * // Use custom shortcut
+   * onDebugShortcut: (e) => {
+   *   return e.ctrlKey && e.key === "c"
+   * }
+   * ```
+   */
+  onDebugShortcut?: (event: KeyboardEvent) => boolean;
+
+  /**
+   * Custom navigation handler for client-side navigation when using components from `@superboard/flows-js-components`.
+   * Without this, every link click results in a full page reload.
+   *
+   * Expects a function from your router library (e.g. `navigateTo()` from Nuxt).
+   * The function receives the `href` string and the `PointerEvent`.
+   *
+   * `onNavigate` is called for internal links (relative URLs) without `target="_blank"`:
+   * - `/about` — internal, `onNavigate` is called
+   * - `?search=test` — internal, `onNavigate` is called
+   * - `https://example.com` — external URL, `onNavigate` is not called
+   * - `/about` with `openInNew` — internal URL with `target="_blank"`, `onNavigate` is not called
+   *
+   * @example
+   * ```ts
+   * import { init } from "@superboard/flows-js";
+   *
+   * init({
+   *   onNavigate: (href, event) => {
+   *     // Prevent full page reload
+   *     event.preventDefault();
+   *     // Use your router's navigation method, e.g. navigateTo() from Nuxt
+   *     navigateTo(href);
+   *   }
+   * });
+   * ```
+   */
+  onNavigate?: OnNavigate;
+}

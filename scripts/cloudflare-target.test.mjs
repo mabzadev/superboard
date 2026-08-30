@@ -17,7 +17,8 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   for (const name of ["mbza-development", "vocostar"]) {
     const { target } = await loadTarget(name);
     assert.equal("accountId" in target, false);
-    assert.equal(target.schemaVersion, 15);
+    assert.equal(target.schemaVersion, 17);
+    assert.match(target.zoneName, /^(?:mbza\.dev|vocostar\.com)$/u);
     assert.deepEqual(
       target.resourceIdentity,
       name === "mbza-development"
@@ -94,8 +95,21 @@ test("committed targets validate without embedding Cloudflare account ids", asyn
   );
   assert.equal(
     vocostar.environments.production.moduleR2.support.name,
-    "opengrow-support-attachments",
+    "opengrow-support-v2-attachments",
   );
+  assert.deepEqual(vocostar.environments.production.supportRouting, {
+    pattern: "api.vocostar.com/api/v1/support*",
+    worker: "opengrow-api",
+    mode: "staged",
+  });
+  assert.deepEqual(vocostar.environments.production.moduleVectorize, {
+    supportKnowledge: {
+      name: "opengrow-support-v2-knowledge",
+      dimensions: 1024,
+      metric: "cosine",
+      description: "SuperBoard Support knowledge index",
+    },
+  });
 });
 
 test("mbza development domains keep API and short links separate", async () => {
@@ -134,6 +148,67 @@ test("mbza development domains keep API and short links separate", async () => {
     target.filePolicy.allowedContentTypes.includes("audio/*"),
     false,
   );
+});
+
+test("enabled Flows targets require their complete native resource set", async () => {
+  const { target: source } = await loadTarget("mbza-development");
+  const missingD1 = structuredClone(source);
+  delete missingD1.environments.development.moduleD1.flows;
+  await assert.rejects(
+    validateTarget(missingD1),
+    /moduleD1\.flows is required because flows is enabled/u,
+  );
+
+  const missingArchive = structuredClone(source);
+  delete missingArchive.environments.development.moduleR2.flows;
+  await assert.rejects(
+    validateTarget(missingArchive),
+    /moduleR2\.flows is required because flows is enabled/u,
+  );
+
+  const missingQueue = structuredClone(source);
+  delete missingQueue.environments.development.moduleQueues.flows;
+  await assert.rejects(
+    validateTarget(missingQueue),
+    /moduleQueues\.flows is required because flows is enabled/u,
+  );
+
+  const withoutProducts = structuredClone(source);
+  withoutProducts.features.products = false;
+  await assert.rejects(
+    validateTarget(withoutProducts),
+    /Products must be enabled when Flows is enabled/u,
+  );
+});
+
+test("enabled Support targets require every queue and Vectorize resource", async () => {
+  const { target: source } = await loadTarget("mbza-development");
+  for (const queueKey of ["support", "supportAi", "supportBulk"]) {
+    const target = structuredClone(source);
+    delete target.environments.development.moduleQueues[queueKey];
+    await assert.rejects(
+      validateTarget(target),
+      queueKey === "support"
+        ? /moduleQueues.*required property 'support'/u
+        : new RegExp(
+            `moduleQueues\\.${queueKey} is required because support is enabled`,
+            "u",
+          ),
+    );
+  }
+
+  const missingKnowledge = structuredClone(source);
+  delete missingKnowledge.environments.development.moduleVectorize
+    .supportKnowledge;
+  await assert.rejects(
+    validateTarget(missingKnowledge),
+    /moduleVectorize\.supportKnowledge is required because support is enabled/u,
+  );
+
+  const wrongRoute = structuredClone(source);
+  wrongRoute.environments.development.supportRouting.pattern =
+    "other.mbza.dev/api/v1/support*";
+  await assert.rejects(validateTarget(wrongRoute), /supportRouting must route/u);
 });
 
 test("resource identity keeps canonical and legacy physical resources fail-closed", async () => {

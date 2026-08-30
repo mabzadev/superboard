@@ -94,6 +94,10 @@
   ],
   "widgets": [
     "SuperBoardBootstrap",
+    "SuperBoardFlowsBootstrap",
+    "SuperBoardFlutterFlowFlowsSlot",
+    "SuperBoardFlutterFlowFlowsOverlay",
+    "SuperBoardFlutterFlowFlowAnchor",
     "SuperBoardPaywall",
     "SuperBoardOnboarding",
     "SuperBoardRestorePurchasesButton",
@@ -131,6 +135,20 @@
       "superboardApplicationRuntimePolicyJson",
       "superboardApplicationMarketingPreferencesJson",
       "superboardApplicationUpdateMarketingConsentJson"
+    ],
+    "flows": [
+      "superboardFlowsInitialize",
+      "superboardFlowsIdentify",
+      "superboardFlowsSetUserPropertiesJson",
+      "superboardFlowsSetContext",
+      "superboardFlowsSetLanguage",
+      "superboardFlowsStartWorkflow",
+      "superboardFlowsResetWorkflowProgress",
+      "superboardFlowsResetAllWorkflowsProgress",
+      "superboardFlowsFetchWorkflowsJson",
+      "superboardFlowsNotifyNavigation",
+      "superboardFlowsNotifyAnchorInteraction",
+      "superboardFlowsDispose"
     ],
     "analyticsAndLinks": [
       "superboardSetAnalyticsUser",
@@ -183,6 +201,18 @@
       "superboardSupportConnectRealtime",
       "superboardSupportDisconnectRealtime",
       "superboardSupportGetLastRealtimeEventJson",
+      "superboardSupportGetContactJson",
+      "superboardSupportUpdateContactJson",
+      "superboardSupportTrackEventJson",
+      "superboardSupportInboxMembersJson",
+      "superboardSupportProactiveSupportJson",
+      "superboardSupportConversationLabelsJson",
+      "superboardSupportRequestTranscriptJson",
+      "superboardSupportHelpCenterCategoriesJson",
+      "superboardSupportSearchHelpCenterJson",
+      "superboardSupportHelpCenterArticleJson",
+      "superboardSupportRecordHelpCenterViewJson",
+      "superboardSupportJoinMeetingJson",
       "superboardSupportDispose"
     ]
   },

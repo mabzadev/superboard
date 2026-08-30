@@ -6,6 +6,15 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    env: {
+      NEXT_PUBLIC_API_URL: "https://api.example.test",
+      NEXT_PUBLIC_AUTH_URL: "https://auth.example.test",
+      NEXT_PUBLIC_CLIENT_ID: "dashboard-test",
+      NEXT_PUBLIC_DOCS_URL: "https://docs.example.test",
+      NEXT_PUBLIC_SDK_URL: "https://sdk.example.test",
+      NEXT_PUBLIC_SHORTLINK_URL: "https://links.example.test",
+      NEXT_PUBLIC_MCP_URL: "https://mcp.example.test",
+    },
     execArgv: ["--no-experimental-webstorage"],
     setupFiles: ["./src/test-setup.ts"],
     include: ["src/**/__tests__/**/*.test.{ts,tsx}"],

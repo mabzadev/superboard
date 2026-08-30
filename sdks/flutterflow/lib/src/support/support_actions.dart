@@ -2,8 +2,7 @@ import 'dart:typed_data';
 
 import 'actions.dart';
 
-/// Canonical Support names for the FlutterFlow API. The historical Messaging
-/// names remain available as compatibility aliases during application cutover.
+/// Canonical Support event stream for FlutterFlow applications.
 Stream<String> get superboardSupportEventJsonStream =>
     superboardMessagingEventJsonStream;
 

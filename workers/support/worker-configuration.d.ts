@@ -3,7 +3,11 @@
 interface __BaseEnv_Env {
 	ATTACHMENTS: R2Bucket;
 	DB: D1Database;
+	SUPPORT_KNOWLEDGE: VectorizeIndex;
 	SUPPORT_QUEUE: Queue;
+	SUPPORT_AI_QUEUE: Queue;
+	SUPPORT_BULK_QUEUE: Queue;
+	AI: Ai;
 	ENVIRONMENT: string;
 	SERVICE_NAME: string;
 	D1_EXPECTED_MIGRATION: string;
@@ -12,11 +16,23 @@ interface __BaseEnv_Env {
 	AUTH_GATEWAY_JWKS_URL: string;
 	CORS_ORIGIN: string;
 	ALLOWED_PROJECT_IDS: string;
+	SUPPORT_EMBEDDING_MODEL: string;
+	SUPPORT_GENERATION_MODEL: string;
 	QUEUE_NAME: string;
 	DLQ_NAME: string;
+	SUPPORT_EVENTS_QUEUE_NAME: string;
+	SUPPORT_EVENTS_DLQ_NAME: string;
+	SUPPORT_AI_QUEUE_NAME: string;
+	SUPPORT_AI_DLQ_NAME: string;
+	SUPPORT_BULK_QUEUE_NAME: string;
+	SUPPORT_BULK_DLQ_NAME: string;
+	EMAIL_INTERNAL_TOKEN: string;
 	INTERNAL_API_TOKEN: string;
+	SUPPORT_CREDENTIAL_ENCRYPTION_KEY: string;
 	SUPPORT_WEBHOOK_ENCRYPTION_KEY: string;
 	CONVERSATIONS: DurableObjectNamespace<import("./src/index").ConversationRoom>;
+	EMAIL_SERVICE: Fetcher;
+	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -30,7 +46,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "CORS_ORIGIN" | "ALLOWED_PROJECT_IDS" | "QUEUE_NAME" | "DLQ_NAME" | "INTERNAL_API_TOKEN" | "SUPPORT_WEBHOOK_ENCRYPTION_KEY">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "CORS_ORIGIN" | "ALLOWED_PROJECT_IDS" | "SUPPORT_EMBEDDING_MODEL" | "SUPPORT_GENERATION_MODEL" | "QUEUE_NAME" | "DLQ_NAME" | "SUPPORT_EVENTS_QUEUE_NAME" | "SUPPORT_EVENTS_DLQ_NAME" | "SUPPORT_AI_QUEUE_NAME" | "SUPPORT_AI_DLQ_NAME" | "SUPPORT_BULK_QUEUE_NAME" | "SUPPORT_BULK_DLQ_NAME" | "EMAIL_INTERNAL_TOKEN" | "INTERNAL_API_TOKEN" | "SUPPORT_CREDENTIAL_ENCRYPTION_KEY" | "SUPPORT_WEBHOOK_ENCRYPTION_KEY">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.
@@ -38,11 +54,17 @@ declare namespace Cloudflare {
 	interface Env {
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	EMAIL_INTERNAL_TOKEN: string;
+	SUPPORT_CREDENTIAL_ENCRYPTION_KEY: string;
+	SUPPORT_CREDENTIAL_ENCRYPTION_KEY_PREVIOUS?: string;
 	SUPPORT_WEBHOOK_ENCRYPTION_KEY: string;
 	}
 }
 interface Env {
 	INTERNAL_API_TOKEN: string;
 	INTERNAL_API_TOKEN_PREVIOUS?: string;
+	EMAIL_INTERNAL_TOKEN: string;
+	SUPPORT_CREDENTIAL_ENCRYPTION_KEY: string;
+	SUPPORT_CREDENTIAL_ENCRYPTION_KEY_PREVIOUS?: string;
 	SUPPORT_WEBHOOK_ENCRYPTION_KEY: string;
 }

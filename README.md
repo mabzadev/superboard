@@ -14,6 +14,39 @@ and never fork this code.
 - Development MCP: <https://mcp.mbza.dev/mcp>
 - Development mail preview: <https://mail.mbza.dev>
 
+## Integrated EmDash foundation
+
+This repository contains the complete EmDash 0.35.0 source at commit
+`1717d31b351164a5f78e95fe004ee582c7c50f40` from
+[`emdash-cms/emdash`](https://github.com/emdash-cms/emdash.git). The non-squashed merge keeps the
+upstream history, and
+`config/emdash-integration.json` pins the imported commit and deterministic
+root overlay.
+
+The historical Next/OpenNext Dashboard remains available while the Release Front
+parity, migration receipts, development rehearsal, production cutover, and
+observation required by [issue #33](https://github.com/mabzadev/superboard/issues/33)
+are incomplete. It is not the target Front SuperBoard. The audited integration
+details are in
+[`docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md`](docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md).
+
+The first executable target slice lives in `apps/site`. It mounts the native
+EmDash Admin, a generic fail-closed Front runtime, the closed Release Front
+contract, D1 activation receipts, and a Last Verified Release cache that never
+becomes activation authority. Release operations are disabled by default.
+
+Use the integrated pnpm gates from the repository root:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm emdash:typecheck
+pnpm emdash:test
+pnpm site:check
+pnpm support:check
+pnpm flows:check
+```
+
 ## Layout
 
 | Path                         | Purpose                                                               |
@@ -38,27 +71,27 @@ The root `Package.swift` exposes the iOS SDK directly from `sdks/ios`.
 ## Local validation
 
 ```bash
-npm ci
-npm run test:all
-npm run platform:readiness
+pnpm install --frozen-lockfile
+pnpm run test:all
+pnpm run platform:readiness
 ```
 
 To include a reviewed external FlutterFlow client in the fail-closed readiness
 report without committing its source, provide its absolute path by application:
 
 ```bash
-npm run platform:readiness -- \
+pnpm run platform:readiness -- \
   --client-sources 'vocostar=/absolute/path/to/app-vocostar-ff'
 
 SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
-  npm run flutterflow:source:verify:vocostar
+  pnpm run flutterflow:source:verify:vocostar
 
 SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
-  npm run flutterflow:migration:plan:vocostar
+  pnpm run flutterflow:migration:plan:vocostar
 ```
 
 `test:all` includes every Worker, the Dashboard, MCP, Flutter/FlutterFlow,
-JavaScript, React Native and the Chatwoot migration tools. Affected iOS and
+JavaScript, React Native and the internal Support audit tools. Affected iOS and
 Android changes are tested on their provisioned GitHub runners. The readiness
 report is read-only and lists unresolved resource IDs, Git state, pending SDK
 releases and credential names without ever returning secret values. Add
@@ -75,14 +108,14 @@ the platform, back-office, Workers, SDKs and reference application. The former
 read-only migration sources. Their immutable tags, releases and package
 coordinates remain available, but all code, issues, releases and Cloudflare Git
 connections now belong to `mabzadev/superboard`;
-`npm run github:history:plan -- --fetch` verifies both canonical remotes,
+`pnpm run github:history:plan -- --fetch` verifies both canonical remotes,
 detects unrelated or divergent histories and derives exact audit refs without
 committing or pushing;
-`npm run github:history:bridge:plan` fails closed once published `main` and
+`pnpm run github:history:bridge:plan` fails closed once published `main` and
 `dev` have no merge base and emits the exact non-mutating two-parent bridge
 procedure documented in
 [`docs/GIT_HISTORY_BRIDGE.md`](docs/GIT_HISTORY_BRIDGE.md);
-`npm run github:reconcile` separately plans repository-setting drift, branch
+`pnpm run github:reconcile` separately plans repository-setting drift, branch
 protection, Environments and non-secret variables. Both mutation modes require
 their own schema-versioned exact confirmation, and neither command commits,
 pushes or uploads secret values.
@@ -96,34 +129,34 @@ The account is selected at runtime with a scoped environment variable derived
 from `accountAlias`, with `CLOUDFLARE_ACCOUNT_ID` as a CI-friendly fallback.
 The automated ownership rules are documented in
 [`docs/CONFIGURATION_BOUNDARIES.md`](docs/CONFIGURATION_BOUNDARIES.md) and can
-be audited offline with `npm run configuration:check`.
+be audited offline with `pnpm run configuration:check`.
 
 ```bash
 # Validate the SuperBoard development target (no remote write)
-npm run cloudflare:bootstrap -- --target mbza-development --environment development
+pnpm run cloudflare:bootstrap -- --target mbza-development --environment development
 
 # Compare the complete paginated remote inventory with a target-scoped token
 CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
-  npm run cloudflare:bootstrap -- \
+  pnpm run cloudflare:bootstrap -- \
   --target mbza-development --environment development --remote
 
 # Apply only the unchanged reviewed plan and its emitted exact confirmation
 CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
-  npm run cloudflare:bootstrap -- \
+  pnpm run cloudflare:bootstrap -- \
   --target mbza-development --environment development --apply \
   --confirm "CLOUDFLARE:BOOTSTRAP:mbza-development:development:<plan-digest>"
 
 # Generate and deploy
-npm run cloudflare:deploy -- --target mbza-development --service api --environment development
-npm run cloudflare:deploy -- --target mbza-development --service mcp --environment development
-npm run cloudflare:deploy -- --target mbza-development --service dashboard --environment development
+pnpm run cloudflare:deploy -- --target mbza-development --service api --environment development
+pnpm run cloudflare:deploy -- --target mbza-development --service mcp --environment development
+pnpm run cloudflare:deploy -- --target mbza-development --service dashboard --environment development
 ```
 
 Google/Apple audiences, web origins and numeric Support project IDs can be
 planned and updated without editing a Worker or hardcoding an application:
 
 ```bash
-npm run target:configure-application -- \
+pnpm run target:configure-application -- \
   --target mbza-development --environment development \
   --google-audiences <public-google-client-id> \
   --apple-audiences <public-apple-service-id> \
@@ -146,7 +179,7 @@ before retention. Generated Wrangler files are ignored; production backups are
 never written into Git:
 
 ```bash
-npm run cloudflare:deploy:all -- \
+pnpm run cloudflare:deploy:all -- \
   --target vocostar --environment production \
   --backup-directory /secure/superboard/d1
 ```
@@ -157,10 +190,10 @@ must emit the exact JSON payload on stdout and pipe it directly to the second
 command; the checkout never receives a secret file:
 
 ```bash
-npm run cloudflare:secrets:upload -- \
+pnpm run cloudflare:secrets:upload -- \
   --target vocostar --environment production --contracts api-jwt-secret
 
-<approved-secret-manager-export> | npm run cloudflare:secrets:upload -- \
+<approved-secret-manager-export> | pnpm run cloudflare:secrets:upload -- \
   --target vocostar --environment production --contracts api-jwt-secret \
   --apply --confirm CLOUDFLARE:SECRET-BUNDLE:<target>:<environment>:<digest>
 ```
@@ -188,9 +221,9 @@ the previous verifier if activation fails. No clear client secret is written to
 disk or printed.
 
 ```bash
-npm run cloudflare:rotate-oauth -- --target mbza-development --environment development
+pnpm run cloudflare:rotate-oauth -- --target mbza-development --environment development
 
-npm run cloudflare:rotate-oauth -- \
+pnpm run cloudflare:rotate-oauth -- \
   --target mbza-development --environment development \
   --apply --confirm CLOUDFLARE:OAUTH-ROTATE:<target>:<environment>:<digest>
 ```
@@ -205,8 +238,8 @@ inventory are documented in `docs/ARCHITECTURE_CIBLE_FR.md`,
 The last VocoStar FlutterFlow mapping is in
 `docs/VOCOSTAR_FLUTTERFLOW_CONVERGENCE.md`; the evidence-backed implementation
 and external-readiness status is in `docs/IMPLEMENTATION_AUDIT_2026-08-08.md`.
-The live OpenChat inventory, duplicate-feature decision and guarded Support
-retirement plan are in `docs/OPENCHAT_SUPPORT_CONVERGENCE.md`.
+The pinned Support behavior inventory and its publication-leak gate are kept in
+the build-excluded `scripts/support-audit` workspace.
 The value-free cross-Worker secret graph, production provenance rules and
 rotation protocol are in `docs/SECRET_MANAGEMENT.md`.
 
@@ -214,15 +247,17 @@ rotation protocol are in `docs/SECRET_MANAGEMENT.md`.
 
 `config/sdk-libraries.json` is the canonical, machine-validated SDK catalogue.
 It records each package path, source version, latest immutable release, install
-snippet, package-local MIT licence and whether the current source still needs a
-release. The Dashboard exposes the same read-only catalogue and licence links at
+snippet when one really exists, package-local MIT licence and whether the
+current source is `released`, `pending-release` or still `unreleased`. An
+unreleased entry cannot declare a release ref, release SHA or installation
+command. The Dashboard exposes the same read-only catalogue and licence links at
 `/app/libraries`; it never rewrites Git.
 
-- `npm run sdk:catalog:check` verifies source versions, tags and the complete
+- `pnpm run sdk:catalog:check` verifies source versions, tags and the complete
   FlutterFlow public-code surface.
-- `npm run sdk:documentation:check` proves that every canonical installation
+- `pnpm run sdk:documentation:check` proves that every canonical installation
   section uses the catalogue's published coordinate, immutable ref and version;
-  `npm run sdk:documentation:write` refreshes those bounded sections after a
+  `pnpm run sdk:documentation:write` refreshes those bounded sections after a
   protected catalogue promotion.
 - `.github/workflows/prepare-sdk-release.yml` is the reviewed manual authority
   that creates a new immutable tag from a release-ready catalogue entry.
@@ -241,7 +276,7 @@ release. The Dashboard exposes the same read-only catalogue and licence links at
 `tools/flutterflow-library` is the Git authority for the reusable FlutterFlow
 project named `SuperBoard`. `config/flutterflow-library.json` inventories its 11
 target-supplied Library Values and 64 custom actions. Run
-`npm run flutterflow-library:check` to prove that its DSL, public HTTPS
+`pnpm run flutterflow-library:check` to prove that its DSL, public HTTPS
 dependencies, immutable refs, token-state policy and GitHub sync workflow stay
 aligned. Published status and the immutable dependency ref come only from the
 SDK catalogue; reference promotion refuses any pending entry. The protected

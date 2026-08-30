@@ -1,0 +1,2809 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prototype jetable #43 — Coexistence EmDash et SuperBoard</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #626d82;
+        --paper: #f4f6fb;
+        --panel: #ffffff;
+        --line: #dce2ec;
+        --accent: #5b46d8;
+        --accent-soft: #efedff;
+        --success: #147a51;
+        --success-soft: #e7f7ef;
+        --danger: #b62d46;
+        --danger-soft: #fff0f3;
+        --warning: #8b5a00;
+        --warning-soft: #fff6dc;
+        --system: #126b8a;
+        --system-soft: #e7f6fb;
+        --shadow: 0 15px 42px rgba(25, 34, 63, 0.08);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        line-height: 1.52;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      code {
+        padding: 0.12rem 0.32rem;
+        border-radius: 0.32rem;
+        background: #eef1f7;
+        color: #314064;
+        font-size: 0.87em;
+        overflow-wrap: anywhere;
+      }
+
+      .page {
+        width: min(1260px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 64px;
+      }
+
+      .prototype-label {
+        display: inline-flex;
+        margin-bottom: 16px;
+        padding: 0.45rem 0.72rem;
+        border: 1px solid #efb8c2;
+        border-radius: 999px;
+        background: var(--danger-soft);
+        color: var(--danger);
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 970px;
+        margin-bottom: 14px;
+        font-size: clamp(2rem, 5vw, 3.65rem);
+        line-height: 1.04;
+        letter-spacing: -0.045em;
+      }
+
+      h2 {
+        margin-bottom: 10px;
+        font-size: 1.26rem;
+        letter-spacing: -0.015em;
+      }
+
+      h3 {
+        margin-bottom: 9px;
+        font-size: 1rem;
+      }
+
+      .lede {
+        max-width: 960px;
+        margin-bottom: 24px;
+        color: var(--muted);
+        font-size: 1.08rem;
+      }
+
+      .callout {
+        margin-bottom: 12px;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+
+      .callout.limit {
+        margin-bottom: 28px;
+        border-left-color: var(--warning);
+        background: var(--warning-soft);
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(290px, 0.85fr);
+        gap: 16px;
+        margin-bottom: 26px;
+      }
+
+      .panel,
+      .hero-panel,
+      .procedure-shell {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .hero-panel,
+      .panel {
+        min-width: 0;
+        padding: 20px;
+      }
+
+      .hero-kicker {
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .hero-result {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 10px;
+        font-size: clamp(1.5rem, 4vw, 2.4rem);
+        font-weight: 850;
+        letter-spacing: -0.035em;
+      }
+
+      .hero-result::before {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: var(--muted);
+        content: "";
+      }
+
+      .hero-result.success::before {
+        background: var(--success);
+      }
+
+      .hero-result.danger::before {
+        background: var(--danger);
+      }
+
+      .hero-result.warning::before {
+        background: var(--warning);
+      }
+
+      .summary-list {
+        display: grid;
+        gap: 9px;
+        margin: 0;
+      }
+
+      .summary-list div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .summary-list div:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .summary-list dt {
+        color: var(--muted);
+      }
+
+      .summary-list dd {
+        min-width: 0;
+        margin: 0;
+        text-align: right;
+        font-weight: 750;
+        overflow-wrap: anywhere;
+      }
+
+      .section {
+        margin-top: 28px;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 12px;
+      }
+
+      .section-heading p {
+        max-width: 740px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .state-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .full {
+        grid-column: 1 / -1;
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: minmax(150px, 0.72fr) minmax(0, 1.28fr);
+        gap: 12px;
+        align-items: start;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .status-row:last-child {
+        border-bottom: 0;
+      }
+
+      .status-row > span:first-child {
+        color: var(--muted);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        max-width: 100%;
+        padding: 0.24rem 0.57rem;
+        border-radius: 999px;
+        background: #edf0f6;
+        color: #44516d;
+        font-size: 0.76rem;
+        font-weight: 850;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .badge.success {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .badge.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .badge.warning {
+        background: var(--warning-soft);
+        color: var(--warning);
+      }
+
+      .badge.system {
+        background: var(--system-soft);
+        color: var(--system);
+      }
+
+      .browser-frame {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: #f9fafc;
+      }
+
+      .browser-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        background: #eef1f6;
+      }
+
+      .browser-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #c4cad6;
+      }
+
+      .address {
+        min-width: 0;
+        flex: 1;
+        margin-left: 5px;
+        padding: 0.38rem 0.65rem;
+        border-radius: 7px;
+        background: #fff;
+        color: var(--muted);
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+      }
+
+      .surface {
+        min-height: 265px;
+        padding: 20px;
+        background: #fff;
+      }
+
+      .surface-shell {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        min-height: 220px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      .surface-nav {
+        padding: 15px;
+        background: #232845;
+        color: #fff;
+      }
+
+      .surface-nav strong {
+        display: block;
+        margin-bottom: 13px;
+      }
+
+      .surface-nav span {
+        display: block;
+        margin: 8px 0;
+        color: #cbd1eb;
+        font-size: 0.8rem;
+      }
+
+      .surface-content {
+        padding: 18px;
+      }
+
+      .mock-card {
+        margin-top: 13px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fafbfe;
+      }
+
+      .mock-form {
+        width: min(370px, 100%);
+        margin: 8px auto 0;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+      }
+
+      .mock-input {
+        height: 38px;
+        margin: 9px 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f7f8fb;
+      }
+
+      .mock-button {
+        padding: 0.6rem 0.85rem;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .route-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .route-table th,
+      .route-table td {
+        padding: 11px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .route-table th {
+        color: var(--muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .route-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      .action-button,
+      .tab-button,
+      .step-button {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+        font-weight: 750;
+      }
+
+      .action-button {
+        padding: 0.64rem 0.84rem;
+      }
+
+      .action-button.primary,
+      .step-button.current {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .action-button.danger {
+        border-color: #efb8c2;
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .action-button:hover,
+      .action-button:focus-visible,
+      .tab-button:hover,
+      .tab-button:focus-visible,
+      .step-button:hover:not(:disabled),
+      .step-button:focus-visible:not(:disabled) {
+        border-color: var(--accent);
+        outline: 3px solid var(--accent-soft);
+        outline-offset: 1px;
+      }
+
+      .procedure-shell {
+        overflow: hidden;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 7px;
+        padding: 12px;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--line);
+        background: #f9faff;
+      }
+
+      .tab-button {
+        flex: 0 0 auto;
+        padding: 0.54rem 0.78rem;
+        color: var(--muted);
+      }
+
+      .tab-button[aria-selected="true"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .procedure-body {
+        padding: 20px;
+      }
+
+      .procedure-body > p {
+        max-width: 850px;
+        color: var(--muted);
+      }
+
+      .steps {
+        display: grid;
+        gap: 9px;
+        counter-reset: steps;
+      }
+
+      .step-button {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        padding: 0.72rem 0.8rem;
+        text-align: left;
+        counter-increment: steps;
+      }
+
+      .step-button::before {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #edf0f6;
+        color: var(--muted);
+        content: counter(steps);
+        font-size: 0.74rem;
+      }
+
+      .step-button.current::before {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+
+      .step-button.done {
+        border-color: #bce3d0;
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .step-button.done::before {
+        background: var(--success);
+        color: #fff;
+        content: "✓";
+      }
+
+      .step-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+      }
+
+      .activity-list,
+      .compact-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .activity-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .activity-list li {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
+        gap: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .activity-list li:last-child {
+        border-bottom: 0;
+      }
+
+      .activity-list small {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      details {
+        margin-top: 20px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fafbfe;
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      footer {
+        margin-top: 34px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.87rem;
+      }
+
+      @media (max-width: 850px) {
+        .hero-grid,
+        .state-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .full {
+          grid-column: auto;
+        }
+      }
+
+      @media (max-width: 580px) {
+        .page {
+          width: min(100% - 20px, 1260px);
+          padding-top: 20px;
+        }
+
+        .status-row,
+        .surface-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .route-table thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+
+        .route-table tr,
+        .route-table td {
+          display: block;
+        }
+
+        .route-table tr {
+          padding: 10px 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .route-table td {
+          padding: 4px 0;
+          border: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <span class="prototype-label">Prototype jetable — à supprimer</span>
+      <h1>
+        Trois surfaces peuvent-elles coexister sur un même Site EmDash sans
+        mélanger leurs frontières&nbsp;?
+      </h1>
+      <p class="lede">
+        Cette démo pilote un routeur générique autour de
+        <code>/_emdash/admin</code>, du <code>SuperBoard Login</code> anonyme et
+        du <code>SuperBoard Admin</code> authentifié. Chaque clic montre la
+        route, la session consultée, la permission évaluée et la composition
+        rendue.
+      </p>
+
+      <div class="callout">
+        <strong>Question du ticket #43</strong>
+        Prouver la coexistence des trois surfaces, avec routes, politiques de
+        session et permissions distinctes, tandis que la Présentation EmDash et
+        son Front Route Manifest possèdent les pages du Front SuperBoard et que
+        Core SuperBoard ne contient aucune page concrète.
+      </div>
+
+      <div class="callout limit">
+        <strong>Verdict à interpréter correctement</strong>
+        EmDash Admin et SuperBoard Admin partagent l’unique session
+        administrative core EmDash décidée dans #41. La séparation porte sur les
+        audiences, auth policies et permissions—pas sur deux cookies
+        administratifs. EmDash 0.35.0 ne fournit pas encore le Front Route
+        Manifest modélisé ici. Ce fichier prouve la logique en mémoire, pas une
+        intégration Astro/Cloudflare réelle.
+      </div>
+
+      <section class="hero-grid" aria-labelledby="resolution-title">
+        <div class="hero-panel" aria-live="polite">
+          <p class="hero-kicker" id="resolution-title">
+            Résolution de route courante
+          </p>
+          <div class="hero-result warning" id="hero-result">
+            Aucune navigation
+          </div>
+          <p id="hero-explanation">
+            Choisissez une route ou démarrez une procédure guidée.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <p class="hero-kicker">Site EmDash courant</p>
+          <dl class="summary-list" id="site-summary"></dl>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="state-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="state-title">État actuel complet</h2>
+            <p>
+              La démo restitue toutes les frontières pertinentes après chaque
+              événement, sans persistance.
+            </p>
+          </div>
+        </div>
+        <div class="state-grid">
+          <article class="panel" aria-labelledby="route-state-title">
+            <h3 id="route-state-title">Route et autorisation</h3>
+            <div id="route-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="session-state-title">
+            <h3 id="session-state-title">Sessions et permissions</h3>
+            <div id="session-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="manifest-state-title">
+            <h3 id="manifest-state-title">Front Route Manifest</h3>
+            <div id="manifest-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="render-state-title">
+            <h3 id="render-state-title">Plan de rendu</h3>
+            <div id="render-state"></div>
+          </article>
+
+          <article class="panel full" aria-labelledby="preview-title">
+            <h3 id="preview-title">Surface résultante</h3>
+            <div class="browser-frame">
+              <div class="browser-bar">
+                <span class="browser-dot"></span
+                ><span class="browser-dot"></span
+                ><span class="browser-dot"></span>
+                <div class="address" id="preview-address">
+                  https://instance.example/
+                </div>
+              </div>
+              <div class="surface" id="surface-preview"></div>
+            </div>
+          </article>
+
+          <article class="panel full" aria-labelledby="routes-title">
+            <h3 id="routes-title">Routes effectivement inventoriées</h3>
+            <table class="route-table">
+              <thead>
+                <tr>
+                  <th>Route</th>
+                  <th>Surface / audience</th>
+                  <th>Session policy</th>
+                  <th>Permission</th>
+                  <th>Propriétaire du rendu</th>
+                </tr>
+              </thead>
+              <tbody id="route-table-body"></tbody>
+            </table>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="free-play-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="free-play-title">Jeu libre</h2>
+            <p>
+              Toutes les actions restent disponibles. Les transitions illégales
+              sont refusées et expliquées sans modifier silencieusement l’état.
+            </p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="controls" id="free-play-controls"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="procedures-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="procedures-title">Procédures guidées</h2>
+            <p>
+              Choisir un onglet réinitialise tout, puis chaque étape applique un
+              événement réel du réducteur.
+            </p>
+          </div>
+        </div>
+        <div class="procedure-shell">
+          <div
+            class="tabs"
+            id="procedure-tabs"
+            role="tablist"
+            aria-label="Scénarios du prototype"
+          ></div>
+          <div class="procedure-body" id="procedure-body" role="tabpanel"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="activity-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="activity-title">Journal des décisions</h2>
+            <p>
+              Les dix derniers événements expliquent chaque rendu, redirection
+              ou refus.
+            </p>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="activity-list" id="activity-state" aria-live="polite"></ul>
+        </div>
+      </section>
+
+      <details>
+        <summary>Frontières capturées par la preuve</summary>
+        <ul class="compact-list">
+          <li>
+            Le cookie administratif est host-only, HttpOnly, Secure,
+            SameSite=Lax et Path=/.
+          </li>
+          <li>
+            Le JWT d’Utilisateur d’application possède l’audience
+            <code>superboard_api</code> et n’ouvre aucune surface
+            d’administration.
+          </li>
+          <li>
+            EmDash Admin est une <code>system_route</code> native inventoriée;
+            il reste récupérable sans Front actif.
+          </li>
+          <li>
+            SuperBoard Login et SuperBoard Admin sont des compositions du Front
+            Route Manifest vérifié.
+          </li>
+          <li>
+            Les plugins fournissent des renderers namespacés; EmDash possède les
+            pages et les layouts.
+          </li>
+          <li>
+            <code>supbrd-core</code> possède le matching, les guards et les
+            error boundaries, mais zéro page concrète.
+          </li>
+        </ul>
+      </details>
+
+      <footer>
+        Ticket <code>#43</code> — logique pure dans le premier module
+        JavaScript; coque jetable sans framework, stockage, base de données,
+        serveur requis ni appel réseau.
+      </footer>
+    </main>
+
+    <script>
+      // Module logique portable. Aucun accès au DOM ne se trouve dans ce bloc.
+      const CoexistencePrototype = (() => {
+        const requiredStates = [
+          "loading",
+          "empty",
+          "forbidden",
+          "not_found",
+          "error",
+          "unavailable",
+          "maintenance",
+        ];
+
+        const adminCookieContract = Object.freeze({
+          name: "superboard_admin_session",
+          hostOnly: true,
+          httpOnly: true,
+          secure: true,
+          sameSite: "Lax",
+          path: "/",
+        });
+
+        const systemRouteRegistry = Object.freeze([
+          {
+            routeId: "system.emdash_admin",
+            pathPattern: "/_emdash/admin",
+            routeKind: "system",
+            audience: "emdash_admin",
+            authPolicy: "authenticated",
+            permissionExpression: "emdash.admin.access",
+            renderSource: "emdash_core_system",
+            pageId: "emdash.admin",
+            layoutId: "emdash.admin_shell",
+            rendererIds: ["emdash.core.renderer.admin"],
+            statePolicies: [...requiredStates],
+          },
+          {
+            routeId: "system.emdash_admin_login",
+            pathPattern: "/_emdash/admin/login",
+            routeKind: "system",
+            audience: "emdash_admin",
+            authPolicy: "anonymous_only",
+            permissionExpression: "allow",
+            renderSource: "emdash_core_system",
+            pageId: "emdash.admin_login",
+            layoutId: "emdash.admin_public",
+            rendererIds: ["emdash.core.renderer.admin_login"],
+            statePolicies: [...requiredStates],
+          },
+        ]);
+
+        function canonicalize(value) {
+          if (Array.isArray(value)) return value.map(canonicalize);
+          if (value && typeof value === "object") {
+            return Object.keys(value)
+              .sort()
+              .reduce((result, key) => {
+                result[key] = canonicalize(value[key]);
+                return result;
+              }, {});
+          }
+          return value;
+        }
+
+        function representativeChecksum(value) {
+          const input = JSON.stringify(canonicalize(value));
+          const words = [];
+          for (let seed = 0; seed < 8; seed += 1) {
+            let hash = (2166136261 ^ seed) >>> 0;
+            for (let index = 0; index < input.length; index += 1) {
+              hash ^= input.charCodeAt(index);
+              hash = Math.imul(hash, 16777619) >>> 0;
+            }
+            words.push(hash.toString(16).padStart(8, "0"));
+          }
+          return `prototype-checksum:${words.join("")}`;
+        }
+
+        function canonicalReleasePayload(candidate) {
+          return {
+            schemaVersion: candidate.schemaVersion,
+            releaseId: candidate.releaseId,
+            systemRoutes: candidate.systemRoutes,
+            routes: candidate.routes,
+            composition: candidate.composition,
+            coreConcretePages: candidate.coreConcretePages,
+          };
+        }
+
+        function releaseSignature(candidate) {
+          return `ES256.prototype.${representativeChecksum({
+            domain: "superboard.front_release.v1",
+            instanceId: "vocostar",
+            schemaVersion: candidate.schemaVersion,
+            releaseId: candidate.releaseId,
+            contentChecksum: candidate.contentChecksum,
+          }).slice(-40)}`;
+        }
+
+        function resignCandidate(candidate) {
+          candidate.contentChecksum = representativeChecksum(
+            canonicalReleasePayload(candidate)
+          );
+          candidate.signature = releaseSignature(candidate);
+          return candidate;
+        }
+
+        function release(releaseId, rendererId, pageId, title) {
+          const candidate = {
+            schemaVersion: "1.0.0",
+            releaseId,
+            contentChecksum: null,
+            signature: null,
+            verificationStatus: "verified",
+            systemRoutes: JSON.parse(JSON.stringify(systemRouteRegistry)),
+            routes: [
+              {
+                routeId: "superboard.login",
+                pathPattern: "/login",
+                routeKind: "page",
+                audience: "superboard_front",
+                authPolicy: "anonymous_only",
+                permissionExpression: "allow",
+                renderSource: "front_route_manifest",
+                pageId: "page.superboard_login",
+                layoutId: "layout.superboard_public",
+                rendererIds: ["supbrd-plug-user.renderer.login_form"],
+                statePolicies: [...requiredStates],
+              },
+              {
+                routeId: "superboard.admin.home",
+                pathPattern: "/app",
+                routeKind: "page",
+                audience: "superboard_front",
+                authPolicy: "authenticated",
+                permissionExpression: "superboard.admin.access",
+                renderSource: "front_route_manifest",
+                pageId,
+                layoutId: "layout.superboard_admin_shell",
+                rendererIds: [rendererId],
+                statePolicies: [...requiredStates],
+              },
+            ],
+            composition: { title, rendererId },
+            coreConcretePages: [],
+          };
+          return resignCandidate(candidate);
+        }
+
+        const releases = Object.freeze({
+          analytics: release(
+            "front_release_000043a",
+            "supbrd-plugmod-analytics.renderer.overview_chart",
+            "page.analytics_overview",
+            "Vue Analytics"
+          ),
+          support: release(
+            "front_release_000043b",
+            "supbrd-plug-support.renderer.inbox",
+            "page.support_inbox",
+            "Boîte de réception Support"
+          ),
+        });
+
+        const releaseKeys = [
+          "schemaVersion",
+          "releaseId",
+          "contentChecksum",
+          "signature",
+          "verificationStatus",
+          "systemRoutes",
+          "routes",
+          "composition",
+          "coreConcretePages",
+        ];
+
+        const routeKeys = [
+          "routeId",
+          "pathPattern",
+          "routeKind",
+          "audience",
+          "authPolicy",
+          "permissionExpression",
+          "renderSource",
+          "pageId",
+          "layoutId",
+          "rendererIds",
+          "statePolicies",
+        ];
+
+        const compositionKeys = ["title", "rendererId"];
+        const allowedRouteKinds = ["system", "page"];
+        const allowedAudiences = ["emdash_admin", "superboard_front"];
+        const allowedAuthPolicies = ["authenticated", "anonymous_only"];
+        const allowedPermissions = [
+          "allow",
+          "emdash.admin.access",
+          "superboard.admin.access",
+        ];
+        const allowedRenderSources = [
+          "emdash_core_system",
+          "front_route_manifest",
+        ];
+
+        function clone(value) {
+          return JSON.parse(JSON.stringify(value));
+        }
+
+        function unknownKey(value, allowed) {
+          return Object.keys(value).find((key) => !allowed.includes(key));
+        }
+
+        function missingKey(value, required) {
+          return required.find((key) => !(key in value));
+        }
+
+        function validateRelease(candidate) {
+          const errors = [];
+          if (
+            !candidate ||
+            typeof candidate !== "object" ||
+            Array.isArray(candidate)
+          ) {
+            return ["release doit être un objet fermé"];
+          }
+
+          const extraRootKey = unknownKey(candidate, releaseKeys);
+          if (extraRootKey) errors.push(`release.${extraRootKey} est inconnu`);
+          const missingRootKey = missingKey(candidate, releaseKeys);
+          if (missingRootKey)
+            errors.push(`release.${missingRootKey} est requis`);
+          if (typeof candidate.schemaVersion !== "string") {
+            errors.push("release.schemaVersion doit être une chaîne");
+          }
+          if (typeof candidate.releaseId !== "string") {
+            errors.push("release.releaseId doit être une chaîne");
+          }
+          if (!Array.isArray(candidate.systemRoutes)) {
+            errors.push("release.systemRoutes doit être un tableau");
+          }
+          if (!Array.isArray(candidate.routes)) {
+            errors.push("release.routes doit être un tableau");
+          }
+          if (!Array.isArray(candidate.coreConcretePages)) {
+            errors.push("release.coreConcretePages doit être un tableau");
+          }
+          if (
+            !candidate.composition ||
+            typeof candidate.composition !== "object" ||
+            Array.isArray(candidate.composition)
+          ) {
+            errors.push("release.composition doit être un objet fermé");
+          } else {
+            const extraCompositionKey = unknownKey(
+              candidate.composition,
+              compositionKeys
+            );
+            const missingCompositionKey = missingKey(
+              candidate.composition,
+              compositionKeys
+            );
+            if (extraCompositionKey) {
+              errors.push(
+                `release.composition.${extraCompositionKey} est inconnu`
+              );
+            }
+            if (missingCompositionKey) {
+              errors.push(
+                `release.composition.${missingCompositionKey} est requis`
+              );
+            }
+            if (
+              typeof candidate.composition.title !== "string" ||
+              typeof candidate.composition.rendererId !== "string"
+            ) {
+              errors.push("release.composition contient un type invalide");
+            }
+          }
+
+          if (candidate.verificationStatus !== "verified") {
+            errors.push("la Release Front n’est pas verified");
+          }
+          if (
+            typeof candidate.contentChecksum !== "string" ||
+            typeof candidate.signature !== "string"
+          ) {
+            errors.push("checksum ou signature absent");
+          }
+          const safeSystemRoutes = Array.isArray(candidate.systemRoutes)
+            ? candidate.systemRoutes
+            : [];
+          const safeRoutes = Array.isArray(candidate.routes)
+            ? candidate.routes
+            : [];
+          const safeCoreConcretePages = Array.isArray(
+            candidate.coreConcretePages
+          )
+            ? candidate.coreConcretePages
+            : [];
+          if (safeCoreConcretePages.length > 0) {
+            errors.push("supbrd-core déclare une page concrète interdite");
+          }
+
+          if (
+            candidate.contentChecksum !==
+            representativeChecksum(canonicalReleasePayload(candidate))
+          ) {
+            errors.push(
+              "contentChecksum ne correspond pas au Canonical Release Payload"
+            );
+          }
+          if (candidate.signature !== releaseSignature(candidate)) {
+            errors.push(
+              "Release Signature ne correspond pas à l’Instance, au schéma et au checksum"
+            );
+          }
+
+          const allRoutes = [...safeSystemRoutes, ...safeRoutes];
+          const validSystemRoutes = safeSystemRoutes.filter(
+            (route) =>
+              route && typeof route === "object" && !Array.isArray(route)
+          );
+          const validRoutes = safeRoutes.filter(
+            (route) =>
+              route && typeof route === "object" && !Array.isArray(route)
+          );
+          const ids = new Set();
+          const paths = new Set();
+          for (const route of allRoutes) {
+            if (!route || typeof route !== "object" || Array.isArray(route)) {
+              errors.push("route doit être un objet fermé");
+              continue;
+            }
+            const extraRouteKey = unknownKey(route, routeKeys);
+            if (extraRouteKey)
+              errors.push(`${route.routeId}.${extraRouteKey} est inconnu`);
+            const missingRouteKey = missingKey(route, routeKeys);
+            if (missingRouteKey) {
+              errors.push(
+                `${route.routeId || "route"}.${missingRouteKey} est requis`
+              );
+            }
+            const stringKeys = routeKeys.filter(
+              (key) => !["rendererIds", "statePolicies"].includes(key)
+            );
+            const stringsAreValid = stringKeys.every(
+              (key) => typeof route[key] === "string"
+            );
+            if (!stringsAreValid) {
+              errors.push(
+                `${route.routeId || "route"} contient un type invalide`
+              );
+            }
+            const arraysAreValid =
+              Array.isArray(route.rendererIds) &&
+              Array.isArray(route.statePolicies);
+            if (!arraysAreValid) {
+              errors.push(
+                `${route.routeId || "route"} doit déclarer rendererIds et statePolicies`
+              );
+            }
+            if (!stringsAreValid || !arraysAreValid) {
+              continue;
+            }
+            if (
+              route.rendererIds.length === 0 ||
+              route.rendererIds.some(
+                (rendererId) => typeof rendererId !== "string"
+              )
+            ) {
+              errors.push(
+                `${route.routeId} contient un Renderer Descriptor invalide`
+              );
+            }
+            if (
+              route.statePolicies.length !== requiredStates.length ||
+              route.statePolicies.some(
+                (statePolicy) =>
+                  typeof statePolicy !== "string" ||
+                  !requiredStates.includes(statePolicy)
+              )
+            ) {
+              errors.push(
+                `${route.routeId} contient une state policy inconnue ou dupliquée`
+              );
+            }
+            if (ids.has(route.routeId))
+              errors.push(`route_id dupliqué: ${route.routeId}`);
+            const normalizedPattern = normalizePath(route.pathPattern);
+            if (paths.has(normalizedPattern))
+              errors.push(`path collision: ${route.pathPattern}`);
+            ids.add(route.routeId);
+            paths.add(normalizedPattern);
+            if (
+              !requiredStates.every((state) =>
+                route.statePolicies.includes(state)
+              )
+            ) {
+              errors.push(
+                `${route.routeId} ne déclare pas tous les états requis`
+              );
+            }
+            if (!allowedRouteKinds.includes(route.routeKind)) {
+              errors.push(`${route.routeId} possède un routeKind inconnu`);
+            }
+            if (!allowedAudiences.includes(route.audience)) {
+              errors.push(`${route.routeId} possède une audience inconnue`);
+            }
+            if (!allowedAuthPolicies.includes(route.authPolicy)) {
+              errors.push(`${route.routeId} possède une auth policy inconnue`);
+            }
+            if (!allowedPermissions.includes(route.permissionExpression)) {
+              errors.push(`${route.routeId} possède une permission inconnue`);
+            }
+            if (!allowedRenderSources.includes(route.renderSource)) {
+              errors.push(
+                `${route.routeId} possède une source de rendu inconnue`
+              );
+            }
+
+            const declaredAsSystemRoute = validSystemRoutes.includes(route);
+            if (
+              declaredAsSystemRoute &&
+              (route.routeKind !== "system" ||
+                route.audience !== "emdash_admin" ||
+                route.renderSource !== "emdash_core_system")
+            ) {
+              errors.push(
+                `${route.routeId} viole la frontière des system_routes`
+              );
+            }
+            if (
+              !declaredAsSystemRoute &&
+              (route.routeKind !== "page" ||
+                route.audience !== "superboard_front" ||
+                route.renderSource !== "front_route_manifest")
+            ) {
+              errors.push(`${route.routeId} contourne le Front Route Manifest`);
+            }
+            if (
+              !declaredAsSystemRoute &&
+              route.authPolicy === "authenticated" &&
+              route.permissionExpression !== "superboard.admin.access"
+            ) {
+              errors.push(
+                `${route.routeId} utilise une permission hors audience`
+              );
+            }
+            if (
+              route.authPolicy === "authenticated" &&
+              route.permissionExpression === "allow"
+            ) {
+              errors.push(`${route.routeId} viole le deny-by-default`);
+            }
+            if (
+              route.authPolicy === "anonymous_only" &&
+              route.permissionExpression !== "allow"
+            ) {
+              errors.push(
+                `${route.routeId} possède une permission incompatible avec anonymous_only`
+              );
+            }
+          }
+
+          if (validSystemRoutes.length !== systemRouteRegistry.length) {
+            errors.push(
+              "le nombre de system_routes diffère du registre canonique"
+            );
+          }
+          for (const expectedSystemRoute of systemRouteRegistry) {
+            const actualSystemRoute = validSystemRoutes.find(
+              (route) => route.routeId === expectedSystemRoute.routeId
+            );
+            if (
+              !actualSystemRoute ||
+              JSON.stringify(canonicalize(actualSystemRoute)) !==
+                JSON.stringify(canonicalize(expectedSystemRoute))
+            ) {
+              errors.push(
+                `${expectedSystemRoute.routeId} diffère du descriptor système canonique`
+              );
+            }
+          }
+
+          const loginRoute = validRoutes.find(
+            (route) => route.routeId === "superboard.login"
+          );
+          if (!loginRoute || loginRoute.authPolicy !== "anonymous_only") {
+            errors.push("SuperBoard Login n’est pas anonymous_only");
+          }
+
+          const adminHome = validRoutes.find(
+            (route) => route.routeId === "superboard.admin.home"
+          );
+          if (
+            !adminHome ||
+            adminHome.authPolicy !== "authenticated" ||
+            adminHome.permissionExpression !== "superboard.admin.access"
+          ) {
+            errors.push("SuperBoard Admin ne possède pas son guard complet");
+          }
+          return errors;
+        }
+
+        function validationReceipt(candidate, candidateId, id, message) {
+          const proof = {
+            id,
+            candidateId,
+            releaseId: candidate.releaseId,
+            contentChecksum: candidate.contentChecksum,
+            status: "passed",
+            message,
+          };
+          return {
+            ...proof,
+            receiptChecksum: representativeChecksum(proof),
+          };
+        }
+
+        function validationReceiptsFor(candidate, candidateId) {
+          return [
+            validationReceipt(
+              candidate,
+              candidateId,
+              "schema",
+              "Le manifest fermé est valide."
+            ),
+            validationReceipt(
+              candidate,
+              candidateId,
+              "routing",
+              "Routes, normalisation et collisions sont validées."
+            ),
+            validationReceipt(
+              candidate,
+              candidateId,
+              "identity",
+              "Audiences et auth policies sont fermées."
+            ),
+            validationReceipt(
+              candidate,
+              candidateId,
+              "permissions",
+              "Permissions deny-by-default vérifiées."
+            ),
+            validationReceipt(
+              candidate,
+              candidateId,
+              "rendering",
+              "Pages, layouts et renderers sont résolus sans page Core."
+            ),
+            validationReceipt(
+              candidate,
+              candidateId,
+              "integrity",
+              "Checksum et Release Signature correspondent au payload exact."
+            ),
+          ];
+        }
+
+        function validationSetChecksum(receipts) {
+          return representativeChecksum(
+            receipts.map((receipt) => receipt.receiptChecksum)
+          );
+        }
+
+        function validatedPromotion(candidate, candidateId) {
+          const receipts = validationReceiptsFor(candidate, candidateId);
+          return {
+            candidateId,
+            candidateRelease: clone(candidate),
+            status: "validated",
+            previewStatus: "not_run",
+            validationReceipts: receipts,
+            validationSetChecksum: validationSetChecksum(receipts),
+            approval: null,
+          };
+        }
+
+        function releaseApproval(promotion) {
+          return {
+            operator: "superboard-operator",
+            candidateId: promotion.candidateId,
+            releaseId: promotion.candidateRelease.releaseId,
+            contentChecksum: promotion.candidateRelease.contentChecksum,
+            signature: promotion.candidateRelease.signature,
+            validationSetChecksum: promotion.validationSetChecksum,
+            previewStatus: promotion.previewStatus,
+          };
+        }
+
+        function approvalMatches(promotion) {
+          if (!promotion.approval) return false;
+          const expected = releaseApproval(promotion);
+          return Object.keys(expected).every(
+            (key) => promotion.approval[key] === expected[key]
+          );
+        }
+
+        function activeReleaseProof(candidate, candidateId, activationId) {
+          const promotion = validatedPromotion(candidate, candidateId);
+          promotion.previewStatus = "verified";
+          promotion.status = "approved";
+          promotion.approval = releaseApproval(promotion);
+          return {
+            candidateId,
+            validationSetChecksum: promotion.validationSetChecksum,
+            approval: promotion.approval,
+            activationId,
+            status: "verified",
+          };
+        }
+
+        function initialResolution() {
+          return {
+            requestedPath: null,
+            normalizedPath: null,
+            routeId: null,
+            surface: "none",
+            audience: "none",
+            authPolicy: "none",
+            permission: "none",
+            permissionDecision: "not_evaluated",
+            result: "not_requested",
+            redirectTo: null,
+            renderSource: "none",
+            pageOwner: "none",
+            pageId: null,
+            layoutId: null,
+            rendererIds: [],
+            coreConcretePage: false,
+            reason: "Aucune navigation n’a encore été demandée.",
+          };
+        }
+
+        function createInitialState() {
+          const activeRelease = clone(releases.analytics);
+          return {
+            sequence: 0,
+            instanceId: "vocostar",
+            siteHost: "instance.example",
+            activeRelease,
+            activeReleaseProof: activeReleaseProof(
+              activeRelease,
+              "front_candidate_000043a",
+              "activation_000043a"
+            ),
+            activeReleaseStatus: "verified",
+            lastVerifiedReleaseStatus: "ready",
+            systemRouteRegistryStatus: "verified",
+            session: {
+              admin: {
+                status: "absent",
+                generation: 0,
+                cookie: clone(adminCookieContract),
+              },
+              application: {
+                status: "absent",
+                tokenType: "application_access_jwt",
+                audience: "superboard_api",
+              },
+            },
+            permissions: {
+              "emdash.admin.access": true,
+              "superboard.admin.access": true,
+            },
+            draft: {
+              status: "clean",
+              activation: "not_attempted",
+              validationErrors: [],
+            },
+            promotion: {
+              candidateId: "front_candidate_000043b",
+              candidateRelease: null,
+              status: "not_started",
+              previewStatus: "not_run",
+              validationReceipts: [],
+              validationSetChecksum: null,
+              approval: null,
+            },
+            resolution: initialResolution(),
+            activity: [
+              {
+                sequence: 0,
+                level: "info",
+                message: "Site EmDash initialisé",
+                detail:
+                  "La release Analytics est vérifiée; aucune session ni navigation n’existe.",
+              },
+            ],
+          };
+        }
+
+        function record(state, level, message, detail) {
+          state.activity.push({
+            sequence: state.sequence,
+            level,
+            message,
+            detail,
+          });
+        }
+
+        function reject(state, message, detail) {
+          record(state, "error", message, detail);
+          return state;
+        }
+
+        function normalizePath(path) {
+          if (!path) return "/";
+          const withoutQuery = path.split("?")[0];
+          if (withoutQuery === "/") return "/";
+          return withoutQuery.replace(/\/+$/, "") || "/";
+        }
+
+        function renderedResolution(path, route, surface, reason) {
+          return {
+            requestedPath: path,
+            normalizedPath: normalizePath(path),
+            routeId: route.routeId,
+            surface,
+            audience: route.audience,
+            authPolicy: route.authPolicy,
+            permission: route.permissionExpression,
+            permissionDecision: "allowed",
+            result: "rendered",
+            redirectTo: null,
+            renderSource: route.renderSource,
+            pageOwner:
+              route.renderSource === "emdash_core_system"
+                ? "emdash_core"
+                : "emdash_presentation",
+            pageId: route.pageId,
+            layoutId: route.layoutId,
+            rendererIds: [...route.rendererIds],
+            coreConcretePage: false,
+            reason,
+          };
+        }
+
+        function deniedResolution(
+          path,
+          route,
+          surface,
+          result,
+          reason,
+          redirectTo = null
+        ) {
+          return {
+            requestedPath: path,
+            normalizedPath: normalizePath(path),
+            routeId: route ? route.routeId : null,
+            surface,
+            audience: route ? route.audience : "none",
+            authPolicy: route ? route.authPolicy : "none",
+            permission: route ? route.permissionExpression : "none",
+            permissionDecision:
+              result === "forbidden" ? "denied" : "not_evaluated",
+            result,
+            redirectTo,
+            renderSource: route ? route.renderSource : "generic_core_state",
+            pageOwner:
+              result === "maintenance"
+                ? "emdash_presentation"
+                : "supbrd_core_generic",
+            pageId: null,
+            layoutId: null,
+            rendererIds: [],
+            coreConcretePage: false,
+            reason,
+          };
+        }
+
+        function resolveSystemRoute(state, requestedPath, route) {
+          if (route.authPolicy === "anonymous_only") {
+            if (state.session.admin.status === "valid") {
+              return deniedResolution(
+                requestedPath,
+                route,
+                "emdash_admin_login",
+                "redirect",
+                "La session administrative existe déjà; le login EmDash redirige vers son administration.",
+                "/_emdash/admin"
+              );
+            }
+            return renderedResolution(
+              requestedPath,
+              route,
+              "emdash_admin_login",
+              "Le login EmDash Admin est rendu par sa system_route anonyme inventoriée."
+            );
+          }
+
+          if (state.session.admin.status !== "valid") {
+            return deniedResolution(
+              requestedPath,
+              route,
+              "emdash_admin",
+              "authentication_required",
+              "La system_route exige la session administrative core EmDash.",
+              "/_emdash/admin/login"
+            );
+          }
+          if (!state.permissions[route.permissionExpression]) {
+            return deniedResolution(
+              requestedPath,
+              route,
+              "emdash_admin",
+              "forbidden",
+              "La session est valide, mais emdash.admin.access est refusée."
+            );
+          }
+          return renderedResolution(
+            requestedPath,
+            route,
+            "emdash_admin",
+            "EmDash Admin est rendu par sa system_route native inventoriée."
+          );
+        }
+
+        function resolveFront(state, requestedPath) {
+          if (
+            state.activeReleaseStatus !== "verified" ||
+            state.lastVerifiedReleaseStatus !== "ready"
+          ) {
+            return deniedResolution(
+              requestedPath,
+              null,
+              "front_superboard",
+              "maintenance",
+              "Aucune Last Verified Release compatible ne peut rendre le Front SuperBoard."
+            );
+          }
+
+          const normalizedPath = normalizePath(requestedPath);
+          const route = state.activeRelease.routes.find(
+            (candidate) => candidate.pathPattern === normalizedPath
+          );
+          if (!route) {
+            return deniedResolution(
+              requestedPath,
+              null,
+              "front_superboard",
+              "not_found",
+              "Aucune route manifestée ne correspond; Core SuperBoard ne fournit aucun fallback métier."
+            );
+          }
+
+          if (route.authPolicy === "anonymous_only") {
+            if (state.session.admin.status === "valid") {
+              return deniedResolution(
+                requestedPath,
+                route,
+                "superboard_login",
+                "redirect",
+                "Une session administrative existe déjà; la route anonymous_only redirige vers le shell.",
+                "/app"
+              );
+            }
+            return renderedResolution(
+              requestedPath,
+              route,
+              "superboard_login",
+              state.session.application.status === "valid"
+                ? "Le JWT applicatif est ignoré par cette audience; le login opérateur reste anonyme."
+                : "Le SuperBoard Login est composé depuis le Front Route Manifest."
+            );
+          }
+
+          if (state.session.admin.status !== "valid") {
+            return deniedResolution(
+              requestedPath,
+              route,
+              "superboard_admin",
+              "redirect",
+              state.session.application.status === "valid"
+                ? "Le JWT applicatif possède la mauvaise audience et ne devient jamais une session administrative."
+                : "Le shell exige la session administrative commune.",
+              "/login"
+            );
+          }
+
+          if (!state.permissions[route.permissionExpression]) {
+            return deniedResolution(
+              requestedPath,
+              route,
+              "superboard_admin",
+              "forbidden",
+              "La session est valide, mais superboard.admin.access est refusée."
+            );
+          }
+
+          return renderedResolution(
+            requestedPath,
+            route,
+            "superboard_admin",
+            "Le shell et sa page enfant sont composés par le Front Route Manifest actif."
+          );
+        }
+
+        function navigate(state, path) {
+          const normalizedPath = normalizePath(path);
+          const systemRoute = systemRouteRegistry.find(
+            (route) => route.pathPattern === normalizedPath
+          );
+          state.resolution = systemRoute
+            ? resolveSystemRoute(state, path, systemRoute)
+            : resolveFront(state, path);
+          const level = ["rendered", "redirect"].includes(
+            state.resolution.result
+          )
+            ? "success"
+            : "error";
+          record(
+            state,
+            level,
+            `Route ${state.resolution.result}`,
+            `${state.resolution.normalizedPath} — ${state.resolution.reason}`
+          );
+        }
+
+        function transition(currentState, event) {
+          if (event.type === "RESET") return createInitialState();
+          const state = clone(currentState);
+          state.sequence += 1;
+
+          switch (event.type) {
+            case "NAVIGATE_LOGIN":
+              navigate(state, "/login");
+              break;
+            case "NAVIGATE_SUPERBOARD":
+              navigate(state, "/app");
+              break;
+            case "NAVIGATE_EMDASH":
+              navigate(state, "/_emdash/admin");
+              break;
+            case "NAVIGATE_EMDASH_LOGIN":
+              navigate(state, "/_emdash/admin/login");
+              break;
+            case "NAVIGATE_SYSTEM_LOOKALIKE":
+              navigate(state, "/_emdash/admin-evil");
+              break;
+            case "NAVIGATE_UNMANIFESTED":
+              navigate(state, "/core-reports");
+              break;
+
+            case "LOGIN_OPERATOR": {
+              if (
+                !["superboard.login", "system.emdash_admin_login"].includes(
+                  state.resolution.routeId
+                ) ||
+                state.resolution.result !== "rendered"
+              ) {
+                return reject(
+                  state,
+                  "Authentification refusée",
+                  "L’Action de login ne peut être invoquée que depuis un login opérateur inventorié et rendu."
+                );
+              }
+              state.session.admin.status = "valid";
+              state.session.admin.generation += 1;
+              record(
+                state,
+                "success",
+                "Session administrative établie",
+                "Le cookie core EmDash commun ouvre potentiellement les deux surfaces d’administration selon leurs permissions."
+              );
+              break;
+            }
+
+            case "LOGOUT_ADMIN": {
+              state.session.admin.status = "revoked";
+              state.session.admin.generation += 1;
+              record(
+                state,
+                "success",
+                "Session administrative révoquée",
+                "Le logout commun ferme EmDash Admin et SuperBoard Admin."
+              );
+              break;
+            }
+
+            case "EXPIRE_ADMIN_SESSION": {
+              state.session.admin.status = "expired";
+              record(
+                state,
+                "error",
+                "Session administrative expirée",
+                "Les deux surfaces authentifiées doivent réévaluer leur guard."
+              );
+              break;
+            }
+
+            case "SET_APPLICATION_TOKEN": {
+              state.session.application.status = "valid";
+              record(
+                state,
+                "success",
+                "JWT applicatif ajouté",
+                "Son audience superboard_api reste distincte de toutes les audiences administratives."
+              );
+              break;
+            }
+
+            case "GRANT_EMDASH_PERMISSION":
+              state.permissions["emdash.admin.access"] = true;
+              record(
+                state,
+                "success",
+                "Permission EmDash accordée",
+                "emdash.admin.access = true"
+              );
+              break;
+            case "REVOKE_EMDASH_PERMISSION":
+              state.permissions["emdash.admin.access"] = false;
+              record(
+                state,
+                "error",
+                "Permission EmDash retirée",
+                "emdash.admin.access = false"
+              );
+              break;
+            case "GRANT_SUPERBOARD_PERMISSION":
+              state.permissions["superboard.admin.access"] = true;
+              record(
+                state,
+                "success",
+                "Permission SuperBoard accordée",
+                "superboard.admin.access = true"
+              );
+              break;
+            case "REVOKE_SUPERBOARD_PERMISSION":
+              state.permissions["superboard.admin.access"] = false;
+              record(
+                state,
+                "error",
+                "Permission SuperBoard retirée",
+                "superboard.admin.access = false"
+              );
+              break;
+
+            case "VALIDATE_ALTERNATE_RELEASE": {
+              const candidate = clone(releases.support);
+              const errors = validateRelease(candidate);
+              if (errors.length > 0) {
+                state.promotion.status = "validation_failed";
+                state.draft = {
+                  status: "invalid",
+                  activation: "blocked",
+                  validationErrors: errors,
+                };
+                return reject(state, "Validation refusée", errors.join("; "));
+              }
+              state.promotion = validatedPromotion(
+                candidate,
+                "front_candidate_000043b"
+              );
+              state.draft = {
+                status: "validated",
+                activation: "not_attempted",
+                validationErrors: [],
+              };
+              record(
+                state,
+                "success",
+                "Front Release Candidate validé",
+                "Six Validation Receipts sont liées au payload canonique et à sa signature exacts."
+              );
+              break;
+            }
+
+            case "PREVIEW_ALTERNATE_RELEASE": {
+              if (state.promotion.status !== "validated") {
+                return reject(
+                  state,
+                  "Preview refusée",
+                  "Le Front Release Candidate doit être validated avant la preview."
+                );
+              }
+              state.promotion.previewStatus = "verified";
+              state.promotion.status = "previewed";
+              record(
+                state,
+                "success",
+                "Preview exacte vérifiée",
+                "La preview utilise le même payload, les mêmes routes et les mêmes renderers que l’activation."
+              );
+              break;
+            }
+
+            case "APPROVE_ALTERNATE_RELEASE": {
+              if (
+                state.promotion.status !== "previewed" ||
+                state.promotion.previewStatus !== "verified"
+              ) {
+                return reject(
+                  state,
+                  "Release Approval refusée",
+                  "La preview exacte doit être vérifiée avant l’approbation opérateur."
+                );
+              }
+              state.promotion.status = "approved";
+              state.promotion.approval = releaseApproval(state.promotion);
+              record(
+                state,
+                "success",
+                "Release Approval enregistrée",
+                "L’approbation est liée au candidate, au checksum, à la signature et au validation set exacts."
+              );
+              break;
+            }
+
+            case "ACTIVATE_ALTERNATE_RELEASE": {
+              const candidate = state.promotion.candidateRelease;
+              const errors = candidate
+                ? validateRelease(candidate)
+                : ["candidate absent"];
+              const currentReceipts = candidate
+                ? validationReceiptsFor(candidate, state.promotion.candidateId)
+                : [];
+              const currentValidationSetChecksum =
+                validationSetChecksum(currentReceipts);
+              const proofsMatch =
+                state.promotion.status === "approved" &&
+                state.promotion.previewStatus === "verified" &&
+                state.promotion.validationSetChecksum ===
+                  currentValidationSetChecksum &&
+                approvalMatches(state.promotion);
+              if (errors.length > 0 || !proofsMatch) {
+                state.draft.activation = "blocked";
+                return reject(
+                  state,
+                  "Activation refusée",
+                  errors.length > 0
+                    ? errors.join("; ")
+                    : "Preview, Validation Receipts ou Release Approval ne correspondent plus au candidate exact."
+                );
+              }
+              state.activeRelease = clone(candidate);
+              state.activeReleaseProof = {
+                candidateId: state.promotion.candidateId,
+                validationSetChecksum: currentValidationSetChecksum,
+                approval: clone(state.promotion.approval),
+                activationId: "activation_000043b",
+                status: "verified",
+              };
+              state.activeReleaseStatus = "verified";
+              state.lastVerifiedReleaseStatus = "ready";
+              state.promotion.status = "activated";
+              state.draft = {
+                status: "clean",
+                activation: "activated",
+                validationErrors: [],
+              };
+              record(
+                state,
+                "success",
+                "Release Front alternative activée",
+                "La route /app rend maintenant Support sans ajouter de page à supbrd-core."
+              );
+              break;
+            }
+
+            case "INJECT_CORE_PAGE": {
+              const invalidDraft = clone(state.activeRelease);
+              invalidDraft.coreConcretePages.push("/core-reports");
+              resignCandidate(invalidDraft);
+              const errors = validateRelease(invalidDraft);
+              state.draft = {
+                status: "invalid",
+                activation: "blocked",
+                validationErrors: errors,
+              };
+              record(
+                state,
+                "error",
+                "Draft avec page Core refusé",
+                `${errors.join("; ")}. La Release Front active reste inchangée.`
+              );
+              break;
+            }
+
+            case "INJECT_UNKNOWN_MANIFEST_FIELD": {
+              const invalidDraft = clone(state.activeRelease);
+              invalidDraft.composition.unexpected = true;
+              resignCandidate(invalidDraft);
+              const errors = validateRelease(invalidDraft);
+              state.draft = {
+                status: "invalid",
+                activation: "blocked",
+                validationErrors: errors,
+              };
+              record(
+                state,
+                "error",
+                "Champ inconnu refusé",
+                `${errors.join("; ")}. Le manifest fermé ne devient jamais actif.`
+              );
+              break;
+            }
+
+            case "INJECT_NORMALIZED_COLLISION": {
+              const invalidDraft = clone(state.activeRelease);
+              const duplicateRoute = clone(
+                invalidDraft.routes.find(
+                  (route) => route.routeId === "superboard.admin.home"
+                )
+              );
+              duplicateRoute.routeId = "superboard.admin.trailing_slash";
+              duplicateRoute.pathPattern = "/app/";
+              invalidDraft.routes.push(duplicateRoute);
+              resignCandidate(invalidDraft);
+              const errors = validateRelease(invalidDraft);
+              state.draft = {
+                status: "invalid",
+                activation: "blocked",
+                validationErrors: errors,
+              };
+              record(
+                state,
+                "error",
+                "Collision normalisée refusée",
+                `${errors.join("; ")}. /app et /app/ ne peuvent pas coexister.`
+              );
+              break;
+            }
+
+            case "INJECT_OPEN_PERMISSION_ROUTE": {
+              const invalidDraft = clone(state.activeRelease);
+              const unsafeRoute = clone(
+                invalidDraft.routes.find(
+                  (route) => route.routeId === "superboard.admin.home"
+                )
+              );
+              unsafeRoute.routeId = "superboard.admin.unsafe";
+              unsafeRoute.pathPattern = "/unsafe";
+              unsafeRoute.permissionExpression = "allow";
+              invalidDraft.routes.push(unsafeRoute);
+              resignCandidate(invalidDraft);
+              const errors = validateRelease(invalidDraft);
+              state.draft = {
+                status: "invalid",
+                activation: "blocked",
+                validationErrors: errors,
+              };
+              record(
+                state,
+                "error",
+                "Permission ouverte refusée",
+                `${errors.join("; ")}. Une route authenticated ne peut jamais utiliser allow.`
+              );
+              break;
+            }
+
+            case "INJECT_MALFORMED_ROUTE_ITEMS": {
+              const invalidDraft = clone(state.activeRelease);
+              const malformedHome = clone(
+                invalidDraft.routes.find(
+                  (route) => route.routeId === "superboard.admin.home"
+                )
+              );
+              malformedHome.rendererIds = [42];
+              invalidDraft.routes = [null, malformedHome];
+              resignCandidate(invalidDraft);
+              const errors = validateRelease(invalidDraft);
+              state.draft = {
+                status: "invalid",
+                activation: "blocked",
+                validationErrors: errors,
+              };
+              record(
+                state,
+                "error",
+                "Items de route mal typés refusés",
+                `${errors.join("; ")}. Le validateur retourne des erreurs sans exception.`
+              );
+              break;
+            }
+
+            case "LOSE_FRONT_RELEASE": {
+              state.activeReleaseStatus = "unavailable";
+              state.lastVerifiedReleaseStatus = "missing";
+              record(
+                state,
+                "error",
+                "Last Verified Release perdue",
+                "Le Front SuperBoard doit rendre maintenance; la system_route EmDash Admin reste inventoriée."
+              );
+              break;
+            }
+
+            default:
+              return reject(state, "Événement inconnu", event.type);
+          }
+
+          return state;
+        }
+
+        return {
+          createInitialState,
+          releases,
+          systemRouteRegistry,
+          transition,
+          validateRelease,
+        };
+      })();
+
+      // Coque de démonstration jetable. Elle seule connaît le DOM.
+      (() => {
+        const actions = [
+          { type: "NAVIGATE_LOGIN", label: "Ouvrir /login", primary: true },
+          { type: "NAVIGATE_SUPERBOARD", label: "Ouvrir /app" },
+          { type: "NAVIGATE_EMDASH", label: "Ouvrir /_emdash/admin" },
+          {
+            type: "NAVIGATE_EMDASH_LOGIN",
+            label: "Ouvrir /_emdash/admin/login",
+          },
+          {
+            type: "NAVIGATE_SYSTEM_LOOKALIKE",
+            label: "Ouvrir /_emdash/admin-evil",
+            danger: true,
+          },
+          {
+            type: "NAVIGATE_UNMANIFESTED",
+            label: "Ouvrir /core-reports",
+            danger: true,
+          },
+          { type: "LOGIN_OPERATOR", label: "Authentifier l’Opérateur" },
+          { type: "LOGOUT_ADMIN", label: "Logout administratif" },
+          {
+            type: "EXPIRE_ADMIN_SESSION",
+            label: "Expirer la session",
+            danger: true,
+          },
+          {
+            type: "SET_APPLICATION_TOKEN",
+            label: "Ajouter un JWT applicatif",
+            danger: true,
+          },
+          { type: "GRANT_EMDASH_PERMISSION", label: "Accorder EmDash Admin" },
+          {
+            type: "REVOKE_EMDASH_PERMISSION",
+            label: "Retirer EmDash Admin",
+            danger: true,
+          },
+          {
+            type: "GRANT_SUPERBOARD_PERMISSION",
+            label: "Accorder SuperBoard Admin",
+          },
+          {
+            type: "REVOKE_SUPERBOARD_PERMISSION",
+            label: "Retirer SuperBoard Admin",
+            danger: true,
+          },
+          {
+            type: "VALIDATE_ALTERNATE_RELEASE",
+            label: "Valider la release Support",
+          },
+          {
+            type: "PREVIEW_ALTERNATE_RELEASE",
+            label: "Prévisualiser la release Support",
+          },
+          {
+            type: "APPROVE_ALTERNATE_RELEASE",
+            label: "Approuver la release Support",
+          },
+          {
+            type: "ACTIVATE_ALTERNATE_RELEASE",
+            label: "Activer la release Support",
+          },
+          {
+            type: "INJECT_CORE_PAGE",
+            label: "Injecter une page dans Core",
+            danger: true,
+          },
+          {
+            type: "INJECT_UNKNOWN_MANIFEST_FIELD",
+            label: "Ajouter composition.unexpected",
+            danger: true,
+          },
+          {
+            type: "INJECT_NORMALIZED_COLLISION",
+            label: "Ajouter une route /app/",
+            danger: true,
+          },
+          {
+            type: "INJECT_OPEN_PERMISSION_ROUTE",
+            label: "Ajouter une route authenticated + allow",
+            danger: true,
+          },
+          {
+            type: "INJECT_MALFORMED_ROUTE_ITEMS",
+            label: "Ajouter une route null et un renderer numérique",
+            danger: true,
+          },
+          {
+            type: "LOSE_FRONT_RELEASE",
+            label: "Perdre la Last Verified Release",
+            danger: true,
+          },
+          { type: "RESET", label: "Réinitialiser" },
+        ];
+
+        const procedures = [
+          {
+            id: "coexistence",
+            label: "Coexistence",
+            description:
+              "Établissez la session depuis le login manifesté, puis ouvrez successivement le shell SuperBoard et EmDash Admin sur le même host.",
+            steps: [
+              ["NAVIGATE_LOGIN", "Rendre le SuperBoard Login anonyme"],
+              ["LOGIN_OPERATOR", "Établir la session administrative commune"],
+              ["NAVIGATE_SUPERBOARD", "Rendre le shell SuperBoard manifesté"],
+              ["NAVIGATE_EMDASH", "Rendre EmDash Admin par sa system_route"],
+              ["NAVIGATE_LOGIN", "Retourner sur la route anonymous_only"],
+            ],
+          },
+          {
+            id: "anonymous",
+            label: "Anonyme",
+            description:
+              "Sans session administrative, chaque surface suit sa propre auth policy: login rendu, shell redirigé et EmDash Admin protégé.",
+            steps: [
+              ["NAVIGATE_EMDASH", "Demander EmDash Admin sans session"],
+              [
+                "NAVIGATE_EMDASH_LOGIN",
+                "Rendre la system_route de login EmDash",
+              ],
+              ["NAVIGATE_SUPERBOARD", "Demander le shell sans session"],
+              ["NAVIGATE_LOGIN", "Demander le login anonymous_only"],
+            ],
+          },
+          {
+            id: "permissions",
+            label: "Permissions distinctes",
+            description:
+              "Conservez la même session, mais retirez alternativement chaque permission pour prouver que les deux surfaces d’administration ne s’autorisent pas mutuellement.",
+            steps: [
+              ["NAVIGATE_LOGIN", "Ouvrir le login"],
+              ["LOGIN_OPERATOR", "Établir la session commune"],
+              [
+                "REVOKE_SUPERBOARD_PERMISSION",
+                "Retirer superboard.admin.access",
+              ],
+              [
+                "NAVIGATE_SUPERBOARD",
+                "Observer forbidden sur SuperBoard Admin",
+              ],
+              ["NAVIGATE_EMDASH", "Observer EmDash Admin toujours rendu"],
+              [
+                "GRANT_SUPERBOARD_PERMISSION",
+                "Rendre la permission SuperBoard",
+              ],
+              ["REVOKE_EMDASH_PERMISSION", "Retirer emdash.admin.access"],
+              ["NAVIGATE_EMDASH", "Observer forbidden sur EmDash Admin"],
+              [
+                "NAVIGATE_SUPERBOARD",
+                "Observer SuperBoard Admin toujours rendu",
+              ],
+            ],
+          },
+          {
+            id: "application-token",
+            label: "JWT applicatif",
+            description:
+              "Ajoutez un Jeton d’accès d’application valide. Sa mauvaise audience ne doit jamais ouvrir une surface d’administration ni transformer le login opérateur.",
+            steps: [
+              [
+                "SET_APPLICATION_TOKEN",
+                "Ajouter un JWT audience superboard_api",
+              ],
+              ["NAVIGATE_SUPERBOARD", "Tenter d’ouvrir le shell avec ce JWT"],
+              ["NAVIGATE_EMDASH", "Tenter d’ouvrir EmDash Admin avec ce JWT"],
+              [
+                "NAVIGATE_LOGIN",
+                "Vérifier que le login opérateur reste anonyme",
+              ],
+            ],
+          },
+          {
+            id: "logout",
+            label: "Logout commun",
+            description:
+              "La session est commune: un seul logout doit fermer les deux surfaces d’administration sans affecter le JWT applicatif séparé.",
+            steps: [
+              ["NAVIGATE_LOGIN", "Ouvrir le login"],
+              ["LOGIN_OPERATOR", "Établir la session commune"],
+              ["NAVIGATE_SUPERBOARD", "Vérifier SuperBoard Admin"],
+              ["NAVIGATE_EMDASH", "Vérifier EmDash Admin"],
+              ["LOGOUT_ADMIN", "Révoquer la session administrative"],
+              ["NAVIGATE_SUPERBOARD", "Rejouer le guard SuperBoard"],
+              ["NAVIGATE_EMDASH", "Rejouer le guard EmDash"],
+            ],
+          },
+          {
+            id: "manifest-composition",
+            label: "Composition manifestée",
+            description:
+              "Remplacez la composition Analytics par Support via une autre Release Front vérifiée, sans changer le routeur ni ajouter de page dans Core.",
+            steps: [
+              ["NAVIGATE_LOGIN", "Ouvrir le login"],
+              ["LOGIN_OPERATOR", "Établir la session"],
+              ["NAVIGATE_SUPERBOARD", "Rendre la composition Analytics"],
+              [
+                "VALIDATE_ALTERNATE_RELEASE",
+                "Valider le Front Release Candidate Support",
+              ],
+              [
+                "PREVIEW_ALTERNATE_RELEASE",
+                "Prévisualiser exactement la composition Support",
+              ],
+              [
+                "APPROVE_ALTERNATE_RELEASE",
+                "Lier la Release Approval aux preuves exactes",
+              ],
+              [
+                "ACTIVATE_ALTERNATE_RELEASE",
+                "Activer atomiquement la Release Front Support",
+              ],
+              [
+                "NAVIGATE_SUPERBOARD",
+                "Rendre la nouvelle composition sur /app",
+              ],
+            ],
+          },
+          {
+            id: "core-boundary",
+            label: "Frontière Core",
+            description:
+              "Tentez d’introduire une page concrète dans supbrd-core. Le draft doit être bloqué et la route rester introuvable dans la release active.",
+            steps: [
+              ["INJECT_CORE_PAGE", "Ajouter /core-reports au draft Core"],
+              [
+                "NAVIGATE_UNMANIFESTED",
+                "Demander /core-reports dans la release active",
+              ],
+              [
+                "NAVIGATE_SYSTEM_LOOKALIKE",
+                "Refuser /_emdash/admin-evil non inventorié",
+              ],
+            ],
+          },
+          {
+            id: "missing-release",
+            label: "Front indisponible",
+            description:
+              "Perdez toute Last Verified Release après authentification. Le Front passe en maintenance, mais EmDash Admin reste disponible pour réparer et republier.",
+            steps: [
+              ["NAVIGATE_LOGIN", "Ouvrir le login"],
+              ["LOGIN_OPERATOR", "Établir la session de récupération"],
+              [
+                "LOSE_FRONT_RELEASE",
+                "Rendre la Last Verified Release indisponible",
+              ],
+              ["NAVIGATE_SUPERBOARD", "Demander le Front SuperBoard"],
+              ["NAVIGATE_EMDASH", "Ouvrir EmDash Admin pour récupérer"],
+            ],
+          },
+          {
+            id: "closed-manifest",
+            label: "Manifest fermé",
+            description:
+              "Introduisez un champ imbriqué inconnu puis une route qui collisionne seulement après normalisation. Les deux drafts doivent rester bloqués.",
+            steps: [
+              [
+                "INJECT_UNKNOWN_MANIFEST_FIELD",
+                "Ajouter composition.unexpected au draft",
+              ],
+              [
+                "INJECT_NORMALIZED_COLLISION",
+                "Ajouter /app/ face à la route /app existante",
+              ],
+              [
+                "INJECT_OPEN_PERMISSION_ROUTE",
+                "Ajouter /unsafe avec authenticated + allow",
+              ],
+              [
+                "INJECT_MALFORMED_ROUTE_ITEMS",
+                "Ajouter null et un renderer non textuel",
+              ],
+            ],
+          },
+        ];
+
+        let state = CoexistencePrototype.createInitialState();
+        let activeProcedureIndex = 0;
+        let activeStepIndex = 0;
+
+        const escapeHtml = (value) =>
+          String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        const shortProof = (value) =>
+          value ? `${value.slice(0, 21)}…${value.slice(-8)}` : "none";
+
+        function toneFor(value) {
+          if (
+            [
+              "valid",
+              "verified",
+              "ready",
+              "rendered",
+              "allowed",
+              "activated",
+              "validated",
+              "previewed",
+              "approved",
+              "bound",
+              "true",
+            ].includes(value)
+          )
+            return "success";
+          if (
+            [
+              "invalid",
+              "unavailable",
+              "missing",
+              "forbidden",
+              "authentication_required",
+              "not_found",
+              "maintenance",
+              "denied",
+              "blocked",
+              "validation_failed",
+              "false",
+            ].includes(value)
+          )
+            return "danger";
+          if (
+            [
+              "redirect",
+              "absent",
+              "expired",
+              "revoked",
+              "not_requested",
+              "not_started",
+              "not_run",
+            ].includes(value)
+          )
+            return "warning";
+          if (["emdash_core_system", "system"].includes(value)) return "system";
+          return "neutral";
+        }
+
+        function badge(value) {
+          return `<span class="badge ${toneFor(value)}">${escapeHtml(value)}</span>`;
+        }
+
+        function row(label, value) {
+          return `<div class="status-row"><span>${escapeHtml(label)}</span>${badge(value)}</div>`;
+        }
+
+        function renderHero() {
+          const result = state.resolution.result;
+          const hero = document.querySelector("#hero-result");
+          hero.className = `hero-result ${toneFor(result)}`;
+          const labels = {
+            not_requested: "Aucune navigation",
+            rendered: "Surface rendue",
+            redirect: "Redirection contrôlée",
+            forbidden: "Accès interdit",
+            authentication_required: "Authentification requise",
+            not_found: "Route introuvable",
+            maintenance: "Front en maintenance",
+          };
+          hero.textContent = labels[result] || result;
+          document.querySelector("#hero-explanation").textContent =
+            state.resolution.reason;
+
+          document.querySelector("#site-summary").innerHTML = [
+            ["Instance", state.instanceId],
+            ["Host unique", state.siteHost],
+            ["Release active", state.activeRelease.releaseId],
+            ["Front Release", state.activeReleaseStatus],
+            ["Last Verified Release", state.lastVerifiedReleaseStatus],
+            ["System routes", state.systemRouteRegistryStatus],
+          ]
+            .map(
+              ([label, value]) =>
+                `<div><dt>${escapeHtml(label)}</dt><dd><code>${escapeHtml(value)}</code></dd></div>`
+            )
+            .join("");
+        }
+
+        function renderState() {
+          const resolution = state.resolution;
+          document.querySelector("#route-state").innerHTML = [
+            row("Chemin demandé", resolution.requestedPath || "none"),
+            row("Chemin normalisé", resolution.normalizedPath || "none"),
+            row("Route ID", resolution.routeId || "none"),
+            row("Surface", resolution.surface),
+            row("Audience", resolution.audience),
+            row("Auth policy", resolution.authPolicy),
+            row("Permission", resolution.permission),
+            row("Décision permission", resolution.permissionDecision),
+            row("Résultat", resolution.result),
+            row("Redirection", resolution.redirectTo || "none"),
+          ].join("");
+
+          document.querySelector("#session-state").innerHTML = [
+            row("Session administrative", state.session.admin.status),
+            row(
+              "Génération de session",
+              String(state.session.admin.generation)
+            ),
+            row("Cookie partagé", state.session.admin.cookie.name),
+            row("Cookie HostOnly / HttpOnly", "true"),
+            row("Cookie Secure / SameSite", "true"),
+            row("JWT applicatif", state.session.application.status),
+            row("Audience du JWT", state.session.application.audience),
+            row(
+              "emdash.admin.access",
+              String(state.permissions["emdash.admin.access"])
+            ),
+            row(
+              "superboard.admin.access",
+              String(state.permissions["superboard.admin.access"])
+            ),
+          ].join("");
+
+          document.querySelector("#manifest-state").innerHTML = [
+            row("Release ID", state.activeRelease.releaseId),
+            row("Signature", state.activeRelease.signature),
+            row("Statut vérifié", state.activeRelease.verificationStatus),
+            row("Routes Front", String(state.activeRelease.routes.length)),
+            row(
+              "System routes",
+              String(state.activeRelease.systemRoutes.length)
+            ),
+            row("Composition /app", state.activeRelease.composition.title),
+            row(
+              "Pages concrètes Core",
+              String(state.activeRelease.coreConcretePages.length)
+            ),
+            row("Preuve active", state.activeReleaseProof.status),
+            row("Candidate actif", state.activeReleaseProof.candidateId),
+            row(
+              "Validation set actif",
+              shortProof(state.activeReleaseProof.validationSetChecksum)
+            ),
+            row("Draft", state.draft.status),
+            row("Activation draft", state.draft.activation),
+            row("Erreurs draft", String(state.draft.validationErrors.length)),
+            row("Promotion Support", state.promotion.status),
+            row("Preview Support", state.promotion.previewStatus),
+            row(
+              "Receipts Support",
+              String(state.promotion.validationReceipts.length)
+            ),
+            row(
+              "Release Approval Support",
+              state.promotion.approval ? "bound" : "none"
+            ),
+          ].join("");
+
+          document.querySelector("#render-state").innerHTML = [
+            row("Source du rendu", resolution.renderSource),
+            row("Propriétaire de page", resolution.pageOwner),
+            row("Page ID", resolution.pageId || "none"),
+            row("Layout ID", resolution.layoutId || "none"),
+            row("Renderer", resolution.rendererIds[0] || "none"),
+            row("Page concrète dans Core", String(resolution.coreConcretePage)),
+          ].join("");
+        }
+
+        function renderSurfacePreview() {
+          const resolution = state.resolution;
+          document.querySelector("#preview-address").textContent =
+            `https://${state.siteHost}${resolution.requestedPath || "/"}`;
+          const target = document.querySelector("#surface-preview");
+
+          if (resolution.result === "not_requested") {
+            target.innerHTML =
+              "<h3>Aucune surface</h3><p>Choisissez une route pour observer le rendu.</p>";
+            return;
+          }
+
+          if (resolution.result !== "rendered") {
+            const title = {
+              redirect: "Redirection",
+              forbidden: "403 — Accès interdit",
+              authentication_required: "Authentification requise",
+              not_found: "404 — Route non manifestée",
+              maintenance: "Maintenance du Front SuperBoard",
+            }[resolution.result];
+            target.innerHTML = `<h3>${escapeHtml(title || resolution.result)}</h3><p>${escapeHtml(
+              resolution.reason
+            )}</p>${resolution.redirectTo ? `<p>Destination&nbsp;: <code>${escapeHtml(resolution.redirectTo)}</code></p>` : ""}`;
+            return;
+          }
+
+          if (resolution.surface === "superboard_login") {
+            target.innerHTML = `<div class="mock-form"><p class="hero-kicker">SuperBoard Login</p><h3>Connexion opérateur</h3><p>Composition EmDash · <code>${escapeHtml(
+              resolution.rendererIds[0]
+            )}</code></p><div class="mock-input"></div><div class="mock-input"></div><div class="mock-button">Continuer</div></div>`;
+            return;
+          }
+
+          if (resolution.surface === "emdash_admin_login") {
+            target.innerHTML = `<div class="mock-form"><p class="hero-kicker">EmDash Admin Login</p><h3>Authentification du Site</h3><p>System route native · <code>${escapeHtml(
+              resolution.rendererIds[0]
+            )}</code></p><div class="mock-input"></div><div class="mock-button">Continuer vers EmDash</div></div>`;
+            return;
+          }
+
+          if (resolution.surface === "emdash_admin") {
+            target.innerHTML = `<div class="surface-shell"><aside class="surface-nav"><strong>EmDash Admin</strong><span>Content</span><span>Media</span><span>Plugins</span><span>Releases</span></aside><div class="surface-content"><p class="hero-kicker">System route native</p><h3>Administration du Site EmDash</h3><div class="mock-card">Rendu par <code>emdash_core_system</code>, permission <code>emdash.admin.access</code>.</div></div></div>`;
+            return;
+          }
+
+          target.innerHTML = `<div class="surface-shell"><aside class="surface-nav"><strong>SuperBoard Admin</strong><span>Vue d’ensemble</span><span>Utilisateurs</span><span>Support</span><span>Réglages</span></aside><div class="surface-content"><p class="hero-kicker">Front Route Manifest</p><h3>${escapeHtml(
+            state.activeRelease.composition.title
+          )}</h3><div class="mock-card">Page <code>${escapeHtml(
+            resolution.pageId
+          )}</code><br />Layout <code>${escapeHtml(resolution.layoutId)}</code><br />Renderer <code>${escapeHtml(
+            resolution.rendererIds[0]
+          )}</code></div></div></div>`;
+        }
+
+        function renderRouteTable() {
+          const routes = [
+            ...state.activeRelease.systemRoutes,
+            ...state.activeRelease.routes,
+          ];
+          document.querySelector("#route-table-body").innerHTML = routes
+            .map(
+              (route) =>
+                `<tr><td><code>${escapeHtml(route.pathPattern)}</code><br />${escapeHtml(
+                  route.routeId
+                )}</td><td>${escapeHtml(route.routeKind)}<br /><code>${escapeHtml(
+                  route.audience
+                )}</code></td><td>${badge(route.authPolicy)}</td><td><code>${escapeHtml(
+                  route.permissionExpression
+                )}</code></td><td>${badge(route.renderSource)}</td></tr>`
+            )
+            .join("");
+        }
+
+        function renderActivity() {
+          document.querySelector("#activity-state").innerHTML = [
+            ...state.activity,
+          ]
+            .reverse()
+            .slice(0, 10)
+            .map(
+              (item) =>
+                `<li><small>#${String(item.sequence).padStart(3, "0")}</small><div><strong>${escapeHtml(
+                  item.message
+                )}</strong><br /><span>${escapeHtml(item.detail)}</span></div></li>`
+            )
+            .join("");
+        }
+
+        function renderProcedures() {
+          document.querySelector("#procedure-tabs").innerHTML = procedures
+            .map(
+              (procedure, index) =>
+                `<button type="button" class="tab-button" role="tab" data-procedure-index="${index}" aria-selected="${
+                  index === activeProcedureIndex
+                }" id="tab-${escapeHtml(procedure.id)}">${escapeHtml(procedure.label)}</button>`
+            )
+            .join("");
+
+          const procedure = procedures[activeProcedureIndex];
+          const body = document.querySelector("#procedure-body");
+          body.setAttribute("aria-labelledby", `tab-${procedure.id}`);
+          body.innerHTML = `<h3>${escapeHtml(procedure.label)}</h3><p>${escapeHtml(
+            procedure.description
+          )}</p><div class="steps">${procedure.steps
+            .map(([type, label], index) => {
+              const status =
+                index < activeStepIndex
+                  ? "done"
+                  : index === activeStepIndex
+                    ? "current"
+                    : "";
+              const disabled = index !== activeStepIndex ? "disabled" : "";
+              return `<button type="button" class="step-button ${status}" data-step-index="${index}" data-event-type="${escapeHtml(
+                type
+              )}" ${disabled}>${escapeHtml(label)}</button>`;
+            })
+            .join("")}</div>`;
+
+          document
+            .querySelectorAll("[data-procedure-index]")
+            .forEach((button) => {
+              button.addEventListener("click", () => {
+                activeProcedureIndex = Number(button.dataset.procedureIndex);
+                activeStepIndex = 0;
+                state = CoexistencePrototype.createInitialState();
+                render();
+              });
+            });
+
+          document.querySelectorAll("[data-step-index]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state = CoexistencePrototype.transition(state, {
+                type: button.dataset.eventType,
+              });
+              activeStepIndex += 1;
+              render();
+            });
+          });
+        }
+
+        function render() {
+          renderHero();
+          renderState();
+          renderSurfacePreview();
+          renderRouteTable();
+          renderActivity();
+          renderProcedures();
+        }
+
+        document.querySelector("#free-play-controls").innerHTML = actions
+          .map(
+            (action) =>
+              `<button type="button" class="action-button ${action.primary ? "primary" : ""} ${
+                action.danger ? "danger" : ""
+              }" data-free-event="${escapeHtml(action.type)}">${escapeHtml(action.label)}</button>`
+          )
+          .join("");
+
+        document.querySelectorAll("[data-free-event]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state = CoexistencePrototype.transition(state, {
+              type: button.dataset.freeEvent,
+            });
+            activeStepIndex = 0;
+            render();
+          });
+        });
+
+        render();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,272 @@
+import type { BlockTriggerContext, UserProperties } from "@superboard/flows-shared";
+import {
+  elementContains,
+  elementExists,
+  elementNotExists,
+  getPathname,
+  pathnameMatch,
+  processTourWait,
+  tourTriggerMatch,
+  type Block,
+} from "@superboard/flows-shared";
+import { effect } from "@preact/signals-core";
+import { debounce } from "es-toolkit";
+import {
+  config,
+  pathname,
+  removeBlock,
+  type RunningTour,
+  runningTours,
+  tourBlocks,
+} from "../store";
+import { sendEvent } from "./api";
+
+const startToursIfNeeded = (tourBlocksValue: Block[], ctx: BlockTriggerContext): void => {
+  const runningTourBlockIds = new Set(runningTours.peek().map((t) => t.blockId));
+
+  tourBlocksValue.forEach((block) => {
+    if (runningTourBlockIds.has(block.id)) return;
+    const triggerMatch = tourTriggerMatch(block, ctx);
+    if (!triggerMatch) return;
+
+    runningTours.value = [
+      ...runningTours.peek(),
+      {
+        blockId: block.id,
+        currentBlockIndex: block.currentTourIndex ?? 0,
+      },
+    ];
+  });
+};
+
+export const updateTourState = (
+  tourBlockId: string,
+  updateFn: (tour: RunningTour) => RunningTour,
+): void => {
+  runningTours.value = runningTours.value.map((tour) =>
+    tour.blockId === tourBlockId ? updateFn(tour) : tour,
+  );
+};
+
+export const previousTourStep = (tourBlock: Block, currentIndex: number): void => {
+  const isFirstStep = currentIndex === 0;
+
+  if (isFirstStep) return;
+  const newIndex = currentIndex - 1;
+  void sendEvent({
+    name: "tour-update",
+    blockId: tourBlock.id,
+    blockStateId: tourBlock.blockStateId,
+    properties: { currentTourIndex: newIndex },
+  });
+
+  // Update the step with a timeout to avoid navigation with href from the previous step
+  setTimeout(() => {
+    updateTourState(tourBlock.id, (t) => ({ ...t, currentBlockIndex: newIndex }));
+  }, 0);
+};
+
+export const nextTourStep = (tourBlock: Block, currentIndex: number): void => {
+  const isLastStep = currentIndex === (tourBlock.tourBlocks?.length ?? 1) - 1;
+
+  if (isLastStep) {
+    removeBlock(tourBlock.id);
+    void sendEvent({ name: "transition", blockId: tourBlock.id, blockStateId: tourBlock.blockStateId, propertyKey: "complete" });
+  } else {
+    const newIndex = currentIndex + 1;
+    void sendEvent({
+      name: "tour-update",
+      blockId: tourBlock.id,
+      properties: { currentTourIndex: newIndex },
+    });
+
+    // Update the step with a timeout to avoid navigation with href from the next step
+    setTimeout(() => {
+      updateTourState(tourBlock.id, (t) => ({ ...t, currentBlockIndex: newIndex }));
+    }, 0);
+  }
+};
+
+export const cancelTour = (tourBlock: Block): void => {
+  removeBlock(tourBlock.id);
+  void sendEvent({ name: "transition", blockId: tourBlock.id, blockStateId: tourBlock.blockStateId, propertyKey: "cancel" });
+};
+
+const handleTourClickWaits = (eventTarget: Element): void => {
+  const blocksById = new Map(tourBlocks.peek().map((block) => [block.id, block]));
+
+  runningTours.value.forEach((tour) => {
+    const tourBlock = blocksById.get(tour.blockId);
+    if (!tourBlock) return;
+    const activeStep = tourBlock.tourBlocks?.at(tour.currentBlockIndex);
+    if (!activeStep) return;
+    const tourWait = processTourWait(activeStep.tourWait, config.peek()?.userProperties ?? {});
+    if (!tourWait) return;
+
+    if (tourWait.interaction === "click") {
+      const pageMatch = pathnameMatch({
+        pathname: getPathname(),
+        operator: tourWait.page?.operator,
+        value: tourWait.page?.value,
+      });
+      const clickMatch = elementContains({ eventTarget, value: tourWait.element });
+      if (clickMatch && pageMatch) {
+        nextTourStep(tourBlock, tour.currentBlockIndex);
+      }
+    }
+  });
+};
+
+export const handleTourDocumentClick = (event: MouseEvent): void => {
+  const eventTarget = event.target;
+  // Handle running tours click waits
+  // The order here is important, otherwise the tour could be started and proceeded with wait by the same click event
+  if (eventTarget instanceof Element) {
+    handleTourClickWaits(eventTarget);
+  }
+
+  // Handle trigger by click
+  startToursIfNeeded(tourBlocks.value, {
+    pathname: getPathname(),
+    event,
+    userProperties: config.peek()?.userProperties ?? {},
+  });
+};
+
+const timeoutByTourId = new Map<string, { timeoutId: number; stepId: string }>();
+
+effect(() => {
+  const pathnameValue = pathname.value;
+  const runningToursValue = runningTours.value;
+  const tourBlocksValue = tourBlocks.value;
+  const configValue = config.value;
+
+  const tourBlockIds = new Map(tourBlocksValue.map((block) => [block.id, block]));
+
+  runningToursValue.forEach((tour) => {
+    const tourBlock = tourBlockIds.get(tour.blockId);
+    if (!tourBlock) return;
+    const activeStep = tourBlock.tourBlocks?.at(tour.currentBlockIndex);
+    if (!activeStep) return;
+
+    // Clear timeouts for tours that don't have active the wait step
+    const existingTimeout = timeoutByTourId.get(tour.blockId);
+    if (existingTimeout && existingTimeout.stepId !== activeStep.id) {
+      clearTimeout(existingTimeout.timeoutId);
+      timeoutByTourId.delete(tour.blockId);
+    }
+
+    const tourWait = processTourWait(activeStep.tourWait, configValue?.userProperties ?? {});
+    if (!tourWait) return;
+
+    // Handle navigation waits
+    if (tourWait.interaction === "navigation") {
+      const match = pathnameMatch({
+        pathname: pathnameValue,
+        operator: tourWait.page?.operator,
+        value: tourWait.page?.value,
+      });
+
+      if (match) nextTourStep(tourBlock, tour.currentBlockIndex);
+    }
+
+    // Handle delay waits
+    if (
+      tourWait.interaction === "delay" &&
+      tourWait.ms !== undefined &&
+      !timeoutByTourId.has(tour.blockId)
+    ) {
+      const timeoutId = window.setTimeout(() => {
+        nextTourStep(tourBlock, tour.currentBlockIndex);
+        timeoutByTourId.delete(tour.blockId);
+      }, tourWait.ms);
+      timeoutByTourId.set(tour.blockId, { timeoutId, stepId: activeStep.id });
+    }
+  });
+});
+
+// Stop tours that are no longer running
+effect(() => {
+  const tourBlocksValue = tourBlocks.value;
+  const tourBlockIds = new Set(tourBlocksValue.map((b) => b.id));
+
+  // Filter out stopped tours
+  runningTours.value = runningTours.peek().filter((tour) => {
+    return tourBlockIds.has(tour.blockId);
+  });
+});
+
+// Handle trigger by navigation
+effect(() => {
+  const tourBlocksValue = tourBlocks.value;
+  const pathnameValue = pathname.value;
+  const configValue = config.value;
+
+  if (!pathnameValue) return;
+
+  startToursIfNeeded(tourBlocksValue, {
+    pathname: pathnameValue,
+    userProperties: configValue?.userProperties ?? {},
+  });
+});
+
+const handleTourElementWaits = (tours: RunningTour[], userProperties: UserProperties): void => {
+  const blocksById = new Map(tourBlocks.peek().map((block) => [block.id, block]));
+
+  tours.forEach((tour) => {
+    const tourBlock = blocksById.get(tour.blockId);
+    if (!tourBlock) return;
+    const activeStep = tourBlock.tourBlocks?.at(tour.currentBlockIndex);
+    if (!activeStep) return;
+    const tourWait = processTourWait(activeStep.tourWait, userProperties);
+    if (!tourWait) return;
+    const waitElement = tourWait.element;
+
+    if (tourWait.interaction === "dom-element") {
+      const pageMatch = pathnameMatch({
+        pathname: getPathname(),
+        operator: tourWait.page?.operator,
+        value: tourWait.page?.value,
+      });
+      const domElementMatch = elementExists(waitElement);
+      if (domElementMatch && pageMatch) nextTourStep(tourBlock, tour.currentBlockIndex);
+    }
+    if (tourWait.interaction === "not-dom-element") {
+      const pageMatch = pathnameMatch({
+        pathname: getPathname(),
+        operator: tourWait.page?.operator,
+        value: tourWait.page?.value,
+      });
+      const notDomElementMatch = elementNotExists(waitElement);
+      if (notDomElementMatch && pageMatch) nextTourStep(tourBlock, tour.currentBlockIndex);
+    }
+  });
+};
+
+// Handle trigger and wait by DOM element
+effect(() => {
+  // Ensure this effect runs only in the browser environment because of the MutationObserver
+  if (typeof window === "undefined") return;
+
+  const tourBlocksValue = tourBlocks.value;
+  const runningToursValue = runningTours.value;
+  const configValue = config.value;
+
+  const callback = (): void => {
+    startToursIfNeeded(tourBlocksValue, {
+      pathname: getPathname(),
+      userProperties: configValue?.userProperties ?? {},
+    });
+    handleTourElementWaits(runningToursValue, configValue?.userProperties ?? {});
+  };
+
+  const debouncedCallback = debounce(callback, 32);
+
+  const observer = new MutationObserver(debouncedCallback);
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+  // Run once to catch existing elements
+  debouncedCallback();
+  return () => {
+    observer.disconnect();
+  };
+});
