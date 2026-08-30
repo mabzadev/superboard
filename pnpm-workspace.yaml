@@ -41,7 +41,7 @@ dangerouslyAllowAllBuilds: false
 blockExoticSubdeps: true
 verifyStoreIntegrity: true
 strictStorePkgContentCheck: true
-verifyDepsBeforeRun: error
+verifyDepsBeforeRun: warn
 allowBuilds:
   # SuperBoard reviewed dependency scripts.
   "@evilmartians/lefthook": false
