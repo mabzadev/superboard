@@ -14,6 +14,7 @@ import {
   reverseDeltaSql,
   sqlLiteral,
   upsertSql,
+	verifyShadowRead,
   validateApplySafety,
   validateMaintenanceEnableSafety,
 } from "./core.mjs";
@@ -137,6 +138,21 @@ test("a checksum mismatch aborts immediately and does not mark a checkpoint veri
     CutoverMismatchError,
   );
   assert.equal(checkpointWrites, 0);
+});
+
+test("shadow reads fail closed and emit mismatch metrics without PII", () => {
+	const metrics = [];
+	assert.throws(
+		() => verifyShadowRead({
+			entity: exampleEntity,
+			sourceRows: [row("a", { email: "private@example.com" })],
+			targetRows: [row("a", { email: "other@example.com" })],
+			emitMetric: (metric) => metrics.push(metric),
+		}),
+		CutoverMismatchError,
+	);
+	assert.equal(metrics[0].tags.result, "mismatch");
+	assert.equal(JSON.stringify(metrics).includes("example.com"), false);
 });
 
 test("a project/window checkpoint cannot be reused for another cutover", async () => {

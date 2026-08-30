@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "instance_id": "vocostar",
+  "aliases": {
+    "projectId": "vocostar",
+    "pid": "vocostar"
+  },
+  "before": {
+    "status": 200,
+    "body": {
+      "id": "user-1",
+      "projectId": "vocostar",
+      "pid": "vocostar",
+      "active": true
+    }
+  },
+  "after": {
+    "status": 200,
+    "body": {
+      "id": "user-1",
+      "projectId": "vocostar",
+      "pid": "vocostar",
+      "active": true
+    }
+  }
+}

@@ -27,7 +27,7 @@
   "scripts": {
     "start": "webpack-dev-server --config webpack.config.cjs --open",
     "build": "webpack --config webpack.config.cjs",
-    "test": "node --test test/opengrow.test.js test/support.test.js",
+		"test": "node --test test/opengrow.test.js test/support.test.js test/emdash-store-parity.test.js",
     "test:package": "node --test test/package.test.js",
     "pack:check": "npm pack --dry-run",
     "audit:production": "npm audit --omit=dev --workspaces=false --audit-level=low",

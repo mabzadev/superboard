@@ -122,6 +122,21 @@ export function compareDatasets(expectedRows, actualRows, entity) {
   return { expected, actual, matches: expected.count === actual.count && expected.checksum === actual.checksum };
 }
 
+export function verifyShadowRead({ entity, sourceRows, targetRows, emitMetric = () => undefined }) {
+	const comparison = compareDatasets(sourceRows, targetRows, entity);
+	const metric = {
+		name: "emdash_store_shadow_read",
+		tags: { entity_id: entity.id, result: comparison.matches ? "match" : "mismatch" },
+		values: {
+			source_count: comparison.expected.count,
+			target_count: comparison.actual.count,
+		},
+	};
+	emitMetric(metric);
+	if (!comparison.matches) throw new CutoverMismatchError(entity.id, comparison);
+	return { rows: targetRows, evidence: comparison, metric };
+}
+
 export function sqlLiteral(value) {
   if (value === null || value === undefined) return "NULL";
   if (typeof value === "number") {

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "environment": "isolated_fixture",
+  "entity_id": "user.application_users",
+  "source": {
+    "count": 2,
+    "checksum": "5b8567abf0eb8b8184b56aa9acabeb657cc53580e3e57086471863c4885829dc"
+  },
+  "target": {
+    "count": 2,
+    "checksum": "5b8567abf0eb8b8184b56aa9acabeb657cc53580e3e57086471863c4885829dc"
+  },
+  "deterministic_sample": {
+    "id": "user-a",
+    "payload_json": "{\"active\":true}",
+    "project_id": "12",
+    "updated_at": "2026-08-30T00:00:00Z"
+  },
+  "sample_checksum": "sha256:d1abb0d663bb54b8a59df0ffad28d6add6ae6f6e602550d5481fc2f13bc8eddc",
+  "double_import_upsert_calls": 1,
+  "resumed_without_write": true,
+  "shadow_metric": {
+    "name": "emdash_store_shadow_read",
+    "tags": {
+      "entity_id": "user.application_users",
+      "result": "match"
+    },
+    "values": {
+      "source_count": 2,
+      "target_count": 2
+    }
+  },
+  "reverse_delta_replayable": true,
+  "rollback_blocked": false,
+  "deletes": [],
+  "public_cutover": false,
+  "receipt_checksum": "sha256:f460eaa85b721a4f8d81a29dddfa6b8431e3e1e5eb231c505d325e226ebcc9f8"
+}

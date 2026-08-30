@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "environment": "isolated_local_restore",
+  "d1_snapshot_checksum": "sha256:94507ae27aca398ce83c759fd57d216819e4cdf0ca5fcdf5369009cbad2aa3ef",
+  "object_snapshot_checksum": "sha256:5d63435876563797c02789f6fb96176f1d83e7889a0c73886fdc921071ea9bd7",
+  "counts": {
+    "documents": 2
+  },
+  "fts_matches": 1,
+  "r2_count": 1,
+  "kv_count": 1,
+  "r2_checksum": "sha256:c88e29ca5f5fa803bfc9381a531dc3e75cfe9e004af155fabf8eb2dcdfa32952",
+  "kv_checksum": "sha256:d23f2842ebad72afff0d06bde9cb1272f266a4e6eedeb0ca8b2b14884dcff6cd",
+  "production_mutated": false,
+  "receipt_checksum": "sha256:f4decc6d2ce5b3b64e9792732de790a95d55130de6259ef2b8271908b4d2b79f"
+}

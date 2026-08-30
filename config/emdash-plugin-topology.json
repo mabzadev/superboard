@@ -1,0 +1,653 @@
+{
+  "schema_version": 1,
+  "aliases": {
+    "projectId": "instance_id",
+    "pid": "instance_id"
+  },
+  "plugins": [
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plug-user",
+      "plugin_kind": "full",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plug-user.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:fa47f6659c48744d91f95b381c37903260d95590aa9cbb0c522f09a923e8ec81"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plug-user.repository.authority",
+          "store_id": "supbrd-plug-user.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:b92df565cce9c7b463c9837f6de74085aa9759b50e851f8a751624ee41ff7e19"
+        }
+      ],
+      "worker_descriptor": null,
+      "artifact_checksum": "sha256:e31bb285f1c9c8dc252a53145f278ab94bdc44928396e86b82ade913283fffd1"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plug-settings",
+      "plugin_kind": "full",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plug-settings.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:fc037ab511837c61bb801fda5b8aea8c1e52e6d1c87723c8168f86f8160db951"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plug-settings.repository.authority",
+          "store_id": "supbrd-plug-settings.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:a067744612c546cc6f69bdb7890cd941a470c552c92518f124da74a8346b2415"
+        }
+      ],
+      "worker_descriptor": null,
+      "artifact_checksum": "sha256:01d332f097a30ec7b6da4d406e31833252ff50eb1a7a6496371a0a4b8439edaf"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plug-content",
+      "plugin_kind": "full",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plug-content.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:e3867d1e1047b410bd0f5789eb71ac5ee0f3d81a9dce89ed22bb4c539357b311"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plug-content.repository.authority",
+          "store_id": "supbrd-plug-content.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:edc442b842f57ff57ce9ca8c96b1911586432eac57b9c45a239158b3c3749d03"
+        }
+      ],
+      "worker_descriptor": null,
+      "artifact_checksum": "sha256:b22ae46ffc8169da912bd4cfeac3584806c461c215e52c9a4c3c36c747a74e8e"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plug-products",
+      "plugin_kind": "full",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plug-products.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:e07a9b31433f095bd6612c22797e301a5c1380de2ae32f5072dde82398a803fe"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plug-products.repository.authority",
+          "store_id": "supbrd-plug-products.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:84d0624de6cea0ad7845ac170753522f18ea5a18edcde60526f832008882a1d8"
+        }
+      ],
+      "worker_descriptor": null,
+      "artifact_checksum": "sha256:3c7c41064582bace15df0e5a5abc22fe942786181afe6612900410eeafd32de4"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plug-audit",
+      "plugin_kind": "full",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plug-audit.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:a1d3c29655865ac748f331dd8ec9b29cdf3ffeb3f58161305d3b8a9fc91673a2"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plug-audit.repository.authority",
+          "store_id": "supbrd-plug-audit.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:2843bde7d27dedf9902bf4b41e2a8c84c2319c506f6b4aa7fcbd6b5e3d087a43"
+        }
+      ],
+      "worker_descriptor": null,
+      "artifact_checksum": "sha256:2c22fd4795c78f3d14bb20e07a8fbdc44be8bcb7b642993c654710868a025819"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-gateway",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-gateway.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:0fa895c626a0c7821d4b0fb1a76a22979e88c179e87b344be8a5e9f568d34608"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-gateway.repository.authority",
+          "store_id": "supbrd-plugmod-gateway.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:b4b7b81e9150fc03babfd964584077f3915d09b6f46b9fdaf321d561e5922477"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/api",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:fe7a6faccf9f4dfb92c3bb85f0dcfe60141a600e5d642ad9280d6e8fadbdd1f1"
+      },
+      "artifact_checksum": "sha256:4cc8bf9b5d14748bbe1be4822295cc7c2662e4b1fab47a6fcbf4fbf0a76393f4"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-billing",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-billing.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:e98f13167f8bf8839e2684d09d5606100b84d9c9a90d36afffaaa21e7a72e278"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-billing.repository.authority",
+          "store_id": "supbrd-plugmod-billing.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:6743ccbbdea072c92883d1df0b8d87229bb810e8b5422f085a06d6da553e9297"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/billing",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:80f996fc9d4847e361f8b01c3b6424dd16d9673e7da483630da5ec08e6cad531"
+      },
+      "artifact_checksum": "sha256:db61af9e142a81d405962599c0ad211d5ed1c39f2c3a210f18994b4c7fee6c21"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-support",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-support.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:4a61338841d9d54a2c429bf8742bb63eb22381c68c6910ed79cd2598eba2d5c7"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-support.repository.authority",
+          "store_id": "supbrd-plugmod-support.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:34ab5bf2b18d564c5a3b59291b683765dc3a116b96e5401bafa3f91ab8757c55"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/support",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:8995c17a327e5fbd742a2d31ee6e7b9d65cb658870cf1a7cbbda40ac4ffff481"
+      },
+      "artifact_checksum": "sha256:bdffa8b58b86d51d2102c8d1b8970a526d7e360abb44cd2ae2f377183497eb5f"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-flows",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-flows.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:06a366a9e049928f75a50d7ff63e9056ed98dd4703796e78dc22ee8ead0a90a2"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-flows.repository.authority",
+          "store_id": "supbrd-plugmod-flows.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:21e21b04e7b84ec41a988c5e77631aa8bce977ea284bf81fb5f671134be60fb0"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/flows",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:64f78a562dbec3acc104648d69f780626c87ad4babb6773701ac09601a6c2521"
+      },
+      "artifact_checksum": "sha256:cf554fd0fd537f37d1303218c501f6c418d9a5298195ee53a0558c28286f2dea"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-analytics.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:ad3f78f0e753f1002ed7c8126289987ed4ece494d0fee848a10cef1e2fd33fcd"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-analytics.repository.authority",
+          "store_id": "supbrd-plugmod-analytics.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:78f88901efe217077d0ac786124e121a6d47ec57b9f60e0a1a30408a08138e94"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/analytics",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:4c5dd532bc42106de150aac4f8d568415891ee38e5671ad84d05a2beda4ff939"
+      },
+      "artifact_checksum": "sha256:113d215fb56259c625e75cd37da85ae8a9079d31e6cf482d503fad688854ada7"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-marketing.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:fad08da602f725337c00388d0594627f1e10453897280ae9b7d543ba827bc4cb"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-marketing.repository.authority",
+          "store_id": "supbrd-plugmod-marketing.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:4dc6bbfb57af7d8e41fe833ffc6e6b5d2885ea09b8e2a78dcb22e68b79066ec0"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/marketing",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:ad1b3e50c6f3751e103a16ca878f5683e834c27993af9a34a6bdf5349f516005"
+      },
+      "artifact_checksum": "sha256:ce2e3d5badb3c5add5690311716d9b76327d22adbd4e12f8e0f76c0085591c6a"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-email",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-email.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:e96543dbe346df22f1300d77e80fafd852d5894dc5f9c7ed71864056943d0b68"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-email.repository.authority",
+          "store_id": "supbrd-plugmod-email.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:f2bed2174085ed1692a8ac0b01d5c02520d5d366cd27211f143ac69110ca5548"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/email",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:22efa2762c35296c49b7e75e212d254288476f0519390855373b34da49fef408"
+      },
+      "artifact_checksum": "sha256:f0c20f31ef0e9d1fca8766611070c52538f620e7654f632ed33ac1df888c0e2f"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-dynamic-links.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:42ea4fdb6c513ae8022febd2e91b79b67c3c966910877ced0f75c703b793ef5a"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-dynamic-links.repository.authority",
+          "store_id": "supbrd-plugmod-dynamic-links.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:1ac43110e227d5b0f65dbd32f392b193e3ff1e428cc622447ead2f759e4696e9"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/dynamic-links",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:1357da8f256d50a373e54c2db54c8a2feb92a5350fbec49f7ab7c1e580659bf1"
+      },
+      "artifact_checksum": "sha256:85db98d450c903f8b3cad0e248e7014e9035caca20e56c4d0c629c27f13fc2ed"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-files",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-files.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:c0850a0f59ce78f94feffcbe92fe14218fb9b42a70c80f543fc8eabc1e101eea"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-files.repository.authority",
+          "store_id": "supbrd-plugmod-files.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:9484c6a6f19152d82dc58e99f692db7ed032d724c160cc827b7403b2c4d50628"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/files",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:acfc1fe963e987705da350a41ae34adb92a0daa9d2afcf6fdfd8c758ae8c38fa"
+      },
+      "artifact_checksum": "sha256:bf267978313f4149be4870c3dffaae32486c6c91a5fec2065824da444f685328"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-paywalls.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:c3cc8cb5009dafa22307f9558b7d3e0df0a1fb49c6621b44fc474f02edfc04f7"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-paywalls.repository.authority",
+          "store_id": "supbrd-plugmod-paywalls.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:8f59c8894eeb0dc6c59d59f9a1b86945cc6b582743142145e7278f5babbbb9db"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/paywalls",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:3734e2c035dd55987ec921b9e037539ee7c6f78fa5192d85ce7cd07fa3d1f026"
+      },
+      "artifact_checksum": "sha256:b8151c9d83c8849c7751fca43184263c66ee0cc4ec20bd89172c477e449c9f53"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-onboardings.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:0f76184ed47052d76296aebb05868624bf64950dfe76c6c271a721422246a070"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-onboardings.repository.authority",
+          "store_id": "supbrd-plugmod-onboardings.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:eff43002ca0a7ce272b13daea83900e6b659b3d3bdb716249b9179d24dd20c64"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/onboardings",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:27bfa323a3030290e4eb80de184b07d44704e123b60af202b371c0e96e3569fd"
+      },
+      "artifact_checksum": "sha256:9e2df0f49671dd33ee896cfe2d92bf6111eba6cfc71eb84f76487e3f7dc9a0a7"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-observability",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-observability.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:bfa1ce578b6db92989ad3bd72ffbf99af450016d567db3f459f7ecaad25cf90f"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-observability.repository.authority",
+          "store_id": "supbrd-plugmod-observability.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:707326d7627710700e8df352a92d36ad2ab1bab2f8e204a2e86d9cf44e89a24e"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/observability",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:af6fe6ff73b5df43f932c166b0faa663995c12ef888e4d5f504e5ba22283aafc"
+      },
+      "artifact_checksum": "sha256:2bffd74457f5f549ead3d7b812cd83dadc8be42739ac8196e9c3cafafaeb0cd9"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-mcp",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-mcp.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:459304d88b02fd99c435626d0c9980116645038fa160f4c3602183ac204e6bf2"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-mcp.repository.authority",
+          "store_id": "supbrd-plugmod-mcp.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:7b5a33120fb03a1a9763bb604480be25ffa4cf86fd7d3bbfc50c8209f61acfcf"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/mcp",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:0be58482c57792e5cbffcc74323c8cde84a583d42bb1d802e4ddf44e4a3ead95"
+      },
+      "artifact_checksum": "sha256:a3928bedbb784063eba5a3086a47a862e6f651842172e493d944e735fb6621fb"
+    },
+    {
+      "schema_version": "1.0.0",
+      "plugin_id": "supbrd-plugmod-custom-*",
+      "plugin_kind": "module",
+      "version": "1.0.0",
+      "stores": [
+        {
+          "store_id": "supbrd-plugmod-custom-*.store.authority",
+          "schema_version": "1.0.0",
+          "classification": "restricted",
+          "checksum": "sha256:973cc20962c7372e61cf12b4a6100f04330d2f51bac8679bb4e24697847d0f12"
+        }
+      ],
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-custom-*.repository.authority",
+          "store_id": "supbrd-plugmod-custom-*.store.authority",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "checksum": "sha256:3d7144261eccd10369747d0ac80a728972273436bff1cb4431c9c63d5c2a547b"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "config/superboard-targets/*/customWorkers",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "signed_and_leased",
+        "checksum": "sha256:3db804331e5346ebfa9dbba3b92e5eabfb1546f7a8f2b58e6516c95c2ca79681"
+      },
+      "artifact_checksum": "sha256:c54bf7f4abda7a63282907c2999faf20c11168f0d7d397d91a5a313557ee5a99"
+    }
+  ]
+}
