@@ -105,6 +105,24 @@ const PLUGIN_PORT_BLOCK_COUNT = 200;
 const PROCESS_PLUGIN_PORT_BASE =
 	18_788 + (process.pid % PLUGIN_PORT_BLOCK_COUNT) * PLUGIN_PORT_BLOCK_SIZE;
 
+async function findAvailablePluginPort(start: number): Promise<number> {
+	for (let port = start; port <= 65_535; port += 1) {
+		if (await canBindPluginPort(port)) return port;
+	}
+	throw new Error("No TCP port is available for a workerd plugin listener");
+}
+
+function canBindPluginPort(port: number): Promise<boolean> {
+	return new Promise((resolveAvailability) => {
+		const probe = createServer();
+		probe.unref();
+		probe.once("error", () => resolveAvailability(false));
+		probe.listen(port, "127.0.0.1", () => {
+			probe.close(() => resolveAvailability(true));
+		});
+	});
+}
+
 const activeRunners = new Set<WorkerdSandboxRunner>();
 let sigHandlerRegistered = false;
 
@@ -507,7 +525,9 @@ export class WorkerdSandboxRunner implements SandboxRunner {
 
 		// Assign port and generate auth token. Reuse a freed port if one is
 		// available, otherwise allocate the next sequential port.
-		const port = this.freePorts.pop() ?? this.nextPluginPort++;
+		const preferredPort = this.freePorts.pop() ?? this.nextPluginPort;
+		const port = await findAvailablePluginPort(preferredPort);
+		this.nextPluginPort = Math.max(this.nextPluginPort, port + 1);
 		const token = this.generatePluginToken(manifest);
 
 		this.plugins.set(pluginId, { manifest, code, port, token });

@@ -89,7 +89,7 @@
 		"mcp:test": "pnpm --dir workers/mcp test && pnpm --dir apps/mcp test",
 		"mcp:build": "pnpm --dir apps/mcp run build",
 		"mcp:lint": "pnpm --dir apps/mcp run lint",
-		"mcp:audit": "pnpm audit --audit-level=low && pnpm --dir apps/mcp audit --workspaces=false --audit-level=low",
+		"mcp:audit": "node scripts/mcp-npm-audit.mjs",
 		"mcp:docker:check": "docker build -f apps/mcp/Dockerfile --output=type=cacheonly apps/mcp",
 		"mcp:check": "pnpm run mcp:types && pnpm run mcp:typecheck && pnpm run mcp:test && pnpm run mcp:build && pnpm run mcp:lint && pnpm run mcp:audit && pnpm run mcp:docker:check && node scripts/cloudflare-dry-run.mjs --service mcp --reference --allow-unprovisioned",
 		"analytics:types": "node scripts/cloudflare-types.mjs --service analytics --reference --allow-unprovisioned",

@@ -82,7 +82,7 @@
 			"mcp:test": "npm --prefix workers/mcp test && npm --prefix apps/mcp test",
 			"mcp:build": "npm --prefix apps/mcp run build",
 			"mcp:lint": "npm --prefix apps/mcp run lint",
-			"mcp:audit": "npm audit --audit-level=low && npm --prefix apps/mcp audit --workspaces=false --audit-level=low",
+			"mcp:audit": "node scripts/mcp-npm-audit.mjs",
 			"mcp:docker:check": "docker build -f apps/mcp/Dockerfile --output=type=cacheonly apps/mcp",
 			"mcp:check": "npm run mcp:types && npm run mcp:typecheck && npm run mcp:test && npm run mcp:build && npm run mcp:lint && npm run mcp:audit && npm run mcp:docker:check && node scripts/cloudflare-dry-run.mjs --service mcp --reference --allow-unprovisioned",
 			"analytics:types": "node scripts/cloudflare-types.mjs --service analytics --reference --allow-unprovisioned",

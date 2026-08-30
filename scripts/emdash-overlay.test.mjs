@@ -131,6 +131,7 @@ void test("gitignore keeps the pnpm lock authoritative", () => {
 	assert.ok(!lines.includes("pnpm-lock.yaml"));
 	assert.ok(!lines.includes("/pnpm-lock.yaml"));
 	assert.ok(lines.includes("package-lock.json"));
+	assert.ok(lines.includes("!apps/mcp/package-lock.json"));
 	assert.ok(lines.includes("!sdks/javascript/package-lock.json"));
 	assert.ok(lines.includes("!.dev.vars.example"));
 	assert.ok(lines.includes(".backups/"));
