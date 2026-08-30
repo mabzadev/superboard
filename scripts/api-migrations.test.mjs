@@ -39,8 +39,14 @@ test("the complete central API migration chain creates one healthy fresh D1 sche
         "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
       ),
     ),
-    120,
+    123,
   );
+
+  assertTables(database, [
+    "flows_legacy_cutover_state",
+    "flows_legacy_cutover_commands",
+    "support_notification_ingress",
+  ]);
 
   assertColumns(database, "ios_push_configurations", ["encrypted_p8_key"]);
   assertColumns(database, "android_push_configurations", [
@@ -192,5 +198,16 @@ function assertColumns(database, table, required) {
   );
   for (const column of required) {
     assert.equal(columns.has(column), true, `${table}.${column} is missing`);
+  }
+}
+
+function assertTables(database, required) {
+  const tables = new Set(
+    queryRows(database, "SELECT name FROM sqlite_master WHERE type='table'").map(
+      (row) => row.name,
+    ),
+  );
+  for (const table of required) {
+    assert.equal(tables.has(table), true, `${table} is missing`);
   }
 }
