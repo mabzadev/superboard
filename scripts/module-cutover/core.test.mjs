@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { FixtureAdapter, RemoteD1Adapter, parseD1Rows } from "./adapters.mjs";
 import {
@@ -288,6 +289,41 @@ test("the remote adapter rejects every mutation while write authority is disable
 	);
   await assert.rejects(adapter.setMaintenance("10-test", { enabled: true }), /writes are disabled/u);
   assert.equal(commands, 0);
+});
+
+test("the remote adapter resolves active manifest authority before a Site repository write", async () => {
+	let repositorySql = "";
+	const adapter = new RemoteD1Adapter({
+		root: "/tmp",
+		targetName: "test",
+		environment: "production",
+		allowWrites: true,
+		repositoryEncryptionKey: Buffer.alloc(32, 7).toString("base64"),
+		commandRunner: (_command, args) => {
+			const commandIndex = args.indexOf("--command");
+			if (commandIndex >= 0) {
+				return '[{"success":true,"results":[{"artifact_checksum":"sha256:active-manifest"}]}]';
+			}
+			const fileIndex = args.indexOf("--file");
+			if (fileIndex >= 0) repositorySql = readFileSync(args[fileIndex + 1], "utf8");
+			return '[{"success":true,"results":[]}]';
+		},
+		target: {
+			accountId: "0".repeat(32),
+			domains: { shortlinks: "example.test" },
+			environments: {
+				production: {
+					d1: { name: "api" },
+					siteD1: { name: "site" },
+					messagingD1: { name: "messaging" },
+					moduleD1: { app: { name: "app" } },
+				},
+			},
+		},
+	});
+	await adapter.upsertRepository(exampleEntity, [row()], fixture().project);
+	assert.equal(repositorySql.includes("sha256:active-manifest"), true);
+	assert.equal(repositorySql.includes(exampleEntity.storeId), true);
 });
 
 test("the production registry is unique and a zero-row rehearsal covers every entity", async () => {

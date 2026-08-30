@@ -25,7 +25,7 @@ La migration D1 Site `0005_plugin_store_authority.sql` introduit le repository c
 - métriques de shadow read limitées au plugin, type, résultat et comptages, sans payload ni PII ;
 - leases Worker à usage unique, liées à une tentative, une opération, une expiration et un token callback stocké uniquement sous forme de hash ; une nouvelle tentative invalide atomiquement la précédente.
 
-La migration générée `0006_plugin_manifest_registry.sql` installe les artefacts de manifest immuables et active leur checksum dans une table de confiance du Site. Une commande d’écriture ne fournit jamais sa propre autorité : le repository résout le manifest actif par `plugin_id`, vérifie son checksum avec le validateur commun, puis refuse tout Store absent ou hors namespace.
+La migration générée `0006_plugin_manifest_registry.sql` installe les artefacts de manifest immuables et active leur checksum dans une table de confiance du Site. Une commande d’écriture ne fournit jamais sa propre autorité : le repository résout le manifest actif par `plugin_id`, vérifie son checksum avec le validateur commun, puis refuse tout Store absent ou hors namespace. Le D1 réapplique la même garde par trigger, y compris aux imports SQL distants. Chaque record et reçu d’outbox conserve le `manifest_artifact_checksum` exact qui a autorisé l’écriture.
 
 Les aliases publics `projectId` et `pid` sont résolus vers l’`instance_id` canonique. Une divergence entre aliases ferme l’écriture. Les contrats publics ne changent pas : la fixture commune `packages/contracts/fixtures/emdash-store-parity/v1.json` traverse les vrais encodeurs, bridges ou modèles de JavaScript, React Native, Flutter et FlutterFlow.
 

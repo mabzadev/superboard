@@ -29,6 +29,7 @@ interface StoreRecordRow {
 	revision: number;
 	payload_json: string;
 	payload_checksum: string;
+	manifest_artifact_checksum: string;
 	last_operation_id: string;
 	updated_at: string;
 }
@@ -37,14 +38,14 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 	assertPlugin(input.plugin_id);
 	const installed = await db
 		.prepare(
-			`SELECT artifact.manifest_json
+			`SELECT artifact.manifest_json, artifact.artifact_checksum
 			 FROM superboard_active_plugin_manifests AS active
 			 JOIN superboard_plugin_manifest_artifacts AS artifact
 			   ON artifact.artifact_checksum = active.artifact_checksum
 			 WHERE active.plugin_id = ? AND artifact.plugin_id = active.plugin_id`,
 		)
 		.bind(input.plugin_id)
-		.first<{ manifest_json: string }>();
+		.first<{ manifest_json: string; artifact_checksum: string }>();
 	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	const manifest: unknown = JSON.parse(installed.manifest_json);
 	const manifestVerification = await verifySuperBoardPluginManifest(manifest);
@@ -126,12 +127,14 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 		.prepare(
 			`INSERT INTO superboard_plugin_store_records (
 			   plugin_id, store_id, instance_id, entity_type, entity_id, revision,
-			   payload_json, payload_checksum, last_operation_id, updated_at
-			 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			   payload_json, payload_checksum, manifest_artifact_checksum,
+			   last_operation_id, updated_at
+			 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			 ON CONFLICT(plugin_id, store_id, instance_id, entity_type, entity_id) DO UPDATE SET
 			   revision = excluded.revision,
 			   payload_json = excluded.payload_json,
 			   payload_checksum = excluded.payload_checksum,
+			   manifest_artifact_checksum = excluded.manifest_artifact_checksum,
 			   last_operation_id = excluded.last_operation_id,
 			   updated_at = excluded.updated_at
 			 WHERE superboard_plugin_store_records.revision = ?
@@ -146,6 +149,7 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 			nextRevision,
 			payloadJson,
 			payloadChecksum,
+			installed.artifact_checksum,
 			input.operation_id,
 			input.updated_at,
 			input.expected_revision,
@@ -363,6 +367,7 @@ async function toRecord(row: StoreRecordRow, encryptionKey: CryptoKey) {
 		revision: row.revision,
 		payload: JSON.parse(payloadJson) as unknown,
 		payload_checksum: row.payload_checksum,
+		manifest_artifact_checksum: row.manifest_artifact_checksum,
 		updated_at: row.updated_at,
 	};
 }

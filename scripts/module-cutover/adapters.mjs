@@ -120,7 +120,27 @@ export class RemoteD1Adapter {
     if (!this.repositoryEncryptionKey) {
       throw new Error("SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY is required for repository authority");
     }
-    const sql = repositoryUpsertSql(entity, rows, context, this.repositoryEncryptionKey);
+    const authority = await this.query(
+      this.resources.siteD1,
+      `SELECT active.artifact_checksum
+       FROM superboard_active_plugin_manifests AS active
+       JOIN superboard_plugin_manifest_artifacts AS artifact
+         ON artifact.artifact_checksum=active.artifact_checksum
+       JOIN json_each(artifact.manifest_json,'$.stores') AS store
+       WHERE active.plugin_id=${sqlString(entity.pluginId)}
+         AND json_extract(store.value,'$.store_id')=${sqlString(entity.storeId)}
+         AND json_extract(store.value,'$.authority')=${sqlString(entity.pluginId)}`,
+    );
+    if (authority.length !== 1 || !authority[0].artifact_checksum) {
+      throw new Error(`${entity.id}: active plugin manifest does not authorize ${entity.storeId}`);
+    }
+    const sql = repositoryUpsertSql(
+      entity,
+      rows,
+      context,
+      this.repositoryEncryptionKey,
+      String(authority[0].artifact_checksum),
+    );
     const directory = await mkdtemp(join(tmpdir(), "superboard-repository-cutover-"));
     const path = join(directory, `${entity.id.replaceAll(".", "-")}-repository.sql`);
     try {
@@ -176,7 +196,7 @@ export class RemoteD1Adapter {
   capture(args) {
     return this.commandRunner("npx", args, {
       cwd: this.root,
-      env: cloudflareEnv(this.target),
+      env: this.commandRunner === runCommand ? cloudflareEnv(this.target) : process.env,
     });
   }
 
@@ -194,7 +214,7 @@ export class RemoteD1Adapter {
   }
 }
 
-function repositoryUpsertSql(entity, rows, context, encodedKey) {
+function repositoryUpsertSql(entity, rows, context, encodedKey, manifestArtifactChecksum) {
   const key = Buffer.from(encodedKey, "base64");
   if (key.length !== 32) throw new Error("SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY must be base64 AES-256 key material");
   const statements = rows.map((row) => {
@@ -212,13 +232,15 @@ function repositoryUpsertSql(entity, rows, context, encodedKey) {
     const operationId = `cutover:${context.project_ref}:${entity.id}:${createHash("sha256").update(`${entityId}:${plaintext}`).digest("hex")}`;
     return `INSERT INTO superboard_plugin_store_records
       (plugin_id,store_id,instance_id,entity_type,entity_id,revision,payload_json,
-       payload_checksum,last_operation_id,updated_at)
+       payload_checksum,manifest_artifact_checksum,last_operation_id,updated_at)
       VALUES (${sqlString(entity.pluginId)},${sqlString(entity.storeId)},${sqlString(String(context.instance_id))},
        ${sqlString(entity.id)},${sqlString(entityId)},1,${sqlString(envelope)},${sqlString(payloadChecksum)},
+       ${sqlString(manifestArtifactChecksum)},
        ${sqlString(operationId)},${sqlString(new Date().toISOString())})
       ON CONFLICT(plugin_id,store_id,instance_id,entity_type,entity_id) DO UPDATE SET
        revision=superboard_plugin_store_records.revision+1,
        payload_json=excluded.payload_json,payload_checksum=excluded.payload_checksum,
+       manifest_artifact_checksum=excluded.manifest_artifact_checksum,
        last_operation_id=excluded.last_operation_id,updated_at=excluded.updated_at
       WHERE superboard_plugin_store_records.last_operation_id<>excluded.last_operation_id;`;
   });

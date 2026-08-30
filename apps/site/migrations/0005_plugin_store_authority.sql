@@ -36,10 +36,44 @@ CREATE TABLE IF NOT EXISTS superboard_plugin_store_records (
   revision INTEGER NOT NULL CHECK (revision > 0),
   payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
   payload_checksum TEXT NOT NULL,
+  manifest_artifact_checksum TEXT NOT NULL
+    REFERENCES superboard_plugin_manifest_artifacts(artifact_checksum),
   last_operation_id TEXT NOT NULL UNIQUE,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (plugin_id, store_id, instance_id, entity_type, entity_id)
 );
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_store_authority_insert_guard
+BEFORE INSERT ON superboard_plugin_store_records
+WHEN NOT EXISTS (
+  SELECT 1 FROM superboard_active_plugin_manifests AS active
+  JOIN superboard_plugin_manifest_artifacts AS artifact
+    ON artifact.artifact_checksum = active.artifact_checksum
+  JOIN json_each(artifact.manifest_json, '$.stores') AS store
+  WHERE active.plugin_id = NEW.plugin_id
+    AND active.artifact_checksum = NEW.manifest_artifact_checksum
+    AND json_extract(store.value, '$.store_id') = NEW.store_id
+    AND json_extract(store.value, '$.authority') = NEW.plugin_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'plugin Store write authority rejected');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_store_authority_update_guard
+BEFORE UPDATE ON superboard_plugin_store_records
+WHEN NOT EXISTS (
+  SELECT 1 FROM superboard_active_plugin_manifests AS active
+  JOIN superboard_plugin_manifest_artifacts AS artifact
+    ON artifact.artifact_checksum = active.artifact_checksum
+  JOIN json_each(artifact.manifest_json, '$.stores') AS store
+  WHERE active.plugin_id = NEW.plugin_id
+    AND active.artifact_checksum = NEW.manifest_artifact_checksum
+    AND json_extract(store.value, '$.store_id') = NEW.store_id
+    AND json_extract(store.value, '$.authority') = NEW.plugin_id
+)
+BEGIN
+  SELECT RAISE(ABORT, 'plugin Store write authority rejected');
+END;
 
 CREATE INDEX IF NOT EXISTS idx_plugin_store_records_instance
   ON superboard_plugin_store_records(instance_id, plugin_id, entity_type, updated_at);
@@ -53,6 +87,7 @@ CREATE TABLE IF NOT EXISTS superboard_plugin_store_outbox (
   entity_id TEXT NOT NULL,
   revision INTEGER NOT NULL,
   payload_checksum TEXT NOT NULL,
+  manifest_artifact_checksum TEXT NOT NULL,
   created_at TEXT NOT NULL,
   delivered_at TEXT
 );
@@ -76,6 +111,7 @@ WHEN NEW.operation_id <> OLD.operation_id
   OR NEW.entity_id <> OLD.entity_id
   OR NEW.revision <> OLD.revision
   OR NEW.payload_checksum <> OLD.payload_checksum
+  OR NEW.manifest_artifact_checksum <> OLD.manifest_artifact_checksum
   OR NEW.created_at <> OLD.created_at
 BEGIN
   SELECT RAISE(ABORT, 'plugin Store outbox receipts are immutable');
@@ -86,10 +122,11 @@ AFTER INSERT ON superboard_plugin_store_records
 BEGIN
   INSERT INTO superboard_plugin_store_outbox (
     operation_id, plugin_id, store_id, instance_id, entity_type, entity_id,
-    revision, payload_checksum, created_at
+    revision, payload_checksum, manifest_artifact_checksum, created_at
   ) VALUES (
     NEW.last_operation_id, NEW.plugin_id, NEW.store_id, NEW.instance_id,
-    NEW.entity_type, NEW.entity_id, NEW.revision, NEW.payload_checksum, NEW.updated_at
+    NEW.entity_type, NEW.entity_id, NEW.revision, NEW.payload_checksum,
+    NEW.manifest_artifact_checksum, NEW.updated_at
   );
 END;
 
@@ -99,10 +136,11 @@ WHEN NEW.last_operation_id <> OLD.last_operation_id
 BEGIN
   INSERT INTO superboard_plugin_store_outbox (
     operation_id, plugin_id, store_id, instance_id, entity_type, entity_id,
-    revision, payload_checksum, created_at
+    revision, payload_checksum, manifest_artifact_checksum, created_at
   ) VALUES (
     NEW.last_operation_id, NEW.plugin_id, NEW.store_id, NEW.instance_id,
-    NEW.entity_type, NEW.entity_id, NEW.revision, NEW.payload_checksum, NEW.updated_at
+    NEW.entity_type, NEW.entity_id, NEW.revision, NEW.payload_checksum,
+    NEW.manifest_artifact_checksum, NEW.updated_at
   );
 END;
 
