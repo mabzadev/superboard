@@ -34,6 +34,12 @@ export function superboardReleaseOperatorApi() {
 						),
 					),
 				});
+				injectRoute({
+					pattern: "/_emdash/superboard/rollbacks",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/rollback-console.ts", import.meta.url),
+					),
+				});
 				for (const endpoint of RELEASE_ENDPOINTS) {
 					injectRoute({
 						pattern: `/_emdash/api/superboard/releases/${endpoint}`,
