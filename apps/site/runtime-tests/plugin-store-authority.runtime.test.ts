@@ -16,6 +16,12 @@ import {
 	putPluginStoreRecord,
 	verifyPluginStoreShadowRead,
 } from "../src/lib/plugin-store-repository.js";
+import {
+	beginRepositoryCommand,
+	completeRepositoryCommand,
+	resolveRepositoryCommandScope,
+} from "../src/lib/plugin-command-authority.js";
+import { proxyOperatorApiRequest } from "../src/lib/operator-api-proxy.js";
 import { synchronizeSuperBoardPluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 import { installCompiledUserPlugin } from "../src/lib/user-plugin-installation.js";
 
@@ -167,6 +173,132 @@ describe("EmDash plugin Store authority", () => {
 				store_id: "supbrd-plug-settings.store.settings",
 			}),
 		).rejects.toThrow(/AUTHORITY_REJECTED|NAMESPACE_REJECTED/u);
+	});
+
+	test("commits compatibility mutations before transient execution and replays receipts", async () => {
+		await synchronizeSuperBoardPluginCatalog(env.DB, {
+			instance_id: "vocostar",
+			checked_at: "2026-08-30T08:20:00.000Z",
+			expires_at: "2026-08-31T08:20:00.000Z",
+		});
+		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+			"encrypt",
+			"decrypt",
+		]);
+		const scope = resolveRepositoryCommandScope(
+			new URL("https://site.example.test/api/v1/analytics/10-test/reports"),
+		);
+		expect(scope).toEqual({
+			plugin_id: "supbrd-plugmod-analytics",
+			project_ref: "10-test",
+			adapter_operation: "api-v1:supbrd-plugmod-analytics",
+		});
+		const input = {
+			operation_id: "operation-analytics-report-1",
+			instance_id: "vocostar",
+			project_ref: scope.project_ref,
+			plugin_id: scope.plugin_id,
+			command_id: "supbrd-plugmod-analytics.command.create_analytics_report",
+			adapter_operation: scope.adapter_operation,
+			method: "POST" as const,
+			request_path: "/api/v1/analytics/10-test/reports",
+			request_body: new TextEncoder().encode('{"email":"private@example.com"}'),
+			accepted_at: "2026-08-30T09:00:00.000Z",
+			encryption_key: encryptionKey,
+		};
+		await expect(beginRepositoryCommand(env.DB, input)).resolves.toMatchObject({
+			status: "accepted",
+			operation: { state: "accepted", plugin_id: scope.plugin_id },
+		});
+		const encrypted = await env.DB.prepare(
+			"SELECT request_payload_json FROM superboard_plugin_command_operations WHERE operation_id = ?",
+		)
+			.bind(input.operation_id)
+			.first<{ request_payload_json: string }>();
+		expect(encrypted?.request_payload_json).not.toContain("private@example.com");
+		const response = Response.json({ id: "report-1", status: "created" }, { status: 201 });
+		await expect(
+			completeRepositoryCommand(env.DB, {
+				operation_id: input.operation_id,
+				response,
+				completed_at: "2026-08-30T09:00:01.000Z",
+				encryption_key: encryptionKey,
+			}),
+		).resolves.toMatchObject({ state: "completed", response_status: 201 });
+		const replay = await beginRepositoryCommand(env.DB, input);
+		expect(replay.status).toBe("replay");
+		if (replay.status !== "replay") throw new Error("expected replay");
+		expect(replay.response.status).toBe(201);
+		await expect(replay.response.json()).resolves.toEqual({ id: "report-1", status: "created" });
+		const outbox = await env.DB.prepare(
+			"SELECT event_kind FROM superboard_plugin_command_outbox WHERE operation_id = ? ORDER BY event_id",
+		)
+			.bind(input.operation_id)
+			.all<{ event_kind: string }>();
+		expect(outbox.results).toEqual([{ event_kind: "accepted" }, { event_kind: "completed" }]);
+		await expect(
+			beginRepositoryCommand(env.DB, { ...input, request_path: "/api/v1/analytics/10-test/reports/other" }),
+		).rejects.toThrow(/IDEMPOTENCY_CONFLICT/u);
+	});
+
+	test("keeps the compatibility Worker transient behind the repository-first gateway", async () => {
+		await synchronizeSuperBoardPluginCatalog(env.DB, {
+			instance_id: "vocostar",
+			checked_at: "2026-08-30T09:10:00.000Z",
+			expires_at: "2026-08-31T09:10:00.000Z",
+		});
+		const rawKey = crypto.getRandomValues(new Uint8Array(32));
+		const encodedKey = btoa(String.fromCodePoint(...rawKey));
+		let dispatches = 0;
+		const apiService = {
+			fetch: async () => {
+				dispatches += 1;
+				const accepted = await env.DB.prepare(
+					"SELECT state FROM superboard_plugin_command_operations WHERE operation_id = ?",
+				)
+					.bind("operation-gateway-report-1")
+					.first<{ state: string }>();
+				expect(accepted).toEqual({ state: "accepted" });
+				return Response.json({ id: "report-gateway-1" }, { status: 201 });
+			},
+		};
+		const buildRequest = () =>
+			new Request("https://site.example.test/api/v1/analytics/10-test/reports", {
+				method: "POST",
+				headers: {
+					Origin: "https://site.example.test",
+					"Content-Type": "application/json",
+					"Idempotency-Key": "operation-gateway-report-1",
+					"X-SuperBoard-Command-Id":
+						"supbrd-plugmod-analytics.command.create_analytics_report",
+				},
+				body: JSON.stringify({ name: "Repository first" }),
+			});
+		const proxyEnv = {
+			API_SERVICE: apiService,
+			SITE_OPERATOR_BRIDGE_TOKEN: "bridge-token",
+			DB: env.DB,
+			SUPERBOARD_INSTANCE_ID: "vocostar",
+			SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: encodedKey,
+		};
+		const first = await proxyOperatorApiRequest({
+			request: buildRequest(),
+			operator_email: "operator@example.com",
+			env: proxyEnv,
+		});
+		expect({ status: first.status, payload: await first.clone().json() }).toEqual({
+			status: 201,
+			payload: { id: "report-gateway-1" },
+		});
+		await expect(first.json()).resolves.toEqual({ id: "report-gateway-1" });
+		const replay = await proxyOperatorApiRequest({
+			request: buildRequest(),
+			operator_email: "operator@example.com",
+			env: proxyEnv,
+		});
+		expect(replay.status).toBe(201);
+		await expect(replay.json()).resolves.toEqual({ id: "report-gateway-1" });
+		expect(dispatches).toBe(1);
 	});
 
 	test("fails shadow mismatches closed with metrics that contain no payload", async () => {

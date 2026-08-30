@@ -19,6 +19,7 @@ test("proxies an operator request through the private API binding without leakin
 		}),
 		operator_email: "MABZADEV@GMAIL.COM",
 		env: { API_SERVICE: { fetch }, SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret" },
+		command_authority: async ({ dispatch }) => dispatch(),
 	});
 	expect(response.status).toBe(200);
 	const forwarded = fetch.mock.calls[0]?.[0] as Request;
@@ -27,6 +28,27 @@ test("proxies an operator request through the private API binding without leakin
 	expect(forwarded.headers.get("Authorization")).toBeNull();
 	expect(forwarded.headers.get("X-SuperBoard-Site-Operator")).toBe("mabzadev@gmail.com");
 	expect(forwarded.headers.get("X-SuperBoard-Internal-Token")).toBe("site-bridge-secret");
+});
+
+test("fails closed when a mutation cannot first commit to the EmDash command repository", async () => {
+	const fetch = vi.fn(async () => Response.json({ ok: true }));
+	const response = await proxyOperatorApiRequest({
+		request: new Request("https://site.example.test/api/v1/analytics/1-prod/reports", {
+			method: "POST",
+			headers: {
+				Origin: "https://site.example.test",
+				"Idempotency-Key": "operation-analytics-1",
+			},
+			body: "{}",
+		}),
+		operator_email: "mabzadev@gmail.com",
+		env: { API_SERVICE: { fetch }, SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret" },
+	});
+	expect(response.status).toBe(503);
+	await expect(response.json()).resolves.toEqual({
+		error: { code: "COMMAND_REPOSITORY_UNAVAILABLE" },
+	});
+	expect(fetch).not.toHaveBeenCalled();
 });
 
 test("fails closed without a private binding, token or same-origin mutation", async () => {

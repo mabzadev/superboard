@@ -3,15 +3,16 @@
   "target": "mbza-development",
   "environment": "development",
   "created_at": "2026-08-30T15:20:48Z",
-  "finalized_at": "2026-08-30T18:42:23.892Z",
+  "finalized_at": "2026-08-30T19:04:51.168Z",
   "public_cutover": false,
   "production_target_mutated": false,
-  "site_version_id": "2e5c2eb0-6df3-44e9-8c2d-7718d937490b",
+  "site_version_id": "56cbb24d-7a74-4b4a-b599-4a39c6e41f2a",
   "api_version_id": "82cb54f7-b843-4792-ad7a-900d5734f1ec",
   "migrations": [
     "0010_plugin_store_project_scope.sql",
     "0011_project_scoped_plugin_contracts.sql",
-    "0012_functional_front_contracts.sql"
+    "0012_functional_front_contracts.sql",
+    "0013_repository_first_plugin_commands.sql"
   ],
   "secret_promotion": {
     "bundle_confirmation": "CLOUDFLARE:SECRET-BUNDLE:mbza-development:development:bf4c986a39a9",
@@ -95,6 +96,38 @@
     "status": 200,
     "items": 1,
     "payload_shape": "business_object"
+  },
+  "repository_first_commands": {
+    "authority": "site_d1_before_transient_api_worker",
+    "failure_policy": "fail_closed",
+    "request_and_response_encryption": "AES-GCM",
+    "idempotency": "caller_operation_id",
+    "outbox": "append_only",
+    "migration_converged": true,
+    "site_version_id": "56cbb24d-7a74-4b4a-b599-4a39c6e41f2a",
+    "compatibility_routes": ["/api/v1/*", "/api/v2/*"],
+    "runtime_tests": {
+      "site_unit_files": 10,
+      "site_unit_tests": 24,
+      "site_runtime_files": 3,
+      "site_runtime_tests": 15,
+      "worker_dispatch_after_repository_acceptance": true,
+      "idempotent_replay_without_second_worker_dispatch": true
+    },
+    "vivaldi_smoke": {
+      "project_ref": "1-prod",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "created_operation_id": "4d74095c-a60b-477f-802c-74902ead2a73",
+      "created_status": 201,
+      "deleted_operation_id": "294a84a6-acf2-4439-9c82-afdd11ea9efe",
+      "deleted_status": 200,
+      "completed_operations": 2,
+      "outbox_events": 4,
+      "plaintext_payload_leaks": 0,
+      "smoke_record_removed": true,
+      "api_v2_surface": "/products/customers",
+      "api_v2_surface_rendered": true
+    }
   },
   "front_candidate": {
     "candidate_id": "01M19MG9YNYYMM0M4VJZK7GAY7",

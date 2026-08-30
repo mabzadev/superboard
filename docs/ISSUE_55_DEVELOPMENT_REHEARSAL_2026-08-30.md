@@ -175,10 +175,23 @@ Le reçu valeur-free complet est versionné dans
 de la reprise fonctionnelle sont `aa63f660` et `9b898bc5`.
 
 Cette preuve clôt l'écart « plugins runtime vides » qui avait motivé la seconde
-réouverture de #55. Elle ne prétend pas, à elle seule, satisfaire la dépendance
-#54 : le déplacement de toutes les mutations métier vers les repositories
-EmDash reste une gate distincte tant que les chemins publics historiques
-continuent d'écrire directement dans les Workers de domaine.
+réouverture de #55.
+
+La gate repository-first de #54 a ensuite été fermée par la migration
+`0013_repository_first_plugin_commands.sql`. Le gateway de compatibilité du
+Site accepte et chiffre chaque mutation dans D1, produit une outbox append-only,
+puis seulement appelle le Worker API comme exécuteur transitoire. Un même
+operation ID rejoue la réponse chiffrée sans second dispatch. Le runtime test
+vérifie explicitement l'ordre acceptance → Worker et le fail-closed lorsque le
+repository est indisponible.
+
+La version Site `56cbb24d-7a74-4b4a-b599-4a39c6e41f2a` a été déployée après
+convergence de la migration, avec les adaptateurs `/api/v1/*` et `/api/v2/*`.
+Un smoke Vivaldi a créé puis supprimé un rapport Analytics sur `1-prod` : opérations
+`4d74095c-a60b-477f-802c-74902ead2a73` (`201`) et
+`294a84a6-acf2-4439-9c82-afdd11ea9efe` (`200`), toutes deux `completed`, avec
+quatre événements outbox et zéro payload métier visible en clair. Le rapport de
+smoke a été supprimé après vérification.
 
 ## Commande de preview versionnée
 
