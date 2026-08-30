@@ -62,8 +62,6 @@ const ciNamePattern = /^name: CI$/m;
 const setupNodeActionPattern = /^(\s*)- uses: actions\/setup-node@/gm;
 const npmCachePattern = /^(\s*cache:) npm$/gm;
 const packageLockCachePathPattern = /apps\/reference\/package-lock\.json/g;
-const yarnInstallPattern = /\byarn install --immutable\b/g;
-const yarnCheckPattern = /\byarn check\b/g;
 const lintSourcePattern = /\.[cm]?[jt]sx?$/;
 const formatSourcePattern = /\.(?:[cm]?[jt]sx?|jsonc?|ya?ml|toml|css|scss|md)$/;
 const overlayLintSources = [
@@ -157,8 +155,6 @@ export function renderSuperboardCi(source) {
 		.replace(ciNamePattern, "name: SuperBoard CI")
 		.replace(npmCachePattern, "$1 pnpm")
 		.replace(packageLockCachePathPattern, "pnpm-lock.yaml")
-		.replace(yarnInstallPattern, "pnpm install --frozen-lockfile")
-		.replace(yarnCheckPattern, "pnpm check")
 		.replace("    timeout-minutes: 10", "    timeout-minutes: 20")
 		.replace(
 			setupNodeActionPattern,

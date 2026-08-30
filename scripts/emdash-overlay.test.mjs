@@ -231,7 +231,8 @@ jobs:
 	assert.ok(result.includes("cache-dependency-path: pnpm-lock.yaml"));
 	assert.ok(result.includes("pnpm install --frozen-lockfile"));
 	assert.ok(result.includes("pnpm run worker:check"));
-	assert.ok(result.includes("pnpm check"));
+	assert.ok(result.includes("yarn install --immutable"));
+	assert.ok(result.includes("yarn check"));
 	assert.ok(result.includes("pnpm emdash:overlay:check"));
 	assert.ok(result.includes("pnpm site:check"));
 });

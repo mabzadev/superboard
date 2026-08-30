@@ -243,11 +243,11 @@ jobs:
         run: pnpm run react-native:native-contract:check
       - name: Install React Native dependencies
         if: needs.plan.outputs.react_native == 'true'
-        run: pnpm install --frozen-lockfile
+        run: yarn install --immutable
         working-directory: sdks/react-native
       - name: Typecheck, test and package React Native SDK
         if: needs.plan.outputs.react_native == 'true'
-        run: pnpm check
+        run: yarn check
         working-directory: sdks/react-native
 
   ios_sdk:
