@@ -235,7 +235,7 @@
 		"site:build": "pnpm --dir apps/site run build",
 		"site:build:target": "node scripts/cloudflare-site-build.mjs",
 		"site:dry-run": "pnpm --dir apps/site run dry-run",
-		"site:check": "pnpm run site:types && pnpm run site:typecheck && pnpm run site:test && pnpm run site:dry-run",
+		"site:check": "pnpm run --filter @superboard/site... build && pnpm run site:types && pnpm run site:typecheck && pnpm run site:test && pnpm run site:dry-run",
 		"superboard:typecheck": "pnpm run worker:typecheck && pnpm run billing:typecheck && pnpm run email:typecheck && pnpm run identity:typecheck && pnpm run files:typecheck && pnpm run observability:typecheck && pnpm run mcp:typecheck && pnpm run modules:typecheck && pnpm run dashboard:typecheck && pnpm run site:typecheck",
 		"superboard:test": "pnpm run contracts:test && pnpm run dashboard:test && pnpm run worker:test && pnpm run billing:test && pnpm run email:test && pnpm run identity:test && pnpm run files:test && pnpm run observability:test && pnpm run mcp:test && pnpm run modules:test && pnpm run site:test",
 		"contracts:test": "pnpm exec vitest run packages/contracts/src",
