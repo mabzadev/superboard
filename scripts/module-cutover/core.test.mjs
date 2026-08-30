@@ -20,6 +20,7 @@ import {
   validateMaintenanceEnableSafety,
 } from "./core.mjs";
 import { MODULE_CUTOVER_GUARDS, MODULE_CUTOVER_REGISTRY } from "./registry.mjs";
+import { buildPluginTopology } from "../emdash-parity-matrix.mjs";
 
 const exampleEntity = {
 	id: "app.example",
@@ -349,6 +350,38 @@ test("every production migration write is bound to an EmDash plugin repository",
 		const sql = upsertSql(entity, [Object.fromEntries(entity.columns.map((column) => [column, null]))]);
 		assert.equal(sql.includes(`repository=${entity.repositoryId}`), true);
 	}
+});
+
+test("every migrated entity writes into a declared canonical plugin Store", () => {
+  const declaredStoreIds = new Set(
+    buildPluginTopology().plugins.flatMap(({ manifest }) =>
+      manifest.stores.map(({ store_id: storeId }) => storeId),
+    ),
+  );
+  for (const entity of MODULE_CUTOVER_REGISTRY) {
+    assert.equal(declaredStoreIds.has(entity.storeId), true, entity.id);
+  }
+});
+
+test("Products never owns Billing customers, purchases, subscriptions, refunds or entitlements", () => {
+  const billingTables = new Set([
+    "financial_customers",
+    "entitlements",
+    "entitlement_products",
+    "purchases",
+    "subscriptions",
+    "refunds",
+  ]);
+  for (const entity of MODULE_CUTOVER_REGISTRY.filter(({ target }) =>
+    billingTables.has(target.table),
+  )) {
+    assert.equal(entity.pluginId, "supbrd-plugmod-billing", entity.id);
+  }
+  for (const entity of MODULE_CUTOVER_REGISTRY.filter(
+    ({ pluginId }) => pluginId === "supbrd-plug-products",
+  )) {
+    assert.equal(billingTables.has(entity.target.table), false, entity.id);
+  }
 });
 
 test("legacy App access keys are project-specific hashes and never retain plaintext", () => {

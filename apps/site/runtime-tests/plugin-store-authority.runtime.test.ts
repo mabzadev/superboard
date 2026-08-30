@@ -107,7 +107,7 @@ describe("EmDash plugin Store authority", () => {
 		]);
 		const input = {
 			plugin_id: "supbrd-plug-user",
-			store_id: "supbrd-plug-user.store.directory",
+			store_id: "supbrd-plug-user.store.user_directory",
 			projectId: "vocostar",
 			pid: "vocostar",
 			entity_type: "user",
@@ -318,7 +318,11 @@ describe("EmDash plugin Store authority", () => {
 					updated_at: "2026-08-30T02:05:00.000Z",
 					encryption_key: encryptionKey,
 				};
-				const created = await putPluginStoreRecord(env.DB, input);
+				const created = await putPluginStoreRecord(env.DB, input).catch((error: unknown) => {
+					throw new Error(
+						`${store.store_id}: ${error instanceof Error ? error.message : String(error)}`,
+					);
+				});
 				expect(created.idempotent).toBe(false);
 				expect((await putPluginStoreRecord(env.DB, input)).idempotent).toBe(true);
 				await expect(

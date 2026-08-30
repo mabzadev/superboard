@@ -27,3 +27,44 @@ describe('Billing internal authentication', () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe('Site operator bridge authentication', () => {
+  it('maps a signed Site operator email to the existing API actor', async () => {
+    const first = vi.fn(async () => ({ id: 73 }));
+    const bind = vi.fn(() => ({ first }));
+    const prepare = vi.fn(() => ({ bind }));
+    const app = new Hono<any>();
+    app.use('*', authMiddleware as any);
+    app.get('/actor', (c) => c.json({ actor: c.get('userId') }));
+    const response = await app.request('/actor', {
+      headers: {
+        'X-SuperBoard-Site-Operator': 'mabzadev@gmail.com',
+        'X-SuperBoard-Internal-Token': 'module-secret',
+      },
+    }, {
+      CREDENTIAL_KEY_SCOPE: 'api',
+      MODULE_INTERNAL_TOKEN: 'module-secret',
+      DB: { prepare },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ actor: 73 });
+    expect(bind).toHaveBeenCalledWith('mabzadev@gmail.com');
+  });
+
+  it('rejects a forged Site operator header without the shared internal token', async () => {
+    const app = new Hono<any>();
+    app.use('*', authMiddleware as any);
+    app.get('/actor', (c) => c.json({ actor: c.get('userId') }));
+    const response = await app.request('/actor', {
+      headers: {
+        'X-SuperBoard-Site-Operator': 'mabzadev@gmail.com',
+        'X-SuperBoard-Internal-Token': 'forged',
+      },
+    }, {
+      CREDENTIAL_KEY_SCOPE: 'api',
+      MODULE_INTERNAL_TOKEN: 'module-secret',
+      DB: {},
+    });
+    expect(response.status).toBe(401);
+  });
+});

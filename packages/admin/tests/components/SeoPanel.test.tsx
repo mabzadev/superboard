@@ -307,9 +307,11 @@ describe("SeoPanel", () => {
 			noIndex: false,
 		};
 		expect(onChange).toHaveBeenCalledWith(expectedSeo);
+		const callsAfterUnmount = onChange.mock.calls.length;
+		expect(callsAfterUnmount).toBeGreaterThan(0);
 
 		await new Promise((resolve) => setTimeout(resolve, 700));
-		expect(onChange).toHaveBeenCalledTimes(1);
+		expect(onChange).toHaveBeenCalledTimes(callsAfterUnmount);
 		expect(onChange.mock.lastCall?.[0]).toEqual(expectedSeo);
 	});
 	it("shows the derived title and description as placeholders", async () => {

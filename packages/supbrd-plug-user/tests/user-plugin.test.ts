@@ -16,15 +16,48 @@ const operator = {
 };
 
 describe("supbrd-plug-user", () => {
-	test("preserves every canonical Store authority while upgrading the Front artifact", () => {
+	test("preserves the canonical issue #48 Store, command, data source and settings names", () => {
 		expect(userPluginManifest.stores.map(({ store_id }) => store_id).toSorted()).toEqual([
-			"supbrd-plug-user.store.access_keys",
-			"supbrd-plug-user.store.credentials",
-			"supbrd-plug-user.store.customers",
-			"supbrd-plug-user.store.directory",
-			"supbrd-plug-user.store.referrals",
-			"supbrd-plug-user.store.sessions",
+			"supbrd-plug-user.store.user_credentials",
+			"supbrd-plug-user.store.user_directory",
+			"supbrd-plug-user.store.user_sessions",
 		]);
+		expect(userPluginManifest.commands.map(({ command_id }) => command_id).toSorted()).toEqual([
+			"supbrd-plug-user.command.application_sign_in",
+			"supbrd-plug-user.command.link_provider",
+			"supbrd-plug-user.command.revoke_application_session",
+			"supbrd-plug-user.command.suspend_member",
+			"supbrd-plug-user.command.update_profile",
+		]);
+		expect(
+			userPluginManifest.data_sources.map(({ data_source_id }) => data_source_id).toSorted(),
+		).toEqual([
+			"supbrd-plug-user.data_source.active_sessions",
+			"supbrd-plug-user.data_source.current_profile",
+			"supbrd-plug-user.data_source.linked_providers",
+			"supbrd-plug-user.data_source.members",
+		]);
+		expect(Object.keys(userPluginManifest.settings.schema.properties).toSorted()).toEqual([
+			"allow_anonymous_upgrade",
+			"max_active_sessions",
+			"mfa_policy",
+		]);
+		const signInSchema = userPluginManifest.schemas.find(
+			({ schema_id: schemaId }) => schemaId === "supbrd-plug-user.schema.application_sign_in.v1",
+		);
+		expect(signInSchema?.json_schema).toMatchObject({
+			type: "object",
+			additionalProperties: false,
+			required: ["email", "password"],
+			properties: { email: { type: "string" }, password: { type: "string" } },
+		});
+		expect(
+			userPluginManifest.schemas
+				.filter(({ schema_id: schemaId }) => !schemaId.endsWith(".schema.empty.v1"))
+				.every(
+					({ json_schema: schema }) => Array.isArray(schema.required) && schema.required.length > 0,
+				),
+		).toBe(true);
 		expect(
 			userPluginManifest.data_sources
 				.map(({ store_id }) => store_id)
@@ -33,7 +66,10 @@ describe("supbrd-plug-user", () => {
 	});
 
 	test("detects mutation of the packaged implementation contract", async () => {
-		expect(await validateUserPluginManifest(userPluginManifest)).toEqual({ valid: true, errors: [] });
+		expect(await validateUserPluginManifest(userPluginManifest)).toEqual({
+			valid: true,
+			errors: [],
+		});
 		const drifted = structuredClone(userPluginManifest);
 		drifted.capabilities.push("identity.undeclared");
 		expect(await validateUserPluginManifest(drifted)).toMatchObject({
@@ -45,7 +81,9 @@ describe("supbrd-plug-user", () => {
 	test("registers every renderer props schema in the common manifest", () => {
 		const schemaIds = new Set(userPluginManifest.schemas.map(({ schema_id }) => schema_id));
 		expect(
-			userPluginManifest.renderers.every(({ props_schema }) => schemaIds.has(props_schema.schema_id)),
+			userPluginManifest.renderers.every(({ props_schema }) =>
+				schemaIds.has(props_schema.schema_id),
+			),
 		).toBe(true);
 	});
 
@@ -77,6 +115,19 @@ describe("supbrd-plug-user", () => {
 			props: { kind: "members", page_size: 10, members: [operator] },
 		});
 		expect(members).toMatchObject({ kind: "members", members: [{ id: "operator-1" }] });
+		const admin = mountUserRenderer({
+			renderer_id: USER_RENDERER_IDS.admin,
+			props: {
+				kind: "admin_surface",
+				route_id: "superboard.identity.apps",
+				path: "/identity/en/apps",
+			},
+		});
+		expect(admin).toMatchObject({
+			kind: "admin_surface",
+			route_id: "superboard.identity.apps",
+			path: "/identity/en/apps",
+		});
 	});
 
 	test("isolates invalid plugin props", () => {

@@ -259,6 +259,7 @@ function siteConfig() {
       },
     ],
     worker_loaders: [{ binding: target.siteRuntime.workerLoaderBinding }],
+    services: [{ binding: "API_SERVICE", service: target.workers.api[environment] }],
     images: { binding: "IMAGES" },
     send_email: [
       {

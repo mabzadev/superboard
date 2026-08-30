@@ -9,13 +9,13 @@ import {
 import { userPluginManifest } from "@superboard/supbrd-plug-user";
 import { expect, test } from "vitest";
 
+import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 import {
 	CORE_ADMIN_SHELL_DESCRIPTOR,
 	SUPBRD_CORE_ARTIFACT_CHECKSUM,
 	composeUserFrontReleaseInput,
 	visibleUserNavigation,
 } from "../src/lib/user-front-release.js";
-import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 
 const identifiers = {
 	instance_id: "vocostar",
@@ -93,7 +93,12 @@ test("the Site composes a permission-filtered user slice from plugin contributio
 		}).result,
 	).toBe("redirect");
 	expect(visibleUserNavigation(input, [])).toHaveLength(0);
-	expect(visibleUserNavigation(input, ["users.read"])).toHaveLength(2);
+	expect(visibleUserNavigation(input, ["users.read"])).toEqual(
+		expect.arrayContaining([
+			{ route_id: "superboard.profile", label: "Profile" },
+			{ route_id: "superboard.users", label: "App · Users" },
+		]),
+	);
 });
 
 test("compiles the complete Site composition with every validation receipt passing", async () => {

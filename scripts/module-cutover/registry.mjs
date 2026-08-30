@@ -8,18 +8,63 @@ const j = (...columns) => columns;
 function entity(definition) {
   const owner = pluginOwner(definition);
   const targetTable = definition.target?.table ?? definition.id.split(".").at(-1);
+  const storeName = canonicalStoreName(definition, owner, targetTable);
   return Object.freeze({
     jsonColumns: [],
     keys: ["id"],
     ...definition,
     pluginId: owner,
-    storeId: `${owner}.store.${targetTable}`,
+    storeId: `${owner}.store.${storeName}`,
     repositoryId: `${owner}.repository.${targetTable}`,
   });
 }
 
+function canonicalStoreName(definition, owner, targetTable) {
+  if (owner === "supbrd-plug-user") {
+    return targetTable === "access_keys" ? "user_credentials" : "user_directory";
+  }
+  if (owner === "supbrd-plug-settings") return "settings";
+  if (owner === "supbrd-plug-products") {
+    if (targetTable === "products") return "catalog";
+    if (targetTable === "store_products") return "prices";
+    return "offers";
+  }
+  if (owner === "supbrd-plugmod-billing") {
+    if (targetTable === "purchases" || targetTable === "refunds") return "purchases";
+    if (targetTable === "subscriptions") return "subscriptions";
+    return "ledger";
+  }
+  if (owner === "supbrd-plugmod-paywalls") {
+    return targetTable === "events" ? "exposures" : "definitions";
+  }
+  if (owner === "supbrd-plugmod-dynamic-links") {
+    return targetTable === "link_events" ? "attribution" : "links";
+  }
+  if (owner === "supbrd-plugmod-analytics") {
+    return targetTable === "daily_metrics" ? "aggregates" : "events";
+  }
+  if (owner === "supbrd-plugmod-support") {
+    if (/(?:contacts|companies|contact_notes)$/u.test(targetTable)) return "contacts";
+    if (/(?:messages|participants|drafts|notifications)$/u.test(targetTable)) return "messages";
+    return "conversations";
+  }
+  throw new Error(`Missing canonical Store mapping for ${definition.id}`);
+}
+
 function pluginOwner(definition) {
-  if (definition.module === "products") return "supbrd-plug-products";
+  if (definition.module === "products") {
+    const billingTables = new Set([
+      "financial_customers",
+      "entitlements",
+      "entitlement_products",
+      "purchases",
+      "subscriptions",
+      "refunds",
+    ]);
+    return billingTables.has(definition.target?.table)
+      ? "supbrd-plugmod-billing"
+      : "supbrd-plug-products";
+  }
   if (definition.module === "paywalls") return "supbrd-plugmod-paywalls";
   if (definition.module === "dynamic-links") return "supbrd-plugmod-dynamic-links";
   if (definition.module === "support") return "supbrd-plugmod-support";

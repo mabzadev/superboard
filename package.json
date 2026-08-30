@@ -226,7 +226,7 @@
 		"sdk:documentation:write": "node scripts/sdk-documentation.mjs write",
 		"sdk:documentation:check": "node scripts/sdk-documentation.mjs check && node --test scripts/sdk-documentation.test.mjs",
 		"emdash:parity:generate": "node scripts/emdash-parity-matrix.mjs --write",
-		"emdash:parity:check": "pnpm --filter @superboard/supbrd-core build && node scripts/emdash-parity-matrix.mjs && node --test scripts/emdash-parity-matrix.test.mjs",
+		"emdash:parity:check": "pnpm --filter @superboard/supbrd-core build && node scripts/emdash-parity-matrix.mjs && node --test scripts/emdash-parity-matrix.test.mjs scripts/dashboard-route-parity.test.mjs",
 		"emdash:store-restore:test": "node scripts/emdash-store-restore-proof.mjs && node --test scripts/emdash-store-restore.test.mjs",
 		"emdash:migration-rehearsal:test": "node scripts/emdash-migration-rehearsal-proof.mjs && node --test scripts/emdash-migration-rehearsal-proof.test.mjs",
 		"site:types": "node scripts/cloudflare-types.mjs --service site --reference --allow-unprovisioned",

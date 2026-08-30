@@ -1,17 +1,18 @@
 import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
-import { compileFrontRelease } from "../packages/supbrd-core/dist/index.js";
-import { userPluginManifest } from "../packages/supbrd-plug-user/src/index.js";
+import { superBoardRuntimePluginCatalog } from "../apps/site/src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../apps/site/src/lib/user-front-release.js";
+import { compileFrontRelease } from "../packages/supbrd-core/dist/index.js";
 
 const root = resolve(import.meta.dirname, "..");
 const previewId = "user-slice-preview";
-const keys = await crypto.subtle.generateKey(
-	{ name: "ECDSA", namedCurve: "P-256" },
-	true,
-	["sign", "verify"],
-);
+const keys = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+	"sign",
+	"verify",
+]);
 const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 const release = await compileFrontRelease(
 	await composeUserFrontReleaseInput({
@@ -23,21 +24,31 @@ const release = await compileFrontRelease(
 		release_id: "01J00000000000000000000305",
 		release_sequence: 1,
 		previous_release_id: null,
-		plugin_lock: [
-			{
-				plugin_id: userPluginManifest.plugin_id,
-				version: userPluginManifest.plugin_version,
-				artifact_checksum: userPluginManifest.artifact_checksum,
-				native: false,
-			},
-		],
+		plugin_lock: superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => ({
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: manifest.execution.backend === "native",
+		})),
 		created_at: "2026-08-30T00:45:00.000Z",
 	}),
 	{ kid: "user-slice-local-key", private_key: keys.privateKey },
 );
 const issuedAt = new Date().toISOString();
 const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1_000).toISOString();
+const releaseJson = JSON.stringify(release);
+const releaseChunkSql = Array.from(
+	{ length: Math.ceil(releaseJson.length / 50_000) },
+	(_, index) =>
+		`INSERT INTO _superboard_front_seed_chunks (chunk_index, chunk) VALUES (${index}, '${escapeSql(releaseJson.slice(index * 50_000, (index + 1) * 50_000))}');`,
+).join("\n");
 const sql = `
+DROP TABLE IF EXISTS _superboard_front_seed_chunks;
+CREATE TABLE _superboard_front_seed_chunks (
+  chunk_index INTEGER PRIMARY KEY,
+  chunk TEXT NOT NULL
+);
+${releaseChunkSql}
 INSERT OR REPLACE INTO superboard_release_signing_keys
   (kid, public_jwk, status, created_at, retired_at)
 VALUES
@@ -47,7 +58,9 @@ INSERT OR REPLACE INTO superboard_front_release_candidates
    validation_set_checksum, signing_kid, status, created_at)
 VALUES
   ('${release.payload.candidate_id}', 'local', '${release.payload.release_id}',
-   '${escapeSql(JSON.stringify(release))}', '${release.content_checksum}',
+   (SELECT group_concat(chunk, '') FROM
+      (SELECT chunk FROM _superboard_front_seed_chunks ORDER BY chunk_index)),
+   '${release.content_checksum}',
    '${release.validation_set_checksum}', 'user-slice-local-key', 'validated', '${issuedAt}');
 INSERT OR REPLACE INTO superboard_front_previews
   (preview_id, candidate_id, release_id, content_checksum, audience,
@@ -55,11 +68,15 @@ INSERT OR REPLACE INTO superboard_front_previews
 VALUES
   ('${previewId}', '${release.payload.candidate_id}', '${release.payload.release_id}',
    '${release.content_checksum}', 'front_preview', 'dry_run', '${issuedAt}', '${expiresAt}');
-INSERT OR REPLACE INTO superboard_dependency_health
+${superBoardRuntimePluginCatalog()
+	.plugins.map(
+		({ manifest }, index) => `INSERT OR REPLACE INTO superboard_dependency_health
   (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
 VALUES
-  ('local', 'dependency.supbrd_plug_user', 'ready', 'sha256:${"a".repeat(64)}',
-   '${issuedAt}', '${expiresAt}');
+  ('local', 'dependency.${manifest.plugin_id.replaceAll("-", "_")}', 'ready',
+   'sha256:${index.toString(16).padStart(64, "0")}', '${issuedAt}', '${expiresAt}');`,
+	)
+	.join("\n")}
 UPDATE superboard_front_release_candidates
 SET status = 'approved', approval_json = '{"local_visual_proof":true}', approved_at = '${issuedAt}'
 WHERE candidate_id = '${release.payload.candidate_id}';
@@ -73,20 +90,28 @@ ON CONFLICT(instance_id) DO UPDATE SET
   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
   activation_id = 'user-slice-local-visual-activation-${Date.now()}',
   activated_at = excluded.activated_at;
+DROP TABLE _superboard_front_seed_chunks;
 `;
 
-run("pnpm", [
-	"--dir",
-	"apps/site",
-	"exec",
-	"wrangler",
-	"d1",
-	"execute",
-	"DB",
-	"--local",
-	"--command",
-	sql,
-]);
+const temporaryDirectory = mkdtempSync(join(tmpdir(), "superboard-front-seed-"));
+const sqlPath = join(temporaryDirectory, "seed.sql");
+try {
+	writeFileSync(sqlPath, sql, { mode: 0o600 });
+	run("pnpm", [
+		"--dir",
+		"apps/site",
+		"exec",
+		"wrangler",
+		"d1",
+		"execute",
+		"DB",
+		"--local",
+		"--file",
+		sqlPath,
+	]);
+} finally {
+	rmSync(temporaryDirectory, { recursive: true, force: true });
+}
 process.stdout.write(
 	`${JSON.stringify({ preview_url: `http://127.0.0.1:4325/superboard-preview/${previewId}/login` })}\n`,
 );

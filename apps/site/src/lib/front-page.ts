@@ -25,6 +25,8 @@ interface EmDashUser {
 
 export interface FrontPageModel {
 	instance_id: string;
+	requested_path: string;
+	api_url: string;
 	release: LoadedFrontRelease | null;
 	resolution: FrontRequestResolution;
 	page_title: string | null;
@@ -82,9 +84,7 @@ async function resolveFrontPageFromRelease(
 		last_verified_release: release?.runtime_release ?? null,
 		requested_path: requestedPath,
 		admin_session: user ? "valid" : "absent",
-		permissions: hasPermission(user, "settings:manage")
-			? ["superboard.admin.access", "users.read", "users.write"]
-			: [],
+		permissions: operatorFrontPermissions(release, user),
 		dependency_health: dependencyHealth,
 	});
 	if (resolution.result === "rendered" && resolution.layout_ids.length > 0 && release) {
@@ -134,10 +134,29 @@ async function resolveFrontPageFromRelease(
 	}
 	return {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		requested_path: requestedPath,
+		api_url: env.SUPERBOARD_API_URL ?? "",
 		release,
 		resolution,
 		page_title: pageTitle,
 		operator,
 		members,
 	};
+}
+
+function operatorFrontPermissions(
+	release: LoadedFrontRelease | null,
+	user: EmDashUser | undefined,
+): string[] {
+	if (!release || !hasPermission(user, "settings:manage")) return [];
+	return [
+		...new Set([
+			"superboard.admin.access",
+			"users.read",
+			"users.write",
+			...release.release.payload.front_route_manifest.routes
+				.map(({ permission_expression: permission }) => permission)
+				.filter((permission) => permission !== "allow"),
+		]),
+	];
 }

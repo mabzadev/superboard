@@ -151,6 +151,9 @@ test("generated Site config uses only explicit target resources and keeps public
       config.worker_loaders[0].binding,
       target.siteRuntime.workerLoaderBinding,
     );
+    assert.deepEqual(config.services, [
+      { binding: "API_SERVICE", service: target.workers.api[environment] },
+    ]);
     assert.deepEqual(config.triggers, { crons: target.siteRuntime.crons });
 		assert.deepEqual(config.observability, target.siteRuntime.observability);
 		assert.deepEqual(config.send_email, [

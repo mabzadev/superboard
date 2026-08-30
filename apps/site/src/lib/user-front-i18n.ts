@@ -13,6 +13,9 @@ export const USER_FRONT_CATALOGS = {
 		"user.members.title": "Application users",
 		"user.members.description":
 			"Review application-user access independently from operator authentication.",
+		"user.admin.title": "Identity administration",
+		"user.admin.description":
+			"Manage the selected identity surface through its verified plugin renderer.",
 		"user.action.passkey": "Continue with Passkey",
 		"user.field.name": "Name",
 		"user.field.email": "Email",
@@ -51,6 +54,9 @@ export const USER_FRONT_CATALOGS = {
 		"user.members.title": "Utilisateurs de l’application",
 		"user.members.description":
 			"Consultez les accès applicatifs indépendamment de l’authentification opérateur.",
+		"user.admin.title": "Administration des identités",
+		"user.admin.description":
+			"Gérez la surface d’identité sélectionnée avec son renderer de plugin vérifié.",
 		"user.action.passkey": "Continuer avec une passkey",
 		"user.field.name": "Nom",
 		"user.field.email": "E-mail",

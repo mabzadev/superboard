@@ -53,10 +53,46 @@ test("Support and Flows cannot be promoted by the generated matrix", () => {
 	);
 });
 
+test("Dashboard requirements keep their canonical path and never assign a concrete page to Core", () => {
+	const dashboard = buildParityMatrix().rows.filter(({ kind }) => kind === "dashboard");
+	assert.equal(
+		dashboard.some(({ id }) => id === "dashboard:/"),
+		true,
+	);
+	assert.equal(
+		dashboard.some(({ id }) => id === "dashboard:/page.tsx"),
+		false,
+	);
+	assert.equal(
+		dashboard.some(({ target }) => target === "supbrd-core"),
+		false,
+	);
+	assert.equal(
+		dashboard.find(({ id }) => id === "dashboard:/project-settings")?.target,
+		"supbrd-plug-settings",
+	);
+	assert.equal(
+		dashboard.find(({ id }) => id === "dashboard:/infrastructure")?.target,
+		"supbrd-plugmod-observability",
+	);
+	assert.equal(
+		dashboard.find(({ id }) => id === "dashboard:/products/offerings")?.target,
+		"supbrd-plug-products",
+	);
+	for (const id of [
+		"dashboard:/products/customers",
+		"dashboard:/products/entitlements",
+		"dashboard:/products/purchases",
+	]) {
+		assert.equal(dashboard.find((row) => row.id === id)?.target, "supbrd-plugmod-billing", id);
+	}
+});
+
 test("committed artifacts are reproducible", () => {
 	for (const path of [
 		"config/emdash-parity-matrix.json",
 		"config/emdash-plugin-topology.json",
+		"config/superboard-front-bundle.json",
 		"docs/evidence/issue-54/parity-matrix.receipt.json",
 	]) {
 		assert.doesNotThrow(() =>

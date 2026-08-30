@@ -1,7 +1,34 @@
 {
 	"extends": "astro/tsconfigs/base",
 	"compilerOptions": {
-		"types": ["node"]
+		"types": ["node"],
+		"baseUrl": ".",
+		"paths": {
+			"@/context/useProjectSelection": ["src/compat/dashboard-project-context.tsx"],
+			"@/lib/api": ["src/compat/dashboard-api.ts"],
+			"@/lib/config": ["src/compat/dashboard-config.ts"],
+			"@/*": ["../dashboard/src/*"],
+			"next/link": ["src/compat/next-link.tsx"],
+			"next/image": ["src/compat/next-image.tsx"],
+			"next/navigation": ["src/compat/next-navigation.ts"],
+			"next/dynamic": ["src/compat/next-dynamic.tsx"],
+			"@melody-auth/react": ["../dashboard/src/identity/melody-react.tsx"],
+			"app/Setup": ["../dashboard/src/identity/Setup.tsx"],
+			"app/useSignalValue": ["../dashboard/src/identity/useSignalValue.ts"],
+			"app/[lang]/*": ["../dashboard/src/app/(protected)/identity/[lang]/*"],
+			"components/*": ["../dashboard/src/identity/components/*"],
+			"hooks/*": ["../dashboard/src/identity/hooks/*"],
+			"i18n/*": ["../dashboard/src/identity/i18n/*"],
+			"identity/*": ["../dashboard/src/identity/*"],
+			"identity-route/*": ["../dashboard/src/app/(protected)/identity/[lang]/*"],
+			"services/*": ["../dashboard/src/identity/services/*"],
+			"signals": ["../dashboard/src/identity/signals/index.ts"],
+			"signals/*": ["../dashboard/src/identity/signals/*"],
+			"stores": ["../dashboard/src/identity/stores/index.tsx"],
+			"stores/*": ["../dashboard/src/identity/stores/*"],
+			"tools": ["../dashboard/src/identity/tools/index.ts"],
+			"tools/*": ["../dashboard/src/identity/tools/*"]
+		}
 	},
 	"include": ["src", ".astro/types.d.ts", "emdash-env.d.ts", "worker-configuration.d.ts"]
 }

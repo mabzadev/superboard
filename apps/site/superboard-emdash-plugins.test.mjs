@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import topology from "../../config/emdash-plugin-topology.json" with { type: "json" };
-
 import {
 	SUPERBOARD_PLUGIN_TEMPLATES,
 	superboardConfiguredPlugins,
@@ -37,5 +36,25 @@ test("does not register a module whose Worker descriptor is not ready", () => {
 			.map(({ id }) => id)
 			.toSorted(),
 		readyModuleIds,
+	);
+});
+
+test("registers the canonical settings, Admin page and functional contract for every plugin", () => {
+	for (const plugin of superboardConfiguredPlugins) {
+		assert.equal(plugin.format, "standard", `${plugin.id} is not sandbox-compatible`);
+		assert.equal(plugin.adminEntry, undefined, `${plugin.id} exposes a trusted React Admin entry`);
+		assert.ok(plugin.adminPages?.length, `${plugin.id} is missing its Admin page`);
+		assert.ok(Object.keys(plugin.settingsSchema ?? {}).length, `${plugin.id} has no settings`);
+		assert.ok(plugin.superboardManifest, `${plugin.id} is missing its SuperBoard manifest`);
+		assert.ok(plugin.superboardManifest.commands.length, `${plugin.id} has no commands`);
+		assert.ok(plugin.superboardManifest.data_sources.length, `${plugin.id} has no data sources`);
+		assert.ok(plugin.routes.includes("admin"), `${plugin.id} has no Block Kit Admin route`);
+		assert.ok(plugin.routes.includes("health"), `${plugin.id} has no health route`);
+	}
+	assert.deepEqual(
+		Object.keys(
+			superboardConfiguredPlugins.find(({ id }) => id === "supbrd-plug-user")?.settingsSchema ?? {},
+		).toSorted(),
+		["allow_anonymous_upgrade", "max_active_sessions", "mfa_policy"],
 	);
 });

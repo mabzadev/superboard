@@ -14,6 +14,7 @@ interface __BaseEnv_Env {
 	SUPERBOARD_RELEASE_OPERATIONS: string;
 	D1_EXPECTED_MIGRATION: string;
 	EMDASH_ENCRYPTION_KEY: string;
+	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -14852,9 +14853,11 @@ declare namespace Cloudflare {
 	interface Env {
 	EMDASH_ENCRYPTION_KEY: string;
 	SUPERBOARD_RELEASE_PRIVATE_JWK?: string;
+	MODULE_INTERNAL_TOKEN: string;
 	}
 }
 interface Env {
 	EMDASH_ENCRYPTION_KEY: string;
 	SUPERBOARD_RELEASE_PRIVATE_JWK?: string;
+	MODULE_INTERNAL_TOKEN: string;
 }

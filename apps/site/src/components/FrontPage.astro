@@ -1,5 +1,6 @@
 ---
 import type { FrontPageModel } from "../lib/front-page.js";
+import { SuperBoardFrontApp } from "./SuperBoardFrontApp";
 import {
 	mountUserRenderer,
 	USER_RENDERER_IDS,
@@ -25,6 +26,8 @@ const localizedPageTitle = model.page_title && i18n.messages[model.page_title]
 	? i18n._(model.page_title)
 	: model.page_title;
 const { resolution } = model;
+const hasAdminSurfaceRenderer = resolution.result === "rendered"
+	&& resolution.renderer_ids.some((rendererId) => rendererId.endsWith(".renderer.admin_surface"));
 const releaseId = model.release?.release.payload.release_id ?? null;
 const coreActionUrls = { "emdash.core.action.admin_session_start": "/_emdash/admin/login" } as const;
 const userRendererViews = resolution.result === "rendered"
@@ -74,6 +77,7 @@ const stateTitle = {
 			a { color: #9cc8ff; }
 			.admin-link { text-decoration: none; border: 1px solid #385176; padding: 0.55rem 0.8rem; border-radius: 0.65rem; }
 			main { width: min(76rem, 100%); margin: auto; padding: 3rem 1.5rem; }
+			main.module-main { width: 100%; margin: 0; padding: 0; }
 			.panel { border: 1px solid #27364e; border-radius: 1rem; padding: clamp(1.4rem, 4vw, 3rem); background: #0d1524e8; box-shadow: 0 2rem 5rem #0007; }
 			.eyebrow { color: #8bbcff; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 			h1 { margin: 0.5rem 0 0.8rem; font-size: clamp(2rem, 7vw, 4.5rem); letter-spacing: -0.055em; line-height: 0.98; }
@@ -107,11 +111,20 @@ const stateTitle = {
 	</head>
 	<body>
 		<div class="shell">
-			<header>
+			{!hasAdminSurfaceRenderer && <header>
 				<div class="brand">SuperBoard</div>
 				<a class="admin-link" href="/_emdash/admin">{message("site.admin.open")}</a>
-			</header>
-			<main>
+			</header>}
+			<main class:list={{ "module-main": hasAdminSurfaceRenderer }}>
+				{hasAdminSurfaceRenderer ? (
+					<SuperBoardFrontApp
+						client:only="react"
+						path={model.requested_path}
+						instanceId={model.instance_id}
+						apiUrl={model.api_url}
+						operator={model.operator}
+					/>
+				) : (
 				<section class="panel">
 					{resolution.result === "rendered" ? (
 						<>
@@ -159,6 +172,7 @@ const stateTitle = {
 						{model.release && <span>{message("site.meta.source")}={model.release.source}</span>}
 					</div>
 				</section>
+				)}
 			</main>
 		</div>
 	</body>

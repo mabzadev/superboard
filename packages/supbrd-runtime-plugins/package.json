@@ -1,0 +1,26 @@
+{
+	"name": "@superboard/supbrd-runtime-plugins",
+	"version": "1.0.0",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"default": "./dist/*.js"
+		}
+	},
+	"files": ["dist"],
+	"scripts": {
+		"build": "tsdown",
+		"typecheck": "tsgo --noEmit"
+	},
+	"dependencies": {
+		"@superboard/supbrd-plug-user": "workspace:*",
+		"emdash": "workspace:*"
+	},
+	"devDependencies": {
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	}
+}

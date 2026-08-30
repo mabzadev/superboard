@@ -1022,6 +1022,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^5.20260808.1
         version: 5.20260828.1
+      '@tailwindcss/postcss':
+        specifier: ^4
+        version: 4.3.3
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3101,6 +3104,22 @@ importers:
       vitest:
         specifier: 4.1.5
         version: 4.1.5(@opentelemetry/api@1.9.0)(@types/node@25.9.5)(@vitest/coverage-v8@4.1.5)(jsdom@29.1.1(@noble/hashes@1.8.0))(vite@8.0.16(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(less@4.9.0)(sass@1.103.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/supbrd-runtime-plugins:
+    dependencies:
+      '@superboard/supbrd-plug-user':
+        specifier: workspace:*
+        version: link:../supbrd-plug-user
+      emdash:
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.20.3(@arethetypeswrong/core@0.18.2)(@typescript/native-preview@7.0.0-dev.20260421.2)(oxc-resolver@11.16.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3))(publint@0.3.17)(synckit@0.11.13)(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
   packages/workerd:
     dependencies:

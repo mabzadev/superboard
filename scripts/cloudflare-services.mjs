@@ -216,6 +216,7 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
   site: Object.freeze([
     "EMDASH_ENCRYPTION_KEY",
     "SUPERBOARD_RELEASE_PRIVATE_JWK",
+    "MODULE_INTERNAL_TOKEN",
   ]),
   billing: Object.freeze([
     ...BILLING_SECRETS,
