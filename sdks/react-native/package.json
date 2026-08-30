@@ -39,7 +39,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "check": "pnpm security:test && pnpm security:audit && pnpm typecheck && pnpm test --runInBand && pnpm prepare && pnpm pack:check",
+    "check": "yarn security:test && yarn security:audit && yarn typecheck && yarn test --runInBand && yarn prepare && yarn pack:check",
     "example": "pnpm --filter @mbzadev/opengrow-react-native-example",
     "test": "jest",
     "typecheck": "tsc",
