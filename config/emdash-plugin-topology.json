@@ -67,6 +67,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/identity/migrations/0001_identity.sql",
               "workers/identity/migrations/0002_project_scope.sql",
               "workers/identity/migrations/0101_melody_create_app_table.sql",
@@ -123,7 +124,7 @@
             "classification": "secret",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:8e21dd992b44d6df877f72a0b2abd8910e2273942dc3d208244243b6677a5f24"
+            "checksum": "sha256:bfcf764a5b37acac59a5ab80c4ec671b29f504d2bbc3e20e11c04f3134936424"
           },
           {
             "store_id": "supbrd-plug-user.store.user_directory",
@@ -133,6 +134,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/identity/migrations/0001_identity.sql",
               "workers/identity/migrations/0002_project_scope.sql",
               "workers/identity/migrations/0101_melody_create_app_table.sql",
@@ -189,7 +191,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:8a657335e2d9954b239d2e99dadb38c2f0199cabd35788ab397a7ced70d7b8c7"
+            "checksum": "sha256:69892e311146023f1614f5f5d80099d7e9fe84dc1c38154c2ec3a84ebc832c46"
           },
           {
             "store_id": "supbrd-plug-user.store.user_sessions",
@@ -199,6 +201,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/identity/migrations/0001_identity.sql",
               "workers/identity/migrations/0002_project_scope.sql",
               "workers/identity/migrations/0101_melody_create_app_table.sql",
@@ -255,7 +258,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:af73629ee09f002548f0fbf5505b9ceea6e98eeb96eed8051c11a4867b43eb1f"
+            "checksum": "sha256:d1bf5e1e0d9a7ab0b79c38d09f8aa9f26758b132e15347d753113324b08ba9b1"
           }
         ],
         "schemas": [
@@ -476,8 +479,8 @@
             "renderer_id": "supbrd-plug-user.renderer.admin_surface",
             "plugin_id": "supbrd-plug-user",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -608,7 +611,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e558dba14c72711d8aab5f1f2f3576e8547837055d98bf680e6211fa607e4ddc"
+        "artifact_checksum": "sha256:50c91bab706dd56b1c7ef976a4d27cd3aa61f626b5e8af1f93261d572ae05f8a"
       },
       "repositories": [
         {
@@ -709,13 +712,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:4c63f83bd712853c75aeb5627adf508bc9651cdfb1a994a50dba72a9eb905ff2"
+            "checksum": "sha256:1ffdcd0304a9ab6ac449ac61ac70ccd430ec9e53e022754e72d62131c181c81d"
           },
           {
             "store_id": "supbrd-plug-settings.store.versions",
@@ -724,13 +728,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:461ebe60fed7cfaf849c6668f6c0c175b3c0926f5040225526f682abd09f7698"
+            "checksum": "sha256:c0834fc2f7842146d9c7388dec1e3f55a9980b1d75f2ffaf2c2b4e477cd61577"
           }
         ],
         "schemas": [
@@ -924,8 +929,8 @@
             "renderer_id": "supbrd-plug-settings.renderer.admin_surface",
             "plugin_id": "supbrd-plug-settings",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1024,7 +1029,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:ebef1fdf0374aa3cfcd6b4235c83cb392bb16096c512fab4f739710966a2c4fd"
+        "artifact_checksum": "sha256:f2267f787c516effac14f29fb1b2117c3d3a851795ddd1306bbb4a2761612402"
       },
       "repositories": [
         {
@@ -1112,13 +1117,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:9f46910a47773bb00691d9c9bacde83061b71c8085b2374c5c06571dd2dddc98"
+            "checksum": "sha256:80223e384fb9963490a2df69641e828b333ccb7a69785e5f2c708b3f625fc3d7"
           },
           {
             "store_id": "supbrd-plug-content.store.revisions",
@@ -1127,13 +1133,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:e5d38f83e4f7aa26af65cc42da51b7ba788cd9d76ca10f5ef6446e2ad4e6f617"
+            "checksum": "sha256:97da22d3e955af1118ef7cf75fa78aa9291cab69a53005903d989d1077c7ea59"
           },
           {
             "store_id": "supbrd-plug-content.store.taxonomies",
@@ -1142,13 +1149,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:45406d7b9f1a07f07b1c9919f767b04c752ba82234ad49e5fee6be88e48f78bc"
+            "checksum": "sha256:b140a9667bc33d33bd535779c40906c40c3345c6584575be3e5ff54c92d116c1"
           }
         ],
         "schemas": [
@@ -1369,8 +1377,8 @@
             "renderer_id": "supbrd-plug-content.renderer.admin_surface",
             "plugin_id": "supbrd-plug-content",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1469,7 +1477,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:5ff56cd113c20f522ef79aec83124cb0791235e7a546f99aba7279fa750887a8"
+        "artifact_checksum": "sha256:cb46d3ca27bf96125a670d024fab46f34da3c383769d1a017de14162169c1fd8"
       },
       "repositories": [
         {
@@ -1569,6 +1577,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/products/migrations/0001_products.sql",
               "workers/products/migrations/0002_products_domain.sql",
               "workers/products/migrations/0003_audit_context.sql"
@@ -1577,7 +1586,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:7570056fc34d45b0e1b581c0e96c11d509f1ef72fe61608fc8d047f5f4027592"
+            "checksum": "sha256:a155359e76a332d5b00fbf4a3a2c9aa957bb00b7a24325972b29c71f7a987dde"
           },
           {
             "store_id": "supbrd-plug-products.store.offers",
@@ -1587,6 +1596,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/products/migrations/0001_products.sql",
               "workers/products/migrations/0002_products_domain.sql",
               "workers/products/migrations/0003_audit_context.sql"
@@ -1595,7 +1605,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:8ca642a1d522d2f6fb3b426d6a6a8355541354c7b0d7fd8289528b52ff314f7f"
+            "checksum": "sha256:e707e054cc57d737b0c0d05823f971cbe6f3fe8a5f8a001ca093859f98fc5052"
           },
           {
             "store_id": "supbrd-plug-products.store.prices",
@@ -1605,6 +1615,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/products/migrations/0001_products.sql",
               "workers/products/migrations/0002_products_domain.sql",
               "workers/products/migrations/0003_audit_context.sql"
@@ -1613,7 +1624,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:786d809b8bd8ce5e02b9759ecbe22578175840c49c9aa3b979402326494dd0d0"
+            "checksum": "sha256:4496103a12c44b9941d1d1f14e58d7691df6b884335ae69b0ba0a456398d74fd"
           }
         ],
         "schemas": [
@@ -1834,8 +1845,8 @@
             "renderer_id": "supbrd-plug-products.renderer.admin_surface",
             "plugin_id": "supbrd-plug-products",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2070,7 +2081,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:12608356fa394d53d407a4e5032b817e3f1980ce6c63a2a0fe9bd230f6c0a3ae"
+        "artifact_checksum": "sha256:eaa296c2e8e28bc10e4800b7f9a62567c78de8146f21279fe7d78b0f24af6b76"
       },
       "repositories": [
         {
@@ -2167,13 +2178,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:2b0c6795d2a5fa8dfc219f3e08d5e200dc9307f73aaeb0f4a6fd2555905fe07b"
+            "checksum": "sha256:81cb2cd3f93e7f504ba0d57778d60fd74fe7d1c8d7b5c8282a658ed0fcedecf0"
           },
           {
             "store_id": "supbrd-plug-audit.store.ledger",
@@ -2182,13 +2194,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:8b981b1ef638f15f12ed0ef0f340f8a2fd2ecdce3455273b69963441859bb886"
+            "checksum": "sha256:14e39206112fe7f435b15e51efa6507c46e5e35f742556923dce82892405f282"
           }
         ],
         "schemas": [
@@ -2382,8 +2395,8 @@
             "renderer_id": "supbrd-plug-audit.renderer.admin_surface",
             "plugin_id": "supbrd-plug-audit",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2472,7 +2485,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:17ff5bec77d44ced9d6d6493ce3ac192f2ab81e21483960b79caa6dfe63b46f8"
+        "artifact_checksum": "sha256:fc052180c096709228ba732a6b70b549676d57546b4d665db2b10641dbfb6092"
       },
       "repositories": [
         {
@@ -2561,6 +2574,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/api/migrations/0001_initial_schema.sql",
               "workers/api/migrations/0002_oauth_tables.sql",
               "workers/api/migrations/0003_cloudflare_grovs_compat.sql",
@@ -2628,7 +2642,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:6b5a766be89deb5ca6df085015f72859ed0fd19cc0467a36476681c1b21345e0"
+            "checksum": "sha256:69a9f9f7be01c4c07eb3571772c4ef187dcfe8ffc9c41eac0c3cf03155535a46"
           },
           {
             "store_id": "supbrd-plugmod-gateway.store.route_manifests",
@@ -2638,6 +2652,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/api/migrations/0001_initial_schema.sql",
               "workers/api/migrations/0002_oauth_tables.sql",
               "workers/api/migrations/0003_cloudflare_grovs_compat.sql",
@@ -2705,7 +2720,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:4527f90b9e3601f26d3a3c061a546ba2f47f633f362c4441d92d71d7ce6323ee"
+            "checksum": "sha256:79c313dcd908972e06c9b080a6269c34e1f83cb23d96af1fbaa64ea9dc3398b9"
           }
         ],
         "schemas": [
@@ -2899,8 +2914,8 @@
             "renderer_id": "supbrd-plugmod-gateway.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-gateway",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2999,7 +3014,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:46faaccdcac19bca3488cb4e26876c95ff5d425bcf50acada25001a061c42310"
+        "artifact_checksum": "sha256:9000d2ce57941861fb754da66ec22494c62f13a65c64c621daf070b8a5de1343"
       },
       "repositories": [
         {
@@ -3120,13 +3135,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:f58cbae65f5dab2f680b49d2d1d086e4927e454e647ae6a8ff9a5c3b3de56cb4"
+            "checksum": "sha256:c2929c6e7ad5dd875e0e10794551f674ff6e6f4ee44e55ee9ff40a4788898b8d"
           },
           {
             "store_id": "supbrd-plugmod-billing.store.purchases",
@@ -3135,13 +3151,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:57ae1e30870691c3ba309957683963f5a1df9548020329023376772498949a4c"
+            "checksum": "sha256:f6b970c6699c5c2adaee9a0fa26fb899578ee4ffabc68f2a2ab261ae50a9ea31"
           },
           {
             "store_id": "supbrd-plugmod-billing.store.subscriptions",
@@ -3150,13 +3167,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:1ece0ae26eb397e3957e35821296fae9acd98e050130facb239bd1fb6098b820"
+            "checksum": "sha256:e8a8640065340670a8b3efee8252740600d9c0a7a9d9395a9af3affb08240640"
           }
         ],
         "schemas": [
@@ -3377,8 +3395,8 @@
             "renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-billing",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3533,7 +3551,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:7b3907675ada4116843d305f8014e4de2f827ca4291aad59236eb159529be5e1"
+        "artifact_checksum": "sha256:048a31c8ac5194bfe9437b23790ded0c36a134352c9319120628646dff896a8a"
       },
       "repositories": [
         {
@@ -3676,6 +3694,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/support/migrations/0001_support.sql",
               "workers/support/migrations/0002_support_configuration.sql",
               "workers/support/migrations/0002a_support_base_upgrade.sql",
@@ -3705,7 +3724,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:b0da54bce69d3c4323fc12555c2915e2c839577191fa0ae1b6daedc5cbb347ed"
+            "checksum": "sha256:b8a8ccc213362b7061ce1300f17a52f305f1680bdded551554d66ec28eb8398b"
           },
           {
             "store_id": "supbrd-plugmod-support.store.conversations",
@@ -3715,6 +3734,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/support/migrations/0001_support.sql",
               "workers/support/migrations/0002_support_configuration.sql",
               "workers/support/migrations/0002a_support_base_upgrade.sql",
@@ -3744,7 +3764,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:2d62c717a6a0fab407ec10f7cd5368961235f4f2c103b47aa8ed92888d12fb21"
+            "checksum": "sha256:d4a6d92f4eef09f4cc6ca22d94edf72357714cd40853e357afb6e4fbf0b128fe"
           },
           {
             "store_id": "supbrd-plugmod-support.store.messages",
@@ -3754,6 +3774,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/support/migrations/0001_support.sql",
               "workers/support/migrations/0002_support_configuration.sql",
               "workers/support/migrations/0002a_support_base_upgrade.sql",
@@ -3783,7 +3804,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:fe7c7e2fbb949bf1e56b712c6b58ed8a982a25c90bbbdb3d0d620863bd18175a"
+            "checksum": "sha256:7abe8d648f46d5e89bcc5ce6363d608a09da097f2c80f202b9eb21dd50f81677"
           }
         ],
         "schemas": [
@@ -4004,8 +4025,8 @@
             "renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-support",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4332,7 +4353,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e000aacea3d2e769f727e1e808e232217a52155c55af22ecffda7a3c5861019b"
+        "artifact_checksum": "sha256:d2e134efcc1817a4d79be75f2e3d61422f17c6f0795b392a5c27f747158c0fff"
       },
       "repositories": [
         {
@@ -4456,6 +4477,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/flows/migrations/0001_flows.sql",
               "workers/flows/migrations/0002_legacy_compatibility.sql",
               "workers/flows/migrations/0003_legacy_event_claims.sql",
@@ -4468,7 +4490,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:096a61fc07182eba66c34372d4b5827954348b00f3c5176a565e9a1e9ac196bf"
+            "checksum": "sha256:baac172efeaf5fd058b51ee2e5cf28dabe5ea2b42c4a6d3da294c7f51808443c"
           },
           {
             "store_id": "supbrd-plugmod-flows.store.runtime",
@@ -4478,6 +4500,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/flows/migrations/0001_flows.sql",
               "workers/flows/migrations/0002_legacy_compatibility.sql",
               "workers/flows/migrations/0003_legacy_event_claims.sql",
@@ -4490,7 +4513,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:db67c31f471ff48b1da2cdbc808caf4edddea9d9d92ef0e65b15dd931c0e4a8b"
+            "checksum": "sha256:898a02407068f183e138fcbd7369db601f3c87dbc7a5ffa83be62dfbdd773518"
           }
         ],
         "schemas": [
@@ -4684,8 +4707,8 @@
             "renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-flows",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4884,7 +4907,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e669af080d068abc5f578c1a7c3333393f55a0cf7dbd2ae73baeee5bab1f5be5"
+        "artifact_checksum": "sha256:a2bf4241c0f4daa3435dfc41f93c58ac09950867e78e186a4456b5279f855984"
       },
       "repositories": [
         {
@@ -4992,6 +5015,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/analytics/migrations/0001_analytics.sql",
               "workers/analytics/migrations/0002_countly_capabilities.sql"
             ],
@@ -4999,7 +5023,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:cc3cbe73d3f977f3af4fbb31123c1aeec82dc6f05c6e1eb5e69ca29fc7efeddf"
+            "checksum": "sha256:d2d28765733d04999ae8b9c9aafc10077454ea386ac28146d75c88b189b273ca"
           },
           {
             "store_id": "supbrd-plugmod-analytics.store.events",
@@ -5009,6 +5033,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/analytics/migrations/0001_analytics.sql",
               "workers/analytics/migrations/0002_countly_capabilities.sql"
             ],
@@ -5016,7 +5041,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:0c94125cc8ace9d22ef5f8078e4b37b2b8fe57b486d36161e062dd84e3a8bda1"
+            "checksum": "sha256:a801679d501dc6db0ade62a87427d89ce077dbf895811668eaa7b8ea12248cb4"
           }
         ],
         "schemas": [
@@ -5210,8 +5235,8 @@
             "renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-analytics",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5580,7 +5605,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:9dd6323020779e0cef6b010eabc1f2ab54c8b124a71cc2f2ea222ee5e279c18d"
+        "artifact_checksum": "sha256:5d6453dfd5d1829941d4a1e3caad55423e4dd65209753dfe5bd7182752951fcf"
       },
       "repositories": [
         {
@@ -5692,6 +5717,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/marketing/migrations/0001_marketing.sql",
               "workers/marketing/migrations/0002_dashboard_contract.sql",
               "workers/marketing/migrations/0003_marketing_engine.sql",
@@ -5708,7 +5734,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:e261c98c5f1f6e751b14346522854792f4ab67d5fc771f574e3c95b469bd9029"
+            "checksum": "sha256:2633278f2186a5815e9f7113262c5fd4036a8434537cec559b0d3ab41623e1f8"
           },
           {
             "store_id": "supbrd-plugmod-marketing.store.consent",
@@ -5718,6 +5744,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/marketing/migrations/0001_marketing.sql",
               "workers/marketing/migrations/0002_dashboard_contract.sql",
               "workers/marketing/migrations/0003_marketing_engine.sql",
@@ -5734,7 +5761,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:1cca2766bbf2e6bb42d942915e7c68de29266e9f868222688138a3ff586ed199"
+            "checksum": "sha256:fb59e299fe6967b5ba0a5166e3779f05e25175885692487b3a14a8d509e9a8a2"
           },
           {
             "store_id": "supbrd-plugmod-marketing.store.journeys",
@@ -5744,6 +5771,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/marketing/migrations/0001_marketing.sql",
               "workers/marketing/migrations/0002_dashboard_contract.sql",
               "workers/marketing/migrations/0003_marketing_engine.sql",
@@ -5760,7 +5788,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:b19d989eb3c87986e235ae8b6cda79b64574fe60ec205810f6187c865fd2304f"
+            "checksum": "sha256:af383bb1ee5e78faa946eee275099ca24296bce04a807c2de78e74f3bf413771"
           }
         ],
         "schemas": [
@@ -5981,8 +6009,8 @@
             "renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-marketing",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6235,7 +6263,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:20b730ca03236b8e8159ec23b519ed2895f072c9a9095bb139063ace9664caa0"
+        "artifact_checksum": "sha256:01ef05ef7b8fb811aa2db7d6158d330d3d74942f1e22c7bc7ff62e83a9ad2669"
       },
       "repositories": [
         {
@@ -6391,6 +6419,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/email/migrations/0001_email.sql",
               "workers/email/migrations/0002_email_dead_letters.sql",
               "workers/email/migrations/0003_email_idempotency.sql",
@@ -6403,7 +6432,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:7bdb74216e1f0b63716fa8e37f1a4790c289cfc42357fcc53a33a022447c69af"
+            "checksum": "sha256:91b050db19260988a13e85cdb41d4c20b9bc4f8ee99b6d98c0734bab3e248f47"
           },
           {
             "store_id": "supbrd-plugmod-email.store.provider_events",
@@ -6413,6 +6442,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/email/migrations/0001_email.sql",
               "workers/email/migrations/0002_email_dead_letters.sql",
               "workers/email/migrations/0003_email_idempotency.sql",
@@ -6425,7 +6455,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:5b25f1aafed02349ca39cb4de94fa763306962700b5ae2f1bc163237b4bbab90"
+            "checksum": "sha256:3c216311f35ae0ad884f3e4fa72a4847e0a919dab8e0604351c32178305c68d5"
           }
         ],
         "schemas": [
@@ -6619,8 +6649,8 @@
             "renderer_id": "supbrd-plugmod-email.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-email",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6793,7 +6823,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:41ede5f66ce6ac04325bd19a633b53a9c7ada90eb64ac357a60d22e6bdfa86fc"
+        "artifact_checksum": "sha256:102a1a154d8ff9e01e0c163408c9f5446993436c1c9ea1e181c22cea743ea1d1"
       },
       "repositories": [
         {
@@ -6910,6 +6940,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/dynamic-links/migrations/0001_dynamic_links.sql",
               "workers/dynamic-links/migrations/0002_dynamic_links_domain.sql",
               "workers/dynamic-links/migrations/0003_campaign_analytics.sql"
@@ -6918,7 +6949,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:b0897eea0384c43ba83d307dc8396fc9a34e196dc2488a497f554b14da824081"
+            "checksum": "sha256:dee804028522c02da1746c464920d6899ae6928889ed8061151ba343bc23da06"
           },
           {
             "store_id": "supbrd-plugmod-dynamic-links.store.links",
@@ -6928,6 +6959,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/dynamic-links/migrations/0001_dynamic_links.sql",
               "workers/dynamic-links/migrations/0002_dynamic_links_domain.sql",
               "workers/dynamic-links/migrations/0003_campaign_analytics.sql"
@@ -6936,7 +6968,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:e113d6d98e7bca6b1e5ad720cad9691f2689c1561a8278dedacbcaaf8db8b83b"
+            "checksum": "sha256:6255a386471f553900b4a007561af661ddc3453b9773b0fc26e9d2644c4d023d"
           }
         ],
         "schemas": [
@@ -7130,8 +7162,8 @@
             "renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-dynamic-links",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7402,7 +7434,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:0b95718a3189f3b503bd5c8d0141d1473ca199d3fa8bc220c41a03b187375bb3"
+        "artifact_checksum": "sha256:db3b2baa0d8b0dc70c7eecbcfe2356ceed0e8858b35e581caf270c83f63718fe"
       },
       "repositories": [
         {
@@ -7511,13 +7543,14 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/files/migrations/0001_files.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:b6de21484c87b7a253e944789232abc0af87fa7466cc3815cb5790e5344994b5"
+            "checksum": "sha256:3ba9e6fad24c57c1a65528bef487bd9d6a4230843f252313c8d9e92d34b00367"
           },
           {
             "store_id": "supbrd-plugmod-files.store.tickets",
@@ -7527,13 +7560,14 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/files/migrations/0001_files.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:dff39bde5fa8d12cbf939ffad489ec0eebabc3af47f2703ff7bb908d78acf0f6"
+            "checksum": "sha256:99ee762209926bd5c967f655c1df22f53175dce99f490dae92380bf94e7988b9"
           }
         ],
         "schemas": [
@@ -7727,8 +7761,8 @@
             "renderer_id": "supbrd-plugmod-files.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-files",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7849,7 +7883,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c6850dfdafd3fb2a2608d2acf9215be2de1c66fa9f60e4405340b447e74f9a76"
+        "artifact_checksum": "sha256:287075cdf5c19381d04b58c4facc032ea6e7f4e8408a4cef10bcf3129f6691cd"
       },
       "repositories": [
         {
@@ -7961,6 +7995,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/paywalls/migrations/0001_paywalls.sql",
               "workers/paywalls/migrations/0002_paywalls_domain.sql",
               "workers/paywalls/migrations/0003_audit_context.sql"
@@ -7969,7 +8004,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:0599c8dbf5d230d5494ed1c6bae9b03f6767503182a1e859b07db7f1085b8dc7"
+            "checksum": "sha256:8476edf3e20917d5fd9f298f175837a7dc02e115c91b2a196899e117e356a766"
           },
           {
             "store_id": "supbrd-plugmod-paywalls.store.exposures",
@@ -7979,6 +8014,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/paywalls/migrations/0001_paywalls.sql",
               "workers/paywalls/migrations/0002_paywalls_domain.sql",
               "workers/paywalls/migrations/0003_audit_context.sql"
@@ -7987,7 +8023,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:e03f45d901d0105d13fe2275f793e2b6c6182e48bc36b7c0347eb4af29470ca0"
+            "checksum": "sha256:c799e4f9cf9e6e0c8fd54fe4d1e772ac95daa5a3d862b21e9e9e6f896dc5ce1e"
           }
         ],
         "schemas": [
@@ -8181,8 +8217,8 @@
             "renderer_id": "supbrd-plugmod-paywalls.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-paywalls",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8365,7 +8401,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:89c16d02313f363d8e71842871c1ad34eab3a808e6cab05a5d731baa596def87"
+        "artifact_checksum": "sha256:99af04bc6f28584280cc5c9f20920563eadf246d888093117a770eb903697c59"
       },
       "repositories": [
         {
@@ -8477,6 +8513,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/onboardings/migrations/0001_onboardings.sql",
               "workers/onboardings/migrations/0002_dashboard_contract.sql",
               "workers/onboardings/migrations/0003_full_onboardings.sql"
@@ -8485,7 +8522,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:2c441309929f2f37de45eaa14dbffb6eb56b289e9edbcf6aca96b7327ccd1ded"
+            "checksum": "sha256:b0fec48324a0578eff784d89bc80c7d649d4b9c100b90453808694b3770ca6e8"
           },
           {
             "store_id": "supbrd-plugmod-onboardings.store.progress",
@@ -8495,6 +8532,7 @@
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
               "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
               "workers/onboardings/migrations/0001_onboardings.sql",
               "workers/onboardings/migrations/0002_dashboard_contract.sql",
               "workers/onboardings/migrations/0003_full_onboardings.sql"
@@ -8503,7 +8541,7 @@
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:fe94a4940d1e14c6f03840847b92502d3edf08495243964731f8f06fb6df40a6"
+            "checksum": "sha256:2298406b48bd45e076587d9c15a746b48e4a07c67968eaef8ac992d018d853ee"
           }
         ],
         "schemas": [
@@ -8697,8 +8735,8 @@
             "renderer_id": "supbrd-plugmod-onboardings.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-onboardings",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8893,7 +8931,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:74953358fac6c33fa0b063dbe900e7ac4d7fe7574afc02786d4ab7fb3ebdaf21"
+        "artifact_checksum": "sha256:3573e2b9c882d9971a70a08799b2ffd48d5c3415aa74afbcdabdd4c41f30ff70"
       },
       "repositories": [
         {
@@ -9001,13 +9039,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:9a9dc3ab636e8c011ed4c4fb0b18c9e59c74bf819122ef9057decea2234719be"
+            "checksum": "sha256:027181bff0dcbce5dc68d3f6235df5cd2ebaf35175e5209e86ffb53133981a4d"
           }
         ],
         "schemas": [
@@ -9174,8 +9213,8 @@
             "renderer_id": "supbrd-plugmod-observability.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-observability",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9330,7 +9369,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:d812a54b1e00cb2ce297da1a1b2c047e632abcc912d57a987c399748d9843156"
+        "artifact_checksum": "sha256:8cddd5c5ce2183bc67579da1036e4419f8c4d4e859ce781e9df4a0846cd8a178"
       },
       "repositories": [
         {
@@ -9423,13 +9462,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:8b6671c3fde052a18e98661feb0112e98f8ce33bc273942d1ed3d25ab0c4b0be"
+            "checksum": "sha256:647be6c14b4d521fdab6dc26443231e7470cd549430d9b1aa8606f844758839f"
           },
           {
             "store_id": "supbrd-plugmod-mcp.store.tool_receipts",
@@ -9438,13 +9478,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:f7512c01fba3a61fdb5621012826a0d9ab1afbf85e26269de0f958cd3a1bb416"
+            "checksum": "sha256:8295cd74402380e8c1aaa46ae1ea6b2c3e32cff5c3e5932eea6045d4a76ea46d"
           }
         ],
         "schemas": [
@@ -9638,8 +9679,8 @@
             "renderer_id": "supbrd-plugmod-mcp.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-mcp",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9738,7 +9779,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c843ef1385b4154d0078ff83bd69eca1254622c295012134fb77f0d1e51f6d0e"
+        "artifact_checksum": "sha256:b6d2b8eb21e0aaff48a3c26b633e0da449f7eba992b49ad8f96e98ad5e9c8647"
       },
       "repositories": [
         {
@@ -9827,13 +9868,14 @@
             "schema_version": "1",
             "migrations": [
               "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql"
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:cb1246f63a160a0bcc5e925c3ccec40eb4974d60c8f4141e793158e45b072366"
+            "checksum": "sha256:db48d22cfb02ea54ccca3d6139913228405df83b96a685f3e387c9817e1f13cf"
           }
         ],
         "schemas": [
@@ -10000,8 +10042,8 @@
             "renderer_id": "supbrd-plugmod-custom-*.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-custom-*",
             "plugin_version": "1.0.0",
-            "build_id": "0FKXF57ECTVK3823CWSVQX5Z3N",
-            "build_checksum": "sha256:43a6db01147743ccaae72db06ff2907189d02776e124e61a79fffa1d2f96c7a9",
+            "build_id": "65XS6VYF330TWF4N56WM3J7WJV",
+            "build_checksum": "sha256:55cedc9d905abb19be7a13dc682ff851badf7c11c45ea37a1a58746868dba9b8",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10056,7 +10098,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:2ac813181baa7b40a1bee2ee13e7449453aaa797d1af1cd8841fda5152bb57bc"
+        "artifact_checksum": "sha256:3fdeb74d45d37ff579e3a2c5e630010f7a0c623fbe7b03cb36a0560ca1d5bf08"
       },
       "repositories": [
         {

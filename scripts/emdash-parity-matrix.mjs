@@ -10,7 +10,10 @@ const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0006_plugin_manifest_registry.sql");
+const manifestMigrationPath = join(
+	root,
+	"apps/site/migrations/0008_canonical_plugin_contracts.sql",
+);
 const PAGE_SUFFIX = "/page.tsx";
 const PAGE_SUFFIX_PATTERN = /\/page\.tsx$/u;
 const SUPPORT_OR_FLOWS_ROUTE_PATTERN = /\/(?:support|flows)(?:\/|$)/u;
@@ -937,6 +940,7 @@ function migrationInventory(pluginId) {
 	const migrations = [
 		"apps/site/migrations/0005_plugin_store_authority.sql",
 		"apps/site/migrations/0006_plugin_manifest_registry.sql",
+		"apps/site/migrations/0008_canonical_plugin_contracts.sql",
 	];
 	if (!worker) return migrations;
 	const directory = join(root, `workers/${worker}/migrations`);
