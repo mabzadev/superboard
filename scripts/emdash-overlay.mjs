@@ -347,7 +347,7 @@ export function renderGitignore(upstreamGitignore, overlay) {
 	const localLines = overlay.gitignore
 		.split("\n")
 		.filter((line) => line.trim() !== "/pnpm-lock.yaml" && line.trim() !== "pnpm-lock.yaml");
-	return `${upstreamGitignore.trimEnd()}\n!.dev.vars.example\n\n# SuperBoard overlay\n${localLines.join("\n").trim()}\npackage-lock.json\n`;
+	return `${upstreamGitignore.trimEnd()}\n!.dev.vars.example\n\n# SuperBoard overlay\n${localLines.join("\n").trim()}\npackage-lock.json\n!sdks/javascript/package-lock.json\n`;
 }
 
 export function isLintSourcePath(path) {
