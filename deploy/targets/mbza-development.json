@@ -166,11 +166,20 @@
   },
   "siteRuntime": {
     "workerLoaderBinding": "LOADER",
-    "crons": ["* * * * *"],
+    "crons": [
+      "* * * * *"
+    ],
     "observability": {
       "enabled": true,
-      "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true },
-      "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+      "logs": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "invocation_logs": true
+      },
+      "traces": {
+        "enabled": true,
+        "head_sampling_rate": 0.1
+      }
     }
   },
   "publicSurfaceMonitors": [
@@ -199,18 +208,18 @@
       },
       "siteD1": {
         "name": "superboard-dev-site-db",
-        "id": null
+        "id": "b00b7274-238a-4f5b-9fc3-d4321cf2a200"
       },
       "siteMedia": {
         "name": "superboard-dev-site-media"
       },
       "siteSessionKv": {
         "name": "superboard-dev-site-session",
-        "id": null
+        "id": "b0536cf4c0fe47c692259505e8d53b94"
       },
       "siteReleaseKv": {
         "name": "superboard-dev-site-last-verified-release",
-        "id": null
+        "id": "ffadd741c4c04996858667f26e4c2583"
       },
       "kv": {
         "name": "superboard-dev",
@@ -259,7 +268,7 @@
         },
         "support": {
           "name": "superboard-dev-support-v2-db",
-          "id": null
+          "id": "85f584b7-3d30-41b1-9e1f-8580ec2ea95e"
         },
         "analytics": {
           "name": "superboard-dev-analytics-db",

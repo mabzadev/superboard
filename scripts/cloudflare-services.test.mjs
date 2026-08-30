@@ -192,6 +192,60 @@ test("generated Site config uses only explicit target resources and keeps public
   }
 });
 
+test("development Site preview routing is explicit and cannot acquire the Dashboard domain", () => {
+	execFileSync(
+		process.execPath,
+		[
+			"scripts/cloudflare-config.mjs",
+			"--service",
+			"site",
+			"--target",
+			"mbza-development",
+			"--environment",
+			"development",
+			"--site-preview-route",
+		],
+		{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+	);
+	const config = JSON.parse(
+		readFileSync(
+			new URL(
+				"../deploy/generated/mbza-development-site-development.jsonc",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	);
+	assert.deepEqual(config.routes, [
+		{ pattern: "site.mbza.dev", custom_domain: true },
+	]);
+	assert.equal(
+		JSON.stringify(config.routes).includes("board.mbza.dev"),
+		false,
+	);
+
+	for (const extraArgs of [
+		["--target", "vocostar", "--environment", "production", "--allow-unprovisioned"],
+		["--target", "mbza-development", "--environment", "development", "--no-routes"],
+	]) {
+		assert.throws(
+			() =>
+				execFileSync(
+					process.execPath,
+					[
+						"scripts/cloudflare-config.mjs",
+						"--service",
+						"site",
+						"--site-preview-route",
+						...extraArgs,
+					],
+					{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+				),
+			/site-preview-route/u,
+		);
+	}
+});
+
 test("every D1 Worker receives the reviewed latest migration automatically", async () => {
   const targetName = "mbza-development";
   const environment = "development";

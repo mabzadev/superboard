@@ -126,6 +126,7 @@ if (service === "site") {
       targetName,
       "--environment",
       environment,
+      ...(args["site-preview-route"] ? ["--site-preview-route"] : []),
     ],
     targetCloudflareEnv,
   );
@@ -291,6 +292,7 @@ function generateServiceConfig() {
       "--environment",
       environment,
       ...(args["no-routes"] ? ["--no-routes"] : []),
+      ...(args["site-preview-route"] ? ["--site-preview-route"] : []),
       ...(args.preflight ? ["--preflight"] : []),
     ],
     targetCloudflareEnv,

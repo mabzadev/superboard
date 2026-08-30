@@ -200,4 +200,8 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
       ) > allowlistBootstrap,
   );
   assert.match(allowlist, /args\["no-routes"\].*\["--no-routes"\]/u);
+	assert.match(
+		deployService,
+		/args\["site-preview-route"\].*\["--site-preview-route"\]/su,
+	);
 });

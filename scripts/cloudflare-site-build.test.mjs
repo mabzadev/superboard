@@ -24,3 +24,29 @@ test("Site deployment uses the built Astro Wrangler artifact without claiming tr
 		/must keep release operations disabled/u,
 	);
 });
+
+test("Site deployment preserves only the explicitly approved development preview route", () => {
+	const config = {
+		$schema: "../../node_modules/wrangler/config-schema.json",
+		main: "../../apps/site/dist/server/entry.mjs",
+		assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
+		vars: { SUPERBOARD_RELEASE_OPERATIONS: "disabled" },
+		d1_databases: [{ binding: "DB", migrations_dir: "../../apps/site/migrations" }],
+		routes: [{ pattern: "site.mbza.dev", custom_domain: true }],
+	};
+	assert.deepEqual(
+		siteDeploymentArtifact(config, { previewHostname: "site.mbza.dev" }).routes,
+		[{ pattern: "site.mbza.dev", custom_domain: true }],
+	);
+	assert.throws(
+		() => siteDeploymentArtifact(config),
+		/must not acquire a public route/u,
+	);
+	assert.throws(
+		() =>
+			siteDeploymentArtifact(config, {
+				previewHostname: "board.mbza.dev",
+			}),
+		/approved preview hostname/u,
+	);
+});

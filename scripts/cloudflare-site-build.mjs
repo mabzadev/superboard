@@ -4,14 +4,28 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { parseArgs, root, targetSelectionFromArgs } from "./cloudflare-target.mjs";
+import {
+	loadTarget,
+	parseArgs,
+	root,
+	targetSelectionFromArgs,
+} from "./cloudflare-target.mjs";
 
-export function siteDeploymentArtifact(config) {
+export function siteDeploymentArtifact(config, { previewHostname = null } = {}) {
 	if (config?.vars?.SUPERBOARD_RELEASE_OPERATIONS !== "disabled") {
 		throw new Error("Site target builds must keep release operations disabled");
 	}
 	if (config?.routes) {
-		throw new Error("Site target builds must not acquire a public route");
+		if (!previewHostname) {
+			throw new Error("Site target builds must not acquire a public route");
+		}
+		if (
+			config.routes.length !== 1 ||
+			config.routes[0]?.pattern !== previewHostname ||
+			config.routes[0]?.custom_domain !== true
+		) {
+			throw new Error("Site target build does not match the approved preview hostname");
+		}
 	}
 	return {
 		...config,
@@ -28,6 +42,9 @@ export function siteDeploymentArtifact(config) {
 export async function buildSiteTarget(argv = process.argv.slice(2), execute = run) {
 	const args = parseArgs(argv);
 	const { targetName, environment } = await targetSelectionFromArgs(args);
+	const previewHostname = args["site-preview-route"]
+		? (await loadTarget(targetName)).target.domains.site
+		: null;
 	execute("pnpm", ["--dir", "apps/site", "run", "build"]);
 	execute(process.execPath, [
 		"scripts/cloudflare-config.mjs",
@@ -37,6 +54,7 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		targetName,
 		"--environment",
 		environment,
+		...(args["site-preview-route"] ? ["--site-preview-route"] : []),
 		...(args["allow-unprovisioned"] ? ["--allow-unprovisioned"] : []),
 	]);
 	const generatedPath = resolve(
@@ -46,7 +64,10 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 	);
 	const artifactPath = resolve(root, "apps/site/dist/server/wrangler.json");
 	const generated = JSON.parse(await readFile(generatedPath, "utf8"));
-	await writeFile(artifactPath, `${JSON.stringify(siteDeploymentArtifact(generated), null, 2)}\n`);
+	await writeFile(
+		artifactPath,
+		`${JSON.stringify(siteDeploymentArtifact(generated, { previewHostname }), null, 2)}\n`,
+	);
 	return artifactPath;
 }
 
