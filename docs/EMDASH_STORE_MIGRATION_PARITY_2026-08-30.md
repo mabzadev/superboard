@@ -55,9 +55,9 @@ node --test scripts/emdash-store-restore.test.mjs
 node --test scripts/module-cutover/*.test.mjs
 pnpm --filter @superboard/site test:runtime
 pnpm --dir sdks/javascript test
-pnpm --dir sdks/react-native test --runInBand --selectProjects plugin
-flutter test sdks/flutter/test/emdash_store_parity_test.dart
-flutter test sdks/flutterflow/test/emdash_store_parity_test.dart
+pnpm --dir sdks/react-native test --runInBand
+flutter --directory sdks/flutter test test/emdash_store_parity_test.dart
+flutter --directory sdks/flutterflow test test/emdash_store_parity_test.dart
 ```
 
 Les opérations de provisionnement distant, de domaine, de trafic et de mutation production restent hors périmètre de cette livraison.
