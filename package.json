@@ -122,7 +122,7 @@
 		"custom-vocostar:check": "pnpm run custom-vocostar:typecheck && pnpm run custom-vocostar:test",
 		"custom:check": "node scripts/custom-worker-check.mjs",
 		"custom:check:all": "node scripts/custom-worker-check.mjs --all",
-		"modules:lint": "for service in app products paywalls dynamic-links support analytics marketing onboardings flows; do pnpm --dir workers/$service run lint --if-present || exit 1; done",
+		"modules:lint": "for service in app products paywalls dynamic-links support analytics marketing onboardings flows; do pnpm --dir workers/$service run --if-present lint || exit 1; done",
 		"modules:types": "for service in app products paywalls dynamic-links support analytics marketing onboardings flows; do node scripts/cloudflare-types.mjs --service $service --reference --allow-disabled --allow-unprovisioned || exit 1; done",
 		"modules:typecheck": "for service in app products paywalls dynamic-links support analytics marketing onboardings flows; do pnpm --dir workers/$service run typecheck || exit 1; done",
 		"modules:test": "for service in app products paywalls dynamic-links support analytics marketing onboardings flows; do pnpm --dir workers/$service test || exit 1; done",
