@@ -190,6 +190,7 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
   api: Object.freeze([
     "JWT_SECRET",
     "MODULE_INTERNAL_TOKEN",
+    "SITE_OPERATOR_BRIDGE_TOKEN",
     "FLOWS_INTERNAL_TOKEN",
     "EMAIL_INTERNAL_TOKEN",
     "OPENGROW_CUTOVER_TOKEN",
@@ -216,7 +217,7 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
   site: Object.freeze([
     "EMDASH_ENCRYPTION_KEY",
     "SUPERBOARD_RELEASE_PRIVATE_JWK",
-    "MODULE_INTERNAL_TOKEN",
+    "SITE_OPERATOR_BRIDGE_TOKEN",
   ]),
   billing: Object.freeze([
     ...BILLING_SECRETS,

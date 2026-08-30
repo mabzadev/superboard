@@ -6,7 +6,7 @@ import { getAuthContext } from '../lib/auth';
 export async function authMiddleware(c: Context<{ Bindings: Env; Variables: AppVariables }>, next: Next) {
   const siteOperatorEmail = (c.req.header('X-SuperBoard-Site-Operator') || '').trim().toLowerCase();
   const siteOperatorToken = (c.req.header('X-SuperBoard-Internal-Token') || '').trim();
-  const expectedSiteToken = c.env.MODULE_INTERNAL_TOKEN?.trim() || '';
+  const expectedSiteToken = c.env.SITE_OPERATOR_BRIDGE_TOKEN?.trim() || '';
   if (
     siteOperatorEmail &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(siteOperatorEmail) &&

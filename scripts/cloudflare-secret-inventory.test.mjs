@@ -159,6 +159,15 @@ test("shared production contracts identify both ends and environment-specific bi
     false,
   );
   assert.equal(productionPlan.summary.overlapCapableContracts, 6);
+  assert.deepEqual(
+    developmentPlan.contracts
+      .find(({ id }) => id === "site-operator-bridge-token")
+      .members.map(({ service, name }) => ({ service, name })),
+    [
+      { service: "api", name: "SITE_OPERATOR_BRIDGE_TOKEN" },
+      { service: "site", name: "SITE_OPERATOR_BRIDGE_TOKEN" },
+    ],
+  );
   assert.equal(
     productionPlan.contracts
       .find(({ id }) => id === "module-internal-token")

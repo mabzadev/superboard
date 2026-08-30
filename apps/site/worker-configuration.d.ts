@@ -14,6 +14,7 @@ interface __BaseEnv_Env {
 	SUPERBOARD_RELEASE_OPERATIONS: string;
 	D1_EXPECTED_MIGRATION: string;
 	EMDASH_ENCRYPTION_KEY: string;
+	SITE_OPERATOR_BRIDGE_TOKEN: string;
 	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
@@ -27,7 +28,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_RELEASE_OPERATIONS" | "D1_EXPECTED_MIGRATION" | "EMDASH_ENCRYPTION_KEY">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_RELEASE_OPERATIONS" | "D1_EXPECTED_MIGRATION" | "EMDASH_ENCRYPTION_KEY" | "SITE_OPERATOR_BRIDGE_TOKEN">> {}
 }
 
 // Begin runtime types
@@ -14853,11 +14854,11 @@ declare namespace Cloudflare {
 	interface Env {
 	EMDASH_ENCRYPTION_KEY: string;
 	SUPERBOARD_RELEASE_PRIVATE_JWK?: string;
-	MODULE_INTERNAL_TOKEN: string;
+	SITE_OPERATOR_BRIDGE_TOKEN: string;
 	}
 }
 interface Env {
 	EMDASH_ENCRYPTION_KEY: string;
 	SUPERBOARD_RELEASE_PRIVATE_JWK?: string;
-	MODULE_INTERNAL_TOKEN: string;
+	SITE_OPERATOR_BRIDGE_TOKEN: string;
 }

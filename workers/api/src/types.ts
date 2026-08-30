@@ -35,6 +35,7 @@ interface ApiSecretEnv {
   OPENGROW_RELEASE?: string;
   PUBLIC_ROUTING_MODE?: "active" | "staged";
   MODULE_INTERNAL_TOKEN?: string;
+  SITE_OPERATOR_BRIDGE_TOKEN?: string;
   MODULE_INTERNAL_TOKEN_PREVIOUS?: string;
   FLOWS_INTERNAL_TOKEN?: string;
   EMAIL_INTERNAL_TOKEN?: string;

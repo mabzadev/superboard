@@ -18,7 +18,7 @@ test("proxies an operator request through the private API binding without leakin
 			body: JSON.stringify({ name: "Weekly" }),
 		}),
 		operator_email: "MABZADEV@GMAIL.COM",
-		env: { API_SERVICE: { fetch }, MODULE_INTERNAL_TOKEN: "module-secret" },
+		env: { API_SERVICE: { fetch }, SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret" },
 	});
 	expect(response.status).toBe(200);
 	const forwarded = fetch.mock.calls[0]?.[0] as Request;
@@ -26,7 +26,7 @@ test("proxies an operator request through the private API binding without leakin
 	expect(forwarded.headers.get("Cookie")).toBeNull();
 	expect(forwarded.headers.get("Authorization")).toBeNull();
 	expect(forwarded.headers.get("X-SuperBoard-Site-Operator")).toBe("mabzadev@gmail.com");
-	expect(forwarded.headers.get("X-SuperBoard-Internal-Token")).toBe("module-secret");
+	expect(forwarded.headers.get("X-SuperBoard-Internal-Token")).toBe("site-bridge-secret");
 });
 
 test("fails closed without a private binding, token or same-origin mutation", async () => {
@@ -46,7 +46,7 @@ test("fails closed without a private binding, token or same-origin mutation", as
 			operator_email: "mabzadev@gmail.com",
 			env: {
 				API_SERVICE: { fetch: vi.fn() },
-				MODULE_INTERNAL_TOKEN: "module-secret",
+				SITE_OPERATOR_BRIDGE_TOKEN: "site-bridge-secret",
 			},
 		}),
 	).resolves.toMatchObject({ status: 403 });

@@ -1,6 +1,6 @@
 interface OperatorApiProxyEnv {
 	API_SERVICE?: { fetch(request: Request): Promise<Response> };
-	MODULE_INTERNAL_TOKEN?: string;
+	SITE_OPERATOR_BRIDGE_TOKEN?: string;
 }
 
 export async function proxyOperatorApiRequest(input: {
@@ -12,7 +12,7 @@ export async function proxyOperatorApiRequest(input: {
 	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) {
 		return errorResponse(401, "OPERATOR_IDENTITY_INVALID");
 	}
-	const token = input.env.MODULE_INTERNAL_TOKEN?.trim();
+	const token = input.env.SITE_OPERATOR_BRIDGE_TOKEN?.trim();
 	if (!input.env.API_SERVICE || !token) {
 		return errorResponse(503, "GATEWAY_BRIDGE_UNAVAILABLE");
 	}

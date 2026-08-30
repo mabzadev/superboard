@@ -39,11 +39,11 @@ describe('Site operator bridge authentication', () => {
     const response = await app.request('/actor', {
       headers: {
         'X-SuperBoard-Site-Operator': 'mabzadev@gmail.com',
-        'X-SuperBoard-Internal-Token': 'module-secret',
+        'X-SuperBoard-Internal-Token': 'site-bridge-secret',
       },
     }, {
       CREDENTIAL_KEY_SCOPE: 'api',
-      MODULE_INTERNAL_TOKEN: 'module-secret',
+      SITE_OPERATOR_BRIDGE_TOKEN: 'site-bridge-secret',
       DB: { prepare },
     });
     expect(response.status).toBe(200);
@@ -62,7 +62,7 @@ describe('Site operator bridge authentication', () => {
       },
     }, {
       CREDENTIAL_KEY_SCOPE: 'api',
-      MODULE_INTERNAL_TOKEN: 'module-secret',
+      SITE_OPERATOR_BRIDGE_TOKEN: 'site-bridge-secret',
       DB: {},
     });
     expect(response.status).toBe(401);

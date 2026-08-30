@@ -74,6 +74,7 @@ export function requiredSecretInventory(target, environment) {
   const api = [
     "JWT_SECRET",
     "MODULE_INTERNAL_TOKEN",
+    "SITE_OPERATOR_BRIDGE_TOKEN",
     "EMAIL_INTERNAL_TOKEN",
     "OPENGROW_CUTOVER_TOKEN",
     "PUSH_PROCESS_KEY",
@@ -92,7 +93,7 @@ export function requiredSecretInventory(target, environment) {
   }
   add("api", api, apiAlternatives);
   add("dashboard", ["CLIENT_SECRET"]);
-  add("site", ["EMDASH_ENCRYPTION_KEY"]);
+  add("site", ["EMDASH_ENCRYPTION_KEY", "SITE_OPERATOR_BRIDGE_TOKEN"]);
   if (target.features?.billing)
     add(
       "billing",
@@ -308,6 +309,17 @@ export function secretCoordinationPlan(target, environment) {
             "INTERNAL_API_TOKEN_PREVIOUS",
           ),
       ),
+    ],
+  });
+  addContract({
+    id: "site-operator-bridge-token",
+    scope: "platform-common",
+    source: "generated-shared-random",
+    sameValueRequired: true,
+    rotation: "deploy-api-consumer-before-site-producer",
+    members: [
+      exactMember("api", "SITE_OPERATOR_BRIDGE_TOKEN"),
+      exactMember("site", "SITE_OPERATOR_BRIDGE_TOKEN"),
     ],
   });
   addContract({
