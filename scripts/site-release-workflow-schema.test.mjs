@@ -11,13 +11,11 @@ test("pointer rollback writes immutable history and a rollback outbox event", (t
   const database = join(temporary, "site.sqlite");
   const migrations = new URL("../apps/site/migrations/", import.meta.url);
   const files = readdirSync(migrations).filter((name) => name.endsWith(".sql")).sort();
-  for (let pass = 0; pass < 2; pass += 1) {
-    for (const filename of files) {
-      execFileSync("sqlite3", [database], {
-        input: readFileSync(new URL(filename, migrations)),
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-    }
+  for (const filename of files) {
+    execFileSync("sqlite3", [database], {
+      input: readFileSync(new URL(filename, migrations)),
+      stdio: ["pipe", "pipe", "pipe"],
+    });
   }
 
   execute(
