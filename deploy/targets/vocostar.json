@@ -328,7 +328,8 @@
     }
   ],
   "operator": {
-    "docsUrl": "https://github.com/mabzadev/superboard/tree/main/docs"
+    "docsUrl": "https://github.com/mabzadev/superboard/tree/main/docs",
+    "email": "mabzadev@gmail.com"
   },
   "environments": {
     "production": {

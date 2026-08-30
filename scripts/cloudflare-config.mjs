@@ -251,6 +251,13 @@ function siteConfig() {
     ],
     worker_loaders: [{ binding: target.siteRuntime.workerLoaderBinding }],
     images: { binding: "IMAGES" },
+    send_email: [
+      {
+        name: "EMAIL",
+        allowed_destination_addresses: [target.operator.email],
+        allowed_sender_addresses: [target.mail.fromAddress],
+      },
+    ],
     ...(sitePreviewRoute ? { routes: sitePreviewRoute.routes } : {}),
     ...(preflight ? {} : { triggers: { crons: [...target.siteRuntime.crons] } }),
     observability: target.siteRuntime.observability,

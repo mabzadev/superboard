@@ -137,8 +137,6 @@ export function createCloudflareEmailDeliver(
 		});
 
 		ctx.log.info("email delivered via Cloudflare Email Sending", {
-			to: message.to,
-			subject: message.subject,
 			messageId: result?.messageId,
 		});
 	};

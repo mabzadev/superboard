@@ -81,12 +81,13 @@ describe("createPlugin()", () => {
 describe("createCloudflareEmailDeliver()", () => {
 	it("sends through the binding with from/replyTo applied", async () => {
 		const { env, send } = fakeEnv();
+		const ctx = fakeCtx();
 		const deliver = createCloudflareEmailDeliver(
 			{ from: { email: "cms@mails.example.com", name: "CMS" }, replyTo: "hello@example.com" },
 			async () => env,
 		);
 
-		await deliver(event, fakeCtx());
+		await deliver(event, ctx);
 
 		expect(send).toHaveBeenCalledWith({
 			from: { email: "cms@mails.example.com", name: "CMS" },
@@ -95,6 +96,7 @@ describe("createCloudflareEmailDeliver()", () => {
 			text: "Click here",
 			replyTo: "hello@example.com",
 		});
+		expect(JSON.stringify(vi.mocked(ctx.log.info).mock.calls)).not.toContain("user@example.com");
 	});
 
 	it("accepts a bare string from and omits optional fields", async () => {

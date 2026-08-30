@@ -311,6 +311,7 @@ npm run target:register -- \
   --max-file-bytes 20971520 \
   --allowed-file-content-types application/pdf,image/png,text/plain \
   --operator-docs-url https://github.com/example/superboard/tree/dev/docs \
+  --operator-email operator@sample.dev \
   --operator-support-email support@sample.dev \
   --application-web-origins https://reference.sample.dev \
   --auth-gateway-issuer https://auth.sample.dev \

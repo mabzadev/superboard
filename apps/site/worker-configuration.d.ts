@@ -6,6 +6,7 @@ interface __BaseEnv_Env {
 	RELEASE_CACHE: KVNamespace;
 	MEDIA: R2Bucket;
 	DB: D1Database;
+	EMAIL: SendEmail;
 	LOADER: WorkerLoader;
 	IMAGES: ImagesBinding;
 	ASSETS: Fetcher;

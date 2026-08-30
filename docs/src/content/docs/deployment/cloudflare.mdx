@@ -392,6 +392,12 @@ notifications — fail with **"Email is not configured"** in production. The
 [Cloudflare Email Sending](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/)
 using a native `send_email` Worker binding, with no external API keys.
 
+When this provider is present during first-run setup, the administrator can be
+created by email instead of by passkey. EmDash sends a single-use verification
+link that expires after 15 minutes and creates the administrator only after the
+recipient opens it. Later magic-link sign-ins also provide the recent
+reauthentication required by sensitive administrator operations.
+
 ### 1. Onboard a sender domain
 
 In the Cloudflare dashboard, go to **Email** and verify the domain (or address)

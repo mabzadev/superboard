@@ -302,9 +302,13 @@
     "operator": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["docsUrl"],
+      "required": ["docsUrl", "email"],
       "properties": {
         "docsUrl": { "type": "string", "pattern": "^https://[^\\s]+$" },
+        "email": {
+          "type": "string",
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        },
         "supportEmail": {
           "type": "string",
           "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"

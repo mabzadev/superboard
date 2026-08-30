@@ -250,9 +250,37 @@ interface AuthMethodStepProps {
 function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 	const { t } = useLingui();
 	const [activeProvider, setActiveProvider] = React.useState<string | null>(null);
+	const [emailSent, setEmailSent] = React.useState(false);
+	const emailSetup = useMutation({
+		mutationFn: async () => {
+			const response = await apiFetch("/_emdash/api/setup/admin/email", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(adminData),
+			});
+			return parseApiResponse<{ success: boolean; emailSent: boolean }>(
+				response,
+				t`Failed to send setup email`,
+			);
+		},
+		onSuccess: () => setEmailSent(true),
+	});
 
 	const buttonProviders = providers.filter((p) => p.LoginButton);
 	const hasProviders = buttonProviders.length > 0;
+	if (emailSent) {
+		return (
+			<div className="space-y-4 text-center">
+				<h3 className="text-lg font-medium">{t`Check your email`}</h3>
+				<p className="text-sm text-kumo-subtle">
+					{t`We sent a verification link to ${adminData.email}. Open it to create the administrator account and finish setup.`}
+				</p>
+				<Button type="button" variant="ghost" onClick={() => emailSetup.mutate()}>
+					{emailSetup.isPending ? t`Sending...` : t`Send another link`}
+				</Button>
+			</div>
+		);
+	}
 
 	// Show provider form (full card replacement)
 	if (activeProvider) {
@@ -299,18 +327,29 @@ function AuthMethodStep({ adminData, providers, onBack }: AuthMethodStepProps) {
 				additionalData={{ ...adminData }}
 			/>
 
+			<div className="relative">
+				<div className="absolute inset-0 flex items-center">
+					<span className="w-full border-t" />
+				</div>
+				<div className="relative flex justify-center text-xs uppercase">
+					<span className="bg-kumo-base px-2 text-kumo-subtle">{t`Or continue with`}</span>
+				</div>
+			</div>
+
+			<Button
+				type="button"
+				variant="secondary"
+				className="w-full justify-center"
+				disabled={emailSetup.isPending}
+				onClick={() => emailSetup.mutate()}
+			>
+				{emailSetup.isPending ? t`Sending...` : t`Send a sign-in link by email`}
+			</Button>
+			{emailSetup.error && <p className="text-sm text-kumo-danger">{emailSetup.error.message}</p>}
+
 			{/* Auth provider options */}
 			{hasProviders && (
 				<>
-					<div className="relative">
-						<div className="absolute inset-0 flex items-center">
-							<span className="w-full border-t" />
-						</div>
-						<div className="relative flex justify-center text-xs uppercase">
-							<span className="bg-kumo-base px-2 text-kumo-subtle">{t`Or continue with`}</span>
-						</div>
-					</div>
-
 					<div
 						className={`grid gap-3 ${buttonProviders.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
 					>

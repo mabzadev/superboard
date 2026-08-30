@@ -35,6 +35,17 @@ export function siteDeploymentArtifact(config, { previewHostname = null } = {}) 
 	};
 }
 
+export function siteEmailBuildEnvironment(target, env = process.env) {
+	return {
+		...env,
+		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: target.mail.fromAddress,
+		SUPERBOARD_SITE_EMAIL_FROM_NAME: target.mail.fromName,
+		...(target.mail.replyToAddress
+			? { SUPERBOARD_SITE_EMAIL_REPLY_TO: target.mail.replyToAddress }
+			: {}),
+	};
+}
+
 export async function buildSiteTarget(argv = process.argv.slice(2), execute = run) {
 	const args = parseArgs(argv);
 	const { targetName, environment } = await targetSelectionFromArgs(args);
@@ -45,7 +56,8 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		environment,
 		hostname: target.domains.site,
 	});
-	execute("pnpm", ["--dir", "apps/site", "run", "build"]);
+	const siteBuildEnvironment = siteEmailBuildEnvironment(target);
+	execute("pnpm", ["--dir", "apps/site", "run", "build"], siteBuildEnvironment);
 	execute(process.execPath, [
 		"scripts/cloudflare-config.mjs",
 		"--service",
@@ -77,9 +89,10 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 	return artifactPath;
 }
 
-function run(command, args) {
+function run(command, args, env = process.env) {
 	const result = spawnSync(command, args, {
 		cwd: root,
+		env,
 		stdio: "inherit",
 		shell: false,
 	});

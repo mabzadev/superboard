@@ -152,8 +152,15 @@ test("generated Site config uses only explicit target resources and keeps public
       target.siteRuntime.workerLoaderBinding,
     );
     assert.deepEqual(config.triggers, { crons: target.siteRuntime.crons });
-    assert.deepEqual(config.observability, target.siteRuntime.observability);
-    assert.equal(config.routes, undefined);
+		assert.deepEqual(config.observability, target.siteRuntime.observability);
+		assert.deepEqual(config.send_email, [
+			{
+				name: "EMAIL",
+				allowed_destination_addresses: [target.operator.email],
+				allowed_sender_addresses: [target.mail.fromAddress],
+			},
+		]);
+		assert.equal(config.routes, undefined);
 
     execFileSync(
       process.execPath,

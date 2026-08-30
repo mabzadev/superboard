@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { siteDeploymentArtifact } from "./cloudflare-site-build.mjs";
+import { siteDeploymentArtifact, siteEmailBuildEnvironment } from "./cloudflare-site-build.mjs";
+import { loadTarget } from "./cloudflare-target.mjs";
 
 test("Site deployment uses the built Astro Wrangler artifact without claiming traffic", () => {
 	const artifact = siteDeploymentArtifact({
@@ -46,3 +47,21 @@ test("Site deployment preserves only the explicitly approved development preview
 		/approved preview hostname/u,
 	);
 });
+
+test("Site email plugin build settings come from the selected target", async () => {
+	const development = (await loadTarget("mbza-development")).target;
+	const production = (await loadTarget("vocostar")).target;
+	expectSiteEmailEnvironment(siteEmailBuildEnvironment(development, {}), {
+		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mbza.dev",
+		SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard Development",
+		SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mbza.dev",
+	});
+	expectSiteEmailEnvironment(siteEmailBuildEnvironment(production, {}), {
+		SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@vocostar.com",
+		SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard",
+	});
+});
+
+function expectSiteEmailEnvironment(actual, expected) {
+	assert.deepEqual(actual, expected);
+}

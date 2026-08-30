@@ -107,6 +107,12 @@ describe("core media route injection", () => {
 		expect(routes).toContain("/sitemap-[collection].xml");
 	});
 
+	it("injects email-verified administrator setup routes", () => {
+		const routes = collectRoutePatterns();
+		expect(routes).toContain("/_emdash/api/setup/admin/email");
+		expect(routes).toContain("/_emdash/api/setup/admin/email/verify");
+	});
+
 	it("skips root SEO routes that are defined by the site", async () => {
 		await withTempSrcDir(
 			{

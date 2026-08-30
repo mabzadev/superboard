@@ -213,6 +213,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
     },
     operator: {
       docsUrl: args["operator-docs-url"],
+      email: args["operator-email"],
       ...(args["operator-support-email"]
         ? { supportEmail: args["operator-support-email"] }
         : {}),

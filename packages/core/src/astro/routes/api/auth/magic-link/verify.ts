@@ -41,6 +41,10 @@ export const GET: APIRoute = async ({ url, locals, session, redirect }) => {
 		// Create session
 		if (session) {
 			session.set("user", { id: user.id });
+			session.set("strongReauthentication", {
+				userId: user.id,
+				verifiedAt: new Date().toISOString(),
+			});
 		}
 
 		// Check for a stored redirect URL (from original request)

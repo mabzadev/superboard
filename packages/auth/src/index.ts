@@ -83,6 +83,15 @@ export {
 	type MagicLinkConfig,
 } from "./magic-link/index.js";
 
+// Email-verified initial administrator setup
+export {
+	requestAdminEmailSetup,
+	completeAdminEmailSetup,
+	AdminEmailSetupError,
+	type AdminEmailSetupConfig,
+	type AdminEmailSetupSendFn,
+} from "./setup-email.js";
+
 // Invite
 export {
 	createInvite,

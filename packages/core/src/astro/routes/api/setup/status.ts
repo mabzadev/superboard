@@ -72,7 +72,7 @@ export const GET: APIRoute = async ({ locals }) => {
 		if (setupState) {
 			try {
 				const state = JSON.parse(setupState.value);
-				if (state.step === "admin") {
+				if (state.step === "admin" || state.step === "admin_email") {
 					step = "admin";
 				} else if (state.step === "site") {
 					step = "site";

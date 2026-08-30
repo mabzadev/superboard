@@ -939,6 +939,16 @@ export function injectCoreRoutes(
 	});
 
 	injectRoute({
+		pattern: "/_emdash/api/setup/admin/email",
+		entrypoint: resolveRoute("api/setup/admin-email.ts"),
+	});
+
+	injectRoute({
+		pattern: "/_emdash/api/setup/admin/email/verify",
+		entrypoint: resolveRoute("api/setup/admin-email-verify.ts"),
+	});
+
+	injectRoute({
 		pattern: "/_emdash/api/setup/dev-bypass",
 		entrypoint: resolveRoute("api/setup/dev-bypass.ts"),
 	});
