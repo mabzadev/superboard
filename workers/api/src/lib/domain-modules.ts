@@ -134,8 +134,8 @@ export async function proxyDomainModule(
 
 /**
  * Keep legacy dashboard contracts alive without keeping their Workers active.
- * MBZA forwards these routes to Flows; a target such as VocoStar that has not
- * cut over yet keeps using its original service binding.
+ * Development forwards these routes to Flows; a target that has not cut over
+ * yet keeps using its original service binding.
  */
 export async function proxyLegacyDomainModule(
   c: GatewayContext,
