@@ -33,6 +33,15 @@ describe("supbrd-plug-user", () => {
 		).toBe(true);
 	});
 
+	test("rejects unknown fields inside contribution descriptors", async () => {
+		const openContribution = structuredClone(userPluginManifest);
+		Object.assign(openContribution.stores[0]!, { undeclared_policy: "allow" });
+		expect(await validateUserPluginManifest(openContribution)).toMatchObject({
+			valid: false,
+			errors: expect.arrayContaining(["CONTRIBUTION_NOT_CLOSED"]),
+		});
+	});
+
 	test("renders passkey, profile and member data through validated props", () => {
 		const login = mountUserRenderer({
 			renderer_id: USER_RENDERER_IDS.login,

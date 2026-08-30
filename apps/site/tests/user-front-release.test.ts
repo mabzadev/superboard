@@ -3,10 +3,13 @@ import {
 	compileFrontRelease,
 	resolveFrontRequest,
 } from "@superboard/supbrd-core";
+import { createHash } from "node:crypto";
+import { readFile, readdir } from "node:fs/promises";
 import { expect, test } from "vitest";
 
 import {
 	CORE_ADMIN_SHELL_DESCRIPTOR,
+	SUPBRD_CORE_ARTIFACT_CHECKSUM,
 	composeUserFrontReleaseInput,
 	visibleUserNavigation,
 } from "../src/lib/user-front-release.js";
@@ -70,4 +73,24 @@ test("rejects an ABI-incompatible EmDash admin root descriptor", () => {
 			{ abi_version: "1.0.0", runtime_version: "0.1.0" },
 		),
 	).toThrow(/compatibility rejected/u);
+});
+
+test("pins the real admin shell and Core source artifacts", async () => {
+	const shellSource = await readFile(new URL("../src/components/FrontPage.astro", import.meta.url));
+	expect(`sha256:${createHash("sha256").update(shellSource).digest("hex")}`).toBe(
+		CORE_ADMIN_SHELL_DESCRIPTOR.build_checksum,
+	);
+
+	const coreDirectory = new URL("../../../packages/supbrd-core/src/", import.meta.url);
+	const names = (await readdir(coreDirectory))
+		.filter((name) => name.endsWith(".ts") || name.endsWith(".js"))
+		.toSorted();
+	const coreHash = createHash("sha256");
+	for (const name of names) {
+		coreHash.update(name);
+		coreHash.update("\0");
+		coreHash.update(await readFile(new URL(name, coreDirectory)));
+		coreHash.update("\0");
+	}
+	expect(`sha256:${coreHash.digest("hex")}`).toBe(SUPBRD_CORE_ARTIFACT_CHECKSUM);
 });

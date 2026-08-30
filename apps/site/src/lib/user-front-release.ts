@@ -1,7 +1,5 @@
 import {
 	REQUIRED_FRONT_STATES,
-	compileFrontRelease,
-	resolveFrontRequest,
 	sha256Canonical,
 } from "@superboard/supbrd-core";
 import type { FrontReleaseInput, FrontState, RendererDescriptor } from "@superboard/supbrd-core";
@@ -9,15 +7,17 @@ import { USER_RENDERER_IDS, userPluginManifest } from "@superboard/supbrd-plug-u
 
 import { USER_FRONT_CATALOGS } from "./user-front-i18n.js";
 
+export const CORE_ADMIN_SHELL_BUILD_CHECKSUM =
+	"sha256:2a4948fa1c9ccfb2e9488a1e9ade131e6775f8a5f0eb773d45a9cc44b5dd6ffd";
+export const SUPBRD_CORE_ARTIFACT_CHECKSUM =
+	"sha256:5d46c1cf733d58f282c82cb145f7731cf7cb422ef8f8c9eb4260b43ae7203547";
+
 export const CORE_ADMIN_SHELL_DESCRIPTOR: RendererDescriptor = {
 	renderer_id: "emdash.core.renderer.admin_shell",
 	plugin_id: "supbrd-core",
 	plugin_version: "0.1.0",
 	build_id: "01J00000000000000000000243",
-	build_checksum: await sha256Canonical({
-		compile_front_release: compileFrontRelease.toString(),
-		resolve_front_request: resolveFrontRequest.toString(),
-	}),
+	build_checksum: CORE_ADMIN_SHELL_BUILD_CHECKSUM,
 	abi_version: "1.0.0",
 	runtime_range: ">=0.1.0 <0.2.0",
 	props_schema: {
@@ -104,7 +104,7 @@ export async function composeUserFrontReleaseInput(input: {
 		},
 		renderers: userPluginManifest.renderers,
 		plugin_lock: [
-			{ plugin_id: "supbrd-core", version: "0.1.0", artifact_checksum: CORE_ADMIN_SHELL_DESCRIPTOR.build_checksum, native: true },
+			{ plugin_id: "supbrd-core", version: "0.1.0", artifact_checksum: SUPBRD_CORE_ARTIFACT_CHECKSUM, native: true },
 			{ plugin_id: userPluginManifest.plugin_id, version: userPluginManifest.plugin_version, artifact_checksum: userPluginManifest.artifact_checksum, native: false },
 		],
 		dependency_policies: [{ dependency_id: "dependency.supbrd_plug_user", kind: "required", minimum_version: userPluginManifest.plugin_version, activation_policy: "ready", runtime_failure_policy: "unavailable", fallback_dependency_id: null }],

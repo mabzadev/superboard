@@ -6,6 +6,7 @@ import {
 } from "@superboard/supbrd-plug-user";
 import {
 	createUserFrontI18n,
+	resolveUserFrontLocale,
 	type UserFrontLocale,
 	type UserFrontMessageId,
 } from "../lib/user-front-i18n.js";
@@ -17,7 +18,7 @@ interface Props {
 const { model } = Astro.props;
 const previewTheme = Astro.url.searchParams.get("theme") === "light" ? "light" : "dark";
 const requestedLocale = Astro.url.searchParams.get("lang") ?? Astro.request.headers.get("accept-language") ?? "en";
-const locale: UserFrontLocale = requestedLocale.toLowerCase().startsWith("fr") ? "fr" : "en";
+const locale: UserFrontLocale = resolveUserFrontLocale(requestedLocale);
 const i18n = createUserFrontI18n(locale);
 const message = (id: UserFrontMessageId) => i18n._(id);
 const localizedPageTitle = model.page_title && i18n.messages[model.page_title]
@@ -152,10 +153,10 @@ const stateTitle = {
 						</>
 					)}
 					<div class="meta">
-						<span>instance={model.instance_id}</span>
-						<span>state={resolution.result}</span>
-						{releaseId && <span>release={releaseId}</span>}
-						{model.release && <span>source={model.release.source}</span>}
+						<span>{message("site.meta.instance")}={model.instance_id}</span>
+						<span>{message("site.meta.state")}={resolution.result}</span>
+						{releaseId && <span>{message("site.meta.release")}={releaseId}</span>}
+						{model.release && <span>{message("site.meta.source")}={model.release.source}</span>}
 					</div>
 				</section>
 			</main>

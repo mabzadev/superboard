@@ -4,19 +4,35 @@ import { hasPermission } from "@emdash-cms/auth";
 import { candidateEvidence, loadFrontPreview } from "../../../lib/front-workflow-repository.js";
 import { resolvePreviewFrontPage } from "../../../lib/front-page.js";
 import { getSiteEnv } from "../../../lib/site-env.js";
+import {
+	resolveUserFrontLocale,
+	userFrontMessage,
+} from "../../../lib/user-front-i18n.js";
 
 export const prerender = false;
 
 const env = getSiteEnv();
+const previewLocale = resolveUserFrontLocale(Astro.request.headers.get("accept-language"));
+Astro.response.headers.set("Content-Language", previewLocale);
+void userFrontMessage;
 if (!hasPermission(Astro.locals.user, "settings:manage")) {
-	return new Response("Operator session required", { status: Astro.locals.user ? 403 : 401 });
+	return new Response(userFrontMessage(previewLocale, "site.preview.operator_required"), {
+		status: Astro.locals.user ? 403 : 401,
+	});
 }
 const previewId = Astro.params.previewId ?? "";
 const preview = await loadFrontPreview(env.DB, previewId, new Date().toISOString());
-if (!preview) return new Response("Preview not found or expired", { status: 404 });
+if (!preview) {
+	return new Response(userFrontMessage(previewLocale, "site.preview.not_found"), {
+		status: 404,
+	});
+}
 const evidence = await candidateEvidence(env.DB, preview.candidate);
 if (evidence.signing_key_status !== "active" || !evidence.verification.valid) {
-	return new Response("Preview verification failed", { status: 409 });
+	return new Response(
+		userFrontMessage(previewLocale, "site.preview.verification_failed"),
+		{ status: 409 },
+	);
 }
 const requestedPath = `/${Astro.params.path ?? ""}`;
 const model = await resolvePreviewFrontPage(

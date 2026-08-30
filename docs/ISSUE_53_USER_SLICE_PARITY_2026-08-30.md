@@ -14,7 +14,7 @@ Cette note lie la Release Front de l’issue #53 aux comportements historiques E
 ## Propriétés vérifiées
 
 - `supbrd-plug-user` exporte des contributions, jamais une URL, une page ou une navigation finale. Les quatre routes et leur Présentation sont composées par la Release Front.
-- Le SuperBoard Plugin Manifest utilise le contrat fermé commun de `supbrd-core`. Les checksums des Command, Data Source, Schema et Store Descriptors sont calculés sur leur contenu JSON canonique. Chaque checksum de Renderer inclut la source de sa fonction de rendu et le checksum de son props schema exact. Le checksum d’artefact du plugin couvre le manifest et les trois implémentations de rendu ; le lock Core couvre les implémentations de compilation et de résolution réellement chargées.
+- Le SuperBoard Plugin Manifest utilise le contrat fermé commun de `supbrd-core`. Les checksums des Command, Data Source, Schema et Store Descriptors sont calculés sur leur contenu JSON canonique. Chaque checksum de Renderer inclut la source de sa fonction de rendu et le checksum de son props schema exact. Le checksum d’artefact du plugin couvre le manifest et les trois implémentations de rendu. Le descriptor du shell est lié aux octets de `FrontPage.astro`; le lock Core est lié à l’ensemble trié des fichiers source de `packages/supbrd-core/src`. Un test recalcule ces deux empreintes depuis les fichiers réels.
 - Les trois renderers passent par une registry typée unique. Les props de login, profil et membres sont discriminées par `kind`; aucun routage par suffixe d’identifiant n’est utilisé.
 - Les messages du plugin sont fournis en anglais et en français. La Release transporte les deux catalogues.
 - Un crash d’un renderer de plugin retourne l’état isolé `error`. Une ABI incompatible du vrai descriptor `emdash.core.renderer.admin_shell` refuse le montage racine.
@@ -33,7 +33,7 @@ Le test échoue si les Validation Receipts ne sont pas tous `passed`, si l’app
 
 ## Preuve visuelle locale
 
-Les huit PNG versionnés sous `apps/site/tests/visual/` proviennent des quatre routes runtime réelles, chacune en thème light et dark :
+Les huit PNG de preuve versionnés sous `docs/evidence/issue-53/` proviennent des quatre routes runtime réelles, chacune en thème light et dark. Ils documentent cette livraison et ne constituent pas des baselines de snapshots visuels CI :
 
 - `user-slice-login-{light,dark}.png` depuis `/login`, sans session ;
 - `user-slice-app-{light,dark}.png` depuis `/app` ;

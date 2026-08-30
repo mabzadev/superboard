@@ -27,6 +27,13 @@ export const USER_FRONT_CATALOGS = {
 		"site.front.dependency_unavailable": "Dependency unavailable",
 		"site.front.fail_closed": "Fail-closed runtime state",
 		"site.front.fail_closed_description": "No unverified draft or partial release is rendered. EmDash Admin remains available to repair and publish a complete Front Release.",
+		"site.preview.operator_required": "Operator session required",
+		"site.preview.not_found": "Preview not found or expired",
+		"site.preview.verification_failed": "Preview verification failed",
+		"site.meta.instance": "instance",
+		"site.meta.state": "state",
+		"site.meta.release": "release",
+		"site.meta.source": "source",
 	},
 	fr: {
 		"user.page.sign_in": "Connexion",
@@ -54,6 +61,13 @@ export const USER_FRONT_CATALOGS = {
 		"site.front.dependency_unavailable": "Dépendance indisponible",
 		"site.front.fail_closed": "État runtime fermé par défaut",
 		"site.front.fail_closed_description": "Aucun brouillon non vérifié ni release partielle n’est rendu. L’administration EmDash reste disponible pour réparer et publier une Release Front complète.",
+		"site.preview.operator_required": "Session opérateur requise",
+		"site.preview.not_found": "Preview introuvable ou expirée",
+		"site.preview.verification_failed": "Échec de la vérification de la preview",
+		"site.meta.instance": "instance",
+		"site.meta.state": "état",
+		"site.meta.release": "release",
+		"site.meta.source": "source",
 	},
 } as const;
 
@@ -62,4 +76,12 @@ export type UserFrontMessageId = keyof (typeof USER_FRONT_CATALOGS)["en"];
 
 export function createUserFrontI18n(locale: UserFrontLocale) {
 	return setupI18n({ locale, messages: { [locale]: USER_FRONT_CATALOGS[locale] } });
+}
+
+export function resolveUserFrontLocale(value: string | null): UserFrontLocale {
+	return value?.toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
+export function userFrontMessage(locale: UserFrontLocale, id: UserFrontMessageId): string {
+	return createUserFrontI18n(locale)._(id);
 }
