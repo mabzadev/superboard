@@ -253,6 +253,62 @@ test("development Site preview routing is explicit and cannot acquire the Dashbo
 	}
 });
 
+test("development Front Release operations require the explicit Site preview route", () => {
+	execFileSync(
+		process.execPath,
+		[
+			"scripts/cloudflare-config.mjs",
+			"--service",
+			"site",
+			"--target",
+			"mbza-development",
+			"--environment",
+			"development",
+			"--site-preview-route",
+			"--release-operations",
+		],
+		{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+	);
+	const config = JSON.parse(
+		readFileSync(
+			new URL(
+				"../deploy/generated/mbza-development-site-development.jsonc",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	);
+	assert.equal(config.vars.SUPERBOARD_RELEASE_OPERATIONS, "enabled");
+
+	for (const extraArgs of [
+		["--target", "mbza-development", "--environment", "development"],
+		[
+			"--target",
+			"vocostar",
+			"--environment",
+			"production",
+			"--site-preview-route",
+			"--allow-unprovisioned",
+		],
+	]) {
+		assert.throws(
+			() =>
+				execFileSync(
+					process.execPath,
+					[
+						"scripts/cloudflare-config.mjs",
+						"--service",
+						"site",
+						"--release-operations",
+						...extraArgs,
+					],
+					{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+				),
+			/release-operations/u,
+		);
+	}
+});
+
 test("every D1 Worker receives the reviewed latest migration automatically", async () => {
   const targetName = "mbza-development";
   const environment = "development";

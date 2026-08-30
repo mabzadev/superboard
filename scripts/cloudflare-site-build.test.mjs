@@ -62,6 +62,27 @@ test("Site email plugin build settings come from the selected target", async () 
 	});
 });
 
+test("Site deployment preserves enabled Release operations only for the approved preview build", () => {
+	const config = {
+		main: "../../apps/site/dist/server/entry.mjs",
+		assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
+		vars: { SUPERBOARD_RELEASE_OPERATIONS: "enabled" },
+		d1_databases: [{ binding: "DB", migrations_dir: "../../apps/site/migrations" }],
+		routes: [{ pattern: "site.mbza.dev", custom_domain: true }],
+	};
+	assert.equal(
+		siteDeploymentArtifact(config, {
+			previewHostname: "site.mbza.dev",
+			releaseOperations: true,
+		}).vars.SUPERBOARD_RELEASE_OPERATIONS,
+		"enabled",
+	);
+	assert.throws(
+		() => siteDeploymentArtifact(config, { previewHostname: "site.mbza.dev" }),
+		/must keep release operations disabled/u,
+	);
+});
+
 function expectSiteEmailEnvironment(actual, expected) {
 	assert.deepEqual(actual, expected);
 }

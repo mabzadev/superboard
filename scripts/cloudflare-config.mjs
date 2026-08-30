@@ -32,7 +32,10 @@ import { requiredSecretInventory } from "./cloudflare-secret-inventory.mjs";
 import { assertTargetPhysicalResourceNames } from "./cloudflare-resource-identity.mjs";
 import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 import { assertPublicRoutingReady } from "./public-routing-gate.mjs";
-import { resolveSitePreviewRoute } from "./cloudflare-site-preview.mjs";
+import {
+  resolveSitePreviewRoute,
+  resolveSiteReleaseOperations,
+} from "./cloudflare-site-preview.mjs";
 import {
   D1_SCHEMA_OWNERS,
   d1Descriptor,
@@ -60,6 +63,12 @@ const sitePreviewRoute = resolveSitePreviewRoute({
   hostname: target.domains.site,
   noRoutes: Boolean(args["no-routes"]),
   preflight,
+});
+const siteReleaseOperations = resolveSiteReleaseOperations({
+  requested: Boolean(args["release-operations"]),
+  service,
+  environment,
+  sitePreviewRoute,
 });
 assertTargetPhysicalResourceNames(target, environment);
 assertServiceForTarget(target, service);
@@ -227,7 +236,7 @@ function siteConfig() {
     assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
     vars: {
       SUPERBOARD_INSTANCE_ID: target.target,
-      SUPERBOARD_RELEASE_OPERATIONS: "disabled",
+      SUPERBOARD_RELEASE_OPERATIONS: siteReleaseOperations.value,
       ...d1SchemaVars(),
     },
     d1_databases: [

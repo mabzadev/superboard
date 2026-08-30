@@ -25,3 +25,18 @@ export function resolveSitePreviewRoute({
 		cliArgs: ["--site-preview-route"],
 	};
 }
+
+export function resolveSiteReleaseOperations({
+	requested,
+	service,
+	environment,
+	sitePreviewRoute,
+}) {
+	if (!requested) return { value: "disabled", cliArgs: [] };
+	if (service !== "site" || environment !== "development" || !sitePreviewRoute) {
+		throw new Error(
+			"--release-operations requires an active development Site preview route",
+		);
+	}
+	return { value: "enabled", cliArgs: ["--release-operations"] };
+}

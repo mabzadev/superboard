@@ -4,11 +4,24 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { resolveSitePreviewRoute } from "./cloudflare-site-preview.mjs";
+import {
+	resolveSitePreviewRoute,
+	resolveSiteReleaseOperations,
+} from "./cloudflare-site-preview.mjs";
 import { loadTarget, parseArgs, root, targetSelectionFromArgs } from "./cloudflare-target.mjs";
 
-export function siteDeploymentArtifact(config, { previewHostname = null } = {}) {
-	if (config?.vars?.SUPERBOARD_RELEASE_OPERATIONS !== "disabled") {
+export function siteDeploymentArtifact(
+	config,
+	{ previewHostname = null, releaseOperations = false } = {},
+) {
+	if (
+		config?.vars?.SUPERBOARD_RELEASE_OPERATIONS !== "disabled" &&
+		!(
+			releaseOperations &&
+			previewHostname &&
+			config?.vars?.SUPERBOARD_RELEASE_OPERATIONS === "enabled"
+		)
+	) {
 		throw new Error("Site target builds must keep release operations disabled");
 	}
 	if (config?.routes) {
@@ -56,6 +69,12 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		environment,
 		hostname: target.domains.site,
 	});
+	const siteReleaseOperations = resolveSiteReleaseOperations({
+		requested: Boolean(args["release-operations"]),
+		service: "site",
+		environment,
+		sitePreviewRoute,
+	});
 	const siteBuildEnvironment = siteEmailBuildEnvironment(target);
 	execute("pnpm", ["--dir", "apps/site", "run", "build"], siteBuildEnvironment);
 	execute(process.execPath, [
@@ -67,6 +86,7 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		"--environment",
 		environment,
 		...(sitePreviewRoute?.cliArgs ?? []),
+		...siteReleaseOperations.cliArgs,
 		...(args["allow-unprovisioned"] ? ["--allow-unprovisioned"] : []),
 	]);
 	const generatedPath = resolve(
@@ -81,6 +101,7 @@ export async function buildSiteTarget(argv = process.argv.slice(2), execute = ru
 		`${JSON.stringify(
 			siteDeploymentArtifact(generated, {
 				previewHostname: sitePreviewRoute?.hostname ?? null,
+				releaseOperations: siteReleaseOperations.value === "enabled",
 			}),
 			null,
 			2,

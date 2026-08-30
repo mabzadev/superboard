@@ -34,16 +34,17 @@ rollback et seconde répétition restent ouverts.
 | `https://site.mbza.dev/superboard-system/health` | `200` |
 | `https://site.mbza.dev/superboard-system/readiness` | `503`, aucune Release Front active |
 | `https://site.mbza.dev/` | `503`, maintenance fail-closed |
-| `https://site.mbza.dev/_emdash/admin` | `302` vers `/_emdash/admin/setup` |
+| `https://site.mbza.dev/_emdash/admin` | session Opérateur SuperBoard vérifiée après magic link |
 
 Le Dashboard historique et ses domaines restent inchangés. Aucune cible
 `vocostar/production` n’a été lue ou mutée pendant ces opérations.
 
 ## Gate ouvert exact
 
-Le nouveau Site n’a encore aucun Opérateur SuperBoard initialisé. La suite exige
-donc une intervention de l’Opérateur SuperBoard sur `/_emdash/admin/setup`, puis une vraie
-strong reauthentication. Tant que ce gate humain n’est pas franchi :
+L’Opérateur SuperBoard `mabzadev@gmail.com` est initialisé sans passkey et la
+connexion par magic link produit la strong reauthentication requise. Le gate
+restant est l’activation contrôlée des opérations Release avec une clé ES256
+development protégée. Tant que ce gate n’est pas franchi :
 
 - `SUPERBOARD_RELEASE_OPERATIONS` reste `disabled` ;
 - aucun Front Release Candidate distant n’est compilé, prévisualisé, approuvé
@@ -62,8 +63,9 @@ node scripts/cloudflare-deploy.mjs \
   --target mbza-development \
   --environment development \
   --service site \
-  --site-preview-route
+  --site-preview-route \
+  --release-operations
 ```
 
-Le générateur refuse ce flag pour production, pour un autre service, en
-preflight ou en combinaison avec `--no-routes`.
+Le générateur refuse les opérations Release pour production, pour un autre
+service, sans route preview, en preflight ou en combinaison avec `--no-routes`.

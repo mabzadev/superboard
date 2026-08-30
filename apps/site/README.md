@@ -44,6 +44,22 @@ Release operations are disabled in the committed configuration. Copy
 provide a private P-256 JWK with `alg: ES256` and an immutable `kid`. Never
 commit that file or key.
 
+An authorized development rehearsal may enable the release endpoints only on
+the explicit Site preview route:
+
+```bash
+node scripts/cloudflare-deploy.mjs \
+  --target mbza-development \
+  --environment development \
+  --service site \
+  --site-preview-route \
+  --release-operations
+```
+
+The flag is rejected for production, for another service, without the preview
+route, or during preflight. The deployment still requires the separately
+provisioned `SUPERBOARD_RELEASE_PRIVATE_JWK` secret.
+
 ## Known promotion blockers
 
 This slice intentionally remains fail-closed until the following evidence is

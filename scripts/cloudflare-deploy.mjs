@@ -23,7 +23,10 @@ import {
 import { migrationConfirmation } from "./cloudflare-d1-converge.mjs";
 import { readMigrationBatchReceipt } from "./cloudflare-migration-batch.mjs";
 import { runtimeBridgeDeploymentBlockers } from "./cloudflare-deploy-plan.mjs";
-import { resolveSitePreviewRoute } from "./cloudflare-site-preview.mjs";
+import {
+  resolveSitePreviewRoute,
+  resolveSiteReleaseOperations,
+} from "./cloudflare-site-preview.mjs";
 import {
   enforceIdentityProjectCutover,
   resolveDeploymentRevision,
@@ -43,6 +46,12 @@ const sitePreviewRoute = resolveSitePreviewRoute({
   hostname: target.domains.site,
   noRoutes: Boolean(args["no-routes"]),
   preflight: Boolean(args.preflight),
+});
+const siteReleaseOperations = resolveSiteReleaseOperations({
+  requested: Boolean(args["release-operations"]),
+  service,
+  environment,
+  sitePreviewRoute,
 });
 assertServiceForTarget(target, service);
 const blockers = runtimeBridgeDeploymentBlockers({
@@ -136,6 +145,7 @@ if (service === "site") {
       "--environment",
       environment,
       ...(sitePreviewRoute?.cliArgs ?? []),
+      ...siteReleaseOperations.cliArgs,
     ],
     targetCloudflareEnv,
   );
@@ -302,6 +312,7 @@ function generateServiceConfig() {
       environment,
       ...(args["no-routes"] ? ["--no-routes"] : []),
       ...(sitePreviewRoute?.cliArgs ?? []),
+      ...siteReleaseOperations.cliArgs,
       ...(args.preflight ? ["--preflight"] : []),
     ],
     targetCloudflareEnv,
