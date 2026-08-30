@@ -1,0 +1,362 @@
+name: SuperBoard CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Security and change plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPERBOARD_REFERENCE_ROOT: ${{ github.workspace }}/apps/reference
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      billing: ${{ steps.changes.outputs.billing }}
+      messaging: ${{ steps.changes.outputs.messaging }}
+      mcp: ${{ steps.changes.outputs.mcp }}
+      workers: ${{ steps.changes.outputs.workers }}
+      dashboard: ${{ steps.changes.outputs.dashboard }}
+      flutter: ${{ steps.changes.outputs.flutter }}
+      flutterflow: ${{ steps.changes.outputs.flutterflow }}
+      flutterflow_messaging: ${{ steps.changes.outputs.flutterflow_messaging }}
+      flutter_packages: ${{ steps.changes.outputs.flutter_packages }}
+      ios: ${{ steps.changes.outputs.ios }}
+      android: ${{ steps.changes.outputs.android }}
+      javascript: ${{ steps.changes.outputs.javascript }}
+      react_native: ${{ steps.changes.outputs.react_native }}
+      node_sdks: ${{ steps.changes.outputs.node_sdks }}
+      native_sdks: ${{ steps.changes.outputs.native_sdks }}
+      reference: ${{ steps.changes.outputs.reference }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate EmDash integration and SuperBoard Site
+        run: pnpm emdash:overlay:check && pnpm emdash:workspace-deps:check && pnpm emdash:integration:test && pnpm site:check
+      - name: Test change planner
+        run: node --test .github/scripts/*.test.mjs
+      - name: Select affected checks
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          FULL_VALIDATION: ${{ github.event_name == 'workflow_dispatch' }}
+        run: .github/scripts/ci-change-plan.sh
+      - name: Validate product copy
+        run: node scripts/check-product-copy.mjs
+      - name: Validate SDK and FlutterFlow catalogues
+        run: pnpm run sdk:catalog:check && pnpm run sdk:catalog:test && pnpm run sdk:documentation:check && pnpm run flutterflow:source:test && pnpm run flutterflow-library:check && pnpm run flutterflow-applications:check
+      - name: Validate Cloudflare and GitHub control planes
+        run: pnpm run migration:inventory && pnpm run migration:inventory:test && pnpm run cloudflare:test:targets && pnpm run cloudflare:test:services
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  non_node_security:
+    name: Non-Node dependency security
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPERBOARD_PIP_AUDIT_VERSION: "2.10.1"
+      SUPERBOARD_BUNDLER_VERSION: "2.7.2"
+      SUPERBOARD_BUNDLER_AUDIT_VERSION: "0.9.3"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13.7"
+      - uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        with:
+          ruby-version: "3.4.9"
+      - name: Install pinned security audit tools
+        run: |
+          python3 -m pip install --disable-pip-version-check "pip-audit==$SUPERBOARD_PIP_AUDIT_VERSION"
+          gem install bundler --version "$SUPERBOARD_BUNDLER_VERSION" --no-document
+          gem install bundler-audit --version "$SUPERBOARD_BUNDLER_AUDIT_VERSION" --no-document
+      - name: Audit committed Python and Ruby dependency inputs
+        run: pnpm run security:audit:non-node
+
+  workers:
+    name: Affected Workers
+    needs: plan
+    if: needs.plan.outputs.workers == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify generated Cloudflare binding types
+        run: pnpm run cloudflare:types:check
+      - name: Validate API Worker
+        if: needs.plan.outputs.api == 'true'
+        run: pnpm run worker:check
+      - name: Validate Billing Worker
+        if: needs.plan.outputs.billing == 'true'
+        run: pnpm run billing:check
+      - name: Validate legacy Messaging compatibility
+        if: needs.plan.outputs.messaging == 'true'
+        run: pnpm run legacy-messaging:check
+      - name: Validate common and domain Workers
+        run: |
+          pnpm run email:check
+          pnpm run identity:check
+          pnpm run files:check
+          pnpm run observability:check
+          pnpm run mcp:check
+          pnpm run modules:check
+          pnpm run custom:check:all
+          pnpm run chatwoot:test
+
+  dashboard:
+    name: Dashboard OpenNext
+    needs: plan
+    if: needs.plan.outputs.dashboard == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run dashboard:typecheck
+      - run: pnpm run dashboard:test
+      - run: pnpm run cloudflare:config:dashboard:reference
+      - run: pnpm run dashboard:cf-build:reference
+
+  flutter:
+    name: Affected Flutter packages
+    needs: plan
+    if: needs.plan.outputs.flutter_packages == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter SDK
+        if: needs.plan.outputs.flutter == 'true'
+        run: flutter pub get
+        working-directory: sdks/flutter
+      - name: Verify embedded Flutter iOS sources
+        if: needs.plan.outputs.flutter == 'true'
+        run: node --test scripts/flutter-ios-embedded-sources.test.mjs
+      - name: Analyze Flutter SDK
+        if: needs.plan.outputs.flutter == 'true'
+        run: flutter analyze
+        working-directory: sdks/flutter
+      - name: Test Flutter SDK
+        if: needs.plan.outputs.flutter == 'true'
+        run: flutter test
+        working-directory: sdks/flutter
+      - name: Resolve FlutterFlow library
+        if: needs.plan.outputs.flutterflow == 'true'
+        run: flutter pub get
+        working-directory: sdks/flutterflow
+      - name: Analyze FlutterFlow library
+        if: needs.plan.outputs.flutterflow == 'true'
+        run: flutter analyze
+        working-directory: sdks/flutterflow
+      - name: Test FlutterFlow library
+        if: needs.plan.outputs.flutterflow == 'true'
+        run: flutter test
+        working-directory: sdks/flutterflow
+      - name: Resolve FlutterFlow Messaging library
+        if: needs.plan.outputs.flutterflow_messaging == 'true'
+        run: flutter pub get
+        working-directory: sdks/flutterflow_messaging
+      - name: Analyze FlutterFlow Messaging library
+        if: needs.plan.outputs.flutterflow_messaging == 'true'
+        run: flutter analyze
+        working-directory: sdks/flutterflow_messaging
+      - name: Test FlutterFlow Messaging library
+        if: needs.plan.outputs.flutterflow_messaging == 'true'
+        run: flutter test
+        working-directory: sdks/flutterflow_messaging
+
+  node_sdks:
+    name: Affected JavaScript and React Native SDKs
+    needs: plan
+    if: needs.plan.outputs.node_sdks == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - name: Validate JavaScript SDK
+        if: needs.plan.outputs.javascript == 'true'
+        run: pnpm install --frozen-lockfile && pnpm run check
+        working-directory: sdks/javascript
+      - name: Enable Corepack for React Native
+        if: needs.plan.outputs.react_native == 'true'
+        run: corepack enable
+      - name: Install repository tooling for the React Native contract
+        if: needs.plan.outputs.react_native == 'true'
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate React Native native dependency contract
+        if: needs.plan.outputs.react_native == 'true'
+        run: pnpm run react-native:native-contract:check
+      - name: Install React Native dependencies
+        if: needs.plan.outputs.react_native == 'true'
+        run: yarn install --immutable
+        working-directory: sdks/react-native
+      - name: Typecheck, test and package React Native SDK
+        if: needs.plan.outputs.react_native == 'true'
+        run: yarn check
+        working-directory: sdks/react-native
+
+  ios_sdk:
+    name: Affected iOS SDK
+    needs: plan
+    if: needs.plan.outputs.ios == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - name: Verify Flutter links to every internal iOS source
+        run: node --test scripts/flutter-ios-embedded-sources.test.mjs
+      - name: Build and test iOS SDK
+        run: ./scripts/run_tests.sh
+        working-directory: sdks/ios
+
+  android_sdk:
+    name: Affected Android SDK
+    needs: plan
+    if: needs.plan.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4
+      - name: Install pinned Android SDK components
+        run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
+      - name: Test Android SDK
+        run: ./gradlew :OpenGrow:testDebugUnitTest
+        working-directory: sdks/android/OpenGrow
+
+  reference:
+    name: Reference application
+    needs: plan
+    if: needs.plan.outputs.reference == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: "3.44.9"
+          cache: true
+      - name: Install the reference contract
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/reference
+      - name: Resolve immutable Flutter dependencies
+        run: flutter pub get --enforce-lockfile
+        working-directory: apps/reference
+      - name: Validate the embedded reference application
+        run: pnpm run check
+        working-directory: apps/reference
+
+  validation-gate:
+    name: CI gate
+    if: ${{ always() }}
+    needs:
+      [
+        plan,
+        non_node_security,
+        workers,
+        dashboard,
+        flutter,
+        node_sdks,
+        ios_sdk,
+        android_sdk,
+        reference,
+      ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PLAN_RESULT: ${{ needs.plan.result }}
+      NON_NODE_SECURITY_RESULT: ${{ needs.non_node_security.result }}
+      WORKERS_RESULT: ${{ needs.workers.result }}
+      DASHBOARD_RESULT: ${{ needs.dashboard.result }}
+      FLUTTER_RESULT: ${{ needs.flutter.result }}
+      NODE_SDKS_RESULT: ${{ needs.node_sdks.result }}
+      IOS_SDK_RESULT: ${{ needs.ios_sdk.result }}
+      ANDROID_SDK_RESULT: ${{ needs.android_sdk.result }}
+      REFERENCE_RESULT: ${{ needs.reference.result }}
+    steps:
+      - name: Require every selected validation to pass
+        run: |
+          test "$PLAN_RESULT" = "success"
+          test "$NON_NODE_SECURITY_RESULT" = "success"
+          for result in "$WORKERS_RESULT" "$DASHBOARD_RESULT" "$FLUTTER_RESULT" "$NODE_SDKS_RESULT" "$IOS_SDK_RESULT" "$ANDROID_SDK_RESULT" "$REFERENCE_RESULT"; do
+            case "$result" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done

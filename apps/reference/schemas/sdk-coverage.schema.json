@@ -15,7 +15,7 @@
   "properties": {
     "$schema": { "const": "../schemas/sdk-coverage.schema.json" },
     "schemaVersion": { "const": 2 },
-    "catalogueSchemaVersion": { "const": 4 },
+    "catalogueSchemaVersion": { "const": 5 },
     "platformRepository": {
       "const": "https://github.com/mabzadev/superboard"
     },
@@ -88,7 +88,8 @@
             "enum": [
               "dart-direct",
               "dart-transitive-override",
-              "dart-legacy-direct",
+              "dart-candidate-direct",
+              "dart-candidate-transitive",
               "historical-release"
             ]
           }

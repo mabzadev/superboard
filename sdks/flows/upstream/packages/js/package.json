@@ -1,0 +1,62 @@
+{
+  "name": "@superboard/flows-js",
+  "description": "Flows JS SDK - Build native product growth experiences, your way",
+  "keywords": [
+    "react",
+    "javascript",
+    "html",
+    "ux",
+    "guide",
+    "spotlight",
+    "popover",
+    "overlay",
+    "users",
+    "saas",
+    "onboarding",
+    "tour",
+    "walkthrough",
+    "user-onboarding",
+    "feature-introductions",
+    "onboarding-tool",
+    "product-adoption",
+    "product-tours"
+  ],
+  "version": "1.23.3",
+  "license": "MIT",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsup --env.NODE_ENV development",
+    "build": "tsup --env.NODE_ENV production",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch",
+    "tsc": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@superboard/flows-shared": "workspace:*",
+    "@superboard/flows-styles": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.12.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "tsup": "^8.5.1",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "dependencies": {
+    "@lit-labs/preact-signals": "^1.0.3",
+    "@preact/signals-core": "^1.14.4",
+    "clsx": "^2.1.1",
+    "es-toolkit": "^1.50.0",
+    "lit": "^3.3.3"
+  }
+}

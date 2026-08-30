@@ -1,10 +1,5 @@
-import type { Metadata } from "next";
-import { OnboardingStatisticsPage } from "@/components/modules/OnboardingPages";
-
-export const metadata: Metadata = {
-  title: "Onboarding statistics · SuperBoard",
-};
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <OnboardingStatisticsPage />;
+  redirect("/flows/workflows?origin=onboardings&view=analytics");
 }

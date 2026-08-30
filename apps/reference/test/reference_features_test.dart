@@ -23,10 +23,10 @@ void main() {
       (feature) => feature.id == ReferenceFeatureId.customExtension,
     );
     expect(custom.actions, [
-      'opengrowApplicationCreateCustomJobJson',
-      'opengrowApplicationListCustomJobsJson',
-      'opengrowApplicationGetCustomJobJson',
-      'opengrowApplicationCancelCustomJobJson',
+      'superboardApplicationCreateCustomJobJson',
+      'superboardApplicationListCustomJobsJson',
+      'superboardApplicationGetCustomJobJson',
+      'superboardApplicationCancelCustomJobJson',
     ]);
     expect(custom.actions.join(' '), isNot(contains('CUSTOM_WORKER_TOKEN')));
   });
@@ -41,7 +41,7 @@ void main() {
         support.actions.join(' ').toLowerCase(),
         isNot(contains('chatwoot')),
       );
-      expect(support.actions, contains('opengrowSupportConnectRealtime'));
+      expect(support.actions, contains('superboardSupportConnectRealtime'));
     },
   );
 }

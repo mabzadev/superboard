@@ -13,6 +13,17 @@ vi.mock("@/lib/config", () => ({
 import { sdkInstallCode } from "../SdkSetupWizard";
 
 describe("SDK setup distribution contract", () => {
+  it("uses the catalogue's published immutable iOS installation", () => {
+    expect(sdkInstallCode("ios")).toEqual([
+      {
+        language: "swift",
+        filename: "Package.swift",
+        code:
+          '.package(url: "https://github.com/mabzadev/superboard.git", exact: "1.0.3")',
+      },
+    ]);
+  });
+
   it("configures npm authentication before the web install command", () => {
     const blocks = sdkInstallCode("web");
 

@@ -24,7 +24,7 @@ const coverageManifest = JSON.parse(
 
 function completeCatalogue() {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     repository: project.platformRepository,
     libraries: coverageManifest.libraries.map((library) => {
       const active = library.lifecycle === "active";
@@ -124,7 +124,7 @@ test("promotion refuses a pending, partial, missing or drifted lifecycle set", (
         dependencySnippet,
         coverageManifest,
       }),
-    /complete governed set/u,
+    /react-native is missing/u,
   );
 
   const drifted = completeCatalogue();

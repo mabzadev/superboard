@@ -1,0 +1,145 @@
+import { cva, cx } from "@superboard/flows-styled-system/css";
+import { Box } from "@superboard/flows-styled-system/jsx";
+import {
+  Banner16,
+  Book16,
+  Card16,
+  Checklist16,
+  Delay16,
+  Email16,
+  Emoji16,
+  End16,
+  Filter16,
+  Hint16,
+  Info16,
+  Modal16,
+  Note16,
+  Pointer16,
+  Sidebar16,
+  Start16,
+  Survey16,
+  Tooltip16,
+  Tour16,
+  Upgrade16,
+  Wait16,
+  WorkflowTrigger16,
+} from "@superboard/flows-icons";
+import { type FC, type SVGProps } from "react";
+import { forwardRef, useMemo } from "react";
+import type { BlockTemplateType, BlockType } from "@superboard/flows-product-types";
+
+import { Icon } from "../icon";
+
+export type IconCmp = FC<SVGProps<SVGSVGElement>>;
+
+export const builtInBlockIcons: Record<string, IconCmp> = {
+  start: Start16,
+  "manual-start": Start16,
+  tour: Tour16,
+  end: End16,
+  filter: Filter16,
+  wait: Wait16,
+  "workflow-trigger": WorkflowTrigger16,
+  delay: Delay16,
+  survey: Survey16,
+  note: Note16,
+};
+
+export const customIconOptions: Record<string, IconCmp> = {
+  modal: Modal16,
+  banner: Banner16,
+  tooltip: Tooltip16,
+  checklist: Checklist16,
+  hint: Hint16,
+  card: Card16,
+  sidebar: Sidebar16,
+  spotlight: Pointer16,
+  info: Info16,
+  survey: Survey16,
+  emoji: Emoji16,
+  email: Email16,
+  book: Book16,
+  upgrade: Upgrade16,
+  note: Note16,
+};
+
+export const fallbackBlockIcon = Tooltip16;
+export const defaultBlockIconKey = Object.keys(builtInBlockIcons)[0];
+
+type Props = {
+  blockType: BlockType | BlockTemplateType;
+  blockIcon?: string | null;
+  className?: string;
+  onClick?: () => void;
+};
+
+export const BlockIcon = forwardRef<HTMLDivElement, Props>(function BlockIcon(
+  { blockType, blockIcon, className, ...props },
+  ref,
+) {
+  const icon = useMemo(() => {
+    const customIcon = blockIcon ? customIconOptions[blockIcon] : undefined;
+    const bultinIcon = builtInBlockIcons[blockType] as IconCmp | undefined;
+    return customIcon ?? bultinIcon ?? fallbackBlockIcon;
+  }, [blockIcon, blockType]);
+
+  const type = useMemo(() => {
+    if (["filter", "wait", "delay"].includes(blockType)) return "logic";
+    if (blockType === "manual-start") return "start";
+    if (["workflow-trigger", "end"].includes(blockType)) return "action";
+    if (["component", "tour-component", "survey", "survey-component"].includes(blockType))
+      return "component";
+    return blockType as (typeof boxStyles.variantMap.type)[number];
+  }, [blockType]);
+
+  return (
+    <Box
+      ref={ref}
+      padding="space2"
+      borderRadius="radius4"
+      borderWidth="1px"
+      className={cx(boxStyles({ type }), className)}
+      {...props}
+    >
+      <Icon color="inherit" icon={icon} />
+    </Box>
+  );
+});
+
+const boxStyles = cva({
+  base: {},
+  variants: {
+    type: {
+      start: {
+        backgroundColor: "blockIcon.start.bg",
+        color: "blockIcon.start.fg",
+        borderColor: "blockIcon.start.border",
+      },
+      component: {
+        backgroundColor: "blockIcon.component.bg",
+        color: "blockIcon.component.fg",
+        borderColor: "blockIcon.component.border",
+      },
+      logic: {
+        backgroundColor: "blockIcon.logic.bg",
+        color: "blockIcon.logic.fg",
+        borderColor: "blockIcon.logic.border",
+      },
+      action: {
+        backgroundColor: "blockIcon.action.bg",
+        color: "blockIcon.action.fg",
+        borderColor: "blockIcon.action.border",
+      },
+      tour: {
+        backgroundColor: "blockIcon.component.bg",
+        color: "blockIcon.component.fg",
+        borderColor: "blockIcon.component.border",
+      },
+      note: {
+        backgroundColor: "blockIcon.note.bg",
+        color: "blockIcon.note.fg",
+        borderColor: "blockIcon.note.border",
+      },
+    },
+  },
+});

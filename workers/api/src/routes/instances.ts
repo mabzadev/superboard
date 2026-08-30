@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../types';
 import { hashPassword } from '../lib/crypto';
-import { getAuthUserId as getStrictAuthUserId } from '../lib/auth';
+import { getRequestAuthUserId } from '../lib/auth';
 import { getOrCreateProject } from '../lib/db';
 import { storeCsvDownload } from '../lib/files';
 import { downloadFileMessage, invitationMessage, invitationUrl, sendMail } from '../lib/mail';
@@ -14,7 +14,7 @@ import { tokenDigest } from '../lib/token-storage';
 const instances = new Hono<{ Bindings: Env }>();
 
 async function getAuthUserId(c: any): Promise<number | null> {
-  return getStrictAuthUserId(c.env, c.req.header('Authorization'));
+  return getRequestAuthUserId(c.env, c.req.raw.headers);
 }
 
 async function buildInstance(db: any, instanceId: number, userId: number, shortlinkDomain: string) {

@@ -19,7 +19,7 @@ import {
   EMAIL_SERVICE_DEAD_LETTERS_PATH,
   EMAIL_SERVICE_OPERATIONS_PATH,
 } from "@superboard/contracts/email";
-import { getAuthContext } from "../lib/auth";
+import { getRequestAuthContext } from "../lib/auth";
 import { readJsonObjectLimited, readTextLimited } from "../lib/http-limits";
 import type { Env } from "../types";
 import sdkCatalog from "../../../../config/sdk-libraries.json";
@@ -75,7 +75,7 @@ const WORKERS = [
     "MESSAGING",
     "binding",
     "/health",
-    "Legacy Messaging runtime (disabled after Support convergence)",
+    "Internal messaging transport",
     ["messaging"],
     ["MESSAGING_QUEUE"],
     ["messages"],
@@ -224,6 +224,17 @@ const WORKERS = [
     [],
   ),
   worker(
+    "flows",
+    "feature",
+    "FLOWS_MODULE",
+    "binding",
+    "/internal/v1/health",
+    "Project-scoped visual workflows, components, tours, surveys and Launchpad",
+    ["flows", "flows-archive", "flows-user-runtime", "flows-realtime"],
+    ["FLOW_EVENTS"],
+    ["projections", "delays", "exports", "maintenance", "deadLetters"],
+  ),
+  worker(
     "custom",
     "application",
     "CUSTOM_WORKER",
@@ -364,6 +375,7 @@ const API_CAPABILITIES = [
       "/api/v1/dynamic-links/*",
       "/api/v1/marketing/*",
       "/api/v1/onboardings/*",
+      "/api/v1/flows/*",
     ],
   },
   {
@@ -397,7 +409,7 @@ const API_CAPABILITIES = [
 platform.get("/libraries", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   return c.json(
@@ -416,7 +428,7 @@ platform.get("/libraries", async (c) => {
 platform.get("/account-erasures", async (c) => {
   const admin = await platformAdminContext(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if ("error" in admin) return c.json({ error: admin.error }, admin.status);
   const status = String(c.req.query("status") || "").trim();
@@ -482,7 +494,7 @@ platform.get("/account-erasures", async (c) => {
 platform.get("/status", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
 
@@ -494,7 +506,7 @@ platform.get("/status", async (c) => {
 platform.get("/email/operations", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   return proxyEmail(
@@ -506,7 +518,7 @@ platform.get("/email/operations", async (c) => {
 platform.post("/email/dead-letters/:deadLetterId/replay", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   return proxyEmail(
@@ -519,7 +531,7 @@ platform.post("/email/dead-letters/:deadLetterId/replay", async (c) => {
 platform.post("/email/dead-letters/:deadLetterId/discard", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   return proxyEmail(
@@ -804,7 +816,7 @@ function publicSurfaceConfigurationError(error: string) {
 platform.get("/custom/stats", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   return proxyCustom(c.env, CUSTOM_WORKER_STATS_PATH);
@@ -813,7 +825,7 @@ platform.get("/custom/stats", async (c) => {
 platform.get("/custom/jobs", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   return proxyCustom(
@@ -825,7 +837,7 @@ platform.get("/custom/jobs", async (c) => {
 platform.post("/custom/jobs/:jobId/retry", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   const jobId = encodeURIComponent(c.req.param("jobId"));
@@ -837,7 +849,7 @@ platform.post("/custom/jobs/:jobId/retry", async (c) => {
 platform.get("/custom/jobs/:jobId", async (c) => {
   const denial = await platformAdminDenial(
     c.env,
-    c.req.header("Authorization"),
+    c.req.raw.headers,
   );
   if (denial) return c.json({ error: denial.error }, denial.status);
   return proxyCustom(
@@ -1104,7 +1116,10 @@ function operationalServices(input: {
         ? [...new Set(routes)]
         : directWorkerRoutes(definition.id, definition.healthPath),
       dependencies: {
-        services: workerServiceDependencies(definition.id),
+        services: workerServiceDependencies(definition.id).filter(
+          (dependency) =>
+            input.topology.workers.get(dependency)?.enabled !== false,
+        ),
         stores: definition.stores,
         queues: definition.queues,
         externalWorkers:
@@ -1172,6 +1187,7 @@ function workerCapabilityIds(id: string): string[] {
     support: ["support"],
     marketing: ["marketing-consent"],
     onboardings: ["modules"],
+    flows: ["modules"],
     custom: ["custom-jobs"],
     dashboard: ["platform", "libraries"],
     observability: ["platform"],
@@ -1200,12 +1216,14 @@ function workerServiceDependencies(id: string): string[] {
       "support",
       "marketing",
       "onboardings",
+      "flows",
       "custom",
     ],
     dashboard: ["api"],
     identity: ["email", "files"],
     mcp: ["api"],
     custom: ["files"],
+    flows: ["products", "identity", "email"],
   };
   return dependencies[id] ?? [];
 }
@@ -1573,7 +1591,7 @@ function dataStoreInventory(
       "R2",
       "support",
       serviceStatus("support"),
-      "Support attachments migrated from Chatwoot and created in SuperBoard",
+      "Support attachments stored by SuperBoard",
     ),
     store(
       "support-realtime",
@@ -1598,6 +1616,32 @@ function dataStoreInventory(
       "onboardings",
       "onboardings",
       "Onboarding flows, targeting, versions and completion events",
+    ),
+    d1Store(
+      "flows",
+      "flows",
+      "Organizations, immutable workflow versions, components, Launchpad, analytics and MTU projections",
+    ),
+    store(
+      "flows-archive",
+      "R2",
+      "flows",
+      serviceStatus("flows"),
+      "Flow event archives, exports, assets and migration packages",
+    ),
+    store(
+      "flows-user-runtime",
+      "Durable Object",
+      "flows",
+      serviceStatus("flows"),
+      "Strong per-user workflow execution state and transactional outbox",
+    ),
+    store(
+      "flows-realtime",
+      "Durable Object",
+      "flows",
+      serviceStatus("flows"),
+      "Hibernating WebSocket hubs for ordered block updates",
     ),
     d1Store(
       "custom",
@@ -2102,19 +2146,19 @@ function record(value: unknown): value is Record<string, unknown> {
 
 async function platformAdminDenial(
   env: Env,
-  authorization: string | undefined,
+  headers: Headers,
 ): Promise<{ error: string; status: 401 | 403 } | null> {
-  const value = await platformAdminContext(env, authorization);
+  const value = await platformAdminContext(env, headers);
   return "error" in value ? value : null;
 }
 
 async function platformAdminContext(
   env: Env,
-  authorization: string | undefined,
+  headers: Headers,
 ): Promise<
   { userId: number; instanceId: number } | { error: string; status: 401 | 403 }
 > {
-  const auth = await getAuthContext(env, authorization);
+  const auth = await getRequestAuthContext(env, headers);
   if (!auth) return { error: "unauthorized", status: 401 };
   if (!auth.instanceId) return { error: "instance_required", status: 403 };
   const role = await env.DB.prepare(

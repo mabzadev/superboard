@@ -1,0 +1,17 @@
+---
+import FrontPage from "../components/FrontPage.astro";
+import { resolveSiteFrontPage } from "../lib/front-page.js";
+import { getSiteEnv } from "../lib/site-env.js";
+
+export const prerender = false;
+
+const model = await resolveSiteFrontPage(getSiteEnv(), Astro.url.pathname, Astro.locals.user);
+if (model.resolution.result === "redirect") {
+	return Astro.redirect(model.resolution.location, 302);
+}
+if (model.resolution.result === "maintenance" || model.resolution.result === "unavailable") {
+	Astro.response.status = 503;
+}
+---
+
+<FrontPage model={model} />

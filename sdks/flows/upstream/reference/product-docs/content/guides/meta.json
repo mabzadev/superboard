@@ -1,0 +1,16 @@
+{
+  "title": "Guides",
+  "description": "Flows Cloud Guides Documentation",
+  "root": true,
+  "pages": [
+    "index",
+    "[Quickstart](/quickstart)",
+    "create-product-tour",
+    "create-survey",
+    "[Styling built-in components](/blocks/basics-v2/styling)",
+    "how-to-target-only-new-users",
+    "create-custom-components",
+    "embed-components",
+    "complete-steps-programmatically"
+  ]
+}

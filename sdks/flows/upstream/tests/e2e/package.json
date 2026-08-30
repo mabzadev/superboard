@@ -1,0 +1,32 @@
+{
+  "name": "e2e",
+  "private": true,
+  "scripts": {
+    "playwright": "playwright test",
+    "playwright:install": "playwright install --with-deps",
+    "vite": "vite",
+    "tsc": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@superboard/flows-js": "*",
+    "@superboard/flows-js-components": "*",
+    "@superboard/flows-react": "*",
+    "@superboard/flows-react-components": "*",
+    "@superboard/flows-shared": "*",
+    "lit": "^3.3.3",
+    "react-router": "^8.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5"
+  },
+  "license": "MIT"
+}

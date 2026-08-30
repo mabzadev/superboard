@@ -1,0 +1,154 @@
+import { type FC, useEffect, useMemo } from "react";
+import {
+  elementContains,
+  elementExists,
+  elementNotExists,
+  getPathname,
+  pathnameMatch,
+  processTourWait,
+} from "@superboard/flows-shared";
+import { useState } from "react";
+import { debounce } from "es-toolkit";
+import { useFlowsContext } from "./flows-context";
+import { usePathname } from "./contexts/pathname-context";
+
+export const TourController: FC = () => {
+  const { runningTours, userProperties } = useFlowsContext();
+  const pathname = usePathname();
+  // eslint-disable-next-line react/hook-use-state -- we need only the value
+  const [timeoutByTourId] = useState(new Map<string, { timeoutId: number; stepId: string }>());
+
+  // Filter out tours that are not waiting for navigation or interaction
+  const relevantTours = useMemo(
+    () => runningTours.filter((tour) => Boolean(tour.activeStep?.tourWait)),
+    [runningTours],
+  );
+
+  // Handle navigation waits
+  useEffect(() => {
+    relevantTours.forEach((tour) => {
+      const tourWait = processTourWait(tour.activeStep?.tourWait, userProperties);
+      if (tourWait?.interaction === "navigation") {
+        const match = pathnameMatch({
+          pathname,
+          operator: tourWait.page?.operator,
+          value: tourWait.page?.value,
+        });
+
+        if (match) tour.continue();
+      }
+    });
+  }, [pathname, relevantTours, userProperties]);
+
+  // Handle interaction waits
+  useEffect(() => {
+    const handleClick = (event: MouseEvent): void => {
+      const eventTarget = event.target;
+      if (!eventTarget || !(eventTarget instanceof Element)) return;
+
+      const currentPathname = getPathname();
+
+      relevantTours.forEach((tour) => {
+        const tourWait = processTourWait(tour.activeStep?.tourWait, userProperties);
+
+        if (tourWait?.interaction === "click") {
+          const pageMatch = pathnameMatch({
+            pathname: currentPathname,
+            operator: tourWait.page?.operator,
+            value: tourWait.page?.value,
+          });
+
+          const clickMatch = elementContains({ eventTarget, value: tourWait.element });
+
+          if (clickMatch && pageMatch) tour.continue();
+        }
+      });
+    };
+
+    addEventListener("click", handleClick);
+    return () => {
+      removeEventListener("click", handleClick);
+    };
+    // Watch pathname to check on each pathname change
+  }, [pathname, relevantTours, userProperties]);
+
+  // Handle DOM element waits
+  useEffect(() => {
+    const callback = (): void => {
+      const currentPathname = getPathname();
+
+      relevantTours.forEach((tour) => {
+        const tourWait = processTourWait(tour.activeStep?.tourWait, userProperties);
+        const waitElement = tourWait?.element;
+
+        if (tourWait?.interaction === "dom-element") {
+          const pageMatch = pathnameMatch({
+            pathname: currentPathname,
+            operator: tourWait.page?.operator,
+            value: tourWait.page?.value,
+          });
+          const domElementMatch = elementExists(waitElement);
+
+          if (domElementMatch && pageMatch) tour.continue();
+        }
+        if (tourWait?.interaction === "not-dom-element") {
+          const pageMatch = pathnameMatch({
+            pathname: currentPathname,
+            operator: tourWait.page?.operator,
+            value: tourWait.page?.value,
+          });
+          const notDomElementMatch = elementNotExists(waitElement);
+
+          if (notDomElementMatch && pageMatch) tour.continue();
+        }
+      });
+    };
+
+    const debouncedCallback = debounce(callback, 32);
+    const observer = new MutationObserver(debouncedCallback);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    // Run once to catch existing elements
+    debouncedCallback();
+    return () => {
+      observer.disconnect();
+      debouncedCallback.cancel();
+    };
+    // Watch pathname to check on each pathname change
+  }, [pathname, relevantTours, userProperties]);
+
+  // Clear timeouts for tours that don't have active the wait step
+  useEffect(() => {
+    runningTours.forEach((tour) => {
+      const activeStep = tour.activeStep;
+      const existingTimeout = timeoutByTourId.get(tour.block.id);
+
+      if (existingTimeout && existingTimeout.stepId !== activeStep?.id) {
+        clearTimeout(existingTimeout.timeoutId);
+        timeoutByTourId.delete(tour.block.id);
+      }
+    });
+  }, [runningTours, timeoutByTourId]);
+
+  // Handle delay waits
+  useEffect(() => {
+    relevantTours.forEach((tour) => {
+      const activeStep = tour.activeStep;
+      const tourWait = processTourWait(activeStep?.tourWait, userProperties);
+
+      if (
+        activeStep &&
+        tourWait?.interaction === "delay" &&
+        tourWait.ms !== undefined &&
+        !timeoutByTourId.has(tour.block.id)
+      ) {
+        const timeoutId = window.setTimeout(() => {
+          tour.continue();
+          timeoutByTourId.delete(tour.block.id);
+        }, tourWait.ms);
+        timeoutByTourId.set(tour.block.id, { timeoutId, stepId: activeStep.id });
+      }
+    });
+  }, [relevantTours, timeoutByTourId, userProperties]);
+
+  return null;
+};

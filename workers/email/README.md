@@ -8,7 +8,10 @@ Common delivery authority for transactional, marketing, and test email.
   package. Managed targets use the regional Amazon SES SMTP endpoint on port
   587 with STARTTLS; the target manifest owns the region and configuration-set
   name while the SMTP credential remains a Worker secret.
-- callers use the private `EMAIL_SERVICE` binding and `POST /internal/v1/messages`, authenticated with the shared `EMAIL_INTERNAL_TOKEN` secret.
+- callers use the private `EMAIL_SERVICE` binding and
+  `POST /internal/v1/messages`, authenticated with the shared
+  `EMAIL_INTERNAL_TOKEN`. Flows has no Email binding after removal of its
+  organization invitations and usage-alert features.
 - Marketing uses the same private binding and
   `POST /internal/v1/transport/smtp` after it has selected a project profile,
   enforced consent/quotas and materialized personalization/tracking. Email is

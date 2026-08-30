@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ describe("LibrariesPageContent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getPlatformLibraries.mockResolvedValue({
-      schemaVersion: 4,
+      schemaVersion: 5,
       repository: "https://github.com/mabzadev/superboard",
       developmentBranch: "dev",
       releasePolicy: "immutable-tag",
@@ -69,6 +69,22 @@ describe("LibrariesPageContent", () => {
               tokenEnvironmentVariable: "OPENGROW_GITHUB_PACKAGES_TOKEN",
             },
           },
+        },
+        {
+          id: "flows-js",
+          lifecycle: "active",
+          displayName: "SuperBoard Flows JavaScript",
+          ecosystem: "npm",
+          packageName: "@superboard/flows-js",
+          sourcePath: "sdks/flows/upstream/packages/js",
+          license: "MIT",
+          licensePath: "sdks/flows/upstream/packages/js/LICENSE",
+          versionSource: "sdks/flows/upstream/packages/js/package.json",
+          sourceVersion: "1.23.3",
+          releaseStatus: "unreleased",
+          publicationTarget: "public-npm",
+          notes:
+            "Initial reviewed source import. No npm publication exists yet.",
         },
       ],
       customCode: {
@@ -195,5 +211,28 @@ describe("LibrariesPageContent", () => {
     expect(
       screen.getAllByText("sdk-flutterflow-v2.2.5"),
     ).not.toHaveLength(0);
+  });
+
+  it("marks an initial package as not published without inventing release metadata", async () => {
+    render(<LibrariesPageContent />);
+
+    const card = await screen.findByTestId("library-flows-js");
+    const library = within(card);
+    expect(library.getByText("SuperBoard Flows JavaScript")).toBeInTheDocument();
+    expect(library.getByText("Not published")).toBeInTheDocument();
+    expect(library.getByText("1.23.3")).toBeInTheDocument();
+    expect(library.queryByText("Latest release")).not.toBeInTheDocument();
+    expect(library.queryByText("Immutable ref")).not.toBeInTheDocument();
+    expect(library.queryByText("Installation")).not.toBeInTheDocument();
+    expect(
+      library.queryByRole("button", {
+        name: "Copy SuperBoard Flows JavaScript release ref",
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      library.queryByRole("button", {
+        name: "Copy SuperBoard Flows JavaScript installation",
+      })
+    ).not.toBeInTheDocument();
   });
 });

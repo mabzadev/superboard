@@ -1,0 +1,112 @@
+---
+title: Architecture
+description: The mental model for building with EmDash — an Astro integration with a live, editable content model.
+---
+
+import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+
+EmDash is an Astro integration. You add it to `astro.config.mjs`, choose a database and storage, and define content collections. This page covers the model you need to build a site. For internals (table layouts, the request path, code generation), see [Architecture (internals)](/contributing/architecture/).
+
+## What EmDash adds to your site
+
+```
+┌──────────────────────────────────────────────┐
+│                Your Astro site                │
+│                                               │
+│   Pages and components you write              │
+│        │                                      │
+│        │  getEmDashCollection() / getEmDashEntry()
+│        ▼                                      │
+│   ┌───────────────┐      ┌────────────────┐   │
+│   │   Content     │      │  Admin panel   │   │
+│   │  (your data)  │◄────►│ /_emdash/admin │   │
+│   └───────────────┘      └────────────────┘   │
+│        │                                      │
+│   Database (SQLite / libSQL / D1 / Postgres)  │
+│   Media storage (local / R2 / S3)             │
+└──────────────────────────────────────────────┘
+```
+
+You write pages and components as normal. EmDash provides the content, an admin panel for editing it, and the database and storage behind it. Editors work in the admin panel; your pages read the same content through query functions.
+
+## Your content model
+
+You define collections and fields — in the admin panel or with the CLI — and EmDash stores content against them.
+
+<CardGrid>
+	<Card title="Change it anytime" icon="pencil">
+		Add, rename, remove, or retype collections and fields whenever you need
+		to. Changes take effect immediately.
+	</Card>
+	<Card title="Editor-designed" icon="seti:plan">
+		A content editor can design the whole model through the admin UI.
+	</Card>
+	<Card title="Typed" icon="approve-check">
+		Generate TypeScript types from the current model for autocomplete from
+		query to template.
+	</Card>
+	<Card title="Portable" icon="right-arrow">
+		Export the model as a JSON seed file for version control, and apply it in
+		another environment.
+	</Card>
+</CardGrid>
+
+See the [content model](/concepts/content-model/) for how to define, change, type, and seed it.
+
+## Content is live
+
+EmDash serves content through Astro's Live Collections at runtime, so changes an editor makes are visible immediately. You read content with two functions:
+
+```ts title="src/pages/blog.astro"
+import { getEmDashCollection, getEmDashEntry } from "emdash";
+
+const { entries: posts } = await getEmDashCollection("posts");
+const { entry: post } = await getEmDashEntry("posts", "my-post-slug");
+```
+
+See [Querying content](/guides/querying-content/) for filtering, pagination, and drafts.
+
+## What you configure
+
+You pass a database and a storage backend to the integration. Everything else has a default.
+
+```ts title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash, { local } from "emdash/astro";
+import { sqlite } from "emdash/db";
+
+export default defineConfig({
+	integrations: [
+		emdash({
+			database: sqlite({ url: "file:./data.db" }),
+			storage: local({ directory: "./uploads" }),
+		}),
+	],
+});
+```
+
+- **Database**: SQLite (local or libSQL), Cloudflare D1, or PostgreSQL. See [Database options](/deployment/database/).
+- **Storage**: the local filesystem, Cloudflare R2, or any S3-compatible storage for media. See [Storage options](/deployment/storage/).
+
+## Extending with plugins
+
+Plugins react to content and media lifecycle events and can add admin pages, dashboard widgets, and settings. There are two formats:
+
+- **Native plugins** run in the host environment with full access. Best for first-party and trusted plugins.
+- **Sandboxed plugins** run in an isolated runtime with capability-based permissions. Best for third-party plugins.
+
+See the [plugin overview](/plugins/overview/) to choose and install plugins, or [create a plugin](/plugins/creating-plugins/choosing-a-format/).
+
+## Next steps
+
+<CardGrid>
+	<Card title="Collections" icon="document">
+		Define [content collections and field types](/concepts/collections/).
+	</Card>
+	<Card title="Content Model" icon="open-book">
+		Understand the [content model](/concepts/content-model/).
+	</Card>
+	<Card title="Admin Panel" icon="setting">
+		See what the [admin panel](/concepts/admin-panel/) offers editors and admins.
+	</Card>
+</CardGrid>

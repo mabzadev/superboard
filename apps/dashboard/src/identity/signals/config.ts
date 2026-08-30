@@ -1,5 +1,5 @@
-import { signal } from '@preact/signals-react'
-import { config as dashboardConfig } from '@/lib/config'
+import { signal } from "@preact/signals-core";
+import { config as dashboardConfig } from "@/lib/config";
 
 export type IdentityConfig = Record<string, unknown> & {
   AUTH_SERVER_URL: string;
@@ -19,11 +19,11 @@ export type IdentityConfig = Record<string, unknown> & {
   ENABLE_EMAIL_LOG: boolean;
   ENABLE_SMS_LOG: boolean;
   ENABLE_SIGN_IN_LOG: boolean;
-}
+};
 
 export const defaultIdentityConfig: IdentityConfig = {
   AUTH_SERVER_URL: dashboardConfig.authUrl,
-  SUPPORTED_LOCALES: ['en', 'fr'],
+  SUPPORTED_LOCALES: ["en", "fr"],
   ENABLE_NAMES: true,
   ENABLE_USER_APP_CONSENT: true,
   ENABLE_EMAIL_VERIFICATION: true,
@@ -39,8 +39,8 @@ export const defaultIdentityConfig: IdentityConfig = {
   ENABLE_EMAIL_LOG: true,
   ENABLE_SMS_LOG: true,
   ENABLE_SIGN_IN_LOG: true,
-}
+};
 
-const config = signal<IdentityConfig>(defaultIdentityConfig)
+const config = signal<IdentityConfig>(defaultIdentityConfig);
 
-export default config
+export default config;

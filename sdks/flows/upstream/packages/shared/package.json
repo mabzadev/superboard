@@ -1,0 +1,26 @@
+{
+  "name": "@superboard/flows-shared",
+  "version": "1.0.0",
+  "private": true,
+  "sideEffects": false,
+  "main": "src/index.ts",
+  "scripts": {
+    "tsc": "tsc -p tsconfig.json",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.17",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "dependencies": {
+    "es-toolkit": "^1.50.0"
+  },
+  "license": "MIT"
+}

@@ -2,18 +2,17 @@ import { describe, expect, it } from "vitest";
 import { DASHBOARD_SECTIONS, pageForPath, sectionForPath } from "../navigation";
 
 describe("dashboard navigation", () => {
-  it("defines Dashboard followed by the nine product sections", () => {
+  it("defines Dashboard followed by the product sections with one unified Flows domain", () => {
     expect(DASHBOARD_SECTIONS.map(({ label }) => label)).toEqual([
       "Dashboard",
       "App",
       "Identity",
       "Products",
-      "Paywalls",
+      "Flows",
       "Dynamic Links",
       "Support",
       "Marketing",
       "Analytics",
-      "Onboardings",
     ]);
   });
 
@@ -54,7 +53,19 @@ describe("dashboard navigation", () => {
         ],
       ],
       ["Products", ["Purchases", "Customers", "Offerings", "Entitlements"]],
-      ["Paywalls", ["Paywalls", "Statistics"]],
+      [
+        "Flows",
+        [
+          "Overview",
+          "Workflows",
+          "Launchpad",
+          "Users",
+          "Components",
+          "Environments",
+          "Localization",
+          "SDK",
+        ],
+      ],
       [
         "Dynamic Links",
         [
@@ -66,7 +77,22 @@ describe("dashboard navigation", () => {
           "Tracking",
         ],
       ],
-      ["Support", ["Inbox", "Configuration", "Contacts", "Quality"]],
+      [
+        "Support",
+        [
+          "Inbox",
+          "Contacts",
+          "Workforce",
+          "Channels",
+          "Automations",
+          "Proactive Support",
+          "Help Center",
+          "Captain",
+          "Integrations",
+          "Reports",
+          "Settings",
+        ],
+      ],
       [
         "Marketing",
         [
@@ -100,7 +126,6 @@ describe("dashboard navigation", () => {
           "Settings",
         ],
       ],
-      ["Onboardings", ["Onboardings", "Statistics"]],
     ]);
   });
 
@@ -125,15 +150,17 @@ describe("dashboard navigation", () => {
     expect(pageForPath("/dynamic-links/campaigns/123")?.label).toBe(
       "Campaigns"
     );
-    expect(pageForPath("/paywalls/statistics")?.label).toBe("Statistics");
-    expect(pageForPath("/onboardings/statistics")?.label).toBe("Statistics");
+    expect(pageForPath("/flows/workflows/flow-1")?.label).toBe("Workflows");
+    expect(pageForPath("/flows/settings/environments")?.label).toBe(
+      "Environments"
+    );
     expect(pageForPath("/identity/en/apps/42")?.label).toBe("Applications");
     expect(pageForPath("/identity/fr/users/abc")?.label).toBe("Users");
   });
 
-  it("defines Dashboard and exactly 59 physical module pages", () => {
+  it("defines Dashboard and exactly 71 physical module pages", () => {
     expect(DASHBOARD_SECTIONS.flatMap((section) => section.pages)).toHaveLength(
-      60
+      71
     );
   });
 
@@ -141,5 +168,50 @@ describe("dashboard navigation", () => {
     expect(JSON.stringify(DASHBOARD_SECTIONS)).not.toMatch(
       /beta|new|platform/i
     );
+  });
+
+  it("removes Paywalls and Onboardings from active navigation", () => {
+    expect(DASHBOARD_SECTIONS.map(({ slug }) => slug)).not.toContain(
+      "paywalls"
+    );
+    expect(DASHBOARD_SECTIONS.map(({ slug }) => slug)).not.toContain(
+      "onboardings"
+    );
+    expect(
+      DASHBOARD_SECTIONS.filter(({ slug }) => slug === "flows")
+    ).toHaveLength(1);
+  });
+
+  it("keeps Flows navigation strictly project-scoped", () => {
+    const flows = DASHBOARD_SECTIONS.find(({ slug }) => slug === "flows");
+    expect(JSON.stringify(flows)).not.toMatch(
+      /organization|organisation|members|invitations|billing|facturation/i
+    );
+    expect(flows?.pages.map(({ href }) => href)).not.toEqual(
+      expect.arrayContaining([
+        "/flows/settings/organization",
+        "/flows/settings/members",
+        "/flows/settings/billing",
+      ])
+    );
+  });
+
+  it("publishes only the native Support navigation surface", () => {
+    const support = DASHBOARD_SECTIONS.find(({ slug }) => slug === "support");
+    expect(support?.pages.map(({ href }) => href)).toEqual([
+      "/support/inbox",
+      "/support/contacts",
+      "/support/workforce",
+      "/support/channels",
+      "/support/automations",
+      "/support/proactive-support",
+      "/support/help-center",
+      "/support/captain",
+      "/support/integrations",
+      "/support/reports",
+      "/support/settings",
+    ]);
+    expect(pageForPath("/support/quality")).toBeUndefined();
+    expect(pageForPath("/support/configuration")).toBeUndefined();
   });
 });

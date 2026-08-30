@@ -1,0 +1,244 @@
+import {
+  getDefaultApiUrl,
+  logBranding,
+  withSdkKey,
+  sendEvents,
+  type CustomFetch,
+  type LanguageOption,
+  type LinkComponentType,
+  type UserProperties,
+} from "@superboard/flows-shared";
+import { useCallback, useEffect, useMemo, type FC, type ReactNode } from "react";
+import { Debug } from "./components/debug";
+import { FloatingBlocks } from "./components/floating-blocks";
+import { PathnameProvider } from "./contexts/pathname-context";
+import { FlowsContext } from "./flows-context";
+import { useBlocks } from "./hooks/use-blocks";
+import { useRunningTours } from "./hooks/use-running-tours";
+import { globalConfig } from "./lib/store";
+import { TourController } from "./tour-controller";
+import { type SurveyComponents, type Components, type TourComponents } from "./types";
+import { useRunningSurveys } from "./hooks/use-running-surveys";
+import { useUserProperties } from "./hooks/use-user-properties";
+
+export interface FlowsProviderProps {
+  /**
+   * Your project ID. Find this in Settings \> General.
+   */
+  projectId: string;
+  /** Environment SDK key. */
+  sdkKey?: string;
+  /**
+   * The environment key. Find this in Settings \> Environments.
+   */
+  environment: string;
+  /**
+   * Unique ID used to identify the user.
+   *
+   * If set to `null`, the SDK will be disabled and `children` will render while waiting for the `userId`. This is useful when loading the ID asynchronously.
+   */
+  userId: string | null;
+  /**
+   * Object with custom user properties. Values can be string, number, boolean, or date.
+   *
+   * When any of the property changes, the SDK will automatically refetch blocks to reflect the updated user properties.
+   */
+  userProperties?: UserProperties;
+  /**
+   * Custom API URL useful when using proxy to send Flows requests through your own domain.
+   */
+  apiUrl?: string;
+  /**
+   * Custom fetch implementation useful when you need to customize api requests with custom headers, credentials, etc.
+   */
+  customFetch?: CustomFetch;
+  /**
+   * Components used for workflow blocks.
+   */
+  components: Components;
+  /**
+   * Components used for tour blocks.
+   */
+  tourComponents: TourComponents;
+  /**
+   * Components used for survey blocks.
+   */
+  surveyComponents: SurveyComponents;
+  /**
+   * Language used to enable localization. Based on the set language, the correct translation for the block data will be selected.
+   * - `disabled` (default) - The user will be served content in the default language group of your project.
+   * - `automatic` - Automatically detect the user's language and use the matching language group. The language is determined by the `Navigator.language` property in the browser.
+   * - Manual - A specific language string, e.g. `en-US`, `fr-FR`, etc. This will use the matching language group for the specified language. See [https://www.localeplanet.com/icu/](https://www.localeplanet.com/icu/) for a full list of supported languages.
+   * @default "disabled"
+   */
+  language?: LanguageOption;
+  /**
+   * Enables the debug panel. Can be also invoked by pressing `Cmd + Option + Shift + F` on Mac or `Ctrl + Alt + Shift + F` on Windows/Linux.
+   *
+   * Disabled by default. Defaults to `true` when running on `localhost`.
+   *
+   * Passing `false` here will NOT disable the shortcut.
+   */
+  debug?: boolean;
+  /**
+   * Custom keyboard shortcut handler for opening the debug panel.
+   *
+   * By default, the debug panel opens with `Cmd + Option + Shift + F` on Mac or `Ctrl + Alt + Shift + F` on Windows/Linux.
+   *
+   * Use this function to customize the shortcut or disable it entirely.
+   *
+   * @param event - The `keydown` keyboard event to evaluate
+   * @returns `true` to open the debug panel, `false` to ignore the shortcut
+   *
+   * @example
+   * ```ts
+   * // Disable debug panel shortcut
+   * onDebugShortcut={() => false}
+   *
+   * // Use custom shortcut
+   * onDebugShortcut={(e) => {
+   *   return e.ctrlKey && e.key === "c"
+   * }}
+   * ```
+   */
+  onDebugShortcut?: (event: KeyboardEvent) => boolean;
+
+  /**
+   * Custom Link component used for client-side navigation when using components from `@superboard/flows-react-components`. Otherwise each link click will result in a full page reload.
+   *
+   * Expects link component from your router, for example Link from "next/link". The LinkComponent should accept `href`, `className`, `onClick` and `children` props and render html `<a>` element.
+   *
+   * The LinkComponent will be used for all URLs without domain and without "openInNew" (target="_blank").
+   * - `/about` - internal link, use LinkComponent
+   * - `?search=test` - internal link, use LinkComponent
+   * - `https://example.com` - external link, use standard `<a>` element
+   * - `/about` with `openInNew` - external link, use standard `<a>` element with `target="_blank"`
+   *
+   * @example
+   * ```tsx
+   * import { Link } from "react-router";
+   * import { LinkComponentType } from "@superboard/flows-react";
+   *
+   * // Adapt "react-router" Link to Flows LinkComponentType
+   * const LinkComponent: LinkComponentType = ({ href, children, className, onClick }) => (
+   *   <Link to={href} className={className} onClick={onClick}>
+   *     {children}
+   *   </Link>
+   * )
+   *
+   * // Pass the LinkComponent to FlowsProvider
+   * <FlowsProvider
+   *   LinkComponent={LinkComponent}
+   * />
+   * ```
+   */
+  LinkComponent?: LinkComponentType;
+
+  children: ReactNode;
+}
+
+export const FlowsProvider: FC<FlowsProviderProps> = (props) => {
+  if (!isProps(props)) return props.children;
+
+  return (
+    <PathnameProvider>
+      <FlowsProviderInner {...props} />
+    </PathnameProvider>
+  );
+};
+
+type Props = Omit<FlowsProviderProps, "userId"> & { userId: string };
+const isProps = (props: FlowsProviderProps): props is Props => {
+  return typeof props.userId === "string";
+};
+
+const FlowsProviderInner: FC<Props> = ({
+  children,
+  apiUrl = getDefaultApiUrl(),
+  customFetch,
+  environment,
+  projectId,
+  sdkKey,
+  userId,
+  components,
+  tourComponents,
+  surveyComponents,
+  userProperties: _userProperties = {},
+  language,
+  debug,
+  onDebugShortcut,
+  LinkComponent,
+}) => {
+  const authenticatedFetch = useMemo(
+    () => withSdkKey(customFetch, sdkKey),
+    [customFetch, sdkKey],
+  );
+
+  globalConfig.apiUrl = apiUrl;
+  globalConfig.environment = environment;
+  globalConfig.projectId = projectId;
+  globalConfig.userId = userId;
+  globalConfig.customFetch = authenticatedFetch;
+
+  const userProperties = useUserProperties(_userProperties);
+
+  const onAfterLoad = useCallback(() => {
+    void sendEvents(globalConfig.customFetch);
+  }, []);
+  const { blocks, legacyBranding, error, wsError, removeBlock, updateBlock } = useBlocks({
+    apiUrl,
+    environment,
+    projectId,
+    userId,
+    userProperties,
+    language,
+    sdkKey,
+    customFetch: authenticatedFetch,
+    onAfterLoad,
+  });
+
+  const runningTours = useRunningTours({ blocks, removeBlock, userProperties });
+  const runningSurveyBlockStateIds = useRunningSurveys({ blocks, userProperties });
+
+  useEffect(() => {
+    window.__flows_LinkComponent = LinkComponent;
+  }, [LinkComponent]);
+
+  // Preserve the upstream legacy-branding hook without injecting vendor branding
+  useEffect(() => {
+    if (!legacyBranding) return;
+    logBranding();
+  }, [legacyBranding]);
+
+  return (
+    <FlowsContext.Provider
+      value={{
+        userProperties,
+        blocks,
+        legacyBranding,
+        components,
+        runningTours,
+        runningSurveyBlockStateIds,
+        tourComponents,
+        surveyComponents,
+        removeBlock,
+        updateBlock,
+      }}
+    >
+      {children}
+      <FloatingBlocks />
+      <TourController />
+
+      <Debug
+        enabled={debug}
+        blocksError={error}
+        wsError={wsError}
+        environment={environment}
+        projectId={projectId}
+        userId={userId}
+        userProperties={userProperties}
+        onDebugKeydown={onDebugShortcut}
+      />
+    </FlowsContext.Provider>
+  );
+};

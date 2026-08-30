@@ -74,6 +74,7 @@ export function requiredSecretInventory(target, environment) {
   const api = [
     "JWT_SECRET",
     "MODULE_INTERNAL_TOKEN",
+    "SITE_OPERATOR_BRIDGE_TOKEN",
     "EMAIL_INTERNAL_TOKEN",
     "OPENGROW_CUTOVER_TOKEN",
     "PUSH_PROCESS_KEY",
@@ -84,6 +85,7 @@ export function requiredSecretInventory(target, environment) {
     "OBSERVABILITY_INTERNAL_TOKEN",
     "STORE_CREDENTIALS_ACTIVE_KEY_VERSION",
   ];
+  if (target.features?.flows) api.push("FLOWS_INTERNAL_TOKEN");
   if (target.customWorker) api.push("CUSTOM_WORKER_TOKEN");
   const apiAlternatives = [BILLING_KEY_ALTERNATIVE];
   if (target.features?.billing && resources.billingExecutionMode === "local") {
@@ -91,6 +93,11 @@ export function requiredSecretInventory(target, environment) {
   }
   add("api", api, apiAlternatives);
   add("dashboard", ["CLIENT_SECRET"]);
+  add("site", [
+    "EMDASH_ENCRYPTION_KEY",
+    "SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",
+    "SITE_OPERATOR_BRIDGE_TOKEN",
+  ]);
   if (target.features?.billing)
     add(
       "billing",
@@ -101,7 +108,10 @@ export function requiredSecretInventory(target, environment) {
   add(
     "email",
     target.mail.transport === "capture"
-      ? ["EMAIL_INTERNAL_TOKEN", "MAIL_PREVIEW_TOKEN"]
+      ? [
+          "EMAIL_INTERNAL_TOKEN",
+          "MAIL_PREVIEW_TOKEN",
+        ]
       : target.mail.provider === "aws-ses"
         ? [
             "EMAIL_INTERNAL_TOKEN",
@@ -156,6 +166,18 @@ export function requiredSecretInventory(target, environment) {
 }
 
 const PRODUCTION_SECRET_METADATA = Object.freeze({
+  EMDASH_ENCRYPTION_KEY: Object.freeze({
+    source: "generated-emdash-encryption-key",
+    rotation: "deploy-new-key-version-reencrypt-plugin-secrets-then-retire-old-key",
+  }),
+  SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: Object.freeze({
+    source: "generated-plugin-store-encryption-key",
+    rotation: "reencrypt-every-plugin-store-record-before-retiring-the-old-key",
+  }),
+  SUPERBOARD_RELEASE_PRIVATE_JWK: Object.freeze({
+    source: "generated-asymmetric-release-key",
+    rotation: "publish-and-verify-new-public-key-before-signing-with-the-new-private-key",
+  }),
   CLIENT_SECRET: Object.freeze({
     source: "generated-paired-database",
     rotation: "rotate-worker-secret-and-oauth-database-hash-together",
@@ -287,12 +309,40 @@ export function secretCoordinationPlan(target, environment) {
         "INTERNAL_API_TOKEN",
         "INTERNAL_API_TOKEN_PREVIOUS",
       ),
-      ...DOMAIN_SERVICES.map((service) =>
-        exactMember(
-          service,
-          "INTERNAL_API_TOKEN",
-          "INTERNAL_API_TOKEN_PREVIOUS",
-        ),
+      ...DOMAIN_SERVICES.filter((service) => service !== "flows").map(
+        (service) =>
+          exactMember(
+            service,
+            "INTERNAL_API_TOKEN",
+            "INTERNAL_API_TOKEN_PREVIOUS",
+          ),
+      ),
+    ],
+  });
+  addContract({
+    id: "site-operator-bridge-token",
+    scope: "platform-common",
+    source: "generated-shared-random",
+    sameValueRequired: true,
+    rotation: "deploy-api-consumer-before-site-producer",
+    members: [
+      exactMember("api", "SITE_OPERATOR_BRIDGE_TOKEN"),
+      exactMember("site", "SITE_OPERATOR_BRIDGE_TOKEN"),
+    ],
+  });
+  addContract({
+    id: "flows-internal-token",
+    scope: "platform-common",
+    source: "generated-flows-dedicated-random",
+    sameValueRequired: true,
+    rotation:
+      "add-dedicated-api-token-after-flows-accepts-the-new-active-and-old-previous-values",
+    members: [
+      exactMember("api", "FLOWS_INTERNAL_TOKEN"),
+      exactMember(
+        "flows",
+        "INTERNAL_API_TOKEN",
+        "INTERNAL_API_TOKEN_PREVIOUS",
       ),
     ],
   });
@@ -310,6 +360,7 @@ export function secretCoordinationPlan(target, environment) {
         "EMAIL_INTERNAL_TOKEN_PREVIOUS",
       ),
       exactMember("identity", "EMAIL_INTERNAL_TOKEN"),
+      exactMember("support", "EMAIL_INTERNAL_TOKEN"),
       exactMember("analytics", "EMAIL_INTERNAL_TOKEN"),
       exactMember("marketing", "EMAIL_INTERNAL_TOKEN"),
     ],

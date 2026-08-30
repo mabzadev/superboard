@@ -16,6 +16,7 @@ test("the D1 registry assigns one migration owner per enabled database", async (
     descriptors.map(({ service }) => service),
     [
       "api",
+      "site",
       "email",
       "identity",
       "files",
@@ -53,7 +54,7 @@ test("the D1 registry assigns one migration owner per enabled database", async (
   );
   assert.equal(
     d1Descriptor(target, "vocostar", "production", "support")?.databaseName,
-    "opengrow-support-db",
+    "opengrow-support-v2-db",
   );
   for (const descriptor of descriptors) {
     assert.ok(

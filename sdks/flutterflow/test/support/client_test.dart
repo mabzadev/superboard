@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -8,9 +10,9 @@ import 'package:http/testing.dart';
 import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 void main() {
-  test('preserves an API gateway path prefix for canonical Support', () async {
+  test('uses the API gateway path without a duplicate v1 segment', () async {
     Uri? requested;
-    final client = SuperBoardMessagingClient(
+    final client = SuperBoardSupportClient(
       baseUri: Uri.parse('https://api.example/api/v1/support-client'),
       projectId: 11,
       identityToken: 'signed-token',
@@ -23,8 +25,24 @@ void main() {
     await client.conversations();
     expect(
       requested.toString(),
-      'https://api.example/api/v1/support-client/v1/conversations',
+      'https://api.example/api/v1/support-client/conversations?limit=50',
     );
+  });
+
+  test('keeps the deprecated direct Worker shim on v1', () async {
+    Uri? requested;
+    final client = SuperBoardMessagingClient(
+      baseUri: Uri.parse('https://support.example'),
+      projectId: 11,
+      identityToken: 'signed-token',
+      httpClient: MockClient((request) async {
+        requested = request.url;
+        return http.Response(jsonEncode({'data': []}), 200);
+      }),
+    );
+
+    await client.conversations();
+    expect(requested?.path, '/v1/conversations');
   });
 
   test('sends application identity and project headers', () async {
@@ -82,22 +100,34 @@ void main() {
   });
 
   test('surfaces stable server errors', () async {
-    final client = SuperBoardMessagingClient(
+    final client = SuperBoardSupportClient(
       baseUri: Uri.parse('https://messages.example'),
       projectId: 11,
       identityToken: 'token',
       httpClient: MockClient(
         (_) async => http.Response(
           jsonEncode({
-            'code': 'identity_invalid',
-            'message': 'expired',
-            'retryable': false,
+            'error': {
+              'code': 'identity_invalid',
+              'message': 'expired',
+              'retryable': false,
+              'request_id': 'request-1',
+              'details': {'reason': 'expired'},
+            },
           }),
           401,
         ),
       ),
     );
-    expect(client.conversations, throwsA(isA<SuperBoardMessagingException>()));
+    await expectLater(
+      client.conversations(),
+      throwsA(
+        isA<SuperBoardSupportException>()
+            .having((error) => error.code, 'code', 'identity_invalid')
+            .having((error) => error.requestId, 'requestId', 'request-1')
+            .having((error) => error.details, 'details', {'reason': 'expired'}),
+      ),
+    );
   });
 
   test(

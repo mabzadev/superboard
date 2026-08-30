@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flows JavaScript CDN example</title>
+
+    <!-- @superboard/flows-js - use the latest version -->
+    <!-- https://www.npmjs.com/package/@superboard/flows-js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@superboard/flows-js@1.22.0/dist/index.global.js"></script>
+
+    <!-- @superboard/flows-js-components - use the latest version -->
+    <!-- https://www.npmjs.com/package/@superboard/flows-js-components -->
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/@superboard/flows-js-components@2.10.0/dist/index.global.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/@superboard/flows-js-components@2.10.0/dist/components.global.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/@superboard/flows-js-components@2.10.0/dist/tour-components.global.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/@superboard/flows-js-components@2.10.0/dist/survey-components.global.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@superboard/flows-js-components@2.10.0/dist/index.css"
+    />
+
+    <!-- Setup script -->
+    <script type="module" src="./flows.js"></script>
+  </head>
+  <body>
+    <h1>Flows JavaScript CDN example</h1>
+
+    <flows-slot data-slot-id="my-slot">
+      <div data-placeholder>
+        <p>I will be displayed if there's no content in slot with id "my-slot"</p>
+      </div>
+    </flows-slot>
+
+    <flows-floating-blocks></flows-floating-blocks>
+  </body>
+</html>

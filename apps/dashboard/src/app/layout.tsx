@@ -1,8 +1,8 @@
-
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import "./openflow-tokens.css";
+import "@xyflow/react/dist/style.css";
 import UserContextProvider from "@/context/useUserContext";
 import { Toaster } from "@/components/ui/sonner";
 import { Suspense } from "react";
@@ -76,9 +76,7 @@ export default function RootLayout({
           }}
         />
       )}
-      <body
-        className={`${inter.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${inter.variable} ${geistMono.variable} antialiased`}>
         {GTM_ID && (
           <noscript>
             <iframe

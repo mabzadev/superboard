@@ -95,9 +95,9 @@ async function main() {
     "generated",
     `${selection.targetName}-messaging-${selection.environment}.jsonc`,
   );
-  run(
-    "npx",
-    ["vitest", "run", "--config", "workers/messaging/vitest.runtime.config.ts"],
+	run(
+		"pnpm",
+		["--dir", "workers/messaging", "exec", "vitest", "run", "--config", "vitest.runtime.config.ts"],
     {
       env: {
         ...process.env,

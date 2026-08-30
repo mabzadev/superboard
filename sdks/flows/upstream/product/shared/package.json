@@ -1,0 +1,19 @@
+{
+  "name": "@superboard/flows-product-shared",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "sideEffects": false,
+  "scripts": {
+    "tsc": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.21"
+  },
+  "devDependencies": {
+    "@superboard/flows-product-types": "*",
+    "tsconfig": "*",
+    "typescript": "6.0.3"
+  },
+  "license": "MIT"
+}

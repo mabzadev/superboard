@@ -10,6 +10,7 @@ const mockMarkReadyToHandleDeeplinks = jest.fn();
 const mockLogInAppPurchase = jest.fn();
 const mockLogCustomPurchase = jest.fn();
 const mockAddListener = jest.fn(() => ({ remove: jest.fn() }));
+const storeParityFixture = require('../../../../packages/contracts/fixtures/emdash-store-parity/v1.json');
 
 jest.mock('react-native', () => {
   const addListenerMock = jest.fn(
@@ -62,6 +63,13 @@ beforeEach(() => {
 });
 
 describe('OpenGrowWrapper', () => {
+  it('passes the shared EmDash Store fixture through the native SDK bridge', () => {
+    OpenGrow.setIdentifier(storeParityFixture.application_user.identifier);
+    OpenGrow.setAttributes(storeParityFixture.application_user.attributes);
+    expect(mockSetIdentifier).toHaveBeenCalledWith('user-1');
+    expect(mockSetAttributes).toHaveBeenCalledWith({ active: true });
+  });
+
   describe('exports', () => {
     it('exports a default singleton instance', () => {
       expect(OpenGrow).toBeDefined();
@@ -141,7 +149,9 @@ describe('OpenGrowWrapper', () => {
 
   describe('generateLink', () => {
     it('generates a link with all parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://github.com/mabzadev/superboard-platform/abc123');
+      mockGenerateLink.mockResolvedValue(
+        'https://github.com/mabzadev/superboard-platform/abc123'
+      );
 
       const customRedirects = {
         ios: { link: 'https://ios.example.com', open_if_app_installed: true },
@@ -172,7 +182,9 @@ describe('OpenGrowWrapper', () => {
         tracking
       );
 
-      expect(link).toBe('https://github.com/mabzadev/superboard-platform/abc123');
+      expect(link).toBe(
+        'https://github.com/mabzadev/superboard-platform/abc123'
+      );
       expect(mockGenerateLink).toHaveBeenCalledWith(
         'Title',
         'Subtitle',
@@ -187,10 +199,14 @@ describe('OpenGrowWrapper', () => {
     });
 
     it('generates a link with minimal parameters', async () => {
-      mockGenerateLink.mockResolvedValue('https://github.com/mabzadev/superboard-platform/minimal');
+      mockGenerateLink.mockResolvedValue(
+        'https://github.com/mabzadev/superboard-platform/minimal'
+      );
 
       const link = await OpenGrow.generateLink('Title');
-      expect(link).toBe('https://github.com/mabzadev/superboard-platform/minimal');
+      expect(link).toBe(
+        'https://github.com/mabzadev/superboard-platform/minimal'
+      );
     });
 
     it('throws on native error', async () => {
@@ -277,7 +293,9 @@ describe('OpenGrowWrapper', () => {
       const subscription = OpenGrow.onDeeplinkReceived(callback);
       subscription.remove();
 
-      const deeplinkData = { link: 'https://github.com/mabzadev/superboard-platform/after-remove' };
+      const deeplinkData = {
+        link: 'https://github.com/mabzadev/superboard-platform/after-remove',
+      };
       // Trigger on any remaining listeners — callback should not be in set
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
@@ -290,7 +308,9 @@ describe('OpenGrowWrapper', () => {
       OpenGrow.onDeeplinkReceived(cb1);
       OpenGrow.onDeeplinkReceived(cb2);
 
-      const deeplinkData = { link: 'https://github.com/mabzadev/superboard-platform/multi' };
+      const deeplinkData = {
+        link: 'https://github.com/mabzadev/superboard-platform/multi',
+      };
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).toHaveBeenCalledWith(deeplinkData);
@@ -305,7 +325,9 @@ describe('OpenGrowWrapper', () => {
 
       sub1.remove();
 
-      const deeplinkData = { link: 'https://github.com/mabzadev/superboard-platform/partial' };
+      const deeplinkData = {
+        link: 'https://github.com/mabzadev/superboard-platform/partial',
+      };
       (OpenGrow as any).triggerDeeplink(deeplinkData);
 
       expect(cb1).not.toHaveBeenCalled();

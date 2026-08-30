@@ -1,0 +1,19 @@
+{
+  "title": "Blocks",
+  "description": "Flows Cloud Blocks Documentation",
+  "root": true,
+  "pages": [
+    "index",
+    "start-blocks",
+    "tour-block",
+    "[Survey block](/surveys/overview)",
+    "logic-blocks",
+    "action-blocks",
+    "end-block",
+    "other-blocks",
+    "block-properties",
+
+    "---Built-in Components---",
+    "...basics-v2"
+  ]
+}

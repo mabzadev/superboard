@@ -1,0 +1,47 @@
+import { createContext, useContext } from "react";
+import { type Block, type TourStep, type UserProperties } from "@superboard/flows-shared";
+import { type SurveyComponents, type Components, type TourComponents } from "./types";
+
+export interface RunningTour {
+  block: Block;
+  currentBlockIndex: number;
+  activeStep?: TourStep;
+  previous: () => void;
+  continue: () => void;
+  cancel: () => void;
+}
+
+export type RemoveBlock = (blockId: string) => void;
+export type UpdateBlock = (blockId: string, updateFn: (block: Block) => Block) => void;
+
+export interface IFlowsContext {
+  blocks: Block[] | null;
+  legacyBranding: boolean;
+  userProperties: UserProperties;
+  components: Components;
+  tourComponents: TourComponents;
+  surveyComponents: SurveyComponents;
+  runningTours: RunningTour[];
+  runningSurveyBlockStateIds: string[];
+  removeBlock: RemoveBlock;
+  updateBlock: UpdateBlock;
+}
+
+// eslint-disable-next-line -- necessary for noop
+const noop = () => {};
+
+export const FlowsContext = createContext<IFlowsContext>({
+  blocks: [],
+  legacyBranding: false,
+  components: {},
+  tourComponents: {},
+  surveyComponents: {},
+  runningTours: [],
+  runningSurveyBlockStateIds: [],
+  userProperties: {},
+  removeBlock: noop,
+  updateBlock: noop,
+});
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- ignore
+export const useFlowsContext = () => useContext(FlowsContext);

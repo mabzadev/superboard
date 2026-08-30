@@ -1,0 +1,88 @@
+---
+title: Admin Panel
+description: What the EmDash admin panel offers editors, administrators, and developers.
+---
+
+import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+
+The admin panel is the content management interface for your site. It is served at `/_emdash/admin/` inside your Astro site, and it adapts automatically to your collections, plugins, and the signed-in user's role. For how it is built, see [Architecture (internals)](/contributing/architecture/#admin-panel-internals).
+
+## Screens
+
+| Path                       | Screen                          |
+| -------------------------- | ------------------------------- |
+| `/`                        | Dashboard                       |
+| `/content/:collection`     | Content list                    |
+| `/content/:collection/:id` | Content editor                  |
+| `/content/:collection/new` | New entry                       |
+| `/media`                   | Media library                   |
+| `/content-types`           | Schema builder (administrators) |
+| `/menus`                   | Navigation menus                |
+| `/widgets`                 | Widget areas                    |
+| `/taxonomies`              | Categories and tags             |
+| `/settings`                | Site settings                   |
+| `/plugins/:pluginId/*`     | Plugin pages                    |
+
+Navigation is generated from your collections and installed plugins, so a schema or plugin change appears in the admin immediately.
+
+## Roles
+
+What a user sees depends on their role. EmDash has five roles, from least to most access: Subscriber, Contributor, Author, Editor, Admin. See [User roles](/guides/authentication/#user-roles) for the full definitions.
+
+In the admin, lower roles see only the content they have permission to manage. The schema builder at `/content-types` and the settings screens are Admin-only. Type generation and the CLI are available to developers working on the project regardless of admin role.
+
+<Aside type="note">
+	The admin requires a signed-in user. Login is a separate page that
+	establishes a session; see [Authentication](/guides/authentication/).
+</Aside>
+
+## Content editor
+
+The content editor builds a form from a collection's fields. Each field type uses a matching input:
+
+| Field type     | Editor            |
+| -------------- | ----------------- |
+| `string`       | Text input        |
+| `text`         | Textarea          |
+| `number`       | Number input      |
+| `boolean`      | Toggle            |
+| `datetime`     | Date/time picker  |
+| `select`       | Dropdown          |
+| `multiSelect`  | Multi-select      |
+| `portableText` | Rich text editor  |
+| `image`        | Media picker      |
+| `reference`    | Entry picker      |
+
+Rich text fields edit as formatted content — headings, lists, quotes, code, links, and images from the media library. Content from plugins or imports that the editor does not recognise is preserved untouched.
+
+Lists are paginated and stay consistent even when content changes between pages.
+
+## Media library
+
+The media library supports:
+
+- Grid and list views
+- Search and filter by type and date
+- Drag-and-drop upload
+- Image preview with metadata
+- Bulk selection and delete
+
+Uploads go directly from the browser to your storage backend, so large files are not limited by request size.
+
+## Plugin pages and widgets
+
+A plugin can add pages and dashboard widgets to the admin. Plugin pages appear under `/_emdash/admin/plugins/:pluginId/`, and a plugin can only mount under its own namespace — it cannot override core admin screens. See [installing plugins](/plugins/installing/).
+
+## Next steps
+
+<CardGrid>
+	<Card title="Getting Started" icon="rocket">
+		[Set up your first EmDash site](/getting-started/).
+	</Card>
+	<Card title="REST API" icon="puzzle">
+		The admin uses the [REST API](/reference/rest-api/); you can call it too.
+	</Card>
+	<Card title="Architecture" icon="open-book">
+		Review the [content model](/concepts/content-model/).
+	</Card>
+</CardGrid>

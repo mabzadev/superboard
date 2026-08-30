@@ -29,7 +29,7 @@ import { useRedirectConfigQuery } from "@/hooks/queries/useConfigurationQueries"
 import { NO_CHECK, PARTIAL_CHECK } from "@/constants/OptionsConstants";
 import LinkDialogContent from "@/components/dynamic_links/links/create_link/LinkDialogContent";
 import CreateLinkCreatedSuccessfully from "@/components/dynamic_links/links/create_link/CreateLinkCreatedSuccessfully";
-import { useProjectSelection } from "./useProjectSelection";
+import { useProjectSelection } from "@/context/useProjectSelection";
 import {
   showErrorNotification,
   showSuccessNotification,

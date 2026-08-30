@@ -7,6 +7,7 @@ export const DOMAIN_MODULE_NAMES = [
   "analytics",
   "marketing",
   "onboardings",
+  "flows",
 ] as const;
 
 export type DomainModuleName = (typeof DOMAIN_MODULE_NAMES)[number];

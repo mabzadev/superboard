@@ -4,11 +4,11 @@ import type { Env } from "../types";
 import { verifyInternalProjectContextRequest } from "@superboard/contracts/project-context";
 
 const mocks = vi.hoisted(() => ({
-  getAuthContext: vi.fn(),
+  getRequestAuthContext: vi.fn(),
   resolveAuthorizedProjectContext: vi.fn(),
 }));
 
-vi.mock("../lib/auth", () => ({ getAuthContext: mocks.getAuthContext }));
+vi.mock("../lib/auth", () => ({ getRequestAuthContext: mocks.getRequestAuthContext }));
 vi.mock("../lib/domain-modules", async (load) => ({
   ...(await load<typeof import("../lib/domain-modules")>()),
   resolveAuthorizedProjectContext: mocks.resolveAuthorizedProjectContext,
@@ -19,7 +19,7 @@ import applicationUsersAdminRoutes from "./application-users-admin";
 describe("application user administration gateway", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getAuthContext.mockResolvedValue({ userId: 7 });
+    mocks.getRequestAuthContext.mockResolvedValue({ userId: 7 });
     mocks.resolveAuthorizedProjectContext.mockResolvedValue({
       ok: true,
       context: {
@@ -102,7 +102,7 @@ describe("application user administration gateway", () => {
   });
 
   it("requires a valid dashboard session and an owner or administrator role", async () => {
-    mocks.getAuthContext.mockResolvedValueOnce(null);
+    mocks.getRequestAuthContext.mockResolvedValueOnce(null);
     const unauthenticated = await app().request(
       "/10-prod/users",
       {},

@@ -1,3 +1,5 @@
-import { SupportQualityPage } from "@/components/modules/SupportQualityPage";
+import { redirect } from "next/navigation";
 
-export default SupportQualityPage;
+export default function Page() {
+  redirect("/support/reports");
+}

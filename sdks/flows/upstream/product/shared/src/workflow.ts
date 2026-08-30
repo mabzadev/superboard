@@ -1,0 +1,109 @@
+import type { BlockTemplateType } from "@superboard/flows-product-types";
+import { type BlockType, type PropertyType, type StateMemoryValue } from "@superboard/flows-product-types";
+
+export const propertyTypes: PropertyType[] = [
+  "string",
+  "number",
+  "boolean",
+  "select",
+  "action",
+  "array",
+  "state-memory",
+  "block-trigger",
+  "block-state",
+];
+export const defaultPropertyType = propertyTypes[0];
+export const primitivePropertyTypes: PropertyType[] = ["string", "number", "boolean", "select"];
+
+export const builtInBlockDescriptions: Partial<Record<BlockType, string>> = {
+  start: "Start block allows users to enter the workflow if they meet the conditions",
+  "manual-start": "Start the workflow manually from your application",
+  tour: "Tour is a sequence of steps that guide users through a process.",
+  survey:
+    "Collect feedback from users by presenting a series of questions through a survey component.",
+  end: "When user reaches an end block, the whole workflow ends and is marked as completed.",
+  filter: "Filter lets through only the users that meet the conditions",
+  "workflow-trigger": "Starts another workflow by entering a specified manual start block.",
+  delay:
+    "Delay pauses the workflow for a specified amount of time before proceeding to the next block",
+  note: "Add comments or explanations to your workflow. Notes are not visible to end users and do not affect the workflow execution.",
+};
+
+export const getVersionName = (versionNumber: number): string =>
+  versionNumber === 0 ? "Draft version" : `v${versionNumber.toString()}`;
+
+export const workflowFrequencyOptions = [
+  { label: "Once", value: "once" },
+  { label: "Every time", value: "every-time" },
+] as const;
+
+export const blockTranslation: Record<BlockType, string> = {
+  component: "Workflow component",
+  "tour-component": "Tour component",
+  survey: "Survey",
+  start: "Start",
+  "manual-start": "Manual start",
+  end: "End",
+  tour: "Tour",
+  filter: "Filter",
+  wait: "Wait",
+  "workflow-trigger": "Workflow trigger",
+  delay: "Delay",
+  note: "Note",
+};
+
+export const blockTemplateTranslation: Record<BlockTemplateType, string> = {
+  component: "Workflow component",
+  "tour-component": "Tour component",
+  "survey-component": "Survey component",
+};
+
+// TODO: consider adding descriptions for more built-in blocks
+export const defaultBuiltInBlockDescription: Record<string, string> = {
+  "manual-start":
+    "Starts the workflow manually when you call the startWorkflow method from your application. For more information, see the Manual start snippet below.",
+};
+
+export const blocksWithoutEntryNode: BlockType[] = ["start", "manual-start", "note"];
+
+export const defaultPropertyValue = {
+  string: "",
+  select: "",
+  number: 0,
+  boolean: false,
+  array: [],
+  "state-memory": { trigger: "manual" } satisfies StateMemoryValue,
+  "block-trigger": null,
+  "block-state": null,
+  action: null,
+} satisfies Record<PropertyType, unknown>;
+
+export const tourBlockExitNodes = [
+  {
+    key: "continue",
+    description: "Proceeds to the next step in the tour.",
+  },
+  {
+    key: "previous",
+    description: "Returns to the previous step in the tour.",
+  },
+  {
+    key: "cancel",
+    description:
+      "Cancels the whole tour. This node is connected to the cancel node of the whole tour block.",
+  },
+];
+export const surveyBlockExitNodes = [
+  {
+    key: "complete",
+    description:
+      "Completes the survey, make sure to submit the survey answers before calling this exit node.",
+  },
+  {
+    key: "cancel",
+    description:
+      "Cancels the survey. This node is connected to the cancel node of the whole survey block.",
+  },
+];
+
+export const delayMaxTotalDays = 30;

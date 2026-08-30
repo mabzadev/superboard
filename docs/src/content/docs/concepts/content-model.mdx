@@ -1,0 +1,137 @@
+---
+title: Content Model
+description: How you shape and evolve your content model in EmDash — collections, fields, runtime changes, types, and seeds.
+---
+
+import { Aside, Card, CardGrid, Steps } from "@astrojs/starlight/components";
+
+Your content model is the set of collections and fields your site stores. You define it in the admin panel or with the CLI, change it whenever you need to, and optionally generate TypeScript types from it. This page covers how to work with it.
+
+## Collections and fields
+
+A **collection** is a type of content (posts, products, authors). Each collection has **fields** you define (a title, a body, a price). Every entry also has system fields EmDash manages for you.
+
+You create and edit collections and fields visually in the admin panel under **Content Types**, or with the CLI. Changes take effect immediately, and a non-developer can do it.
+
+## System fields
+
+In addition to the fields you define, every entry has these, always present:
+
+| Field                                        | Purpose                                |
+| -------------------------------------------- | -------------------------------------- |
+| `id`                                         | Stable unique identifier               |
+| `slug`                                       | URL-safe identifier, unique per locale |
+| `status`                                     | `draft`, `published`, or `scheduled`   |
+| `author_id`                                  | The user who created the entry         |
+| `created_at` / `updated_at` / `published_at` | Timestamps                             |
+| `deleted_at`                                 | Set on soft delete; the row is kept    |
+| `version`                                    | Increments on each save                |
+
+Deleting an entry is a soft delete: it can be restored.
+
+## Changing the model anytime
+
+You can add, rename, remove, or retype a field on a live collection at any time, through the admin panel or the CLI. Existing content is preserved.
+
+<Aside type="tip">
+	Adding a field is always safe. Removing one drops its data. Rename rather
+	than remove-and-recreate when you want to keep existing values.
+</Aside>
+
+## TypeScript types
+
+Type generation is optional but recommended. Generate types from your current model:
+
+```bash
+npx emdash types
+```
+
+This writes `.emdash/types.ts` with an interface per collection and typed query overloads, so `getEmDashCollection("posts")` returns fully typed entries:
+
+```ts title=".emdash/types.ts (generated)"
+export interface Post {
+	title: string;
+	content: PortableTextBlock[];
+	excerpt?: string;
+}
+
+declare module "emdash" {
+	export function getEmDashCollection(
+		type: "posts",
+	): Promise<{ entries: ContentEntry<Post>[]; error?: Error }>;
+}
+```
+
+Re-run the command after changing the model to keep types in sync.
+
+## Workflows
+
+Both workflows change the same model.
+
+A non-developer uses the admin panel:
+
+<Steps>
+
+1. Open **Content Types** in the admin panel.
+2. Click **Add Collection**.
+3. Define fields with the visual builder.
+4. Start creating content.
+
+</Steps>
+
+A developer can use the CLI to generate types and move the model between environments:
+
+```bash
+npx emdash types                     # generate TypeScript types
+npx emdash export-seed > seed.json   # export the model as a seed file
+```
+
+## Seed files
+
+A seed file is a JSON description of collections, taxonomies, and menus. Templates ship one, and you can export your own for version control or to set up another environment.
+
+```json title=".emdash/seed.json"
+{
+	"version": "1",
+	"collections": [
+		{
+			"slug": "posts",
+			"label": "Blog Posts",
+			"labelSingular": "Post",
+			"supports": ["drafts", "revisions", "preview"],
+			"fields": [
+				{ "slug": "title", "type": "string", "required": true },
+				{ "slug": "content", "type": "portableText" }
+			]
+		}
+	],
+	"taxonomies": [{ "name": "category", "label": "Categories", "hierarchical": true }],
+	"menus": [{ "name": "primary", "label": "Primary Navigation" }]
+}
+```
+
+Applying a seed is idempotent, so it is safe to re-run:
+
+```ts
+import { applySeed, validateSeed } from "emdash/seed";
+import seedData from "./.emdash/seed.json";
+
+const { valid, errors } = validateSeed(seedData);
+await applySeed(db, seedData, { includeContent: true, onConflict: "skip" });
+```
+
+See [Seed file format](/themes/seed-files/) for the full schema.
+
+## Next steps
+
+<CardGrid>
+	<Card title="Collections" icon="document">
+		Define [field types and validation](/concepts/collections/).
+	</Card>
+	<Card title="Admin Panel" icon="setting">
+		See the [admin panel](/concepts/admin-panel/).
+	</Card>
+	<Card title="Seeding" icon="open-book">
+		Set up sites with [seed files](/themes/seed-files/).
+	</Card>
+</CardGrid>

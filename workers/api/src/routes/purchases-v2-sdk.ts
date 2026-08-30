@@ -18,6 +18,8 @@ import {
 } from '../lib/billing-service';
 import { recordDeviceCertificationResult } from '../lib/device-certification';
 import { readApiJson } from '../lib/request-body';
+import { flowsCommercePresentation } from '../lib/flows-commerce';
+import { isFlowsLegacyCutoverEnabled } from '../lib/flows-cutover-state';
 
 function brandedHeader(c: any, suffix: string): string | undefined {
   return c.req.header(`X-SuperBoard-${suffix}`) || c.req.header(`X-OpenGrow-${suffix}`);
@@ -33,7 +35,7 @@ async function context(c: any) {
   const projectId = c.get('projectId');
   if (!projectId) throw purchasesError('invalid_sdk_project', 'Invalid project for SDK credentials', 403);
   const project = await c.env.DB.prepare(`
-    SELECT p.id, COALESCE(p.is_test, p.test, 0) AS is_test,
+    SELECT p.id, p.instance_id, COALESCE(p.is_test, p.test, 0) AS is_test,
            COALESCE(s.purchases_enabled, 0) AS purchases_enabled,
            COALESCE(f.purchases_core, 1) AS purchases_core,
            COALESCE(f.paywalls, 1) AS paywalls,
@@ -42,7 +44,7 @@ async function context(c: any) {
     LEFT JOIN billing_project_settings s ON s.project_id = p.id
     LEFT JOIN billing_feature_flags f ON f.project_id = p.id
     WHERE p.id = ? LIMIT 1
-  `).bind(String(projectId)).first() as { id: number; is_test: number; purchases_enabled: number; purchases_core: number; paywalls: number; virtual_currencies: number } | null;
+  `).bind(String(projectId)).first() as { id: number; instance_id: number; is_test: number; purchases_enabled: number; purchases_core: number; paywalls: number; virtual_currencies: number } | null;
   if (!project) throw purchasesError('invalid_sdk_project', 'Invalid project for SDK credentials', 403);
   if (!isPurchasesEnabled(c.env, project.purchases_enabled)) throw purchasesError('purchases_disabled', 'SuperBoard Purchases is not enabled for this project', 403);
   if (Number(project.purchases_core) !== 1) throw purchasesError('purchases_v2_not_enabled', 'Purchases v2 core is not enabled for this project', 403);
@@ -53,6 +55,8 @@ async function context(c: any) {
   });
   return {
     projectId: String(projectId),
+    instanceId: Number(project.instance_id),
+    projectEnvironment: (Number(project.is_test) === 1 ? 'test' : 'production') as 'test' | 'production',
     environment: (Number(project.is_test) === 1 ? 'sandbox' : 'production') as BillingEnvironment,
     features: {
       paywalls: Number(project.paywalls) === 1,
@@ -93,16 +97,43 @@ sdk.get('/configuration', async (c) => {
     const ctx = await context(c);
     const placement = c.req.query('placement') || 'default';
     const platform = c.get('sdkPlatform') || c.req.header('PLATFORM') || '';
+    const flowsCutoverEnabled = Boolean(c.env.FLOWS_MODULE) &&
+      await isFlowsLegacyCutoverEnabled(c.env.DB, Number(ctx.projectId));
     const resolved = await resolvePurchaseConfiguration(
       c.env.DB,
       ctx.projectId,
       String(ctx.customer.id),
       placement,
       targetingContext(c, ctx.customer),
-      { paywallsEnabled: ctx.features.paywalls },
+      {
+        // Once this target has cut over, Flows is the only presentation
+        // authority. Products keeps placements, offerings and verified store
+        // transactions, but the historical billing_paywalls projection must
+        // no longer be read or accidentally returned.
+        paywallsEnabled: ctx.features.paywalls && !flowsCutoverEnabled,
+      },
     );
     const offerings = await offeringsForCustomer(c.env.DB, ctx.projectId, platform, ctx.environment, placement);
     const selected = resolved.offeringIdentifier ? (offerings.all as Record<string, unknown>)[resolved.offeringIdentifier] : offerings.current;
+    const target = targetingContext(c, ctx.customer);
+    const flowsPaywall = await flowsCommercePresentation(c.env, {
+      projectId: Number(ctx.projectId),
+      instanceId: ctx.instanceId,
+      environment: ctx.projectEnvironment,
+      placement,
+      customerId: String(ctx.customer.id),
+      offeringIdentifier: resolved.offeringIdentifier,
+      userProperties: {
+        ...target.attributes,
+        platform: target.platform ?? null,
+        country: target.country ?? null,
+        storefront: target.storefront ?? null,
+        app_version: target.appVersion ?? null,
+        sdk_version: target.sdkVersion ?? null,
+        campaign: target.campaign ?? null,
+      },
+      requestId: c.req.header('cf-ray') || crypto.randomUUID(),
+    });
     return c.json({
       schema_version: 2,
       environment: ctx.environment,
@@ -112,7 +143,7 @@ sdk.get('/configuration', async (c) => {
       experiment_assignment: resolved.assignment,
       offering: selected || null,
       offerings: offerings.all,
-      paywall: resolved.paywall,
+      paywall: flowsPaywall === undefined ? resolved.paywall : flowsPaywall,
       fetched_at: new Date().toISOString(),
     }, 200, { 'Cache-Control': 'private, no-store' });
   } catch (error) { return fail(c, error); }

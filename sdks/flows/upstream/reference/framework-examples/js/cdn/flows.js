@@ -1,0 +1,45 @@
+// @superboard/flows-js
+const {
+  init,
+  addFloatingBlocksChangeListener,
+  addSlotBlocksChangeListener,
+  getCurrentFloatingBlocks,
+  getCurrentSlotBlocks,
+} = flows_js;
+
+// @superboard/flows-js-components
+const { setupJsComponents } = flows_js_components;
+const components = flows_js_components_components;
+const tourComponents = flows_js_components_tour_components;
+const surveyComponents = flows_js_components_survey_components;
+
+import { Banner } from "./banner.js";
+import { TourBanner } from "./tour-banner.js";
+
+// Initialize the SDK with your options
+init({
+  projectId: "YOUR_PROJECT_ID",
+  userId: "YOUR_USER_ID",
+  environment: "production",
+});
+setupJsComponents({
+  components: {
+    ...components,
+    // Example of custom "Banner" component
+    Banner,
+  },
+  tourComponents: {
+    ...tourComponents,
+    // Example of custom "Banner" component for tours
+    Banner: TourBanner,
+  },
+  surveyComponents: {
+    ...surveyComponents
+  },
+
+  // We need to pass @superboard/flows-js methods to fix non working cross package imports in CDN setup
+  addFloatingBlocksChangeListener,
+  addSlotBlocksChangeListener,
+  getCurrentFloatingBlocks,
+  getCurrentSlotBlocks,
+});

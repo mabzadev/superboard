@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { renderChatwootSql, transformChatwootBundle } from "./core.mjs";
+import { CHATWOOT_TABLES, renderChatwootSql, transformChatwootBundle } from "./core.mjs";
 
 function fixture() {
   return {
@@ -60,6 +60,21 @@ function fixture() {
     }],
   };
 }
+
+test("Chatwoot entities declare their canonical EmDash support repositories", () => {
+  const expectedStores = {
+    contacts: "contacts",
+    configuration: "conversations",
+    conversations: "conversations",
+    messages: "messages",
+    attachments: "messages",
+  };
+  for (const entity of CHATWOOT_TABLES) {
+    assert.equal(entity.pluginId, "supbrd-plugmod-support");
+    assert.equal(entity.storeId, `supbrd-plugmod-support.store.${expectedStores[entity.id]}`);
+    assert.equal(entity.repositoryId, `supbrd-plugmod-support.repository.${entity.target.table}`);
+  }
+});
 
 test("Chatwoot conversion preserves identities, messages and every attachment", () => {
   const result = transformChatwootBundle(fixture(), { projectId: 12 });

@@ -50,6 +50,7 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	CUSTOM_WORKER_TOKEN: string;
 	DIAGNOSTICS_API_KEY: string;
 	EMAIL_INTERNAL_TOKEN: string;
+	FLOWS_INTERNAL_TOKEN: string;
 	IAP_PROCESS_KEY: string;
 	JWT_SECRET: string;
 	MAINTENANCE_PROCESS_KEY: string;
@@ -59,6 +60,7 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	OPENGROW_ENTITLEMENT_WEBHOOK_SECRET: string;
 	PURCHASES_SIGNING_KEYSET: string;
 	PUSH_PROCESS_KEY: string;
+	SITE_OPERATOR_BRIDGE_TOKEN: string;
 	STORE_CREDENTIALS_ACTIVE_KEY_VERSION: string;
 	STORE_CREDENTIALS_ENCRYPTION_KEYS: string;
 	BILLING: Fetcher;
@@ -69,11 +71,10 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	CUSTOM_WORKER: Fetcher;
 	APP_MODULE: Fetcher;
 	PRODUCTS_MODULE: Fetcher;
-	PAYWALLS_MODULE: Fetcher;
 	DYNAMIC_LINKS_MODULE: Fetcher;
 	SUPPORT_MODULE: Fetcher;
 	ANALYTICS_MODULE: Fetcher;
 	MARKETING_MODULE: Fetcher;
-	ONBOARDINGS_MODULE: Fetcher;
+	FLOWS_MODULE: Fetcher;
 }
 interface ApiWorkerGeneratedEnv extends __BaseEnv_ApiWorkerGeneratedEnv {}

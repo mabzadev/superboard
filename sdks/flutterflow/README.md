@@ -49,12 +49,72 @@ superboard_flutterflow:
     path: sdks/flutterflow
 ```
 
-Do not install `opengrow_flutterflow_messaging` beside v3. Existing projects
-remain on the two published v2 coordinates until their atomic migration is
-validated. See `docs/SUPERBOARD_FLUTTERFLOW_V3_CUTOVER.md` for the cutover and
-rollback procedure.
+Existing projects must switch to the single v3 package atomically. The release
+catalogue and Git-owned FlutterFlow library contract remain the source of truth
+for the immutable package reference.
 
 ## Integration
+
+### Support
+
+Initialize Support after application authentication with the native gateway
+URL ending in `/api/v1/support-client`:
+
+```dart
+await superboardSupportInitializeAuthenticated(
+  applicationAccessToken: applicationAccessToken,
+  projectId: 42,
+  authGatewayUrl: 'https://api.example.com',
+  supportUrl: 'https://api.example.com/api/v1/support-client',
+);
+```
+
+The existing `superboardSupport*` actions cover conversations, messages, CSAT,
+attachments, read state, typing and realtime. Additional actions expose the
+authenticated contact, contact attributes, application events, inbox members,
+eligible proactive support, labels, transcripts, Help Center search/articles,
+article views and configured meetings. All actions use the core
+`SuperBoardSupportClient`; FlutterFlow does not maintain a second transport.
+
+### Flows
+
+Add `SuperBoardFlowsBootstrap` once with the absolute SuperBoard Flows API URL,
+project identifier, rotatable environment `sdkKey`, environment, user
+ID, language, and JSON user properties. The key is used only by the HTTP and
+WebSocket transports; it is never copied into App State, event payloads, or
+debug output. Use `SuperBoardFlutterFlowFlowsSlot` for inline content and the
+exported `SuperBoardFlowsOverlay` for floating native components.
+
+FlutterFlow actions include:
+
+- `superboardFlowsInitialize`
+- `superboardFlowsIdentify`
+- `superboardFlowsSetUserPropertiesJson`
+- `superboardFlowsSetContext`
+- `superboardFlowsSetLanguage`
+- `superboardFlowsStartWorkflow`
+- `superboardFlowsResetWorkflowProgress`
+- `superboardFlowsResetAllWorkflowsProgress`
+- `superboardFlowsFetchWorkflowsJson`
+- current floating/slot block JSON getters and streams
+- `superboardFlowsNotifyNavigation`,
+  `superboardFlowsNotifyAnchorInteraction`, and `superboardFlowsDispose`
+
+Place `SuperBoardFlutterFlowFlowAnchor` over a named native target used by a
+hint, tooltip, or tour. It ignores pointers, so the underlying FlutterFlow
+control remains interactive. Add `superboardFlowsNotifyAnchorInteraction` to
+that control's action chain when the workflow trigger or wait is a click.
+
+`SuperBoardPaywall` and `SuperBoardOnboarding` remain source compatible for
+already-published applications, but are deprecated adapters. New screens use
+commerce or onboarding workflows through Flows.
+
+The native `superboard-commerce` Flow component is rendered automatically by
+the slot or overlay widgets. Keep the existing authenticated
+`SuperBoardBootstrap`/Purchases initialization on the page: the component calls
+Products for offerings, verified App Store or Google Play checkout, and
+restoration. It sends only the resulting workflow branch to Flows, so it cannot
+duplicate purchase revenue.
 
 1. Add `SuperBoardBootstrap` once to the initial page. It never initializes
    Purchases anonymously. Call `superboardInitializeAuthenticated` immediately

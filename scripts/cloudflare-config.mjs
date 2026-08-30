@@ -33,6 +33,10 @@ import { assertTargetPhysicalResourceNames } from "./cloudflare-resource-identit
 import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 import { assertPublicRoutingReady } from "./public-routing-gate.mjs";
 import {
+  resolveSitePreviewRoute,
+  resolveSiteReleaseOperations,
+} from "./cloudflare-site-preview.mjs";
+import {
   D1_SCHEMA_OWNERS,
   d1Descriptor,
   localMigrationFiles,
@@ -52,6 +56,20 @@ if (outputSuffix && !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(outputSuffix)) {
   throw new Error("--output-suffix must be a safe lowercase name");
 }
 const { target } = await loadTarget(targetName);
+const sitePreviewRoute = resolveSitePreviewRoute({
+  requested: Boolean(args["site-preview-route"]),
+  service,
+  environment,
+  hostname: target.domains.site,
+  noRoutes: Boolean(args["no-routes"]),
+  preflight,
+});
+const siteReleaseOperations = resolveSiteReleaseOperations({
+  requested: Boolean(args["release-operations"]),
+  service,
+  environment,
+  sitePreviewRoute,
+});
 assertTargetPhysicalResourceNames(target, environment);
 assertServiceForTarget(target, service);
 const managedWorker = managedWorkerDefinition(target, service);
@@ -71,6 +89,10 @@ const domainResource = DOMAIN_SERVICES.includes(service)
 if (
   ((service === "api" || service === "billing") &&
     (!resources.d1.id || !resources.kv.id)) ||
+  (service === "site" &&
+    (!resources.siteD1.id ||
+      !resources.siteSessionKv.id ||
+      !resources.siteReleaseKv.id)) ||
   (service === "messaging" && !resources.messagingD1.id) ||
   (service === "email" && !resources.emailD1.id) ||
   (service === "identity" && !resources.identityD1.id) ||
@@ -103,6 +125,8 @@ const outputPath = resolve(
 const config =
   service === "api"
     ? apiConfig()
+    : service === "site"
+      ? siteConfig()
     : service === "dashboard"
       ? dashboardConfig()
       : service === "billing"
@@ -164,7 +188,10 @@ function baseConfig() {
     ...(accountId ? { account_id: accountId } : {}),
     // Pin to the newest date supported by the current Wrangler/workerd toolchain.
     compatibility_date: "2026-08-08",
-    compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+    compatibility_flags:
+      service === "site"
+        ? ["nodejs_compat"]
+        : ["nodejs_compat", "global_fetch_strictly_public"],
     workers_dev: false,
     preview_urls: false,
     observability: {
@@ -198,6 +225,53 @@ function requiredSecretNamesForService() {
         : oneOf[0],
     ),
   ].sort();
+}
+
+function siteConfig() {
+  return {
+    ...baseConfig(),
+    main: "../../apps/site/dist/server/entry.mjs",
+    no_bundle: true,
+    rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
+    assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
+    vars: {
+      SUPERBOARD_INSTANCE_ID: target.target,
+      SUPERBOARD_RELEASE_OPERATIONS: siteReleaseOperations.value,
+      ...d1SchemaVars(),
+    },
+    d1_databases: [
+      {
+        binding: "DB",
+        database_name: resources.siteD1.name,
+        database_id: resourceId(resources.siteD1, "d1"),
+        migrations_dir: "../../apps/site/migrations",
+        migrations_table: "d1_migrations",
+      },
+    ],
+    r2_buckets: [
+      { binding: "MEDIA", bucket_name: resources.siteMedia.name },
+    ],
+    kv_namespaces: [
+      { binding: "SESSION", id: resourceId(resources.siteSessionKv, "kv") },
+      {
+        binding: "RELEASE_CACHE",
+        id: resourceId(resources.siteReleaseKv, "kv"),
+      },
+    ],
+    worker_loaders: [{ binding: target.siteRuntime.workerLoaderBinding }],
+    services: [{ binding: "API_SERVICE", service: target.workers.api[environment] }],
+    images: { binding: "IMAGES" },
+    send_email: [
+      {
+        name: "EMAIL",
+        allowed_destination_addresses: [target.operator.email],
+        allowed_sender_addresses: [target.mail.fromAddress],
+      },
+    ],
+    ...(sitePreviewRoute ? { routes: sitePreviewRoute.routes } : {}),
+    ...(preflight ? {} : { triggers: { crons: [...target.siteRuntime.crons] } }),
+    observability: target.siteRuntime.observability,
+  };
 }
 
 function apiConfig() {
@@ -352,13 +426,24 @@ function apiConfig() {
     }
   }
   if (publicRoutesEnabled) {
-    config.routes = [
-      { pattern: target.domains.api, custom_domain: true },
-      { pattern: target.domains.auth, custom_domain: true },
-      { pattern: target.domains.shortlinks, custom_domain: true },
-      { pattern: target.domains.sdk, custom_domain: true },
-      { pattern: target.domains.files, custom_domain: true },
-    ];
+    if (environment === "production" && resources.supportRouting) {
+      if (resources.supportRouting.mode === "active") {
+        config.routes = [
+          {
+            pattern: resources.supportRouting.pattern,
+            zone_name: target.zoneName,
+          },
+        ];
+      }
+    } else {
+      config.routes = [
+        { pattern: target.domains.api, custom_domain: true },
+        { pattern: target.domains.auth, custom_domain: true },
+        { pattern: target.domains.shortlinks, custom_domain: true },
+        { pattern: target.domains.sdk, custom_domain: true },
+        { pattern: target.domains.files, custom_domain: true },
+      ];
+    }
   }
   return config;
 }
@@ -366,6 +451,11 @@ function apiConfig() {
 function domainConfig() {
   const definition = DOMAIN_SERVICE_REGISTRY[service];
   const resourceKey = definition.resourceKey;
+  const domainQueues = definition.queues.map((queueDefinition) => ({
+    definition: queueDefinition,
+    resource: resources.moduleQueues[queueDefinition.resourceKey],
+  }));
+  const primaryQueue = domainQueues[0] ?? null;
   const config = {
     ...baseConfig(),
     workers_dev: false,
@@ -387,6 +477,11 @@ function domainConfig() {
             PUBLIC_API_URL: publicApiUrl(target),
           }
         : {}),
+      ...(definition.vars.includes("PUBLIC_DASHBOARD_URL")
+        ? {
+            PUBLIC_DASHBOARD_URL: publicDashboardUrl(target),
+          }
+        : {}),
       ...(definition.vars.includes("EMAIL_PROVIDER")
         ? { EMAIL_PROVIDER: target.mail.provider }
         : {}),
@@ -398,13 +493,19 @@ function domainConfig() {
             ALLOWED_PROJECT_IDS: resources.supportProjectIds.join(","),
           }
         : {}),
-      ...(definition.queue
+      ...definition.staticVars,
+      ...(primaryQueue
         ? {
-            QUEUE_NAME:
-              resources.moduleQueues[definition.queue.resourceKey].name,
-            DLQ_NAME: resources.moduleQueues[definition.queue.resourceKey].dlq,
+            QUEUE_NAME: primaryQueue.resource.name,
+            DLQ_NAME: primaryQueue.resource.dlq,
           }
         : {}),
+      ...Object.fromEntries(
+        domainQueues.flatMap(({ definition: queue, resource }) => [
+          ...(queue.nameVar ? [[queue.nameVar, resource.name]] : []),
+          ...(queue.dlqVar ? [[queue.dlqVar, resource.dlq]] : []),
+        ]),
+      ),
     },
     d1_databases: [
       {
@@ -422,6 +523,15 @@ function domainConfig() {
       bucket_name: resources.moduleR2[binding.resourceKey].name,
     }));
   }
+  if (definition.ai) {
+    config.ai = { binding: definition.ai.binding };
+  }
+  if (definition.vectorize.length) {
+    config.vectorize = definition.vectorize.map((binding) => ({
+      binding: binding.binding,
+      index_name: resources.moduleVectorize[binding.resourceKey].name,
+    }));
+  }
   if (definition.services.length) {
     config.services = definition.services.map((binding) => ({
       binding: binding.binding,
@@ -435,21 +545,27 @@ function domainConfig() {
       class_name: workflow.className,
     }));
   }
-  if (definition.queue) {
-    const queue = resources.moduleQueues[definition.queue.resourceKey];
+  if (domainQueues.length) {
     config.queues = {
-      producers: [{ binding: definition.queue.binding, queue: queue.name }],
+      producers: domainQueues.map(({ definition: queue, resource }) => ({
+        binding: queue.binding,
+        queue: resource.name,
+      })),
     };
     if (!preflight) {
       config.queues.consumers = [
-        queueConsumer(
-          queue.name,
-          queue.dlq,
-          definition.queue.maxBatchSize,
-          definition.queue.maxBatchTimeout,
-          definition.queue.maxRetries,
+        ...domainQueues.map(({ definition: queue, resource }) =>
+          queueConsumer(
+            resource.name,
+            resource.dlq,
+            queue.maxBatchSize,
+            queue.maxBatchTimeout,
+            queue.maxRetries,
+          ),
         ),
-        queueConsumer(queue.dlq, null, 10, 5, 100),
+        ...domainQueues.map(({ resource }) =>
+          queueConsumer(resource.dlq, null, 10, 5, 100),
+        ),
       ];
     }
   }
@@ -1115,6 +1231,7 @@ function publicSurfaceMonitors(selectedTarget) {
 function platformWorkerTopology(selectedTarget) {
   const publicSurfaceIds = {
     api: ["api", "sdk", "shortlinks"],
+    site: ["site-preview"],
     dashboard: ["dashboard"],
     email: selectedTarget.domains.mailPreview ? ["mail-preview"] : [],
     files: ["files"],

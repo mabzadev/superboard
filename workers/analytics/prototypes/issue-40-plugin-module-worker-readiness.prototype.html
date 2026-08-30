@@ -1,0 +1,2732 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prototype jetable #40 — Plugin module et Worker SuperBoard</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #14213d;
+        --muted: #5d677b;
+        --paper: #f6f8fc;
+        --panel: #ffffff;
+        --line: #dbe1eb;
+        --accent: #3157d5;
+        --accent-soft: #e9eeff;
+        --success: #147a51;
+        --success-soft: #e6f7ef;
+        --danger: #b3283f;
+        --danger-soft: #fff0f2;
+        --warning: #8a5a00;
+        --warning-soft: #fff6db;
+        --shadow: 0 14px 38px rgba(27, 39, 73, 0.08);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        line-height: 1.55;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      code {
+        padding: 0.12rem 0.3rem;
+        border-radius: 0.3rem;
+        background: #eef1f7;
+        color: #24365f;
+        font-size: 0.88em;
+        overflow-wrap: anywhere;
+      }
+
+      .page {
+        width: min(1240px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 64px;
+      }
+
+      .prototype-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 16px;
+        padding: 0.45rem 0.72rem;
+        border: 1px solid #f1b5bf;
+        border-radius: 999px;
+        background: var(--danger-soft);
+        color: var(--danger);
+        font-size: 0.77rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 900px;
+        margin-bottom: 14px;
+        font-size: clamp(2rem, 5vw, 3.55rem);
+        line-height: 1.05;
+        letter-spacing: -0.045em;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        font-size: 1.25rem;
+        letter-spacing: -0.015em;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+
+      .lede {
+        max-width: 920px;
+        margin-bottom: 24px;
+        color: var(--muted);
+        font-size: 1.08rem;
+      }
+
+      .question,
+      .limitation {
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+
+      .question {
+        margin-bottom: 12px;
+      }
+
+      .limitation {
+        margin-bottom: 28px;
+        border-left-color: var(--warning);
+        background: var(--warning-soft);
+      }
+
+      .question strong,
+      .limitation strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .status-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+        gap: 18px;
+        align-items: stretch;
+        margin-bottom: 24px;
+      }
+
+      .hero-panel,
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .hero-panel {
+        padding: 22px;
+      }
+
+      .hero-panel p:last-child {
+        margin-bottom: 0;
+      }
+
+      .hero-kicker {
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.075em;
+        text-transform: uppercase;
+      }
+
+      .hero-result {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+        font-size: clamp(1.45rem, 4vw, 2.35rem);
+        font-weight: 800;
+        letter-spacing: -0.035em;
+      }
+
+      .hero-result::before {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--muted);
+        content: "";
+      }
+
+      .hero-result.ready::before {
+        background: var(--success);
+      }
+
+      .hero-result.blocked::before {
+        background: var(--danger);
+      }
+
+      .hero-result.pending::before {
+        background: var(--warning);
+      }
+
+      .summary-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+      }
+
+      .summary-list div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 9px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .summary-list div:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .summary-list dt {
+        color: var(--muted);
+      }
+
+      .summary-list dd {
+        margin: 0;
+        text-align: right;
+        font-weight: 700;
+      }
+
+      .section {
+        margin-top: 28px;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 12px;
+      }
+
+      .section-heading p {
+        max-width: 680px;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .state-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .panel {
+        min-width: 0;
+        padding: 20px;
+      }
+
+      .panel.full {
+        grid-column: 1 / -1;
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: minmax(145px, 0.72fr) minmax(0, 1.28fr);
+        gap: 12px;
+        align-items: start;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .status-row:last-child {
+        border-bottom: 0;
+      }
+
+      .status-row > span:first-child {
+        color: var(--muted);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        max-width: 100%;
+        padding: 0.25rem 0.58rem;
+        border-radius: 999px;
+        background: #edf0f6;
+        color: #41506e;
+        font-size: 0.77rem;
+        font-weight: 800;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .badge.success {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .badge.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .badge.warning {
+        background: var(--warning-soft);
+        color: var(--warning);
+      }
+
+      .contribution-list,
+      .activity-list,
+      .compact-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .contribution-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .contribution-list li {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fafbfe;
+      }
+
+      .contribution-list strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .contribution-list small {
+        color: var(--muted);
+      }
+
+      .receipt-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .receipt-table th,
+      .receipt-table td {
+        padding: 11px 9px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .receipt-table th {
+        color: var(--muted);
+        font-size: 0.76rem;
+        letter-spacing: 0.055em;
+        text-transform: uppercase;
+      }
+
+      .receipt-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .payload-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .payload {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fafbfe;
+      }
+
+      .payload strong {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 0.82rem;
+      }
+
+      .payload pre {
+        margin: 0;
+        overflow: auto;
+        color: #24365f;
+        font-size: 0.78rem;
+        white-space: pre-wrap;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      .action-button,
+      .tab-button,
+      .step-button {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .action-button {
+        padding: 0.65rem 0.85rem;
+      }
+
+      .action-button:hover,
+      .action-button:focus-visible,
+      .tab-button:hover,
+      .tab-button:focus-visible,
+      .step-button:hover:not(:disabled),
+      .step-button:focus-visible:not(:disabled) {
+        border-color: var(--accent);
+        outline: 3px solid var(--accent-soft);
+        outline-offset: 1px;
+      }
+
+      .action-button.primary,
+      .step-button.current {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .action-button.danger {
+        border-color: #f1b5bf;
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .procedure-shell {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .tabs {
+        display: flex;
+        gap: 7px;
+        padding: 12px;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--line);
+        background: #f9faff;
+      }
+
+      .tab-button {
+        flex: 0 0 auto;
+        padding: 0.55rem 0.8rem;
+        color: var(--muted);
+      }
+
+      .tab-button[aria-selected="true"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .procedure-body {
+        padding: 20px;
+      }
+
+      .procedure-body > p {
+        max-width: 800px;
+        color: var(--muted);
+      }
+
+      .steps {
+        display: grid;
+        gap: 9px;
+        counter-reset: steps;
+      }
+
+      .step-button {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        padding: 0.72rem 0.8rem;
+        text-align: left;
+        counter-increment: steps;
+      }
+
+      .step-button::before {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #edf0f6;
+        color: var(--muted);
+        content: counter(steps);
+        font-size: 0.75rem;
+      }
+
+      .step-button.current::before {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+
+      .step-button.done {
+        border-color: #bce3d0;
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .step-button.done::before {
+        background: var(--success);
+        color: #fff;
+        content: "✓";
+      }
+
+      .step-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+      }
+
+      .activity-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .activity-list li {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .activity-list li:last-child {
+        border-bottom: 0;
+      }
+
+      .activity-list small {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      details {
+        margin-top: 18px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fafbfe;
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      footer {
+        margin-top: 34px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      @media (max-width: 820px) {
+        .status-hero,
+        .state-grid,
+        .payload-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .panel.full {
+          grid-column: auto;
+        }
+
+        .section-heading {
+          align-items: start;
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .page {
+          width: min(100% - 20px, 1240px);
+          padding-top: 20px;
+        }
+
+        .status-row {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+
+        .receipt-table thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+
+        .receipt-table tr,
+        .receipt-table td {
+          display: block;
+        }
+
+        .receipt-table tr {
+          padding: 10px 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .receipt-table td {
+          padding: 4px 0;
+          border: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <span class="prototype-label">Prototype jetable — à supprimer</span>
+      <h1>
+        Un Plugin module peut-il fermer la publication tant que son Worker n’est
+        pas prêt&nbsp;?
+      </h1>
+      <p class="lede">
+        Cette démo pilotable représente
+        <code>supbrd-plugmod-analytics</code> dans un Site EmDash. Elle rend
+        visibles l’installation, les contributions du Front SuperBoard,
+        l’isolation du Worker, les contrats partagés et chaque Validation
+        Receipt du gate de Release Front.
+      </p>
+
+      <div class="question">
+        <strong>Question du ticket #40</strong>
+        Démontrer qu’un Plugin module installé et configuré dans EmDash expose
+        des éléments, actions et sources de données au Front SuperBoard, appelle
+        son Worker métier avec isolation et contrats typés, puis empêche la
+        publication si le Worker, ses migrations ou sa santé ne sont pas prêts.
+      </div>
+
+      <div class="limitation">
+        <strong>Portée honnête de la preuve</strong>
+        Ce fichier valide le modèle de contrôle et les transitions attendues,
+        entièrement en mémoire. Il ne déploie ni EmDash ni Cloudflare, ne prouve
+        pas les bindings d’un compte réel et ne remplace pas un test
+        d’intégration futur sur le Socle EmDash intégré. Les checksums et
+        identifiants sont représentatifs.
+      </div>
+
+      <section class="status-hero" aria-labelledby="current-result-title">
+        <div class="hero-panel" aria-live="polite">
+          <p class="hero-kicker" id="current-result-title">
+            Décision de publication courante
+          </p>
+          <div id="hero-result" class="hero-result pending">
+            Préflight incomplet
+          </div>
+          <p id="hero-explanation"></p>
+        </div>
+        <div class="hero-panel">
+          <p class="hero-kicker">Pointeurs immuables</p>
+          <dl class="summary-list" id="release-summary"></dl>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="state-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="state-title">État actuel complet</h2>
+            <p>
+              Chaque action restitue ces panneaux. Rien n’est conservé après la
+              fermeture de la page.
+            </p>
+          </div>
+        </div>
+        <div class="state-grid">
+          <article class="panel" aria-labelledby="plugin-title">
+            <h3 id="plugin-title">Plugin dans EmDash</h3>
+            <div id="plugin-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="worker-title">
+            <h3 id="worker-title">Worker métier dédié</h3>
+            <div id="worker-state"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="contributions-title">
+            <h3 id="contributions-title">Contributions au Front SuperBoard</h3>
+            <ul class="contribution-list" id="contribution-state"></ul>
+          </article>
+
+          <article class="panel" aria-labelledby="invocation-title">
+            <h3 id="invocation-title">Dernier appel Worker</h3>
+            <div id="invocation-state"></div>
+          </article>
+
+          <article class="panel full" aria-labelledby="receipts-title">
+            <h3 id="receipts-title">
+              Validation Receipts du prochain Front Release Candidate
+            </h3>
+            <table class="receipt-table">
+              <thead>
+                <tr>
+                  <th>Couche</th>
+                  <th>État</th>
+                  <th>Preuve visible</th>
+                </tr>
+              </thead>
+              <tbody id="receipt-state"></tbody>
+            </table>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="free-play-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="free-play-title">Jeu libre</h2>
+            <p>
+              Tous les événements restent disponibles dans n’importe quel ordre.
+              Une transition illégale est refusée et expliquée dans le journal
+              sans modifier silencieusement l’état.
+            </p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="controls" id="free-play-controls"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="procedures-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="procedures-title">Procédures guidées</h2>
+            <p>
+              Choisir un onglet réinitialise la démo, puis chaque étape applique
+              un événement réel du modèle.
+            </p>
+          </div>
+        </div>
+        <div class="procedure-shell">
+          <div
+            class="tabs"
+            id="procedure-tabs"
+            role="tablist"
+            aria-label="Scénarios du prototype"
+          ></div>
+          <div class="procedure-body" id="procedure-body" role="tabpanel"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="activity-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="activity-title">Journal des décisions</h2>
+            <p>
+              Les huit derniers événements montrent ce qui a changé ou pourquoi
+              une action a été refusée.
+            </p>
+          </div>
+        </div>
+        <div class="panel">
+          <ul class="activity-list" id="activity-state" aria-live="polite"></ul>
+        </div>
+      </section>
+
+      <details>
+        <summary>Contrats représentatifs intégrés à la preuve</summary>
+        <ul class="compact-list">
+          <li>
+            Plugin&nbsp;: <code>supbrd-plugmod-analytics@1.4.0</code>, backend
+            <code>sandboxed</code>, Worker <code>dedicated</code>.
+          </li>
+          <li>
+            Élément&nbsp;:
+            <code>supbrd-plugmod-analytics.renderer.overview_chart</code>.
+          </li>
+          <li>
+            Action&nbsp;:
+            <code>supbrd-plugmod-analytics.command.export_report</code>.
+          </li>
+          <li>
+            Source&nbsp;:
+            <code>supbrd-plugmod-analytics.data_source.event_series</code>.
+          </li>
+          <li>
+            Appels&nbsp;: schémas fermés, checksum de contrat identique,
+            Execution Attempt et Execution Lease à durée bornée, résultat
+            accepté uniquement par le repository du plugin.
+          </li>
+          <li>
+            Isolation&nbsp;: le Worker ne possède aucun binding direct vers un
+            Store autoritatif; une tentative directe est refusée avant dispatch.
+          </li>
+          <li>
+            Store et dépendance&nbsp;: le Store D1 gouverné par EmDash et
+            <code>supbrd-core</code> avec policy <code>required</code> possèdent
+            chacun un état vérifiable et une Validation Receipt bloquante.
+          </li>
+          <li>
+            Publication&nbsp;: chaque receipt est lié au checksum du Front
+            Release Candidate exact; validation, signature, Release Approval et
+            activation atomique sont quatre états distincts.
+          </li>
+        </ul>
+      </details>
+
+      <footer>
+        Ticket <code>#40</code> — modèle pur dans le premier bloc JavaScript;
+        coque de démonstration sans framework, serveur, base de données,
+        stockage local ni appel réseau.
+      </footer>
+    </main>
+
+    <script>
+      // Module logique portable. Il ne connaît ni le DOM ni les boutons de la page.
+      const PluginModulePrototype = (() => {
+        const manifest = Object.freeze({
+          schemaVersion: "1.0.0",
+          pluginId: "supbrd-plugmod-analytics",
+          pluginKind: "module",
+          pluginVersion: "1.4.0",
+          publisher: "superboard",
+          artifactChecksum:
+            "sha256:7b1af31f9f2657eef0dd8dd0dcd7284864729513695c14f91f42b4dcf6df113a",
+          contractChecksum:
+            "sha256:38f6b3bf6511bd4de65bb60af5e6f6d632cf5dbcc23e4762a7eb751255965402",
+          execution: {
+            backend: "sandboxed",
+            worker: "dedicated",
+            renderer: "native_bundle",
+          },
+          capabilities: [
+            "plugin.repository.read",
+            "plugin.repository.command",
+            "worker.dispatch",
+          ],
+          resources: ["SUPERBOARD_PLUGIN_REPOSITORY", "ANALYTICS_QUEUE"],
+          stores: [
+            {
+              id: "supbrd-plugmod-analytics.store.analytics_events",
+              kind: "d1",
+              authority: "emdash",
+              schemaVersion: "2",
+              availabilityPolicy: "required",
+            },
+          ],
+          dependencies: [
+            {
+              pluginId: "supbrd-core",
+              policy: "required",
+              minimumVersion: "1.0.0",
+            },
+          ],
+          worker: {
+            id: "supbrd-analytics-worker",
+            artifactChecksum:
+              "sha256:7b1af31f9f2657eef0dd8dd0dcd7284864729513695c14f91f42b4dcf6df113a",
+            protocolVersion: "superboard.worker.v1",
+            bindings: ["SUPERBOARD_PLUGIN_REPOSITORY"],
+            forbiddenBindings: ["ANALYTICS_DB", "RELEASE_STORE"],
+            resources: ["ANALYTICS_QUEUE"],
+            secretReferences: ["ANALYTICS_EXPORT_SIGNING_KEY"],
+            networkHosts: [],
+            healthChecks: [
+              "self_report",
+              "handshake",
+              "artifact",
+              "dependencies",
+              "callback",
+              "capacity",
+            ],
+            failurePolicy: "fail_closed",
+          },
+          migrations: ["0001_create_event_store", "0002_add_daily_projection"],
+          contributions: {
+            renderers: ["supbrd-plugmod-analytics.renderer.overview_chart"],
+            commands: ["supbrd-plugmod-analytics.command.export_report"],
+            dataSources: ["supbrd-plugmod-analytics.data_source.event_series"],
+          },
+          failurePolicies: {
+            writes: "fail_closed",
+            reads: "unavailable",
+          },
+        });
+
+        const schemas = Object.freeze({
+          manifest: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "schemaVersion",
+              "pluginId",
+              "pluginKind",
+              "pluginVersion",
+              "publisher",
+              "artifactChecksum",
+              "contractChecksum",
+              "execution",
+              "capabilities",
+              "resources",
+              "stores",
+              "dependencies",
+              "worker",
+              "migrations",
+              "contributions",
+              "failurePolicies",
+            ],
+            properties: {
+              schemaVersion: { type: "string" },
+              pluginId: { type: "string" },
+              pluginKind: { type: "string", enum: ["module"] },
+              pluginVersion: { type: "string" },
+              publisher: { type: "string" },
+              artifactChecksum: { type: "string" },
+              contractChecksum: { type: "string" },
+              execution: {
+                type: "object",
+                additionalProperties: false,
+                required: ["backend", "worker", "renderer"],
+                properties: {
+                  backend: { type: "string", enum: ["sandboxed"] },
+                  worker: { type: "string", enum: ["dedicated"] },
+                  renderer: {
+                    type: "string",
+                    enum: ["native_bundle", "block_kit"],
+                  },
+                },
+              },
+              capabilities: { type: "array", items: { type: "string" } },
+              resources: { type: "array", items: { type: "string" } },
+              stores: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "id",
+                    "kind",
+                    "authority",
+                    "schemaVersion",
+                    "availabilityPolicy",
+                  ],
+                  properties: {
+                    id: { type: "string" },
+                    kind: { type: "string", enum: ["d1"] },
+                    authority: { type: "string", enum: ["emdash"] },
+                    schemaVersion: { type: "string" },
+                    availabilityPolicy: {
+                      type: "string",
+                      enum: ["required"],
+                    },
+                  },
+                },
+              },
+              dependencies: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["pluginId", "policy", "minimumVersion"],
+                  properties: {
+                    pluginId: { type: "string" },
+                    policy: { type: "string", enum: ["required"] },
+                    minimumVersion: { type: "string" },
+                  },
+                },
+              },
+              worker: {
+                type: "object",
+                additionalProperties: false,
+                required: [
+                  "id",
+                  "artifactChecksum",
+                  "protocolVersion",
+                  "bindings",
+                  "forbiddenBindings",
+                  "resources",
+                  "secretReferences",
+                  "networkHosts",
+                  "healthChecks",
+                  "failurePolicy",
+                ],
+                properties: {
+                  id: { type: "string" },
+                  artifactChecksum: { type: "string" },
+                  protocolVersion: { type: "string" },
+                  bindings: { type: "array", items: { type: "string" } },
+                  forbiddenBindings: {
+                    type: "array",
+                    items: { type: "string" },
+                  },
+                  resources: { type: "array", items: { type: "string" } },
+                  secretReferences: {
+                    type: "array",
+                    items: { type: "string" },
+                  },
+                  networkHosts: { type: "array", items: { type: "string" } },
+                  healthChecks: { type: "array", items: { type: "string" } },
+                  failurePolicy: {
+                    type: "string",
+                    enum: ["fail_closed"],
+                  },
+                },
+              },
+              migrations: { type: "array", items: { type: "string" } },
+              contributions: {
+                type: "object",
+                additionalProperties: false,
+                required: ["renderers", "commands", "dataSources"],
+                properties: {
+                  renderers: { type: "array", items: { type: "string" } },
+                  commands: { type: "array", items: { type: "string" } },
+                  dataSources: { type: "array", items: { type: "string" } },
+                },
+              },
+              failurePolicies: {
+                type: "object",
+                additionalProperties: false,
+                required: ["writes", "reads"],
+                properties: {
+                  writes: { type: "string", enum: ["fail_closed"] },
+                  reads: { type: "string", enum: ["unavailable"] },
+                },
+              },
+            },
+          },
+          commandInput: {
+            type: "object",
+            additionalProperties: false,
+            required: ["format", "range"],
+            properties: {
+              format: { type: "string", enum: ["csv"] },
+              range: { type: "string", enum: ["24h", "7d"] },
+            },
+          },
+          commandOutput: {
+            type: "object",
+            additionalProperties: false,
+            required: ["operationId", "status"],
+            properties: {
+              operationId: { type: "string" },
+              status: { type: "string", enum: ["accepted"] },
+            },
+          },
+          sourceInput: {
+            type: "object",
+            additionalProperties: false,
+            required: ["range"],
+            properties: {
+              range: { type: "string", enum: ["24h", "7d"] },
+            },
+          },
+          sourceOutput: {
+            type: "object",
+            additionalProperties: false,
+            required: ["points", "unit"],
+            properties: {
+              points: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["label", "value"],
+                  properties: {
+                    label: { type: "string" },
+                    value: { type: "number" },
+                  },
+                },
+              },
+              unit: { type: "string", enum: ["events"] },
+            },
+          },
+        });
+
+        function clone(value) {
+          return JSON.parse(JSON.stringify(value));
+        }
+
+        function canonicalize(value) {
+          if (Array.isArray(value)) return value.map(canonicalize);
+          if (value && typeof value === "object") {
+            return Object.keys(value)
+              .sort()
+              .reduce((result, key) => {
+                result[key] = canonicalize(value[key]);
+                return result;
+              }, {});
+          }
+          return value;
+        }
+
+        function representativeChecksum(value) {
+          const input = JSON.stringify(canonicalize(value));
+          const words = [];
+          for (let seed = 0; seed < 8; seed += 1) {
+            let hash = (2166136261 ^ seed) >>> 0;
+            for (let index = 0; index < input.length; index += 1) {
+              hash ^= input.charCodeAt(index);
+              hash = Math.imul(hash, 16777619) >>> 0;
+            }
+            words.push(hash.toString(16).padStart(8, "0"));
+          }
+          return `prototype-checksum:${words.join("")}`;
+        }
+
+        function candidatePayload(state) {
+          return {
+            plugin: state.plugin,
+            isolation: {
+              descriptor: state.isolation.descriptor,
+              directAuthoritativeStoreBinding:
+                state.isolation.directAuthoritativeStoreBinding,
+            },
+            store: state.store,
+            migrations: state.migrations,
+            dependencies: state.dependencies,
+            worker: state.worker,
+            registry: state.registry,
+          };
+        }
+
+        function createInitialState() {
+          const state = {
+            sequence: 0,
+            plugin: {
+              lifecycle: "available",
+              manifest: "not_validated",
+              configuration: "missing",
+              capabilityApproval: {
+                status: "missing",
+                artifactChecksum: null,
+                capabilitySetChecksum: null,
+                resourceSetChecksum: null,
+              },
+            },
+            isolation: {
+              descriptor: "not_validated",
+              directAuthoritativeStoreBinding: false,
+              deniedAttempts: 0,
+              lastDecision: "not_exercised",
+            },
+            migrations: {
+              expected: [...manifest.migrations],
+              applied: [],
+            },
+            store: {
+              id: manifest.stores[0].id,
+              descriptor: "not_validated",
+              provisioning: "absent",
+              schemaVersion: null,
+              availability: "unknown",
+            },
+            dependencies: {
+              "supbrd-core": {
+                policy: "required",
+                minimumVersion: "1.0.0",
+                resolvedVersion: null,
+                status: "unknown",
+              },
+            },
+            worker: {
+              deployment: "absent",
+              artifactChecksum: null,
+              contractChecksum: null,
+              protocolVersion: null,
+              evidence: {
+                selfReport: "unknown",
+                handshake: "unknown",
+                artifact: "unknown",
+                dependencies: "unknown",
+                callback: "unknown",
+                capacity: "unknown",
+              },
+              verifiedHealth: "not_ready",
+            },
+            registry: {
+              renderers: [],
+              commands: [],
+              dataSources: [],
+            },
+            release: {
+              candidateId: "front_candidate_000042",
+              candidateStatus: "draft",
+              publicationStatus: "not_attempted",
+              activeReleaseId: "front_release_000041",
+              previousReleaseId: "front_release_000040",
+              candidateContentChecksum: null,
+              signature: null,
+              validationSetChecksum: null,
+              approval: null,
+              validationReceipts: [],
+            },
+            invocation: {
+              status: "never_called",
+              contributionId: null,
+              contract: "not_checked",
+              dispatched: false,
+              lease: null,
+              request: null,
+              response: null,
+              explanation: "Aucun appel n’a encore été tenté.",
+            },
+            activity: [
+              {
+                sequence: 0,
+                level: "info",
+                message: "État initial chargé",
+                detail:
+                  "Le plugin est disponible mais rien n’est encore installé.",
+              },
+            ],
+          };
+          state.release.candidateContentChecksum = representativeChecksum(
+            candidatePayload(state)
+          );
+          return state;
+        }
+
+        function valuesMatch(actual, expected) {
+          return (
+            actual.length === expected.length &&
+            expected.every((value) => actual.includes(value))
+          );
+        }
+
+        function migrationsAreCurrent(state) {
+          return valuesMatch(
+            state.migrations.applied,
+            state.migrations.expected
+          );
+        }
+
+        function storeIsReady(state) {
+          return (
+            state.store.id === manifest.stores[0].id &&
+            state.store.descriptor === "valid" &&
+            state.store.provisioning === "provisioned" &&
+            state.store.schemaVersion === manifest.stores[0].schemaVersion &&
+            state.store.availability === "ready"
+          );
+        }
+
+        function requiredDependenciesAreReady(state) {
+          return manifest.dependencies
+            .filter((dependency) => dependency.policy === "required")
+            .every((dependency) => {
+              const resolved = state.dependencies[dependency.pluginId];
+              return (
+                resolved &&
+                resolved.status === "ready" &&
+                resolved.resolvedVersion !== null
+              );
+            });
+        }
+
+        function capabilityApprovalMatches(state) {
+          const approval = state.plugin.capabilityApproval;
+          return (
+            approval.status === "approved" &&
+            approval.artifactChecksum === manifest.artifactChecksum &&
+            approval.capabilitySetChecksum ===
+              representativeChecksum(manifest.capabilities) &&
+            approval.resourceSetChecksum ===
+              representativeChecksum(manifest.resources)
+          );
+        }
+
+        function contributionsAreRegistered(state) {
+          return (
+            valuesMatch(
+              state.registry.renderers,
+              manifest.contributions.renderers
+            ) &&
+            valuesMatch(
+              state.registry.commands,
+              manifest.contributions.commands
+            ) &&
+            valuesMatch(
+              state.registry.dataSources,
+              manifest.contributions.dataSources
+            )
+          );
+        }
+
+        function calculateVerifiedHealth(worker) {
+          const evidence = worker.evidence;
+          const allEvidenceReady = Object.values(evidence).every(
+            (value) => value === "ready"
+          );
+          const descriptorMatches =
+            worker.deployment === "deployed" &&
+            worker.artifactChecksum === manifest.artifactChecksum &&
+            worker.protocolVersion === manifest.worker.protocolVersion &&
+            worker.contractChecksum === manifest.contractChecksum;
+          return allEvidenceReady && descriptorMatches ? "ready" : "not_ready";
+        }
+
+        function validateValue(value, schema, path = "payload") {
+          if (schema.type === "object") {
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+              return `${path} doit être un objet`;
+            }
+            const keys = Object.keys(value);
+            const unknown = keys.find((key) => !(key in schema.properties));
+            if (schema.additionalProperties === false && unknown) {
+              return `${path}.${unknown} n’est pas déclaré par le schéma fermé`;
+            }
+            const missing = schema.required.find((key) => !(key in value));
+            if (missing) {
+              return `${path}.${missing} est requis`;
+            }
+            for (const key of keys) {
+              const error = validateValue(
+                value[key],
+                schema.properties[key],
+                `${path}.${key}`
+              );
+              if (error) return error;
+            }
+            return null;
+          }
+
+          if (schema.type === "array") {
+            if (!Array.isArray(value)) return `${path} doit être un tableau`;
+            for (let index = 0; index < value.length; index += 1) {
+              const error = validateValue(
+                value[index],
+                schema.items,
+                `${path}[${index}]`
+              );
+              if (error) return error;
+            }
+            return null;
+          }
+
+          if (typeof value !== schema.type)
+            return `${path} doit être de type ${schema.type}`;
+          if (schema.enum && !schema.enum.includes(value)) {
+            return `${path} doit valoir ${schema.enum.join(" ou ")}`;
+          }
+          return null;
+        }
+
+        function validateManifestContract(value) {
+          const structureError = validateValue(
+            value,
+            schemas.manifest,
+            "manifest"
+          );
+          if (structureError) return structureError;
+
+          const expectedNamespaces = [
+            ["renderers", "renderer"],
+            ["commands", "command"],
+            ["dataSources", "data_source"],
+          ];
+          for (const [collection, kind] of expectedNamespaces) {
+            const prefix = `${value.pluginId}.${kind}.`;
+            const invalidId = value.contributions[collection].find(
+              (id) => !id.startsWith(prefix)
+            );
+            if (invalidId) return `${invalidId} sort du Plugin Namespace`;
+          }
+
+          const forbiddenBinding = value.worker.bindings.find((binding) =>
+            value.worker.forbiddenBindings.includes(binding)
+          );
+          if (forbiddenBinding) {
+            return `${forbiddenBinding} expose un Store autoritatif au Worker`;
+          }
+          return null;
+        }
+
+        function receipt(state, id, label, passed, passMessage, errorMessage) {
+          const proof = {
+            id,
+            label,
+            candidateId: state.release.candidateId,
+            candidateContentChecksum: state.release.candidateContentChecksum,
+            level: passed ? "info" : "error",
+            status: passed ? "passed" : "failed",
+            message: passed ? passMessage : errorMessage,
+          };
+          return {
+            ...proof,
+            receiptChecksum: representativeChecksum(proof),
+          };
+        }
+
+        function validationSetChecksum(receipts) {
+          return representativeChecksum(
+            receipts.map((item) => item.receiptChecksum)
+          );
+        }
+
+        function deriveValidationReceipts(state) {
+          const workerArtifactMatches =
+            state.worker.deployment === "deployed" &&
+            state.worker.artifactChecksum === manifest.artifactChecksum &&
+            state.worker.protocolVersion === manifest.worker.protocolVersion;
+          const contractsMatch =
+            workerArtifactMatches &&
+            state.worker.contractChecksum === manifest.contractChecksum;
+          const isolationPassed =
+            state.isolation.descriptor === "verified" &&
+            state.isolation.directAuthoritativeStoreBinding === false;
+          const makeReceipt = (...args) => receipt(state, ...args);
+
+          return [
+            makeReceipt(
+              "plugin_manifest",
+              "SuperBoard Plugin Manifest",
+              state.plugin.manifest === "valid",
+              "Manifest fermé, checksumé et namespacé.",
+              "Le manifest n’a pas été validé."
+            ),
+            makeReceipt(
+              "plugin_configuration",
+              "Configuration EmDash",
+              state.plugin.configuration === "valid",
+              "Réglages opérateur complets et liés au plugin.",
+              "La configuration EmDash est absente ou invalide."
+            ),
+            makeReceipt(
+              "capability_approval",
+              "Capability Approval",
+              capabilityApprovalMatches(state),
+              "Approval liée à la version, à l’artefact et aux ressources exactes.",
+              "Les capacités sandboxed/dedicated ne sont pas approuvées."
+            ),
+            makeReceipt(
+              "plugin_store",
+              "Store Descriptor",
+              storeIsReady(state),
+              "Store EmDash exact, disponible et au schema version attendu.",
+              "Store absent, indisponible ou incompatible avec le descriptor."
+            ),
+            makeReceipt(
+              "required_dependencies",
+              "Dépendances required",
+              requiredDependenciesAreReady(state),
+              "Toutes les dépendances required sont résolues et ready.",
+              "Au moins une dépendance required est absente ou not_ready."
+            ),
+            makeReceipt(
+              "worker_descriptor",
+              "Worker Descriptor",
+              workerArtifactMatches,
+              "Artefact et protocole déployés correspondent au descriptor.",
+              "Worker absent ou artefact/protocole différent du descriptor."
+            ),
+            makeReceipt(
+              "worker_health",
+              "Worker Health",
+              state.worker.verifiedHealth === "ready",
+              "Handshake, dépendances, callback, capacité et artefact sont vérifiés.",
+              "Le self-report seul ne suffit pas; au moins une preuve vérifiée manque."
+            ),
+            makeReceipt(
+              "plugin_migrations",
+              "Graphe de migrations",
+              migrationsAreCurrent(state),
+              "Toutes les migrations attendues sont appliquées dans l’ordre.",
+              "Le schéma du Store n’atteint pas la version exigée par le plugin."
+            ),
+            makeReceipt(
+              "front_contributions",
+              "Contributions Front",
+              contributionsAreRegistered(state),
+              "Renderer, command et data source exacts sont dans le Front Release Candidate.",
+              "Les contributions exactes ne sont pas toutes enregistrées."
+            ),
+            makeReceipt(
+              "typed_contracts",
+              "Contrats partagés",
+              contractsMatch,
+              "Plugin et Worker utilisent le même checksum de schémas fermés.",
+              "Le checksum de contrat du Worker ne correspond pas au plugin."
+            ),
+            makeReceipt(
+              "worker_isolation",
+              "Isolation Worker",
+              isolationPassed,
+              "Seul le repository callback est lié; aucun Store autoritatif n’est exposé.",
+              "Le Worker Descriptor n’établit pas l’isolation deny-by-default."
+            ),
+          ];
+        }
+
+        function record(state, level, message, detail) {
+          state.activity.push({
+            sequence: state.sequence,
+            level,
+            message,
+            detail,
+          });
+        }
+
+        function reject(state, message, detail) {
+          record(state, "error", message, detail);
+          return state;
+        }
+
+        function markCandidateChanged(state) {
+          state.release.candidateStatus = "draft";
+          state.release.publicationStatus = "not_attempted";
+          state.release.validationReceipts = [];
+          state.release.validationSetChecksum = null;
+          state.release.signature = null;
+          state.release.approval = null;
+          state.release.candidateContentChecksum = representativeChecksum(
+            candidatePayload(state)
+          );
+        }
+
+        function refreshLifecycle(state) {
+          state.worker.verifiedHealth = calculateVerifiedHealth(state.worker);
+          if (
+            state.plugin.lifecycle === "active" ||
+            state.plugin.lifecycle === "quarantined"
+          ) {
+            return;
+          }
+          const installationReady =
+            state.plugin.manifest === "valid" &&
+            state.plugin.configuration === "valid" &&
+            capabilityApprovalMatches(state) &&
+            storeIsReady(state) &&
+            requiredDependenciesAreReady(state) &&
+            migrationsAreCurrent(state) &&
+            state.worker.verifiedHealth === "ready";
+          state.plugin.lifecycle = installationReady
+            ? "installed"
+            : state.plugin.lifecycle;
+        }
+
+        function canInvoke(state, contributionId) {
+          if (state.plugin.lifecycle !== "active") {
+            return `Le plugin doit être active avant d’appeler ${contributionId}.`;
+          }
+          if (state.worker.verifiedHealth !== "ready") {
+            return "Le Worker n’est pas ready; aucune nouvelle Execution Lease n’est créée.";
+          }
+          const registered = [
+            ...state.registry.commands,
+            ...state.registry.dataSources,
+          ].includes(contributionId);
+          return registered
+            ? null
+            : `${contributionId} n’appartient pas à la Release Front active.`;
+        }
+
+        function invoke(
+          state,
+          contributionId,
+          request,
+          inputSchema,
+          response,
+          outputSchema
+        ) {
+          const unavailable = canInvoke(state, contributionId);
+          if (unavailable) {
+            state.invocation = {
+              status: "rejected",
+              contributionId,
+              contract: "not_checked",
+              dispatched: false,
+              lease: null,
+              request,
+              response: null,
+              explanation: unavailable,
+            };
+            return reject(state, "Appel refusé avant dispatch", unavailable);
+          }
+
+          const inputError = validateValue(request, inputSchema);
+          if (inputError) {
+            state.invocation = {
+              status: "rejected",
+              contributionId,
+              contract: "rejected",
+              dispatched: false,
+              lease: null,
+              request,
+              response: null,
+              explanation: inputError,
+            };
+            return reject(
+              state,
+              "Payload refusé par le contrat partagé",
+              `${inputError}. Aucun octet n’a été envoyé au Worker.`
+            );
+          }
+
+          const outputError = validateValue(response, outputSchema, "result");
+          if (outputError) {
+            state.invocation = {
+              status: "rejected",
+              contributionId,
+              contract: "worker_result_rejected",
+              dispatched: true,
+              lease: `lease_${String(state.sequence).padStart(4, "0")}`,
+              request,
+              response,
+              explanation: outputError,
+            };
+            return reject(state, "Résultat Worker refusé", outputError);
+          }
+
+          state.invocation = {
+            status: "accepted",
+            contributionId,
+            contract: "accepted",
+            dispatched: true,
+            lease: `lease_${String(state.sequence).padStart(4, "0")}_expires_T+30s`,
+            request,
+            response,
+            explanation:
+              "Le repository a validé le payload, créé une lease bornée et accepté un résultat conforme.",
+          };
+          record(
+            state,
+            "success",
+            "Appel Worker accepté",
+            `${contributionId} a utilisé une Execution Lease et le repository callback uniquement.`
+          );
+          return state;
+        }
+
+        function stageManifest(state, candidateManifest) {
+          const error = validateManifestContract(candidateManifest);
+          if (error) {
+            state.plugin.manifest = "invalid";
+            state.plugin.lifecycle = "available";
+            state.isolation.descriptor = "invalid";
+            state.store.descriptor = "invalid";
+            markCandidateChanged(state);
+            record(
+              state,
+              "error",
+              "Manifest fermé refusé",
+              `${error}. Aucune installation n’a commencé.`
+            );
+            return;
+          }
+
+          state.plugin.manifest = "valid";
+          state.plugin.lifecycle = "staged";
+          state.isolation.descriptor = "verified";
+          state.isolation.directAuthoritativeStoreBinding = false;
+          state.store.descriptor = "valid";
+          markCandidateChanged(state);
+          record(
+            state,
+            "success",
+            "Manifest placé en staged",
+            "Type module, namespaces, Store, Worker Descriptor, capabilities, resources et Failure Policies ont été validés."
+          );
+        }
+
+        function transition(currentState, event) {
+          if (event.type === "RESET") return createInitialState();
+
+          const state = clone(currentState);
+          state.sequence += 1;
+
+          switch (event.type) {
+            case "STAGE_MANIFEST": {
+              stageManifest(state, manifest);
+              break;
+            }
+
+            case "STAGE_INVALID_MANIFEST": {
+              const invalidManifest = clone(manifest);
+              invalidManifest.undeclaredAccess = true;
+              stageManifest(state, invalidManifest);
+              break;
+            }
+
+            case "SAVE_CONFIGURATION": {
+              if (state.plugin.manifest !== "valid") {
+                return reject(
+                  state,
+                  "Configuration refusée",
+                  "Le SuperBoard Plugin Manifest doit être staged et valide."
+                );
+              }
+              state.plugin.configuration = "valid";
+              markCandidateChanged(state);
+              record(
+                state,
+                "success",
+                "Configuration enregistrée dans EmDash",
+                "Les réglages sont complets, sans secret dans le Front Draft."
+              );
+              break;
+            }
+
+            case "APPROVE_CAPABILITIES": {
+              if (
+                state.plugin.manifest !== "valid" ||
+                state.plugin.configuration !== "valid"
+              ) {
+                return reject(
+                  state,
+                  "Approval refusée",
+                  "Le manifest et la configuration doivent être exacts avant le consentement."
+                );
+              }
+              state.plugin.capabilityApproval = {
+                status: "approved",
+                artifactChecksum: manifest.artifactChecksum,
+                capabilitySetChecksum: representativeChecksum(
+                  manifest.capabilities
+                ),
+                resourceSetChecksum: representativeChecksum(manifest.resources),
+              };
+              markCandidateChanged(state);
+              record(
+                state,
+                "success",
+                "Capabilities approuvées",
+                "L’approval est liée au checksum d’artefact et au resource set exact."
+              );
+              break;
+            }
+
+            case "APPLY_MIGRATIONS": {
+              if (!capabilityApprovalMatches(state)) {
+                return reject(
+                  state,
+                  "Migrations refusées",
+                  "Les resources du plugin ne peuvent pas être préparées sans Capability Approval."
+                );
+              }
+              state.migrations.applied = [...state.migrations.expected];
+              state.store.provisioning = "provisioned";
+              state.store.schemaVersion = manifest.stores[0].schemaVersion;
+              state.store.availability = "ready";
+              markCandidateChanged(state);
+              record(
+                state,
+                "success",
+                "Migrations appliquées",
+                "Le Store gouverné par EmDash correspond à la version attendue."
+              );
+              break;
+            }
+
+            case "DEPLOY_WORKER": {
+              if (
+                !capabilityApprovalMatches(state) ||
+                state.plugin.configuration !== "valid"
+              ) {
+                return reject(
+                  state,
+                  "Déploiement refusé",
+                  "Configuration et Capability Approval sont requises avant le Worker inactif."
+                );
+              }
+              state.worker.deployment = "deployed";
+              state.worker.artifactChecksum = manifest.artifactChecksum;
+              state.worker.contractChecksum = manifest.contractChecksum;
+              state.worker.protocolVersion = manifest.worker.protocolVersion;
+              state.worker.evidence = {
+                selfReport: "unknown",
+                handshake: "unknown",
+                artifact: "unknown",
+                dependencies: "unknown",
+                callback: "unknown",
+                capacity: "unknown",
+              };
+              markCandidateChanged(state);
+              record(
+                state,
+                "success",
+                "Worker déployé inactif",
+                "Aucune contribution ni lease n’est active avant les probes et la release."
+              );
+              break;
+            }
+
+            case "VERIFY_HEALTH": {
+              if (state.worker.deployment !== "deployed") {
+                return reject(
+                  state,
+                  "Health check refusé",
+                  "Aucun Worker correspondant au descriptor n’est déployé."
+                );
+              }
+              const exactDeployment =
+                state.worker.artifactChecksum === manifest.artifactChecksum &&
+                state.worker.contractChecksum === manifest.contractChecksum &&
+                state.worker.protocolVersion ===
+                  manifest.worker.protocolVersion;
+              state.dependencies["supbrd-core"] = exactDeployment
+                ? {
+                    policy: "required",
+                    minimumVersion: "1.0.0",
+                    resolvedVersion: "1.0.0",
+                    status: "ready",
+                  }
+                : {
+                    policy: "required",
+                    minimumVersion: "1.0.0",
+                    resolvedVersion: null,
+                    status: "not_ready",
+                  };
+              state.worker.evidence = exactDeployment
+                ? {
+                    selfReport: "ready",
+                    handshake: "ready",
+                    artifact: "ready",
+                    dependencies: "ready",
+                    callback: "ready",
+                    capacity: "ready",
+                  }
+                : {
+                    selfReport: "ready",
+                    handshake: "failed",
+                    artifact: "failed",
+                    dependencies: "ready",
+                    callback: "failed",
+                    capacity: "ready",
+                  };
+              record(
+                state,
+                exactDeployment ? "success" : "error",
+                exactDeployment
+                  ? "Worker Health vérifié"
+                  : "Worker Health refusé",
+                exactDeployment
+                  ? "Toutes les preuves du descriptor sont ready."
+                  : "Le self-report est vert mais le protocole, l’artefact ou le contrat ne correspond pas."
+              );
+              markCandidateChanged(state);
+              break;
+            }
+
+            case "REGISTER_CONTRIBUTIONS": {
+              refreshLifecycle(state);
+              if (state.plugin.lifecycle !== "installed") {
+                return reject(
+                  state,
+                  "Enregistrement refusé",
+                  "Le Plugin Installation Plan doit finir avec migrations et Worker Health ready."
+                );
+              }
+              state.registry = clone(manifest.contributions);
+              markCandidateChanged(state);
+              record(
+                state,
+                "success",
+                "Contributions ajoutées au Front Release Candidate",
+                "Le renderer, la command et la data source restent inactifs jusqu’à l’activation atomique."
+              );
+              break;
+            }
+
+            case "VALIDATE_CANDIDATE": {
+              refreshLifecycle(state);
+              state.release.candidateContentChecksum = representativeChecksum(
+                candidatePayload(state)
+              );
+              state.release.signature = `ES256.prototype.${representativeChecksum(
+                {
+                  candidateId: state.release.candidateId,
+                  contentChecksum: state.release.candidateContentChecksum,
+                }
+              ).slice(-32)}`;
+              const receipts = deriveValidationReceipts(state);
+              const errors = receipts.filter((item) => item.level === "error");
+              state.release.validationReceipts = receipts;
+              state.release.validationSetChecksum =
+                validationSetChecksum(receipts);
+              state.release.approval = null;
+              if (errors.length > 0) {
+                state.release.candidateStatus = "validation_failed";
+                state.release.publicationStatus = "blocked";
+                record(
+                  state,
+                  "error",
+                  "Publication bloquée",
+                  `${errors.length} Validation Receipt${errors.length > 1 ? "s" : ""} de niveau error.`
+                );
+                break;
+              }
+              state.release.candidateStatus = "validated";
+              state.release.publicationStatus = "awaiting_approval";
+              record(
+                state,
+                "success",
+                "Front Release Candidate validé",
+                "Le payload canonique, la signature et le jeu checksumé de Validation Receipts sont figés."
+              );
+              break;
+            }
+
+            case "APPROVE_RELEASE": {
+              if (
+                state.release.candidateStatus !== "validated" ||
+                !state.release.signature ||
+                !state.release.validationSetChecksum
+              ) {
+                return reject(
+                  state,
+                  "Release Approval refusée",
+                  "Le Front Release Candidate exact doit être validé et signé avant l’approbation opérateur."
+                );
+              }
+              state.release.approval = {
+                candidateId: state.release.candidateId,
+                contentChecksum: state.release.candidateContentChecksum,
+                signature: state.release.signature,
+                validationSetChecksum: state.release.validationSetChecksum,
+                operator: "superboard-operator",
+              };
+              state.release.candidateStatus = "approved";
+              state.release.publicationStatus = "approved";
+              record(
+                state,
+                "success",
+                "Release Approval enregistrée",
+                "L’opérateur a approuvé le Front Release Candidate, la signature et le jeu de receipts exacts."
+              );
+              break;
+            }
+
+            case "ACTIVATE_RELEASE": {
+              const currentReceipts = deriveValidationReceipts(state);
+              const currentValidationSetChecksum =
+                validationSetChecksum(currentReceipts);
+              const errors = currentReceipts.filter(
+                (item) => item.level === "error"
+              );
+              const approvalMatches =
+                state.release.approval &&
+                state.release.approval.candidateId ===
+                  state.release.candidateId &&
+                state.release.approval.contentChecksum ===
+                  state.release.candidateContentChecksum &&
+                state.release.approval.signature === state.release.signature &&
+                state.release.approval.validationSetChecksum ===
+                  currentValidationSetChecksum;
+              state.release.validationReceipts = currentReceipts;
+              state.release.validationSetChecksum =
+                currentValidationSetChecksum;
+              if (errors.length > 0 || !approvalMatches) {
+                state.release.candidateStatus = "activation_failed";
+                state.release.publicationStatus = "blocked";
+                record(
+                  state,
+                  "error",
+                  "Activation bloquée",
+                  errors.length > 0
+                    ? "Une Validation Receipt revalidée est en error."
+                    : "La Release Approval ne correspond plus au Front Release Candidate exact."
+                );
+                break;
+              }
+              const priorActiveRelease = state.release.activeReleaseId;
+              state.release.previousReleaseId = priorActiveRelease;
+              state.release.activeReleaseId = "front_release_000042";
+              state.release.candidateStatus = "active";
+              state.release.publicationStatus = "activated";
+              state.plugin.lifecycle = "active";
+              record(
+                state,
+                "success",
+                "Release Front activée atomiquement",
+                "Le renderer, la command et la data source deviennent actifs ensemble."
+              );
+              break;
+            }
+
+            case "MARK_MIGRATION_PENDING": {
+              if (state.migrations.applied.length === 0) {
+                return reject(
+                  state,
+                  "Aucune migration à retirer",
+                  "Appliquez d’abord le graphe de migrations."
+                );
+              }
+              state.migrations.applied = state.migrations.applied.slice(0, -1);
+              markCandidateChanged(state);
+              record(
+                state,
+                "error",
+                "Migration attendue rendue pending",
+                "La release active ne change pas, mais le prochain Front Release Candidate doit être bloqué."
+              );
+              break;
+            }
+
+            case "REMOVE_STORE": {
+              state.store.provisioning = "absent";
+              state.store.schemaVersion = null;
+              state.store.availability = "not_ready";
+              markCandidateChanged(state);
+              record(
+                state,
+                "error",
+                "Store requis rendu absent",
+                "Le Store Descriptor reste connu, mais son Store exact ne peut plus satisfaire la validation."
+              );
+              break;
+            }
+
+            case "SET_REQUIRED_DEPENDENCY_NOT_READY": {
+              state.dependencies["supbrd-core"] = {
+                policy: "required",
+                minimumVersion: "1.0.0",
+                resolvedVersion: "1.0.0",
+                status: "not_ready",
+              };
+              state.worker.evidence.dependencies = "failed";
+              markCandidateChanged(state);
+              record(
+                state,
+                "error",
+                "Dépendance required indisponible",
+                "supbrd-core@1.0.0 est résolu mais not_ready; le Worker Health et la publication doivent fermer."
+              );
+              break;
+            }
+
+            case "SET_FALSE_GREEN_HEALTH": {
+              if (state.worker.deployment !== "deployed") {
+                return reject(
+                  state,
+                  "Simulation impossible",
+                  "Déployez d’abord le Worker."
+                );
+              }
+              state.worker.protocolVersion = "superboard.worker.v0";
+              state.worker.evidence = {
+                selfReport: "ready",
+                handshake: "failed",
+                artifact: "ready",
+                dependencies: "ready",
+                callback: "failed",
+                capacity: "ready",
+              };
+              markCandidateChanged(state);
+              record(
+                state,
+                "error",
+                "Faux health vert simulé",
+                "Le Worker répond 200 mais le handshake et le callback probe échouent."
+              );
+              break;
+            }
+
+            case "REMOVE_WORKER": {
+              state.worker.deployment = "absent";
+              state.worker.artifactChecksum = null;
+              state.worker.contractChecksum = null;
+              state.worker.protocolVersion = null;
+              state.worker.evidence = {
+                selfReport: "unknown",
+                handshake: "unknown",
+                artifact: "unknown",
+                dependencies: "unknown",
+                callback: "unknown",
+                capacity: "unknown",
+              };
+              markCandidateChanged(state);
+              record(
+                state,
+                "error",
+                "Worker retiré de la cible",
+                "Le prochain Front Release Candidate doit échouer sans modifier le pointeur actif."
+              );
+              break;
+            }
+
+            case "ATTEMPT_FORBIDDEN_STORE_ACCESS": {
+              state.isolation.deniedAttempts += 1;
+              state.isolation.lastDecision = "denied_before_dispatch";
+              state.isolation.directAuthoritativeStoreBinding = false;
+              record(
+                state,
+                "success",
+                "Accès direct au Store refusé",
+                "ANALYTICS_DB n’est pas dans le Worker Descriptor; aucune lease ni donnée n’est exposée."
+              );
+              break;
+            }
+
+            case "CALL_DATA_SOURCE": {
+              return invoke(
+                state,
+                manifest.contributions.dataSources[0],
+                { range: "24h" },
+                schemas.sourceInput,
+                {
+                  points: [
+                    { label: "00:00", value: 18 },
+                    { label: "12:00", value: 31 },
+                  ],
+                  unit: "events",
+                },
+                schemas.sourceOutput
+              );
+            }
+
+            case "CALL_VALID_COMMAND": {
+              return invoke(
+                state,
+                manifest.contributions.commands[0],
+                { format: "csv", range: "24h" },
+                schemas.commandInput,
+                { operationId: "operation_01J7K4M2", status: "accepted" },
+                schemas.commandOutput
+              );
+            }
+
+            case "CALL_INVALID_COMMAND": {
+              return invoke(
+                state,
+                manifest.contributions.commands[0],
+                { format: "csv", range: "24h", adminOverride: true },
+                schemas.commandInput,
+                {
+                  operationId: "operation_should_not_exist",
+                  status: "accepted",
+                },
+                schemas.commandOutput
+              );
+            }
+
+            default:
+              return reject(state, "Événement inconnu", event.type);
+          }
+
+          refreshLifecycle(state);
+          if (state.release.candidateStatus === "draft") {
+            state.release.candidateContentChecksum = representativeChecksum(
+              candidatePayload(state)
+            );
+          }
+          return state;
+        }
+
+        return {
+          createInitialState,
+          deriveValidationReceipts,
+          manifest,
+          transition,
+        };
+      })();
+
+      // Coque jetable de la démo. Tout ce qui suit peut être supprimé avec ce fichier.
+      (() => {
+        const actions = [
+          { type: "STAGE_MANIFEST", label: "Stager le manifest" },
+          {
+            type: "STAGE_INVALID_MANIFEST",
+            label: "Stager un manifest avec une propriété inconnue",
+            danger: true,
+          },
+          { type: "SAVE_CONFIGURATION", label: "Enregistrer la configuration" },
+          { type: "APPROVE_CAPABILITIES", label: "Approuver les capabilities" },
+          { type: "APPLY_MIGRATIONS", label: "Appliquer les migrations" },
+          { type: "DEPLOY_WORKER", label: "Déployer le Worker" },
+          { type: "VERIFY_HEALTH", label: "Vérifier le Worker Health" },
+          {
+            type: "REGISTER_CONTRIBUTIONS",
+            label: "Enregistrer les contributions",
+          },
+          {
+            type: "VALIDATE_CANDIDATE",
+            label: "Valider le Front Release Candidate",
+            primary: true,
+          },
+          { type: "APPROVE_RELEASE", label: "Approuver la Release Front" },
+          { type: "ACTIVATE_RELEASE", label: "Activer la Release Front" },
+          { type: "CALL_DATA_SOURCE", label: "Lire la source de données" },
+          { type: "CALL_VALID_COMMAND", label: "Appeler l’action valide" },
+          {
+            type: "CALL_INVALID_COMMAND",
+            label: "Envoyer un payload hors contrat",
+            danger: true,
+          },
+          {
+            type: "ATTEMPT_FORBIDDEN_STORE_ACCESS",
+            label: "Tenter un accès direct au Store",
+            danger: true,
+          },
+          {
+            type: "MARK_MIGRATION_PENDING",
+            label: "Rendre une migration pending",
+            danger: true,
+          },
+          { type: "REMOVE_STORE", label: "Retirer le Store", danger: true },
+          {
+            type: "SET_REQUIRED_DEPENDENCY_NOT_READY",
+            label: "Rendre supbrd-core not_ready",
+            danger: true,
+          },
+          {
+            type: "SET_FALSE_GREEN_HEALTH",
+            label: "Simuler un faux health vert",
+            danger: true,
+          },
+          { type: "REMOVE_WORKER", label: "Retirer le Worker", danger: true },
+          { type: "RESET", label: "Réinitialiser" },
+        ];
+
+        const setupSteps = [
+          ["STAGE_MANIFEST", "Stager et valider le SuperBoard Plugin Manifest"],
+          ["SAVE_CONFIGURATION", "Enregistrer les réglages dans EmDash"],
+          [
+            "APPROVE_CAPABILITIES",
+            "Approuver l’artefact et ses resources exactes",
+          ],
+          ["APPLY_MIGRATIONS", "Appliquer le graphe de migrations"],
+          ["DEPLOY_WORKER", "Déployer le Worker inactif"],
+          ["VERIFY_HEALTH", "Vérifier toutes les preuves de Worker Health"],
+          [
+            "REGISTER_CONTRIBUTIONS",
+            "Ajouter les contributions au Front Release Candidate",
+          ],
+        ];
+
+        const publicationSteps = [
+          [
+            "VALIDATE_CANDIDATE",
+            "Valider et signer le Front Release Candidate exact",
+          ],
+          ["APPROVE_RELEASE", "Lier la Release Approval aux receipts exacts"],
+          [
+            "ACTIVATE_RELEASE",
+            "Activer la Release Front par échange de pointeur",
+          ],
+        ];
+
+        const procedures = [
+          {
+            id: "happy",
+            label: "Chemin heureux",
+            description:
+              "Installez le plugin jusqu’au bout, activez une Release Front, puis observez une data source et une command passer par un contrat partagé et une lease bornée.",
+            steps: [
+              ...setupSteps,
+              ...publicationSteps,
+              ["CALL_DATA_SOURCE", "Charger l’élément depuis la data source"],
+              ["CALL_VALID_COMMAND", "Déclencher l’action export_report"],
+            ],
+          },
+          {
+            id: "missing-worker",
+            label: "Worker absent",
+            description:
+              "Préparez un Front Release Candidate complet, retirez ensuite le Worker de la cible et vérifiez que le pointeur de release actif ne change pas.",
+            steps: [
+              ...setupSteps,
+              ["REMOVE_WORKER", "Rendre le Worker absent de la cible"],
+              [
+                "VALIDATE_CANDIDATE",
+                "Tenter de valider malgré le Worker absent",
+              ],
+            ],
+          },
+          {
+            id: "migration",
+            label: "Migration manquante",
+            description:
+              "Après une installation cohérente, rendez la dernière migration pending. Le gate doit isoler ce défaut et bloquer le Front Release Candidate.",
+            steps: [
+              ...setupSteps,
+              [
+                "MARK_MIGRATION_PENDING",
+                "Marquer 0002_add_daily_projection pending",
+              ],
+              [
+                "VALIDATE_CANDIDATE",
+                "Tenter de valider avec le Store en retard",
+              ],
+            ],
+          },
+          {
+            id: "missing-store",
+            label: "Store absent",
+            description:
+              "Retirez le Store exact après l’installation. Son descriptor et les migrations seules ne doivent jamais suffire à ouvrir le gate.",
+            steps: [
+              ...setupSteps,
+              ["REMOVE_STORE", "Rendre le Store requis absent"],
+              ["VALIDATE_CANDIDATE", "Tenter de valider sans le Store exact"],
+            ],
+          },
+          {
+            id: "dependency",
+            label: "Dépendance required",
+            description:
+              "Rendez supbrd-core not_ready après le health check. La dépendance nommée et le Worker Health doivent fermer ensemble.",
+            steps: [
+              ...setupSteps,
+              [
+                "SET_REQUIRED_DEPENDENCY_NOT_READY",
+                "Rendre supbrd-core@1.0.0 not_ready",
+              ],
+              [
+                "VALIDATE_CANDIDATE",
+                "Tenter de valider avec la dépendance indisponible",
+              ],
+            ],
+          },
+          {
+            id: "false-green",
+            label: "Faux health vert",
+            description:
+              "Un HTTP 200 auto-déclaré ne suffit pas. Cassez le protocole et le callback probe, puis observez le Worker Health rester not_ready.",
+            steps: [
+              ...setupSteps,
+              [
+                "SET_FALSE_GREEN_HEALTH",
+                "Conserver le self-report vert mais casser les probes",
+              ],
+              ["VALIDATE_CANDIDATE", "Tenter de valider avec ce faux vert"],
+            ],
+          },
+          {
+            id: "isolation",
+            label: "Isolation",
+            description:
+              "Le Worker tente d’obtenir un binding vers le Store autoritatif. L’hôte le refuse avant dispatch; le plugin peut ensuite être publié sans fuite de données.",
+            steps: [
+              ["STAGE_MANIFEST", "Stager le Worker Descriptor deny-by-default"],
+              [
+                "ATTEMPT_FORBIDDEN_STORE_ACCESS",
+                "Tenter d’obtenir le binding ANALYTICS_DB",
+              ],
+              ...setupSteps.slice(1),
+              ...publicationSteps,
+              [
+                "CALL_VALID_COMMAND",
+                "Appeler le Worker via le repository autorisé",
+              ],
+            ],
+          },
+          {
+            id: "contracts",
+            label: "Contrat fermé",
+            description:
+              "Activez le plugin, ajoutez une propriété inconnue au payload, puis comparez avec un appel conforme. Le premier ne doit créer aucune lease.",
+            steps: [
+              ...setupSteps,
+              ...publicationSteps,
+              [
+                "CALL_INVALID_COMMAND",
+                "Envoyer adminOverride, absent du schéma",
+              ],
+              ["CALL_VALID_COMMAND", "Renvoyer le payload fermé attendu"],
+            ],
+          },
+        ];
+
+        let state = PluginModulePrototype.createInitialState();
+        let activeProcedureIndex = 0;
+        let activeStepIndex = 0;
+
+        const escapeHtml = (value) =>
+          String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        const pretty = (value) => JSON.stringify(value, null, 2);
+        const shortChecksum = (value) =>
+          value ? `${value.slice(0, 22)}…${value.slice(-8)}` : "missing";
+
+        function badge(value, tone = "neutral") {
+          return `<span class="badge ${tone}">${escapeHtml(value)}</span>`;
+        }
+
+        function toneFor(value) {
+          if (
+            [
+              "valid",
+              "approved",
+              "installed",
+              "active",
+              "deployed",
+              "ready",
+              "verified",
+              "accepted",
+              "activated",
+              "awaiting_approval",
+              "bound",
+              "provisioned",
+              "passed",
+              "denied_before_dispatch",
+            ].includes(value)
+          ) {
+            return "success";
+          }
+          if (
+            [
+              "failed",
+              "blocked",
+              "invalid",
+              "validation_failed",
+              "activation_failed",
+              "rejected",
+              "worker_result_rejected",
+              "quarantined",
+            ].includes(value)
+          ) {
+            return "danger";
+          }
+          if (
+            ["missing", "not_ready", "unknown", "not_attempted"].includes(value)
+          ) {
+            return "warning";
+          }
+          return "neutral";
+        }
+
+        function row(label, value) {
+          return `<div class="status-row"><span>${escapeHtml(label)}</span>${badge(value, toneFor(value))}</div>`;
+        }
+
+        function renderHero(receipts) {
+          const errorCount = receipts.filter(
+            (item) => item.level === "error"
+          ).length;
+          const result = document.querySelector("#hero-result");
+          const explanation = document.querySelector("#hero-explanation");
+          result.className = "hero-result";
+
+          if (state.release.publicationStatus === "activated") {
+            result.classList.add("ready");
+            result.textContent = "Publication autorisée";
+            explanation.textContent =
+              "Toutes les Validation Receipts sont passées; les trois contributions ont été activées ensemble.";
+          } else if (state.release.publicationStatus === "blocked") {
+            result.classList.add("blocked");
+            result.textContent = "Publication bloquée";
+            explanation.textContent = `${errorCount} erreur${errorCount > 1 ? "s" : ""} ferme${
+              errorCount > 1 ? "nt" : ""
+            } le gate. Le pointeur actif reste ${state.release.activeReleaseId}.`;
+          } else if (state.release.publicationStatus === "awaiting_approval") {
+            result.classList.add("pending");
+            result.textContent =
+              "Front Release Candidate validé — approval requise";
+            explanation.textContent =
+              "Le payload, la signature et les receipts sont figés; l’Opérateur doit encore approuver cet ensemble exact.";
+          } else if (state.release.publicationStatus === "approved") {
+            result.classList.add("ready");
+            result.textContent = "Release approuvée — activation requise";
+            explanation.textContent =
+              "La Release Approval correspond au Front Release Candidate exact; le CAS d’activation n’a pas encore été exécuté.";
+          } else if (errorCount === 0) {
+            result.classList.add("ready");
+            result.textContent = "Préflight vert";
+            explanation.textContent =
+              "Le Front Release Candidate doit encore être figé, signé, validé puis approuvé avant activation.";
+          } else {
+            result.classList.add("pending");
+            result.textContent = "Préflight incomplet";
+            explanation.textContent = `${errorCount} condition${errorCount > 1 ? "s" : ""} reste${
+              errorCount > 1 ? "nt" : ""
+            } à satisfaire avant toute publication.`;
+          }
+
+          document.querySelector("#release-summary").innerHTML = [
+            ["Front Release Candidate", state.release.candidateId],
+            ["État du Front Release Candidate", state.release.candidateStatus],
+            [
+              "Content checksum",
+              shortChecksum(state.release.candidateContentChecksum),
+            ],
+            ["Signature", shortChecksum(state.release.signature)],
+            [
+              "Validation set",
+              shortChecksum(state.release.validationSetChecksum),
+            ],
+            ["Release Approval", state.release.approval ? "bound" : "missing"],
+            ["Release active", state.release.activeReleaseId],
+            ["Release précédente", state.release.previousReleaseId],
+          ]
+            .map(
+              ([label, value]) =>
+                `<div><dt>${escapeHtml(label)}</dt><dd><code>${escapeHtml(value)}</code></dd></div>`
+            )
+            .join("");
+        }
+
+        function renderPlugin() {
+          document.querySelector("#plugin-state").innerHTML = [
+            row("Plugin Lifecycle", state.plugin.lifecycle),
+            row("Manifest", state.plugin.manifest),
+            row("Configuration EmDash", state.plugin.configuration),
+            row("Capability Approval", state.plugin.capabilityApproval.status),
+            row("Store Descriptor", state.store.descriptor),
+            row("Store provisionné", state.store.provisioning),
+            row("Store disponible", state.store.availability),
+            row("Worker Descriptor", state.isolation.descriptor),
+            row("Dernier contrôle d’isolation", state.isolation.lastDecision),
+            row(
+              "Tentatives directes refusées",
+              String(state.isolation.deniedAttempts)
+            ),
+          ].join("");
+        }
+
+        function renderWorker() {
+          const evidence = state.worker.evidence;
+          document.querySelector("#worker-state").innerHTML = [
+            row("Déploiement", state.worker.deployment),
+            row("Worker Health vérifié", state.worker.verifiedHealth),
+            row("Self-report", evidence.selfReport),
+            row("Handshake", evidence.handshake),
+            row("Artefact", evidence.artifact),
+            row("Probe dépendances", evidence.dependencies),
+            row(
+              "supbrd-core (required)",
+              state.dependencies["supbrd-core"].status
+            ),
+            row("Callback probe", evidence.callback),
+            row("Capacité", evidence.capacity),
+            row(
+              "Migrations",
+              `${state.migrations.applied.length}/${state.migrations.expected.length} applied`
+            ),
+          ].join("");
+        }
+
+        function renderContributions() {
+          const definitions = [
+            {
+              label: "Élément / Renderer",
+              expected:
+                PluginModulePrototype.manifest.contributions.renderers[0],
+              registered: state.registry.renderers,
+            },
+            {
+              label: "Action / Command",
+              expected:
+                PluginModulePrototype.manifest.contributions.commands[0],
+              registered: state.registry.commands,
+            },
+            {
+              label: "Source de données",
+              expected:
+                PluginModulePrototype.manifest.contributions.dataSources[0],
+              registered: state.registry.dataSources,
+            },
+          ];
+          document.querySelector("#contribution-state").innerHTML = definitions
+            .map((definition) => {
+              const present = definition.registered.includes(
+                definition.expected
+              );
+              const activation =
+                present && state.plugin.lifecycle === "active"
+                  ? "active"
+                  : present
+                    ? "candidate_only"
+                    : "absent";
+              return `<li><strong>${escapeHtml(definition.label)} ${badge(
+                activation,
+                toneFor(activation)
+              )}</strong><code>${escapeHtml(definition.expected)}</code><small>${
+                present
+                  ? " Enregistré par EmDash; jamais monté directement par le plugin."
+                  : " Pas encore présent dans le Front Release Candidate."
+              }</small></li>`;
+            })
+            .join("");
+        }
+
+        function renderInvocation() {
+          const invocation = state.invocation;
+          const target = document.querySelector("#invocation-state");
+          const heading = [
+            row("État", invocation.status),
+            row("Contrat", invocation.contract),
+            row("Dispatch Worker", invocation.dispatched ? "yes" : "no"),
+            row("Execution Lease", invocation.lease || "none"),
+          ].join("");
+          const payloads =
+            invocation.request === null
+              ? ""
+              : `<div class="payload-grid"><div class="payload"><strong>Request</strong><pre>${escapeHtml(
+                  pretty(invocation.request)
+                )}</pre></div><div class="payload"><strong>Response</strong><pre>${escapeHtml(
+                  invocation.response === null
+                    ? "—"
+                    : pretty(invocation.response)
+                )}</pre></div></div>`;
+          target.innerHTML = `${heading}<p>${escapeHtml(invocation.explanation)}</p>${payloads}`;
+        }
+
+        function renderReceipts(receipts) {
+          document.querySelector("#receipt-state").innerHTML = receipts
+            .map(
+              (item) =>
+                `<tr><td><code>${escapeHtml(item.id)}</code><br />${escapeHtml(
+                  item.label
+                )}</td><td>${badge(item.status, toneFor(item.status))}</td><td>${escapeHtml(
+                  item.message
+                )}<br /><small><code>${escapeHtml(
+                  item.candidateId
+                )}</code> · ${escapeHtml(shortChecksum(item.receiptChecksum))}</small></td></tr>`
+            )
+            .join("");
+        }
+
+        function renderActivity() {
+          document.querySelector("#activity-state").innerHTML = [
+            ...state.activity,
+          ]
+            .reverse()
+            .slice(0, 8)
+            .map(
+              (item) =>
+                `<li><small>#${String(item.sequence).padStart(3, "0")}</small><div><strong>${escapeHtml(
+                  item.message
+                )}</strong><br /><span>${escapeHtml(item.detail)}</span></div></li>`
+            )
+            .join("");
+        }
+
+        function renderProcedures() {
+          document.querySelector("#procedure-tabs").innerHTML = procedures
+            .map(
+              (procedure, index) =>
+                `<button type="button" class="tab-button" role="tab" data-procedure-index="${index}" aria-selected="${
+                  index === activeProcedureIndex
+                }" id="tab-${escapeHtml(procedure.id)}">${escapeHtml(
+                  procedure.label
+                )}</button>`
+            )
+            .join("");
+
+          const procedure = procedures[activeProcedureIndex];
+          document
+            .querySelector("#procedure-body")
+            .setAttribute("aria-labelledby", `tab-${procedure.id}`);
+          document.querySelector("#procedure-body").innerHTML =
+            `<h3>${escapeHtml(
+              procedure.label
+            )}</h3><p>${escapeHtml(procedure.description)}</p><div class="steps">${procedure.steps
+              .map(([type, label], index) => {
+                const status =
+                  index < activeStepIndex
+                    ? "done"
+                    : index === activeStepIndex
+                      ? "current"
+                      : "";
+                const disabled =
+                  index > activeStepIndex || index < activeStepIndex
+                    ? "disabled"
+                    : "";
+                return `<button type="button" class="step-button ${status}" data-step-index="${index}" data-event-type="${escapeHtml(
+                  type
+                )}" ${disabled}>${escapeHtml(label)}</button>`;
+              })
+              .join("")}</div>`;
+
+          document
+            .querySelectorAll("[data-procedure-index]")
+            .forEach((button) => {
+              button.addEventListener("click", () => {
+                activeProcedureIndex = Number(button.dataset.procedureIndex);
+                activeStepIndex = 0;
+                state = PluginModulePrototype.createInitialState();
+                render();
+              });
+            });
+
+          document.querySelectorAll("[data-step-index]").forEach((button) => {
+            button.addEventListener("click", () => {
+              state = PluginModulePrototype.transition(state, {
+                type: button.dataset.eventType,
+              });
+              activeStepIndex += 1;
+              render();
+            });
+          });
+        }
+
+        function render() {
+          const receipts =
+            PluginModulePrototype.deriveValidationReceipts(state);
+          renderHero(receipts);
+          renderPlugin();
+          renderWorker();
+          renderContributions();
+          renderInvocation();
+          renderReceipts(receipts);
+          renderActivity();
+          renderProcedures();
+        }
+
+        document.querySelector("#free-play-controls").innerHTML = actions
+          .map(
+            (action) =>
+              `<button type="button" class="action-button ${action.primary ? "primary" : ""} ${
+                action.danger ? "danger" : ""
+              }" data-free-event="${escapeHtml(action.type)}">${escapeHtml(action.label)}</button>`
+          )
+          .join("");
+
+        document.querySelectorAll("[data-free-event]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state = PluginModulePrototype.transition(state, {
+              type: button.dataset.freeEvent,
+            });
+            activeStepIndex = 0;
+            render();
+          });
+        });
+
+        render();
+      })();
+    </script>
+  </body>
+</html>

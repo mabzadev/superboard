@@ -1,0 +1,16 @@
+.flows_basicsV2_text {
+  font-family: var(--flows-basicsV2-font-family);
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+.flows_basicsV2_text_body {
+  font-size: var(--flows-basicsV2-base-font-size);
+  line-height: var(--flows-basicsV2-base-line-height);
+}
+
+.flows_basicsV2_text_title {
+  font-size: var(--flows-basicsV2-title-font-size);
+  line-height: var(--flows-basicsV2-title-line-height);
+  font-weight: var(--flows-basicsV2-title-font-weight);
+}

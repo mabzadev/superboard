@@ -1,0 +1,76 @@
+import { onMount } from "solid-js";
+import { customElement } from "solid-element";
+import { useNavigate } from "@solidjs/router";
+
+import { init } from "@superboard/flows-js";
+import { setupJsComponents } from "@superboard/flows-js-components";
+
+import * as components from "@superboard/flows-js-components/components";
+import * as tourComponents from "@superboard/flows-js-components/tour-components";
+import * as surveyComponents from "@superboard/flows-js-components/survey-components";
+
+// Don't forget to import the CSS styles for Flows components
+import "@superboard/flows-js-components/index.css";
+
+import { Banner as SolidBanner } from "~/components/banner";
+import { TourBanner as SolidTourBanner } from "~/components/tour-banner";
+
+export const Flows = () => {
+  const navigate = useNavigate();
+
+  onMount(() => {
+    init({
+      projectId: "YOUR_PROJECT_ID",
+      userId: "YOUR_USER_ID",
+      environment: "production",
+      onNavigate: (href, event) => {
+        event.preventDefault();
+
+        navigate(href);
+      },
+    });
+
+    const Banner = customElement(
+      "flows-banner",
+      {
+        // Define prop keys with default values
+        title: "",
+        body: "",
+        close: () => {},
+        __flows: { id: "", workflowId: "" },
+      },
+      SolidBanner,
+    );
+    const TourBanner = customElement(
+      "flows-tour-banner",
+      {
+        // Define prop keys with default values
+        title: "",
+        body: "",
+        previous: () => {},
+        continue: () => {},
+        cancel: () => {},
+        __flows: { id: "", workflowId: "" },
+      },
+      SolidTourBanner,
+    );
+
+    setupJsComponents({
+      components: {
+        ...components,
+        // Example of custom "Banner" component
+        Banner,
+      },
+      tourComponents: {
+        ...tourComponents,
+        // Example of custom "Banner" component for tours
+        Banner: TourBanner,
+      },
+      surveyComponents: {
+        ...surveyComponents,
+      },
+    });
+  });
+
+  return <flows-floating-blocks />;
+};

@@ -1,0 +1,14 @@
+{
+  "defaultOpen": true,
+  "pages": [
+    "next",
+    "tanstack",
+    "react-router",
+    "angular",
+    "nuxt",
+    "solid",
+    "svelte",
+    "astro",
+    "ember"
+  ]
+}

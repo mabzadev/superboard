@@ -3,7 +3,7 @@ import { Env } from '../types';
 import { getOrCreateRedirectConfig, parseJsonObject, resolveProject } from '../lib/db';
 import { runMaintenance } from '../lib/maintenance';
 import { decryptCredential, encryptSecret, timingSafeEqual } from '../lib/secrets';
-import { domainError } from '../lib/domain-modules';
+import { domainError, forwardDomainRequest } from '../lib/domain-modules';
 import { readRequestObjectLimited } from '@superboard/contracts/request-body';
 
 const admin = new Hono<{ Bindings: Env }>();
@@ -85,6 +85,16 @@ function requestId(c: any): string {
   return /^[A-Za-z0-9._:-]{1,128}$/.test(provided) ? provided : crypto.randomUUID();
 }
 
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(value),
+  );
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 async function cutoverDenied(c: any): Promise<Response | null> {
   const expected = c.env.OPENGROW_CUTOVER_TOKEN;
   const authorization = String(c.req.header('Authorization') || '').trim();
@@ -157,6 +167,220 @@ admin.put('/module-cutover/maintenance/:projectRef', async (c) => {
     `).bind(crypto.randomUUID(), project.id, body.enabled ? 'maintenance.enabled' : 'maintenance.disabled', actor, JSON.stringify({ window_id: windowId || null, reason: reason || null, request_id: id })),
   ]);
   return c.json({ data: { project_ref: c.req.param('projectRef'), project_id: project.id, enabled: body.enabled, window_id: windowId || null, reason: reason || null } }, 200, { 'X-Request-Id': id, 'Cache-Control': 'no-store' });
+});
+
+admin.get('/module-cutover/flows-routing/:projectRef', async (c) => {
+  const denied = await cutoverDenied(c);
+  if (denied) return denied;
+  const id = requestId(c);
+  const projectRef = c.req.param('projectRef');
+  const project = await cutoverProject(c.env.DB, projectRef);
+  if (!project) return domainError(id, 404, 'project_not_found', 'Project was not found');
+  const state = await c.env.DB.prepare(
+    `SELECT enabled, window_id, plan_id, verification_checksum_sha256,
+            updated_by, updated_at
+     FROM flows_legacy_cutover_state WHERE project_id = ? LIMIT 1`,
+  ).bind(project.id).first<Record<string, unknown>>();
+  return c.json({
+    data: {
+      project_ref: projectRef,
+      project_id: project.id,
+      enabled: Number(state?.enabled ?? 0) === 1,
+      window_id: state?.window_id ?? null,
+      plan_id: state?.plan_id ?? null,
+      verification_checksum_sha256: state?.verification_checksum_sha256 ?? null,
+      updated_by: state?.updated_by ?? null,
+      updated_at: state?.updated_at ?? null,
+    },
+  }, 200, { 'X-Request-Id': id, 'Cache-Control': 'no-store' });
+});
+
+admin.put('/module-cutover/flows-routing/:projectRef', async (c) => {
+  const denied = await cutoverDenied(c);
+  if (denied) return denied;
+  const id = requestId(c);
+  const projectRef = c.req.param('projectRef');
+  const project = await cutoverProject(c.env.DB, projectRef);
+  if (!project) return domainError(id, 404, 'project_not_found', 'Project was not found');
+  const idempotencyKey = String(c.req.header('Idempotency-Key') || '').trim();
+  if (!/^[A-Za-z0-9._:-]{8,200}$/.test(idempotencyKey)) {
+    return domainError(id, 422, 'idempotency_key_invalid', 'A valid Idempotency-Key is required');
+  }
+  const body = await c.req.json<Record<string, unknown>>().catch(() => null);
+  if (!body || typeof body.enabled !== 'boolean') {
+    return domainError(id, 422, 'flows_routing_state_invalid', 'enabled must be a boolean');
+  }
+  if (body.enabled && !c.env.FLOWS_MODULE) {
+    return domainError(
+      id,
+      503,
+      'flows_service_unavailable',
+      'Flows routing cannot be enabled before the private service binding is ready',
+      { retryable: true },
+    );
+  }
+  const windowId = String(body.window_id ?? '').trim();
+  const planId = String(body.plan_id ?? '').trim();
+  const verificationChecksum = String(body.verification_checksum_sha256 ?? '').trim();
+  if (
+    !/^[A-Za-z0-9._-]{8,128}$/.test(windowId) ||
+    !/^[a-f0-9]{64}$/.test(planId) ||
+    !/^[a-f0-9]{64}$/.test(verificationChecksum)
+  ) {
+    return domainError(
+      id,
+      422,
+      'flows_routing_evidence_invalid',
+      'window_id, plan_id and verification_checksum_sha256 are required',
+    );
+  }
+  const responseData = {
+    project_ref: projectRef,
+    project_id: project.id,
+    enabled: body.enabled,
+    window_id: windowId,
+    plan_id: planId,
+    verification_checksum_sha256: verificationChecksum,
+  };
+  const payloadChecksum = await sha256Hex(JSON.stringify({
+    enabled: body.enabled,
+    plan_id: planId,
+    project_id: project.id,
+    project_ref: projectRef,
+    verification_checksum_sha256: verificationChecksum,
+    window_id: windowId,
+  }));
+  const replay = await c.env.DB.prepare(
+    `SELECT payload_checksum_sha256, response_json
+     FROM flows_legacy_cutover_commands
+     WHERE project_id = ? AND idempotency_key = ? LIMIT 1`,
+  ).bind(project.id, idempotencyKey).first<{
+    payload_checksum_sha256: string;
+    response_json: string;
+  }>();
+  if (replay) {
+    if (replay.payload_checksum_sha256 !== payloadChecksum) {
+      return domainError(
+        id,
+        409,
+        'idempotency_key_conflict',
+        'The Idempotency-Key was already used with different routing evidence',
+      );
+    }
+    let replayData: unknown;
+    try {
+      replayData = JSON.parse(replay.response_json);
+    } catch {
+      return domainError(
+        id,
+        500,
+        'cutover_receipt_corrupt',
+        'The stored cutover response is invalid',
+      );
+    }
+    return c.json({ data: replayData }, 200, {
+      'X-Request-Id': id,
+      'Cache-Control': 'no-store',
+      'Idempotency-Replayed': 'true',
+    });
+  }
+  const maintenance = await c.env.DB.prepare(
+    `SELECT enabled, window_id FROM module_cutover_maintenance
+     WHERE project_id = ? LIMIT 1`,
+  ).bind(project.id).first<{ enabled: number; window_id: string | null }>();
+  if (
+    Number(maintenance?.enabled ?? 0) !== 1 ||
+    maintenance?.window_id !== windowId
+  ) {
+    return domainError(
+      id,
+      409,
+      'flows_routing_requires_freeze',
+      'The exact project cutover window must remain frozen',
+    );
+  }
+  const actor = 'admin_api';
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO flows_legacy_cutover_commands
+        (project_id, idempotency_key, payload_checksum_sha256, response_json)
+       VALUES (?, ?, ?, ?)`,
+    ).bind(
+      project.id,
+      idempotencyKey,
+      payloadChecksum,
+      JSON.stringify(responseData),
+    ),
+    c.env.DB.prepare(
+      `INSERT INTO flows_legacy_cutover_state
+        (project_id, enabled, window_id, plan_id,
+         verification_checksum_sha256, updated_by, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(project_id) DO UPDATE SET
+         enabled=excluded.enabled,
+         window_id=excluded.window_id,
+         plan_id=excluded.plan_id,
+         verification_checksum_sha256=excluded.verification_checksum_sha256,
+         updated_by=excluded.updated_by,
+         updated_at=excluded.updated_at`,
+    ).bind(
+      project.id,
+      body.enabled ? 1 : 0,
+      windowId,
+      planId,
+      verificationChecksum,
+      actor,
+    ),
+    c.env.DB.prepare(
+      `INSERT INTO module_cutover_audit
+        (id, project_id, action, actor, details_json)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).bind(
+      crypto.randomUUID(),
+      project.id,
+      body.enabled ? 'flows.routing.enabled' : 'flows.routing.disabled',
+      actor,
+      JSON.stringify({
+        window_id: windowId,
+        plan_id: planId,
+        verification_checksum_sha256: verificationChecksum,
+        idempotency_key: idempotencyKey,
+        request_id: id,
+      }),
+    ),
+  ]);
+  return c.json({ data: responseData }, 200, {
+    'X-Request-Id': id,
+    'Cache-Control': 'no-store',
+  });
+});
+
+admin.post('/module-cutover/user-hashes/:projectRef', async (c) => {
+  const denied = await cutoverDenied(c);
+  if (denied) return denied;
+  const id = requestId(c);
+  const projectRef = c.req.param('projectRef');
+  const project = await cutoverProject(c.env.DB, projectRef);
+  if (!project) return domainError(id, 404, 'project_not_found', 'Project was not found');
+  const idempotencyKey = String(c.req.header('Idempotency-Key') || '').trim();
+  if (!/^[A-Za-z0-9._:-]{8,200}$/.test(idempotencyKey)) {
+    return domainError(id, 422, 'idempotency_key_invalid', 'A valid Idempotency-Key is required');
+  }
+  return forwardDomainRequest(
+    c,
+    'flows',
+    'FLOWS_MODULE',
+    id,
+    `/internal/v1/projects/${projectRef}/cutover/user-hashes`,
+    {
+      projectId: project.id,
+      projectRef,
+      instanceId: project.instance_id,
+      environment: project.is_test === 1 ? 'test' : 'production',
+      actorId: 0,
+      role: 'cutover',
+    },
+  );
 });
 
 async function domainForProject(db: D1Database, projectId: number, shortlinkDomain: string): Promise<number> {

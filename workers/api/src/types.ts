@@ -35,7 +35,9 @@ interface ApiSecretEnv {
   OPENGROW_RELEASE?: string;
   PUBLIC_ROUTING_MODE?: "active" | "staged";
   MODULE_INTERNAL_TOKEN?: string;
+  SITE_OPERATOR_BRIDGE_TOKEN?: string;
   MODULE_INTERNAL_TOKEN_PREVIOUS?: string;
+  FLOWS_INTERNAL_TOKEN?: string;
   EMAIL_INTERNAL_TOKEN?: string;
   /** @deprecated Transitional compatibility only; new targets use EMAIL_SERVICE. */
   EMAIL?: SendEmail;
@@ -80,6 +82,12 @@ interface ApiSecretEnv {
   CUSTOM_WORKER?: Fetcher;
   CUSTOM_WORKER_TOKEN?: string;
   OBSERVABILITY?: Fetcher;
+  /** Active on targets that have completed the Paywalls/Onboardings cutover. */
+  FLOWS_MODULE?: Fetcher;
+  /** @deprecated Preserved only for targets that have not cut over to Flows. */
+  PAYWALLS_MODULE?: Fetcher;
+  /** @deprecated Preserved only for targets that have not cut over to Flows. */
+  ONBOARDINGS_MODULE?: Fetcher;
   OBSERVABILITY_INTERNAL_TOKEN?: string;
   FILES_DOMAIN?: string;
   MCP_DOMAIN?: string;

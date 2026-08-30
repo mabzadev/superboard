@@ -1,0 +1,77 @@
+{
+  "name": "@superboard/flows-react-components",
+  "version": "2.9.4",
+  "description": "Built-in components for Flows React SDK",
+  "keywords": [
+    "react",
+    "ux",
+    "guide",
+    "spotlight",
+    "popover",
+    "overlay",
+    "users",
+    "saas",
+    "onboarding",
+    "tour",
+    "walkthrough",
+    "user-onboarding",
+    "feature-introductions",
+    "onboarding-tool",
+    "product-adoption",
+    "product-tours"
+  ],
+  "scripts": {
+    "dev": "tsup --env.NODE_ENV development",
+    "build": "tsup --env.NODE_ENV production",
+    "tsc": "tsc -p tsconfig.json",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "license": "MIT",
+  "sideEffects": false,
+  "devDependencies": {
+    "@superboard/flows-shared": "workspace:*",
+    "@superboard/flows-styles": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.17",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "ts-jest": "^29.4.11",
+    "tsup": "^8.5.1",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "dependencies": {
+    "@floating-ui/react-dom": "^2.1.9",
+    "clsx": "^2.1.1",
+    "dompurify": "^3.4.12",
+    "es-toolkit": "^1.50.0"
+  },
+  "peerDependencies": {
+    "@superboard/flows-react": "workspace:*",
+    "react": ">=17.0.2"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./tour": {
+      "types": "./dist/tour.d.ts",
+      "import": "./dist/tour.mjs",
+      "require": "./dist/tour.js"
+    },
+    "./survey": {
+      "types": "./dist/survey.d.ts",
+      "import": "./dist/survey.mjs",
+      "require": "./dist/survey.js"
+    },
+    "./index.css": {
+      "import": "./dist/index.css",
+      "require": "./dist/index.css"
+    }
+  }
+}

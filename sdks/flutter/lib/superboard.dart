@@ -3,6 +3,8 @@ import 'models/superboard_link.dart';
 export 'models/superboard_link.dart';
 export 'superboard_purchases.dart';
 export 'models/superboard_purchases.dart';
+export 'superboard_flows.dart';
+export 'superboard_support.dart';
 
 /// Main class for interacting with the SuperBoard SDK
 class SuperBoard {

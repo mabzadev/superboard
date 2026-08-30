@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "schemaVersion": 15,
+  "schemaVersion": 17,
   "target": "vocostar",
   "accountAlias": "vocostar-production",
   "resourceIdentity": {
@@ -10,6 +10,7 @@
     "migrationStrategy": "retain-physical-name"
   },
   "workersDevSubdomain": "vocostar",
+  "zoneName": "vocostar.com",
   "registrationMode": "allowlist",
   "ssoEnabled": false,
   "features": {
@@ -22,7 +23,8 @@
     "support": true,
     "analytics": false,
     "marketing": true,
-    "onboardings": true
+    "onboardings": true,
+    "flows": false
   },
   "applicationIdentity": {
     "registrationMode": "open",
@@ -61,6 +63,7 @@
     "shortlinks": "go.vocostar.com",
     "sdk": "sdk.vocostar.com",
     "dashboard": "grow.vocostar.com",
+    "site": "site.vocostar.com",
     "files": "files.vocostar.com",
     "mcp": "mcp.vocostar.com",
     "messaging": "messages.vocostar.com"
@@ -69,6 +72,9 @@
   "workers": {
     "api": {
       "production": "opengrow-api"
+    },
+    "site": {
+      "production": "opengrow-site"
     },
     "dashboard": {
       "production": "opengrow"
@@ -298,7 +304,22 @@
     "audience": "opengrow",
     "jwksUrl": "https://api.vocostar.com/.well-known/jwks.json"
   },
+  "siteRuntime": {
+    "workerLoaderBinding": "LOADER",
+    "crons": ["* * * * *"],
+    "observability": {
+      "enabled": true,
+      "logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true },
+      "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+    }
+  },
   "publicSurfaceMonitors": [
+    {
+      "id": "site-preview",
+      "url": "https://site.vocostar.com",
+      "healthUrl": "https://site.vocostar.com/superboard-system/health",
+      "description": "Staged Site EmDash preview; it does not own Dashboard traffic"
+    },
     {
       "id": "legacy-chatwoot",
       "url": "https://chat.vocostar.com",
@@ -307,13 +328,29 @@
     }
   ],
   "operator": {
-    "docsUrl": "https://github.com/mabzadev/superboard/tree/main/docs"
+    "docsUrl": "https://github.com/mabzadev/superboard/tree/main/docs",
+    "email": "mabzadev@gmail.com"
   },
   "environments": {
     "production": {
       "d1": {
         "name": "opengrow-db",
         "id": "0eafa441-cc8b-4da1-9db5-37a82642d69a"
+      },
+      "siteD1": {
+        "name": "opengrow-site-db",
+        "id": null
+      },
+      "siteMedia": {
+        "name": "opengrow-site-media"
+      },
+      "siteSessionKv": {
+        "name": "opengrow-site-session",
+        "id": null
+      },
+      "siteReleaseKv": {
+        "name": "opengrow-site-last-verified-release",
+        "id": null
       },
       "kv": {
         "name": "opengrow",
@@ -374,8 +411,8 @@
           "id": "8c46f117-6b12-49df-8308-e82458e31eab"
         },
         "support": {
-          "name": "opengrow-support-db",
-          "id": "13171470-dfb5-46ce-b047-c9b151c34ae2"
+          "name": "opengrow-support-v2-db",
+          "id": null
         },
         "analytics": {
           "name": "opengrow-analytics-db",
@@ -392,7 +429,7 @@
       },
       "moduleR2": {
         "support": {
-          "name": "opengrow-support-attachments"
+          "name": "opengrow-support-v2-attachments"
         },
         "analytics": {
           "name": "opengrow-analytics-events"
@@ -401,10 +438,26 @@
           "name": "opengrow-marketing-media"
         }
       },
+      "moduleVectorize": {
+        "supportKnowledge": {
+          "name": "opengrow-support-v2-knowledge",
+          "dimensions": 1024,
+          "metric": "cosine",
+          "description": "SuperBoard Support knowledge index"
+        }
+      },
       "moduleQueues": {
         "support": {
-          "name": "opengrow-support-events",
-          "dlq": "opengrow-support-events-dlq"
+          "name": "opengrow-support-v2-events",
+          "dlq": "opengrow-support-v2-events-dlq"
+        },
+        "supportAi": {
+          "name": "opengrow-support-v2-ai",
+          "dlq": "opengrow-support-v2-ai-dlq"
+        },
+        "supportBulk": {
+          "name": "opengrow-support-v2-bulk",
+          "dlq": "opengrow-support-v2-bulk-dlq"
         },
         "analytics": {
           "name": "opengrow-analytics-ingest",
@@ -414,6 +467,11 @@
           "name": "opengrow-marketing-delivery",
           "dlq": "opengrow-marketing-delivery-dlq"
         }
+      },
+      "supportRouting": {
+        "pattern": "api.vocostar.com/api/v1/support*",
+        "worker": "opengrow-api",
+        "mode": "staged"
       },
       "publicRouting": "staged",
       "billingExecutionMode": "service",

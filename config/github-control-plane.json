@@ -42,6 +42,10 @@
             "refs/tags/sdk-android-v*",
             "refs/tags/sdk-js-v*",
             "refs/tags/sdk-react-native-v*",
+            "refs/tags/sdk-flows-js-v*",
+            "refs/tags/sdk-flows-react-v*",
+            "refs/tags/sdk-flows-js-components-v*",
+            "refs/tags/sdk-flows-react-components-v*",
             "refs/tags/*.*.*"
           ],
           "rules": ["update", "deletion"]
@@ -125,7 +129,17 @@
               { "type": "tag", "pattern": "sdk-ios-v*" },
               { "type": "tag", "pattern": "sdk-android-v*" },
               { "type": "tag", "pattern": "sdk-js-v*" },
-              { "type": "tag", "pattern": "sdk-react-native-v*" }
+              { "type": "tag", "pattern": "sdk-react-native-v*" },
+              { "type": "tag", "pattern": "sdk-flows-js-v*" },
+              { "type": "tag", "pattern": "sdk-flows-react-v*" },
+              {
+                "type": "tag",
+                "pattern": "sdk-flows-js-components-v*"
+              },
+              {
+                "type": "tag",
+                "pattern": "sdk-flows-react-components-v*"
+              }
             ]
           }
         },

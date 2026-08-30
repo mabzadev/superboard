@@ -16,9 +16,6 @@ interface __BaseEnv_Env {
 	FILES_INTERNAL_TOKEN: string;
 }
 declare namespace Cloudflare {
-	interface GlobalProps {
-		mainModule: typeof import("./src/index");
-	}
 	interface Env extends __BaseEnv_Env {}
 }
 interface Env extends __BaseEnv_Env {}

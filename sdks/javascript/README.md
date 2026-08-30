@@ -12,7 +12,126 @@
 
 ## Overview
 
-The OpenGrow SDK is a JavaScript module designed to integrate with the OpenGrow API, providing functionality for creating and managing links, handling user information, and managing authentication. This documentation covers the main methods and usage of the SDK.
+The package includes the native SuperBoard Support client and embedded widget,
+alongside its existing default API.
+
+## SuperBoard Support
+
+Import the canonical Support surface from the dedicated package export:
+
+```javascript
+import {
+  SuperBoardSupportClient,
+  SuperBoardSupportException,
+  SuperBoardSupportWidget,
+} from "@mbzadev/opengrow-js-sdk/support";
+```
+
+Create the client with the public API origin. The client applies
+`/api/v1/support-widget` exactly once, refreshes expiring identity tokens,
+reuses one `Idempotency-Key` across safe retries, and caps cursor pages at 100.
+
+```javascript
+const support = new SuperBoardSupportClient({
+  baseUrl: "https://api.example.com",
+  projectId: window.superboard.projectId,
+  identityToken: window.superboard.identityToken,
+  identityTokenProvider: async () => {
+    const response = await fetch("/support/identity", { method: "POST" });
+    const { token } = await response.json();
+    return token;
+  },
+  widgetKey: window.superboard.widgetKey,
+  widgetSignatureProvider: async (request) => {
+    const response = await fetch("/support/sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    return response.json();
+  },
+  allowedDomains: ["app.example.com"],
+});
+```
+
+The signature provider obtains a short-lived server-issued signature. A
+signing secret must never be embedded in browser code. Domain authorization is
+also enforced by the SuperBoard project configuration; `allowedDomains` adds
+an immediate local check. In widget-key mode, an opaque random `visitorId` is
+kept per API origin, project, and widget key. It can also be supplied explicitly
+when the application already owns a stable visitor identity.
+
+The signing endpoint must reproduce this UTF-8 canonical input exactly (the
+path is the full public pathname without a query string, the method is upper
+case, an absent idempotency key is an empty line, and the digest is lower-case
+hex):
+
+```text
+timestamp
+METHOD
+/api/v1/support-widget/path
+projectId
+visitorId
+idempotencyKey
+sha256(body)
+```
+
+The client sends the same identity as `X-SuperBoard-Widget-Visitor` and exposes
+`bodySha256` plus `canonicalInput` to `widgetSignatureProvider`. Empty GET bodies
+use the SHA-256 digest of zero bytes. The canonical provider response is the
+lower-case hexadecimal HMAC-SHA256 digest of `canonicalInput`, computed by the
+application server with the configured widget signing secret.
+
+Conversations, messages, attachments, events, proactive support, CSAT, Help
+Center content, and configured meetings are available directly from the
+client:
+
+```javascript
+const conversation = await support.createConversation({
+  clientConversationId: crypto.randomUUID(),
+  subject: "Account question",
+});
+
+await support.sendMessage(conversation.id, {
+  body: "Could you help me?",
+  clientMessageId: crypto.randomUUID(),
+});
+
+const articles = await support.searchHelpCenter({
+  portalSlug: "docs",
+  query: "account",
+});
+```
+
+Realtime uses one-use tickets and reconnects with a fresh ticket. Only native
+SuperBoard Support event names are delivered to subscribers:
+
+```javascript
+const realtime = support.realtime();
+const unsubscribe = realtime.subscribe((event) => {
+  if (event.type === "message.created") renderMessage(event.message);
+});
+await realtime.connect(conversation.id);
+
+// Later:
+unsubscribe();
+await realtime.dispose();
+```
+
+Mount the dependency-free accessible widget into any element. Its interface is
+isolated in a closed Shadow DOM and writes user content with `textContent`:
+
+```javascript
+const widget = new SuperBoardSupportWidget({
+  client: support,
+  title: "Customer Support",
+});
+
+widget.mount(document.querySelector("#support"));
+```
+
+Network failures are surfaced as `SuperBoardSupportException` with `code`,
+`message`, `retryable`, `requestId`, `statusCode`, and optional `details`.
 
 <!-- opengrow-sdk-documentation:javascript:start -->
 

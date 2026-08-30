@@ -19,6 +19,7 @@ const target = {
     sdk: "sdk.example.test",
     files: "files.example.test",
     dashboard: "grow.example.test",
+    site: "site.example.test",
     mcp: "mcp.example.test",
     mailPreview: "mail.example.test",
   },
@@ -32,6 +33,7 @@ const target = {
   workers: {
     api: { development: "opengrow-api-dev" },
     dashboard: { development: "opengrow-dashboard-dev" },
+    site: { development: "opengrow-site-dev" },
     mcp: { development: "opengrow-mcp-dev" },
     email: { development: "opengrow-email-dev" },
   },
@@ -39,12 +41,20 @@ const target = {
 
 test("the domain plan assigns every public surface to one explicit Worker", () => {
   const expected = expectedDomainOwners(target, "development");
-  assert.equal(expected.length, 8);
+  assert.equal(expected.length, 9);
   assert.deepEqual(
     expected
       .filter((entry) => entry.service === "opengrow-api-dev")
       .map((entry) => entry.surface),
     ["api", "auth", "shortlinks", "sdk", "files"],
+  );
+  assert.deepEqual(
+    expected.find((entry) => entry.surface === "site"),
+    {
+      surface: "site",
+      hostname: "site.example.test",
+      service: "opengrow-site-dev",
+    },
   );
   assert.throws(
     () =>
@@ -67,7 +77,7 @@ test("mail preview is optional for SMTP targets", () => {
     ),
   };
   const expected = expectedDomainOwners(smtpTarget, "development");
-  assert.equal(expected.length, 7);
+  assert.equal(expected.length, 8);
   assert.equal(
     expected.some((entry) => entry.surface === "mailPreview"),
     false,

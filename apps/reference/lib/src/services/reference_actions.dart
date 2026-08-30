@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
-import 'package:opengrow_flutterflow_messaging/opengrow_flutterflow_messaging.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 import '../config/reference_config.dart';
 import '../model/reference_feature.dart';
@@ -46,14 +45,14 @@ abstract interface class ReferenceSdkBridge {
   Future<Object?> invoke(String action, Map<String, dynamic> parameters);
 }
 
-class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
-  const OpenGrowReferenceSdkBridge();
+class SuperBoardReferenceSdkBridge implements ReferenceSdkBridge {
+  const SuperBoardReferenceSdkBridge();
 
   @override
   Future<Object?> invoke(String action, Map<String, dynamic> parameters) async {
     switch (action) {
-      case 'opengrowApplicationInitialize':
-        return opengrowApplicationInitialize(
+      case 'superboardApplicationInitialize':
+        return superboardApplicationInitialize(
           apiBaseUrl: _string(parameters, 'api_base_url'),
           filesBaseUrl: _string(parameters, 'files_base_url'),
           applicationAccessToken: _optionalString(
@@ -65,23 +64,23 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
           identifier: _optionalString(parameters, 'identifier'),
           environment: _optionalString(parameters, 'environment', 'production'),
         );
-      case 'opengrowApplicationSetAccessToken':
-        return opengrowApplicationSetAccessToken(
+      case 'superboardApplicationSetAccessToken':
+        return superboardApplicationSetAccessToken(
           _optionalString(parameters, 'application_access_token'),
         );
-      case 'opengrowApplicationRestoreSessionJson':
-        return _decodeJson(await opengrowApplicationRestoreSessionJson());
-      case 'opengrowApplicationCurrentSessionJson':
-        return _decodeJson(await opengrowApplicationCurrentSessionJson());
-      case 'opengrowApplicationAccessToken':
-        return opengrowApplicationAccessToken();
-      case 'opengrowInitializeAuto':
-        return opengrowInitializeAuto(
+      case 'superboardApplicationRestoreSessionJson':
+        return _decodeJson(await superboardApplicationRestoreSessionJson());
+      case 'superboardApplicationCurrentSessionJson':
+        return _decodeJson(await superboardApplicationCurrentSessionJson());
+      case 'superboardApplicationAccessToken':
+        return superboardApplicationAccessToken();
+      case 'superboardInitializeAuto':
+        return superboardInitializeAuto(
           projectKey: _string(parameters, 'project_key'),
           sdkBaseUrl: _string(parameters, 'sdk_base_url'),
         );
-      case 'opengrowInitializeAuthenticated':
-        return opengrowInitializeAuthenticated(
+      case 'superboardInitializeAuthenticated':
+        return superboardInitializeAuthenticated(
           projectKey: _string(parameters, 'project_key'),
           applicationAccessToken: _string(
             parameters,
@@ -90,139 +89,143 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
           sdkBaseUrl: _string(parameters, 'sdk_base_url'),
           authGatewayBaseUrl: _string(parameters, 'auth_gateway_base_url'),
         );
-      case 'opengrowApplicationRuntimePolicyJson':
+      case 'superboardApplicationRuntimePolicyJson':
         return _decodeJson(
-          await opengrowApplicationRuntimePolicyJson(
+          await superboardApplicationRuntimePolicyJson(
             appVersion: _string(parameters, 'app_version'),
             build: _optionalString(parameters, 'build'),
           ),
         );
-      case 'opengrowApplicationSignInPasswordJson':
+      case 'superboardApplicationSignInPasswordJson':
         return _decodeJson(
-          await opengrowApplicationSignInPasswordJson(
+          await superboardApplicationSignInPasswordJson(
             email: _string(parameters, 'email'),
             password: _string(parameters, 'password'),
           ),
         );
-      case 'opengrowApplicationSignInProviderJson':
+      case 'superboardApplicationSignInProviderJson':
         return _decodeJson(
-          await opengrowApplicationSignInProviderJson(
+          await superboardApplicationSignInProviderJson(
             provider: _string(parameters, 'provider'),
             idToken: _string(parameters, 'id_token'),
             name: _optionalString(parameters, 'name'),
           ),
         );
-      case 'opengrowApplicationRefreshJson':
+      case 'superboardApplicationRefreshJson':
         return _decodeJson(
-          await opengrowApplicationRefreshJson(
+          await superboardApplicationRefreshJson(
             _string(parameters, 'refresh_token'),
           ),
         );
-      case 'opengrowApplicationRegisterJson':
+      case 'superboardApplicationRegisterJson':
         return _decodeJson(
-          await opengrowApplicationRegisterJson(
+          await superboardApplicationRegisterJson(
             email: _string(parameters, 'email'),
             password: _string(parameters, 'password'),
             name: _optionalString(parameters, 'name'),
           ),
         );
-      case 'opengrowApplicationRequestPasswordResetJson':
+      case 'superboardApplicationRequestPasswordResetJson':
         return _decodeJson(
-          await opengrowApplicationRequestPasswordResetJson(
+          await superboardApplicationRequestPasswordResetJson(
             _string(parameters, 'email'),
           ),
         );
-      case 'opengrowApplicationResetPasswordJson':
+      case 'superboardApplicationResetPasswordJson':
         return _decodeJson(
-          await opengrowApplicationResetPasswordJson(
+          await superboardApplicationResetPasswordJson(
             token: _string(parameters, 'token'),
             password: _string(parameters, 'password'),
           ),
         );
-      case 'opengrowApplicationProfileJson':
-        return _decodeJson(await opengrowApplicationProfileJson());
-      case 'opengrowApplicationUpdateProfileJson':
+      case 'superboardApplicationProfileJson':
+        return _decodeJson(await superboardApplicationProfileJson());
+      case 'superboardApplicationUpdateProfileJson':
         return _decodeJson(
-          await opengrowApplicationUpdateProfileJson(
+          await superboardApplicationUpdateProfileJson(
             _string(parameters, 'name'),
           ),
         );
-      case 'opengrowApplicationLogoutJson':
-        return _decodeJson(await opengrowApplicationLogoutJson());
-      case 'opengrowApplicationDeleteAccountJson':
-        return _decodeJson(await opengrowApplicationDeleteAccountJson());
-      case 'opengrowApplicationMarketingPreferencesJson':
-        return _decodeJson(await opengrowApplicationMarketingPreferencesJson());
-      case 'opengrowApplicationUpdateMarketingConsentJson':
+      case 'superboardApplicationLogoutJson':
+        return _decodeJson(await superboardApplicationLogoutJson());
+      case 'superboardApplicationDeleteAccountJson':
+        return _decodeJson(await superboardApplicationDeleteAccountJson());
+      case 'superboardApplicationMarketingPreferencesJson':
         return _decodeJson(
-          await opengrowApplicationUpdateMarketingConsentJson(
+          await superboardApplicationMarketingPreferencesJson(),
+        );
+      case 'superboardApplicationUpdateMarketingConsentJson':
+        return _decodeJson(
+          await superboardApplicationUpdateMarketingConsentJson(
             consented: _boolean(parameters, 'consented'),
             idempotencyKey: _string(parameters, 'idempotency_key'),
             attributesJson: jsonEncode(_object(parameters, 'attributes')),
             listIdsJson: jsonEncode(parameters['list_ids'] ?? const []),
           ),
         );
-      case 'opengrowIdentify':
-        return opengrowIdentify(
+      case 'superboardIdentify':
+        return superboardIdentify(
           userIdentifier: _string(parameters, 'user_identifier'),
           identityToken: _optionalString(parameters, 'identity_token'),
         );
-      case 'opengrowSetUserAttributesJson':
-        return opengrowSetUserAttributesJson(
+      case 'superboardSetUserAttributesJson':
+        return superboardSetUserAttributesJson(
           jsonEncode(_object(parameters, 'attributes')),
         );
-      case 'opengrowSetPushToken':
-        return opengrowSetPushToken(_string(parameters, 'push_token'));
-      case 'opengrowGetUnreadMessageCount':
-        return {'unread': await opengrowGetUnreadMessageCount()};
-      case 'opengrowDisplayMessages':
-        return {'displayed': await opengrowDisplayMessages()};
-      case 'opengrowApplicationListFilesJson':
+      case 'superboardSetPushToken':
+        return superboardSetPushToken(_string(parameters, 'push_token'));
+      case 'superboardGetUnreadMessageCount':
+        return {'unread': await superboardGetUnreadMessageCount()};
+      case 'superboardDisplayMessages':
+        return {'displayed': await superboardDisplayMessages()};
+      case 'superboardApplicationListFilesJson':
         return _decodeJson(
-          await opengrowApplicationListFilesJson(
+          await superboardApplicationListFilesJson(
             limit: _integer(parameters, 'limit', 50),
             offset: _integer(parameters, 'offset', 0),
           ),
         );
-      case 'opengrowApplicationUploadFileJson':
+      case 'superboardApplicationUploadFileJson':
         return _decodeJson(
-          await opengrowApplicationUploadFileJson(
+          await superboardApplicationUploadFileJson(
             bytes: _byteInput(parameters),
             filename: _string(parameters, 'filename'),
             contentType: _string(parameters, 'content_type'),
           ),
         );
-      case 'opengrowApplicationDownloadFile':
-        return opengrowApplicationDownloadFile(_string(parameters, 'file_id'));
-      case 'opengrowApplicationDeleteFileJson':
+      case 'superboardApplicationDownloadFile':
+        return superboardApplicationDownloadFile(
+          _string(parameters, 'file_id'),
+        );
+      case 'superboardApplicationDeleteFileJson':
         return _decodeJson(
-          await opengrowApplicationDeleteFileJson(
+          await superboardApplicationDeleteFileJson(
             _string(parameters, 'file_id'),
           ),
         );
-      case 'opengrowGetOfferings':
+      case 'superboardGetOfferings':
         return _decodeJson(
-          await opengrowGetOfferings(
+          await superboardGetOfferings(
             placement: _optionalString(parameters, 'placement', 'default'),
           ),
         );
-      case 'opengrowGetCustomerInfoJson':
-        return _decodeJson(await opengrowGetCustomerInfoJson());
-      case 'opengrowGetLastVerifiedCustomerInfoJson':
+      case 'superboardGetCustomerInfoJson':
+        return _decodeJson(await superboardGetCustomerInfoJson());
+      case 'superboardGetLastVerifiedCustomerInfoJson':
         return _decodeOptionalJson(
-          await opengrowGetLastVerifiedCustomerInfoJson(),
+          await superboardGetLastVerifiedCustomerInfoJson(),
         );
-      case 'opengrowRestore':
-        return {'restored': await opengrowRestore()};
-      case 'opengrowGetPurchaseConfigurationJson':
+      case 'superboardRestore':
+        return {'restored': await superboardRestore()};
+      case 'superboardGetPurchaseConfigurationJson':
         return _decodeJson(
-          await opengrowGetPurchaseConfigurationJson(
+          await superboardGetPurchaseConfigurationJson(
             placement: _optionalString(parameters, 'placement', 'default'),
           ),
         );
-      case 'opengrowPurchase':
+      case 'superboardPurchase':
         return _decodeJson(
-          await opengrowPurchase(
+          await superboardPurchase(
             packageIdentifier: _string(parameters, 'package_identifier'),
             offeringIdentifier: _optionalString(
               parameters,
@@ -230,18 +233,18 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
             ),
           ),
         );
-      case 'opengrowGetLastPurchaseResultJson':
-        return _decodeOptionalJson(await opengrowGetLastPurchaseResultJson());
-      case 'opengrowGenerateLinkJson':
+      case 'superboardGetLastPurchaseResultJson':
+        return _decodeOptionalJson(await superboardGetLastPurchaseResultJson());
+      case 'superboardGenerateLinkJson':
         return {
-          'url': await opengrowGenerateLinkJson(
+          'url': await superboardGenerateLinkJson(
             jsonEncode(_object(parameters, 'parameters')),
           ),
         };
-      case 'opengrowGetLastDeepLinkJson':
-        return _decodeOptionalJson(await opengrowGetLastDeepLinkJson());
-      case 'opengrowSupportInitializeAuthenticated':
-        return opengrowSupportInitializeAuthenticated(
+      case 'superboardGetLastDeepLinkJson':
+        return _decodeOptionalJson(await superboardGetLastDeepLinkJson());
+      case 'superboardSupportInitializeAuthenticated':
+        return superboardSupportInitializeAuthenticated(
           applicationAccessToken: _string(
             parameters,
             'application_access_token',
@@ -250,13 +253,13 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
           authGatewayUrl: _string(parameters, 'auth_gateway_url'),
           supportUrl: _string(parameters, 'support_url'),
         );
-      case 'opengrowSupportGetConfigurationJson':
-        return _decodeJson(await opengrowSupportGetConfigurationJson());
-      case 'opengrowSupportListConversationsJson':
-        return _decodeJson(await opengrowSupportListConversationsJson());
-      case 'opengrowSupportOpenConversation':
+      case 'superboardSupportGetConfigurationJson':
+        return _decodeJson(await superboardSupportGetConfigurationJson());
+      case 'superboardSupportListConversationsJson':
+        return _decodeJson(await superboardSupportListConversationsJson());
+      case 'superboardSupportOpenConversation':
         return _decodeJson(
-          await opengrowSupportOpenConversation(
+          await superboardSupportOpenConversation(
             clientConversationId: _string(parameters, 'client_conversation_id'),
             subject: _nullableString(parameters, 'subject'),
             inboxId: _nullableString(parameters, 'inbox_id'),
@@ -265,9 +268,9 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
             ),
           ),
         );
-      case 'opengrowSupportUpdateConversationJson':
+      case 'superboardSupportUpdateConversationJson':
         return _decodeJson(
-          await opengrowSupportUpdateConversationJson(
+          await superboardSupportUpdateConversationJson(
             conversationId: _string(parameters, 'conversation_id'),
             status: _nullableString(parameters, 'status'),
             customAttributesJson: parameters.containsKey('custom_attributes')
@@ -275,9 +278,9 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
                 : null,
           ),
         );
-      case 'opengrowSupportMessagesJson':
+      case 'superboardSupportMessagesJson':
         return _decodeJson(
-          await opengrowSupportMessagesJson(
+          await superboardSupportMessagesJson(
             _string(parameters, 'conversation_id'),
             beforeSequence: parameters['before_sequence'] == null
                 ? null
@@ -285,9 +288,9 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
             limit: _integer(parameters, 'limit', 50),
           ),
         );
-      case 'opengrowSupportSendAdvanced':
+      case 'superboardSupportSendAdvanced':
         return _decodeJson(
-          await opengrowSupportSendAdvanced(
+          await superboardSupportSendAdvanced(
             conversationId: _string(parameters, 'conversation_id'),
             body: _string(parameters, 'body'),
             clientMessageId: _string(parameters, 'client_message_id'),
@@ -299,87 +302,89 @@ class OpenGrowReferenceSdkBridge implements ReferenceSdkBridge {
             metadataJson: jsonEncode(_object(parameters, 'metadata')),
           ),
         );
-      case 'opengrowSupportSubmitCsatJson':
+      case 'superboardSupportSubmitCsatJson':
         return _decodeJson(
-          await opengrowSupportSubmitCsatJson(
+          await superboardSupportSubmitCsatJson(
             conversationId: _string(parameters, 'conversation_id'),
             rating: _integer(parameters, 'rating'),
             feedback: _nullableString(parameters, 'feedback'),
           ),
         );
-      case 'opengrowSupportUploadAttachmentJson':
+      case 'superboardSupportUploadAttachmentJson':
         return _decodeJson(
-          await opengrowSupportUploadAttachmentJson(
+          await superboardSupportUploadAttachmentJson(
             conversationId: _string(parameters, 'conversation_id'),
             bytes: _byteInput(parameters),
             filename: _string(parameters, 'filename'),
             contentType: _string(parameters, 'content_type'),
           ),
         );
-      case 'opengrowSupportDownloadAttachment':
-        return opengrowSupportDownloadAttachment(
+      case 'superboardSupportDownloadAttachment':
+        return superboardSupportDownloadAttachment(
           conversationId: _string(parameters, 'conversation_id'),
           messageId: _string(parameters, 'message_id'),
           attachmentId: _nullableString(parameters, 'attachment_id'),
         );
-      case 'opengrowSupportSendAttachment':
+      case 'superboardSupportSendAttachment':
         return _decodeJson(
-          await opengrowSupportSendAttachment(
+          await superboardSupportSendAttachment(
             conversationId: _string(parameters, 'conversation_id'),
             attachmentJson: jsonEncode(_object(parameters, 'attachment')),
             clientMessageId: _string(parameters, 'client_message_id'),
             body: _optionalString(parameters, 'body'),
           ),
         );
-      case 'opengrowSupportMarkRead':
+      case 'superboardSupportMarkRead':
         return _decodeJson(
-          await opengrowSupportMarkRead(_string(parameters, 'conversation_id')),
+          await superboardSupportMarkRead(
+            _string(parameters, 'conversation_id'),
+          ),
         );
-      case 'opengrowSupportSetTyping':
+      case 'superboardSupportSetTyping':
         return {
-          'typing': await opengrowSupportSetTyping(
+          'typing': await superboardSupportSetTyping(
             _string(parameters, 'conversation_id'),
             _boolean(parameters, 'active'),
           ),
         };
-      case 'opengrowSupportConnectRealtime':
+      case 'superboardSupportConnectRealtime':
         return {
-          'connected': await opengrowSupportConnectRealtime(
+          'connected': await superboardSupportConnectRealtime(
             _string(parameters, 'conversation_id'),
           ),
         };
-      case 'opengrowSupportDisconnectRealtime':
-        return {'disconnected': await opengrowSupportDisconnectRealtime()};
-      case 'opengrowSupportGetLastRealtimeEventJson':
+      case 'superboardSupportDisconnectRealtime':
+        return {'disconnected': await superboardSupportDisconnectRealtime()};
+      case 'superboardSupportGetLastRealtimeEventJson':
         return _decodeOptionalJson(
-          await opengrowSupportGetLastRealtimeEventJson(),
+          await superboardSupportGetLastRealtimeEventJson(),
         );
-      case 'opengrowApplicationCreateCustomJobJson':
+      case 'superboardApplicationCreateCustomJobJson':
         return _decodeJson(
-          await opengrowApplicationCreateCustomJobJson(
+          await superboardApplicationCreateCustomJobJson(
             capability: _string(parameters, 'capability'),
             payloadJson: jsonEncode(_object(parameters, 'payload')),
             idempotencyKey: _string(parameters, 'idempotency_key'),
           ),
         );
-      case 'opengrowApplicationListCustomJobsJson':
+      case 'superboardApplicationListCustomJobsJson':
         return _decodeJson(
-          await opengrowApplicationListCustomJobsJson(
+          await superboardApplicationListCustomJobsJson(
             limit: _integer(parameters, 'limit', 25),
             status: _optionalString(parameters, 'status'),
             capability: _optionalString(parameters, 'capability'),
             cursor: _optionalString(parameters, 'cursor'),
           ),
         );
-      case 'opengrowApplicationGetCustomJobJson':
+      case 'superboardApplicationGetCustomJobJson':
         return _decodeJson(
-          await opengrowApplicationGetCustomJobJson(
+          await superboardApplicationGetCustomJobJson(
             _string(parameters, 'job_id'),
           ),
         );
-      case 'opengrowApplicationCancelCustomJobJson':
+      case 'superboardApplicationCancelCustomJobJson':
         return _decodeJson(
-          await opengrowApplicationCancelCustomJobJson(
+          await superboardApplicationCancelCustomJobJson(
             _string(parameters, 'job_id'),
           ),
         );
@@ -429,7 +434,7 @@ class LiveReferenceActions implements ReferenceActions {
     http.Client? client,
     ReferenceSdkBridge? sdk,
   }) : _client = client ?? http.Client(),
-       _sdk = sdk ?? const OpenGrowReferenceSdkBridge();
+       _sdk = sdk ?? const SuperBoardReferenceSdkBridge();
 
   final ReferenceConfig configuration;
   final http.Client _client;
@@ -480,12 +485,12 @@ class LiveReferenceActions implements ReferenceActions {
     switch (id) {
       case ReferenceFeatureId.bootstrap:
         if (state.applicationAccessToken.isEmpty) {
-          await _sdk.invoke('opengrowInitializeAuto', {
+          await _sdk.invoke('superboardInitializeAuto', {
             'project_key': configuration.projectKey,
             'sdk_base_url': configuration.sdkBaseUrl,
           });
         } else {
-          await _sdk.invoke('opengrowInitializeAuthenticated', {
+          await _sdk.invoke('superboardInitializeAuthenticated', {
             'project_key': configuration.projectKey,
             'application_access_token': state.applicationAccessToken,
             'sdk_base_url': configuration.sdkBaseUrl,
@@ -493,19 +498,19 @@ class LiveReferenceActions implements ReferenceActions {
           });
         }
         final runtimePolicy = await _sdk
-            .invoke('opengrowApplicationRuntimePolicyJson', {
+            .invoke('superboardApplicationRuntimePolicyJson', {
               'app_version': input['app_version']?.toString() ?? '0.1.0',
               'build': input['build']?.toString() ?? '1',
             });
-        return _LiveExecution('opengrowApplicationRuntimePolicyJson', {
+        return _LiveExecution('superboardApplicationRuntimePolicyJson', {
           ...configuration.diagnostics(),
           'runtime_policy': _unwrapData(runtimePolicy),
         });
       case ReferenceFeatureId.signIn:
         final provider = input['provider']?.toString();
         final operation = provider == 'google' || provider == 'apple'
-            ? 'opengrowApplicationSignInProviderJson'
-            : 'opengrowApplicationSignInPasswordJson';
+            ? 'superboardApplicationSignInProviderJson'
+            : 'superboardApplicationSignInPasswordJson';
         final value = await _sdk.invoke(operation, {
           if (provider == 'google' || provider == 'apple') ...{
             'provider': provider,
@@ -519,7 +524,7 @@ class LiveReferenceActions implements ReferenceActions {
         _applySession(state, value);
         return _LiveExecution(operation, value);
       case ReferenceFeatureId.createAccount:
-        const operation = 'opengrowApplicationRegisterJson';
+        const operation = 'superboardApplicationRegisterJson';
         final value = await _sdk.invoke(operation, {
           'email': input['email']?.toString() ?? '',
           'password': input['password']?.toString() ?? '',
@@ -530,8 +535,8 @@ class LiveReferenceActions implements ReferenceActions {
       case ReferenceFeatureId.passwordRecovery:
         final reset = input['operation'] == 'reset';
         final operation = reset
-            ? 'opengrowApplicationResetPasswordJson'
-            : 'opengrowApplicationRequestPasswordResetJson';
+            ? 'superboardApplicationResetPasswordJson'
+            : 'superboardApplicationRequestPasswordResetJson';
         return _LiveExecution(
           operation,
           await _sdk.invoke(operation, {
@@ -544,11 +549,11 @@ class LiveReferenceActions implements ReferenceActions {
         );
       case ReferenceFeatureId.home:
         final profile = await _sdk.invoke(
-          'opengrowApplicationProfileJson',
+          'superboardApplicationProfileJson',
           const {},
         );
         final policy = await _sdk
-            .invoke('opengrowApplicationRuntimePolicyJson', {
+            .invoke('superboardApplicationRuntimePolicyJson', {
               'app_version': input['app_version']?.toString() ?? '0.1.0',
               'build': input['build']?.toString() ?? '1',
             });
@@ -559,32 +564,35 @@ class LiveReferenceActions implements ReferenceActions {
       case ReferenceFeatureId.profile:
         if (input['operation'] == 'delete') {
           final result = await _sdk.invoke(
-            'opengrowApplicationDeleteAccountJson',
+            'superboardApplicationDeleteAccountJson',
             const {},
           );
           state.clearSession();
-          return _LiveExecution('opengrowApplicationDeleteAccountJson', result);
+          return _LiveExecution(
+            'superboardApplicationDeleteAccountJson',
+            result,
+          );
         }
         if (input['operation'] == 'logout') {
           final result = await _sdk.invoke(
-            'opengrowApplicationLogoutJson',
+            'superboardApplicationLogoutJson',
             const {},
           );
           state.clearSession();
-          return _LiveExecution('opengrowApplicationLogoutJson', result);
+          return _LiveExecution('superboardApplicationLogoutJson', result);
         }
         if (input['operation'] == 'update_profile') {
           return _LiveExecution(
-            'opengrowApplicationUpdateProfileJson',
-            await _sdk.invoke('opengrowApplicationUpdateProfileJson', {
+            'superboardApplicationUpdateProfileJson',
+            await _sdk.invoke('superboardApplicationUpdateProfileJson', {
               'name': input['name']?.toString() ?? '',
             }),
           );
         }
         if (input['operation'] == 'identify') {
           return _LiveExecution(
-            'opengrowIdentify',
-            await _sdk.invoke('opengrowIdentify', {
+            'superboardIdentify',
+            await _sdk.invoke('superboardIdentify', {
               'user_identifier':
                   input['user_identifier']?.toString() ?? state.currentUserId,
               'identity_token': input['identity_token']?.toString() ?? '',
@@ -593,8 +601,8 @@ class LiveReferenceActions implements ReferenceActions {
         }
         if (input['operation'] == 'attributes') {
           return _LiveExecution(
-            'opengrowSetUserAttributesJson',
-            await _sdk.invoke('opengrowSetUserAttributesJson', {
+            'superboardSetUserAttributesJson',
+            await _sdk.invoke('superboardSetUserAttributesJson', {
               'attributes': input['attributes'] is Map
                   ? input['attributes']
                   : const <String, Object?>{},
@@ -602,74 +610,74 @@ class LiveReferenceActions implements ReferenceActions {
           );
         }
         return _LiveExecution(
-          'opengrowApplicationProfileJson',
-          await _sdk.invoke('opengrowApplicationProfileJson', const {}),
+          'superboardApplicationProfileJson',
+          await _sdk.invoke('superboardApplicationProfileJson', const {}),
         );
       case ReferenceFeatureId.notifications:
         final operation = input['operation']?.toString() ?? 'inspect';
         if (operation == 'register') {
-          await _sdk.invoke('opengrowSetPushToken', {
+          await _sdk.invoke('superboardSetPushToken', {
             'push_token': input['push_token']?.toString() ?? '',
           });
         } else if (operation == 'display') {
           return _LiveExecution(
-            'opengrowDisplayMessages',
-            await _sdk.invoke('opengrowDisplayMessages', const {}),
+            'superboardDisplayMessages',
+            await _sdk.invoke('superboardDisplayMessages', const {}),
           );
         }
         return _LiveExecution(
           operation == 'register'
-              ? 'opengrowSetPushToken'
-              : 'opengrowGetUnreadMessageCount',
-          await _sdk.invoke('opengrowGetUnreadMessageCount', const {}),
+              ? 'superboardSetPushToken'
+              : 'superboardGetUnreadMessageCount',
+          await _sdk.invoke('superboardGetUnreadMessageCount', const {}),
         );
       case ReferenceFeatureId.files:
         final operation = input['operation']?.toString() ?? 'list';
         if (operation == 'upload') {
           return _LiveExecution(
-            'opengrowApplicationUploadFileJson',
-            await _sdk.invoke('opengrowApplicationUploadFileJson', input),
+            'superboardApplicationUploadFileJson',
+            await _sdk.invoke('superboardApplicationUploadFileJson', input),
           );
         }
         if (operation == 'download') {
           final bytes = await _sdk.invoke(
-            'opengrowApplicationDownloadFile',
+            'superboardApplicationDownloadFile',
             input,
           );
           return _LiveExecution(
-            'opengrowApplicationDownloadFile',
+            'superboardApplicationDownloadFile',
             _downloadProof(bytes),
           );
         }
         if (operation == 'delete') {
           return _LiveExecution(
-            'opengrowApplicationDeleteFileJson',
-            await _sdk.invoke('opengrowApplicationDeleteFileJson', input),
+            'superboardApplicationDeleteFileJson',
+            await _sdk.invoke('superboardApplicationDeleteFileJson', input),
           );
         }
         return _LiveExecution(
-          'opengrowApplicationListFilesJson',
-          await _sdk.invoke('opengrowApplicationListFilesJson', input),
+          'superboardApplicationListFilesJson',
+          await _sdk.invoke('superboardApplicationListFilesJson', input),
         );
       case ReferenceFeatureId.products:
         if (input['operation'] == 'restore') {
-          final restored = await _sdk.invoke('opengrowRestore', const {});
+          final restored = await _sdk.invoke('superboardRestore', const {});
           final customer = await _sdk.invoke(
-            'opengrowGetCustomerInfoJson',
+            'superboardGetCustomerInfoJson',
             const {},
           );
-          return _LiveExecution('opengrowRestore', {
+          return _LiveExecution('superboardRestore', {
             'restore': restored,
             'customer_info': _unwrapData(customer),
           });
         }
-        final offerings = await _sdk.invoke('opengrowGetOfferings', input);
+        final offerings = await _sdk.invoke('superboardGetOfferings', input);
         final customer = await _sdk.invoke(
-          'opengrowGetCustomerInfoJson',
+          'superboardGetCustomerInfoJson',
           const {},
         );
         final verified = await _sdk.invoke(
-          'opengrowGetLastVerifiedCustomerInfoJson',
+          'superboardGetLastVerifiedCustomerInfoJson',
           const {},
         );
         return _LiveExecution('inspectProductsAndCustomerInfo', {
@@ -679,28 +687,28 @@ class LiveReferenceActions implements ReferenceActions {
         });
       case ReferenceFeatureId.paywall:
         if (input['operation'] == 'purchase') {
-          final purchase = await _sdk.invoke('opengrowPurchase', input);
+          final purchase = await _sdk.invoke('superboardPurchase', input);
           final latest = await _sdk.invoke(
-            'opengrowGetLastPurchaseResultJson',
+            'superboardGetLastPurchaseResultJson',
             const {},
           );
-          return _LiveExecution('opengrowPurchase', {
+          return _LiveExecution('superboardPurchase', {
             'purchase': _unwrapData(purchase),
             'last_result': _unwrapData(latest),
           });
         }
         return _LiveExecution(
-          'opengrowGetPurchaseConfigurationJson',
-          await _sdk.invoke('opengrowGetPurchaseConfigurationJson', input),
+          'superboardGetPurchaseConfigurationJson',
+          await _sdk.invoke('superboardGetPurchaseConfigurationJson', input),
         );
       case ReferenceFeatureId.dynamicLinks:
         if (input['operation'] == 'last') {
           return _LiveExecution(
-            'opengrowGetLastDeepLinkJson',
-            await _sdk.invoke('opengrowGetLastDeepLinkJson', const {}),
+            'superboardGetLastDeepLinkJson',
+            await _sdk.invoke('superboardGetLastDeepLinkJson', const {}),
           );
         }
-        final link = await _sdk.invoke('opengrowGenerateLinkJson', {
+        final link = await _sdk.invoke('superboardGenerateLinkJson', {
           'parameters': {
             'title': input['title']?.toString() ?? 'SuperBoard reference',
             'data': input['data'] is Map
@@ -708,7 +716,7 @@ class LiveReferenceActions implements ReferenceActions {
                 : {'source': 'superboard-reference'},
           },
         });
-        return _LiveExecution('opengrowGenerateLinkJson', {
+        return _LiveExecution('superboardGenerateLinkJson', {
           ..._objectValue(link),
           'origin': configuration.shortLinksBaseUrl,
         });
@@ -719,18 +727,18 @@ class LiveReferenceActions implements ReferenceActions {
         final load = input['operation'] == 'load';
         return _LiveExecution(
           load
-              ? 'opengrowApplicationMarketingPreferencesJson'
-              : 'opengrowApplicationUpdateMarketingConsentJson',
+              ? 'superboardApplicationMarketingPreferencesJson'
+              : 'superboardApplicationUpdateMarketingConsentJson',
           await _sdk.invoke(
             load
-                ? 'opengrowApplicationMarketingPreferencesJson'
-                : 'opengrowApplicationUpdateMarketingConsentJson',
+                ? 'superboardApplicationMarketingPreferencesJson'
+                : 'superboardApplicationUpdateMarketingConsentJson',
             input,
           ),
         );
       case ReferenceFeatureId.onboarding:
-        return _LiveExecution('OpenGrowOnboarding', {
-          'widget': 'OpenGrowOnboarding',
+        return _LiveExecution('SuperBoardOnboarding', {
+          'widget': 'SuperBoardOnboarding',
           'placement': input['placement']?.toString() ?? 'app_launch',
           'rendered_in_live_mode': configuration.liveMode,
           'message':
@@ -763,7 +771,7 @@ class LiveReferenceActions implements ReferenceActions {
           );
         }
         final created = await _sdk
-            .invoke('opengrowApplicationCreateCustomJobJson', {
+            .invoke('superboardApplicationCreateCustomJobJson', {
               'capability': capability,
               'payload': payload,
               'idempotency_key': idempotencyKey,
@@ -779,22 +787,22 @@ class LiveReferenceActions implements ReferenceActions {
           );
         }
         final listed = await _sdk.invoke(
-          'opengrowApplicationListCustomJobsJson',
+          'superboardApplicationListCustomJobsJson',
           {'limit': 10, 'status': 'completed', 'capability': capability},
         );
         final detail = await _sdk.invoke(
-          'opengrowApplicationGetCustomJobJson',
+          'superboardApplicationGetCustomJobJson',
           {'job_id': jobId},
         );
         Object cancellation;
         try {
-          await _sdk.invoke('opengrowApplicationCancelCustomJobJson', {
+          await _sdk.invoke('superboardApplicationCancelCustomJobJson', {
             'job_id': jobId,
           });
           throw const FormatException(
             'A completed reference job was unexpectedly cancellable.',
           );
-        } on OpenGrowApplicationException catch (error) {
+        } on SuperBoardApplicationException catch (error) {
           if (error.code != 'job_not_cancellable' || error.statusCode != 409) {
             rethrow;
           }
@@ -822,34 +830,34 @@ class LiveReferenceActions implements ReferenceActions {
   Future<_LiveExecution> _executeSupport(Map<String, dynamic> input) async {
     final operation = input['operation']?.toString() ?? 'list';
     final action = switch (operation) {
-      'configuration' => 'opengrowSupportGetConfigurationJson',
-      'open' => 'opengrowSupportOpenConversation',
-      'update' => 'opengrowSupportUpdateConversationJson',
-      'messages' => 'opengrowSupportMessagesJson',
-      'send' => 'opengrowSupportSendAdvanced',
-      'upload_attachment' => 'opengrowSupportUploadAttachmentJson',
-      'download_attachment' => 'opengrowSupportDownloadAttachment',
-      'send_attachment' => 'opengrowSupportSendAttachment',
-      'mark_read' => 'opengrowSupportMarkRead',
-      'typing' => 'opengrowSupportSetTyping',
-      'connect' => 'opengrowSupportConnectRealtime',
-      'disconnect' => 'opengrowSupportDisconnectRealtime',
-      'realtime_event' => 'opengrowSupportGetLastRealtimeEventJson',
-      'csat' => 'opengrowSupportSubmitCsatJson',
-      'list' => 'opengrowSupportListConversationsJson',
+      'configuration' => 'superboardSupportGetConfigurationJson',
+      'open' => 'superboardSupportOpenConversation',
+      'update' => 'superboardSupportUpdateConversationJson',
+      'messages' => 'superboardSupportMessagesJson',
+      'send' => 'superboardSupportSendAdvanced',
+      'upload_attachment' => 'superboardSupportUploadAttachmentJson',
+      'download_attachment' => 'superboardSupportDownloadAttachment',
+      'send_attachment' => 'superboardSupportSendAttachment',
+      'mark_read' => 'superboardSupportMarkRead',
+      'typing' => 'superboardSupportSetTyping',
+      'connect' => 'superboardSupportConnectRealtime',
+      'disconnect' => 'superboardSupportDisconnectRealtime',
+      'realtime_event' => 'superboardSupportGetLastRealtimeEventJson',
+      'csat' => 'superboardSupportSubmitCsatJson',
+      'list' => 'superboardSupportListConversationsJson',
       _ => throw FormatException('Unsupported Support operation: $operation'),
     };
     final result = await _sdk.invoke(action, input);
     return _LiveExecution(
       action,
-      action == 'opengrowSupportDownloadAttachment'
+      action == 'superboardSupportDownloadAttachment'
           ? _downloadProof(result)
           : result,
     );
   }
 
   Future<void> _initializeSupport(ReferenceState state) async {
-    await _sdk.invoke('opengrowSupportInitializeAuthenticated', {
+    await _sdk.invoke('superboardSupportInitializeAuthenticated', {
       'application_access_token': state.applicationAccessToken,
       'project_id': configuration.projectId,
       'auth_gateway_url': configuration.apiBaseUrl,
@@ -921,7 +929,7 @@ class LiveReferenceActions implements ReferenceActions {
 
   Future<void> _ensureApplication(ReferenceState state) async {
     if (!_applicationInitialized) {
-      await _sdk.invoke('opengrowApplicationInitialize', {
+      await _sdk.invoke('superboardApplicationInitialize', {
         'api_base_url': configuration.apiBaseUrl,
         'files_base_url': configuration.filesBaseUrl,
         'project_key': configuration.projectKey,
@@ -931,7 +939,7 @@ class LiveReferenceActions implements ReferenceActions {
       });
       _applicationInitialized = true;
       final restored = await _sdk.invoke(
-        'opengrowApplicationCurrentSessionJson',
+        'superboardApplicationCurrentSessionJson',
         const {},
       );
       _applySession(state, restored);

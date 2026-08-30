@@ -5,7 +5,7 @@ import 'package:superboard_reference/src/config/reference_config.dart';
 import 'package:superboard_reference/src/model/reference_feature.dart';
 import 'package:superboard_reference/src/services/reference_actions.dart';
 import 'package:superboard_reference/src/state/reference_state.dart';
-import 'package:opengrow_flutterflow/opengrow_flutterflow.dart';
+import 'package:superboard_flutterflow/superboard_flutterflow.dart';
 
 void main() {
   test(
@@ -31,8 +31,8 @@ void main() {
       expect(
         sdk.actions,
         containsAllInOrder([
-          'opengrowApplicationInitialize',
-          'opengrowApplicationCurrentSessionJson',
+          'superboardApplicationInitialize',
+          'superboardApplicationCurrentSessionJson',
         ]),
       );
     },
@@ -48,7 +48,7 @@ void main() {
       });
 
       expect(result.success, isTrue);
-      expect(result.operation, 'opengrowApplicationSignInPasswordJson');
+      expect(result.operation, 'superboardApplicationSignInPasswordJson');
       expect(harness.state.currentUserId, 'application-user-1');
       expect(harness.state.applicationAccessToken, 'access-token');
     },
@@ -69,8 +69,8 @@ void main() {
     expect(
       harness.sdk.actions,
       containsAllInOrder([
-        'opengrowApplicationRequestPasswordResetJson',
-        'opengrowApplicationResetPasswordJson',
+        'superboardApplicationRequestPasswordResetJson',
+        'superboardApplicationResetPasswordJson',
       ]),
     );
   });
@@ -82,7 +82,7 @@ void main() {
       'operation': 'upload',
       'filename': 'reference.txt',
       'content_type': 'text/plain',
-      'text': 'OpenGrow',
+      'text': 'SuperBoard',
     });
     final download = await harness.run(ReferenceFeatureId.files, {
       'operation': 'download',
@@ -97,10 +97,10 @@ void main() {
     expect(
       harness.sdk.actions,
       containsAllInOrder([
-        'opengrowApplicationUploadFileJson',
-        'opengrowApplicationDownloadFile',
-        'opengrowApplicationListFilesJson',
-        'opengrowApplicationDeleteFileJson',
+        'superboardApplicationUploadFileJson',
+        'superboardApplicationDownloadFile',
+        'superboardApplicationListFilesJson',
+        'superboardApplicationDeleteFileJson',
       ]),
     );
     expect(download.payload, {
@@ -125,9 +125,9 @@ void main() {
     expect(
       harness.sdk.actions,
       containsAllInOrder([
-        'opengrowSetPushToken',
-        'opengrowGetUnreadMessageCount',
-        'opengrowDisplayMessages',
+        'superboardSetPushToken',
+        'superboardGetUnreadMessageCount',
+        'superboardDisplayMessages',
       ]),
     );
   });
@@ -147,13 +147,13 @@ void main() {
       expect(
         harness.sdk.actions,
         containsAllInOrder([
-          'opengrowGetOfferings',
-          'opengrowGetCustomerInfoJson',
-          'opengrowGetLastVerifiedCustomerInfoJson',
-          'opengrowRestore',
-          'opengrowGetCustomerInfoJson',
-          'opengrowPurchase',
-          'opengrowGetLastPurchaseResultJson',
+          'superboardGetOfferings',
+          'superboardGetCustomerInfoJson',
+          'superboardGetLastVerifiedCustomerInfoJson',
+          'superboardRestore',
+          'superboardGetCustomerInfoJson',
+          'superboardPurchase',
+          'superboardGetLastPurchaseResultJson',
         ]),
       );
     },
@@ -173,8 +173,8 @@ void main() {
       expect(
         harness.sdk.actions,
         containsAllInOrder([
-          'opengrowGenerateLinkJson',
-          'opengrowGetLastDeepLinkJson',
+          'superboardGenerateLinkJson',
+          'superboardGetLastDeepLinkJson',
         ]),
       );
     },
@@ -199,8 +199,8 @@ void main() {
       expect(
         harness.sdk.actions,
         containsAllInOrder([
-          'opengrowApplicationMarketingPreferencesJson',
-          'opengrowApplicationUpdateMarketingConsentJson',
+          'superboardApplicationMarketingPreferencesJson',
+          'superboardApplicationUpdateMarketingConsentJson',
         ]),
       );
     },
@@ -209,21 +209,21 @@ void main() {
   test('support dispatches every canonical conversation operation', () async {
     final harness = _Harness();
     const operations = <String, String>{
-      'configuration': 'opengrowSupportGetConfigurationJson',
-      'list': 'opengrowSupportListConversationsJson',
-      'open': 'opengrowSupportOpenConversation',
-      'update': 'opengrowSupportUpdateConversationJson',
-      'messages': 'opengrowSupportMessagesJson',
-      'send': 'opengrowSupportSendAdvanced',
-      'upload_attachment': 'opengrowSupportUploadAttachmentJson',
-      'download_attachment': 'opengrowSupportDownloadAttachment',
-      'send_attachment': 'opengrowSupportSendAttachment',
-      'mark_read': 'opengrowSupportMarkRead',
-      'typing': 'opengrowSupportSetTyping',
-      'connect': 'opengrowSupportConnectRealtime',
-      'disconnect': 'opengrowSupportDisconnectRealtime',
-      'realtime_event': 'opengrowSupportGetLastRealtimeEventJson',
-      'csat': 'opengrowSupportSubmitCsatJson',
+      'configuration': 'superboardSupportGetConfigurationJson',
+      'list': 'superboardSupportListConversationsJson',
+      'open': 'superboardSupportOpenConversation',
+      'update': 'superboardSupportUpdateConversationJson',
+      'messages': 'superboardSupportMessagesJson',
+      'send': 'superboardSupportSendAdvanced',
+      'upload_attachment': 'superboardSupportUploadAttachmentJson',
+      'download_attachment': 'superboardSupportDownloadAttachment',
+      'send_attachment': 'superboardSupportSendAttachment',
+      'mark_read': 'superboardSupportMarkRead',
+      'typing': 'superboardSupportSetTyping',
+      'connect': 'superboardSupportConnectRealtime',
+      'disconnect': 'superboardSupportDisconnectRealtime',
+      'realtime_event': 'superboardSupportGetLastRealtimeEventJson',
+      'csat': 'superboardSupportSubmitCsatJson',
     };
 
     for (final entry in operations.entries) {
@@ -270,10 +270,10 @@ void main() {
       expect(
         harness.sdk.actions,
         containsAllInOrder([
-          'opengrowApplicationCreateCustomJobJson',
-          'opengrowApplicationListCustomJobsJson',
-          'opengrowApplicationGetCustomJobJson',
-          'opengrowApplicationCancelCustomJobJson',
+          'superboardApplicationCreateCustomJobJson',
+          'superboardApplicationListCustomJobsJson',
+          'superboardApplicationGetCustomJobJson',
+          'superboardApplicationCancelCustomJobJson',
         ]),
       );
     },
@@ -303,7 +303,7 @@ void main() {
         'reference.acceptance.create-list-detail-cancel',
       );
       final creation = harness.sdk.invocations.firstWhere(
-        (entry) => entry.$1 == 'opengrowApplicationCreateCustomJobJson',
+        (entry) => entry.$1 == 'superboardApplicationCreateCustomJobJson',
       );
       expect(creation.$2['capability'], 'reference.acceptance');
       expect(creation.$2['payload'], {
@@ -368,23 +368,23 @@ class _RecordingBridge implements ReferenceSdkBridge {
     actions.add(action);
     invocations.add((action, Map<String, dynamic>.from(parameters)));
     return switch (action) {
-      'opengrowApplicationSignInPasswordJson' => {
+      'superboardApplicationSignInPasswordJson' => {
         'authenticated': true,
         'access_token': 'access-token',
         'user': {'id': 'application-user-1'},
       },
-      'opengrowApplicationCurrentSessionJson' => currentSession,
-      'opengrowApplicationDownloadFile' ||
-      'opengrowSupportDownloadAttachment' => Uint8List.fromList([1, 2, 3]),
-      'opengrowApplicationCreateCustomJobJson' => {'id': 'job-1'},
-      'opengrowApplicationCancelCustomJobJson' =>
-        throw const OpenGrowApplicationException(
+      'superboardApplicationCurrentSessionJson' => currentSession,
+      'superboardApplicationDownloadFile' ||
+      'superboardSupportDownloadAttachment' => Uint8List.fromList([1, 2, 3]),
+      'superboardApplicationCreateCustomJobJson' => {'id': 'job-1'},
+      'superboardApplicationCancelCustomJobJson' =>
+        throw const SuperBoardApplicationException(
           'job_not_cancellable',
           'The completed reference receipt cannot be cancelled.',
           statusCode: 409,
         ),
-      'opengrowGenerateLinkJson' => {'url': 'https://in.example.test/link'},
-      'opengrowGetUnreadMessageCount' => {'unread': 2},
+      'superboardGenerateLinkJson' => {'url': 'https://in.example.test/link'},
+      'superboardGetUnreadMessageCount' => {'unread': 2},
       _ => <String, Object?>{'ok': true, 'action': action},
     };
   }
