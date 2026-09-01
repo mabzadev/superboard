@@ -56,6 +56,7 @@ test("EmDash menu and View records become editable Front configuration", () => {
 		data: {
 			name: "Configuration distante",
 			plugin_id: "supbrd-plugmod-analytics",
+			renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
 			route_id: "superboard.analytics_remote_config",
 			path: "/analytics/remote-config",
 			description: "Ce texte vient de la View EmDash.",
@@ -86,6 +87,7 @@ test("EmDash menu and View records become editable Front configuration", () => {
 	expect(view).toEqual({
 		route_id: "superboard.analytics_remote_config",
 		plugin_id: "supbrd-plugmod-analytics",
+		renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
 		path: "/analytics/remote-config",
 		title: "Configuration distante",
 		description: "Ce texte vient de la View EmDash.",
@@ -133,7 +135,7 @@ test("adding and removing a plugin from the Release changes the rendered Front",
 	expect(activeMarkup).toContain("supbrd-plugmod-marketing");
 });
 
-test("the editable Remote Config View supplies the Dashboard composition", async () => {
+test("the editable Remote Config View supplies its Dashboard renderer bindings", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
 	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
 		const manifest = catalog.plugins.find(
@@ -161,9 +163,9 @@ test("the editable Remote Config View supplies the Dashboard composition", async
 	);
 
 	expect(output).toContain("Remote Config");
-	expect(output).toContain("Stable assignments");
-	expect(output).toContain("Publish parameter");
-	expect(output).toContain("No remote parameters published.");
+	expect(output).toContain("supbrd-plugmod-analytics.renderer.admin_surface");
+	expect(output).toContain("supbrd-plugmod-analytics.data_source.analytics_remote_config");
+	expect(output).toContain("supbrd-plugmod-analytics.command.upsert_analytics_remote_config");
 	expect(output).toContain('"group_id":"analytics"');
 });
 
@@ -199,6 +201,7 @@ test("EmDash menu and View edits drive the rendered Front within the active Rele
 			view: {
 				route_id: "superboard.analytics_remote_config",
 				plugin_id: "supbrd-plugmod-analytics",
+				renderer_id: "supbrd-plugmod-analytics.renderer.admin_surface",
 				path: "/analytics/remote-config",
 				title: "Configuration distante",
 				description: "Ce texte vient de la View EmDash.",
@@ -317,28 +320,36 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 		};
 	});
 	const release = await compile(locked, "01J00000000000000000000412");
-	const legacyAnalyticsBuild = Object.values(compatibility.artifacts).find(
-		({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics",
-	)?.renderer_builds["supbrd-plugmod-analytics.renderer.admin_surface"];
-	if (!legacyAnalyticsBuild) throw new Error("Missing legacy Analytics renderer build");
+	const legacyAnalyticsBuilds = [
+		...new Set(
+			Object.values(compatibility.artifacts).flatMap(({ plugin_id: pluginId, renderer_builds }) =>
+				pluginId === "supbrd-plugmod-analytics"
+					? [renderer_builds["supbrd-plugmod-analytics.renderer.admin_surface"]]
+					: [],
+			),
+		),
+	].filter((build): build is string => typeof build === "string");
+	expect(legacyAnalyticsBuilds).toHaveLength(2);
 	const analyticsRenderer = release.payload.renderers.find(
 		({ renderer_id: rendererId }) =>
 			rendererId === "supbrd-plugmod-analytics.renderer.admin_surface",
 	);
 	if (!analyticsRenderer) throw new Error("Missing Analytics renderer");
-	analyticsRenderer.build_checksum = legacyAnalyticsBuild;
 	const seededView = seed.content.views.find(
 		({ data }) => data.path === "/analytics/remote-config",
 	);
 	const view = editableViewFromEntry({ data: seededView?.data });
 	if (!view) throw new Error("Missing Remote Config View");
 
-	expect(() => assertReleasePresentation(release.payload)).not.toThrow();
-	expect(() =>
-		render(release, "/analytics/remote-config", ["users.read", "supbrd-plugmod-analytics.read"], {
-			view,
-		}),
-	).not.toThrow();
+	for (const build of legacyAnalyticsBuilds) {
+		analyticsRenderer.build_checksum = build;
+		expect(() => assertReleasePresentation(release.payload)).not.toThrow();
+		expect(() =>
+			render(release, "/analytics/remote-config", ["users.read", "supbrd-plugmod-analytics.read"], {
+				view,
+			}),
+		).not.toThrow();
+	}
 });
 
 test("keeps an active legacy Release renderable during the native Front upgrade", async () => {

@@ -6,10 +6,15 @@ import type {
 } from "@superboard/supbrd-core";
 import type { CSSProperties } from "react";
 
+import {
+	DashboardViewRenderer,
+	isDashboardViewPath,
+} from "../../../dashboard/src/emdash/DashboardViewRenderer.js";
 import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
 
 import "../styles/native-front.css";
+import "../styles/dashboard-views.css";
 
 export function NativeFrontApp({ projection }: { projection: NativeFrontPresentationProjection }) {
 	const i18n = setupI18n({
@@ -21,12 +26,37 @@ export function NativeFrontApp({ projection }: { projection: NativeFrontPresenta
 		mountNativeFrontRenderer({ mount: input, plugin_lock: projection.plugin_lock });
 	const layouts = projection.layout_mounts.map(mount);
 	const contents = projection.content_mounts.map(mount);
+	const dashboardMount = projection.content_mounts[0];
 	const state = projection.state_mount ? mount(projection.state_mount) : null;
+	const currentSurface = contents.find((document) => document.kind === "surface");
 	const style = {
 		"--front-primary": projection.theme.accent,
 	} as CSSProperties;
+	const dashboardView =
+		!state && isDashboardViewPath(projection.path) ? (
+			<div className="native-front-dashboard-view">
+				<DashboardViewRenderer
+					bindings={dashboardMount?.view_bindings ?? { commands: [], data_sources: [] }}
+					configurationError={message("site.front.view_configuration_error")}
+					instanceId={projection.instance_id}
+					locale={projection.locale}
+					path={projection.path}
+					pluginId={dashboardMount?.renderer.plugin_id ?? ""}
+					rendererId={dashboardMount?.renderer.renderer_id ?? ""}
+				/>
+				{currentSurface?.blocks.length ? (
+					<div className="native-front-dashboard-additions">
+						{currentSurface.blocks.map((block, index) => (
+							<RendererBlock key={`${block.kind}:${index}`} block={block} message={message} />
+						))}
+					</div>
+				) : null}
+			</div>
+		) : null;
 	const body = state ? (
 		<RendererDocument document={state} message={message} />
+	) : dashboardView ? (
+		dashboardView
 	) : (
 		contents.map((document) => (
 			<RendererDocument
@@ -37,7 +67,6 @@ export function NativeFrontApp({ projection }: { projection: NativeFrontPresenta
 		))
 	);
 	const layout = layouts.find((document) => document.kind === "layout");
-	const currentSurface = contents.find((document) => document.kind === "surface");
 	if (!layout) {
 		return (
 			<div className="native-front native-front-standalone" style={style}>
@@ -98,7 +127,7 @@ export function NativeFrontApp({ projection }: { projection: NativeFrontPresenta
 					</div>
 					<ActionList actions={layout.actions} message={message} />
 				</header>
-				<main>{body}</main>
+				<main className={dashboardView ? "native-front-dashboard-main" : undefined}>{body}</main>
 			</div>
 		</div>
 	);

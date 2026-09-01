@@ -32,6 +32,8 @@ export const USER_FRONT_CATALOGS = {
 		"site.front.empty_description": "The selected View has no data to display.",
 		"site.front.error": "View error",
 		"site.front.error_description": "The selected plugin renderer could not complete.",
+		"site.front.view_configuration_error":
+			"This View needs a valid renderer and at least one plugin data source.",
 		"site.front.forbidden_description": "Your grants do not allow this View.",
 		"site.front.not_found_description":
 			"The published SuperBoard configuration does not expose this URL.",
@@ -86,6 +88,8 @@ export const USER_FRONT_CATALOGS = {
 		"site.front.empty_description": "La View sélectionnée n’a aucune donnée à afficher.",
 		"site.front.error": "Erreur de View",
 		"site.front.error_description": "Le renderer du plugin sélectionné n’a pas pu aboutir.",
+		"site.front.view_configuration_error":
+			"Cette View exige un renderer valide et au moins une source de données du plugin.",
 		"site.front.forbidden_description": "Vos permissions n’autorisent pas cette View.",
 		"site.front.not_found_description":
 			"La configuration SuperBoard publiée n’expose pas cette URL.",

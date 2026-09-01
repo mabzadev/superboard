@@ -69,6 +69,10 @@ export interface NativeRendererMountInput {
 	view_title: string | null;
 	view_description?: string | null;
 	view_blocks?: readonly NativeRendererBlock[];
+	view_bindings?: {
+		data_sources: readonly string[];
+		commands: readonly string[];
+	};
 	parameters: Readonly<Record<string, string>>;
 	operator: NativeFrontOperator | null;
 }

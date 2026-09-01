@@ -8,12 +8,15 @@ const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0017_native_front_presentation.sql");
-const compatibilityPath = join(root, "config/superboard-plugin-compatibility.json");
-const compatibilitySourcePath = join(
+const manifestMigrationPath = join(
 	root,
-	"apps/site/migrations/0016_native_front_compatibility.sql",
+	"apps/site/migrations/0018_native_front_view_bindings.sql",
 );
+const compatibilityPath = join(root, "config/superboard-plugin-compatibility.json");
+const compatibilitySourcePaths = [
+	join(root, "apps/site/migrations/0016_native_front_compatibility.sql"),
+	join(root, "apps/site/migrations/0017_native_front_presentation.sql"),
+];
 const MANIFEST_ARTIFACT_PATTERN =
 	/VALUES \('(sha256:[a-f0-9]{64})', '([^']+)', '((?:[^']|'')*)', '[^']+'\)/gu;
 const PAGE_SUFFIX = "/page.tsx";
@@ -1115,26 +1118,32 @@ function manifestRegistryMigration(topology) {
 }
 
 function pluginCompatibilityRegistry() {
-	const migration = readFileSync(compatibilitySourcePath, "utf8");
 	const artifacts = Object.fromEntries(
-		Array.from(
-			migration.matchAll(MANIFEST_ARTIFACT_PATTERN),
-			([, artifactChecksum, pluginId, json]) => {
-				const manifest = JSON.parse(json.replaceAll("''", "'"));
-				return [
-					artifactChecksum,
-					{
-						plugin_id: pluginId,
-						manifest_checksum: `sha256:${createHash("sha256").update(canonical(manifest)).digest("hex")}`,
-						renderer_builds: Object.fromEntries(
-							(manifest.renderers ?? []).map(
-								({ renderer_id: rendererId, build_checksum: checksum }) => [rendererId, checksum],
-							),
-						),
+		compatibilitySourcePaths
+			.flatMap((path) =>
+				Array.from(
+					readFileSync(path, "utf8").matchAll(MANIFEST_ARTIFACT_PATTERN),
+					([, artifactChecksum, pluginId, json]) => {
+						const manifest = JSON.parse(json.replaceAll("''", "'"));
+						return [
+							artifactChecksum,
+							{
+								plugin_id: pluginId,
+								manifest_checksum: `sha256:${createHash("sha256").update(canonical(manifest)).digest("hex")}`,
+								renderer_builds: Object.fromEntries(
+									(manifest.renderers ?? []).map(
+										({ renderer_id: rendererId, build_checksum: checksum }) => [
+											rendererId,
+											checksum,
+										],
+									),
+								),
+							},
+						];
 					},
-				];
-			},
-		).toSorted(([left], [right]) => left.localeCompare(right)),
+				),
+			)
+			.toSorted(([left], [right]) => left.localeCompare(right)),
 	);
 	if (Object.keys(artifacts).length === 0) {
 		throw new Error("Published plugin compatibility manifests are missing");

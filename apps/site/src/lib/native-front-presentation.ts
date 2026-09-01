@@ -30,6 +30,7 @@ export interface NativeFrontViewBindings {
 export interface NativeFrontEditableView {
 	route_id: string;
 	plugin_id: string;
+	renderer_id: string;
 	path: string;
 	title: string | null;
 	description: string | null;
@@ -171,6 +172,7 @@ export function projectNativeFrontPresentation(
 	const configuredView = configuration?.view;
 	const view =
 		configuredView?.route_id === route.route_id &&
+		resolution.renderer_ids.includes(configuredView.renderer_id) &&
 		resolution.renderer_ids.some(
 			(rendererId) => renderers.get(rendererId)?.plugin_id === configuredView.plugin_id,
 		)
@@ -238,6 +240,7 @@ function mountInput(
 		view_title: viewTitle,
 		view_description: view ? (view.description?.trim() ?? "") : null,
 		view_blocks: view?.blocks,
+		view_bindings: view?.bindings,
 		parameters,
 		operator: model.operator,
 	};
