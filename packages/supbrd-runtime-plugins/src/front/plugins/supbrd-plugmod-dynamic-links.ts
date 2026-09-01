@@ -1,6 +1,10 @@
 import { defineNativeFrontPlugin, navigationGroup } from "../runtime-factory.js";
 
-const growth = navigationGroup({ group_id: "growth", group_label: "Growth", group_order: 4 });
+const dynamicLinks = navigationGroup({
+	group_id: "dynamic-links",
+	group_label: "Dynamic Links",
+	group_order: 5,
+});
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
 	plugin_id: "supbrd-plugmod-dynamic-links",
@@ -8,32 +12,32 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	description:
 		"Manage links, campaigns, domains, redirects, previews, and tracking from the plugin Store.",
 	surfaces: [
-		{ path_pattern: "/dynamic-links/links", title: "Links", navigation: growth("Links", 10) },
+		{ path_pattern: "/dynamic-links/links", title: "Links", navigation: dynamicLinks("Links", 0) },
 		{
 			path_pattern: "/dynamic-links/campaigns",
-			title: "Link campaigns",
-			navigation: growth("Link campaigns", 11),
+			title: "Campaigns",
+			navigation: dynamicLinks("Campaigns", 1),
 		},
 		{ path_pattern: "/dynamic-links/campaigns/:id", title: "Link campaign" },
 		{
-			path_pattern: "/dynamic-links/domain",
-			title: "Link domain",
-			navigation: growth("Link domain", 12),
+			path_pattern: "/dynamic-links/redirect-rules",
+			title: "Redirect Rules",
+			navigation: dynamicLinks("Redirect Rules", 2),
 		},
 		{
-			path_pattern: "/dynamic-links/redirect-rules",
-			title: "Redirect rules",
-			navigation: growth("Redirect rules", 13),
+			path_pattern: "/dynamic-links/domain",
+			title: "Domain",
+			navigation: dynamicLinks("Domain", 3),
 		},
 		{
 			path_pattern: "/dynamic-links/social-media-preview",
-			title: "Social preview",
-			navigation: growth("Social preview", 14),
+			title: "Social Media Preview",
+			navigation: dynamicLinks("Social Media Preview", 4),
 		},
 		{
 			path_pattern: "/dynamic-links/tracking",
-			title: "Link tracking",
-			navigation: growth("Link tracking", 15),
+			title: "Tracking",
+			navigation: dynamicLinks("Tracking", 5),
 		},
 	],
 });

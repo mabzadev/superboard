@@ -1,6 +1,14 @@
 ---
+import { getEmDashEntry, getMenu } from "emdash";
+
 import type { FrontPageModel } from "../lib/front-page.js";
+import {
+	editableNavigationFromMenu,
+	editableViewFromEntry,
+	frontViewSlug,
+} from "../lib/native-front-views.js";
 import { projectNativeFrontPresentation } from "../lib/native-front-presentation.js";
+import { ensureSuperBoardViews } from "../lib/superboard-views.js";
 import { createUserFrontI18n, resolveUserFrontLocale } from "../lib/user-front-i18n.js";
 import { NativeFrontApp } from "./NativeFrontApp.js";
 
@@ -12,9 +20,23 @@ const { model } = Astro.props;
 const requestedLocale = Astro.url.searchParams.get("lang")
 	?? Astro.request.headers.get("accept-language");
 const locale = resolveUserFrontLocale(requestedLocale);
-const projection = projectNativeFrontPresentation(model, locale);
+let configuration;
+if (model.resolution.result === "rendered" && model.operator) {
+	await ensureSuperBoardViews(Astro.locals.emdash.db);
+	const [menu, viewResult] = await Promise.all([
+		getMenu("superboard-admin"),
+		getEmDashEntry("views", frontViewSlug(model.requested_path)),
+	]);
+	if (Astro.cache?.enabled) Astro.cache.set(viewResult.cacheHint);
+	configuration = {
+		navigation: editableNavigationFromMenu(menu),
+		view: editableViewFromEntry(viewResult.entry),
+	};
+}
+const projection = projectNativeFrontPresentation(model, locale, configuration);
 const i18n = createUserFrontI18n(locale);
-const title = model.page_title ? i18n._(model.page_title) : i18n._("site.front.title");
+const viewTitle = projection.content_mounts[0]?.view_title ?? model.page_title;
+const title = viewTitle ? i18n._(viewTitle) : i18n._("site.front.title");
 ---
 
 <!doctype html>

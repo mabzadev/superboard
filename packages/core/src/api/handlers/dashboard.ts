@@ -59,7 +59,8 @@ export async function handleDashboardStats(
 		// Discover collections from the system table
 		const collections = await db
 			.selectFrom("_emdash_collections")
-			.select(["slug", "label"])
+			.select(["slug", "label", "title_field"])
+			.where("hidden", "=", 0)
 			.orderBy("slug", "asc")
 			.execute();
 
@@ -138,11 +139,12 @@ interface RecentItemRow {
  */
 async function fetchRecentItems(
 	db: Kysely<Database>,
-	collections: Array<{ slug: string; label: string }>,
+	collections: Array<{ slug: string; label: string; title_field: string | null }>,
 ): Promise<RecentItem[]> {
 	if (collections.length === 0) return [];
 
-	// Discover which collections have a "title" column
+	// Preserve the legacy title-column fallback for collections without an
+	// explicit display field.
 	const titleFields = await db
 		.selectFrom("_emdash_fields as f")
 		.innerJoin("_emdash_collections as c", "c.id", "f.collection_id")
@@ -161,11 +163,15 @@ async function fetchRecentItems(
 		collections.map(async (col) => {
 			validateIdentifier(col.slug);
 			const table = `ec_${col.slug}`;
-			const hasTitle = collectionsWithTitle.has(col.slug);
+			const titleField = col.title_field ?? (collectionsWithTitle.has(col.slug) ? "title" : null);
+			if (titleField) validateIdentifier(titleField);
 
-			// Use title column if it exists, otherwise fall back to slug, id.
+			// Use the collection's display field when configured, otherwise fall
+			// back to the conventional title column, slug, then id.
 			// All output uses snake_case to avoid SQLite quoting issues on D1.
-			const titleExpr = hasTitle ? sql`COALESCE(title, slug, id)` : sql`COALESCE(slug, id)`;
+			const titleExpr = titleField
+				? sql`COALESCE(${sql.ref(titleField)}, slug, id)`
+				: sql`COALESCE(slug, id)`;
 
 			const result = await sql<RecentItemRow>`
 				SELECT

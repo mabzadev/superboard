@@ -325,6 +325,13 @@ describe("ContentList", () => {
 			expect(screen.getByText("Pending changes").query()).toBeNull();
 		});
 
+		it("does not link non-routable published content as a web page", async () => {
+			const items = [makeItem({ status: "published", liveRevisionId: "rev_live" })];
+			const screen = await render(<ContentList {...defaultProps} items={items} routable={false} />);
+
+			expect(screen.getByLabelText("View published Hello World").query()).toBeNull();
+		});
+
 		it("renders unknown status names without treating object properties as lifecycle states", async () => {
 			const items = [makeItem({ id: "1", status: "toString" })];
 			const screen = await render(<ContentList {...defaultProps} items={items} />);

@@ -491,8 +491,8 @@
             "renderer_id": "supbrd-plug-user.renderer.admin_surface",
             "plugin_id": "supbrd-plug-user",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -623,7 +623,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e53178554d865fd814670b7770d0d2069aa91e5d78ac057243c4f2646a842cd2"
+        "artifact_checksum": "sha256:5c5e2103dbf8cf897ecf1bbbee55b633e36742aa36f586f0f6b54da0fe784314"
       },
       "repositories": [
         {
@@ -949,8 +949,8 @@
             "renderer_id": "supbrd-plug-settings.renderer.admin_surface",
             "plugin_id": "supbrd-plug-settings",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1049,7 +1049,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:be0867d36461dc72487ec01a8df6725f4b4e66c3400549226d1c0577568fb4cd"
+        "artifact_checksum": "sha256:ba42066da62bcec525acd08ad2a31a845173bf34d5cf4694064ff70b58c43ee0"
       },
       "repositories": [
         {
@@ -1409,8 +1409,8 @@
             "renderer_id": "supbrd-plug-content.renderer.admin_surface",
             "plugin_id": "supbrd-plug-content",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1509,7 +1509,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:6baf9acd355b99d1aa0933b765e9d4b7e49faf7e4256e8de4ab615394a5b777a"
+        "artifact_checksum": "sha256:6d1b30b86e5c1f89dc7f1870b0f8371674e9a68f96a9e797e7f1dbc0b1208465"
       },
       "repositories": [
         {
@@ -1889,8 +1889,8 @@
             "renderer_id": "supbrd-plug-products.renderer.admin_surface",
             "plugin_id": "supbrd-plug-products",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2125,7 +2125,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:1aa71953a7d01868365c08c88196e377daa26bc428fd8c4c07951ea67ff3e42b"
+        "artifact_checksum": "sha256:ae59b9a65458d9260c8620bfe38b58bde7078359f64641e0eedfbce6bd5493e2"
       },
       "repositories": [
         {
@@ -2447,8 +2447,8 @@
             "renderer_id": "supbrd-plug-audit.renderer.admin_surface",
             "plugin_id": "supbrd-plug-audit",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2537,7 +2537,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:62916f04277110cf1165c79fbe20432886efffdbd7b6038169d50e46991fba0d"
+        "artifact_checksum": "sha256:710f671b48b551f81e6b933ef0ca0ba52527cb2fa6a1df5b30d28df4f8076185"
       },
       "repositories": [
         {
@@ -2974,8 +2974,8 @@
             "renderer_id": "supbrd-plugmod-gateway.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-gateway",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3074,7 +3074,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:da21001ed957b8283a8bd925135592246a44994e17cf00b7737d2c9cc18e5125"
+        "artifact_checksum": "sha256:4edba14400ac030bce4ad4772ea0b0008670a1b7ddcd2cc9f96820439ac70d7b"
       },
       "repositories": [
         {
@@ -3467,8 +3467,8 @@
             "renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-billing",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3623,7 +3623,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:4beea4ce95c0daecb6fe9d9983f39f0f0428072236564acd9dcfb938c1c1052e"
+        "artifact_checksum": "sha256:5552aaa176bb11556704f04d43281bc8017fd20d060842caa798604438989151"
       },
       "repositories": [
         {
@@ -4109,8 +4109,8 @@
             "renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-support",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4437,7 +4437,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:484c020642ff613567dd6cc35a11a95edb7810611c6a6b016d5e5ccd576997bb"
+        "artifact_checksum": "sha256:c357b830e4816b25bbe227f5e1949f134bddb5dbe0e341ea2296fca5eb315550"
       },
       "repositories": [
         {
@@ -4799,8 +4799,8 @@
             "renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-flows",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4999,7 +4999,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:48639f7f63a40f66de83ce866cf600076b59c8465731ca96d003f0b90e3f21e8"
+        "artifact_checksum": "sha256:ce66471a588962128dc29418ae8909781d5dacaa663a539d43d138d1af255450"
       },
       "repositories": [
         {
@@ -5335,8 +5335,8 @@
             "renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-analytics",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5705,7 +5705,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:d1aade326c29a2216fe98d594f99b2eaa79d14d83c6f8fca928bb3cf50ffae16"
+        "artifact_checksum": "sha256:1aff51eb1e9586826538df6565251ecc6085e3065b7c449c0d5f84ab174cbbb6"
       },
       "repositories": [
         {
@@ -6121,8 +6121,8 @@
             "renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-marketing",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6375,7 +6375,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:5c1cbbeabecf4ca9f9a1b1bdcaf099a0af584df7113a8d08026cfe843c0c8990"
+        "artifact_checksum": "sha256:5ec73866dcb0fb40fb08ce8b2585b65617a4476ac58a46b62d6465d4dce42c49"
       },
       "repositories": [
         {
@@ -6769,8 +6769,8 @@
             "renderer_id": "supbrd-plugmod-email.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-email",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6943,7 +6943,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:43800ae987973fa56d62b7195e8f8c7aaa74001432a7c5396ca415289877312d"
+        "artifact_checksum": "sha256:4e093057b6d02d1ab80a8e83dcc4d24aeb602d616d26000b42f5a67730e7167b"
       },
       "repositories": [
         {
@@ -7290,8 +7290,8 @@
             "renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-dynamic-links",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7562,7 +7562,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:a2d63b6cb6e0f133f85168ceae81f55ebfb212f02e1dfed41d2a57fdaecabfd6"
+        "artifact_checksum": "sha256:56a3fd76b3565663830145039d9d37cb8b0b435d38e0b90829db670b07b9a2ce"
       },
       "repositories": [
         {
@@ -7897,8 +7897,8 @@
             "renderer_id": "supbrd-plugmod-files.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-files",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8019,7 +8019,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:1fcdc91a64d2d0f51cd983e55e15b5e55a0b900c23285ee4700e80015738c890"
+        "artifact_checksum": "sha256:10dc3d1053a7260572338e5cab71010d560db4a33fd08dea25abbd42f0a4394f"
       },
       "repositories": [
         {
@@ -8361,8 +8361,8 @@
             "renderer_id": "supbrd-plugmod-paywalls.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-paywalls",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8545,7 +8545,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:9d75985e01b70d37f510cfbbc7a448de0c48378e02fe93f1e5445e4ca7402fcf"
+        "artifact_checksum": "sha256:9f17dd36d50937e3b1a39268965178fc16ff147d709b489f2bf24e097f02e23d"
       },
       "repositories": [
         {
@@ -8887,8 +8887,8 @@
             "renderer_id": "supbrd-plugmod-onboardings.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-onboardings",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9083,7 +9083,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:15eb0de2a9320671867706b7c3c01e6df2f947b6ba7054426bdc12dda9b9e8fa"
+        "artifact_checksum": "sha256:646bad6923daa9bf629b66d150276ebfda4fe821f59bb633db5cfb5b759f0f9f"
       },
       "repositories": [
         {
@@ -9369,8 +9369,8 @@
             "renderer_id": "supbrd-plugmod-observability.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-observability",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9525,7 +9525,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:64eb147fddf498d4d4c7493c3302a51deb5d7e6d35d3a2b90c7acbbe1964dfca"
+        "artifact_checksum": "sha256:ec1167948cc61405485c24fb132d4453a78a610913489810ffd196d07fbd211b"
       },
       "repositories": [
         {
@@ -9843,8 +9843,8 @@
             "renderer_id": "supbrd-plugmod-mcp.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-mcp",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9943,7 +9943,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:b14ef9efd2d9c282cdd5bf07465baa5d9e87d7280fd93c9598e39aaa86b344b2"
+        "artifact_checksum": "sha256:b1da269f4483665e808d94d481f913e4005d250e14f55893a1d01513e559b698"
       },
       "repositories": [
         {
@@ -10210,8 +10210,8 @@
             "renderer_id": "supbrd-plugmod-custom-*.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-custom-*",
             "plugin_version": "1.0.0",
-            "build_id": "054R2F1H26E0QX5C8M9FRW6CB4",
-            "build_checksum": "sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+            "build_id": "4MB7TX472ZV16H56DE9HYMQT8R",
+            "build_checksum": "sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10266,7 +10266,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:36ebbc7f2a8f87d5c3b206fd9d7d7dc6e1bf9e860d11a9ba7fdf66be38716178"
+        "artifact_checksum": "sha256:03b2f5d10c324f1f9e5bddd30922f84b53269ff98190ad9d4d9b24066966a765"
       },
       "repositories": [
         {

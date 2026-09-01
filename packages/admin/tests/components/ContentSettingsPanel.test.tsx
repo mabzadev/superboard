@@ -592,6 +592,32 @@ describe("ContentSettingsPanel", () => {
 		expect(screen.container.textContent).not.toContain("Bylines");
 	});
 
+	it("hides web publishing fields for a non-routable collection", async () => {
+		const screen = await render(
+			<ContentSettingsPanel
+				{...makePanelProps({
+					collection: "views",
+					manifest: {
+						...TEST_MANIFEST,
+						collections: {
+							views: {
+								label: "Views",
+								labelSingular: "View",
+								supports: ["drafts", "revisions"],
+								hasSeo: false,
+								routable: false,
+								fields: {},
+							},
+						},
+					},
+				})}
+			/>,
+		);
+
+		expect(screen.getByRole("textbox", { name: "Slug" }).query()).toBeNull();
+		expect(screen.getByRole("heading", { name: "Bylines" }).query()).toBeNull();
+	});
+
 	it("lets editors update the publish date of published content", async () => {
 		const onPublishedAtChange = vi.fn();
 		const previousLocale = i18n.locale;

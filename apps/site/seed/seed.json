@@ -1,0 +1,1967 @@
+{
+	"$schema": "https://emdashcms.com/seed.schema.json",
+	"version": "1",
+	"defaultLocale": "en",
+	"meta": {
+		"name": "SuperBoard Admin",
+		"description": "Editable SuperBoard navigation and View configuration",
+		"author": "SuperBoard"
+	},
+	"collections": [
+		{
+			"slug": "views",
+			"label": "Views",
+			"labelSingular": "View",
+			"description": "Plugin-owned SuperBoard interfaces and their editable presentation.",
+			"routable": false,
+			"titleField": "name",
+			"sortOrder": 0,
+			"supports": [
+				"drafts",
+				"revisions",
+				"search"
+			],
+			"fields": [
+				{
+					"slug": "name",
+					"label": "Name",
+					"type": "string",
+					"required": true,
+					"searchable": true
+				},
+				{
+					"slug": "plugin_id",
+					"label": "Plugin",
+					"type": "string",
+					"required": true,
+					"indexed": true
+				},
+				{
+					"slug": "route_id",
+					"label": "View key",
+					"type": "string",
+					"required": true,
+					"unique": true,
+					"indexed": true
+				},
+				{
+					"slug": "path",
+					"label": "URL",
+					"type": "string",
+					"required": true,
+					"unique": true,
+					"indexed": true
+				},
+				{
+					"slug": "description",
+					"label": "Description",
+					"type": "text"
+				},
+				{
+					"slug": "presentation",
+					"label": "Layout and content",
+					"type": "json",
+					"required": true
+				},
+				{
+					"slug": "bindings",
+					"label": "Plugin data and actions",
+					"type": "json",
+					"required": true
+				}
+			]
+		}
+	],
+	"menus": [
+		{
+			"name": "superboard-admin",
+			"label": "SuperBoard Admin",
+			"items": [
+				{
+					"type": "custom",
+					"label": "Dashboard",
+					"url": "/dashboard",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Dashboard",
+							"url": "/dashboard"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "App",
+					"url": "/app/customers",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Customers",
+							"url": "/app/customers"
+						},
+						{
+							"type": "custom",
+							"label": "Users",
+							"url": "/app/users"
+						},
+						{
+							"type": "custom",
+							"label": "Referrals",
+							"url": "/app/referrals"
+						},
+						{
+							"type": "custom",
+							"label": "Access Key",
+							"url": "/app/access-key"
+						},
+						{
+							"type": "custom",
+							"label": "Libraries",
+							"url": "/app/libraries"
+						},
+						{
+							"type": "custom",
+							"label": "Android Setup",
+							"url": "/app/android-setup"
+						},
+						{
+							"type": "custom",
+							"label": "iOS Setup",
+							"url": "/app/ios-setup"
+						},
+						{
+							"type": "custom",
+							"label": "Web Setup",
+							"url": "/app/web-setup"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Identity",
+					"url": "/identity/en/dashboard",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Overview",
+							"url": "/identity/en/dashboard"
+						},
+						{
+							"type": "custom",
+							"label": "Users",
+							"url": "/identity/en/users"
+						},
+						{
+							"type": "custom",
+							"label": "User Attributes",
+							"url": "/identity/en/user-attributes"
+						},
+						{
+							"type": "custom",
+							"label": "Roles",
+							"url": "/identity/en/roles"
+						},
+						{
+							"type": "custom",
+							"label": "Applications",
+							"url": "/identity/en/apps"
+						},
+						{
+							"type": "custom",
+							"label": "Scopes",
+							"url": "/identity/en/scopes"
+						},
+						{
+							"type": "custom",
+							"label": "Organizations",
+							"url": "/identity/en/orgs"
+						},
+						{
+							"type": "custom",
+							"label": "Logs",
+							"url": "/identity/en/logs"
+						},
+						{
+							"type": "custom",
+							"label": "SAML SSO",
+							"url": "/identity/en/saml"
+						},
+						{
+							"type": "custom",
+							"label": "Account Policies",
+							"url": "/identity/en/account"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Products",
+					"url": "/products/purchases",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Purchases",
+							"url": "/products/purchases"
+						},
+						{
+							"type": "custom",
+							"label": "Customers",
+							"url": "/products/customers"
+						},
+						{
+							"type": "custom",
+							"label": "Offerings",
+							"url": "/products/offerings"
+						},
+						{
+							"type": "custom",
+							"label": "Entitlements",
+							"url": "/products/entitlements"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Flows",
+					"url": "/flows",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Overview",
+							"url": "/flows"
+						},
+						{
+							"type": "custom",
+							"label": "Workflows",
+							"url": "/flows/workflows"
+						},
+						{
+							"type": "custom",
+							"label": "Launchpad",
+							"url": "/flows/launchpad"
+						},
+						{
+							"type": "custom",
+							"label": "Users",
+							"url": "/flows/users"
+						},
+						{
+							"type": "custom",
+							"label": "Components",
+							"url": "/flows/components"
+						},
+						{
+							"type": "custom",
+							"label": "Environments",
+							"url": "/flows/settings/environments"
+						},
+						{
+							"type": "custom",
+							"label": "Localization",
+							"url": "/flows/settings/localization"
+						},
+						{
+							"type": "custom",
+							"label": "SDK",
+							"url": "/flows/settings/sdk"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Dynamic Links",
+					"url": "/dynamic-links/links",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Links",
+							"url": "/dynamic-links/links"
+						},
+						{
+							"type": "custom",
+							"label": "Campaigns",
+							"url": "/dynamic-links/campaigns"
+						},
+						{
+							"type": "custom",
+							"label": "Redirect Rules",
+							"url": "/dynamic-links/redirect-rules"
+						},
+						{
+							"type": "custom",
+							"label": "Domain",
+							"url": "/dynamic-links/domain"
+						},
+						{
+							"type": "custom",
+							"label": "Social Media Preview",
+							"url": "/dynamic-links/social-media-preview"
+						},
+						{
+							"type": "custom",
+							"label": "Tracking",
+							"url": "/dynamic-links/tracking"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Support",
+					"url": "/support/inbox",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Inbox",
+							"url": "/support/inbox"
+						},
+						{
+							"type": "custom",
+							"label": "Contacts",
+							"url": "/support/contacts"
+						},
+						{
+							"type": "custom",
+							"label": "Workforce",
+							"url": "/support/workforce"
+						},
+						{
+							"type": "custom",
+							"label": "Channels",
+							"url": "/support/channels"
+						},
+						{
+							"type": "custom",
+							"label": "Automations",
+							"url": "/support/automations"
+						},
+						{
+							"type": "custom",
+							"label": "Proactive Support",
+							"url": "/support/proactive-support"
+						},
+						{
+							"type": "custom",
+							"label": "Help Center",
+							"url": "/support/help-center"
+						},
+						{
+							"type": "custom",
+							"label": "Captain",
+							"url": "/support/captain"
+						},
+						{
+							"type": "custom",
+							"label": "Integrations",
+							"url": "/support/integrations"
+						},
+						{
+							"type": "custom",
+							"label": "Reports",
+							"url": "/support/reports"
+						},
+						{
+							"type": "custom",
+							"label": "Settings",
+							"url": "/support/settings"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Marketing",
+					"url": "/marketing/in-app-messages",
+					"children": [
+						{
+							"type": "custom",
+							"label": "In-app Messages",
+							"url": "/marketing/in-app-messages"
+						},
+						{
+							"type": "custom",
+							"label": "Email",
+							"url": "/marketing/email"
+						},
+						{
+							"type": "custom",
+							"label": "Campaigns",
+							"url": "/marketing/campaigns"
+						},
+						{
+							"type": "custom",
+							"label": "Journeys",
+							"url": "/marketing/journeys"
+						},
+						{
+							"type": "custom",
+							"label": "Channels",
+							"url": "/marketing/channels"
+						},
+						{
+							"type": "custom",
+							"label": "Statistics",
+							"url": "/marketing/statistics"
+						},
+						{
+							"type": "custom",
+							"label": "Settings",
+							"url": "/marketing/settings"
+						}
+					]
+				},
+				{
+					"type": "custom",
+					"label": "Analytics",
+					"url": "/analytics",
+					"children": [
+						{
+							"type": "custom",
+							"label": "Overview",
+							"url": "/analytics"
+						},
+						{
+							"type": "custom",
+							"label": "Dashboards",
+							"url": "/analytics/dashboards"
+						},
+						{
+							"type": "custom",
+							"label": "Users & Sessions",
+							"url": "/analytics/users"
+						},
+						{
+							"type": "custom",
+							"label": "Events",
+							"url": "/analytics/events"
+						},
+						{
+							"type": "custom",
+							"label": "Technology & Location",
+							"url": "/analytics/dimensions"
+						},
+						{
+							"type": "custom",
+							"label": "Views",
+							"url": "/analytics/views"
+						},
+						{
+							"type": "custom",
+							"label": "Installations",
+							"url": "/analytics/installations"
+						},
+						{
+							"type": "custom",
+							"label": "Verified Purchases",
+							"url": "/analytics/purchases"
+						},
+						{
+							"type": "custom",
+							"label": "Funnels & Retention",
+							"url": "/analytics/insights"
+						},
+						{
+							"type": "custom",
+							"label": "Cohorts",
+							"url": "/analytics/cohorts"
+						},
+						{
+							"type": "custom",
+							"label": "Crashes",
+							"url": "/analytics/crashes"
+						},
+						{
+							"type": "custom",
+							"label": "Feedback",
+							"url": "/analytics/feedback"
+						},
+						{
+							"type": "custom",
+							"label": "Remote Config",
+							"url": "/analytics/remote-config"
+						},
+						{
+							"type": "custom",
+							"label": "Alerts",
+							"url": "/analytics/alerts"
+						},
+						{
+							"type": "custom",
+							"label": "Reports & Exports",
+							"url": "/analytics/reports"
+						},
+						{
+							"type": "custom",
+							"label": "Settings",
+							"url": "/analytics/settings"
+						}
+					]
+				}
+			]
+		}
+	],
+	"content": {
+		"views": [
+			{
+				"id": "view:dashboard",
+				"slug": "dashboard",
+				"status": "published",
+				"data": {
+					"name": "Dashboard",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.dashboard",
+					"path": "/dashboard",
+					"description": "A cross-module view of acquisition, engagement and product performance.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--customers",
+				"slug": "app--customers",
+				"status": "published",
+				"data": {
+					"name": "Customers",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.app_customers",
+					"path": "/app/customers",
+					"description": "Acquisition identities and their complete app engagement history.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--users",
+				"slug": "app--users",
+				"status": "published",
+				"data": {
+					"name": "Users",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.users",
+					"path": "/app/users",
+					"description": "Authentication, linked Google or Apple identities, sessions, subscriptions, entitlements and paywall activity.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--referrals",
+				"slug": "app--referrals",
+				"status": "published",
+				"data": {
+					"name": "Referrals",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.app_referrals",
+					"path": "/app/referrals",
+					"description": "Referral codes, attributed customers and the complete conversion lifecycle.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--access-key",
+				"slug": "app--access-key",
+				"status": "published",
+				"data": {
+					"name": "Access Key",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.app_access_key",
+					"path": "/app/access-key",
+					"description": "Authenticate public SuperBoard SDK requests without exposing an administrative session.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--libraries",
+				"slug": "app--libraries",
+				"status": "published",
+				"data": {
+					"name": "Libraries",
+					"plugin_id": "supbrd-plug-settings",
+					"route_id": "superboard.app_libraries",
+					"path": "/app/libraries",
+					"description": "Git-owned SDK versions, immutable release references and reusable FlutterFlow custom code.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--android-setup",
+				"slug": "app--android-setup",
+				"status": "published",
+				"data": {
+					"name": "Android Setup",
+					"plugin_id": "supbrd-plug-settings",
+					"route_id": "superboard.app_android_setup",
+					"path": "/app/android-setup",
+					"description": "Complete the five-step Android SDK integration and verify it against this project.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--ios-setup",
+				"slug": "app--ios-setup",
+				"status": "published",
+				"data": {
+					"name": "iOS Setup",
+					"plugin_id": "supbrd-plug-settings",
+					"route_id": "superboard.app_ios_setup",
+					"path": "/app/ios-setup",
+					"description": "Complete the five-step iOS SDK integration and verify it against this project.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:app--web-setup",
+				"slug": "app--web-setup",
+				"status": "published",
+				"data": {
+					"name": "Web Setup",
+					"plugin_id": "supbrd-plug-settings",
+					"route_id": "superboard.app_web_setup",
+					"path": "/app/web-setup",
+					"description": "Complete the five-step Web SDK integration and verify it against this project.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--dashboard",
+				"slug": "identity--en--dashboard",
+				"status": "published",
+				"data": {
+					"name": "Overview",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_dashboard",
+					"path": "/identity/en/dashboard",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--users",
+				"slug": "identity--en--users",
+				"status": "published",
+				"data": {
+					"name": "Users",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_users",
+					"path": "/identity/en/users",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--user-attributes",
+				"slug": "identity--en--user-attributes",
+				"status": "published",
+				"data": {
+					"name": "User Attributes",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_user_attributes",
+					"path": "/identity/en/user-attributes",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--roles",
+				"slug": "identity--en--roles",
+				"status": "published",
+				"data": {
+					"name": "Roles",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_roles",
+					"path": "/identity/en/roles",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--apps",
+				"slug": "identity--en--apps",
+				"status": "published",
+				"data": {
+					"name": "Applications",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_apps",
+					"path": "/identity/en/apps",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--scopes",
+				"slug": "identity--en--scopes",
+				"status": "published",
+				"data": {
+					"name": "Scopes",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_scopes",
+					"path": "/identity/en/scopes",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--orgs",
+				"slug": "identity--en--orgs",
+				"status": "published",
+				"data": {
+					"name": "Organizations",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_orgs",
+					"path": "/identity/en/orgs",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--logs",
+				"slug": "identity--en--logs",
+				"status": "published",
+				"data": {
+					"name": "Logs",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_logs",
+					"path": "/identity/en/logs",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--saml",
+				"slug": "identity--en--saml",
+				"status": "published",
+				"data": {
+					"name": "SAML SSO",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_saml",
+					"path": "/identity/en/saml",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:identity--en--account",
+				"slug": "identity--en--account",
+				"status": "published",
+				"data": {
+					"name": "Account Policies",
+					"plugin_id": "supbrd-plug-user",
+					"route_id": "superboard.identity_by_lang_account",
+					"path": "/identity/en/account",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:products--purchases",
+				"slug": "products--purchases",
+				"status": "published",
+				"data": {
+					"name": "Purchases",
+					"plugin_id": "supbrd-plugmod-billing",
+					"route_id": "superboard.products_purchases",
+					"path": "/products/purchases",
+					"description": "Purchases, subscriptions, restorations, refunds and financial history.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:products--customers",
+				"slug": "products--customers",
+				"status": "published",
+				"data": {
+					"name": "Customers",
+					"plugin_id": "supbrd-plugmod-billing",
+					"route_id": "superboard.products_customers",
+					"path": "/products/customers",
+					"description": "Application identities, subscriptions, entitlements, balances, transactions and paywall activity.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:products--offerings",
+				"slug": "products--offerings",
+				"status": "published",
+				"data": {
+					"name": "Offerings",
+					"plugin_id": "supbrd-plug-products",
+					"route_id": "superboard.products_offerings",
+					"path": "/products/offerings",
+					"description": "Manage the store catalog, packages and SDK-resolved offerings.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:products--entitlements",
+				"slug": "products--entitlements",
+				"status": "published",
+				"data": {
+					"name": "Entitlements",
+					"plugin_id": "supbrd-plugmod-billing",
+					"route_id": "superboard.products_entitlements",
+					"path": "/products/entitlements",
+					"description": "Define SDK access rights and the products that unlock each right.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows",
+				"slug": "flows",
+				"status": "published",
+				"data": {
+					"name": "Overview",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows",
+					"path": "/flows",
+					"description": "Monitor active workflows, user activity and runtime incidents.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows--workflows",
+				"slug": "flows--workflows",
+				"status": "published",
+				"data": {
+					"name": "Workflows",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows_workflows",
+					"path": "/flows/workflows",
+					"description": "Create, version, publish and analyze product experiences.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows--launchpad",
+				"slug": "flows--launchpad",
+				"status": "published",
+				"data": {
+					"name": "Launchpad",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows_launchpad",
+					"path": "/flows/launchpad",
+					"description": "Order workflow groups, priorities and concurrency for every environment.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows--users",
+				"slug": "flows--users",
+				"status": "published",
+				"data": {
+					"name": "Users",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows_users",
+					"path": "/flows/users",
+					"description": "Inspect user properties, workflow state and the complete activity journal.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows--components",
+				"slug": "flows--components",
+				"status": "published",
+				"data": {
+					"name": "Components",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows_components",
+					"path": "/flows/components",
+					"description": "Manage Basics V2 and custom component libraries without silently updating instances.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows--settings--environments",
+				"slug": "flows--settings--environments",
+				"status": "published",
+				"data": {
+					"name": "Environments",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows_settings_environments",
+					"path": "/flows/settings/environments",
+					"description": "Manage isolated release environments and their rotatable SDK keys.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows--settings--localization",
+				"slug": "flows--settings--localization",
+				"status": "published",
+				"data": {
+					"name": "Localization",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows_settings_localization",
+					"path": "/flows/settings/localization",
+					"description": "Configure language groups, default languages and fallback chains.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:flows--settings--sdk",
+				"slug": "flows--settings--sdk",
+				"status": "published",
+				"data": {
+					"name": "SDK",
+					"plugin_id": "supbrd-plugmod-flows",
+					"route_id": "superboard.flows_settings_sdk",
+					"path": "/flows/settings/sdk",
+					"description": "Install JavaScript, React, Flutter or FlutterFlow against the SuperBoard API.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:dynamic-links--links",
+				"slug": "dynamic-links--links",
+				"status": "published",
+				"data": {
+					"name": "Links",
+					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"route_id": "superboard.dynamic_links_links",
+					"path": "/dynamic-links/links",
+					"description": "Create, route and measure links across every platform and acquisition source.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:dynamic-links--campaigns",
+				"slug": "dynamic-links--campaigns",
+				"status": "published",
+				"data": {
+					"name": "Campaigns",
+					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"route_id": "superboard.dynamic_links_campaigns",
+					"path": "/dynamic-links/campaigns",
+					"description": "Measure every acquisition campaign from link view to referred customer and revenue.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:dynamic-links--redirect-rules",
+				"slug": "dynamic-links--redirect-rules",
+				"status": "published",
+				"data": {
+					"name": "Redirect Rules",
+					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"route_id": "superboard.dynamic_links_redirect_rules",
+					"path": "/dynamic-links/redirect-rules",
+					"description": "Resolve the first matching platform rule by priority, then fall back to the link destination.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:dynamic-links--domain",
+				"slug": "dynamic-links--domain",
+				"status": "published",
+				"data": {
+					"name": "Domain",
+					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"route_id": "superboard.dynamic_links_domain",
+					"path": "/dynamic-links/domain",
+					"description": "Serve branded dynamic links only after ownership has been verified through DNS.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:dynamic-links--social-media-preview",
+				"slug": "dynamic-links--social-media-preview",
+				"status": "published",
+				"data": {
+					"name": "Social Media Preview",
+					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"route_id": "superboard.dynamic_links_social_media_preview",
+					"path": "/dynamic-links/social-media-preview",
+					"description": "Design the default Open Graph card shown when a dynamic link is shared.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:dynamic-links--tracking",
+				"slug": "dynamic-links--tracking",
+				"status": "published",
+				"data": {
+					"name": "Tracking",
+					"plugin_id": "supbrd-plugmod-dynamic-links",
+					"route_id": "superboard.dynamic_links_tracking",
+					"path": "/dynamic-links/tracking",
+					"description": "Inspect attributed link events and control consent-aware collection by project.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--inbox",
+				"slug": "support--inbox",
+				"status": "published",
+				"data": {
+					"name": "Inbox",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_inbox",
+					"path": "/support/inbox",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--contacts",
+				"slug": "support--contacts",
+				"status": "published",
+				"data": {
+					"name": "Contacts",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_contacts",
+					"path": "/support/contacts",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--workforce",
+				"slug": "support--workforce",
+				"status": "published",
+				"data": {
+					"name": "Workforce",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_workforce",
+					"path": "/support/workforce",
+					"description": "Support roles, teams, availability, capacity and leave schedules.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--channels",
+				"slug": "support--channels",
+				"status": "published",
+				"data": {
+					"name": "Channels",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_channels",
+					"path": "/support/channels",
+					"description": "Connect every customer channel to a native Support inbox.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--automations",
+				"slug": "support--automations",
+				"status": "published",
+				"data": {
+					"name": "Automations",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_automations",
+					"path": "/support/automations",
+					"description": "Automate routing and actions, then enforce response and resolution targets.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--proactive-support",
+				"slug": "support--proactive-support",
+				"status": "published",
+				"data": {
+					"name": "Proactive Support",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_proactive_support",
+					"path": "/support/proactive-support",
+					"description": "Reach eligible customers through Support inboxes with controlled, auditable campaigns.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--help-center",
+				"slug": "support--help-center",
+				"status": "published",
+				"data": {
+					"name": "Help Center",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_help_center",
+					"path": "/support/help-center",
+					"description": "Author, translate, publish and index customer self-service content.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--captain",
+				"slug": "support--captain",
+				"status": "published",
+				"data": {
+					"name": "Captain",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_captain",
+					"path": "/support/captain",
+					"description": "Project-isolated assistants, Copilot scenarios, allowlisted tools and traceable tasks.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--integrations",
+				"slug": "support--integrations",
+				"status": "published",
+				"data": {
+					"name": "Integrations",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_integrations",
+					"path": "/support/integrations",
+					"description": "Connect Support workflows to your team tools and customer context.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--reports",
+				"slug": "support--reports",
+				"status": "published",
+				"data": {
+					"name": "Reports",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_reports",
+					"path": "/support/reports",
+					"description": "Support volume, response, resolution, backlog, SLA, satisfaction and campaign performance.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:support--settings",
+				"slug": "support--settings",
+				"status": "published",
+				"data": {
+					"name": "Settings",
+					"plugin_id": "supbrd-plugmod-support",
+					"route_id": "superboard.support_settings",
+					"path": "/support/settings",
+					"description": "Project-wide Support behavior, attachments, features and operations.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:marketing--in-app-messages",
+				"slug": "marketing--in-app-messages",
+				"status": "published",
+				"data": {
+					"name": "In-app Messages",
+					"plugin_id": "supbrd-plugmod-marketing",
+					"route_id": "superboard.marketing_in_app_messages",
+					"path": "/marketing/in-app-messages",
+					"description": "",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:marketing--email",
+				"slug": "marketing--email",
+				"status": "published",
+				"data": {
+					"name": "Email",
+					"plugin_id": "supbrd-plugmod-marketing",
+					"route_id": "superboard.marketing_email",
+					"path": "/marketing/email",
+					"description": "Subscribers, consent, lists, double opt-in, segmentation and bulk operations.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:marketing--campaigns",
+				"slug": "marketing--campaigns",
+				"status": "published",
+				"data": {
+					"name": "Campaigns",
+					"plugin_id": "supbrd-plugmod-marketing",
+					"route_id": "superboard.marketing_campaigns",
+					"path": "/marketing/campaigns",
+					"description": "Templates, media, previews, scheduled campaigns, transactional email and delivery controls.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:marketing--journeys",
+				"slug": "marketing--journeys",
+				"status": "published",
+				"data": {
+					"name": "Journeys",
+					"plugin_id": "supbrd-plugmod-marketing",
+					"route_id": "superboard.marketing_journeys",
+					"path": "/marketing/journeys",
+					"description": "Turn product events into versioned, resumable email and omnichannel customer journeys.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:marketing--channels",
+				"slug": "marketing--channels",
+				"status": "published",
+				"data": {
+					"name": "Channels",
+					"plugin_id": "supbrd-plugmod-marketing",
+					"route_id": "superboard.marketing_channels",
+					"path": "/marketing/channels",
+					"description": "Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:marketing--statistics",
+				"slug": "marketing--statistics",
+				"status": "published",
+				"data": {
+					"name": "Statistics",
+					"plugin_id": "supbrd-plugmod-marketing",
+					"route_id": "superboard.marketing_statistics",
+					"path": "/marketing/statistics",
+					"description": "Delivery, opens, clicks, bounces, complaints, unsubscribes and campaign progression.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:marketing--settings",
+				"slug": "marketing--settings",
+				"status": "published",
+				"data": {
+					"name": "Settings",
+					"plugin_id": "supbrd-plugmod-marketing",
+					"route_id": "superboard.marketing_settings",
+					"path": "/marketing/settings",
+					"description": "Sender identities, AWS SES delivery, quotas, domain authentication, provider events and retries.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics",
+				"slug": "analytics",
+				"status": "published",
+				"data": {
+					"name": "Overview",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics",
+					"path": "/analytics",
+					"description": "A single, privacy-aware view of product usage, installations and verified revenue.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--dashboards",
+				"slug": "analytics--dashboards",
+				"status": "published",
+				"data": {
+					"name": "Dashboards",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_dashboards",
+					"path": "/analytics/dashboards",
+					"description": "Build project dashboards from reusable product, revenue, stability and audience widgets.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--users",
+				"slug": "analytics--users",
+				"status": "published",
+				"data": {
+					"name": "Users & Sessions",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_users",
+					"path": "/analytics/users",
+					"description": "Explore pseudonymized profiles and session timelines without exposing raw SDK identifiers.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--events",
+				"slug": "analytics--events",
+				"status": "published",
+				"data": {
+					"name": "Events",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_events",
+					"path": "/analytics/events",
+					"description": "Inspect the recent, pseudonymized event stream without exposing raw user identifiers.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--dimensions",
+				"slug": "analytics--dimensions",
+				"status": "published",
+				"data": {
+					"name": "Technology & Location",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_dimensions",
+					"path": "/analytics/dimensions",
+					"description": "Compare application versions, devices, browsers, countries, carriers and acquisition context.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--views",
+				"slug": "analytics--views",
+				"status": "published",
+				"data": {
+					"name": "Views",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_views",
+					"path": "/analytics/views",
+					"description": "Page and screen performance, visit depth and time spent across web and mobile applications.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--installations",
+				"slug": "analytics--installations",
+				"status": "published",
+				"data": {
+					"name": "Installations",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_installations",
+					"path": "/analytics/installations",
+					"description": "Canonical first installs only—retries and repeated attribution calls do not increase this count.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--purchases",
+				"slug": "analytics--purchases",
+				"status": "published",
+				"data": {
+					"name": "Verified Purchases",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_purchases",
+					"path": "/analytics/purchases",
+					"description": "Financial facts emitted only after store or billing verification, deduplicated by transaction and event type.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--insights",
+				"slug": "analytics--insights",
+				"status": "published",
+				"data": {
+					"name": "Funnels & Retention",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_insights",
+					"path": "/analytics/insights",
+					"description": "Understand conversion sequences and whether new installations return over time.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--cohorts",
+				"slug": "analytics--cohorts",
+				"status": "published",
+				"data": {
+					"name": "Cohorts",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_cohorts",
+					"path": "/analytics/cohorts",
+					"description": "Define reusable audiences from behavior and keep their estimated size current.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--crashes",
+				"slug": "analytics--crashes",
+				"status": "published",
+				"data": {
+					"name": "Crashes",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_crashes",
+					"path": "/analytics/crashes",
+					"description": "Group recurring errors by deterministic fingerprint, inspect occurrences and manage resolution.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--feedback",
+				"slug": "analytics--feedback",
+				"status": "published",
+				"data": {
+					"name": "Feedback",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_feedback",
+					"path": "/analytics/feedback",
+					"description": "Review star ratings and written feedback captured from web and mobile experiences.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--remote-config",
+				"slug": "analytics--remote-config",
+				"status": "published",
+				"data": {
+					"name": "Remote Config",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_remote_config",
+					"path": "/analytics/remote-config",
+					"description": "Publish versioned JSON values with deterministic rollouts for the selected environment.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": [
+							{
+								"kind": "notice",
+								"title": "Stable assignments",
+								"description": "Rollout buckets are computed from a pseudonymous identity, project and key. The same installation always receives the same result."
+							},
+							{
+								"kind": "columns",
+								"columns": [
+									{
+										"title": "Publish parameter",
+										"description": "Environment: production",
+										"fields": [
+											{
+												"label": "Parameter key",
+												"control": "text",
+												"placeholder": "checkout_banner"
+											},
+											{
+												"label": "JSON value",
+												"control": "textarea",
+												"value": "{\n  \"enabled\": true\n}"
+											},
+											{
+												"label": "Rollout · 100%",
+												"control": "range",
+												"value": "100"
+											}
+										],
+										"action_label": "Publish"
+									},
+									{
+										"title": "Parameters",
+										"description": "Each update increments an immutable client-visible version.",
+										"empty_state": "No remote parameters published."
+									}
+								]
+							}
+						]
+					},
+					"bindings": {
+						"data_sources": [
+							"supbrd-plugmod-analytics.data_source.analytics_remote_config"
+						],
+						"commands": [
+							"supbrd-plugmod-analytics.command.upsert_analytics_remote_config"
+						]
+					}
+				}
+			},
+			{
+				"id": "view:analytics--alerts",
+				"slug": "analytics--alerts",
+				"status": "published",
+				"data": {
+					"name": "Alerts",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_alerts",
+					"path": "/analytics/alerts",
+					"description": "Continuously evaluate product, crash, installation and verified-payment signals at the edge.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--reports",
+				"slug": "analytics--reports",
+				"status": "published",
+				"data": {
+					"name": "Reports & Exports",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_reports",
+					"path": "/analytics/reports",
+					"description": "Save reusable analysis definitions and run durable export or rollup jobs.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			},
+			{
+				"id": "view:analytics--settings",
+				"slug": "analytics--settings",
+				"status": "published",
+				"data": {
+					"name": "Settings",
+					"plugin_id": "supbrd-plugmod-analytics",
+					"route_id": "superboard.analytics_settings",
+					"path": "/analytics/settings",
+					"description": "Manage applications, retention, collection, signed webhooks and timeline annotations.",
+					"presentation": {
+						"schema_version": "1.0.0",
+						"blocks": []
+					},
+					"bindings": {
+						"data_sources": [],
+						"commands": []
+					}
+				}
+			}
+		]
+	}
+}

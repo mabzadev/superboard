@@ -1,9 +1,19 @@
 import { compileFrontRelease, resolveFrontRequest } from "@superboard/supbrd-core";
 import { expect, test } from "vitest";
 
+import compatibility from "../../../config/superboard-plugin-compatibility.json";
+import seed from "../seed/seed.json";
 import { assertReleasePresentation, type FrontPageModel } from "../src/lib/front-page.js";
-import { mountNativeFrontRenderer } from "../src/lib/native-front-plugins.js";
+import {
+	assertNativeFrontRenderer,
+	mountNativeFrontRenderer,
+} from "../src/lib/native-front-plugins.js";
 import { projectNativeFrontPresentation } from "../src/lib/native-front-presentation.js";
+import {
+	editableNavigationFromMenu,
+	editableViewFromEntry,
+	frontViewSlug,
+} from "../src/lib/native-front-views.js";
 import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 
@@ -18,6 +28,80 @@ const identifiers = {
 	previous_release_id: null,
 	created_at: "2026-09-01T12:00:00.000Z",
 };
+
+test("EmDash menu and View records become editable Front configuration", () => {
+	const navigation = editableNavigationFromMenu({
+		id: "menu",
+		name: "superboard-admin",
+		label: "SuperBoard Admin",
+		locale: "en",
+		translationGroup: "menu",
+		items: [
+			{
+				id: "analytics",
+				label: "Analyse éditée",
+				url: "/analytics",
+				children: [
+					{
+						id: "remote-config",
+						label: "Configuration distante",
+						url: "/analytics/remote-config",
+						children: [],
+					},
+				],
+			},
+		],
+	});
+	const view = editableViewFromEntry({
+		data: {
+			name: "Configuration distante",
+			plugin_id: "supbrd-plugmod-analytics",
+			route_id: "superboard.analytics_remote_config",
+			path: "/analytics/remote-config",
+			description: "Ce texte vient de la View EmDash.",
+			presentation: {
+				schema_version: "1.0.0",
+				blocks: [
+					{
+						kind: "notice",
+						title: "Configuration éditable",
+						description: "La composition vient de la View.",
+					},
+				],
+			},
+			bindings: {
+				data_sources: ["supbrd-plugmod-analytics.data_source.analytics_remote_config"],
+				commands: ["supbrd-plugmod-analytics.command.upsert_analytics_remote_config"],
+			},
+		},
+	});
+
+	expect(frontViewSlug("/analytics/remote-config")).toBe("analytics--remote-config");
+	expect(navigation).toEqual([
+		{
+			label: "Analyse éditée",
+			items: [{ label: "Configuration distante", href: "/analytics/remote-config" }],
+		},
+	]);
+	expect(view).toEqual({
+		route_id: "superboard.analytics_remote_config",
+		plugin_id: "supbrd-plugmod-analytics",
+		path: "/analytics/remote-config",
+		title: "Configuration distante",
+		description: "Ce texte vient de la View EmDash.",
+		blocks: [
+			{
+				kind: "notice",
+				title: "Configuration éditable",
+				description: "La composition vient de la View.",
+			},
+		],
+		bindings: {
+			data_sources: ["supbrd-plugmod-analytics.data_source.analytics_remote_config"],
+			commands: ["supbrd-plugmod-analytics.command.upsert_analytics_remote_config"],
+		},
+	});
+});
 
 test("adding and removing a plugin from the Release changes the rendered Front", async () => {
 	const catalog = superBoardRuntimePluginCatalog();
@@ -47,6 +131,95 @@ test("adding and removing a plugin from the Release changes the rendered Front",
 	expect(activeMarkup).toContain("Campaigns");
 	expect(activeMarkup).toContain('"href":"/marketing/campaigns"');
 	expect(activeMarkup).toContain("supbrd-plugmod-marketing");
+});
+
+test("the editable Remote Config View supplies the Dashboard composition", async () => {
+	const catalog = superBoardRuntimePluginCatalog();
+	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+		const manifest = catalog.plugins.find(
+			({ manifest: candidate }) => candidate.plugin_id === pluginId,
+		)?.manifest;
+		if (!manifest) throw new Error(`Missing test plugin: ${pluginId}`);
+		return {
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: manifest.execution.backend === "native",
+		};
+	});
+	const release = await compile(locked, "01J00000000000000000000409");
+	const seededView = seed.content.views.find(
+		({ data }) => data.path === "/analytics/remote-config",
+	);
+	const view = editableViewFromEntry({ data: seededView?.data });
+	if (!view) throw new Error("Missing Remote Config View");
+	const output = render(
+		release,
+		"/analytics/remote-config",
+		["users.read", "supbrd-plugmod-analytics.read"],
+		{ view },
+	);
+
+	expect(output).toContain("Remote Config");
+	expect(output).toContain("Stable assignments");
+	expect(output).toContain("Publish parameter");
+	expect(output).toContain("No remote parameters published.");
+	expect(output).toContain('"group_id":"analytics"');
+});
+
+test("EmDash menu and View edits drive the rendered Front within the active Release", async () => {
+	const catalog = superBoardRuntimePluginCatalog();
+	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+		const manifest = catalog.plugins.find(
+			({ manifest: candidate }) => candidate.plugin_id === pluginId,
+		)?.manifest;
+		if (!manifest) throw new Error(`Missing test plugin: ${pluginId}`);
+		return {
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: manifest.execution.backend === "native",
+		};
+	});
+	const release = await compile(locked, "01J00000000000000000000410");
+	const output = render(
+		release,
+		"/analytics/remote-config",
+		["users.read", "supbrd-plugmod-analytics.read"],
+		{
+			navigation: [
+				{
+					label: "Analyse éditée",
+					items: [
+						{ label: "Configuration distante", href: "/analytics/remote-config" },
+						{ label: "Hors Release", href: "/paywalls" },
+					],
+				},
+			],
+			view: {
+				route_id: "superboard.analytics_remote_config",
+				plugin_id: "supbrd-plugmod-analytics",
+				path: "/analytics/remote-config",
+				title: "Configuration distante",
+				description: "Ce texte vient de la View EmDash.",
+				blocks: [
+					{
+						kind: "notice",
+						title: "Contenu éditable",
+						description: "Composition de View",
+					},
+				],
+				bindings: { data_sources: [], commands: [] },
+			},
+		},
+	);
+
+	expect(output).toContain("Analyse éditée");
+	expect(output).toContain("Configuration distante");
+	expect(output).toContain("Ce texte vient de la View EmDash.");
+	expect(output).toContain("Contenu éditable");
+	expect(output).not.toContain("Hors Release");
+	expect(output).not.toContain('"href":"/paywalls"');
 });
 
 test("rejects routes, pages, renderers, and navigation outside the Release graph", async () => {
@@ -98,6 +271,76 @@ test("rejects routes, pages, renderers, and navigation outside the Release graph
 	expect(() => assertReleasePresentation(withoutRenderer)).toThrow(/renderer is missing/u);
 });
 
+test("legacy renderer checksums stay scoped to their plugin renderer", async () => {
+	const catalog = superBoardRuntimePluginCatalog();
+	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+		const manifest = catalog.plugins.find(
+			({ manifest: candidate }) => candidate.plugin_id === pluginId,
+		)?.manifest;
+		if (!manifest) throw new Error(`Missing test plugin: ${pluginId}`);
+		return {
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: manifest.execution.backend === "native",
+		};
+	});
+	const release = await compile(locked, "01J00000000000000000000411");
+	const analyticsRenderer = release.payload.renderers.find(
+		({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics",
+	);
+	if (!analyticsRenderer) throw new Error("Missing Analytics renderer");
+
+	expect(() =>
+		assertNativeFrontRenderer(
+			{
+				...analyticsRenderer,
+				build_checksum: "sha256:d7b1bda9489908a0fc50539a8a305d0c18e8c54f92fac05980ec30af32f28ba2",
+			},
+			release.payload.plugin_lock,
+		),
+	).toThrow(/Native renderer build is unavailable/u);
+});
+
+test("keeps an active multi-plugin Release renderable across renderer upgrades", async () => {
+	const catalog = superBoardRuntimePluginCatalog();
+	const locked = ["supbrd-plug-user", "supbrd-plugmod-analytics"].map((pluginId) => {
+		const manifest = catalog.plugins.find(
+			({ manifest: candidate }) => candidate.plugin_id === pluginId,
+		)?.manifest;
+		if (!manifest) throw new Error(`Missing test plugin: ${pluginId}`);
+		return {
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: manifest.execution.backend === "native",
+		};
+	});
+	const release = await compile(locked, "01J00000000000000000000412");
+	const legacyAnalyticsBuild = Object.values(compatibility.artifacts).find(
+		({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics",
+	)?.renderer_builds["supbrd-plugmod-analytics.renderer.admin_surface"];
+	if (!legacyAnalyticsBuild) throw new Error("Missing legacy Analytics renderer build");
+	const analyticsRenderer = release.payload.renderers.find(
+		({ renderer_id: rendererId }) =>
+			rendererId === "supbrd-plugmod-analytics.renderer.admin_surface",
+	);
+	if (!analyticsRenderer) throw new Error("Missing Analytics renderer");
+	analyticsRenderer.build_checksum = legacyAnalyticsBuild;
+	const seededView = seed.content.views.find(
+		({ data }) => data.path === "/analytics/remote-config",
+	);
+	const view = editableViewFromEntry({ data: seededView?.data });
+	if (!view) throw new Error("Missing Remote Config View");
+
+	expect(() => assertReleasePresentation(release.payload)).not.toThrow();
+	expect(() =>
+		render(release, "/analytics/remote-config", ["users.read", "supbrd-plugmod-analytics.read"], {
+			view,
+		}),
+	).not.toThrow();
+});
+
 test("keeps an active legacy Release renderable during the native Front upgrade", async () => {
 	const userManifest = superBoardRuntimePluginCatalog().plugins.find(
 		({ manifest }) => manifest.plugin_id === "supbrd-plug-user",
@@ -122,6 +365,17 @@ test("keeps an active legacy Release renderable during the native Front upgrade"
 				? group.items.map(({ route_id, label, permission }) => ({ route_id, label, permission }))
 				: [],
 		);
+	legacyRelease.payload.presentation.navigation = [
+		...legacyRelease.payload.presentation.navigation.filter(
+			(item) =>
+				typeof item === "object" &&
+				item !== null &&
+				"route_id" in item &&
+				typeof item.route_id === "string" &&
+				!item.route_id.startsWith("superboard.identity_by_lang"),
+		),
+		{ route_id: "superboard.identity", label: "Identity", permission: "users.read" },
+	];
 	legacyRelease.payload.renderers = legacyRelease.payload.renderers
 		.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
 		.map((renderer) => {
@@ -153,7 +407,19 @@ test("keeps an active legacy Release renderable during the native Front upgrade"
 	legacyUsersPage.root_renderer_id = "supbrd-plug-user.renderer.members_table";
 
 	expect(() => assertReleasePresentation(legacyRelease.payload)).not.toThrow();
-	expect(render(legacyRelease, "/app/users", ["users.read"])).toContain("App · Users");
+	const legacyMarkup = render(legacyRelease, "/app/users", ["users.read"], {
+		navigation: [
+			{ label: "App", items: [{ label: "Users", href: "/app/users" }] },
+			{
+				label: "Identity",
+				items: [{ label: "Overview", href: "/identity/en/dashboard" }],
+			},
+		],
+	});
+	expect(legacyMarkup).toContain("App · Users");
+	expect(legacyMarkup).toContain('"label":"Identity"');
+	expect(legacyMarkup).toContain('"href":"/identity/en/dashboard"');
+	expect(legacyMarkup).not.toContain('"group_id":"legacy"');
 });
 
 async function compile(
@@ -178,6 +444,7 @@ function render(
 	release: Awaited<ReturnType<typeof compile>>,
 	path: string,
 	permissions: string[],
+	editorial?: Parameters<typeof projectNativeFrontPresentation>[2],
 ): string {
 	const dependencyHealth = Object.fromEntries(
 		release.payload.dependency_policies.map(({ dependency_id: dependencyId }) => [
@@ -223,7 +490,7 @@ function render(
 		},
 		permissions,
 	};
-	const projection = projectNativeFrontPresentation(model);
+	const projection = projectNativeFrontPresentation(model, "en", editorial);
 	const mounts = [
 		...projection.layout_mounts,
 		...projection.content_mounts,

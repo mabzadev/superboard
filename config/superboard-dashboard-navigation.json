@@ -1,0 +1,136 @@
+{
+	"sections": [
+		{
+			"slug": "dashboard",
+			"label": "Dashboard",
+			"href": "/dashboard",
+			"pages": [{ "label": "Dashboard", "href": "/dashboard" }]
+		},
+		{
+			"slug": "app",
+			"label": "App",
+			"href": "/app/customers",
+			"pages": [
+				{ "label": "Customers", "href": "/app/customers" },
+				{ "label": "Users", "href": "/app/users" },
+				{ "label": "Referrals", "href": "/app/referrals" },
+				{ "label": "Access Key", "href": "/app/access-key" },
+				{ "label": "Libraries", "href": "/app/libraries" },
+				{ "label": "Android Setup", "href": "/app/android-setup" },
+				{ "label": "iOS Setup", "href": "/app/ios-setup" },
+				{ "label": "Web Setup", "href": "/app/web-setup" }
+			]
+		},
+		{
+			"slug": "identity",
+			"label": "Identity",
+			"href": "/identity/en/dashboard",
+			"pages": [
+				{ "label": "Overview", "href": "/identity/en/dashboard" },
+				{ "label": "Users", "href": "/identity/en/users" },
+				{ "label": "User Attributes", "href": "/identity/en/user-attributes" },
+				{ "label": "Roles", "href": "/identity/en/roles" },
+				{ "label": "Applications", "href": "/identity/en/apps" },
+				{ "label": "Scopes", "href": "/identity/en/scopes" },
+				{ "label": "Organizations", "href": "/identity/en/orgs" },
+				{ "label": "Logs", "href": "/identity/en/logs" },
+				{ "label": "SAML SSO", "href": "/identity/en/saml" },
+				{ "label": "Account Policies", "href": "/identity/en/account" }
+			]
+		},
+		{
+			"slug": "products",
+			"label": "Products",
+			"href": "/products/purchases",
+			"pages": [
+				{ "label": "Purchases", "href": "/products/purchases" },
+				{ "label": "Customers", "href": "/products/customers" },
+				{ "label": "Offerings", "href": "/products/offerings" },
+				{ "label": "Entitlements", "href": "/products/entitlements" }
+			]
+		},
+		{
+			"slug": "flows",
+			"label": "Flows",
+			"href": "/flows",
+			"pages": [
+				{ "label": "Overview", "href": "/flows" },
+				{ "label": "Workflows", "href": "/flows/workflows" },
+				{ "label": "Launchpad", "href": "/flows/launchpad" },
+				{ "label": "Users", "href": "/flows/users" },
+				{ "label": "Components", "href": "/flows/components" },
+				{ "label": "Environments", "href": "/flows/settings/environments" },
+				{ "label": "Localization", "href": "/flows/settings/localization" },
+				{ "label": "SDK", "href": "/flows/settings/sdk" }
+			]
+		},
+		{
+			"slug": "dynamic-links",
+			"label": "Dynamic Links",
+			"href": "/dynamic-links/links",
+			"pages": [
+				{ "label": "Links", "href": "/dynamic-links/links" },
+				{ "label": "Campaigns", "href": "/dynamic-links/campaigns" },
+				{ "label": "Redirect Rules", "href": "/dynamic-links/redirect-rules" },
+				{ "label": "Domain", "href": "/dynamic-links/domain" },
+				{ "label": "Social Media Preview", "href": "/dynamic-links/social-media-preview" },
+				{ "label": "Tracking", "href": "/dynamic-links/tracking" }
+			]
+		},
+		{
+			"slug": "support",
+			"label": "Support",
+			"href": "/support/inbox",
+			"pages": [
+				{ "label": "Inbox", "href": "/support/inbox" },
+				{ "label": "Contacts", "href": "/support/contacts" },
+				{ "label": "Workforce", "href": "/support/workforce" },
+				{ "label": "Channels", "href": "/support/channels" },
+				{ "label": "Automations", "href": "/support/automations" },
+				{ "label": "Proactive Support", "href": "/support/proactive-support" },
+				{ "label": "Help Center", "href": "/support/help-center" },
+				{ "label": "Captain", "href": "/support/captain" },
+				{ "label": "Integrations", "href": "/support/integrations" },
+				{ "label": "Reports", "href": "/support/reports" },
+				{ "label": "Settings", "href": "/support/settings" }
+			]
+		},
+		{
+			"slug": "marketing",
+			"label": "Marketing",
+			"href": "/marketing/in-app-messages",
+			"pages": [
+				{ "label": "In-app Messages", "href": "/marketing/in-app-messages" },
+				{ "label": "Email", "href": "/marketing/email" },
+				{ "label": "Campaigns", "href": "/marketing/campaigns" },
+				{ "label": "Journeys", "href": "/marketing/journeys" },
+				{ "label": "Channels", "href": "/marketing/channels" },
+				{ "label": "Statistics", "href": "/marketing/statistics" },
+				{ "label": "Settings", "href": "/marketing/settings" }
+			]
+		},
+		{
+			"slug": "analytics",
+			"label": "Analytics",
+			"href": "/analytics",
+			"pages": [
+				{ "label": "Overview", "href": "/analytics" },
+				{ "label": "Dashboards", "href": "/analytics/dashboards" },
+				{ "label": "Users & Sessions", "href": "/analytics/users" },
+				{ "label": "Events", "href": "/analytics/events" },
+				{ "label": "Technology & Location", "href": "/analytics/dimensions" },
+				{ "label": "Views", "href": "/analytics/views" },
+				{ "label": "Installations", "href": "/analytics/installations" },
+				{ "label": "Verified Purchases", "href": "/analytics/purchases" },
+				{ "label": "Funnels & Retention", "href": "/analytics/insights" },
+				{ "label": "Cohorts", "href": "/analytics/cohorts" },
+				{ "label": "Crashes", "href": "/analytics/crashes" },
+				{ "label": "Feedback", "href": "/analytics/feedback" },
+				{ "label": "Remote Config", "href": "/analytics/remote-config" },
+				{ "label": "Alerts", "href": "/analytics/alerts" },
+				{ "label": "Reports & Exports", "href": "/analytics/reports" },
+				{ "label": "Settings", "href": "/analytics/settings" }
+			]
+		}
+	]
+}

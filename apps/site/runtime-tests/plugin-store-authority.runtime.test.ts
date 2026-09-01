@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 
 import topology from "../../../config/emdash-plugin-topology.json";
+import compatibility from "../../../config/superboard-plugin-compatibility.json";
 import { proxyOperatorApiRequest } from "../src/lib/operator-api-proxy.js";
 import {
 	beginRepositoryCommand,
@@ -24,6 +25,7 @@ import {
 } from "../src/lib/plugin-store-repository.js";
 import {
 	loadActiveSuperBoardPluginLock,
+	superBoardRuntimePluginCatalog,
 	synchronizeSuperBoardPluginCatalog,
 } from "../src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
@@ -80,6 +82,63 @@ describe("EmDash plugin Store authority", () => {
 				({ path_pattern: path }) => path === "/marketing/campaigns",
 			),
 		).toBe(true);
+
+		const compatibleAnalyticsChecksum = Object.entries(compatibility.artifacts).find(
+			([, value]) => value.plugin_id === "supbrd-plugmod-analytics",
+		)?.[0];
+		expect(compatibleAnalyticsChecksum).toBeDefined();
+		const previousAnalytics = await env.DB.prepare(
+			`SELECT artifact.artifact_checksum
+			 FROM superboard_plugin_manifest_artifacts artifact
+			 WHERE artifact.artifact_checksum = ?`,
+		)
+			.bind(compatibleAnalyticsChecksum)
+			.first<{ artifact_checksum: string }>();
+		expect(previousAnalytics).not.toBeNull();
+		await env.DB.prepare(
+			"UPDATE superboard_active_plugin_manifests SET artifact_checksum = ? WHERE plugin_id = 'supbrd-plugmod-analytics'",
+		)
+			.bind(previousAnalytics!.artifact_checksum)
+			.run();
+		const rollingDeployLock = await loadActiveSuperBoardPluginLock(env.DB);
+		expect(
+			rollingDeployLock.find(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics")
+				?.artifact_checksum,
+		).toBe(previousAnalytics!.artifact_checksum);
+		await expect(
+			composeUserFrontReleaseInput({
+				...releaseIdentifiers,
+				plugin_lock: rollingDeployLock,
+			}),
+		).rejects.toThrow(/PLUGIN_LOCK_MANIFEST_MISMATCH:.*analytics/u);
+		const tamperedChecksum = `sha256:${"f".repeat(64)}`;
+		await env.DB.prepare(
+			`INSERT INTO superboard_plugin_manifest_artifacts
+			 (artifact_checksum, plugin_id, manifest_json, installed_at)
+			 SELECT ?, plugin_id,
+			        json_set(manifest_json, '$.artifact_checksum', ?, '$.publisher', 'tampered'),
+			        installed_at
+			 FROM superboard_plugin_manifest_artifacts
+			 WHERE artifact_checksum = ?`,
+		)
+			.bind(tamperedChecksum, tamperedChecksum, previousAnalytics!.artifact_checksum)
+			.run();
+		await env.DB.prepare(
+			"UPDATE superboard_active_plugin_manifests SET artifact_checksum = ? WHERE plugin_id = 'supbrd-plugmod-analytics'",
+		)
+			.bind(tamperedChecksum)
+			.run();
+		await expect(loadActiveSuperBoardPluginLock(env.DB)).rejects.toThrow(
+			/PLUGIN_CATALOG_STORED_MANIFEST_INVALID:.*analytics/u,
+		);
+		const currentAnalytics = superBoardRuntimePluginCatalog().plugins.find(
+			({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
+		)?.manifest.artifact_checksum;
+		await env.DB.prepare(
+			"UPDATE superboard_active_plugin_manifests SET artifact_checksum = ? WHERE plugin_id = 'supbrd-plugmod-analytics'",
+		)
+			.bind(currentAnalytics)
+			.run();
 
 		await env.DB.prepare(
 			"DELETE FROM superboard_active_plugin_manifests WHERE plugin_id = 'supbrd-plugmod-marketing'",

@@ -7,6 +7,7 @@ import {
 import { userPluginManifest, validateUserPluginManifest } from "@superboard/supbrd-plug-user";
 
 import topologyJson from "../../../../config/emdash-plugin-topology.json";
+import compatibilityJson from "../../../../config/superboard-plugin-compatibility.json";
 
 interface WorkerDescriptor {
 	deployment_status: "ready" | "not_ready";
@@ -19,6 +20,10 @@ interface TopologyPlugin {
 }
 
 const topology = topologyJson as unknown as { plugins: TopologyPlugin[] };
+const compatibility = compatibilityJson as {
+	artifacts: Record<string, { plugin_id: string; manifest_checksum: string }>;
+};
+const PLUGIN_ID_PREFIX_PATTERN = /^supbrd-(?:plug|plugmod)-/u;
 
 export interface SuperBoardRuntimePlugin {
 	manifest: SuperBoardPluginManifest;
@@ -201,23 +206,69 @@ export async function loadActiveSuperBoardPluginLock(db: D1Database) {
 	const catalog = new Map(
 		superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => [manifest.plugin_id, manifest]),
 	);
-	return rows.results.map((row) => {
-		const manifest = catalog.get(row.plugin_id);
-		if (!manifest || row.artifact_checksum !== manifest.artifact_checksum) {
-			throw new Error(`PLUGIN_CATALOG_NOT_SYNCHRONIZED:${row.plugin_id}`);
-		}
-		return {
-			plugin_id: manifest.plugin_id,
-			version: manifest.plugin_version,
-			artifact_checksum: manifest.artifact_checksum,
-			native: manifest.execution.backend === "native",
-		};
-	});
+	return Promise.all(
+		rows.results.map(async (row) => {
+			const manifest = catalog.get(row.plugin_id);
+			if (!manifest) {
+				throw new Error(`PLUGIN_CATALOG_NOT_SYNCHRONIZED:${row.plugin_id}`);
+			}
+			let stored: unknown;
+			try {
+				stored = JSON.parse(row.manifest_json);
+			} catch {
+				throw new Error(`PLUGIN_CATALOG_STORED_MANIFEST_INVALID:${row.plugin_id}`);
+			}
+			const verification =
+				row.artifact_checksum === manifest.artifact_checksum
+					? row.plugin_id === userPluginManifest.plugin_id
+						? await validateUserPluginManifest(stored)
+						: await verifySuperBoardPluginManifest(stored)
+					: await verifyCompatibleStoredManifest(stored, row.plugin_id, row.artifact_checksum);
+			if (
+				!verification.valid ||
+				typeof stored !== "object" ||
+				stored === null ||
+				!("plugin_id" in stored) ||
+				stored.plugin_id !== row.plugin_id ||
+				!("artifact_checksum" in stored) ||
+				stored.artifact_checksum !== row.artifact_checksum
+			) {
+				throw new Error(
+					`PLUGIN_CATALOG_STORED_MANIFEST_INVALID:${row.plugin_id}:${verification.errors.join(",")}`,
+				);
+			}
+			const storedManifest = stored as SuperBoardPluginManifest;
+			return {
+				plugin_id: storedManifest.plugin_id,
+				version: storedManifest.plugin_version,
+				artifact_checksum: storedManifest.artifact_checksum,
+				native: storedManifest.execution.backend === "native",
+			};
+		}),
+	);
+}
+
+async function verifyCompatibleStoredManifest(
+	stored: unknown,
+	pluginId: string,
+	artifactChecksum: string,
+): Promise<{ valid: boolean; errors: string[] }> {
+	const structural = await verifySuperBoardPluginManifest(stored);
+	const errors = structural.errors.filter((error) => error !== "ARTIFACT_CHECKSUM_MISMATCH");
+	const registered = compatibility.artifacts[artifactChecksum];
+	if (
+		!registered ||
+		registered.plugin_id !== pluginId ||
+		(await sha256Canonical(stored)) !== registered.manifest_checksum
+	) {
+		errors.push("ARTIFACT_CHECKSUM_MISMATCH");
+	}
+	return { valid: errors.length === 0, errors: [...new Set(errors)] };
 }
 
 function displayPluginName(pluginId: string): string {
 	return pluginId
-		.replace(/^supbrd-(?:plug|plugmod)-/u, "")
+		.replace(PLUGIN_ID_PREFIX_PATTERN, "")
 		.split("-")
 		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
 		.join(" ");

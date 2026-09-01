@@ -8,10 +8,14 @@ const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
-const manifestMigrationPath = join(
+const manifestMigrationPath = join(root, "apps/site/migrations/0017_native_front_presentation.sql");
+const compatibilityPath = join(root, "config/superboard-plugin-compatibility.json");
+const compatibilitySourcePath = join(
 	root,
 	"apps/site/migrations/0016_native_front_compatibility.sql",
 );
+const MANIFEST_ARTIFACT_PATTERN =
+	/VALUES \('(sha256:[a-f0-9]{64})', '([^']+)', '((?:[^']|'')*)', '[^']+'\)/gu;
 const PAGE_SUFFIX = "/page.tsx";
 const PAGE_SUFFIX_PATTERN = /\/page\.tsx$/u;
 const SUPPORT_OR_FLOWS_ROUTE_PATTERN = /\/(?:support|flows)(?:\/|$)/u;
@@ -1104,18 +1108,44 @@ function manifestRegistryMigration(topology) {
 			`INSERT INTO superboard_plugin_manifest_artifacts (artifact_checksum, plugin_id, manifest_json, installed_at)`,
 			`VALUES ('${manifest.artifact_checksum}', '${manifest.plugin_id}', '${json}', '2026-08-30T00:00:00.000Z')`,
 			`ON CONFLICT(artifact_checksum) DO NOTHING;`,
-			`INSERT INTO superboard_active_plugin_manifests (plugin_id, artifact_checksum, activated_at)`,
-			`VALUES ('${manifest.plugin_id}', '${manifest.artifact_checksum}', '2026-08-30T00:00:00.000Z')`,
-			`ON CONFLICT(plugin_id) DO UPDATE SET artifact_checksum = excluded.artifact_checksum, activated_at = excluded.activated_at;`,
 			"",
 		);
 	}
 	return `${lines.join("\n")}\n`;
 }
 
+function pluginCompatibilityRegistry() {
+	const migration = readFileSync(compatibilitySourcePath, "utf8");
+	const artifacts = Object.fromEntries(
+		Array.from(
+			migration.matchAll(MANIFEST_ARTIFACT_PATTERN),
+			([, artifactChecksum, pluginId, json]) => {
+				const manifest = JSON.parse(json.replaceAll("''", "'"));
+				return [
+					artifactChecksum,
+					{
+						plugin_id: pluginId,
+						manifest_checksum: `sha256:${createHash("sha256").update(canonical(manifest)).digest("hex")}`,
+						renderer_builds: Object.fromEntries(
+							(manifest.renderers ?? []).map(
+								({ renderer_id: rendererId, build_checksum: checksum }) => [rendererId, checksum],
+							),
+						),
+					},
+				];
+			},
+		).toSorted(([left], [right]) => left.localeCompare(right)),
+	);
+	if (Object.keys(artifacts).length === 0) {
+		throw new Error("Published plugin compatibility manifests are missing");
+	}
+	return { schema_version: 1, artifacts };
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const matrix = buildParityMatrix();
 	const topology = buildPluginTopology();
+	const compatibility = pluginCompatibilityRegistry();
 	const errors = validateArtifacts(matrix, topology);
 	if (errors.length > 0) {
 		console.error(errors.join("\n"));
@@ -1149,6 +1179,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		writeJson(topologyPath, topology);
 		writeJson(receiptPath, receipt);
 		writeJson(frontBundlePath, frontBundleReceipt);
+		writeJson(compatibilityPath, compatibility);
 		writeFileSync(manifestMigrationPath, manifestRegistryMigration(topology));
 	} else {
 		for (const [path, value] of [
@@ -1156,6 +1187,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			[topologyPath, topology],
 			[receiptPath, receipt],
 			[frontBundlePath, frontBundleReceipt],
+			[compatibilityPath, compatibility],
 		]) {
 			if (
 				!existsSync(path) ||

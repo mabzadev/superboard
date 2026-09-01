@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { superBoardRuntimePluginCatalog } from "../apps/site/src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../apps/site/src/lib/user-front-release.js";
@@ -31,6 +32,7 @@ const release = await compileFrontRelease(
 			native: manifest.execution.backend === "native",
 		})),
 		created_at: "2026-08-30T00:45:00.000Z",
+		native_plugins: await loadNativePlugins(),
 	}),
 	{ kid: "user-slice-local-key", private_key: keys.privateKey },
 );
@@ -118,6 +120,18 @@ process.stdout.write(
 
 function escapeSql(value: string): string {
 	return value.replaceAll("'", "''");
+}
+
+async function loadNativePlugins() {
+	const runtimeDirectory = join(root, "packages/supbrd-runtime-plugins/src/front/plugins");
+	const sources = [
+		join(root, "packages/supbrd-plug-user/src/native-front.ts"),
+		...readdirSync(runtimeDirectory)
+			.filter((name) => name.endsWith(".ts"))
+			.map((name) => join(runtimeDirectory, name)),
+	];
+	const modules = await Promise.all(sources.map((source) => import(pathToFileURL(source).href)));
+	return modules.map(({ nativeFrontPlugin }) => nativeFrontPlugin);
 }
 
 function run(command: string, args: string[]): void {

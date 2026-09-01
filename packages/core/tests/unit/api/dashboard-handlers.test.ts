@@ -72,6 +72,47 @@ describe("Dashboard Handlers", () => {
 			expect(pageStats!.scheduled).toBe(0);
 		});
 
+		it("excludes hidden collections from dashboard stats and recent content", async () => {
+			db = await setupTestDatabaseWithCollections();
+			const contentRepo = new ContentRepository(db);
+			await contentRepo.create(createPostFixture({ slug: "visible-post", status: "published" }));
+			await contentRepo.create(createPageFixture({ slug: "hidden-page", status: "published" }));
+			await db
+				.updateTable("_emdash_collections")
+				.set({ hidden: 1 })
+				.where("slug", "=", "page")
+				.execute();
+
+			const result = await handleDashboardStats(db);
+
+			expect(result.success).toBe(true);
+			expect(result.data!.collections.map(({ slug }) => slug)).toEqual(["post"]);
+			expect(result.data!.recentItems.map(({ collection }) => collection)).toEqual(["post"]);
+		});
+
+		it("uses a collection's configured title field for recent content", async () => {
+			db = await setupTestDatabase();
+			const registry = new SchemaRegistry(db);
+			await registry.createCollection({
+				slug: "views",
+				label: "Views",
+				labelSingular: "View",
+			});
+			await registry.createField("views", { slug: "name", label: "Name", type: "string" });
+			await registry.updateCollection("views", { titleField: "name" });
+			await new ContentRepository(db).create({
+				type: "views",
+				slug: "analytics--remote-config",
+				data: { name: "Remote Config" },
+				status: "published",
+			});
+
+			const result = await handleDashboardStats(db);
+
+			expect(result.success).toBe(true);
+			expect(result.data!.recentItems[0]?.title).toBe("Remote Config");
+		});
+
 		it("counts entries with pending schedules in collection stats", async () => {
 			db = await setupTestDatabaseWithCollections();
 			const contentRepo = new ContentRepository(db);
