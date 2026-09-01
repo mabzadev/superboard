@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import Link from "next/link";
-import { capturePosthog } from "@/analytics/posthog";
 import { categorizeError } from "@/lib/errorUtils";
 
 export default function GlobalError({
@@ -15,10 +14,6 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Caught in error.tsx:", error);
-    capturePosthog("error_boundary_triggered", {
-      error_message: error.message,
-      error_digest: error.digest,
-    });
   }, [error]);
 
   const { title, description } = categorizeError(error);

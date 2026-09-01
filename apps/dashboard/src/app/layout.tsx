@@ -8,7 +8,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { Suspense } from "react";
 import { ThemeProvider } from "next-themes";
 import { AnalyticsProvider } from "@/analytics/AnalyticsProvider";
-import { WebVitals } from "@/analytics/WebVitals";
 import QueryProvider from "@/lib/QueryProvider";
 import Script from "next/script";
 
@@ -98,9 +97,6 @@ export default function RootLayout({
               <AnalyticsProvider>
                 <UserContextProvider>{children}</UserContextProvider>
               </AnalyticsProvider>
-            </Suspense>
-            <Suspense fallback={null}>
-              <WebVitals />
             </Suspense>
           </QueryProvider>
         </ThemeProvider>
