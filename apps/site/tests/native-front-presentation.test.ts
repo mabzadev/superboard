@@ -98,6 +98,64 @@ test("rejects routes, pages, renderers, and navigation outside the Release graph
 	expect(() => assertReleasePresentation(withoutRenderer)).toThrow(/renderer is missing/u);
 });
 
+test("keeps an active legacy Release renderable during the native Front upgrade", async () => {
+	const userManifest = superBoardRuntimePluginCatalog().plugins.find(
+		({ manifest }) => manifest.plugin_id === "supbrd-plug-user",
+	)?.manifest;
+	if (!userManifest) throw new Error("Missing User plugin");
+	const legacyRelease = structuredClone(
+		await compile(
+			[
+				{
+					plugin_id: userManifest.plugin_id,
+					version: userManifest.plugin_version,
+					artifact_checksum: userManifest.artifact_checksum,
+					native: false,
+				},
+			],
+			"01J00000000000000000000408",
+		),
+	);
+	legacyRelease.payload.presentation.navigation =
+		legacyRelease.payload.presentation.navigation.flatMap((group) =>
+			typeof group === "object" && group !== null && "items" in group && Array.isArray(group.items)
+				? group.items.map(({ route_id, label, permission }) => ({ route_id, label, permission }))
+				: [],
+		);
+	legacyRelease.payload.renderers = legacyRelease.payload.renderers
+		.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
+		.map((renderer) => {
+			const legacyBuilds: Record<string, string> = {
+				"supbrd-plug-user.renderer.admin_surface":
+					"sha256:d7b1bda9489908a0fc50539a8a305d0c18e8c54f92fac05980ec30af32f28ba2",
+				"supbrd-plug-user.renderer.login_form":
+					"sha256:fb7093abcf297a8b10024c579ec6faeb0336a91e3551e0c397a670ead659d9d9",
+				"supbrd-plug-user.renderer.members_table":
+					"sha256:83e314240c11dfd0118ed0a0d2496e1589513f2c18b199e65e6e791ea430d0cb",
+				"supbrd-plug-user.renderer.profile_card":
+					"sha256:a6ca9335d1dc37ecaabddcce6f5c6add578ec1bdd2b5b637e44b97606825d86d",
+			};
+			return legacyBuilds[renderer.renderer_id]
+				? {
+						...renderer,
+						build_checksum: legacyBuilds[renderer.renderer_id]!,
+					}
+				: renderer;
+		});
+	const legacyUsersRoute = legacyRelease.payload.front_route_manifest.routes.find(
+		({ route_id: routeId }) => routeId === "superboard.users",
+	);
+	const legacyUsersPage = legacyRelease.payload.presentation.pages.find(
+		({ page_id: pageId }) => pageId === "page.superboard_users",
+	);
+	if (!legacyUsersRoute || !legacyUsersPage) throw new Error("Missing legacy Users surface");
+	legacyUsersRoute.renderer_ids = ["supbrd-plug-user.renderer.members_table"];
+	legacyUsersPage.root_renderer_id = "supbrd-plug-user.renderer.members_table";
+
+	expect(() => assertReleasePresentation(legacyRelease.payload)).not.toThrow();
+	expect(render(legacyRelease, "/app/users", ["users.read"])).toContain("App · Users");
+});
+
 async function compile(
 	pluginLock: Parameters<typeof composeUserFrontReleaseInput>[0]["plugin_lock"],
 	releaseId: string,

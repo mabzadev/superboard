@@ -8,7 +8,10 @@ const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
-const manifestMigrationPath = join(root, "apps/site/migrations/0014_native_front_contracts.sql");
+const manifestMigrationPath = join(
+	root,
+	"apps/site/migrations/0016_native_front_compatibility.sql",
+);
 const PAGE_SUFFIX = "/page.tsx";
 const PAGE_SUFFIX_PATTERN = /\/page\.tsx$/u;
 const SUPPORT_OR_FLOWS_ROUTE_PATTERN = /\/(?:support|flows)(?:\/|$)/u;

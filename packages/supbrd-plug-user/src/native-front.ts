@@ -31,6 +31,7 @@ const anonymous = {
 	permission_expression: "allow",
 	renderer_id: USER_RENDERER_IDS.login,
 };
+const userRendererIds = new Set<string>(Object.values(USER_RENDERER_IDS));
 
 const contribution = defineNativeFrontPlugin({
 	plugin_id: "supbrd-plug-user",
@@ -167,6 +168,7 @@ const contribution = defineNativeFrontPlugin({
 
 export const nativeFrontPlugin = {
 	...contribution,
+	renderer_ids: [...userRendererIds],
 	renderer_builds: Object.fromEntries(
 		userPluginManifest.renderers.map(({ renderer_id: rendererId, build_checksum: checksum }) => [
 			rendererId,
@@ -174,7 +176,7 @@ export const nativeFrontPlugin = {
 		]),
 	),
 	mount_renderer(input: NativeRendererMountInput) {
-		if (!contribution.renderer_ids.includes(input.renderer.renderer_id)) return null;
+		if (!userRendererIds.has(input.renderer.renderer_id)) return null;
 		const view = mountUserRenderer({
 			renderer_id: input.renderer.renderer_id,
 			descriptor: input.renderer,
@@ -208,6 +210,7 @@ function rendererProps(input: NativeRendererMountInput): UserRendererProps {
 			if (!input.operator) throw new Error("User profile renderer requires an operator");
 			return { kind: "profile", operator: input.operator };
 		},
+		[USER_RENDERER_IDS.members]: () => ({ kind: "members", page_size: 25, members: [] }),
 		[USER_RENDERER_IDS.admin]: () => ({
 			kind: "admin_surface",
 			route_id: input.route_id ?? "unknown",
