@@ -4,9 +4,11 @@ import { dirname, join, relative, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const navigationPath = join(root, "config/superboard-dashboard-navigation.json");
 const parityPath = join(root, "config/emdash-parity-matrix.json");
+const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const seedPath = join(root, "apps/site/seed/seed.json");
 const navigation = JSON.parse(readFileSync(navigationPath, "utf8"));
 const parity = JSON.parse(readFileSync(parityPath, "utf8"));
+const topology = JSON.parse(readFileSync(topologyPath, "utf8"));
 const PATH_EDGE_SLASH_PATTERN = /^\/+|\/+$/gu;
 const IDENTITY_LOCALE_PATTERN = /^\/identity\/en(?=\/|$)/u;
 const VIEW_PARAMETER_PATTERN = /[:*]/gu;
@@ -136,6 +138,12 @@ const pluginByDashboardPath = new Map(
 			: [],
 	),
 );
+const manifestByPlugin = new Map(
+	topology.plugins.map(({ manifest: pluginManifest }) => [
+		pluginManifest.plugin_id,
+		pluginManifest,
+	]),
+);
 
 const seed = {
 	$schema: "https://emdashcms.com/seed.schema.json",
@@ -169,7 +177,14 @@ const seed = {
 				},
 				{ slug: "path", label: "URL", type: "string", required: true, unique: true, indexed: true },
 				{ slug: "description", label: "Description", type: "text" },
-				{ slug: "presentation", label: "Layout and content", type: "json", required: true },
+				{
+					slug: "renderer_id",
+					label: "Renderer",
+					type: "string",
+					required: true,
+					defaultValue: "",
+				},
+				{ slug: "presentation", label: "Additional content", type: "json", required: true },
 				{ slug: "bindings", label: "Plugin data and actions", type: "json", required: true },
 			],
 		},
@@ -203,7 +218,8 @@ const seed = {
 					route_id: routeId(view.href),
 					path: view.href,
 					description: VIEW_DESCRIPTIONS[view.href] ?? "",
-					presentation: viewPresentation(view.href),
+					renderer_id: viewRenderer(pluginId),
+					presentation: viewPresentation(),
 					bindings: viewBindings(view.href, pluginId),
 				},
 			};
@@ -245,50 +261,33 @@ function surfaceName(path) {
 		.toLowerCase();
 }
 
-function viewPresentation(href) {
+function viewPresentation() {
 	return {
 		schema_version: "1.0.0",
-		blocks: href === "/analytics/remote-config" ? remoteConfigBlocks() : [],
+		blocks: [],
 	};
 }
 
-function remoteConfigBlocks() {
-	return [
-		{
-			kind: "notice",
-			title: "Stable assignments",
-			description:
-				"Rollout buckets are computed from a pseudonymous identity, project and key. The same installation always receives the same result.",
-		},
-		{
-			kind: "columns",
-			columns: [
-				{
-					title: "Publish parameter",
-					description: "Environment: production",
-					fields: [
-						{ label: "Parameter key", control: "text", placeholder: "checkout_banner" },
-						{ label: "JSON value", control: "textarea", value: '{\n  "enabled": true\n}' },
-						{ label: "Rollout · 100%", control: "range", value: "100" },
-					],
-					action_label: "Publish",
-				},
-				{
-					title: "Parameters",
-					description: "Each update increments an immutable client-visible version.",
-					empty_state: "No remote parameters published.",
-				},
-			],
-		},
-	];
+function viewRenderer(pluginId) {
+	const renderers = pluginManifestFor(pluginId).renderers;
+	if (renderers.length !== 1 || typeof renderers[0]?.renderer_id !== "string") {
+		throw new TypeError(`Dashboard View renderer is ambiguous: ${pluginId}`);
+	}
+	return renderers[0].renderer_id;
 }
 
-function viewBindings(href, pluginId) {
-	if (href !== "/analytics/remote-config") return { data_sources: [], commands: [] };
+function viewBindings(_href, pluginId) {
+	const pluginManifest = pluginManifestFor(pluginId);
 	return {
-		data_sources: [`${pluginId}.data_source.analytics_remote_config`],
-		commands: [`${pluginId}.command.upsert_analytics_remote_config`],
+		data_sources: pluginManifest.data_sources.map(({ data_source_id }) => data_source_id),
+		commands: pluginManifest.commands.map(({ command_id }) => command_id),
 	};
+}
+
+function pluginManifestFor(pluginId) {
+	const pluginManifest = manifestByPlugin.get(pluginId);
+	if (!pluginManifest) throw new TypeError(`Dashboard View manifest is missing: ${pluginId}`);
+	return pluginManifest;
 }
 
 function contentSlug(href) {

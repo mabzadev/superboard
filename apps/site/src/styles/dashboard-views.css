@@ -1,0 +1,22 @@
+@import "../../../dashboard/src/app/openflow-tokens.css";
+@import "../../../dashboard/src/app/globals.css";
+
+@source "../../../dashboard/src";
+
+.native-front-dashboard-view {
+	width: 100%;
+	min-width: 0;
+}
+
+.native-front-content > .native-front-dashboard-main {
+	padding: 0;
+}
+
+.native-front-dashboard-additions {
+	display: grid;
+	gap: 20px;
+	width: 100%;
+	max-width: 90rem;
+	margin-inline: auto;
+	padding: 0 var(--page-padding-x, 24px) var(--page-padding-y, 24px);
+}

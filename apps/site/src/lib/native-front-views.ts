@@ -39,6 +39,8 @@ export function editableViewFromEntry(entry: unknown): NativeFrontEditableView |
 		!data.route_id ||
 		typeof data.plugin_id !== "string" ||
 		!data.plugin_id ||
+		typeof data.renderer_id !== "string" ||
+		!data.renderer_id ||
 		typeof data.path !== "string" ||
 		!data.path.startsWith("/")
 	) {
@@ -50,6 +52,7 @@ export function editableViewFromEntry(entry: unknown): NativeFrontEditableView |
 	return {
 		route_id: data.route_id,
 		plugin_id: data.plugin_id,
+		renderer_id: data.renderer_id,
 		path: data.path,
 		title: typeof data.name === "string" ? data.name : null,
 		description: typeof data.description === "string" ? data.description : null,
