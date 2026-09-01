@@ -13,9 +13,6 @@ export const EVENTS = {
 
   // Conversion
   PURCHASE: "purchase",
-
-  // Performance
-  WEB_VITALS: "web_vitals",
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];

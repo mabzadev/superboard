@@ -87,7 +87,7 @@ See [`.env.example`](.env.example) for all available configuration options.
 public URL from the selected target manifest; operators do not maintain a
 second domain list in the Dashboard.
 
-**Optional:** `NEXT_PUBLIC_SUPPORT_EMAIL`, Firebase, PostHog and GTM (features
+**Optional:** `NEXT_PUBLIC_SUPPORT_EMAIL`, Firebase and GTM (features
 gracefully disable when not configured).
 
 ## Scripts

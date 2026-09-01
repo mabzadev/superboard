@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
-import { capturePosthog } from "@/analytics/posthog";
 import { categorizeError } from "@/lib/errorUtils";
 
 export default function SettingsError({
@@ -14,11 +13,6 @@ export default function SettingsError({
 }) {
   useEffect(() => {
     console.error("Caught in settings/error.tsx:", error);
-    capturePosthog("error_boundary_triggered", {
-      error_message: error.message,
-      error_digest: error.digest,
-      route_group: "settings",
-    });
   }, [error]);
 
   const { title, description } = categorizeError(error);
