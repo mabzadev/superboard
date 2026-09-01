@@ -21,15 +21,16 @@ test("the EmDash seed exposes every Dashboard screen as a plugin-owned View", ()
 		expect(view, path).toBeDefined();
 		expect(view!.data.plugin_id).toMatch(/^supbrd-(?:plug|plugmod)-/u);
 		expect(view!.data.route_id).toMatch(/^superboard\./u);
+		expect(view!.data.renderer_id, path).toBe(`${view!.data.plugin_id}.renderer.admin_surface`);
 		expect(view!.data.presentation.schema_version).toBe("1.0.0");
 		expect(view!.data.presentation.blocks).toBeInstanceOf(Array);
-		expect(view!.data.bindings.data_sources).toBeInstanceOf(Array);
-		expect(view!.data.bindings.commands).toBeInstanceOf(Array);
+		expect(view!.data.bindings.data_sources.length, path).toBeGreaterThan(0);
+		expect(view!.data.bindings.commands.length, path).toBeGreaterThan(0);
 	}
 	expect(JSON.stringify(seed)).not.toContain("No data available for this surface yet.");
 });
 
-test("Remote Config keeps its real Dashboard composition in the editable View", () => {
+test("Remote Config selects its real Dashboard renderer and plugin capabilities", () => {
 	const remoteConfig = seed.content.views.find(
 		({ data }) => data.path === "/analytics/remote-config",
 	);
@@ -37,11 +38,13 @@ test("Remote Config keeps its real Dashboard composition in the editable View", 
 	expect(remoteConfig?.data.description).toBe(
 		"Publish versioned JSON values with deterministic rollouts for the selected environment.",
 	);
-	expect(remoteConfig?.data.presentation.blocks).toEqual(
-		expect.arrayContaining([
-			expect.objectContaining({ kind: "notice", title: "Stable assignments" }),
-			expect.objectContaining({ kind: "columns" }),
-		]),
+	expect(remoteConfig?.data.renderer_id).toBe("supbrd-plugmod-analytics.renderer.admin_surface");
+	expect(remoteConfig?.data.presentation.blocks).toEqual([]);
+	expect(remoteConfig?.data.bindings.data_sources).toContain(
+		"supbrd-plugmod-analytics.data_source.analytics_remote_config",
+	);
+	expect(remoteConfig?.data.bindings.commands).toContain(
+		"supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
 	);
 });
 

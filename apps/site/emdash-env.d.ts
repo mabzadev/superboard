@@ -16,6 +16,7 @@ export interface View {
   description?: string;
   presentation: unknown;
   bindings: unknown;
+  renderer_id: string;
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
