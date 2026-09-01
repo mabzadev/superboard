@@ -3107,6 +3107,9 @@ importers:
 
   packages/supbrd-runtime-plugins:
     devDependencies:
+      '@superboard/supbrd-core':
+        specifier: workspace:*
+        version: link:../supbrd-core
       esbuild:
         specifier: 0.25.4
         version: 0.25.4

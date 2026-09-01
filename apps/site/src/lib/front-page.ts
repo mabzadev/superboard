@@ -1,19 +1,22 @@
-import { hasPermission, type RoleLevel } from "@emdash-cms/auth";
+import type { RoleLevel } from "@emdash-cms/auth";
 import {
 	assertRendererCompatibility,
+	parseFrontNavigation,
+	resolveFrontRoute,
 	resolveFrontRequest,
 	type CompiledFrontRelease,
+	type FrontReleasePayload,
 	type FrontRequestResolution,
+	type NativeFrontOperator,
 } from "@superboard/supbrd-core";
-import type { UserMember } from "@superboard/supbrd-plug-user";
 
+import { assertNativeFrontRenderer } from "./native-front-plugins.js";
 import {
 	loadDependencyHealth,
 	loadLastVerifiedFrontRelease,
 	type LoadedFrontRelease,
 } from "./release-source.js";
 import type { SuperBoardSiteEnv } from "./site-env.js";
-import { CORE_ADMIN_SHELL_DESCRIPTOR } from "./user-front-release.js";
 
 interface EmDashUser {
 	id: string;
@@ -26,13 +29,11 @@ interface EmDashUser {
 export interface FrontPageModel {
 	instance_id: string;
 	requested_path: string;
-	api_url: string;
 	release: LoadedFrontRelease | null;
 	resolution: FrontRequestResolution;
 	page_title: string | null;
-	operator: UserMember | null;
-	members: UserMember[];
-	project_refs: { production: string; test: string } | null;
+	operator: NativeFrontOperator | null;
+	permissions: string[];
 }
 
 export async function resolveSiteFrontPage(
@@ -81,33 +82,36 @@ async function resolveFrontPageFromRelease(
 			dependencyHealth = {};
 		}
 	}
+	const permissions = await loadOperatorFrontPermissions(
+		env.DB,
+		env.SUPERBOARD_INSTANCE_ID,
+		release,
+		user,
+	);
 	let resolution = resolveFrontRequest({
 		last_verified_release: release?.runtime_release ?? null,
 		requested_path: requestedPath,
 		admin_session: user ? "valid" : "absent",
-		permissions: operatorFrontPermissions(release, user),
+		permissions,
 		dependency_health: dependencyHealth,
 	});
-	if (resolution.result === "rendered" && resolution.layout_ids.length > 0 && release) {
+	if (release) {
 		try {
-			for (const layoutId of resolution.layout_ids) {
-				const layout = release.release.payload.presentation.layouts.find(
-					(entry) => entry.layout_id === layoutId,
-				);
-				if (layout?.root_renderer_id !== CORE_ADMIN_SHELL_DESCRIPTOR.renderer_id) {
-					throw new Error(`Unknown root layout renderer for ${layoutId}`);
-				}
-				assertRendererCompatibility(CORE_ADMIN_SHELL_DESCRIPTOR, {
-					abi_version: "1.0.0",
-					runtime_version: "0.1.0",
-				});
-			}
+			assertReleasePresentation(release.release.payload);
 		} catch {
-			resolution = {
-				result: "unavailable",
-				route_id: resolution.route_id,
-				state_renderer_id: "emdash.core.state.unavailable",
-			};
+			const routeId = "route_id" in resolution ? resolution.route_id : null;
+			const route = routeId
+				? release.release.payload.front_route_manifest.routes.find(
+						({ route_id: candidate }) => candidate === routeId,
+					)
+				: null;
+			resolution = routeId
+				? {
+						result: "unavailable",
+						route_id: routeId,
+						state_renderer_id: route?.state_policies.unavailable ?? "emdash.core.state.unavailable",
+					}
+				: { result: "maintenance", route_id: null, state_renderer_id: null };
 		}
 	}
 	const pageTitle =
@@ -119,65 +123,90 @@ async function resolveFrontPageFromRelease(
 	const operator = user
 		? { id: user.id, email: user.email, name: user.name, role: user.role, disabled: user.disabled }
 		: null;
-	let members: UserMember[] = [];
-	let projectRefs: { production: string; test: string } | null = null;
-	if (user && resolution.result === "rendered") {
-		try {
-			const rows = await env.DB.prepare(
-				`SELECT DISTINCT project_ref FROM superboard_plugin_store_records
-				 WHERE instance_id = ? AND project_ref <> 'legacy-unscoped'
-				 ORDER BY project_ref`,
-			)
-				.bind(env.SUPERBOARD_INSTANCE_ID)
-				.all<{ project_ref: string }>();
-			const production = rows.results.find(({ project_ref: value }) => value.endsWith("-prod"));
-			const test = rows.results.find(({ project_ref: value }) => value.endsWith("-test"));
-			if (production && test) {
-				projectRefs = { production: production.project_ref, test: test.project_ref };
-			}
-		} catch {
-			projectRefs = null;
-		}
-	}
-	if (
-		resolution.result === "rendered" &&
-		resolution.renderer_ids.includes("supbrd-plug-user.renderer.members_table")
-	) {
-		try {
-			const rows = await env.DB.prepare(
-				"SELECT id, email, name, role, disabled FROM users ORDER BY email LIMIT 100",
-			).all<UserMember>();
-			members = rows.results.map((row) => ({ ...row, disabled: Boolean(row.disabled) }));
-		} catch {
-			members = [];
-		}
-	}
 	return {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		requested_path: requestedPath,
-		api_url: env.SUPERBOARD_API_URL ?? "",
 		release,
 		resolution,
 		page_title: pageTitle,
 		operator,
-		members,
-		project_refs: projectRefs,
+		permissions,
 	};
 }
 
-function operatorFrontPermissions(
+export function assertReleasePresentation(payload: FrontReleasePayload): void {
+	const renderers = new Map(payload.renderers.map((renderer) => [renderer.renderer_id, renderer]));
+	const lockedPlugins = new Set(payload.plugin_lock.map(({ plugin_id: pluginId }) => pluginId));
+	const pages = new Map(payload.presentation.pages.map((page) => [page.page_id, page]));
+	const layouts = new Map(payload.presentation.layouts.map((layout) => [layout.layout_id, layout]));
+	const routes = new Map(
+		payload.front_route_manifest.routes.map((route) => [route.route_id, route]),
+	);
+	const assertRenderer = (rendererId: string) => {
+		const renderer = renderers.get(rendererId);
+		if (!renderer) throw new Error(`Release renderer is missing: ${rendererId}`);
+		if (!lockedPlugins.has(renderer.plugin_id)) {
+			throw new Error(`Release renderer plugin is not locked: ${renderer.plugin_id}`);
+		}
+		assertRendererCompatibility(renderer, { abi_version: "1.0.0", runtime_version: "0.1.0" });
+		assertNativeFrontRenderer(renderer, payload.plugin_lock);
+	};
+	for (const route of routes.values()) {
+		if (!route.page_id) throw new Error(`Release route has no page: ${route.route_id}`);
+		const page = pages.get(route.page_id);
+		if (!page) throw new Error(`Release page is missing: ${route.page_id}`);
+		if (!route.renderer_ids.includes(page.root_renderer_id)) {
+			throw new Error(`Release page renderer is not selected by route: ${route.route_id}`);
+		}
+		for (const rendererId of route.renderer_ids) assertRenderer(rendererId);
+		for (const rendererId of Object.values(route.state_policies)) assertRenderer(rendererId);
+		for (const layoutId of route.layout_ids) {
+			const layout = layouts.get(layoutId);
+			if (!layout) throw new Error(`Release layout is missing: ${layoutId}`);
+			assertRenderer(layout.root_renderer_id);
+		}
+	}
+	for (const group of parseFrontNavigation(payload.presentation.navigation)) {
+		for (const item of group.items) {
+			if (!routes.has(item.route_id)) {
+				throw new Error(`Release navigation route is missing: ${item.route_id}`);
+			}
+			const navigationRoute = resolveFrontRoute(payload.front_route_manifest, item.href);
+			if (
+				navigationRoute.result !== "matched" ||
+				navigationRoute.route.route_id !== item.route_id
+			) {
+				throw new Error(`Release navigation href is invalid: ${item.route_id}`);
+			}
+		}
+	}
+}
+
+async function loadOperatorFrontPermissions(
+	db: D1Database,
+	instanceId: string,
 	release: LoadedFrontRelease | null,
 	user: EmDashUser | undefined,
-): string[] {
-	if (!release || !hasPermission(user, "settings:manage")) return [];
-	return [
-		...new Set([
-			"superboard.admin.access",
-			"users.read",
-			"users.write",
-			...release.release.payload.front_route_manifest.routes
+): Promise<string[]> {
+	if (!release || !user) return [];
+	const declared = [
+		...new Set(
+			release.release.payload.front_route_manifest.routes
 				.map(({ permission_expression: permission }) => permission)
 				.filter((permission) => permission !== "allow"),
-		]),
+		),
 	];
+	try {
+		const result = await db
+			.prepare(
+				`SELECT permission FROM superboard_front_permission_grants
+				 WHERE role = ? AND (instance_id = ? OR instance_id = '*')`,
+			)
+			.bind(user.role, instanceId)
+			.all<{ permission: string }>();
+		const granted = new Set(result.results.map(({ permission }) => permission));
+		return granted.has("*") ? declared : declared.filter((permission) => granted.has(permission));
+	} catch {
+		return [];
+	}
 }

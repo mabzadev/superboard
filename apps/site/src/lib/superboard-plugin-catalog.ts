@@ -4,10 +4,7 @@ import {
 	verifySuperBoardPluginManifest,
 	type SuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
-import {
-	userPluginManifest,
-	validateUserPluginManifest,
-} from "@superboard/supbrd-plug-user";
+import { userPluginManifest, validateUserPluginManifest } from "@superboard/supbrd-plug-user";
 
 import topologyJson from "../../../../config/emdash-plugin-topology.json";
 
@@ -200,23 +197,22 @@ export async function loadActiveSuperBoardPluginLock(db: D1Database) {
 			 ORDER BY active.plugin_id`,
 		)
 		.all<{ plugin_id: string; artifact_checksum: string; manifest_json: string }>();
-	const active = new Map(rows.results.map((row) => [row.plugin_id, row]));
-	const catalog = superBoardRuntimePluginCatalog();
-	for (const { manifest } of catalog.plugins) {
-		const row = active.get(manifest.plugin_id);
-		if (!row || row.artifact_checksum !== manifest.artifact_checksum) {
-			throw new Error(`PLUGIN_CATALOG_NOT_SYNCHRONIZED:${manifest.plugin_id}`);
+	if (rows.results.length === 0) throw new Error("PLUGIN_CATALOG_ACTIVE_SET_EMPTY");
+	const catalog = new Map(
+		superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => [manifest.plugin_id, manifest]),
+	);
+	return rows.results.map((row) => {
+		const manifest = catalog.get(row.plugin_id);
+		if (!manifest || row.artifact_checksum !== manifest.artifact_checksum) {
+			throw new Error(`PLUGIN_CATALOG_NOT_SYNCHRONIZED:${row.plugin_id}`);
 		}
-	}
-	if (active.size !== catalog.plugins.length) {
-		throw new Error("PLUGIN_CATALOG_ACTIVE_SET_MISMATCH");
-	}
-	return catalog.plugins.map(({ manifest }) => ({
-		plugin_id: manifest.plugin_id,
-		version: manifest.plugin_version,
-		artifact_checksum: manifest.artifact_checksum,
-		native: manifest.execution.backend === "native",
-	}));
+		return {
+			plugin_id: manifest.plugin_id,
+			version: manifest.plugin_version,
+			artifact_checksum: manifest.artifact_checksum,
+			native: manifest.execution.backend === "native",
+		};
+	});
 }
 
 function displayPluginName(pluginId: string): string {

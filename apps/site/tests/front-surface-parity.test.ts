@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolveFrontRequest } from "@superboard/supbrd-core";
 import { expect, test } from "vitest";
 
-import { hasExecutableFrontSurface } from "../src/lib/front-surface-registry.js";
+import { nativeFrontPluginCatalog } from "../src/lib/native-front-plugins.js";
 import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 
@@ -50,6 +50,9 @@ test("every required Dashboard surface is a real target route backed by its decl
 	const renderersById = new Map(
 		input.renderers.map((renderer) => [renderer.renderer_id, renderer]),
 	);
+	const nativePlugins = new Map(
+		nativeFrontPluginCatalog().map((plugin) => [plugin.plugin_id, plugin]),
+	);
 	const dependencyHealth = Object.fromEntries(
 		input.dependency_policies.map(({ dependency_id: dependencyId }) => [dependencyId, "ready"]),
 	) as Record<string, "ready">;
@@ -65,15 +68,16 @@ test("every required Dashboard surface is a real target route backed by its decl
 			.replaceAll("[authId]", ":authId");
 		const route = routesByPath.get(path);
 		expect(route, `missing target route for ${row.id}`).toBeDefined();
-		expect(hasExecutableFrontSurface(path), `no executable target component for ${row.id}`).toBe(
-			true,
-		);
 		expect(route?.renderer_ids.length, `route without renderer: ${row.id}`).toBeGreaterThan(0);
 		for (const rendererId of route?.renderer_ids ?? []) {
 			const renderer = renderersById.get(rendererId);
 			expect(renderer, `unregistered renderer ${rendererId} for ${row.id}`).toBeDefined();
 			if (row.target.startsWith("supbrd-")) {
 				expect(renderer?.plugin_id, `wrong renderer owner for ${row.id}`).toBe(row.target);
+				expect(
+					nativePlugins.get(row.target)?.renderer_ids,
+					`plugin ${row.target} does not provide ${rendererId}`,
+				).toContain(rendererId);
 			}
 		}
 		const resolution = resolveFrontRequest({
