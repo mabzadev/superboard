@@ -1,6 +1,6 @@
 import { defineNativeFrontPlugin, navigationGroup } from "../runtime-factory.js";
 
-const flows = navigationGroup({ group_id: "flows", group_label: "Flows", group_order: 5 });
+const flows = navigationGroup({ group_id: "flows", group_label: "Flows", group_order: 4 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
 	plugin_id: "supbrd-plugmod-flows",
@@ -12,9 +12,9 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 		{ path_pattern: "/flows/workflows", title: "Workflows", navigation: flows("Workflows", 1) },
 		{ path_pattern: "/flows/workflows/:id", title: "Workflow" },
 		{ path_pattern: "/flows/launchpad", title: "Launchpad", navigation: flows("Launchpad", 2) },
-		{ path_pattern: "/flows/components", title: "Components", navigation: flows("Components", 3) },
-		{ path_pattern: "/flows/users", title: "Flow users", navigation: flows("Users", 4) },
+		{ path_pattern: "/flows/users", title: "Flow users", navigation: flows("Users", 3) },
 		{ path_pattern: "/flows/users/:id", title: "Flow user" },
+		{ path_pattern: "/flows/components", title: "Components", navigation: flows("Components", 4) },
 		{
 			path_pattern: "/flows/settings/environments",
 			title: "Flow environments",

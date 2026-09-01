@@ -5,6 +5,11 @@ import type {
 	RendererDescriptor,
 } from "./contracts.js";
 
+const DYNAMIC_PATH_PATTERN = /(?:^|\/)(?::|\*)/u;
+const SURFACE_PARAMETER_PATTERN = /[:*]/gu;
+const SURFACE_SEPARATOR_PATTERN = /[^a-zA-Z0-9]+/gu;
+const SURFACE_EDGE_SEPARATOR_PATTERN = /^_+|_+$/gu;
+
 export interface NativeFrontNavigationContribution {
 	group_id: string;
 	group_label: string;
@@ -61,7 +66,9 @@ export interface NativeRendererMountInput {
 	renderer: RendererDescriptor;
 	route_id: string | null;
 	path: string;
-	page_title: string | null;
+	view_title: string | null;
+	view_description?: string | null;
+	view_blocks?: readonly NativeRendererBlock[];
 	parameters: Readonly<Record<string, string>>;
 	operator: NativeFrontOperator | null;
 }
@@ -88,7 +95,35 @@ export type NativeRendererDocument =
 			description: string;
 			details: readonly { label: string; value: string }[];
 			actions: readonly { label: string; href: string }[];
+			blocks: readonly NativeRendererBlock[];
 	  };
+
+export type NativeRendererBlock =
+	| {
+			kind: "notice";
+			title: string;
+			description: string;
+	  }
+	| {
+			kind: "columns";
+			columns: readonly NativeRendererCard[];
+	  }
+	| ({ kind: "card" } & NativeRendererCard);
+
+export interface NativeRendererCard {
+	title: string;
+	description?: string;
+	fields?: readonly NativeRendererField[];
+	action_label?: string;
+	empty_state?: string;
+}
+
+export interface NativeRendererField {
+	label: string;
+	control: "text" | "textarea" | "range";
+	placeholder?: string;
+	value?: string;
+}
 
 export interface FrontNavigationItem {
 	route_id: string;
@@ -171,10 +206,11 @@ export function defineNativeFrontPlugin(input: {
 			return {
 				kind: "surface",
 				eyebrow: input.plugin_label,
-				title: mountInput.page_title ?? input.plugin_label,
-				description: input.description,
+				title: mountInput.view_title ?? input.plugin_label,
+				description: mountInput.view_description ?? input.description,
 				details,
 				actions: surfaceActions.get(mountInput.route_id ?? "") ?? [],
+				blocks: mountInput.view_blocks ?? [],
 			};
 		},
 	};
@@ -259,16 +295,16 @@ function parseNavigationItem(value: unknown): FrontNavigationItem {
 }
 
 function hasParameters(path: string): boolean {
-	return /(?:^|\/)(?::|\*)/u.test(path);
+	return DYNAMIC_PATH_PATTERN.test(path);
 }
 
 function surfaceName(path: string): string {
 	if (path === "/") return "home";
 	return path
 		.slice(1)
-		.replaceAll(/[:*]/gu, "by_")
-		.replaceAll(/[^a-zA-Z0-9]+/gu, "_")
-		.replaceAll(/^_+|_+$/gu, "")
+		.replaceAll(SURFACE_PARAMETER_PATTERN, "by_")
+		.replaceAll(SURFACE_SEPARATOR_PATTERN, "_")
+		.replaceAll(SURFACE_EDGE_SEPARATOR_PATTERN, "")
 		.toLowerCase();
 }
 

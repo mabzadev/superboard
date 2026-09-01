@@ -13,7 +13,6 @@ import {
 	CORE_STATE_RENDERER_IDS,
 	SUPBRD_CORE_ARTIFACT_CHECKSUM,
 } from "./core-front-contract.js";
-import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
 import { superBoardRuntimePluginCatalog } from "./superboard-plugin-catalog.js";
 import { USER_FRONT_CATALOGS } from "./user-front-i18n.js";
 
@@ -23,6 +22,7 @@ export {
 } from "./core-front-contract.js";
 
 const ADMIN_LAYOUT_ID = "layout.superboard_admin";
+const ROUTE_PARAMETER_PATTERN = /(?:^|\/)(?::|\*)([A-Za-z][A-Za-z0-9_]*)/gu;
 
 export async function composeUserFrontReleaseInput(input: {
 	instance_id: string;
@@ -35,16 +35,18 @@ export async function composeUserFrontReleaseInput(input: {
 	previous_release_id: string | null;
 	plugin_lock: FrontReleaseInput["plugin_lock"];
 	created_at: string;
+	native_plugins?: readonly NativeFrontPluginModule[];
 }): Promise<FrontReleaseInput> {
+	const { native_plugins: nativePluginOverride, ...releaseIdentity } = input;
 	const statePolicies = Object.fromEntries(
 		REQUIRED_FRONT_STATES.map((state) => [state, CORE_STATE_RENDERER_IDS[state]]),
 	) as Record<FrontState, string>;
 	const manifests = new Map(
 		superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => [manifest.plugin_id, manifest]),
 	);
-	const nativePlugins = new Map(
-		nativeFrontPluginCatalog().map((plugin) => [plugin.plugin_id, plugin]),
-	);
+	const nativePluginModules =
+		nativePluginOverride ?? (await import("./native-front-plugins.js")).nativeFrontPluginCatalog();
+	const nativePlugins = new Map(nativePluginModules.map((plugin) => [plugin.plugin_id, plugin]));
 	const activePlugins = input.plugin_lock
 		.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
 		.toSorted((left, right) => left.plugin_id.localeCompare(right.plugin_id))
@@ -100,7 +102,7 @@ export async function composeUserFrontReleaseInput(input: {
 	return {
 		schema_version: "1.0.0",
 		compiler_version: "0.1.0",
-		...input,
+		...releaseIdentity,
 		front_route_manifest: {
 			schema_version: "1.0.0",
 			manifest_id: "01J00000000000000000000220",
@@ -223,21 +225,19 @@ function composeNavigation(surfaces: readonly NativeFrontPluginModule["surfaces"
 		});
 		groups.set(group.group_id, group);
 	}
-	return [...groups.values()]
-		.map((group) => ({
-			...group,
-			items: group.items.toSorted(
-				(left, right) => left.order - right.order || left.route_id.localeCompare(right.route_id),
-			),
-		}))
-		.toSorted(
-			(left, right) => left.order - right.order || left.group_id.localeCompare(right.group_id),
-		);
+	return Array.from(groups.values(), (group) => ({
+		...group,
+		items: group.items.toSorted(
+			(left, right) => left.order - right.order || left.route_id.localeCompare(right.route_id),
+		),
+	})).toSorted(
+		(left, right) => left.order - right.order || left.group_id.localeCompare(right.group_id),
+	);
 }
 
 function routeParameters(path: string) {
 	return Object.fromEntries(
-		[...path.matchAll(/(?:^|\/)(?::|\*)([A-Za-z][A-Za-z0-9_]*)/gu)].map(([token, name]) => [
+		Array.from(path.matchAll(ROUTE_PARAMETER_PATTERN), ([token, name]) => [
 			name!,
 			{ type: token.includes("*") ? ("path" as const) : ("string" as const), required: true },
 		]),

@@ -8,6 +8,20 @@ import emdash from "emdash/astro";
 import { superboardReleaseOperatorApi } from "./release-operator-api.mjs";
 import { superboardConfiguredPlugins } from "./superboard-emdash-plugins.mjs";
 
+function superboardViewsBootstrap() {
+	return {
+		name: "superboard-views-bootstrap",
+		hooks: {
+			"astro:config:setup": ({ addMiddleware }) => {
+				addMiddleware({
+					entrypoint: new URL("./src/views-bootstrap-middleware.ts", import.meta.url),
+					order: "post",
+				});
+			},
+		},
+	};
+}
+
 const emailFromAddress = process.env.SUPERBOARD_SITE_EMAIL_FROM_ADDRESS ?? "noreply@localhost";
 const emailFromName = process.env.SUPERBOARD_SITE_EMAIL_FROM_NAME ?? "SuperBoard";
 const emailReplyTo = process.env.SUPERBOARD_SITE_EMAIL_REPLY_TO || undefined;
@@ -29,6 +43,7 @@ export default defineConfig({
 			sandboxed: [...superboardConfiguredPlugins],
 			sandboxRunner: sandbox(),
 		}),
+		superboardViewsBootstrap(),
 	],
 	devToolbar: { enabled: false },
 	security: { checkOrigin: true },

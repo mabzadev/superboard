@@ -1,5 +1,6 @@
 import {
 	parseFrontNavigation,
+	resolveFrontRoute,
 	type FrontNavigationGroup,
 	type NativeRendererMountInput,
 	type PluginLockEntry,
@@ -11,9 +12,35 @@ import {
 	SUPBRD_CORE_ARTIFACT_CHECKSUM,
 } from "./core-front-contract.js";
 import type { FrontPageModel } from "./front-page.js";
+import { groupNativeFrontNavigation } from "./native-front-plugins.js";
 import { USER_FRONT_CATALOGS, type UserFrontLocale } from "./user-front-i18n.js";
 
 export type NativeFrontNavigationGroup = FrontNavigationGroup;
+
+export interface NativeFrontEditableNavigationGroup {
+	label: string;
+	items: readonly { label: string; href: string }[];
+}
+
+export interface NativeFrontViewBindings {
+	data_sources: readonly string[];
+	commands: readonly string[];
+}
+
+export interface NativeFrontEditableView {
+	route_id: string;
+	plugin_id: string;
+	path: string;
+	title: string | null;
+	description: string | null;
+	blocks: NonNullable<NativeRendererMountInput["view_blocks"]>;
+	bindings: NativeFrontViewBindings;
+}
+
+export interface NativeFrontViewConfiguration {
+	navigation?: readonly NativeFrontEditableNavigationGroup[];
+	view?: NativeFrontEditableView | null;
+}
 
 export interface NativeFrontPresentationProjection {
 	instance_id: string;
@@ -32,6 +59,7 @@ export interface NativeFrontPresentationProjection {
 export function projectNativeFrontPresentation(
 	model: FrontPageModel,
 	locale: UserFrontLocale = "en",
+	configuration?: NativeFrontViewConfiguration,
 ): NativeFrontPresentationProjection {
 	const payload = model.release?.release.payload;
 	const fallbackPluginLock: PluginLockEntry[] = [
@@ -74,9 +102,8 @@ export function projectNativeFrontPresentation(
 		"route_id" in model.resolution && model.resolution.route_id
 			? routes.get(model.resolution.route_id)
 			: undefined;
-	const visibleNavigation = parseFrontNavigation(
-		payload.presentation.navigation,
-		payload.front_route_manifest.routes,
+	const releaseNavigation = groupNativeFrontNavigation(
+		parseFrontNavigation(payload.presentation.navigation, payload.front_route_manifest.routes),
 	)
 		.map((group) => ({
 			...group,
@@ -92,6 +119,14 @@ export function projectNativeFrontPresentation(
 			}),
 		}))
 		.filter(({ items }) => items.length > 0);
+	const visibleNavigation = configuration?.navigation
+		? projectEditorialNavigation(
+				configuration.navigation,
+				releaseNavigation,
+				payload.front_route_manifest,
+				model.permissions,
+			)
+		: releaseNavigation;
 	const theme = Object.fromEntries(
 		Object.entries(payload.presentation.theme.tokens).flatMap(([key, value]) =>
 			typeof value === "string" ? [[key, value]] : [],
@@ -133,18 +168,27 @@ export function projectNativeFrontPresentation(
 	);
 	if (!route || !page) throw new Error("Rendered Front presentation is incomplete");
 	const parameters = resolution.parameters;
+	const configuredView = configuration?.view;
+	const view =
+		configuredView?.route_id === route.route_id &&
+		resolution.renderer_ids.some(
+			(rendererId) => renderers.get(rendererId)?.plugin_id === configuredView.plugin_id,
+		)
+			? configuredView
+			: null;
+	const viewTitle = view?.title?.trim() || page.title;
 	const layoutMounts = resolution.layout_ids.map((layoutId) => {
 		const layout = payload.presentation.layouts.find(
 			({ layout_id: candidate }) => candidate === layoutId,
 		);
 		const renderer = layout && renderers.get(layout.root_renderer_id);
 		if (!renderer) throw new Error(`Layout renderer is missing: ${layoutId}`);
-		return mountInput(model, renderer, route.route_id, page.title, parameters);
+		return mountInput(model, renderer, route.route_id, viewTitle, parameters, view);
 	});
 	const contentMounts = resolution.renderer_ids.map((rendererId) => {
 		const renderer = renderers.get(rendererId);
 		if (!renderer) throw new Error(`Page renderer is missing: ${rendererId}`);
-		return mountInput(model, renderer, route.route_id, page.title, parameters);
+		return mountInput(model, renderer, route.route_id, viewTitle, parameters, view);
 	});
 	return {
 		instance_id: model.instance_id,
@@ -169,28 +213,80 @@ function releaseMessages(
 		(value) => isRecord(value) && value.locale === locale && isRecord(value.messages),
 	);
 	if (!isRecord(catalog) || !isRecord(catalog.messages)) return { ...USER_FRONT_CATALOGS[locale] };
-	return Object.fromEntries(
-		Object.entries(catalog.messages).flatMap(([id, message]) =>
-			typeof message === "string" ? [[id, message]] : [],
+	return {
+		...USER_FRONT_CATALOGS[locale],
+		...Object.fromEntries(
+			Object.entries(catalog.messages).flatMap(([id, message]) =>
+				typeof message === "string" ? [[id, message]] : [],
+			),
 		),
-	);
+	};
 }
 
 function mountInput(
 	model: FrontPageModel,
 	renderer: NativeRendererMountInput["renderer"],
 	routeId: string | null,
-	pageTitle: string | null,
+	viewTitle: string | null,
 	parameters: Record<string, string>,
+	view: NativeFrontEditableView | null = null,
 ): NativeRendererMountInput {
 	return {
 		renderer,
 		route_id: routeId,
 		path: model.requested_path,
-		page_title: pageTitle,
+		view_title: viewTitle,
+		view_description: view ? (view.description?.trim() ?? "") : null,
+		view_blocks: view?.blocks,
 		parameters,
 		operator: model.operator,
 	};
+}
+
+function projectEditorialNavigation(
+	editorial: readonly NativeFrontEditableNavigationGroup[],
+	release: readonly NativeFrontNavigationGroup[],
+	manifest: Parameters<typeof resolveFrontRoute>[0],
+	permissions: readonly string[],
+): NativeFrontNavigationGroup[] {
+	const releaseItemByHref = new Map(
+		release.flatMap((group) => group.items.map((item) => [item.href, item] as const)),
+	);
+	return editorial.flatMap((group, groupOrder) => {
+		const items = group.items.flatMap((item, itemOrder) => {
+			const listedItem = releaseItemByHref.get(item.href);
+			if (listedItem) return [{ ...listedItem, label: item.label, order: itemOrder }];
+			const resolution = resolveFrontRoute(manifest, item.href);
+			if (
+				resolution.result !== "matched" ||
+				resolution.route.audience !== "superboard_front" ||
+				resolution.route.route_kind !== "page" ||
+				resolution.route.page_id === null ||
+				(resolution.route.permission_expression !== "allow" &&
+					!permissions.includes(resolution.route.permission_expression))
+			) {
+				return [];
+			}
+			return [
+				{
+					route_id: resolution.route_id,
+					label: item.label,
+					permission: resolution.route.permission_expression,
+					order: itemOrder,
+					href: item.href,
+				},
+			];
+		});
+		if (items.length === 0) return [];
+		return [
+			{
+				group_id: `emdash-${groupOrder}`,
+				label: group.label,
+				order: groupOrder,
+				items,
+			},
+		];
+	});
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,6 +1,6 @@
 import { defineNativeFrontPlugin, navigationGroup } from "../runtime-factory.js";
 
-const growth = navigationGroup({ group_id: "growth", group_label: "Growth", group_order: 4 });
+const products = navigationGroup({ group_id: "products", group_label: "Products", group_order: 3 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
 	plugin_id: "supbrd-plug-products",
@@ -10,7 +10,7 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 		{
 			path_pattern: "/products/offerings",
 			title: "Offerings",
-			navigation: growth("Offerings", 19),
+			navigation: products("Offerings", 2),
 		},
 	],
 });

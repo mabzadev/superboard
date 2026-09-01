@@ -126,6 +126,8 @@ export interface ContentListProps {
 	onLocaleChange?: (locale: string) => void;
 	/** URL pattern for published content links (e.g. `/blog/{slug}`) */
 	urlPattern?: string;
+	/** Whether entries have public web URLs. */
+	routable?: boolean;
 	/** Collection field slug powering the Title column (falls back to the title chain). */
 	titleField?: string;
 	/** Collection field slug (datetime) powering the Date column (falls back to updated date). */
@@ -250,6 +252,7 @@ export function ContentList({
 	activeLocale,
 	onLocaleChange,
 	urlPattern,
+	routable,
 	titleField,
 	dateField,
 	sort,
@@ -684,6 +687,7 @@ export function ContentList({
 											onDuplicate={onDuplicate}
 											showLocale={!!i18n}
 											urlPattern={urlPattern}
+											routable={routable}
 											titleField={titleField}
 											dateField={dateField}
 											listColumns={listColumns}
@@ -1211,6 +1215,7 @@ interface ContentListItemProps {
 	onDuplicate?: (id: string) => void;
 	showLocale?: boolean;
 	urlPattern?: string;
+	routable?: boolean;
 	titleField?: string;
 	dateField?: string;
 	listColumns: ContentListColumn[];
@@ -1228,6 +1233,7 @@ function ContentListItem({
 	onDuplicate,
 	showLocale,
 	urlPattern,
+	routable,
 	titleField,
 	dateField,
 	listColumns,
@@ -1311,7 +1317,7 @@ function ContentListItem({
 			})}
 			<td className="px-4 py-3 text-end">
 				<div className="flex items-center justify-end space-x-1">
-					{item.status === "published" && item.slug && (
+					{routable !== false && item.status === "published" && item.slug && (
 						<LinkButton
 							href={contentUrl(collection, item.slug, urlPattern)}
 							external

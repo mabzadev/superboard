@@ -394,6 +394,7 @@ export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 	const { t, i18n: lingui } = useLingui();
 	const navigate = useNavigate();
 	const pluginAdmins = usePluginAdmins();
+	const routable = manifest?.collections[collection]?.routable !== false;
 	const extensionPanels = React.useMemo(
 		() =>
 			!isNew && item
@@ -486,12 +487,14 @@ export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 							{t`Publish`}
 						</Text>
 						<div className="space-y-4">
-							<Input
-								label={t`Slug`}
-								value={slug}
-								onChange={(e) => onSlugChange(e.target.value)}
-								placeholder="my-post-slug"
-							/>
+							{routable && (
+								<Input
+									label={t`Slug`}
+									value={slug}
+									onChange={(e) => onSlugChange(e.target.value)}
+									placeholder="my-post-slug"
+								/>
+							)}
 							{contentLocale ? (
 								<div className="flex flex-wrap items-center gap-1.5">
 									<Label>{t`Content locale`}</Label>
@@ -665,7 +668,7 @@ export const ContentSettingsPanel = React.memo(function ContentSettingsPanel({
 					</SortableContentSettingsSection>
 				)}
 
-				{currentUser && currentUser.role >= ROLE_EDITOR && (
+				{routable && currentUser && currentUser.role >= ROLE_EDITOR && (
 					<SortableContentSettingsSection id="bylines" label={t`Bylines`}>
 						<div className="p-4">
 							<div className="mb-4 flex items-center gap-1.5 pe-24">

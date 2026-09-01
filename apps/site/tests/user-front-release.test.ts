@@ -131,10 +131,15 @@ test("the Site composes a permission-filtered user slice from plugin contributio
 		}).result,
 	).toBe("redirect");
 	expect(visibleUserNavigation(input, [])).toHaveLength(0);
-	expect(visibleUserNavigation(input, ["users.read"])).toEqual(
+	const userNavigation = visibleUserNavigation(input, ["users.read"]);
+	expect(userNavigation).not.toContainEqual(
+		expect.objectContaining({ route_id: "superboard.profile" }),
+	);
+	expect(userNavigation).toEqual(
 		expect.arrayContaining([
-			{ route_id: "superboard.profile", label: "Profile" },
-			{ route_id: "superboard.users", label: "App · Users" },
+			{ route_id: "superboard.app_customers", label: "Customers" },
+			{ route_id: "superboard.users", label: "Users" },
+			{ route_id: "superboard.identity_by_lang_dashboard", label: "Overview" },
 		]),
 	);
 });
