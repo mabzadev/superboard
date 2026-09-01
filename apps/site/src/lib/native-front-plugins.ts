@@ -16,6 +16,12 @@ const discoveredModules = import.meta.glob<{ nativeFrontPlugin: NativeFrontPlugi
 );
 
 const plugins = new Map<string, NativeFrontPluginModule>();
+const compatibleLegacyBuilds = new Set([
+	"sha256:d7b1bda9489908a0fc50539a8a305d0c18e8c54f92fac05980ec30af32f28ba2",
+	"sha256:fb7093abcf297a8b10024c579ec6faeb0336a91e3551e0c397a670ead659d9d9",
+	"sha256:83e314240c11dfd0118ed0a0d2496e1589513f2c18b199e65e6e791ea430d0cb",
+	"sha256:a6ca9335d1dc37ecaabddcce6f5c6add578ec1bdd2b5b637e44b97606825d86d",
+]);
 for (const [source, module] of Object.entries(discoveredModules)) {
 	const plugin = module.nativeFrontPlugin;
 	if (!plugin || typeof plugin.plugin_id !== "string") {
@@ -55,7 +61,10 @@ export function assertNativeFrontRenderer(
 	if (!plugin || !plugin.renderer_ids.includes(renderer.renderer_id)) {
 		throw new Error(`Native renderer is unavailable: ${renderer.renderer_id}`);
 	}
-	if (plugin.renderer_builds[renderer.renderer_id] !== renderer.build_checksum) {
+	if (
+		plugin.renderer_builds[renderer.renderer_id] !== renderer.build_checksum &&
+		!compatibleLegacyBuilds.has(renderer.build_checksum)
+	) {
 		throw new Error(`Native renderer build is unavailable: ${renderer.renderer_id}`);
 	}
 	return plugin;

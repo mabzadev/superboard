@@ -179,7 +179,10 @@ export async function composeUserFrontReleaseInput(input: {
 
 export function visibleUserNavigation(input: FrontReleaseInput, permissions: readonly string[]) {
 	const routes = new Set(input.front_route_manifest.routes.map(({ route_id }) => route_id));
-	return parseFrontNavigation(input.presentation.navigation).flatMap((group) =>
+	return parseFrontNavigation(
+		input.presentation.navigation,
+		input.front_route_manifest.routes,
+	).flatMap((group) =>
 		group.items.flatMap((item) =>
 			routes.has(item.route_id) &&
 			(item.permission === "allow" || permissions.includes(item.permission))
