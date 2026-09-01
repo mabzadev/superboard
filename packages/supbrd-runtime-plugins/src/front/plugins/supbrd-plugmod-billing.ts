@@ -1,6 +1,6 @@
 import { defineNativeFrontPlugin, navigationGroup } from "../runtime-factory.js";
 
-const growth = navigationGroup({ group_id: "growth", group_label: "Growth", group_order: 4 });
+const products = navigationGroup({ group_id: "products", group_label: "Products", group_order: 3 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
 	plugin_id: "supbrd-plugmod-billing",
@@ -8,19 +8,19 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	description: "Review customers, entitlements, and purchases through the Billing plugin contract.",
 	surfaces: [
 		{
+			path_pattern: "/products/purchases",
+			title: "Purchases",
+			navigation: products("Purchases", 0),
+		},
+		{
 			path_pattern: "/products/customers",
-			title: "Billing customers",
-			navigation: growth("Billing customers", 20),
+			title: "Customers",
+			navigation: products("Customers", 1),
 		},
 		{
 			path_pattern: "/products/entitlements",
 			title: "Entitlements",
-			navigation: growth("Entitlements", 21),
-		},
-		{
-			path_pattern: "/products/purchases",
-			title: "Purchases",
-			navigation: growth("Purchases", 22),
+			navigation: products("Entitlements", 3),
 		},
 	],
 });

@@ -62,6 +62,9 @@ export type {
 	NativeFrontSurfaceContribution,
 	NativeFrontSurfaceInput,
 	NativeRendererDocument,
+	NativeRendererBlock,
+	NativeRendererCard,
+	NativeRendererField,
 	NativeRendererMountInput,
 } from "./native-front.js";
 export {

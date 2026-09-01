@@ -11,20 +11,15 @@ import {
 	type UserRendererProps,
 } from "./index.js";
 
-const application = navigationGroup({
-	group_id: "application",
-	group_label: "Application",
+const app = navigationGroup({
+	group_id: "app",
+	group_label: "App",
 	group_order: 1,
 });
 const identity = navigationGroup({
 	group_id: "identity",
 	group_label: "Identity",
 	group_order: 2,
-});
-const platform = navigationGroup({
-	group_id: "platform",
-	group_label: "Platform",
-	group_order: 8,
 });
 const anonymous = {
 	auth_policy: "anonymous_only" as const,
@@ -61,7 +56,6 @@ const contribution = defineNativeFrontPlugin({
 			page_id: "page.superboard_profile",
 			renderer_id: USER_RENDERER_IDS.profile,
 			transition: "authenticated_home",
-			navigation: application("Profile", -1),
 		},
 		{
 			path_pattern: "/app/users",
@@ -69,31 +63,31 @@ const contribution = defineNativeFrontPlugin({
 			route_id: "superboard.users",
 			page_id: "page.superboard_users",
 			renderer_id: USER_RENDERER_IDS.admin,
-			navigation: application("App · Users", 0),
+			navigation: app("Users", 1),
 		},
 		{
 			path_pattern: "/app/customers",
 			title: "Customers",
-			navigation: application("Customers", 1),
+			navigation: app("Customers", 0),
 		},
 		{
 			path_pattern: "/app/referrals",
 			title: "Referrals",
-			navigation: application("Referrals", 2),
+			navigation: app("Referrals", 2),
 		},
 		{
 			path_pattern: "/app/access-key",
-			title: "Access key",
-			navigation: application("Access key", 3),
+			title: "Access Key",
+			navigation: app("Access Key", 3),
 		},
-		{
-			path_pattern: "/account",
-			title: "Operator account",
-			navigation: platform("Operator account", 2),
-		},
+		{ path_pattern: "/account", title: "Operator account" },
 		{ path_pattern: "/identity", title: "Identity" },
 		{ path_pattern: "/identity/:lang", title: "Identity" },
-		{ path_pattern: "/identity/:lang/account", title: "Identity · Account" },
+		{
+			path_pattern: "/identity/:lang/account",
+			title: "Identity · Account Policies",
+			navigation: identity("Account Policies", 9, "/identity/en/account"),
+		},
 		{
 			path_pattern: "/identity/:lang/dashboard",
 			title: "Identity · Overview",
@@ -108,7 +102,7 @@ const contribution = defineNativeFrontPlugin({
 		{
 			path_pattern: "/identity/:lang/apps",
 			title: "Identity · Applications",
-			navigation: identity("Applications", 2, "/identity/en/apps"),
+			navigation: identity("Applications", 4, "/identity/en/apps"),
 		},
 		{ path_pattern: "/identity/:lang/apps/new", title: "Identity · New application" },
 		{ path_pattern: "/identity/:lang/apps/:id", title: "Identity · Application" },
@@ -117,14 +111,14 @@ const contribution = defineNativeFrontPlugin({
 		{
 			path_pattern: "/identity/:lang/orgs",
 			title: "Identity · Organizations",
-			navigation: identity("Organizations", 3, "/identity/en/orgs"),
+			navigation: identity("Organizations", 6, "/identity/en/orgs"),
 		},
 		{ path_pattern: "/identity/:lang/orgs/new", title: "Identity · New organization" },
 		{ path_pattern: "/identity/:lang/orgs/:id", title: "Identity · Organization" },
 		{
 			path_pattern: "/identity/:lang/roles",
 			title: "Identity · Roles",
-			navigation: identity("Roles", 4, "/identity/en/roles"),
+			navigation: identity("Roles", 3, "/identity/en/roles"),
 		},
 		{ path_pattern: "/identity/:lang/roles/new", title: "Identity · New role" },
 		{ path_pattern: "/identity/:lang/roles/:id", title: "Identity · Role" },
@@ -138,7 +132,7 @@ const contribution = defineNativeFrontPlugin({
 		{
 			path_pattern: "/identity/:lang/user-attributes",
 			title: "Identity · User attributes",
-			navigation: identity("User attributes", 6, "/identity/en/user-attributes"),
+			navigation: identity("User Attributes", 2, "/identity/en/user-attributes"),
 		},
 		{
 			path_pattern: "/identity/:lang/user-attributes/new",
@@ -151,14 +145,14 @@ const contribution = defineNativeFrontPlugin({
 		{
 			path_pattern: "/identity/:lang/saml",
 			title: "Identity · SAML",
-			navigation: identity("SAML", 7, "/identity/en/saml"),
+			navigation: identity("SAML SSO", 8, "/identity/en/saml"),
 		},
 		{ path_pattern: "/identity/:lang/saml/new", title: "Identity · New SAML connection" },
 		{ path_pattern: "/identity/:lang/saml/:id", title: "Identity · SAML connection" },
 		{
 			path_pattern: "/identity/:lang/logs",
 			title: "Identity · Logs",
-			navigation: identity("Logs", 8, "/identity/en/logs"),
+			navigation: identity("Logs", 7, "/identity/en/logs"),
 		},
 		{ path_pattern: "/identity/:lang/logs/email/:id", title: "Identity · Email log" },
 		{ path_pattern: "/identity/:lang/logs/sign-in/:id", title: "Identity · Sign-in log" },
@@ -185,8 +179,8 @@ export const nativeFrontPlugin = {
 		return {
 			kind: "surface" as const,
 			eyebrow: "Identity",
-			title: input.page_title ?? "Identity",
-			description: view.description_message_id,
+			title: input.view_title ?? "Identity",
+			description: input.view_description ?? view.description_message_id,
 			details: [
 				{ label: "Plugin", value: "supbrd-plug-user" },
 				{ label: "Renderer", value: view.renderer_id },
@@ -196,6 +190,7 @@ export const nativeFrontPlugin = {
 				view.kind === "login"
 					? [{ label: "Continue with EmDash", href: "/_emdash/admin/login" }]
 					: [],
+			blocks: input.view_blocks ?? [],
 		};
 	},
 };

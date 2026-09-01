@@ -1,6 +1,10 @@
 import { defineNativeFrontPlugin, navigationGroup } from "../runtime-factory.js";
 
-const growth = navigationGroup({ group_id: "growth", group_label: "Growth", group_order: 4 });
+const marketing = navigationGroup({
+	group_id: "marketing",
+	group_label: "Marketing",
+	group_order: 7,
+});
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
 	plugin_id: "supbrd-plugmod-marketing",
@@ -9,17 +13,17 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 		"Build campaigns, journeys, messages, and channel settings from the active Marketing plugin.",
 	surfaces: [
 		...[
-			["campaigns", "Campaigns"],
+			["in-app-messages", "In-app Messages"],
 			["email", "Email"],
+			["campaigns", "Campaigns"],
 			["journeys", "Journeys"],
 			["channels", "Channels"],
-			["in-app-messages", "In-app messages"],
-			["statistics", "Marketing statistics"],
-			["settings", "Marketing settings"],
+			["statistics", "Statistics"],
+			["settings", "Settings"],
 		].map(([path, label], index) => ({
 			path_pattern: `/marketing/${path}`,
 			title: label,
-			navigation: growth(label, index),
+			navigation: marketing(label, index),
 		})),
 		{ path_pattern: "/message-preview-craft", title: "Message preview" },
 	],

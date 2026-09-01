@@ -78,7 +78,7 @@ _À éviter_ : ensemble de drafts indépendants, état live partiel
 
 **Draft Snapshot** :
 Capture immuable de toutes les entrées et versions exactes d’un Front Draft utilisée comme unique input d’une compilation.
-_À éviter_ : lecture du draft courant, snapshot par page
+_À éviter_ : lecture du draft courant, snapshot par View
 
 **Front Release Candidate** :
 Artefact global immuable compilé depuis un Draft Snapshot et conservé inactif jusqu’à sa validation, sa preview et son approbation.
@@ -229,7 +229,7 @@ Ensemble des surfaces d’administration produit publiées par le Site EmDash et
 _À éviter_ : EmDash Admin, interface d’utilisateur d’application
 
 **Présentation EmDash** :
-Ensemble complet des pages, layouts, routes, menus, composants visibles, textes et états d’interface défini, composé et monté par le Site EmDash.
+Ensemble complet des Views SuperBoard, layouts, routes, menus, composants visibles, textes et états d’interface défini, composé et monté par le Site EmDash.
 _À éviter_ : interface possédée par un plugin, page codée dans un Worker
 
 **Renderer de plugin** :
@@ -265,5 +265,5 @@ Plugin `supbrd-plugmod-*` configuré dans EmDash, associé à un Worker pour son
 _À éviter_ : plugin full EmDash, Worker autonome, plugin d’interface
 
 **Core SuperBoard** :
-Plugin fondateur `supbrd-core` qui fournit le runtime générique utilisé par la Présentation EmDash sans posséder de page, composition ou interface concrète.
-_À éviter_ : application SuperBoard, collection de pages, propriétaire de l’affichage
+Plugin fondateur `supbrd-core` qui fournit le runtime générique utilisé par la Présentation EmDash sans posséder de View SuperBoard, de composition ou d’interface concrète.
+_À éviter_ : application SuperBoard, propriétaire de Views SuperBoard, propriétaire de l’affichage

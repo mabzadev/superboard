@@ -9,31 +9,23 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 		"Operate support conversations, contacts, automations, knowledge, and quality workflows.",
 	surfaces: [
 		...[
-			"inbox",
-			"contacts",
-			"channels",
-			"automations",
-			"help-center",
-			"proactive-support",
-			"captain",
-			"quality",
-			"workforce",
-			"reports",
-			"integrations",
-			"configuration",
-			"settings",
-		].map(supportSurface),
+			["inbox", "Inbox"],
+			["contacts", "Contacts"],
+			["workforce", "Workforce"],
+			["channels", "Channels"],
+			["automations", "Automations"],
+			["proactive-support", "Proactive Support"],
+			["help-center", "Help Center"],
+			["captain", "Captain"],
+			["integrations", "Integrations"],
+			["reports", "Reports"],
+			["settings", "Settings"],
+		].map(([path, title], index) => ({
+			path_pattern: `/support/${path}`,
+			title,
+			navigation: support(title, index),
+		})),
+		{ path_pattern: "/support/quality", title: "Quality" },
+		{ path_pattern: "/support/configuration", title: "Configuration" },
 	],
 });
-
-function supportSurface(path: string, index: number) {
-	const title = path
-		.split("-")
-		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-		.join(" ");
-	return {
-		path_pattern: `/support/${path}`,
-		title,
-		navigation: support(title, index),
-	};
-}

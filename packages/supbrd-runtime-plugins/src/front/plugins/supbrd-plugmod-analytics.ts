@@ -1,10 +1,14 @@
 import { defineNativeFrontPlugin, navigationGroup } from "../runtime-factory.js";
 
-const overview = navigationGroup({ group_id: "overview", group_label: "Overview", group_order: 0 });
+const dashboard = navigationGroup({
+	group_id: "dashboard",
+	group_label: "Dashboard",
+	group_order: 0,
+});
 const analytics = navigationGroup({
 	group_id: "analytics",
 	group_label: "Analytics",
-	group_order: 3,
+	group_order: 8,
 });
 
 export const nativeFrontPlugin = defineNativeFrontPlugin({
@@ -21,24 +25,24 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 			page_id: "page.superboard_app",
 			transition: "authenticated_home",
 		},
-		{ path_pattern: "/dashboard", title: "Dashboard", navigation: overview("Dashboard", 0) },
+		{ path_pattern: "/dashboard", title: "Dashboard", navigation: dashboard("Dashboard", 0) },
 		{ path_pattern: "/analytics", title: "Analytics", navigation: analytics("Overview", 0) },
 		...[
-			["alerts", "Alerts"],
+			["dashboards", "Dashboards"],
+			["users", "Users & Sessions"],
+			["events", "Events"],
+			["dimensions", "Technology & Location"],
+			["views", "Views"],
+			["installations", "Installations"],
+			["purchases", "Verified Purchases"],
+			["insights", "Funnels & Retention"],
 			["cohorts", "Cohorts"],
 			["crashes", "Crashes"],
-			["dashboards", "Dashboards"],
-			["dimensions", "Dimensions"],
-			["events", "Events"],
 			["feedback", "Feedback"],
-			["insights", "Insights"],
-			["installations", "Installations"],
-			["purchases", "Purchases"],
-			["remote-config", "Remote config"],
-			["reports", "Reports"],
+			["remote-config", "Remote Config"],
+			["alerts", "Alerts"],
+			["reports", "Reports & Exports"],
 			["settings", "Settings"],
-			["users", "Users"],
-			["views", "Views"],
 		].map(([path, label], index) => ({
 			path_pattern: `/analytics/${path}`,
 			title: label,

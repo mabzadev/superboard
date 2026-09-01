@@ -652,6 +652,7 @@ function ContentListPage() {
 			activeLocale={activeLocale}
 			onLocaleChange={handleLocaleChange}
 			urlPattern={collectionConfig.urlPattern}
+			routable={collectionConfig.routable}
 			titleField={collectionConfig.titleField}
 			dateField={collectionConfig.dateField}
 			sort={sort}
@@ -2201,7 +2202,7 @@ function ContentTypesListPage() {
 
 	return (
 		<ContentTypeList
-			collections={collections ?? []}
+			collections={(collections ?? []).filter(({ hidden }) => !hidden)}
 			orphanedTables={orphanedTables}
 			isLoading={collectionsLoading || orphansLoading}
 			onDelete={(slug) => deleteMutation.mutate(slug)}
