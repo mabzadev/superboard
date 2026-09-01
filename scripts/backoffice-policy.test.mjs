@@ -198,17 +198,14 @@ test("copyable SDK setup uses target-owned public origins", () => {
   assert.match(preview, /config\.shortlinkUrl/);
 });
 
-test("optional Dashboard analytics has no hardcoded collector origin", () => {
-  const analytics = read("apps/dashboard/src/analytics/posthog.ts");
-  assert.match(analytics, /process\.env\.NEXT_PUBLIC_POSTHOG_HOST/u);
+test("Dashboard ships without PostHog runtime or environment variables", () => {
+  const dashboardPackage = JSON.parse(read("apps/dashboard/package.json"));
+  assert.equal(dashboardPackage.dependencies["posthog-js"], undefined);
   assert.equal(
-    /POSTHOG_HOST\s*=\s*[^;]*(?:posthog\.com|https?:\/\/)/u.test(analytics),
+    existsSync(join(root, "apps/dashboard/src/analytics/posthog.ts")),
     false,
   );
-  assert.match(
-    read("apps/dashboard/.env.example"),
-    /NEXT_PUBLIC_POSTHOG_HOST=/u,
-  );
+  assert.doesNotMatch(read("apps/dashboard/.env.example"), /POSTHOG/u);
 });
 
 test("reusable platform source and examples contain no application hostname or embedded project key", () => {

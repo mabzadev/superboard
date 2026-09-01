@@ -25,16 +25,54 @@ const ProjectSelectionContext = createContext<
   ProjectSelectionContextType | undefined
 >(undefined);
 
+interface ProjectSelectionProviderProps {
+  children: ReactNode;
+  instanceId?: string;
+  productionProjectRef?: string;
+  testProjectRef?: string;
+}
+
 export function ProjectSelectionProvider({
   children,
-}: {
-  children: ReactNode;
-}) {
+  instanceId,
+  productionProjectRef,
+  testProjectRef,
+}: ProjectSelectionProviderProps) {
+  const siteSelection = useMemo(() => {
+    if (!instanceId) return null;
+    const domain = globalThis.location?.hostname ?? "local";
+    const production: Project = {
+      id: productionProjectRef ?? `${instanceId}-prod`,
+      name: "Production",
+      domain,
+    };
+    const test: Project = {
+      id: testProjectRef ?? `${instanceId}-test`,
+      name: "Test",
+      domain,
+    };
+    const selectedInstance: Instance = {
+      id: productionProjectRef?.match(/^(\d+)-prod$/u)?.[1] ?? instanceId,
+      name: instanceId,
+      role: "owner",
+      updated_at: new Date(0).toISOString(),
+      created_at: new Date(0).toISOString(),
+      revenue_collection_enabled: true,
+      get_started_dismissed: true,
+      projects: [production, test],
+      api_key: "",
+      hash_id: instanceId,
+      uri_scheme: instanceId,
+      production,
+      test,
+    };
+    return { selectedInstance, selectedProject: production };
+  }, [instanceId, productionProjectRef, testProjectRef]);
   const [selectedInstance, setSelectedInstance] = useState<
     Instance | undefined
-  >(undefined);
+  >(siteSelection?.selectedInstance);
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(
-    undefined
+    siteSelection?.selectedProject
   );
   const [projectType, setProjectType] = useState<string>(PRODUCTION);
   const [getStartedSetup, setGetStartedSetup] = useState<

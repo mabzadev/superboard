@@ -27,7 +27,7 @@ import {
 } from "../api/auth/userService";
 
 import LocalStorage from "../lib/LocalStorage";
-import { trackEvent, identify, reset, EVENTS } from "@/analytics";
+import { trackEvent, EVENTS } from "@/analytics";
 
 import type { AxiosResponse } from "axios";
 import type { User, EditUserPayload } from "@/types";
@@ -111,8 +111,6 @@ const UserContextProvider = ({ children }: Props) => {
         return response;
       }
       handleLoggedInUserResponse(response);
-      const user = response.data.user;
-      identify(user.id, { email: user.email, name: user.name });
       trackEvent(EVENTS.LOGIN);
       return response;
     },
@@ -122,9 +120,7 @@ const UserContextProvider = ({ children }: Props) => {
   const logoutUser = useCallback(
     async (token: string | null): Promise<AxiosResponse> => {
       const response = await logoutAPICall(token ?? "");
-      // Track logout and reset analytics
       trackEvent(EVENTS.LOGOUT);
-      reset();
       LocalStorage.logoutUser();
       userRef.current = null;
       setUser(null);
@@ -156,9 +152,6 @@ const UserContextProvider = ({ children }: Props) => {
     ): Promise<AxiosResponse> => {
       const response = await createAccountAPICall(email, password, name);
       handleLoggedInUserResponse(response);
-      // Track signup event
-      const user = response.data.user;
-      identify(user.id, { email: user.email, name: user.name });
       trackEvent(EVENTS.SIGN_UP);
       return response;
     },

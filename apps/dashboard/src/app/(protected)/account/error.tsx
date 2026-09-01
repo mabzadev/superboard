@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
-import { capturePosthog } from "@/analytics/posthog";
 import { categorizeError } from "@/lib/errorUtils";
 import { useRouter } from "next/navigation";
 
@@ -17,11 +16,6 @@ export default function AccountError({
 
   useEffect(() => {
     console.error("Caught in account/error.tsx:", error);
-    capturePosthog("error_boundary_triggered", {
-      error_message: error.message,
-      error_digest: error.digest,
-      route_group: "account",
-    });
   }, [error]);
 
   const { title, description } = categorizeError(error);
