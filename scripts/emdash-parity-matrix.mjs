@@ -8,10 +8,7 @@ const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
-const manifestMigrationPath = join(
-	root,
-	"apps/site/migrations/0012_functional_front_contracts.sql",
-);
+const manifestMigrationPath = join(root, "apps/site/migrations/0014_native_front_contracts.sql");
 const PAGE_SUFFIX = "/page.tsx";
 const PAGE_SUFFIX_PATTERN = /\/page\.tsx$/u;
 const SUPPORT_OR_FLOWS_ROUTE_PATTERN = /\/(?:support|flows)(?:\/|$)/u;
@@ -870,13 +867,22 @@ function stableBuildId(value) {
 
 function buildFrontBundleReceipt() {
 	const explicit = [
-		join(root, "apps/site/src/components/SuperBoardFrontApp.tsx"),
-		join(root, "apps/site/src/lib/front-surface-registry.ts"),
+		join(root, "apps/site/src/components/FrontPage.astro"),
+		join(root, "apps/site/src/components/NativeFrontApp.tsx"),
+		join(root, "apps/site/src/lib/core-front-contract.ts"),
+		join(root, "apps/site/src/lib/native-front-plugins.ts"),
+		join(root, "apps/site/src/lib/native-front-presentation.ts"),
+		join(root, "apps/site/src/lib/user-front-release.ts"),
+		join(root, "apps/site/src/styles/native-front.css"),
+		join(root, "packages/supbrd-core/src/native-front.ts"),
+		join(root, "packages/supbrd-plug-user/src/native-front.ts"),
 	];
 	const sourceFiles = [
 		...explicit,
-		...walk(join(root, "apps/site/src/compat"), () => true),
-		...walk(join(root, "apps/dashboard/src"), (path) => /\.(?:css|json|svg|ts|tsx)$/u.test(path)),
+		...walk(join(root, "apps/site/src/front-plugins"), (path) => path.endsWith(".ts")),
+		...walk(join(root, "packages/supbrd-runtime-plugins/src/front"), (path) =>
+			path.endsWith(".ts"),
+		),
 	]
 		.filter((path, index, all) => existsSync(path) && all.indexOf(path) === index)
 		.toSorted();

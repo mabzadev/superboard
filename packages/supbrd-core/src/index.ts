@@ -52,6 +52,18 @@ export {
 	type FrontRequestResolution,
 	type LastVerifiedFrontRelease,
 } from "./front-runtime.js";
+export { defineNativeFrontPlugin, navigationGroup, parseFrontNavigation } from "./native-front.js";
+export type {
+	FrontNavigationGroup,
+	FrontNavigationItem,
+	NativeFrontNavigationContribution,
+	NativeFrontOperator,
+	NativeFrontPluginModule,
+	NativeFrontSurfaceContribution,
+	NativeFrontSurfaceInput,
+	NativeRendererDocument,
+	NativeRendererMountInput,
+} from "./native-front.js";
 export {
 	activateFrontRelease,
 	createInMemoryFrontReleaseRepository,

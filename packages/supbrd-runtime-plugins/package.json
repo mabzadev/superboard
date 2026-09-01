@@ -13,6 +13,7 @@
 		"typecheck": "tsgo --noEmit"
 	},
 	"devDependencies": {
+		"@superboard/supbrd-core": "workspace:*",
 		"esbuild": "0.25.4",
 		"tsdown": "catalog:",
 		"typescript": "catalog:"
