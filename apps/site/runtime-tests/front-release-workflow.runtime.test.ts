@@ -7,6 +7,7 @@ import {
 	type FrontReleaseInput,
 	type ReleaseApproval,
 } from "@superboard/supbrd-core";
+import { userPluginManifest } from "@superboard/supbrd-plug-user";
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 
@@ -26,6 +27,7 @@ import {
 	verifyActivationReceipts,
 } from "../src/lib/release-repository.js";
 import { loadLastVerifiedFrontRelease } from "../src/lib/release-source.js";
+import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 
 function release(): CompiledFrontRelease {
 	return {
@@ -157,7 +159,7 @@ describe("Site Front Release D1 workflow", () => {
 		]);
 		const publicJwk = await crypto.subtle.exportKey("jwk", keys.publicKey);
 		const first = await compileFrontRelease(
-			frontReleaseInput({
+			await frontReleaseInput({
 				candidateId: "01J00000000000000000000101",
 				releaseId: "01J00000000000000000000102",
 				previousReleaseId: null,
@@ -201,7 +203,7 @@ describe("Site Front Release D1 workflow", () => {
 		).toMatchObject({ status: "activated" });
 
 		const second = await compileFrontRelease(
-			frontReleaseInput({
+			await frontReleaseInput({
 				candidateId: "01J00000000000000000000103",
 				releaseId: "01J00000000000000000000104",
 				previousReleaseId: first.payload.release_id,
@@ -233,6 +235,28 @@ describe("Site Front Release D1 workflow", () => {
 			(await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/login", undefined))
 				.resolution.result,
 		).toBe("rendered");
+		expect(
+			(
+				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/app/profile", {
+					id: "operator-admin",
+					email: "admin@example.com",
+					name: "Admin",
+					role: 50,
+					disabled: false,
+				})
+			).resolution.result,
+		).toBe("rendered");
+		expect(
+			(
+				await resolvePreviewFrontPage(env, loadedPreview.candidate.release, "/app/profile", {
+					id: "operator-editor",
+					email: "editor@example.com",
+					name: "Editor",
+					role: 40,
+					disabled: false,
+				})
+			).resolution.result,
+		).toBe("forbidden");
 
 		const secondApproval = approvalFor(second, "2026-08-30T00:13:30.000Z");
 		expect(await persistReleaseApproval(env.DB, secondApproval)).toBe(true);
@@ -313,25 +337,13 @@ describe("Site Front Release D1 workflow", () => {
 	});
 });
 
-const requiredStates = {
-	loading: "emdash.core.state.loading",
-	empty: "emdash.core.state.empty",
-	forbidden: "emdash.core.state.forbidden",
-	not_found: "emdash.core.state.not_found",
-	error: "emdash.core.state.error",
-	unavailable: "emdash.core.state.unavailable",
-	maintenance: "emdash.core.state.maintenance",
-};
-
-function frontReleaseInput(input: {
+async function frontReleaseInput(input: {
 	candidateId: string;
 	releaseId: string;
 	previousReleaseId: string | null;
 	releaseSequence: number;
-}): FrontReleaseInput {
-	return {
-		schema_version: "1.0.0",
-		compiler_version: "0.1.0",
+}): Promise<FrontReleaseInput> {
+	const releaseInput = await composeUserFrontReleaseInput({
 		instance_id: "vocostar",
 		front_draft_id: "01J00000000000000000000110",
 		draft_snapshot_id: "01J00000000000000000000111",
@@ -341,64 +353,26 @@ function frontReleaseInput(input: {
 		release_sequence: input.releaseSequence,
 		previous_release_id: input.previousReleaseId,
 		created_at: "2026-08-30T00:10:00.000Z",
+		plugin_lock: [
+			{
+				plugin_id: userPluginManifest.plugin_id,
+				version: userPluginManifest.plugin_version,
+				artifact_checksum: userPluginManifest.artifact_checksum,
+				native: false,
+			},
+		],
+		created_at: "2026-08-30T00:10:00.000Z",
+	});
+	return {
+		...releaseInput,
 		front_route_manifest: {
-			schema_version: "1.0.0",
-			manifest_id: "01J00000000000000000000112",
-			normalization: {
-				unicode: "NFC",
-				case_sensitive: true,
-				trailing_slash: "strip",
-				percent_decoding: "once",
-			},
-			auth_transitions: {
-				login_route_id: "superboard.login",
-				authenticated_home_route_id: "superboard.login",
-			},
-			system_routes: [],
-			routes: [
-				{
-					route_id: "superboard.login",
-					path_pattern: "/login",
-					route_kind: "page",
-					audience: "superboard_front",
-					auth_policy: "public",
-					permission_expression: "allow",
-					priority: 100,
-					parameters: {},
-					query: {},
-					page_id: "page.superboard_login",
-					layout_ids: [],
-					renderer_ids: [],
-					state_policies: requiredStates,
-					dependencies: [],
-					redirect: null,
-				},
-			],
+			...releaseInput.front_route_manifest,
+			routes: releaseInput.front_route_manifest.routes.map((route) => ({
+				...route,
+				dependencies: [],
+			})),
 		},
-		gateway_manifest: {
-			schema_version: "1.0.0",
-			gateway_manifest_id: "01J00000000000000000000113",
-			routes: [],
-		},
-		presentation: {
-			pages: [
-				{
-					page_id: "page.superboard_login",
-					title: "Preview Login",
-					root_renderer_id: "emdash.core.renderer.empty",
-				},
-			],
-			layouts: [],
-			navigation: [],
-			translations: [],
-			media: [],
-			theme: { theme_id: "theme.superboard", tokens: {} },
-		},
-		renderers: [],
-		plugin_lock: [],
 		dependency_policies: [],
-		rollback: { classification: "pointer_only", restore_point_id: null, conditions: [] },
-		core_concrete_pages: [],
 	};
 }
 

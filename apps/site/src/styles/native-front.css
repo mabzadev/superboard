@@ -1,0 +1,167 @@
+.native-front,
+body {
+	margin: 0;
+}
+
+.native-front {
+	--front-accent: #2f81f7;
+	--front-background: #070b14;
+	--front-foreground: #f4f7fb;
+	--front-panel: #0d1524;
+	min-height: 100svh;
+	background: var(--front-background);
+	color: var(--front-foreground);
+	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.native-front-layout {
+	display: grid;
+	grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+}
+
+.native-front-sidebar {
+	position: sticky;
+	top: 0;
+	height: 100svh;
+	overflow-y: auto;
+	border-inline-end: 1px solid color-mix(in srgb, var(--front-foreground) 15%, transparent);
+	padding: 1.25rem;
+	background: color-mix(in srgb, var(--front-panel) 94%, transparent);
+}
+
+.native-front-brand {
+	color: inherit;
+	font-size: 1.25rem;
+	font-weight: 800;
+	text-decoration: none;
+}
+
+.native-front-sidebar > p {
+	margin: 0.35rem 0 1.5rem;
+	color: color-mix(in srgb, var(--front-foreground) 65%, transparent);
+	font-size: 0.78rem;
+}
+
+.native-front-sidebar details {
+	margin-block: 0.4rem;
+}
+
+.native-front-sidebar summary {
+	cursor: pointer;
+	padding: 0.55rem 0.65rem;
+	font-size: 0.72rem;
+	font-weight: 750;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.native-front-sidebar details a {
+	display: block;
+	border-radius: 0.55rem;
+	padding: 0.55rem 0.8rem;
+	color: inherit;
+	font-size: 0.88rem;
+	text-decoration: none;
+}
+
+.native-front-sidebar details a:hover,
+.native-front-sidebar details a[aria-current="page"] {
+	background: color-mix(in srgb, var(--front-accent) 22%, transparent);
+}
+
+.native-front-content > header {
+	display: flex;
+	min-height: 4rem;
+	align-items: center;
+	justify-content: space-between;
+	border-block-end: 1px solid color-mix(in srgb, var(--front-foreground) 12%, transparent);
+	padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+.native-front-content > header a,
+.native-front-actions a {
+	border-radius: 0.6rem;
+	background: var(--front-accent);
+	color: white;
+	font-weight: 700;
+	padding: 0.65rem 0.9rem;
+	text-decoration: none;
+}
+
+.native-front-content main,
+.native-front-standalone {
+	display: grid;
+	place-items: center;
+	padding: clamp(1rem, 6vw, 4rem);
+}
+
+.native-front-panel {
+	width: min(58rem, 100%);
+	border: 1px solid color-mix(in srgb, var(--front-foreground) 16%, transparent);
+	border-radius: 1.1rem;
+	padding: clamp(1.5rem, 5vw, 3rem);
+	background: var(--front-panel);
+	box-shadow: 0 2rem 5rem rgb(0 0 0 / 35%);
+}
+
+.native-front-eyebrow {
+	color: var(--front-accent);
+	font-size: 0.75rem;
+	font-weight: 800;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.native-front-panel h1 {
+	margin: 0.5rem 0;
+	font-size: clamp(2rem, 6vw, 4rem);
+	letter-spacing: -0.05em;
+}
+
+.native-front-panel > p {
+	color: color-mix(in srgb, var(--front-foreground) 72%, transparent);
+	line-height: 1.7;
+}
+
+.native-front-panel dl {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	gap: 0.75rem;
+	margin-block: 1.5rem;
+}
+
+.native-front-panel dl div {
+	border: 1px solid color-mix(in srgb, var(--front-foreground) 13%, transparent);
+	border-radius: 0.65rem;
+	padding: 0.8rem;
+}
+
+.native-front-panel dt {
+	color: color-mix(in srgb, var(--front-foreground) 58%, transparent);
+	font-size: 0.7rem;
+	text-transform: uppercase;
+}
+
+.native-front-panel dd {
+	margin: 0.25rem 0 0;
+	overflow-wrap: anywhere;
+}
+
+.native-front-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+@media (max-width: 52rem) {
+	.native-front-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.native-front-sidebar {
+		position: static;
+		height: auto;
+		border-inline-end: 0;
+		border-block-end: 1px solid color-mix(in srgb, var(--front-foreground) 15%, transparent);
+	}
+}

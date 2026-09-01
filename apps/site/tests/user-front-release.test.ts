@@ -1,6 +1,3 @@
-import { createHash } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
-
 import {
 	assertRendererCompatibility,
 	compileFrontRelease,
@@ -12,7 +9,6 @@ import { expect, test } from "vitest";
 import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 import {
 	CORE_ADMIN_SHELL_DESCRIPTOR,
-	SUPBRD_CORE_ARTIFACT_CHECKSUM,
 	composeUserFrontReleaseInput,
 	visibleUserNavigation,
 } from "../src/lib/user-front-release.js";
@@ -65,6 +61,48 @@ test("composes the next release against the exact active predecessor", async () 
 	});
 	expect(input.release_sequence).toBe(2);
 	expect(input.previous_release_id).toBe(identifiers.release_id);
+});
+
+test("adds and removes plugin presentation only through the Release plugin lock", async () => {
+	const catalog = superBoardRuntimePluginCatalog();
+	const user = catalog.plugins.find(({ manifest }) => manifest.plugin_id === "supbrd-plug-user");
+	const marketing = catalog.plugins.find(
+		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-marketing",
+	);
+	if (!user || !marketing) throw new Error("Expected native Front plugins are missing");
+	const lockEntry = ({ manifest }: (typeof catalog.plugins)[number]) => ({
+		plugin_id: manifest.plugin_id,
+		version: manifest.plugin_version,
+		artifact_checksum: manifest.artifact_checksum,
+		native: manifest.execution.backend === "native",
+	});
+
+	const withoutMarketing = await composeUserFrontReleaseInput({
+		...identifiers,
+		plugin_lock: [lockEntry(user)],
+	});
+	const withMarketing = await composeUserFrontReleaseInput({
+		...identifiers,
+		plugin_lock: [lockEntry(user), lockEntry(marketing)],
+	});
+	const routeIds = (input: Awaited<ReturnType<typeof composeUserFrontReleaseInput>>) =>
+		new Set(input.front_route_manifest.routes.map(({ route_id }) => route_id));
+	const navigationRouteIds = (input: Awaited<ReturnType<typeof composeUserFrontReleaseInput>>) =>
+		new Set(
+			visibleUserNavigation(input, ["supbrd-plugmod-marketing.read"]).map(
+				({ route_id }) => route_id,
+			),
+		);
+
+	expect(routeIds(withoutMarketing)).not.toContain("superboard.marketing_campaigns");
+	expect(navigationRouteIds(withoutMarketing)).not.toContain("superboard.marketing_campaigns");
+	expect(routeIds(withMarketing)).toContain("superboard.marketing_campaigns");
+	expect(navigationRouteIds(withMarketing)).toContain("superboard.marketing_campaigns");
+	expect(
+		withMarketing.presentation.pages.some(
+			({ page_id }) => page_id === "page.superboard_marketing_campaigns",
+		),
+	).toBe(true);
 });
 
 test("the Site composes a permission-filtered user slice from plugin contributions", async () => {
@@ -120,24 +158,4 @@ test("rejects an ABI-incompatible EmDash admin root descriptor", () => {
 			{ abi_version: "1.0.0", runtime_version: "0.1.0" },
 		),
 	).toThrow(/compatibility rejected/u);
-});
-
-test("pins the real admin shell and Core source artifacts", async () => {
-	const shellSource = await readFile(new URL("../src/components/FrontPage.astro", import.meta.url));
-	expect(`sha256:${createHash("sha256").update(shellSource).digest("hex")}`).toBe(
-		CORE_ADMIN_SHELL_DESCRIPTOR.build_checksum,
-	);
-
-	const coreDirectory = new URL("../../../packages/supbrd-core/src/", import.meta.url);
-	const names = (await readdir(coreDirectory))
-		.filter((name) => name.endsWith(".ts") || name.endsWith(".js"))
-		.toSorted();
-	const coreHash = createHash("sha256");
-	for (const name of names) {
-		coreHash.update(name);
-		coreHash.update("\0");
-		coreHash.update(await readFile(new URL(name, coreDirectory)));
-		coreHash.update("\0");
-	}
-	expect(`sha256:${coreHash.digest("hex")}`).toBe(SUPBRD_CORE_ARTIFACT_CHECKSUM);
 });

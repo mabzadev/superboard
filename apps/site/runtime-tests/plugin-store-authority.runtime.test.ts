@@ -4,6 +4,12 @@ import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 
 import topology from "../../../config/emdash-plugin-topology.json";
+import { proxyOperatorApiRequest } from "../src/lib/operator-api-proxy.js";
+import {
+	beginRepositoryCommand,
+	completeRepositoryCommand,
+	resolveRepositoryCommandScope,
+} from "../src/lib/plugin-command-authority.js";
 import {
 	restorePluginObjectStores,
 	snapshotPluginObjectStores,
@@ -17,12 +23,10 @@ import {
 	verifyPluginStoreShadowRead,
 } from "../src/lib/plugin-store-repository.js";
 import {
-	beginRepositoryCommand,
-	completeRepositoryCommand,
-	resolveRepositoryCommandScope,
-} from "../src/lib/plugin-command-authority.js";
-import { proxyOperatorApiRequest } from "../src/lib/operator-api-proxy.js";
-import { synchronizeSuperBoardPluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
+	loadActiveSuperBoardPluginLock,
+	synchronizeSuperBoardPluginCatalog,
+} from "../src/lib/superboard-plugin-catalog.js";
+import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 import { installCompiledUserPlugin } from "../src/lib/user-plugin-installation.js";
 
 describe("EmDash plugin Store authority", () => {
@@ -66,6 +70,34 @@ describe("EmDash plugin Store authority", () => {
 			.bind("vocostar")
 			.first<{ count: number }>();
 		expect(health?.count).toBe(18);
+		const fullLock = await loadActiveSuperBoardPluginLock(env.DB);
+		const fullPresentation = await composeUserFrontReleaseInput({
+			...releaseIdentifiers,
+			plugin_lock: fullLock,
+		});
+		expect(
+			fullPresentation.front_route_manifest.routes.some(
+				({ path_pattern: path }) => path === "/marketing/campaigns",
+			),
+		).toBe(true);
+
+		await env.DB.prepare(
+			"DELETE FROM superboard_active_plugin_manifests WHERE plugin_id = 'supbrd-plugmod-marketing'",
+		).run();
+		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB);
+		expect(reducedLock).toHaveLength(17);
+		expect(
+			reducedLock.some(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-marketing"),
+		).toBe(false);
+		const reducedPresentation = await composeUserFrontReleaseInput({
+			...releaseIdentifiers,
+			plugin_lock: reducedLock,
+		});
+		expect(
+			reducedPresentation.front_route_manifest.routes.some(
+				({ path_pattern: path }) => path === "/marketing/campaigns",
+			),
+		).toBe(false);
 	});
 
 	test("installs the exact compiled user plugin and publishes bounded dependency health", async () => {
@@ -237,7 +269,10 @@ describe("EmDash plugin Store authority", () => {
 			.all<{ event_kind: string }>();
 		expect(outbox.results).toEqual([{ event_kind: "accepted" }, { event_kind: "completed" }]);
 		await expect(
-			beginRepositoryCommand(env.DB, { ...input, request_path: "/api/v1/analytics/10-test/reports/other" }),
+			beginRepositoryCommand(env.DB, {
+				...input,
+				request_path: "/api/v1/analytics/10-test/reports/other",
+			}),
 		).rejects.toThrow(/IDEMPOTENCY_CONFLICT/u);
 	});
 
@@ -269,8 +304,7 @@ describe("EmDash plugin Store authority", () => {
 					Origin: "https://site.example.test",
 					"Content-Type": "application/json",
 					"Idempotency-Key": "operation-gateway-report-1",
-					"X-SuperBoard-Command-Id":
-						"supbrd-plugmod-analytics.command.create_analytics_report",
+					"X-SuperBoard-Command-Id": "supbrd-plugmod-analytics.command.create_analytics_report",
 				},
 				body: JSON.stringify({ name: "Repository first" }),
 			});
@@ -495,6 +529,18 @@ describe("EmDash plugin Store authority", () => {
 		expect(storeCount).toBeGreaterThan(19);
 	});
 });
+
+const releaseIdentifiers = {
+	instance_id: "vocostar",
+	front_draft_id: "01J00000000000000000000501",
+	draft_snapshot_id: "01J00000000000000000000502",
+	compilation_id: "01J00000000000000000000503",
+	candidate_id: "01J00000000000000000000504",
+	release_id: "01J00000000000000000000505",
+	release_sequence: 1,
+	previous_release_id: null,
+	created_at: "2026-09-01T13:00:00.000Z",
+};
 
 async function signWorkerCallback(
 	privateKey: CryptoKey,
