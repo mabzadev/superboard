@@ -180,7 +180,25 @@ export function defineNativeFrontPlugin(input: {
 	};
 }
 
-export function parseFrontNavigation(value: readonly unknown[]): FrontNavigationGroup[] {
+export function parseFrontNavigation(
+	value: readonly unknown[],
+	routes: readonly { route_id: string; path_pattern: string }[] = [],
+): FrontNavigationGroup[] {
+	if (value.length > 0 && value.every(isLegacyNavigationItem)) {
+		const hrefByRoute = new Map(routes.map((route) => [route.route_id, route.path_pattern]));
+		return [
+			{
+				group_id: "legacy",
+				label: "Navigation",
+				order: 0,
+				items: value.map((entry, order) => {
+					const href = hrefByRoute.get(entry.route_id);
+					if (!href) throw new TypeError(`Front navigation route is missing: ${entry.route_id}`);
+					return { ...entry, order, href };
+				}),
+			},
+		];
+	}
 	return value.map((entry) => {
 		if (!isRecord(entry) || !hasExactKeys(entry, ["group_id", "items", "label", "order"])) {
 			throw new TypeError("Front navigation group is not closed");
@@ -200,6 +218,18 @@ export function parseFrontNavigation(value: readonly unknown[]): FrontNavigation
 			items: entry.items.map((item) => parseNavigationItem(item)),
 		};
 	});
+}
+
+function isLegacyNavigationItem(
+	value: unknown,
+): value is { route_id: string; label: string; permission: string } {
+	return (
+		isRecord(value) &&
+		hasExactKeys(value, ["label", "permission", "route_id"]) &&
+		typeof value.route_id === "string" &&
+		typeof value.label === "string" &&
+		typeof value.permission === "string"
+	);
 }
 
 function parseNavigationItem(value: unknown): FrontNavigationItem {

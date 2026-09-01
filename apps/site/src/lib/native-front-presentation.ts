@@ -60,7 +60,12 @@ export function projectNativeFrontPresentation(
 			messages: { ...USER_FRONT_CATALOGS[locale] },
 		};
 	}
-	const renderers = new Map(payload.renderers.map((renderer) => [renderer.renderer_id, renderer]));
+	const renderers = new Map(
+		[...CORE_FRONT_RENDERER_DESCRIPTORS, ...payload.renderers].map((renderer) => [
+			renderer.renderer_id,
+			renderer,
+		]),
+	);
 	const routes = new Map(
 		payload.front_route_manifest.routes.map((route) => [route.route_id, route]),
 	);
@@ -69,7 +74,10 @@ export function projectNativeFrontPresentation(
 		"route_id" in model.resolution && model.resolution.route_id
 			? routes.get(model.resolution.route_id)
 			: undefined;
-	const visibleNavigation = parseFrontNavigation(payload.presentation.navigation)
+	const visibleNavigation = parseFrontNavigation(
+		payload.presentation.navigation,
+		payload.front_route_manifest.routes,
+	)
 		.map((group) => ({
 			...group,
 			items: group.items.flatMap((item) => {

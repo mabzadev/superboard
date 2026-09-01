@@ -10,6 +10,7 @@ import {
 	type NativeFrontOperator,
 } from "@superboard/supbrd-core";
 
+import { CORE_FRONT_RENDERER_DESCRIPTORS } from "./core-front-contract.js";
 import { assertNativeFrontRenderer } from "./native-front-plugins.js";
 import {
 	loadDependencyHealth,
@@ -135,7 +136,12 @@ async function resolveFrontPageFromRelease(
 }
 
 export function assertReleasePresentation(payload: FrontReleasePayload): void {
-	const renderers = new Map(payload.renderers.map((renderer) => [renderer.renderer_id, renderer]));
+	const renderers = new Map(
+		[...CORE_FRONT_RENDERER_DESCRIPTORS, ...payload.renderers].map((renderer) => [
+			renderer.renderer_id,
+			renderer,
+		]),
+	);
 	const lockedPlugins = new Set(payload.plugin_lock.map(({ plugin_id: pluginId }) => pluginId));
 	const pages = new Map(payload.presentation.pages.map((page) => [page.page_id, page]));
 	const layouts = new Map(payload.presentation.layouts.map((layout) => [layout.layout_id, layout]));
@@ -166,7 +172,10 @@ export function assertReleasePresentation(payload: FrontReleasePayload): void {
 			assertRenderer(layout.root_renderer_id);
 		}
 	}
-	for (const group of parseFrontNavigation(payload.presentation.navigation)) {
+	for (const group of parseFrontNavigation(
+		payload.presentation.navigation,
+		payload.front_route_manifest.routes,
+	)) {
 		for (const item of group.items) {
 			if (!routes.has(item.route_id)) {
 				throw new Error(`Release navigation route is missing: ${item.route_id}`);
