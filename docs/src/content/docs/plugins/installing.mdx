@@ -152,6 +152,30 @@ Native plugins:
   Use native plugins only when you need features that require build-time integration: React admin pages, Portable Text rendering components, or page fragment injection. For everything else, prefer sandboxed plugins -- they can be installed, updated, and removed from the admin panel.
 </Aside>
 
+### Keep a configured plugin inactive
+
+Sandboxed plugins in `sandboxed: []` are enabled when no persisted lifecycle state exists. Set `defaultEnabled: false` when a site needs to catalog a plugin before activation. Set `lifecycleManaged: true` when a host workflow must also reject the generic enable and disable actions in **Plugins**.
+
+The following configuration catalogs the webhook notifier while keeping its hooks and routes inactive:
+
+```javascript title="astro.config.mjs"
+import { defineConfig } from "astro/config";
+import emdash from "emdash/astro";
+import webhookNotifier from "@emdash-cms/plugin-webhook-notifier";
+
+export default defineConfig({
+  integrations: [
+    emdash({
+      sandboxed: [
+        { ...webhookNotifier, defaultEnabled: false, lifecycleManaged: true },
+      ],
+    }),
+  ],
+});
+```
+
+The host workflow must persist the active or inactive state for this plugin. Persisted state takes precedence over `defaultEnabled` on later starts.
+
 ## Marketplace vs. config — when to use which
 
 | | Marketplace (sandboxed) | Config (native or in-process sandboxed) |

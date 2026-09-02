@@ -12,6 +12,13 @@ import type { Database } from "../database/types.js";
 export type PluginStatus = "active" | "inactive";
 export type PluginSource = "config" | "marketplace" | "registry";
 
+export function isPluginStateEnabled(
+	status: string | undefined,
+	defaultEnabled: boolean = true,
+): boolean {
+	return status === "active" || (status === undefined && defaultEnabled);
+}
+
 function toPluginStatus(value: string): PluginStatus {
 	if (value === "active") return "active";
 	return "inactive";

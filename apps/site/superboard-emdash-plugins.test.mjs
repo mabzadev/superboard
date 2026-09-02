@@ -4,6 +4,7 @@ import test from "node:test";
 import topology from "../../config/emdash-plugin-topology.json" with { type: "json" };
 import {
 	SUPERBOARD_PLUGIN_TEMPLATES,
+	configureSuperBoardPlugins,
 	superboardConfiguredPlugins,
 } from "./superboard-emdash-plugins.mjs";
 
@@ -22,20 +23,19 @@ test("adapts every concrete SuperBoard manifest into one configured EmDash plugi
 	assert.ok(superboardConfiguredPlugins.every(({ id }) => !id.includes("*")));
 });
 
-test("does not register a module whose Worker descriptor is not ready", () => {
-	const readyModuleIds = topology.plugins
-		.filter(
-			({ manifest, worker_descriptor: descriptor }) =>
-				manifest.plugin_kind === "module" && descriptor?.deployment_status === "ready",
-		)
-		.map(({ manifest }) => manifest.plugin_id)
-		.toSorted();
+test("keeps a module available in the catalog while its Worker is not ready", () => {
+	const module = topology.plugins.find(
+		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
+	);
+	const configured = configureSuperBoardPlugins([
+		{
+			...module,
+			worker_descriptor: { ...module.worker_descriptor, deployment_status: "not_ready" },
+		},
+	]);
 	assert.deepEqual(
-		superboardConfiguredPlugins
-			.filter(({ id }) => id.startsWith("supbrd-plugmod-"))
-			.map(({ id }) => id)
-			.toSorted(),
-		readyModuleIds,
+		configured.map(({ id }) => id),
+		["supbrd-plugmod-analytics"],
 	);
 });
 
