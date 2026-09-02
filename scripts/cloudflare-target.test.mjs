@@ -141,7 +141,9 @@ test("mbza development domains keep API and short links separate", async () => {
     migrationsDir: "workers/custom/reference/migrations",
   });
   assert.deepEqual(target.customWorker.crons, ["0 3 * * *"]);
-  assert.deepEqual(Object.keys(target.environments), ["development"]);
+  assert.ok(target.environments.development);
+  assert.ok(target.environments.local);
+  assert.equal(target.environments.production, undefined);
   assert.equal(target.filePolicy.maxBytes, 10_485_760);
   assert.equal(target.filePolicy.downloadTicketTtlSeconds, 600);
   assert.equal(
@@ -307,7 +309,8 @@ test("Workers Builds cannot override target-owned Worker names", async () => {
   assert.equal(childEnv.WORKERS_CI, "1");
 });
 
-test("only development and production environments are accepted", () => {
+test("local, development and production environments are accepted", () => {
+  assert.equal(environmentFromArgs({ environment: "local" }), "local");
   assert.equal(
     environmentFromArgs({ environment: "development" }),
     "development",
@@ -318,7 +321,7 @@ test("only development and production environments are accepted", () => {
   );
   assert.throws(
     () => environmentFromArgs({ environment: "staging" }),
-    /development or production/,
+    /local, development or production/,
   );
 });
 

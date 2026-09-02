@@ -31,6 +31,9 @@ import {
   enforceIdentityProjectCutover,
   resolveDeploymentRevision,
 } from "./cloudflare-identity-cutover.mjs";
+import {
+  compiledTargetFromArgs,
+} from "./target-compiler.mjs";
 
 const args = parseArgs();
 const targetName = targetNameFromArgs(args);
@@ -39,6 +42,7 @@ const service = args.service ?? "api";
 const uploadOnly = Boolean(args["upload-only"] || args.preflight);
 
 const { target } = await loadTarget(targetName);
+await compiledTargetFromArgs(target, environment, args);
 const sitePreviewRoute = resolveSitePreviewRoute({
   requested: Boolean(args["site-preview-route"]),
   service,
@@ -310,6 +314,14 @@ function generateServiceConfig() {
       service,
       "--environment",
       environment,
+      ...(args["target-artifact"] && args["target-artifact-checksum"]
+        ? [
+            "--target-artifact",
+            args["target-artifact"],
+            "--target-artifact-checksum",
+            args["target-artifact-checksum"],
+          ]
+        : []),
       ...(args["no-routes"] ? ["--no-routes"] : []),
       ...(sitePreviewRoute?.cliArgs ?? []),
       ...siteReleaseOperations.cliArgs,
