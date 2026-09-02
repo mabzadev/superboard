@@ -11,6 +11,7 @@ interface StoreRecordInput {
 	plugin_id: string;
 	store_id: string;
 	instance_id?: string;
+	target?: "local" | "development" | "production";
 	projectId?: string;
 	pid?: string;
 	project_ref?: string;
@@ -40,15 +41,17 @@ interface StoreRecordRow {
 
 export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInput) {
 	assertPlugin(input.plugin_id);
+	const instanceId = resolveInstanceAlias(input);
 	const installed = await db
 		.prepare(
 			`SELECT artifact.manifest_json, artifact.artifact_checksum
-			 FROM superboard_active_plugin_manifests AS active
+			 FROM superboard_plugin_lifecycle AS lifecycle
 			 JOIN superboard_plugin_manifest_artifacts AS artifact
-			   ON artifact.artifact_checksum = active.artifact_checksum
-			 WHERE active.plugin_id = ? AND artifact.plugin_id = active.plugin_id`,
+			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
+			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ? AND lifecycle.plugin_id = ?
+			   AND lifecycle.state = 'active' AND artifact.plugin_id = lifecycle.plugin_id`,
 		)
-		.bind(input.plugin_id)
+		.bind(instanceId, input.target ?? "local", input.plugin_id)
 		.first<{ manifest_json: string; artifact_checksum: string }>();
 	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	const manifest: unknown = JSON.parse(installed.manifest_json);
@@ -69,7 +72,6 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 	if (!input.store_id.startsWith(`${input.plugin_id}.store.`)) {
 		throw new Error("STORE_NAMESPACE_REJECTED");
 	}
-	const instanceId = resolveInstanceAlias(input);
 	const projectRef = normalizeProjectRef(input.project_ref);
 	const storedEntityId = qualifyEntityId(projectRef, input.entity_id);
 	const canonicalPayload = canonicalizeReleasePayload(input.payload);

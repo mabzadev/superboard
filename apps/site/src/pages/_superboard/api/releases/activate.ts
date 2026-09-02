@@ -17,6 +17,11 @@ import {
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
+import {
+	finalizeSuperBoardPluginLifecycleForRelease,
+	prepareSuperBoardPluginLifecycleForRelease,
+	resolveSuperBoardPluginTarget,
+} from "../../../../lib/superboard-plugin-catalog.js";
 
 export const prerender = false;
 
@@ -56,6 +61,14 @@ export const POST: APIRoute = async (context) => {
 	if (!reauthentication) {
 		return jsonResponse({ error: { code: "STRONG_REAUTH_REQUIRED" } }, 403);
 	}
+	const pluginTarget = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT);
+	await prepareSuperBoardPluginLifecycleForRelease(env.DB, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		target: pluginTarget,
+		release_id: candidate.release.payload.release_id,
+		plugin_lock: candidate.release.payload.plugin_lock,
+		prepared_at: activatedAt,
+	});
 	const result = await activateFrontRelease(createD1FrontReleaseRepository(env.DB), {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		candidate_id: body.candidate_id,
@@ -82,5 +95,17 @@ export const POST: APIRoute = async (context) => {
 	if (!loaded || loaded.release.payload.release_id !== result.active_release_id) {
 		return jsonResponse({ error: { code: "LAST_VERIFIED_CACHE_RELOAD_FAILED" } }, 500);
 	}
-	return jsonResponse(result, 201);
+	const pluginLifecycle = await finalizeSuperBoardPluginLifecycleForRelease(env.DB, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		target: pluginTarget,
+		release_id: loaded.release.payload.release_id,
+		finalized_at: activatedAt,
+	});
+	for (const pluginId of pluginLifecycle.activated_plugin_ids) {
+		await context.locals.emdash.setPluginStatus(pluginId, "active");
+	}
+	for (const pluginId of pluginLifecycle.disabled_plugin_ids) {
+		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
+	}
+	return jsonResponse({ ...result, plugin_lifecycle: pluginLifecycle }, 201);
 };

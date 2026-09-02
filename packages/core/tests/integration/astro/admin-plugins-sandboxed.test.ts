@@ -130,6 +130,27 @@ describe("admin plugin routes: statically-sandboxed plugins (real runtime)", () 
 		expect(plugin).toMatchObject({ source: "config", sandboxed: true, enabled: true });
 	});
 
+	it("keeps a catalogued sandboxed plugin inactive until it has lifecycle state", async () => {
+		runtime = buildRuntime(db, [sandboxedEntry({ defaultEnabled: false })]);
+		const body = await listIds(runtime);
+		const plugin = body.items.find((item) => item.id === "webhook-notifier");
+		expect(plugin).toMatchObject({ source: "config", sandboxed: true, enabled: false });
+		expect(runtime.getPluginRouteMeta("webhook-notifier", "admin")).toBeNull();
+	});
+
+	it("rejects generic activation for a host-managed plugin", async () => {
+		runtime = buildRuntime(db, [sandboxedEntry({ defaultEnabled: false, lifecycleManaged: true })]);
+		const enable = await enablePlugin(ctx(runtime, { id: "webhook-notifier" }));
+		expect(enable.status).toBe(400);
+		expect(await enable.json()).toMatchObject({
+			error: { code: "VALIDATION_ERROR", message: "Plugin activation is managed by the host" },
+		});
+		const disable = await disablePlugin(ctx(runtime, { id: "webhook-notifier" }));
+		expect(disable.status).toBe(400);
+		const body = await listIds(runtime);
+		expect(body.items.find((item) => item.id === "webhook-notifier")?.enabled).toBe(false);
+	});
+
 	it("the enable and disable routes toggle a sandboxed plugin end to end", async () => {
 		const off = await disablePlugin(ctx(runtime, { id: "webhook-notifier" }));
 		expect(off.status).toBe(200);

@@ -246,7 +246,14 @@ function siteConfig() {
     assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
     vars: {
       SUPERBOARD_INSTANCE_ID: target.target,
+      SUPERBOARD_ENVIRONMENT: environment,
+      SUPERBOARD_PLUGIN_IDS: JSON.stringify(
+        compiledTarget.graph.plugins
+          .filter(({ pluginId }) => !pluginId.includes("*"))
+          .map(({ pluginId }) => pluginId),
+      ),
       SUPERBOARD_RELEASE_OPERATIONS: siteReleaseOperations.value,
+      TARGET_ARTIFACT_CHECKSUM: compiledTarget.checksum,
       ...d1SchemaVars(),
     },
     d1_databases: [
