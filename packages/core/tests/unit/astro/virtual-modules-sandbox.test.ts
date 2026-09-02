@@ -67,12 +67,13 @@ describe("generateSandboxedPluginsModule", () => {
 		await setupFakeProject("dist/sandbox-entry.mjs", "export default { hooks: {} };");
 
 		const result = generateSandboxedPluginsModule(
-			[descriptor({ entrypoint: "@test/plugin/sandbox" })],
+			[descriptor({ entrypoint: "@test/plugin/sandbox", defaultEnabled: false })],
 			tmpDir,
 		);
 
 		expect(result).toContain("sandboxedPlugins");
 		expect(result).toContain("test-plugin");
+		expect(result).toContain("defaultEnabled: false");
 		expect(result).toContain("export default { hooks: {} };");
 	});
 

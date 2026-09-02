@@ -33,19 +33,9 @@ import { installCompiledUserPlugin } from "../src/lib/user-plugin-installation.j
 
 describe("EmDash plugin Store authority", () => {
 	test("synchronizes every concrete SuperBoard plugin into the EmDash runtime lifecycle", async () => {
-		await env.DB.prepare(
-			`CREATE TABLE IF NOT EXISTS _plugin_state (
-			  plugin_id TEXT PRIMARY KEY, version TEXT NOT NULL,
-			  status TEXT NOT NULL DEFAULT 'installed', installed_at TEXT DEFAULT (datetime('now')),
-			  activated_at TEXT, deactivated_at TEXT, data TEXT,
-			  source TEXT NOT NULL DEFAULT 'config', marketplace_version TEXT,
-			  display_name TEXT, description TEXT, registry_publisher_did TEXT,
-			  registry_slug TEXT, mcp_tools_enabled INTEGER NOT NULL DEFAULT 0,
-			  mcp_tools_consent TEXT
-			)`,
-		).run();
+		const scope = { instance_id: "vocostar", target: "local" as const };
 		const receipt = await synchronizeSuperBoardPluginCatalog(env.DB, {
-			instance_id: "vocostar",
+			...scope,
 			checked_at: "2026-08-30T08:20:00.000Z",
 			expires_at: "2026-08-31T08:20:00.000Z",
 		});
@@ -59,8 +49,11 @@ describe("EmDash plugin Store authority", () => {
 		});
 
 		const states = await env.DB.prepare(
-			"SELECT COUNT(*) count FROM _plugin_state WHERE source = 'config' AND status = 'active' AND plugin_id LIKE 'supbrd-%'",
-		).first<{ count: number }>();
+			`SELECT COUNT(*) count FROM superboard_plugin_lifecycle
+			 WHERE instance_id = ? AND target = ? AND state = 'active'`,
+		)
+			.bind(scope.instance_id, scope.target)
+			.first<{ count: number }>();
 		expect(states?.count).toBe(18);
 		const manifests = await env.DB.prepare(
 			"SELECT COUNT(*) count FROM superboard_active_plugin_manifests WHERE plugin_id NOT LIKE '%*%'",
@@ -72,7 +65,7 @@ describe("EmDash plugin Store authority", () => {
 			.bind("vocostar")
 			.first<{ count: number }>();
 		expect(health?.count).toBe(18);
-		const fullLock = await loadActiveSuperBoardPluginLock(env.DB);
+		const fullLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		const fullPresentation = await composeUserFrontReleaseInput({
 			...releaseIdentifiers,
 			plugin_lock: fullLock,
@@ -95,12 +88,15 @@ describe("EmDash plugin Store authority", () => {
 			.bind(compatibleAnalyticsChecksum)
 			.first<{ artifact_checksum: string }>();
 		expect(previousAnalytics).not.toBeNull();
-		await env.DB.prepare(
-			"UPDATE superboard_active_plugin_manifests SET artifact_checksum = ? WHERE plugin_id = 'supbrd-plugmod-analytics'",
-		)
-			.bind(previousAnalytics!.artifact_checksum)
-			.run();
-		const rollingDeployLock = await loadActiveSuperBoardPluginLock(env.DB);
+		await env.DB.batch([
+			env.DB.prepare(
+				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+			).bind(previousAnalytics!.artifact_checksum, scope.instance_id, scope.target),
+			env.DB.prepare(
+				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+			).bind(previousAnalytics!.artifact_checksum, scope.instance_id, scope.target),
+		]);
+		const rollingDeployLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		expect(
 			rollingDeployLock.find(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics")
 				?.artifact_checksum,
@@ -123,27 +119,36 @@ describe("EmDash plugin Store authority", () => {
 		)
 			.bind(tamperedChecksum, tamperedChecksum, previousAnalytics!.artifact_checksum)
 			.run();
-		await env.DB.prepare(
-			"UPDATE superboard_active_plugin_manifests SET artifact_checksum = ? WHERE plugin_id = 'supbrd-plugmod-analytics'",
-		)
-			.bind(tamperedChecksum)
-			.run();
-		await expect(loadActiveSuperBoardPluginLock(env.DB)).rejects.toThrow(
+		await env.DB.batch([
+			env.DB.prepare(
+				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+			).bind(tamperedChecksum, scope.instance_id, scope.target),
+			env.DB.prepare(
+				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+			).bind(tamperedChecksum, scope.instance_id, scope.target),
+		]);
+		await expect(loadActiveSuperBoardPluginLock(env.DB, scope)).rejects.toThrow(
 			/PLUGIN_CATALOG_STORED_MANIFEST_INVALID:.*analytics/u,
 		);
 		const currentAnalytics = superBoardRuntimePluginCatalog().plugins.find(
 			({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
 		)?.manifest.artifact_checksum;
-		await env.DB.prepare(
-			"UPDATE superboard_active_plugin_manifests SET artifact_checksum = ? WHERE plugin_id = 'supbrd-plugmod-analytics'",
-		)
-			.bind(currentAnalytics)
-			.run();
+		await env.DB.batch([
+			env.DB.prepare(
+				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+			).bind(currentAnalytics, scope.instance_id, scope.target),
+			env.DB.prepare(
+				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
+			).bind(currentAnalytics, scope.instance_id, scope.target),
+		]);
 
 		await env.DB.prepare(
-			"DELETE FROM superboard_active_plugin_manifests WHERE plugin_id = 'supbrd-plugmod-marketing'",
-		).run();
-		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB);
+			`DELETE FROM superboard_plugin_lifecycle
+			 WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-marketing'`,
+		)
+			.bind(scope.instance_id, scope.target)
+			.run();
+		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		expect(reducedLock).toHaveLength(17);
 		expect(
 			reducedLock.some(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-marketing"),

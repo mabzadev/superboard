@@ -23,6 +23,15 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/lifecycle",
+					entrypoint: fileURLToPath(
+						new URL(
+							"./src/pages/_superboard/api/plugins/[pluginId]/lifecycle.ts",
+							import.meta.url,
+						),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/api/superboard/plugins/stores",
 					entrypoint: fileURLToPath(
 						new URL("./src/pages/_superboard/api/plugins/stores.ts", import.meta.url),

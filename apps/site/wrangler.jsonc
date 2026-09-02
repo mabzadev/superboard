@@ -65,6 +65,7 @@
 	},
 	"vars": {
 		"SUPERBOARD_INSTANCE_ID": "mbza-development",
+		"SUPERBOARD_ENVIRONMENT": "local",
 		"SUPERBOARD_RELEASE_OPERATIONS": "disabled",
 		"D1_EXPECTED_MIGRATION": "0018_native_front_view_bindings.sql",
 		"TARGET_ARTIFACT_CHECKSUM": "sha256:e0abcd3485c04787c5a8ea348828077c12f7af5dd5af5714c76730e9ba4d02c7",

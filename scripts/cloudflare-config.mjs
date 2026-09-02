@@ -246,6 +246,7 @@ function siteConfig() {
     assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
     vars: {
       SUPERBOARD_INSTANCE_ID: target.target,
+      SUPERBOARD_ENVIRONMENT: environment,
       SUPERBOARD_RELEASE_OPERATIONS: siteReleaseOperations.value,
       ...d1SchemaVars(),
     },

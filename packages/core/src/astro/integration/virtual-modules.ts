@@ -692,6 +692,7 @@ export const sandboxedPlugins = [];
 		pluginEntries.push(`{
     id: ${JSON.stringify(descriptor.id)},
     version: ${JSON.stringify(descriptor.version)},
+    defaultEnabled: ${JSON.stringify(descriptor.defaultEnabled ?? true)},
     options: ${JSON.stringify(descriptor.options ?? {})},
     capabilities: ${JSON.stringify(descriptor.capabilities ?? [])},
     allowedHosts: ${JSON.stringify(descriptor.allowedHosts ?? [])},

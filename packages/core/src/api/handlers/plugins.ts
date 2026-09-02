@@ -120,7 +120,7 @@ function buildSandboxedPluginInfo(
 	entry: SandboxedPluginEntry,
 	state: PluginState | null,
 ): PluginInfo {
-	const status = state?.status ?? "active";
+	const status = state?.status ?? (entry.defaultEnabled === false ? "inactive" : "active");
 	const enabled = status === "active";
 
 	return {

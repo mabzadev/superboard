@@ -10,12 +10,9 @@ export const SUPERBOARD_PLUGIN_TEMPLATES = Object.freeze(
 		.toSorted(),
 );
 
-export const superboardConfiguredPlugins = Object.freeze(
-	topology.plugins
-		.filter(({ manifest, worker_descriptor: descriptor }) => {
-			if (manifest.plugin_id.includes("*")) return false;
-			return manifest.plugin_kind === "full" || descriptor?.deployment_status === "ready";
-		})
+export function configureSuperBoardPlugins(plugins) {
+	return plugins
+		.filter(({ manifest }) => !manifest.plugin_id.includes("*"))
 		.map(({ manifest }) => {
 			const version = VERSION_OVERRIDES[manifest.plugin_id] ?? manifest.plugin_version;
 			const displayName = pluginDisplayName(manifest.plugin_id);
@@ -29,6 +26,7 @@ export const superboardConfiguredPlugins = Object.freeze(
 			return {
 				id: manifest.plugin_id,
 				version,
+				defaultEnabled: false,
 				entrypoint,
 				adminPages: [{ path: "/", label: displayName, icon: "settings" }],
 				settingsSchema,
@@ -50,7 +48,11 @@ export const superboardConfiguredPlugins = Object.freeze(
 				],
 				superboardManifest: manifest,
 			};
-		}),
+		});
+}
+
+export const superboardConfiguredPlugins = Object.freeze(
+	configureSuperBoardPlugins(topology.plugins),
 );
 
 function emdashSettingsSchema(properties) {
