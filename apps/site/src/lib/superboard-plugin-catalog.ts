@@ -343,7 +343,7 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 			.bind(
 				failed ? "failed" : "installed",
 				input.checked_at,
-				failed ? "completed" : "not_required",
+				"not_required",
 				failed
 					? canonicalizeReleasePayload({
 							code: "PLUGIN_INSTALLATION_PLAN_NOT_READY",
@@ -481,17 +481,27 @@ export async function finalizeSuperBoardPluginLifecycleForRelease(
 	}
 	const reconciliation = await db
 		.prepare(
-			`SELECT status FROM superboard_plugin_release_reconciliations
-			 WHERE instance_id = ? AND target = ? AND release_id = ?`,
+			`SELECT reconciliation.status, reconciliation.plugin_lock_json,
+			        active.active_release_id
+			 FROM superboard_plugin_release_reconciliations reconciliation
+			 LEFT JOIN superboard_front_active_releases active
+			   ON active.instance_id = reconciliation.instance_id
+			  AND active.active_release_id = reconciliation.release_id
+			 WHERE reconciliation.instance_id = ? AND reconciliation.target = ?
+			   AND reconciliation.release_id = ?`,
 		)
 		.bind(input.instance_id, input.target, input.release_id)
-		.first<{ status: "prepared" | "applied" }>();
-	if (reconciliation?.status !== "applied") {
+		.first<{
+			status: "prepared" | "applied";
+			plugin_lock_json: string;
+			active_release_id: string | null;
+		}>();
+	if (reconciliation?.status !== "applied" || !reconciliation.active_release_id) {
 		throw new Error("PLUGIN_RELEASE_RECONCILIATION_NOT_APPLIED");
 	}
 	const rows = await db
 		.prepare(
-			`SELECT lifecycle.plugin_id, lifecycle.state,
+			`SELECT lifecycle.plugin_id, lifecycle.artifact_checksum, lifecycle.state,
 			        json_extract(artifact.manifest_json, '$.plugin_version') AS plugin_version
 			 FROM superboard_plugin_lifecycle lifecycle
 			 JOIN superboard_plugin_manifest_artifacts artifact
@@ -502,9 +512,37 @@ export async function finalizeSuperBoardPluginLifecycleForRelease(
 			 ORDER BY lifecycle.plugin_id`,
 		)
 		.bind(input.instance_id, input.target, input.release_id)
-		.all<{ plugin_id: string; state: "active" | "disabled"; plugin_version: string }>();
+		.all<{
+			plugin_id: string;
+			artifact_checksum: string;
+			state: "active" | "disabled";
+			plugin_version: string;
+		}>();
 	const activated = rows.results.filter(({ state }) => state === "active");
 	const disabled = rows.results.filter(({ state }) => state === "disabled");
+	let preparedLock: PluginLockEntry[];
+	try {
+		const parsed: unknown = JSON.parse(reconciliation.plugin_lock_json);
+		if (!Array.isArray(parsed)) throw new TypeError("Plugin Lock is not an array");
+		preparedLock = parsed as PluginLockEntry[];
+	} catch {
+		throw new Error("PLUGIN_RELEASE_LOCK_INVALID");
+	}
+	const desired = preparedLock.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core");
+	const activeById = new Map(activated.map((row) => [row.plugin_id, row]));
+	if (
+		activeById.size !== desired.length ||
+		desired.some((lock) => {
+			const row = activeById.get(lock.plugin_id);
+			return (
+				!row ||
+				row.plugin_version !== lock.version ||
+				row.artifact_checksum !== lock.artifact_checksum
+			);
+		})
+	) {
+		throw new Error("PLUGIN_RELEASE_RECONCILIATION_INCOMPLETE");
+	}
 	await writeEmDashPluginStates(
 		db,
 		activated.map(({ plugin_id: pluginId, plugin_version: version }) => ({

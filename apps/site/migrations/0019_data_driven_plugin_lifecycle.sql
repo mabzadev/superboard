@@ -215,6 +215,92 @@ BEGIN
   SELECT RAISE(ABORT, 'plugin lifecycle reconciliation is not prepared');
 END;
 
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_release_reconciliation_insert_fresh_guard
+BEFORE INSERT ON superboard_front_active_releases
+WHEN EXISTS (
+  SELECT 1 FROM superboard_plugin_release_reconciliations reconciliation
+  WHERE reconciliation.instance_id = NEW.instance_id
+    AND reconciliation.release_id = NEW.active_release_id
+    AND reconciliation.status = 'prepared'
+    AND (
+      EXISTS (
+        SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+        WHERE json_extract(lock.value, '$.plugin_id') <> 'supbrd-core'
+          AND NOT EXISTS (
+            SELECT 1 FROM superboard_plugin_lifecycle lifecycle
+            JOIN superboard_plugin_runtime_health health
+              ON health.instance_id = lifecycle.instance_id
+             AND health.target = lifecycle.target
+             AND health.plugin_id = lifecycle.plugin_id
+             AND health.artifact_checksum = lifecycle.artifact_checksum
+            WHERE lifecycle.instance_id = NEW.instance_id
+              AND lifecycle.target = reconciliation.target
+              AND lifecycle.plugin_id = json_extract(lock.value, '$.plugin_id')
+              AND lifecycle.artifact_checksum = json_extract(lock.value, '$.artifact_checksum')
+              AND lifecycle.state IN ('installed', 'active')
+              AND health.status = 'ready'
+              AND health.expires_at > NEW.activated_at
+          )
+      )
+      OR EXISTS (
+        SELECT 1 FROM superboard_plugin_lifecycle lifecycle
+        WHERE lifecycle.instance_id = NEW.instance_id
+          AND lifecycle.target = reconciliation.target
+          AND lifecycle.state = 'active'
+          AND NOT EXISTS (
+            SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+            WHERE json_extract(lock.value, '$.plugin_id') = lifecycle.plugin_id
+          )
+      )
+    )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'plugin lifecycle reconciliation is stale');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_release_reconciliation_update_fresh_guard
+BEFORE UPDATE ON superboard_front_active_releases
+WHEN EXISTS (
+  SELECT 1 FROM superboard_plugin_release_reconciliations reconciliation
+  WHERE reconciliation.instance_id = NEW.instance_id
+    AND reconciliation.release_id = NEW.active_release_id
+    AND reconciliation.status = 'prepared'
+    AND (
+      EXISTS (
+        SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+        WHERE json_extract(lock.value, '$.plugin_id') <> 'supbrd-core'
+          AND NOT EXISTS (
+            SELECT 1 FROM superboard_plugin_lifecycle lifecycle
+            JOIN superboard_plugin_runtime_health health
+              ON health.instance_id = lifecycle.instance_id
+             AND health.target = lifecycle.target
+             AND health.plugin_id = lifecycle.plugin_id
+             AND health.artifact_checksum = lifecycle.artifact_checksum
+            WHERE lifecycle.instance_id = NEW.instance_id
+              AND lifecycle.target = reconciliation.target
+              AND lifecycle.plugin_id = json_extract(lock.value, '$.plugin_id')
+              AND lifecycle.artifact_checksum = json_extract(lock.value, '$.artifact_checksum')
+              AND lifecycle.state IN ('installed', 'active')
+              AND health.status = 'ready'
+              AND health.expires_at > NEW.activated_at
+          )
+      )
+      OR EXISTS (
+        SELECT 1 FROM superboard_plugin_lifecycle lifecycle
+        WHERE lifecycle.instance_id = NEW.instance_id
+          AND lifecycle.target = reconciliation.target
+          AND lifecycle.state = 'active'
+          AND NOT EXISTS (
+            SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+            WHERE json_extract(lock.value, '$.plugin_id') = lifecycle.plugin_id
+          )
+      )
+    )
+)
+BEGIN
+  SELECT RAISE(ABORT, 'plugin lifecycle reconciliation is stale');
+END;
+
 CREATE TRIGGER IF NOT EXISTS superboard_plugin_release_reconciliation_apply
 AFTER INSERT ON superboard_front_activations
 BEGIN

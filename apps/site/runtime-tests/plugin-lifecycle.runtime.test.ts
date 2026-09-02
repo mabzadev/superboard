@@ -256,7 +256,42 @@ describe("SuperBoard plugin lifecycle", () => {
 			/PLUGIN_CATALOG_HEALTH_NOT_READY/u,
 		);
 	});
+
+	test("rejects a prepared Release when lifecycle changes before the pointer swap", async () => {
+		const staleScope = {
+			instance_id: "stale-preparation-instance",
+			target: "development" as const,
+			approved_by: "operator-1",
+		};
+		await installSuperBoardPluginCatalog(env.DB, {
+			...staleScope,
+			plan_id: "plugin-plan-stale-preparation",
+			checked_at: "2026-09-02T12:00:00.000Z",
+			expires_at: "2999-09-03T12:00:00.000Z",
+		});
+		const lock = await loadReleasableSuperBoardPluginLock(env.DB, staleScope);
+		const releaseId = "01J00000000000000000000455";
+		await stageReleaseCandidate(env.DB, staleScope.instance_id, releaseId, lock, staleScopeTime);
+		await prepareSuperBoardPluginLifecycleForRelease(env.DB, {
+			...staleScope,
+			release_id: releaseId,
+			plugin_lock: lock,
+			prepared_at: staleScopeTime,
+		});
+		await transitionSuperBoardPluginLifecycle(env.DB, {
+			...staleScope,
+			plugin_id: "supbrd-plug-user",
+			to_state: "quarantined",
+			changed_at: "2026-09-02T12:01:00.000Z",
+			reason: "integrity changed after preparation",
+		});
+		await expect(
+			activateReleasePointer(env.DB, staleScope.instance_id, releaseId, staleScopeTime),
+		).rejects.toThrow(/plugin lifecycle reconciliation is stale/u);
+	});
 });
+
+const staleScopeTime = "2026-09-02T12:05:00.000Z";
 
 async function activatePluginRelease(
 	db: D1Database,
