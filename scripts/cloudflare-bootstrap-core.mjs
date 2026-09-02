@@ -245,6 +245,7 @@ export function buildCloudflareBootstrapPlan({
   accountId,
   inventories,
   freshSupportInstall = false,
+  compiledTarget,
 }) {
   if (freshSupportInstall && !target.features?.support) {
     throw new Error("fresh-support-install requires Support to be enabled");
@@ -252,6 +253,12 @@ export function buildCloudflareBootstrapPlan({
   const desired = desiredCloudflareResources(target, environment).filter(
     (resource) => !freshSupportInstall || isFreshSupportResource(resource),
   );
+  if (compiledTarget) {
+    assertCompiledResources(
+      compiledTarget,
+      desiredCloudflareResources(target, environment),
+    );
+  }
   const resources = [];
   const operations = [];
   const blockers = [];
@@ -392,6 +399,12 @@ export function buildCloudflareBootstrapPlan({
       ? "remote-read-only-fresh-support"
       : "remote-read-only",
     target: target.target,
+    ...(compiledTarget
+      ? {
+          targetArtifactChecksum: compiledTarget.checksum,
+          graphChecksum: compiledTarget.graphChecksum,
+        }
+      : {}),
     resourceIdentity: resourceIdentity(target),
     accountAlias: target.accountAlias,
     accountFingerprint: accountFingerprint(accountId),
@@ -422,6 +435,8 @@ export function cloudflareBootstrapConfirmation(plan) {
       JSON.stringify({
         schemaVersion: plan.schemaVersion,
         target: plan.target,
+        targetArtifactChecksum: plan.targetArtifactChecksum ?? null,
+        graphChecksum: plan.graphChecksum ?? null,
         accountAlias: plan.accountAlias,
         accountFingerprint: plan.accountFingerprint,
         environment: plan.environment,
@@ -610,4 +625,27 @@ function setPath(root, path, value) {
     current = current[segment];
   }
   current[path.at(-1)] = value;
+}
+
+function assertCompiledResources(compiledTarget, desired) {
+  const compiled = new Map(
+    compiledTarget.materialization.resources.map((resource) => [
+      resource.key,
+      resource,
+    ]),
+  );
+  for (const resource of desired) {
+    const value = compiled.get(resource.key);
+    if (
+      !value ||
+      value.kind !== resource.kind ||
+      value.name !== resource.name ||
+      value.id !== (resource.manifestId ?? null)
+    ) {
+      throw new Error(`Target resource graph drift for ${resource.key}`);
+    }
+  }
+  if (compiled.size !== desired.length) {
+    throw new Error("Target resource graph drift: resource count changed");
+  }
 }

@@ -77,61 +77,80 @@
   ],
   "workers": {
     "api": {
-      "development": "superboard-api-dev"
+      "development": "superboard-api-dev",
+      "local": "superboard-api-local"
     },
     "site": {
-      "development": "superboard-site-dev"
+      "development": "superboard-site-dev",
+      "local": "superboard-site-local"
     },
     "dashboard": {
-      "development": "superboard-dashboard-dev"
+      "development": "superboard-dashboard-dev",
+      "local": "superboard-dashboard-local"
     },
     "billing": {
-      "development": "superboard-billing-dev"
+      "development": "superboard-billing-dev",
+      "local": "superboard-billing-local"
     },
     "email": {
-      "development": "superboard-email-dev"
+      "development": "superboard-email-dev",
+      "local": "superboard-email-local"
     },
     "identity": {
-      "development": "superboard-identity-dev"
+      "development": "superboard-identity-dev",
+      "local": "superboard-identity-local"
     },
     "files": {
-      "development": "superboard-files-dev"
+      "development": "superboard-files-dev",
+      "local": "superboard-files-local"
     },
     "observability": {
-      "development": "superboard-observability-dev"
+      "development": "superboard-observability-dev",
+      "local": "superboard-observability-local"
     },
     "mcp": {
-      "development": "superboard-mcp-dev"
+      "development": "superboard-mcp-dev",
+      "local": "superboard-mcp-local"
     },
     "app": {
-      "development": "superboard-app-dev"
+      "development": "superboard-app-dev",
+      "local": "superboard-app-local"
     },
     "products": {
-      "development": "superboard-products-dev"
+      "development": "superboard-products-dev",
+      "local": "superboard-products-local"
     },
     "paywalls": {
-      "development": "superboard-paywalls-dev"
+      "development": "superboard-paywalls-dev",
+      "local": "superboard-paywalls-local"
     },
     "dynamic-links": {
-      "development": "superboard-dynamic-links-dev"
+      "development": "superboard-dynamic-links-dev",
+      "local": "superboard-dynamic-links-local"
     },
     "support": {
-      "development": "superboard-support-dev"
+      "development": "superboard-support-dev",
+      "local": "superboard-support-local"
     },
     "analytics": {
-      "development": "superboard-analytics-dev"
+      "development": "superboard-analytics-dev",
+      "local": "superboard-analytics-local"
     },
     "marketing": {
-      "development": "superboard-marketing-dev"
+      "development": "superboard-marketing-dev",
+      "local": "superboard-marketing-local"
     },
     "onboardings": {
-      "development": "superboard-onboardings-dev"
+      "development": "superboard-onboardings-dev",
+      "local": "superboard-onboardings-local"
     },
     "flows": {
-      "development": "superboard-flows-dev"
+      "development": "superboard-flows-dev",
+      "local": "superboard-flows-local"
     },
     "custom": {
-      "development": "superboard-custom-reference-dev"
+      "development": "superboard-custom-reference-dev",
+      "local": "superboard-custom-reference-local"
     }
   },
   "customWorker": {
@@ -354,6 +373,160 @@
         "billingDlq": "superboard-dev-billing-dlq",
         "email": "superboard-dev-email-delivery",
         "emailDlq": "superboard-dev-email-delivery-dlq"
+      }
+    },
+    "local": {
+      "d1": {
+        "name": "superboard-local-db",
+        "id": null
+      },
+      "siteD1": {
+        "name": "superboard-local-site-db",
+        "id": null
+      },
+      "siteMedia": {
+        "name": "superboard-local-site-media"
+      },
+      "siteSessionKv": {
+        "name": "superboard-local-site-session",
+        "id": null
+      },
+      "siteReleaseKv": {
+        "name": "superboard-local-site-last-verified-release",
+        "id": null
+      },
+      "kv": {
+        "name": "superboard-local",
+        "id": null
+      },
+      "r2": {
+        "name": "superboard-local-files"
+      },
+      "dashboardCache": {
+        "name": "superboard-local-dashboard-cache"
+      },
+      "emailD1": {
+        "name": "superboard-local-email-db",
+        "id": null
+      },
+      "identityD1": {
+        "name": "superboard-local-identity-db",
+        "id": null
+      },
+      "filesD1": {
+        "name": "superboard-local-files-db",
+        "id": null
+      },
+      "customD1": {
+        "name": "superboard-local-custom-reference-db",
+        "id": null
+      },
+      "analyticsDataset": "superboard_mbza_local",
+      "supportProjectIds": [],
+      "moduleD1": {
+        "app": {
+          "name": "superboard-local-app-db",
+          "id": null
+        },
+        "products": {
+          "name": "superboard-local-products-db",
+          "id": null
+        },
+        "paywalls": {
+          "name": "superboard-local-paywalls-db",
+          "id": null
+        },
+        "dynamicLinks": {
+          "name": "superboard-local-dynamic-links-db",
+          "id": null
+        },
+        "support": {
+          "name": "superboard-local-support-v2-db",
+          "id": null
+        },
+        "analytics": {
+          "name": "superboard-local-analytics-db",
+          "id": null
+        },
+        "marketing": {
+          "name": "superboard-local-marketing-db",
+          "id": null
+        },
+        "onboardings": {
+          "name": "superboard-local-onboardings-db",
+          "id": null
+        },
+        "flows": {
+          "name": "superboard-local-flows-db",
+          "id": null
+        }
+      },
+      "moduleR2": {
+        "support": {
+          "name": "superboard-local-support-v2-attachments"
+        },
+        "analytics": {
+          "name": "superboard-local-analytics-events"
+        },
+        "marketing": {
+          "name": "superboard-local-marketing-media"
+        },
+        "flows": {
+          "name": "superboard-local-flows-archive"
+        }
+      },
+      "moduleVectorize": {
+        "supportKnowledge": {
+          "name": "superboard-local-support-v2-knowledge",
+          "dimensions": 1024,
+          "metric": "cosine",
+          "description": "SuperBoard Support knowledge index"
+        }
+      },
+      "moduleQueues": {
+        "support": {
+          "name": "superboard-local-support-v2-events",
+          "dlq": "superboard-local-support-v2-events-dlq"
+        },
+        "supportAi": {
+          "name": "superboard-local-support-v2-ai",
+          "dlq": "superboard-local-support-v2-ai-dlq"
+        },
+        "supportBulk": {
+          "name": "superboard-local-support-v2-bulk",
+          "dlq": "superboard-local-support-v2-bulk-dlq"
+        },
+        "analytics": {
+          "name": "superboard-local-analytics-ingest",
+          "dlq": "superboard-local-analytics-ingest-dlq"
+        },
+        "marketing": {
+          "name": "superboard-local-marketing-delivery",
+          "dlq": "superboard-local-marketing-delivery-dlq"
+        },
+        "flows": {
+          "name": "superboard-local-flows-events",
+          "dlq": "superboard-local-flows-events-dlq"
+        }
+      },
+      "supportRouting": {
+        "pattern": "api.mbza.dev/api/v1/support*",
+        "worker": "superboard-api-local",
+        "mode": "staged"
+      },
+      "publicRouting": "staged",
+      "billingExecutionMode": "local",
+      "queues": {
+        "events": "superboard-local-events",
+        "eventsDlq": "superboard-local-events-dlq",
+        "push": "superboard-local-push",
+        "pushDlq": "superboard-local-push-dlq",
+        "maintenance": "superboard-local-maintenance",
+        "maintenanceDlq": "superboard-local-maintenance-dlq",
+        "billing": "superboard-local-billing",
+        "billingDlq": "superboard-local-billing-dlq",
+        "email": "superboard-local-email-delivery",
+        "emailDlq": "superboard-local-email-delivery-dlq"
       }
     }
   }

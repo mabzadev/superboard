@@ -420,6 +420,7 @@
       "additionalProperties": false,
       "minProperties": 1,
       "properties": {
+        "local": { "$ref": "#/$defs/environment" },
         "development": { "$ref": "#/$defs/environment" },
         "production": { "$ref": "#/$defs/environment" }
       }
@@ -502,6 +503,7 @@
       "additionalProperties": false,
       "minProperties": 1,
       "properties": {
+        "local": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "development": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "production": { "type": "string", "pattern": "^[a-z0-9-]+$" }
       }

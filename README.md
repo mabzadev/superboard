@@ -122,34 +122,56 @@ pushes or uploads secret values.
 
 ## Cloudflare targets
 
-`deploy/targets/<target>.json` contains non-secret names, domains and resource
-identifiers, but never credentials or Cloudflare account IDs. Development and
-production are separate targets and may live in different Cloudflare accounts.
-The account is selected at runtime with a scoped environment variable derived
-from `accountAlias`, with `CLOUDFLARE_ACCOUNT_ID` as a CI-friendly fallback.
+`deploy/targets/<target>.json` selects an Instance's features, Workers, domains,
+and physical resources. The target compiler joins that manifest with the plugin
+topology, migrations, bindings, routes, secret contracts, and health checks.
+Its `environments` entries materialize the same logical graph for local and
+Cloudflare execution. Separate Instances use separate targets and may live in
+different Cloudflare accounts. The account is selected at runtime with a scoped
+environment variable derived from `accountAlias`, with
+`CLOUDFLARE_ACCOUNT_ID` as a CI-friendly fallback.
+
+`pnpm target:orchestrate` compiles the selected target before every lifecycle
+operation. The compiler compares the logical graph checksum across available
+environments and stops when their plugins, bindings, resources, migrations,
+routes, secrets, or health checks differ.
 The automated ownership rules are documented in
 [`docs/CONFIGURATION_BOUNDARIES.md`](docs/CONFIGURATION_BOUNDARIES.md) and can
 be audited offline with `pnpm run configuration:check`.
+Use the [Site local validation guide](apps/site/README.md#local-validation) to
+configure, migrate, and start the complete local graph.
+
+The following command displays the local lifecycle plan:
 
 ```bash
-# Validate the SuperBoard development target (no remote write)
-pnpm run cloudflare:bootstrap -- --target mbza-development --environment development
+pnpm target:orchestrate plan --target mbza-development --environment local --adapter local
+```
 
-# Compare the complete paginated remote inventory with a target-scoped token
-CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
-  pnpm run cloudflare:bootstrap -- \
-  --target mbza-development --environment development --remote
+The following command compares the complete remote inventory with the compiled
+development artifact:
 
-# Apply only the unchanged reviewed plan and its emitted exact confirmation
+```bash
 CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
-  pnpm run cloudflare:bootstrap -- \
-  --target mbza-development --environment development --apply \
+  pnpm target:orchestrate provision \
+  --target mbza-development --environment development --adapter cloudflare --remote
+```
+
+Apply the unchanged plan with the exact confirmation emitted by the preceding
+command:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
+  pnpm target:orchestrate provision \
+  --target mbza-development --environment development --adapter cloudflare \
+  --remote --apply \
   --confirm "CLOUDFLARE:BOOTSTRAP:mbza-development:development:<plan-digest>"
+```
 
-# Generate and deploy
-pnpm run cloudflare:deploy -- --target mbza-development --service api --environment development
-pnpm run cloudflare:deploy -- --target mbza-development --service mcp --environment development
-pnpm run cloudflare:deploy -- --target mbza-development --service dashboard --environment development
+The following command generates, migrates, and deploys the API Worker:
+
+```bash
+pnpm target:orchestrate deploy --target mbza-development \
+  --environment development --adapter cloudflare --service api
 ```
 
 Google/Apple audiences, web origins and numeric Support project IDs can be

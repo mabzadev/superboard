@@ -1,28 +1,87 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "superboard-site",
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "superboard-site-local",
 	"main": "./src/worker.ts",
 	"compatibility_date": "2026-08-08",
 	"compatibility_flags": ["nodejs_compat"],
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "superboard-site",
-			"migrations_dir": "migrations"
-		}
+			"database_name": "superboard-local-site-db",
+			"migrations_dir": "migrations",
+			"migrations_table": "d1_migrations",
+		},
 	],
-	"r2_buckets": [{ "binding": "MEDIA", "bucket_name": "superboard-site-media" }],
-	"kv_namespaces": [{ "binding": "SESSION" }, { "binding": "RELEASE_CACHE" }],
-	"worker_loaders": [{ "binding": "LOADER" }],
-	"services": [{ "binding": "API_SERVICE", "service": "superboard-api-dev" }],
-	"vars": {
-		"SUPERBOARD_INSTANCE_ID": "local",
-		"SUPERBOARD_RELEASE_OPERATIONS": "disabled"
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "superboard-local-site-media",
+		},
+	],
+	"kv_namespaces": [
+		{
+			"binding": "SESSION",
+		},
+		{
+			"binding": "RELEASE_CACHE",
+		},
+	],
+	"worker_loaders": [
+		{
+			"binding": "LOADER",
+		},
+	],
+	"services": [
+		{
+			"binding": "API_SERVICE",
+			"service": "superboard-api-local",
+		},
+	],
+	"tail_consumers": [
+		{
+			"service": "superboard-observability-local",
+		},
+	],
+	"images": {
+		"binding": "IMAGES",
 	},
-	"triggers": { "crons": ["* * * * *"] },
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./dist/client",
+	},
+	"send_email": [
+		{
+			"name": "EMAIL",
+			"allowed_destination_addresses": ["mabzadev@gmail.com"],
+			"allowed_sender_addresses": ["noreply@mbza.dev"],
+		},
+	],
+	"secrets": {
+		"required": [
+			"EMDASH_ENCRYPTION_KEY",
+			"SITE_OPERATOR_BRIDGE_TOKEN",
+			"SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",
+		],
+	},
+	"vars": {
+		"SUPERBOARD_INSTANCE_ID": "mbza-development",
+		"SUPERBOARD_RELEASE_OPERATIONS": "disabled",
+		"D1_EXPECTED_MIGRATION": "0018_native_front_view_bindings.sql",
+		"TARGET_ARTIFACT_CHECKSUM": "sha256:e0abcd3485c04787c5a8ea348828077c12f7af5dd5af5714c76730e9ba4d02c7",
+	},
+	"triggers": {
+		"crons": ["* * * * *"],
+	},
 	"observability": {
 		"enabled": true,
-		"logs": { "enabled": true, "head_sampling_rate": 1, "invocation_logs": true },
-		"traces": { "enabled": true, "head_sampling_rate": 0.1 }
-	}
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 0.1,
+		},
+	},
 }

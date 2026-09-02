@@ -15,6 +15,9 @@ import {
   root,
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
+import {
+  compiledTargetFromArgs,
+} from "./target-compiler.mjs";
 
 export function migrationConfirmation(
   targetName,
@@ -92,6 +95,7 @@ export async function buildD1ConvergencePlan({
   targetName,
   environment,
   serviceSelector = "all",
+  compiledTarget,
 }) {
   const descriptors = targetD1Descriptors(
     target,
@@ -112,11 +116,18 @@ export async function buildD1ConvergencePlan({
       local_migration_count: migrations.length,
     });
   }
+  if (compiledTarget) assertCompiledMigrations(compiledTarget, databases);
   return {
     schema_version: 1,
     mode: "plan",
     target: targetName,
     environment,
+    ...(compiledTarget
+      ? {
+          target_artifact_checksum: compiledTarget.checksum,
+          graph_checksum: compiledTarget.graphChecksum,
+        }
+      : {}),
     service_selector: serviceSelector,
     ready: databases.every(({ provisioned }) => provisioned),
     remote_read: false,
@@ -134,6 +145,8 @@ export async function attachRemoteMigrationStatus({
   serviceSelector,
   env,
   execute = executeCommand,
+  targetArtifactPath,
+  targetArtifactChecksum,
 }) {
   const descriptors = targetD1Descriptors(
     target,
@@ -144,7 +157,10 @@ export async function attachRemoteMigrationStatus({
   for (const descriptor of descriptors) {
     if (!descriptor.databaseId)
       throw new Error(`${descriptor.service} database is not provisioned`);
-    generateConfig(descriptor, targetName, environment, env, execute);
+    generateConfig(descriptor, targetName, environment, env, execute, {
+      targetArtifactPath,
+      targetArtifactChecksum,
+    });
     const result = execute(
       "npx",
       [
@@ -200,6 +216,9 @@ export async function applyD1Convergence({
   execute = executeCommand,
   backup = createD1Backup,
   now = new Date(),
+  compiledTarget,
+  targetArtifactPath,
+  targetArtifactChecksum,
 }) {
   const descriptors = targetD1Descriptors(
     target,
@@ -207,10 +226,23 @@ export async function applyD1Convergence({
     environment,
     serviceSelector,
   );
+  if (compiledTarget) {
+    const databases = [];
+    for (const descriptor of descriptors) {
+      databases.push({
+        service: descriptor.service,
+        local_migrations: await localMigrationFiles(descriptor),
+      });
+    }
+    assertCompiledMigrations(compiledTarget, databases);
+  }
   for (const descriptor of descriptors) {
     if (!descriptor.databaseId)
       throw new Error(`${descriptor.service} database is not provisioned`);
-    generateConfig(descriptor, targetName, environment, env, execute);
+    generateConfig(descriptor, targetName, environment, env, execute, {
+      targetArtifactPath,
+      targetArtifactChecksum,
+    });
   }
 
   // Back up every selected production database before the first schema write.
@@ -286,6 +318,12 @@ export async function applyD1Convergence({
     mode: "apply",
     target: targetName,
     environment,
+    ...(compiledTarget
+      ? {
+          target_artifact_checksum: compiledTarget.checksum,
+          graph_checksum: compiledTarget.graphChecksum,
+        }
+      : {}),
     service_selector: serviceSelector,
     converged: true,
     pending_migration_count: 0,
@@ -294,7 +332,14 @@ export async function applyD1Convergence({
   };
 }
 
-function generateConfig(descriptor, targetName, environment, env, execute) {
+function generateConfig(
+  descriptor,
+  targetName,
+  environment,
+  env,
+  execute,
+  { targetArtifactPath, targetArtifactChecksum } = {},
+) {
   execute(
     process.execPath,
     [
@@ -306,6 +351,14 @@ function generateConfig(descriptor, targetName, environment, env, execute) {
       "--environment",
       environment,
       "--no-routes",
+      ...(targetArtifactPath && targetArtifactChecksum
+        ? [
+            "--target-artifact",
+            targetArtifactPath,
+            "--target-artifact-checksum",
+            targetArtifactChecksum,
+          ]
+        : []),
     ],
     { env, capture: true },
   );
@@ -346,6 +399,7 @@ async function main(argv = process.argv.slice(2)) {
   const environment = environmentFromArgs(args);
   const serviceSelector = String(args.service || "all");
   const { target } = await loadTarget(targetName);
+  const compiledTarget = await compiledTargetFromArgs(target, environment, args);
 
   if (command === "plan") {
     const plan = await buildD1ConvergencePlan({
@@ -353,6 +407,7 @@ async function main(argv = process.argv.slice(2)) {
       targetName,
       environment,
       serviceSelector,
+      compiledTarget,
     });
     if (args["remote-read"]) {
       await attachRemoteMigrationStatus({
@@ -362,6 +417,8 @@ async function main(argv = process.argv.slice(2)) {
         environment,
         serviceSelector,
         env: cloudflareEnv(target),
+        targetArtifactPath: args["target-artifact"],
+        targetArtifactChecksum: args["target-artifact-checksum"],
       });
     }
     process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
@@ -384,8 +441,32 @@ async function main(argv = process.argv.slice(2)) {
     serviceSelector,
     backupDirectory: args["backup-directory"],
     env: cloudflareEnv(target),
+    compiledTarget,
+    targetArtifactPath: args["target-artifact"],
+    targetArtifactChecksum: args["target-artifact-checksum"],
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+}
+
+function assertCompiledMigrations(compiledTarget, databases) {
+  const compiled = new Map(
+    compiledTarget.graph.migrations.map((migration) => [
+      migration.service,
+      migration,
+    ]),
+  );
+  for (const database of databases) {
+    const migration = compiled.get(database.service);
+    if (
+      !migration ||
+      migration.files.length !== database.local_migrations.length ||
+      migration.files.some(
+        ({ file }, index) => file !== database.local_migrations[index],
+      )
+    ) {
+      throw new Error(`Target migration graph drift for ${database.service}`);
+    }
+  }
 }
 
 if (

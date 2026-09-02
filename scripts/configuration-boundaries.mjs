@@ -232,11 +232,15 @@ function validateReferenceTarget(reference, contract, errors) {
   const referenceContract = contract.authorities.reference;
   const environments = Object.keys(target.environments ?? {});
   if (
-    environments.length !== 1 ||
-    environments[0] !== referenceContract.requiredEnvironment
+    !environments.includes(referenceContract.requiredEnvironment) ||
+    environments.some(
+      (environment) =>
+        environment !== "local" &&
+        environment !== referenceContract.requiredEnvironment,
+    )
   ) {
     errors.push(
-      `${reference.path} must isolate the reference profile in development only`,
+      `${reference.path} must isolate the reference profile in local and development environments`,
     );
   }
   if (

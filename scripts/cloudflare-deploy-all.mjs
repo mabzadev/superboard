@@ -24,6 +24,9 @@ import {
   resolveDeploymentRevision,
   verifyIdentityProjectCutover,
 } from "./cloudflare-identity-cutover.mjs";
+import {
+  compiledTargetFromArgs,
+} from "./target-compiler.mjs";
 
 const args = parseArgs();
 if (args["skip-backup"]) {
@@ -34,6 +37,7 @@ if (args["skip-backup"]) {
 const targetName = targetNameFromArgs(args);
 const environment = environmentFromArgs(args);
 const { target } = await loadTarget(targetName);
+const compiledTarget = await compiledTargetFromArgs(target, environment, args);
 if (!target.environments[environment])
   throw new Error(`${targetName} does not define ${environment}`);
 const plan = buildDeploymentExecutionPlan({
@@ -43,6 +47,7 @@ const plan = buildDeploymentExecutionPlan({
   uploadOnly: Boolean(args["upload-only"]),
   preflight: Boolean(args.preflight),
   skipMigrations: Boolean(args["skip-migrations"]),
+  compiledTarget,
 });
 const services = plan.services;
 
@@ -88,6 +93,9 @@ if (plan.migrationStrategy === "backup-and-migrate-all-before-workers") {
     backupDirectory,
     env: targetCloudflareEnv,
     now,
+    compiledTarget,
+    targetArtifactPath: args["target-artifact"],
+    targetArtifactChecksum: args["target-artifact-checksum"],
   });
   const receipt = buildMigrationBatchReceipt({
     targetName,
@@ -131,6 +139,14 @@ for (const service of services) {
     environment,
     "--service",
     service,
+    ...(args["target-artifact"] && args["target-artifact-checksum"]
+      ? [
+          "--target-artifact",
+          args["target-artifact"],
+          "--target-artifact-checksum",
+          args["target-artifact-checksum"],
+        ]
+      : []),
     ...(args["no-routes"] ? ["--no-routes"] : []),
     ...(args.preflight ? ["--preflight"] : []),
     ...(args["upload-only"] ? ["--upload-only"] : []),
