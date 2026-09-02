@@ -269,6 +269,8 @@ export interface SandboxedPluginEntry {
 	version: string;
 	/** Build-time default used only when no persisted plugin state exists. */
 	defaultEnabled?: boolean;
+	/** Host-owned lifecycle blocks generic admin enable/disable actions. */
+	lifecycleManaged?: boolean;
 	options: Record<string, unknown>;
 	code: string;
 	/** Capabilities the plugin requests */

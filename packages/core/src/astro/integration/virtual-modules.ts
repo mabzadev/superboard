@@ -693,6 +693,7 @@ export const sandboxedPlugins = [];
     id: ${JSON.stringify(descriptor.id)},
     version: ${JSON.stringify(descriptor.version)},
     defaultEnabled: ${JSON.stringify(descriptor.defaultEnabled ?? true)},
+    lifecycleManaged: ${JSON.stringify(descriptor.lifecycleManaged ?? false)},
     options: ${JSON.stringify(descriptor.options ?? {})},
     capabilities: ${JSON.stringify(descriptor.capabilities ?? [])},
     allowedHosts: ${JSON.stringify(descriptor.allowedHosts ?? [])},

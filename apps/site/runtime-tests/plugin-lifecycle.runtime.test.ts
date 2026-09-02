@@ -2,10 +2,11 @@ import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 
 import {
+	finalizeSuperBoardPluginLifecycleForRelease,
 	installSuperBoardPluginCatalog,
-	reconcileSuperBoardPluginLifecycleForRelease,
 	loadActiveSuperBoardPluginLock,
 	loadReleasableSuperBoardPluginLock,
+	prepareSuperBoardPluginLifecycleForRelease,
 	superBoardRuntimePluginCatalog,
 	transitionSuperBoardPluginLifecycle,
 } from "../src/lib/superboard-plugin-catalog.js";
@@ -34,7 +35,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			...scope,
 			plan_id: "plugin-plan-blank-instance",
 			checked_at: "2026-09-02T08:00:00.000Z",
-			expires_at: "2026-09-03T08:00:00.000Z",
+			expires_at: "2999-09-03T08:00:00.000Z",
 		});
 
 		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(18);
@@ -76,19 +77,13 @@ describe("SuperBoard plugin lifecycle", () => {
 
 		const candidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
 		expect(candidateLock).toHaveLength(18);
-		await activateReleasePointer(
+		const activation = await activatePluginRelease(
 			env.DB,
-			scope.instance_id,
+			scope,
 			"01J00000000000000000000405",
 			candidateLock,
 			"2026-09-02T08:05:00.000Z",
 		);
-		const activation = await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
-			...scope,
-			release_id: "01J00000000000000000000405",
-			plugin_lock: candidateLock,
-			activated_at: "2026-09-02T08:05:00.000Z",
-		});
 		expect(activation).toMatchObject({ status: "reconciled", plugin_count: 18 });
 		const activeStates = await env.DB.prepare(
 			"SELECT COUNT(*) count FROM _plugin_state WHERE status = 'active'",
@@ -113,23 +108,16 @@ describe("SuperBoard plugin lifecycle", () => {
 			...scope,
 			plan_id: "plugin-plan-state-changes",
 			checked_at: "2026-09-02T09:00:00.000Z",
-			expires_at: "2026-09-03T09:00:00.000Z",
+			expires_at: "2999-09-03T09:00:00.000Z",
 		});
 		const initialLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
-		await activateReleasePointer(
+		await activatePluginRelease(
 			env.DB,
-			scope.instance_id,
+			scope,
 			"01J00000000000000000000415",
 			initialLock,
 			"2026-09-02T09:05:00.000Z",
 		);
-		await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
-			...scope,
-			release_id: "01J00000000000000000000415",
-			plugin_lock: initialLock,
-			activated_at: "2026-09-02T09:05:00.000Z",
-		});
-
 		await transitionSuperBoardPluginLifecycle(env.DB, {
 			...scope,
 			plugin_id: "supbrd-plugmod-marketing",
@@ -147,19 +135,13 @@ describe("SuperBoard plugin lifecycle", () => {
 
 		const reducedCandidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
 		expect(reducedCandidateLock).toHaveLength(16);
-		await activateReleasePointer(
+		await activatePluginRelease(
 			env.DB,
-			scope.instance_id,
+			scope,
 			"01J00000000000000000000425",
 			reducedCandidateLock,
 			"2026-09-02T09:15:00.000Z",
 		);
-		await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
-			...scope,
-			release_id: "01J00000000000000000000425",
-			plugin_lock: reducedCandidateLock,
-			activated_at: "2026-09-02T09:15:00.000Z",
-		});
 		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		expect(reducedLock).toHaveLength(16);
 		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(18);
@@ -186,7 +168,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			approved_by: "operator-1",
 			plan_id: "plugin-plan-tampered-contract",
 			checked_at: "2026-09-02T10:00:00.000Z",
-			expires_at: "2026-09-03T10:00:00.000Z",
+			expires_at: "2999-09-03T10:00:00.000Z",
 		});
 		await env.DB.prepare(
 			`UPDATE superboard_plugin_installation_items
@@ -196,7 +178,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			.bind(`sha256:${"f".repeat(64)}`, plan.plan_id)
 			.run();
 		const tamperedLock = plan.plugins.map(({ derived }) => derived.plugin_lock);
-		await activateReleasePointer(
+		await stageReleaseCandidate(
 			env.DB,
 			"tampered-instance",
 			"01J00000000000000000000435",
@@ -205,12 +187,12 @@ describe("SuperBoard plugin lifecycle", () => {
 		);
 
 		await expect(
-			reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
+			prepareSuperBoardPluginLifecycleForRelease(env.DB, {
 				instance_id: "tampered-instance",
 				target: "production",
 				release_id: "01J00000000000000000000435",
 				plugin_lock: tamperedLock,
-				activated_at: "2026-09-02T10:05:00.000Z",
+				prepared_at: "2026-09-02T10:05:00.000Z",
 			}),
 		).rejects.toThrow("PLUGIN_INSTALLATION_PLAN_CONTRACT_INVALID:supbrd-plug-user");
 	});
@@ -225,25 +207,84 @@ describe("SuperBoard plugin lifecycle", () => {
 			...inactiveScope,
 			plan_id: "plugin-plan-release-gated",
 			checked_at: "2026-09-02T11:00:00.000Z",
-			expires_at: "2026-09-03T11:00:00.000Z",
+			expires_at: "2999-09-03T11:00:00.000Z",
 		});
 		const lock = await loadReleasableSuperBoardPluginLock(env.DB, inactiveScope);
+		await stageReleaseCandidate(
+			env.DB,
+			inactiveScope.instance_id,
+			"01J00000000000000000000445",
+			lock,
+			"2026-09-02T11:05:00.000Z",
+		);
 		await expect(
-			reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
+			activateReleasePointer(
+				env.DB,
+				inactiveScope.instance_id,
+				"01J00000000000000000000445",
+				"2026-09-02T11:05:00.000Z",
+			),
+		).rejects.toThrow(/plugin lifecycle reconciliation is not prepared/u);
+		await prepareSuperBoardPluginLifecycleForRelease(env.DB, {
+			...inactiveScope,
+			release_id: "01J00000000000000000000445",
+			plugin_lock: lock,
+			prepared_at: "2026-09-02T11:05:00.000Z",
+		});
+		await expect(
+			finalizeSuperBoardPluginLifecycleForRelease(env.DB, {
 				...inactiveScope,
 				release_id: "01J00000000000000000000445",
-				plugin_lock: lock,
-				activated_at: "2026-09-02T11:05:00.000Z",
+				finalized_at: "2026-09-02T11:05:00.000Z",
 			}),
-		).rejects.toThrow("PLUGIN_RELEASE_NOT_ACTIVE");
+		).rejects.toThrow("PLUGIN_RELEASE_RECONCILIATION_NOT_APPLIED");
+	});
+
+	test("rejects a Plugin Lock when its health evidence has expired", async () => {
+		const expiredScope = {
+			instance_id: "expired-health-instance",
+			target: "local" as const,
+			approved_by: "operator-1",
+		};
+		await installSuperBoardPluginCatalog(env.DB, {
+			...expiredScope,
+			plan_id: "plugin-plan-expired-health",
+			checked_at: "2026-09-02T07:00:00.000Z",
+			expires_at: "2026-09-02T07:01:00.000Z",
+		});
+		await expect(loadReleasableSuperBoardPluginLock(env.DB, expiredScope)).rejects.toThrow(
+			/PLUGIN_CATALOG_HEALTH_NOT_READY/u,
+		);
 	});
 });
 
-async function activateReleasePointer(
+async function activatePluginRelease(
+	db: D1Database,
+	releaseScope: { instance_id: string; target: "local" | "development" | "production" },
+	releaseId: string,
+	pluginLock: Parameters<typeof prepareSuperBoardPluginLifecycleForRelease>[1]["plugin_lock"],
+	activatedAt: string,
+) {
+	await stageReleaseCandidate(db, releaseScope.instance_id, releaseId, pluginLock, activatedAt);
+	await prepareSuperBoardPluginLifecycleForRelease(db, {
+		...releaseScope,
+		release_id: releaseId,
+		plugin_lock: pluginLock,
+		prepared_at: activatedAt,
+	});
+	await activateReleasePointer(db, releaseScope.instance_id, releaseId, activatedAt);
+	return finalizeSuperBoardPluginLifecycleForRelease(db, {
+		...releaseScope,
+		release_id: releaseId,
+		finalized_at: activatedAt,
+	});
+}
+
+async function stageReleaseCandidate(
 	db: D1Database,
 	instanceId: string,
 	releaseId: string,
-	pluginLock: readonly unknown[],
+	pluginLock: Parameters<typeof prepareSuperBoardPluginLifecycleForRelease>[1]["plugin_lock"],
 	activatedAt: string,
 ) {
 	const candidateId = `${releaseId}-candidate`;
@@ -272,21 +313,30 @@ async function activateReleasePointer(
 				activatedAt,
 				activatedAt,
 			),
-		db
-			.prepare(
-				`INSERT INTO superboard_front_active_releases
-				 (instance_id, active_release_id, previous_release_id, pointer_revision,
-				  activation_id, activated_at)
-				 VALUES (?, ?, NULL, 1, ?, ?)
-				 ON CONFLICT(instance_id) DO UPDATE SET
-				   previous_release_id = superboard_front_active_releases.active_release_id,
-				   active_release_id = excluded.active_release_id,
-				   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
-				   activation_id = excluded.activation_id,
-				   activated_at = excluded.activated_at`,
-			)
-			.bind(instanceId, releaseId, `${releaseId}-activation`, activatedAt),
 	]);
+}
+
+async function activateReleasePointer(
+	db: D1Database,
+	instanceId: string,
+	releaseId: string,
+	activatedAt: string,
+) {
+	await db
+		.prepare(
+			`INSERT INTO superboard_front_active_releases
+			 (instance_id, active_release_id, previous_release_id, pointer_revision,
+			  activation_id, activated_at)
+			 VALUES (?, ?, NULL, 1, ?, ?)
+			 ON CONFLICT(instance_id) DO UPDATE SET
+			   previous_release_id = superboard_front_active_releases.active_release_id,
+			   active_release_id = excluded.active_release_id,
+			   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
+			   activation_id = excluded.activation_id,
+			   activated_at = excluded.activated_at`,
+		)
+		.bind(instanceId, releaseId, `${releaseId}-activation`, activatedAt)
+		.run();
 }
 
 const releaseIdentifiers = {

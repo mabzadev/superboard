@@ -27,6 +27,7 @@ export function configureSuperBoardPlugins(plugins) {
 				id: manifest.plugin_id,
 				version,
 				defaultEnabled: false,
+				lifecycleManaged: true,
 				entrypoint,
 				adminPages: [{ path: "/", label: displayName, icon: "settings" }],
 				settingsSchema,

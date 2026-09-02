@@ -167,3 +167,177 @@ CREATE TABLE IF NOT EXISTS superboard_plugin_runtime_health (
 
 CREATE INDEX IF NOT EXISTS idx_plugin_runtime_health_ready
   ON superboard_plugin_runtime_health(instance_id, target, status, expires_at);
+
+CREATE TABLE IF NOT EXISTS superboard_plugin_release_reconciliations (
+  instance_id TEXT NOT NULL,
+  target TEXT NOT NULL CHECK (target IN ('local', 'development', 'production')),
+  release_id TEXT NOT NULL
+    REFERENCES superboard_front_release_candidates(release_id),
+  plugin_lock_json TEXT NOT NULL CHECK (json_valid(plugin_lock_json)),
+  status TEXT NOT NULL CHECK (status IN ('prepared', 'applied')),
+  prepared_at TEXT NOT NULL,
+  applied_at TEXT,
+  PRIMARY KEY (instance_id, target, release_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_plugin_release_reconciliations_release
+  ON superboard_plugin_release_reconciliations(release_id);
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_release_reconciliation_insert_guard
+BEFORE INSERT ON superboard_front_active_releases
+WHEN EXISTS (
+  SELECT 1 FROM superboard_plugin_lifecycle lifecycle
+  WHERE lifecycle.instance_id = NEW.instance_id
+)
+AND NOT EXISTS (
+  SELECT 1 FROM superboard_plugin_release_reconciliations reconciliation
+  WHERE reconciliation.instance_id = NEW.instance_id
+    AND reconciliation.release_id = NEW.active_release_id
+    AND reconciliation.status = 'prepared'
+)
+BEGIN
+  SELECT RAISE(ABORT, 'plugin lifecycle reconciliation is not prepared');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_release_reconciliation_update_guard
+BEFORE UPDATE ON superboard_front_active_releases
+WHEN EXISTS (
+  SELECT 1 FROM superboard_plugin_lifecycle lifecycle
+  WHERE lifecycle.instance_id = NEW.instance_id
+)
+AND NOT EXISTS (
+  SELECT 1 FROM superboard_plugin_release_reconciliations reconciliation
+  WHERE reconciliation.instance_id = NEW.instance_id
+    AND reconciliation.release_id = NEW.active_release_id
+    AND reconciliation.status = 'prepared'
+)
+BEGIN
+  SELECT RAISE(ABORT, 'plugin lifecycle reconciliation is not prepared');
+END;
+
+CREATE TRIGGER IF NOT EXISTS superboard_plugin_release_reconciliation_apply
+AFTER INSERT ON superboard_front_activations
+BEGIN
+  INSERT INTO superboard_plugin_lifecycle_events (
+    instance_id, target, plugin_id, artifact_checksum, from_state, to_state,
+    plan_id, release_id, reason, changed_at
+  )
+  SELECT lifecycle.instance_id, lifecycle.target, lifecycle.plugin_id,
+         lifecycle.artifact_checksum, lifecycle.state,
+         CASE WHEN lifecycle.state = 'draining' THEN 'disabled' ELSE 'active' END,
+         lifecycle.plan_id, NEW.active_release_id, 'Front Release activation', NEW.activated_at
+  FROM superboard_plugin_lifecycle lifecycle
+  JOIN superboard_plugin_release_reconciliations reconciliation
+    ON reconciliation.instance_id = lifecycle.instance_id
+   AND reconciliation.target = lifecycle.target
+   AND reconciliation.release_id = NEW.active_release_id
+   AND reconciliation.status = 'prepared'
+  WHERE lifecycle.instance_id = NEW.instance_id
+    AND (
+      (lifecycle.state = 'installed' AND EXISTS (
+        SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+        WHERE json_extract(lock.value, '$.plugin_id') = lifecycle.plugin_id
+          AND json_extract(lock.value, '$.artifact_checksum') = lifecycle.artifact_checksum
+      ))
+      OR
+      (lifecycle.state = 'draining' AND NOT EXISTS (
+        SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+        WHERE json_extract(lock.value, '$.plugin_id') = lifecycle.plugin_id
+      ))
+    );
+
+  UPDATE superboard_plugin_lifecycle
+  SET state = CASE WHEN superboard_plugin_lifecycle.state = 'draining' THEN 'disabled' ELSE 'active' END,
+      activated_release_id = NEW.active_release_id,
+      state_changed_at = NEW.activated_at,
+      reason = 'Front Release activation'
+  WHERE superboard_plugin_lifecycle.instance_id = NEW.instance_id
+    AND EXISTS (
+      SELECT 1 FROM superboard_plugin_release_reconciliations reconciliation
+      WHERE reconciliation.instance_id = superboard_plugin_lifecycle.instance_id
+        AND reconciliation.target = superboard_plugin_lifecycle.target
+        AND reconciliation.release_id = NEW.active_release_id
+        AND reconciliation.status = 'prepared'
+        AND (
+          (superboard_plugin_lifecycle.state IN ('installed', 'active') AND EXISTS (
+            SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+            WHERE json_extract(lock.value, '$.plugin_id') = superboard_plugin_lifecycle.plugin_id
+              AND json_extract(lock.value, '$.artifact_checksum') = superboard_plugin_lifecycle.artifact_checksum
+          ))
+          OR
+          (superboard_plugin_lifecycle.state = 'draining' AND NOT EXISTS (
+            SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
+            WHERE json_extract(lock.value, '$.plugin_id') = superboard_plugin_lifecycle.plugin_id
+          ))
+        )
+    );
+
+  UPDATE superboard_plugin_installation_items
+  SET state = 'active'
+  WHERE EXISTS (
+    SELECT 1 FROM superboard_plugin_lifecycle lifecycle
+    WHERE lifecycle.plan_id = superboard_plugin_installation_items.plan_id
+      AND lifecycle.plugin_id = superboard_plugin_installation_items.plugin_id
+      AND lifecycle.state = 'active'
+      AND lifecycle.activated_release_id = NEW.active_release_id
+  );
+
+  UPDATE superboard_plugin_installation_plans
+  SET status = 'active', completed_at = NEW.activated_at
+  WHERE superboard_plugin_installation_plans.status = 'installed'
+    AND NOT EXISTS (
+      SELECT 1 FROM superboard_plugin_installation_items item
+      WHERE item.plan_id = superboard_plugin_installation_plans.plan_id AND item.state <> 'active'
+    );
+
+  INSERT INTO superboard_active_plugin_manifests
+    (plugin_id, artifact_checksum, activated_at)
+  SELECT lifecycle.plugin_id, lifecycle.artifact_checksum, NEW.activated_at
+  FROM superboard_plugin_lifecycle lifecycle
+  JOIN superboard_plugin_release_reconciliations reconciliation
+    ON reconciliation.instance_id = lifecycle.instance_id
+   AND reconciliation.target = lifecycle.target
+   AND reconciliation.release_id = NEW.active_release_id
+  WHERE lifecycle.instance_id = NEW.instance_id
+    AND lifecycle.state = 'active'
+    AND lifecycle.activated_release_id = NEW.active_release_id
+  ON CONFLICT(plugin_id) DO UPDATE SET
+    artifact_checksum = excluded.artifact_checksum,
+    activated_at = excluded.activated_at;
+
+  DELETE FROM superboard_active_plugin_manifests
+  WHERE plugin_id IN (
+    SELECT lifecycle.plugin_id
+    FROM superboard_plugin_lifecycle lifecycle
+    JOIN superboard_plugin_release_reconciliations reconciliation
+      ON reconciliation.instance_id = lifecycle.instance_id
+     AND reconciliation.target = lifecycle.target
+     AND reconciliation.release_id = NEW.active_release_id
+    WHERE lifecycle.instance_id = NEW.instance_id
+      AND lifecycle.state IN ('disabled', 'quarantined', 'purged')
+  );
+
+  INSERT INTO superboard_dependency_health
+    (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
+  SELECT lifecycle.instance_id,
+         'dependency.' || replace(lifecycle.plugin_id, '-', '_'),
+         'ready', health.evidence_checksum, NEW.activated_at, health.expires_at
+  FROM superboard_plugin_lifecycle lifecycle
+  JOIN superboard_plugin_runtime_health health
+    ON health.instance_id = lifecycle.instance_id
+   AND health.target = lifecycle.target
+   AND health.plugin_id = lifecycle.plugin_id
+   AND health.artifact_checksum = lifecycle.artifact_checksum
+  WHERE lifecycle.instance_id = NEW.instance_id
+    AND lifecycle.state = 'active'
+    AND lifecycle.activated_release_id = NEW.active_release_id
+  ON CONFLICT(instance_id, dependency_id) DO UPDATE SET
+    status = 'ready', evidence_checksum = excluded.evidence_checksum,
+    checked_at = excluded.checked_at, expires_at = excluded.expires_at;
+
+  UPDATE superboard_plugin_release_reconciliations
+  SET status = 'applied', applied_at = NEW.activated_at
+  WHERE instance_id = NEW.instance_id
+    AND release_id = NEW.active_release_id
+    AND status = 'prepared';
+END;

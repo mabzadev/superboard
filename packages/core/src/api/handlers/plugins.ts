@@ -25,6 +25,8 @@ export interface PluginInfo {
 	source?: "config" | "marketplace" | "registry";
 	/** True for statically-sandboxed plugins (registered via `sandboxed: []`) */
 	sandboxed?: boolean;
+	/** True when the host owns activation outside generic plugin actions. */
+	lifecycleManaged?: boolean;
 	marketplaceVersion?: string;
 	/** Publisher DID, for registry-source plugins */
 	registryPublisherDid?: string;
@@ -137,6 +139,7 @@ function buildSandboxedPluginInfo(
 		status,
 		source: "config",
 		sandboxed: true,
+		lifecycleManaged: entry.lifecycleManaged ?? false,
 		capabilities: entry.capabilities,
 		hasAdminPages: (entry.adminPages?.length ?? 0) > 0,
 		hasDashboardWidgets: (entry.adminWidgets?.length ?? 0) > 0,
@@ -341,6 +344,15 @@ export async function handlePluginEnable(
 		// Statically-sandboxed plugin: addressable via its build-time entry.
 		const sandboxed = sandboxedPluginEntries.find((e) => e.id === pluginId);
 		if (sandboxed) {
+			if (sandboxed.lifecycleManaged) {
+				return {
+					success: false,
+					error: {
+						code: "VALIDATION_ERROR",
+						message: "Plugin activation is managed by the host",
+					},
+				};
+			}
 			const state = await stateRepo.enable(pluginId, sandboxed.version);
 			return { success: true, data: { item: buildSandboxedPluginInfo(sandboxed, state) } };
 		}
@@ -388,6 +400,15 @@ export async function handlePluginDisable(
 
 		const sandboxed = sandboxedPluginEntries.find((e) => e.id === pluginId);
 		if (sandboxed) {
+			if (sandboxed.lifecycleManaged) {
+				return {
+					success: false,
+					error: {
+						code: "VALIDATION_ERROR",
+						message: "Plugin deactivation is managed by the host",
+					},
+				};
+			}
 			const state = await stateRepo.disable(pluginId, sandboxed.version);
 			return { success: true, data: { item: buildSandboxedPluginInfo(sandboxed, state) } };
 		}

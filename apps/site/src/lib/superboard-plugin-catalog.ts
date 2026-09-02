@@ -203,7 +203,6 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 	if (selected.length === 0 || (selectedIds && selected.length !== selectedIds.size)) {
 		throw new Error("PLUGIN_INSTALLATION_PLAN_UNKNOWN_PLUGIN");
 	}
-	await db.prepare("SELECT 1 FROM superboard_plugin_store_records LIMIT 1").first();
 	const planned = await Promise.all(selected.map((plugin) => derivePluginContract(plugin, input)));
 	const catalogChecksum = await sha256Canonical(planned.map(({ derived }) => derived.plugin_lock));
 	const unavailable = planned.filter(({ derived }) => derived.worker_status !== "ready");
@@ -374,35 +373,30 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 	return loadInstallationPlanReceipt(db, input.plan_id);
 }
 
-export async function reconcileSuperBoardPluginLifecycleForRelease(
+export async function prepareSuperBoardPluginLifecycleForRelease(
 	db: D1Database,
 	input: PluginScope & {
 		release_id: string;
 		plugin_lock: readonly PluginLockEntry[];
-		activated_at: string;
+		prepared_at: string;
 	},
 ) {
 	assertScope(input);
-	if (!input.release_id || !isCanonicalTimestamp(input.activated_at)) {
-		throw new TypeError("Plugin lifecycle reconciliation requires a Release and timestamp");
+	if (!input.release_id || !isCanonicalTimestamp(input.prepared_at)) {
+		throw new TypeError("Plugin lifecycle preparation requires a Release and timestamp");
 	}
-	const activeRelease = await db
+	const candidate = await db
 		.prepare(
-			`SELECT candidate.release_json
-			 FROM superboard_front_active_releases active
-			 JOIN superboard_front_release_candidates candidate
-			   ON candidate.instance_id = active.instance_id
-			  AND candidate.release_id = active.active_release_id
-			 WHERE active.instance_id = ? AND active.active_release_id = ?
-			   AND candidate.status = 'activated'`,
+			`SELECT release_json FROM superboard_front_release_candidates
+			 WHERE instance_id = ? AND release_id = ? AND status IN ('approved', 'activated')`,
 		)
 		.bind(input.instance_id, input.release_id)
 		.first<{ release_json: string }>();
-	if (!activeRelease) throw new Error("PLUGIN_RELEASE_NOT_ACTIVE");
-	let activePluginLock: unknown;
+	if (!candidate) throw new Error("PLUGIN_RELEASE_NOT_APPROVED");
+	let candidatePluginLock: unknown;
 	try {
-		const release: unknown = JSON.parse(activeRelease.release_json);
-		activePluginLock =
+		const release: unknown = JSON.parse(candidate.release_json);
+		candidatePluginLock =
 			typeof release === "object" &&
 			release !== null &&
 			"payload" in release &&
@@ -415,7 +409,8 @@ export async function reconcileSuperBoardPluginLifecycleForRelease(
 		throw new Error("PLUGIN_RELEASE_LOCK_INVALID");
 	}
 	if (
-		canonicalizeReleasePayload(activePluginLock) !== canonicalizeReleasePayload(input.plugin_lock)
+		canonicalizeReleasePayload(candidatePluginLock) !==
+		canonicalizeReleasePayload(input.plugin_lock)
 	) {
 		throw new Error("PLUGIN_RELEASE_LOCK_MISMATCH");
 	}
@@ -436,167 +431,98 @@ export async function reconcileSuperBoardPluginLifecycleForRelease(
 		}
 	}
 	const desired = new Set(desiredLocks.map(({ plugin_id: pluginId }) => pluginId));
-	const rows = await db
+	const lifecycle = await db
 		.prepare(
-			`SELECT lifecycle.plugin_id, lifecycle.artifact_checksum, lifecycle.state,
-			        lifecycle.plan_id, health.evidence_checksum, health.expires_at,
-			        json_extract(artifact.manifest_json, '$.plugin_version') AS plugin_version
-			 FROM superboard_plugin_lifecycle lifecycle
-			 JOIN superboard_plugin_manifest_artifacts artifact
-			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
-			 JOIN superboard_plugin_runtime_health health
-			   ON health.instance_id = lifecycle.instance_id
-			  AND health.target = lifecycle.target
-			  AND health.plugin_id = lifecycle.plugin_id
-			  AND health.artifact_checksum = lifecycle.artifact_checksum
-			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ?
-			 ORDER BY lifecycle.plugin_id`,
+			`SELECT plugin_id, state FROM superboard_plugin_lifecycle
+			 WHERE instance_id = ? AND target = ?
+			 ORDER BY plugin_id`,
 		)
 		.bind(input.instance_id, input.target)
-		.all<{
-			plugin_id: string;
-			artifact_checksum: string;
-			state: SuperBoardPluginLifecycleState;
-			plan_id: string | null;
-			evidence_checksum: string;
-			expires_at: string;
-			plugin_version: string;
-		}>();
-	for (const row of rows.results) {
+		.all<{ plugin_id: string; state: SuperBoardPluginLifecycleState }>();
+	for (const row of lifecycle.results) {
 		if (row.state === "active" && !desired.has(row.plugin_id)) {
 			throw new Error(`PLUGIN_RELEASE_DRAIN_REQUIRED:${row.plugin_id}`);
 		}
 	}
+	await db
+		.prepare(
+			`INSERT INTO superboard_plugin_release_reconciliations
+			 (instance_id, target, release_id, plugin_lock_json, status, prepared_at, applied_at)
+			 VALUES (?, ?, ?, ?, 'prepared', ?, NULL)
+			 ON CONFLICT(instance_id, target, release_id) DO UPDATE SET
+			   plugin_lock_json = excluded.plugin_lock_json,
+			   prepared_at = excluded.prepared_at
+			 WHERE superboard_plugin_release_reconciliations.status = 'prepared'`,
+		)
+		.bind(
+			input.instance_id,
+			input.target,
+			input.release_id,
+			canonicalizeReleasePayload(input.plugin_lock),
+			input.prepared_at,
+		)
+		.run();
+	return {
+		instance_id: input.instance_id,
+		target: input.target,
+		release_id: input.release_id,
+		status: "prepared" as const,
+		plugin_count: desiredLocks.length,
+	};
+}
 
-	const statements: D1PreparedStatement[] = [];
-	const activated: Array<{ plugin_id: string; version: string }> = [];
-	const disabled: Array<{ plugin_id: string; version: string }> = [];
-	for (const row of rows.results) {
-		if (desired.has(row.plugin_id)) {
-			if (row.state !== "installed" && row.state !== "active") {
-				throw new Error(`PLUGIN_RELEASE_STATE_INVALID:${row.plugin_id}:${row.state}`);
-			}
-			statements.push(
-				db
-					.prepare(
-						`UPDATE superboard_plugin_lifecycle
-						 SET state = 'active', activated_release_id = ?, state_changed_at = ?,
-						     reason = 'Front Release activation'
-						 WHERE instance_id = ? AND target = ? AND plugin_id = ?`,
-					)
-					.bind(
-						input.release_id,
-						input.activated_at,
-						input.instance_id,
-						input.target,
-						row.plugin_id,
-					),
-				db
-					.prepare(
-						`UPDATE superboard_plugin_installation_items
-						 SET state = 'active' WHERE plan_id = ? AND plugin_id = ?`,
-					)
-					.bind(row.plan_id, row.plugin_id),
-				db
-					.prepare(
-						`INSERT INTO superboard_active_plugin_manifests
-						 (plugin_id, artifact_checksum, activated_at)
-						 VALUES (?, ?, ?)
-						 ON CONFLICT(plugin_id) DO UPDATE SET
-						   artifact_checksum = excluded.artifact_checksum,
-						   activated_at = excluded.activated_at`,
-					)
-					.bind(row.plugin_id, row.artifact_checksum, input.activated_at),
-				db
-					.prepare(
-						`INSERT INTO superboard_dependency_health
-						 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
-						 VALUES (?, ?, 'ready', ?, ?, ?)
-						 ON CONFLICT(instance_id, dependency_id) DO UPDATE SET
-						   status = 'ready', evidence_checksum = excluded.evidence_checksum,
-						   checked_at = excluded.checked_at, expires_at = excluded.expires_at`,
-					)
-					.bind(
-						input.instance_id,
-						dependencyId(row.plugin_id),
-						row.evidence_checksum,
-						input.activated_at,
-						row.expires_at,
-					),
-			);
-			if (row.state === "installed") {
-				statements.push(
-					lifecycleEventStatement(db, {
-						...input,
-						plugin_id: row.plugin_id,
-						artifact_checksum: row.artifact_checksum,
-						from_state: "installed",
-						to_state: "active",
-						plan_id: row.plan_id,
-						reason: "Front Release activation",
-						changed_at: input.activated_at,
-					}),
-				);
-			}
-			activated.push({ plugin_id: row.plugin_id, version: row.plugin_version });
-			continue;
-		}
-		if (row.state === "draining") {
-			statements.push(
-				db
-					.prepare(
-						`UPDATE superboard_plugin_lifecycle
-						 SET state = 'disabled', activated_release_id = ?, state_changed_at = ?,
-						     reason = 'Front Release removed plugin'
-						 WHERE instance_id = ? AND target = ? AND plugin_id = ? AND state = 'draining'`,
-					)
-					.bind(
-						input.release_id,
-						input.activated_at,
-						input.instance_id,
-						input.target,
-						row.plugin_id,
-					),
-				lifecycleEventStatement(db, {
-					...input,
-					plugin_id: row.plugin_id,
-					artifact_checksum: row.artifact_checksum,
-					from_state: "draining",
-					to_state: "disabled",
-					plan_id: row.plan_id,
-					reason: "Front Release removed plugin",
-					changed_at: input.activated_at,
-				}),
-				db
-					.prepare(
-						`DELETE FROM superboard_active_plugin_manifests
-						 WHERE plugin_id = ? AND artifact_checksum = ?`,
-					)
-					.bind(row.plugin_id, row.artifact_checksum),
-			);
-			disabled.push({ plugin_id: row.plugin_id, version: row.plugin_version });
-		}
+export async function finalizeSuperBoardPluginLifecycleForRelease(
+	db: D1Database,
+	input: PluginScope & { release_id: string; finalized_at: string },
+) {
+	assertScope(input);
+	if (!input.release_id || !isCanonicalTimestamp(input.finalized_at)) {
+		throw new TypeError("Plugin lifecycle finalization requires a Release and timestamp");
 	}
-	for (const installationPlanId of new Set(
-		rows.results.flatMap(({ plan_id: resolvedPlanId }) => (resolvedPlanId ? [resolvedPlanId] : [])),
-	)) {
-		statements.push(
-			db
-				.prepare(
-					`UPDATE superboard_plugin_installation_plans
-					 SET status = 'active', completed_at = ?
-					 WHERE plan_id = ? AND status = 'installed'
-					   AND NOT EXISTS (
-					     SELECT 1 FROM superboard_plugin_installation_items item
-					     WHERE item.plan_id = ? AND item.state <> 'active'
-					   )`,
-				)
-				.bind(input.activated_at, installationPlanId, installationPlanId),
-		);
+	const reconciliation = await db
+		.prepare(
+			`SELECT status FROM superboard_plugin_release_reconciliations
+			 WHERE instance_id = ? AND target = ? AND release_id = ?`,
+		)
+		.bind(input.instance_id, input.target, input.release_id)
+		.first<{ status: "prepared" | "applied" }>();
+	if (reconciliation?.status !== "applied") {
+		throw new Error("PLUGIN_RELEASE_RECONCILIATION_NOT_APPLIED");
 	}
-	await db.batch(statements);
-	await writeEmDashPluginStates(db, activated, "active", input.activated_at);
-	await writeEmDashPluginStates(db, disabled, "inactive", input.activated_at);
+	const rows = await db
+		.prepare(
+			`SELECT lifecycle.plugin_id, lifecycle.state,
+			        json_extract(artifact.manifest_json, '$.plugin_version') AS plugin_version
+			 FROM superboard_plugin_lifecycle lifecycle
+			 JOIN superboard_plugin_manifest_artifacts artifact
+			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
+			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ?
+			   AND lifecycle.activated_release_id = ?
+			   AND lifecycle.state IN ('active', 'disabled')
+			 ORDER BY lifecycle.plugin_id`,
+		)
+		.bind(input.instance_id, input.target, input.release_id)
+		.all<{ plugin_id: string; state: "active" | "disabled"; plugin_version: string }>();
+	const activated = rows.results.filter(({ state }) => state === "active");
+	const disabled = rows.results.filter(({ state }) => state === "disabled");
+	await writeEmDashPluginStates(
+		db,
+		activated.map(({ plugin_id: pluginId, plugin_version: version }) => ({
+			plugin_id: pluginId,
+			version,
+		})),
+		"active",
+		input.finalized_at,
+	);
+	await writeEmDashPluginStates(
+		db,
+		disabled.map(({ plugin_id: pluginId, plugin_version: version }) => ({
+			plugin_id: pluginId,
+			version,
+		})),
+		"inactive",
+		input.finalized_at,
+	);
 	return {
 		instance_id: input.instance_id,
 		target: input.target,
@@ -799,7 +725,7 @@ async function loadSuperBoardPluginLock(
 	const result = await db
 		.prepare(
 			`SELECT lifecycle.plugin_id, lifecycle.artifact_checksum, artifact.manifest_json,
-			        lifecycle.state, health.status AS health_status,
+			        lifecycle.state, health.status AS health_status, health.expires_at,
 			        item.derived_contract_json, item.derived_contract_checksum,
 			        steps.step_count, steps.completed_count
 			 FROM superboard_plugin_lifecycle lifecycle
@@ -829,6 +755,7 @@ async function loadSuperBoardPluginLock(
 			manifest_json: string;
 			state: "installed" | "active";
 			health_status: "ready" | "unavailable";
+			expires_at: string;
 			derived_contract_json: string | null;
 			derived_contract_checksum: string | null;
 			step_count: number | null;
@@ -847,7 +774,7 @@ async function loadSuperBoardPluginLock(
 	);
 	return Promise.all(
 		rows.map(async (row) => {
-			if (row.health_status !== "ready") {
+			if (row.health_status !== "ready" || Date.parse(row.expires_at) <= Date.now()) {
 				throw new Error(`PLUGIN_CATALOG_HEALTH_NOT_READY:${row.plugin_id}`);
 			}
 			if (!row.derived_contract_json || !row.derived_contract_checksum) {
@@ -1188,40 +1115,6 @@ function installationStepsStatement(
 			healthStatus,
 			receipts.release_contract_ready,
 			input.checked_at,
-		);
-}
-
-function lifecycleEventStatement(
-	db: D1Database,
-	input: PluginScope & {
-		plugin_id: string;
-		artifact_checksum: string;
-		from_state: SuperBoardPluginLifecycleState;
-		to_state: SuperBoardPluginLifecycleState;
-		plan_id: string | null;
-		release_id: string;
-		reason: string;
-		changed_at: string;
-	},
-): D1PreparedStatement {
-	return db
-		.prepare(
-			`INSERT INTO superboard_plugin_lifecycle_events
-			 (instance_id, target, plugin_id, artifact_checksum, from_state, to_state,
-			  plan_id, release_id, reason, changed_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		)
-		.bind(
-			input.instance_id,
-			input.target,
-			input.plugin_id,
-			input.artifact_checksum,
-			input.from_state,
-			input.to_state,
-			input.plan_id,
-			input.release_id,
-			input.reason,
-			input.changed_at,
 		);
 }
 

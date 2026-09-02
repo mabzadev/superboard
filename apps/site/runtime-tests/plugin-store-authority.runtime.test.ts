@@ -24,9 +24,10 @@ import {
 	verifyPluginStoreShadowRead,
 } from "../src/lib/plugin-store-repository.js";
 import {
+	finalizeSuperBoardPluginLifecycleForRelease,
 	loadActiveSuperBoardPluginLock,
 	loadReleasableSuperBoardPluginLock,
-	reconcileSuperBoardPluginLifecycleForRelease,
+	prepareSuperBoardPluginLifecycleForRelease,
 	superBoardRuntimePluginCatalog,
 	synchronizeSuperBoardPluginCatalog,
 } from "../src/lib/superboard-plugin-catalog.js";
@@ -40,7 +41,7 @@ describe("EmDash plugin Store authority", () => {
 			...scope,
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:20:00.000Z",
-			expires_at: "2026-08-31T08:20:00.000Z",
+			expires_at: "2999-08-31T08:20:00.000Z",
 		});
 		expect(receipt.installed).toHaveLength(18);
 		expect(receipt.templates).toEqual(["supbrd-plugmod-custom-*"]);
@@ -66,19 +67,13 @@ describe("EmDash plugin Store authority", () => {
 			.first<{ count: number }>();
 		expect(health?.count).toBe(18);
 		const candidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
-		await activateReleasePointer(
+		await activatePluginRelease(
 			env.DB,
-			scope.instance_id,
+			scope,
 			"01J00000000000000000000501",
 			candidateLock,
 			"2026-08-30T08:25:00.000Z",
 		);
-		await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
-			...scope,
-			release_id: "01J00000000000000000000501",
-			plugin_lock: candidateLock,
-			activated_at: "2026-08-30T08:25:00.000Z",
-		});
 		const fullLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		const fullPresentation = await composeUserFrontReleaseInput({
 			...releaseIdentifiers,
@@ -157,7 +152,7 @@ describe("EmDash plugin Store authority", () => {
 			instance_id: "vocostar",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:30:00.000Z",
-			expires_at: "2026-08-30T09:30:00.000Z",
+			expires_at: "2999-08-30T09:30:00.000Z",
 		});
 		expect(receipt).toMatchObject({
 			plugin_id: userPluginManifest.plugin_id,
@@ -266,7 +261,7 @@ describe("EmDash plugin Store authority", () => {
 			instance_id: "vocostar",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:20:00.000Z",
-			expires_at: "2026-08-31T08:20:00.000Z",
+			expires_at: "2999-08-31T08:20:00.000Z",
 		});
 		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
 			"encrypt",
@@ -336,7 +331,7 @@ describe("EmDash plugin Store authority", () => {
 			instance_id: "vocostar",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T09:10:00.000Z",
-			expires_at: "2026-08-31T09:10:00.000Z",
+			expires_at: "2999-08-31T09:10:00.000Z",
 		});
 		const rawKey = crypto.getRandomValues(new Uint8Array(32));
 		const encodedKey = btoa(String.fromCodePoint(...rawKey));
@@ -540,23 +535,17 @@ describe("EmDash plugin Store authority", () => {
 			target: "local",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T02:00:00.000Z",
-			expires_at: "2026-08-31T02:00:00.000Z",
+			expires_at: "2999-08-31T02:00:00.000Z",
 		});
 		const parityScope = { instance_id: "parity-all", target: "local" as const };
 		const parityLock = await loadReleasableSuperBoardPluginLock(env.DB, parityScope);
-		await activateReleasePointer(
+		await activatePluginRelease(
 			env.DB,
-			parityScope.instance_id,
+			parityScope,
 			"01J00000000000000000000511",
 			parityLock,
 			"2026-08-30T02:01:00.000Z",
 		);
-		await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
-			...parityScope,
-			release_id: "01J00000000000000000000511",
-			plugin_lock: parityLock,
-			activated_at: "2026-08-30T02:01:00.000Z",
-		});
 		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
 			"encrypt",
 			"decrypt",
@@ -610,13 +599,14 @@ describe("EmDash plugin Store authority", () => {
 	});
 });
 
-async function activateReleasePointer(
+async function activatePluginRelease(
 	db: D1Database,
-	instanceId: string,
+	releaseScope: { instance_id: string; target: "local" | "development" | "production" },
 	releaseId: string,
-	pluginLock: readonly unknown[],
+	pluginLock: Parameters<typeof prepareSuperBoardPluginLifecycleForRelease>[1]["plugin_lock"],
 	activatedAt: string,
 ) {
+	const instanceId = releaseScope.instance_id;
 	await db.batch([
 		db
 			.prepare(
@@ -642,21 +632,33 @@ async function activateReleasePointer(
 				activatedAt,
 				activatedAt,
 			),
-		db
-			.prepare(
-				`INSERT INTO superboard_front_active_releases
-				 (instance_id, active_release_id, previous_release_id, pointer_revision,
-				  activation_id, activated_at)
-				 VALUES (?, ?, NULL, 1, ?, ?)
-				 ON CONFLICT(instance_id) DO UPDATE SET
-				   previous_release_id = superboard_front_active_releases.active_release_id,
-				   active_release_id = excluded.active_release_id,
-				   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
-				   activation_id = excluded.activation_id,
-				   activated_at = excluded.activated_at`,
-			)
-			.bind(instanceId, releaseId, `${releaseId}-activation`, activatedAt),
 	]);
+	await prepareSuperBoardPluginLifecycleForRelease(db, {
+		...releaseScope,
+		release_id: releaseId,
+		plugin_lock: pluginLock,
+		prepared_at: activatedAt,
+	});
+	await db
+		.prepare(
+			`INSERT INTO superboard_front_active_releases
+			 (instance_id, active_release_id, previous_release_id, pointer_revision,
+			  activation_id, activated_at)
+			 VALUES (?, ?, NULL, 1, ?, ?)
+			 ON CONFLICT(instance_id) DO UPDATE SET
+			   previous_release_id = superboard_front_active_releases.active_release_id,
+			   active_release_id = excluded.active_release_id,
+			   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
+			   activation_id = excluded.activation_id,
+			   activated_at = excluded.activated_at`,
+		)
+		.bind(instanceId, releaseId, `${releaseId}-activation`, activatedAt)
+		.run();
+	return finalizeSuperBoardPluginLifecycleForRelease(db, {
+		...releaseScope,
+		release_id: releaseId,
+		finalized_at: activatedAt,
+	});
 }
 
 const releaseIdentifiers = {

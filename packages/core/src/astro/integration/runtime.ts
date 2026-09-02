@@ -82,6 +82,8 @@ export interface PluginDescriptor<TOptions = Record<string, unknown>> {
 	version: string;
 	/** Whether code presence enables the plugin when no persisted lifecycle state exists. */
 	defaultEnabled?: boolean;
+	/** Whether the host owns activation and rejects generic admin enable/disable actions. */
+	lifecycleManaged?: boolean;
 	/** Module specifier to import (e.g., "@emdash-cms/plugin-api-test") */
 	entrypoint: string;
 	/**

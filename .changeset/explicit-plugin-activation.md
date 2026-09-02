@@ -2,6 +2,6 @@
 "emdash": minor
 ---
 
-Adds `defaultEnabled` to plugin descriptors. Set it to `false` for a statically configured sandboxed plugin that should appear in the plugin catalog but remain inactive until an administrator enables it or persisted lifecycle state marks it active.
+Adds `defaultEnabled` and `lifecycleManaged` to plugin descriptors. Set `defaultEnabled: false` for a statically configured sandboxed plugin that should appear in the plugin catalog but remain inactive until persisted lifecycle state marks it active. Set `lifecycleManaged: true` when a host workflow must reject the generic enable and disable actions in **Plugins**.
 
 The default remains `true`, so existing plugin configurations keep their current activation behavior.

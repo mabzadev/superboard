@@ -11,6 +11,7 @@ interface StoreRecordInput {
 	plugin_id: string;
 	store_id: string;
 	instance_id?: string;
+	target?: "local" | "development" | "production";
 	projectId?: string;
 	pid?: string;
 	project_ref?: string;
@@ -47,10 +48,10 @@ export async function putPluginStoreRecord(db: D1Database, input: StoreRecordInp
 			 FROM superboard_plugin_lifecycle AS lifecycle
 			 JOIN superboard_plugin_manifest_artifacts AS artifact
 			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
-			 WHERE lifecycle.instance_id = ? AND lifecycle.plugin_id = ?
+			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ? AND lifecycle.plugin_id = ?
 			   AND lifecycle.state = 'active' AND artifact.plugin_id = lifecycle.plugin_id`,
 		)
-		.bind(instanceId, input.plugin_id)
+		.bind(instanceId, input.target ?? "local", input.plugin_id)
 		.first<{ manifest_json: string; artifact_checksum: string }>();
 	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	const manifest: unknown = JSON.parse(installed.manifest_json);

@@ -26,6 +26,7 @@ interface CommandOperationRow {
 export interface RepositoryCommandInput {
 	operation_id: string;
 	instance_id: string;
+	target?: "local" | "development" | "production";
 	project_ref: string;
 	plugin_id: string;
 	command_id?: string;
@@ -39,7 +40,13 @@ export interface RepositoryCommandInput {
 
 export async function beginRepositoryCommand(db: D1Database, input: RepositoryCommandInput) {
 	assertCommandInput(input);
-	await assertActiveCommandContract(db, input.instance_id, input.plugin_id, input.command_id);
+	await assertActiveCommandContract(
+		db,
+		input.instance_id,
+		input.target ?? "local",
+		input.plugin_id,
+		input.command_id,
+	);
 	const pathChecksum = await sha256(new TextEncoder().encode(input.request_path));
 	const requestChecksum = await sha256(
 		new TextEncoder().encode(
@@ -172,6 +179,7 @@ export function assertIdempotencyKey(value: string | null): string {
 async function assertActiveCommandContract(
 	db: D1Database,
 	instanceId: string,
+	target: "local" | "development" | "production",
 	pluginId: string,
 	commandId: string | undefined,
 ) {
@@ -182,10 +190,10 @@ async function assertActiveCommandContract(
 			 FROM superboard_plugin_lifecycle lifecycle
 			 JOIN superboard_plugin_manifest_artifacts artifact
 			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
-			 WHERE lifecycle.instance_id = ? AND lifecycle.plugin_id = ?
+			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ? AND lifecycle.plugin_id = ?
 			   AND lifecycle.state = 'active' AND artifact.plugin_id = lifecycle.plugin_id`,
 		)
-		.bind(instanceId, pluginId)
+		.bind(instanceId, target, pluginId)
 		.first<{ manifest_json: string }>();
 	if (!active) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	if (!commandId) return;
