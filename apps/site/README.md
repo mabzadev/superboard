@@ -30,16 +30,26 @@ From the repository root:
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm target:orchestrate check --target mbza-development --environment local --adapter local
 pnpm site:check
 ```
 
-To apply only the SuperBoard release-control migrations to local D1:
+Generate the Site, Gateway, and enabled Worker configurations from the local
+target materialization:
 
 ```bash
-pnpm --dir apps/site exec wrangler d1 migrations apply DB --local
+pnpm target:orchestrate configure --target mbza-development --environment local --adapter local
 ```
 
-Release operations are disabled in the committed configuration. Copy
+Apply every target-owned migration to local Wrangler storage, then start the
+Site, Gateway, and enabled Workers:
+
+```bash
+pnpm target:orchestrate migrate --target mbza-development --environment local --adapter local
+pnpm target:orchestrate start --target mbza-development --environment local --adapter local
+```
+
+The generated local configuration keeps Release operations disabled. Copy
 `.dev.vars.example` to `.dev.vars` only for an authorized local exercise and
 provide a private P-256 JWK with `alg: ES256` and an immutable `kid`. Never
 commit that file or key.

@@ -333,8 +333,8 @@ export function environmentFromArgs(args, env = process.env) {
     args.environment ??
     superboardEnvironmentValue("SUPERBOARD_ENVIRONMENT", env) ??
     "development";
-  if (!new Set(["development", "production"]).has(environment)) {
-    throw new Error("--environment must be development or production");
+  if (!new Set(["local", "development", "production"]).has(environment)) {
+    throw new Error("--environment must be local, development or production");
   }
   return environment;
 }

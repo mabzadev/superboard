@@ -81,6 +81,7 @@ export function buildDeploymentExecutionPlan({
   uploadOnly = false,
   preflight = false,
   skipMigrations = false,
+  compiledTarget,
 }) {
   const order = deploymentOrder(target);
   const requested = requestedServices
@@ -143,6 +144,12 @@ export function buildDeploymentExecutionPlan({
   return {
     target: target.target,
     environment,
+    ...(compiledTarget
+      ? {
+          targetArtifactChecksum: compiledTarget.checksum,
+          graphChecksum: compiledTarget.graphChecksum,
+        }
+      : {}),
     services,
     schemaServices,
     identityCutover,

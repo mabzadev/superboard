@@ -15,6 +15,9 @@ import {
   parseArgs,
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
+import {
+  compiledTargetFromArgs,
+} from "./target-compiler.mjs";
 
 const MAX_API_RESPONSE_BYTES = 8 * 1024 * 1024;
 
@@ -174,7 +177,12 @@ async function readJsonLimited(response, maxBytes) {
   return text ? JSON.parse(text) : {};
 }
 
-function offlineReport(target, environment, { freshSupportInstall = false } = {}) {
+function offlineReport(
+  target,
+  environment,
+  compiledTarget,
+  { freshSupportInstall = false } = {},
+) {
   const desired = desiredCloudflareResources(target, environment).filter(
     ({ key }) =>
       !freshSupportInstall ||
@@ -191,6 +199,8 @@ function offlineReport(target, environment, { freshSupportInstall = false } = {}
       ? "offline-fresh-support-desired-state"
       : "offline-desired-state",
     target: target.target,
+    targetArtifactChecksum: compiledTarget.checksum,
+    graphChecksum: compiledTarget.graphChecksum,
     accountAlias: target.accountAlias,
     environment,
     remoteInspected: false,
@@ -246,13 +256,14 @@ async function main() {
   const environment = environmentFromArgs(args);
   const freshSupportInstall = Boolean(args["fresh-support-install"]);
   const { path, target } = await loadTarget(targetName);
+  const compiledTarget = await compiledTargetFromArgs(target, environment, args);
   assertBootstrapMode(target, environment, {
     apply: Boolean(args.apply),
     freshSupportInstall,
   });
   if (!args.remote && !args.apply) {
     process.stdout.write(
-      `${JSON.stringify(offlineReport(target, environment, { freshSupportInstall }), null, 2)}\n`,
+      `${JSON.stringify(offlineReport(target, environment, compiledTarget, { freshSupportInstall }), null, 2)}\n`,
     );
     return;
   }
@@ -269,6 +280,7 @@ async function main() {
     accountId,
     inventories,
     freshSupportInstall,
+    compiledTarget,
   });
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
   if (!args.apply) {

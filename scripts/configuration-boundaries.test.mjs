@@ -16,6 +16,7 @@ test("the repository has one MBZA reference profile and isolated application pro
   assert.equal(report.classification.reference.target, "mbza-development");
   assert.deepEqual(report.classification.reference.environments, [
     "development",
+    "local",
   ]);
   assert.ok(report.classification.reference.cloudflareResourceIds > 0);
   const applications = report.classification.applications.map(
