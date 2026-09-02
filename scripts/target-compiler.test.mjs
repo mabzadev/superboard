@@ -94,6 +94,7 @@ test("the local Site configuration is generated and guarded by the target artifa
 		["SESSION", "RELEASE_CACHE"],
 	);
 	assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, "mbza-development");
+	assert.equal(config.vars.SUPERBOARD_ENVIRONMENT, "local");
 	assert.match(config.vars.TARGET_ARTIFACT_CHECKSUM, CHECKSUM_PATTERN);
 	assertTargetServiceConfiguration(compiled, "site", config);
 

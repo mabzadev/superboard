@@ -283,6 +283,7 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 		secrets: { required: (siteSecrets?.names ?? []).toSorted() },
 		vars: {
 			SUPERBOARD_INSTANCE_ID: compiledTarget.target,
+			SUPERBOARD_ENVIRONMENT: compiledTarget.environment,
 			SUPERBOARD_RELEASE_OPERATIONS: "disabled",
 			D1_EXPECTED_MIGRATION: siteMigration?.files.at(-1)?.file,
 			TARGET_ARTIFACT_CHECKSUM: compiledTarget.checksum,

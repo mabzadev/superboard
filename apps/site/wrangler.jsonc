@@ -67,8 +67,8 @@
 		"SUPERBOARD_INSTANCE_ID": "mbza-development",
 		"SUPERBOARD_ENVIRONMENT": "local",
 		"SUPERBOARD_RELEASE_OPERATIONS": "disabled",
-		"D1_EXPECTED_MIGRATION": "0018_native_front_view_bindings.sql",
-		"TARGET_ARTIFACT_CHECKSUM": "sha256:e0abcd3485c04787c5a8ea348828077c12f7af5dd5af5714c76730e9ba4d02c7",
+		"D1_EXPECTED_MIGRATION": "0019_data_driven_plugin_lifecycle.sql",
+		"TARGET_ARTIFACT_CHECKSUM": "sha256:3dfdf6401706baed96352b9958109d2c32f87e32b6b346b1519fa00e1c7523e6",
 	},
 	"triggers": {
 		"crons": ["* * * * *"],
