@@ -10,7 +10,7 @@ import { createD1FrontReleaseRepository } from "../../../../lib/release-reposito
 import { isRecord, isUlid } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 import {
-	loadActiveSuperBoardPluginLock,
+	loadReleasableSuperBoardPluginLock,
 	resolveSuperBoardPluginTarget,
 } from "../../../../lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../../../../lib/user-front-release.js";
@@ -51,7 +51,7 @@ export const POST: APIRoute = async (context) => {
 		}
 		const releaseSequence = (predecessor?.release.payload.release_sequence ?? 0) + 1;
 		const previousReleaseId = active?.active_release_id ?? null;
-		const pluginLock = await loadActiveSuperBoardPluginLock(env.DB, {
+		const pluginLock = await loadReleasableSuperBoardPluginLock(env.DB, {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local"),
 		});

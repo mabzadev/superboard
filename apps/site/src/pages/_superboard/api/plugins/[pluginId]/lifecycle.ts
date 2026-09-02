@@ -22,18 +22,19 @@ export const POST: APIRoute = async (context) => {
 		if (!isRecord(body) || !pluginId || typeof body.reason !== "string" || !body.reason.trim()) {
 			return jsonResponse({ error: { code: "INVALID_PLUGIN_LIFECYCLE_REQUEST" } }, 422);
 		}
+		const state = resolveSuperBoardPluginLifecycleState(body.state);
+		if (state === "active" || state === "disabled") {
+			return jsonResponse({ error: { code: "RELEASE_MANAGED_PLUGIN_STATE" } }, 422);
+		}
 		const result = await transitionSuperBoardPluginLifecycle(env.DB, {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local"),
 			plugin_id: pluginId,
-			to_state: resolveSuperBoardPluginLifecycleState(body.state),
+			to_state: state,
 			changed_at: new Date().toISOString(),
 			reason: body.reason,
 		});
-		await context.locals.emdash.setPluginStatus(
-			pluginId,
-			result.state === "active" ? "active" : "inactive",
-		);
+		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
 		return jsonResponse(result, 200);
 	} catch (error) {
 		return handleError(

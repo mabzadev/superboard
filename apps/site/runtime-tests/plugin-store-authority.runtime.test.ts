@@ -25,6 +25,8 @@ import {
 } from "../src/lib/plugin-store-repository.js";
 import {
 	loadActiveSuperBoardPluginLock,
+	loadReleasableSuperBoardPluginLock,
+	reconcileSuperBoardPluginLifecycleForRelease,
 	superBoardRuntimePluginCatalog,
 	synchronizeSuperBoardPluginCatalog,
 } from "../src/lib/superboard-plugin-catalog.js";
@@ -36,6 +38,7 @@ describe("EmDash plugin Store authority", () => {
 		const scope = { instance_id: "vocostar", target: "local" as const };
 		const receipt = await synchronizeSuperBoardPluginCatalog(env.DB, {
 			...scope,
+			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:20:00.000Z",
 			expires_at: "2026-08-31T08:20:00.000Z",
 		});
@@ -45,26 +48,37 @@ describe("EmDash plugin Store authority", () => {
 			receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user"),
 		).toMatchObject({
 			plugin_version: "1.3.0",
-			status: "active",
+			status: "installed",
 		});
 
 		const states = await env.DB.prepare(
 			`SELECT COUNT(*) count FROM superboard_plugin_lifecycle
-			 WHERE instance_id = ? AND target = ? AND state = 'active'`,
+			 WHERE instance_id = ? AND target = ? AND state = 'installed'`,
 		)
 			.bind(scope.instance_id, scope.target)
 			.first<{ count: number }>();
 		expect(states?.count).toBe(18);
-		const manifests = await env.DB.prepare(
-			"SELECT COUNT(*) count FROM superboard_active_plugin_manifests WHERE plugin_id NOT LIKE '%*%'",
-		).first<{ count: number }>();
-		expect(manifests?.count).toBe(18);
 		const health = await env.DB.prepare(
-			"SELECT COUNT(*) count FROM superboard_dependency_health WHERE instance_id = ? AND status = 'ready'",
+			`SELECT COUNT(*) count FROM superboard_plugin_runtime_health
+			 WHERE instance_id = ? AND target = ? AND status = 'ready'`,
 		)
-			.bind("vocostar")
+			.bind(scope.instance_id, scope.target)
 			.first<{ count: number }>();
 		expect(health?.count).toBe(18);
+		const candidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
+		await activateReleasePointer(
+			env.DB,
+			scope.instance_id,
+			"01J00000000000000000000501",
+			candidateLock,
+			"2026-08-30T08:25:00.000Z",
+		);
+		await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
+			...scope,
+			release_id: "01J00000000000000000000501",
+			plugin_lock: candidateLock,
+			activated_at: "2026-08-30T08:25:00.000Z",
+		});
 		const fullLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
 		const fullPresentation = await composeUserFrontReleaseInput({
 			...releaseIdentifiers,
@@ -96,39 +110,8 @@ describe("EmDash plugin Store authority", () => {
 				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
 			).bind(previousAnalytics!.artifact_checksum, scope.instance_id, scope.target),
 		]);
-		const rollingDeployLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
-		expect(
-			rollingDeployLock.find(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics")
-				?.artifact_checksum,
-		).toBe(previousAnalytics!.artifact_checksum);
-		await expect(
-			composeUserFrontReleaseInput({
-				...releaseIdentifiers,
-				plugin_lock: rollingDeployLock,
-			}),
-		).rejects.toThrow(/PLUGIN_LOCK_MANIFEST_MISMATCH:.*analytics/u);
-		const tamperedChecksum = `sha256:${"f".repeat(64)}`;
-		await env.DB.prepare(
-			`INSERT INTO superboard_plugin_manifest_artifacts
-			 (artifact_checksum, plugin_id, manifest_json, installed_at)
-			 SELECT ?, plugin_id,
-			        json_set(manifest_json, '$.artifact_checksum', ?, '$.publisher', 'tampered'),
-			        installed_at
-			 FROM superboard_plugin_manifest_artifacts
-			 WHERE artifact_checksum = ?`,
-		)
-			.bind(tamperedChecksum, tamperedChecksum, previousAnalytics!.artifact_checksum)
-			.run();
-		await env.DB.batch([
-			env.DB.prepare(
-				"UPDATE superboard_plugin_lifecycle SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
-			).bind(tamperedChecksum, scope.instance_id, scope.target),
-			env.DB.prepare(
-				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
-			).bind(tamperedChecksum, scope.instance_id, scope.target),
-		]);
 		await expect(loadActiveSuperBoardPluginLock(env.DB, scope)).rejects.toThrow(
-			/PLUGIN_CATALOG_STORED_MANIFEST_INVALID:.*analytics/u,
+			/PLUGIN_INSTALLATION_PLAN_CONTRACT_MISSING:.*analytics/u,
 		);
 		const currentAnalytics = superBoardRuntimePluginCatalog().plugins.find(
 			({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
@@ -141,6 +124,11 @@ describe("EmDash plugin Store authority", () => {
 				"UPDATE superboard_plugin_runtime_health SET artifact_checksum = ? WHERE instance_id = ? AND target = ? AND plugin_id = 'supbrd-plugmod-analytics'",
 			).bind(currentAnalytics, scope.instance_id, scope.target),
 		]);
+		const restoredLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
+		expect(
+			restoredLock.find(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-analytics")
+				?.artifact_checksum,
+		).toBe(currentAnalytics);
 
 		await env.DB.prepare(
 			`DELETE FROM superboard_plugin_lifecycle
@@ -167,6 +155,7 @@ describe("EmDash plugin Store authority", () => {
 	test("installs the exact compiled user plugin and publishes bounded dependency health", async () => {
 		const receipt = await installCompiledUserPlugin(env.DB, {
 			instance_id: "vocostar",
+			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:30:00.000Z",
 			expires_at: "2026-08-30T09:30:00.000Z",
 		});
@@ -175,18 +164,18 @@ describe("EmDash plugin Store authority", () => {
 			plugin_version: userPluginManifest.plugin_version,
 			artifact_checksum: userPluginManifest.artifact_checksum,
 			dependency_id: "dependency.supbrd_plug_user",
-			status: "ready",
+			status: "installed",
 		});
 		expect(receipt.evidence_checksum).toMatch(/^sha256:[a-f0-9]{64}$/u);
 
 		const installed = await env.DB.prepare(
 			`SELECT artifact.artifact_checksum, artifact.manifest_json
-			 FROM superboard_active_plugin_manifests active
+			 FROM superboard_plugin_installation_items item
 			 JOIN superboard_plugin_manifest_artifacts artifact
-			   ON artifact.artifact_checksum = active.artifact_checksum
-			 WHERE active.plugin_id = ? AND active.artifact_checksum = ?`,
+			   ON artifact.artifact_checksum = item.artifact_checksum
+			 WHERE item.plan_id = ? AND item.plugin_id = ? AND item.state = 'installed'`,
 		)
-			.bind(userPluginManifest.plugin_id, userPluginManifest.artifact_checksum)
+			.bind(receipt.plan_id, userPluginManifest.plugin_id)
 			.first<{ artifact_checksum: string; manifest_json: string }>();
 		expect(installed?.artifact_checksum).toBe(userPluginManifest.artifact_checksum);
 		expect(JSON.parse(installed?.manifest_json ?? "{}")).toMatchObject({
@@ -194,9 +183,10 @@ describe("EmDash plugin Store authority", () => {
 		});
 
 		const health = await env.DB.prepare(
-			"SELECT status, evidence_checksum, expires_at FROM superboard_dependency_health WHERE instance_id = ? AND dependency_id = ?",
+			`SELECT status, evidence_checksum, expires_at FROM superboard_plugin_runtime_health
+			 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 		)
-			.bind("vocostar", "dependency.supbrd_plug_user")
+			.bind("vocostar", userPluginManifest.plugin_id)
 			.first();
 		expect(health).toEqual({
 			status: "ready",
@@ -274,6 +264,7 @@ describe("EmDash plugin Store authority", () => {
 	test("commits compatibility mutations before transient execution and replays receipts", async () => {
 		await synchronizeSuperBoardPluginCatalog(env.DB, {
 			instance_id: "vocostar",
+			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:20:00.000Z",
 			expires_at: "2026-08-31T08:20:00.000Z",
 		});
@@ -343,6 +334,7 @@ describe("EmDash plugin Store authority", () => {
 	test("keeps the compatibility Worker transient behind the repository-first gateway", async () => {
 		await synchronizeSuperBoardPluginCatalog(env.DB, {
 			instance_id: "vocostar",
+			approved_by: "operator-1",
 			checked_at: "2026-08-30T09:10:00.000Z",
 			expires_at: "2026-08-31T09:10:00.000Z",
 		});
@@ -543,12 +535,36 @@ describe("EmDash plugin Store authority", () => {
 	});
 
 	test("rehearses encrypted idempotent authority for every declared domain Store", async () => {
+		await synchronizeSuperBoardPluginCatalog(env.DB, {
+			instance_id: "parity-all",
+			target: "local",
+			approved_by: "operator-1",
+			checked_at: "2026-08-30T02:00:00.000Z",
+			expires_at: "2026-08-31T02:00:00.000Z",
+		});
+		const parityScope = { instance_id: "parity-all", target: "local" as const };
+		const parityLock = await loadReleasableSuperBoardPluginLock(env.DB, parityScope);
+		await activateReleasePointer(
+			env.DB,
+			parityScope.instance_id,
+			"01J00000000000000000000511",
+			parityLock,
+			"2026-08-30T02:01:00.000Z",
+		);
+		await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
+			...parityScope,
+			release_id: "01J00000000000000000000511",
+			plugin_lock: parityLock,
+			activated_at: "2026-08-30T02:01:00.000Z",
+		});
 		const encryptionKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
 			"encrypt",
 			"decrypt",
 		]);
 		let storeCount = 0;
-		for (const { manifest } of topology.plugins) {
+		for (const { manifest } of topology.plugins.filter(
+			({ manifest }) => !manifest.plugin_id.includes("*"),
+		)) {
 			for (const store of manifest.stores) {
 				storeCount += 1;
 				const entityId = `fixture-${storeCount}`;
@@ -593,6 +609,55 @@ describe("EmDash plugin Store authority", () => {
 		expect(storeCount).toBeGreaterThan(19);
 	});
 });
+
+async function activateReleasePointer(
+	db: D1Database,
+	instanceId: string,
+	releaseId: string,
+	pluginLock: readonly unknown[],
+	activatedAt: string,
+) {
+	await db.batch([
+		db
+			.prepare(
+				`INSERT INTO superboard_release_signing_keys
+				 (kid, public_jwk, status, created_at, retired_at)
+				 VALUES ('plugin-authority-test-key', '{}', 'active', ?, NULL)
+				 ON CONFLICT(kid) DO NOTHING`,
+			)
+			.bind(activatedAt),
+		db
+			.prepare(
+				`INSERT INTO superboard_front_release_candidates
+				 (candidate_id, instance_id, release_id, release_json, content_checksum,
+				  validation_set_checksum, signing_kid, status, approval_json, created_at, approved_at)
+				 VALUES (?, ?, ?, ?, 'sha256:test', 'sha256:test',
+				         'plugin-authority-test-key', 'approved', '{}', ?, ?)`,
+			)
+			.bind(
+				`${releaseId}-candidate`,
+				instanceId,
+				releaseId,
+				JSON.stringify({ payload: { plugin_lock: pluginLock } }),
+				activatedAt,
+				activatedAt,
+			),
+		db
+			.prepare(
+				`INSERT INTO superboard_front_active_releases
+				 (instance_id, active_release_id, previous_release_id, pointer_revision,
+				  activation_id, activated_at)
+				 VALUES (?, ?, NULL, 1, ?, ?)
+				 ON CONFLICT(instance_id) DO UPDATE SET
+				   previous_release_id = superboard_front_active_releases.active_release_id,
+				   active_release_id = excluded.active_release_id,
+				   pointer_revision = superboard_front_active_releases.pointer_revision + 1,
+				   activation_id = excluded.activation_id,
+				   activated_at = excluded.activated_at`,
+			)
+			.bind(instanceId, releaseId, `${releaseId}-activation`, activatedAt),
+	]);
+}
 
 const releaseIdentifiers = {
 	instance_id: "vocostar",

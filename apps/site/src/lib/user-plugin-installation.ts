@@ -1,7 +1,6 @@
 import { userPluginManifest } from "@superboard/supbrd-plug-user";
 
 import {
-	activateSuperBoardPluginInstallationPlan,
 	installSuperBoardPluginCatalog,
 	type SuperBoardPluginTarget,
 } from "./superboard-plugin-catalog.js";
@@ -13,6 +12,7 @@ export async function installCompiledUserPlugin(
 	input: {
 		instance_id: string;
 		target?: SuperBoardPluginTarget;
+		approved_by: string;
 		checked_at: string;
 		expires_at: string;
 	},
@@ -24,12 +24,6 @@ export async function installCompiledUserPlugin(
 		plan_id: `user-plugin-plan-${crypto.randomUUID()}`,
 		plugin_ids: [userPluginManifest.plugin_id],
 	});
-	await activateSuperBoardPluginInstallationPlan(db, {
-		instance_id: input.instance_id,
-		target,
-		plan_id: plan.plan_id,
-		changed_at: input.checked_at,
-	});
 	const plugin = plan.plugins[0];
 	if (!plugin) throw new Error("USER_PLUGIN_INSTALLATION_PLAN_EMPTY");
 	return {
@@ -40,7 +34,7 @@ export async function installCompiledUserPlugin(
 		plugin_version: userPluginManifest.plugin_version,
 		artifact_checksum: userPluginManifest.artifact_checksum,
 		activation_scope: "front_release" as const,
-		status: "ready" as const,
+		status: "installed" as const,
 		checked_at: input.checked_at,
 		expires_at: input.expires_at,
 		evidence_checksum: plugin.health_evidence_checksum,

@@ -17,6 +17,10 @@ import {
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
+import {
+	reconcileSuperBoardPluginLifecycleForRelease,
+	resolveSuperBoardPluginTarget,
+} from "../../../../lib/superboard-plugin-catalog.js";
 
 export const prerender = false;
 
@@ -82,5 +86,18 @@ export const POST: APIRoute = async (context) => {
 	if (!loaded || loaded.release.payload.release_id !== result.active_release_id) {
 		return jsonResponse({ error: { code: "LAST_VERIFIED_CACHE_RELOAD_FAILED" } }, 500);
 	}
-	return jsonResponse(result, 201);
+	const pluginLifecycle = await reconcileSuperBoardPluginLifecycleForRelease(env.DB, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
+		release_id: loaded.release.payload.release_id,
+		plugin_lock: loaded.release.payload.plugin_lock,
+		activated_at: activatedAt,
+	});
+	for (const pluginId of pluginLifecycle.activated_plugin_ids) {
+		await context.locals.emdash.setPluginStatus(pluginId, "active");
+	}
+	for (const pluginId of pluginLifecycle.disabled_plugin_ids) {
+		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
+	}
+	return jsonResponse({ ...result, plugin_lifecycle: pluginLifecycle }, 201);
 };

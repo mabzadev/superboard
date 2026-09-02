@@ -6,7 +6,12 @@ import type { Kysely } from "kysely";
 
 import type { Database } from "../../database/types.js";
 import type { SandboxedPluginEntry } from "../../emdash-runtime.js";
-import { PluginStateRepository, type PluginState, type PluginStatus } from "../../plugins/state.js";
+import {
+	isPluginStateEnabled,
+	PluginStateRepository,
+	type PluginState,
+	type PluginStatus,
+} from "../../plugins/state.js";
 import type { ResolvedPlugin } from "../../plugins/types.js";
 import type { ApiResult } from "../types.js";
 
@@ -120,8 +125,8 @@ function buildSandboxedPluginInfo(
 	entry: SandboxedPluginEntry,
 	state: PluginState | null,
 ): PluginInfo {
-	const status = state?.status ?? (entry.defaultEnabled === false ? "inactive" : "active");
-	const enabled = status === "active";
+	const enabled = isPluginStateEnabled(state?.status, entry.defaultEnabled);
+	const status = state?.status ?? (enabled ? "active" : "inactive");
 
 	return {
 		id: entry.id,

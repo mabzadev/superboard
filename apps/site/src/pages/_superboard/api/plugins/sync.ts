@@ -5,7 +5,6 @@ import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-g
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 import {
-	activateSuperBoardPluginInstallationPlan,
 	installSuperBoardPluginCatalog,
 	resolveSuperBoardPluginTarget,
 } from "../../../../lib/superboard-plugin-catalog.js";
@@ -27,36 +26,25 @@ export const POST: APIRoute = async (context) => {
 			!Number.isSafeInteger(expiresInHours) ||
 			expiresInHours < 1 ||
 			expiresInHours > 24 ||
-			(body.activate !== undefined && typeof body.activate !== "boolean") ||
+			body.activate !== undefined ||
 			(body.plan_id !== undefined && (typeof body.plan_id !== "string" || !body.plan_id.trim()))
 		) {
 			return jsonResponse({ error: { code: "INVALID_PLUGIN_CATALOG_SYNC_REQUEST" } }, 422);
 		}
 		const checkedAt = new Date().toISOString();
+		const operatorId = context.locals.user?.id;
+		if (!operatorId) return jsonResponse({ error: { code: "UNAUTHORIZED" } }, 401);
 		const target = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local");
 		const plan = await installSuperBoardPluginCatalog(env.DB, {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target,
 			plan_id:
 				typeof body.plan_id === "string" ? body.plan_id : `plugin-plan-${crypto.randomUUID()}`,
+			approved_by: operatorId,
 			checked_at: checkedAt,
 			expires_at: new Date(Date.parse(checkedAt) + expiresInHours * 60 * 60 * 1_000).toISOString(),
 		});
-		const activation =
-			body.activate === true
-				? await activateSuperBoardPluginInstallationPlan(env.DB, {
-						instance_id: env.SUPERBOARD_INSTANCE_ID,
-						target,
-						plan_id: plan.plan_id,
-						changed_at: checkedAt,
-					})
-				: null;
-		if (activation) {
-			for (const plugin of plan.plugins) {
-				await context.locals.emdash.setPluginStatus(plugin.plugin_id, "active");
-			}
-		}
-		return jsonResponse({ plan, activation }, 201);
+		return jsonResponse({ plan }, 201);
 	} catch (error) {
 		return handleError(
 			error,

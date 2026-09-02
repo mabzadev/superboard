@@ -28,13 +28,15 @@ export const POST: APIRoute = async (context) => {
 			return jsonResponse({ error: { code: "INVALID_USER_PLUGIN_INSTALL_REQUEST" } }, 422);
 		}
 		const checkedAt = new Date().toISOString();
+		const operatorId = context.locals.user?.id;
+		if (!operatorId) return jsonResponse({ error: { code: "UNAUTHORIZED" } }, 401);
 		const receipt = await installCompiledUserPlugin(env.DB, {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local"),
+			approved_by: operatorId,
 			checked_at: checkedAt,
 			expires_at: new Date(Date.parse(checkedAt) + expiresInHours * 60 * 60 * 1_000).toISOString(),
 		});
-		await context.locals.emdash.setPluginStatus(receipt.plugin_id, "active");
 		return jsonResponse(receipt, 201);
 	} catch (error) {
 		return handleError(

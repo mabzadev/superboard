@@ -39,7 +39,7 @@ export interface RepositoryCommandInput {
 
 export async function beginRepositoryCommand(db: D1Database, input: RepositoryCommandInput) {
 	assertCommandInput(input);
-	await assertActiveCommandContract(db, input.plugin_id, input.command_id);
+	await assertActiveCommandContract(db, input.instance_id, input.plugin_id, input.command_id);
 	const pathChecksum = await sha256(new TextEncoder().encode(input.request_path));
 	const requestChecksum = await sha256(
 		new TextEncoder().encode(
@@ -153,7 +153,8 @@ export function resolveRepositoryCommandScope(url: URL): {
 	const pathname = url.pathname;
 	const projectRef =
 		pathname.match(/\/(\d+-(?:test|prod))(?:\/|$)/u)?.[1] ??
-		(url.searchParams.get("project_ref")?.match(projectRefPattern)?.[0] ?? "instance-wide");
+		url.searchParams.get("project_ref")?.match(projectRefPattern)?.[0] ??
+		"instance-wide";
 	const pluginId = inferPluginId(pathname);
 	return {
 		plugin_id: pluginId,
@@ -170,6 +171,7 @@ export function assertIdempotencyKey(value: string | null): string {
 
 async function assertActiveCommandContract(
 	db: D1Database,
+	instanceId: string,
 	pluginId: string,
 	commandId: string | undefined,
 ) {
@@ -177,16 +179,19 @@ async function assertActiveCommandContract(
 	const active = await db
 		.prepare(
 			`SELECT artifact.manifest_json
-			 FROM superboard_active_plugin_manifests active
+			 FROM superboard_plugin_lifecycle lifecycle
 			 JOIN superboard_plugin_manifest_artifacts artifact
-			   ON artifact.artifact_checksum = active.artifact_checksum
-			 WHERE active.plugin_id = ? AND artifact.plugin_id = active.plugin_id`,
+			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
+			 WHERE lifecycle.instance_id = ? AND lifecycle.plugin_id = ?
+			   AND lifecycle.state = 'active' AND artifact.plugin_id = lifecycle.plugin_id`,
 		)
-		.bind(pluginId)
+		.bind(instanceId, pluginId)
 		.first<{ manifest_json: string }>();
 	if (!active) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	if (!commandId) return;
-	const manifest = JSON.parse(active.manifest_json) as { commands?: Array<{ command_id?: string }> };
+	const manifest = JSON.parse(active.manifest_json) as {
+		commands?: Array<{ command_id?: string }>;
+	};
 	if (!manifest.commands?.some(({ command_id: value }) => value === commandId)) {
 		throw new Error("PLUGIN_COMMAND_NOT_DECLARED");
 	}
@@ -308,7 +313,10 @@ async function encryptBytes(key: CryptoKey, bytes: Uint8Array): Promise<Encrypte
 	};
 }
 
-async function decryptBytes(key: CryptoKey, payload: EncryptedBytes): Promise<Uint8Array<ArrayBuffer>> {
+async function decryptBytes(
+	key: CryptoKey,
+	payload: EncryptedBytes,
+): Promise<Uint8Array<ArrayBuffer>> {
 	const plaintext = await crypto.subtle.decrypt(
 		{ name: "AES-GCM", iv: base64ToBytes(payload.iv) },
 		key,

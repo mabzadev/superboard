@@ -217,7 +217,7 @@ import {
 	type RouteMeta,
 } from "./plugins/routes.js";
 import type { CronScheduler } from "./plugins/scheduler/types.js";
-import { PluginStateRepository } from "./plugins/state.js";
+import { isPluginStateEnabled, PluginStateRepository } from "./plugins/state.js";
 import { syncDeclaredStorageIndexes } from "./plugins/storage-indexes.js";
 import { normalizeRegistryConfig } from "./registry/config.js";
 import { requestCached } from "./request-cache.js";
@@ -1517,7 +1517,7 @@ export class EmDashRuntime {
 				// Persisted state overrides the descriptor's missing-state default.
 				const status = pluginStates.get(plugin.id);
 				const configured = deps.sandboxedPluginEntries.find((entry) => entry.id === plugin.id);
-				if (status === "active" || (status === undefined && configured?.defaultEnabled !== false)) {
+				if (isPluginStateEnabled(status, configured?.defaultEnabled)) {
 					enabledPlugins.add(plugin.id);
 				}
 			}
@@ -2588,8 +2588,7 @@ export class EmDashRuntime {
 		// Add sandboxed plugins (use entries for admin config)
 		for (const entry of this.sandboxedPluginEntries) {
 			const status = this.pluginStates.get(entry.id);
-			const enabled =
-				status === "active" || (status === undefined && entry.defaultEnabled !== false);
+			const enabled = isPluginStateEnabled(status, entry.defaultEnabled);
 
 			const hasAdminPages = (entry.adminPages?.length ?? 0) > 0;
 			const hasWidgets = (entry.adminWidgets?.length ?? 0) > 0;
@@ -4368,9 +4367,9 @@ export class EmDashRuntime {
 
 	private isPluginEnabled(pluginId: string): boolean {
 		const status = this.pluginStates.get(pluginId);
-		if (status !== undefined) return status === "active";
-		return (
-			this.sandboxedPluginEntries.find((entry) => entry.id === pluginId)?.defaultEnabled !== false
-		);
+		const defaultEnabled = this.sandboxedPluginEntries.find(
+			(entry) => entry.id === pluginId,
+		)?.defaultEnabled;
+		return isPluginStateEnabled(status, defaultEnabled);
 	}
 }
