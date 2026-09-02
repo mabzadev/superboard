@@ -41,6 +41,10 @@ import {
   d1Descriptor,
   localMigrationFiles,
 } from "./cloudflare-d1-registry.mjs";
+import {
+  assertTargetServiceConfiguration,
+  compiledTargetFromArgs,
+} from "./target-compiler.mjs";
 
 const args = parseArgs();
 const service = args.service ?? "api";
@@ -56,6 +60,7 @@ if (outputSuffix && !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(outputSuffix)) {
   throw new Error("--output-suffix must be a safe lowercase name");
 }
 const { target } = await loadTarget(targetName);
+const compiledTarget = await compiledTargetFromArgs(target, environment, args);
 const sitePreviewRoute = resolveSitePreviewRoute({
   requested: Boolean(args["site-preview-route"]),
   service,
@@ -148,6 +153,11 @@ const config =
                       : managedWorker
                         ? managedWorkerConfig()
                         : domainConfig();
+assertTargetServiceConfiguration(compiledTarget, service, config, {
+  routesEnabled: publicRoutesEnabled,
+  sitePreviewRoute: Boolean(sitePreviewRoute),
+  preflight,
+});
 await writeConfigAtomically(outputPath, `${JSON.stringify(config, null, 2)}\n`);
 console.log(relative(root, outputPath));
 
