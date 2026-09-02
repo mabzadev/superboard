@@ -34,9 +34,16 @@ import {
 import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 import { installCompiledUserPlugin } from "../src/lib/user-plugin-installation.js";
 
+const targetProof = {
+	target_artifact_checksum: `sha256:${"3".repeat(64)}`,
+	target_plugin_ids: superBoardRuntimePluginCatalog().plugins.map(
+		({ manifest }) => manifest.plugin_id,
+	),
+};
+
 describe("EmDash plugin Store authority", () => {
 	test("synchronizes every concrete SuperBoard plugin into the EmDash runtime lifecycle", async () => {
-		const scope = { instance_id: "vocostar", target: "local" as const };
+		const scope = { ...targetProof, instance_id: "vocostar", target: "local" as const };
 		const receipt = await synchronizeSuperBoardPluginCatalog(env.DB, {
 			...scope,
 			approved_by: "operator-1",
@@ -149,6 +156,7 @@ describe("EmDash plugin Store authority", () => {
 
 	test("installs the exact compiled user plugin and publishes bounded dependency health", async () => {
 		const receipt = await installCompiledUserPlugin(env.DB, {
+			...targetProof,
 			instance_id: "vocostar",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:30:00.000Z",
@@ -258,6 +266,7 @@ describe("EmDash plugin Store authority", () => {
 
 	test("commits compatibility mutations before transient execution and replays receipts", async () => {
 		await synchronizeSuperBoardPluginCatalog(env.DB, {
+			...targetProof,
 			instance_id: "vocostar",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T08:20:00.000Z",
@@ -328,6 +337,7 @@ describe("EmDash plugin Store authority", () => {
 
 	test("keeps the compatibility Worker transient behind the repository-first gateway", async () => {
 		await synchronizeSuperBoardPluginCatalog(env.DB, {
+			...targetProof,
 			instance_id: "vocostar",
 			approved_by: "operator-1",
 			checked_at: "2026-08-30T09:10:00.000Z",
@@ -531,6 +541,7 @@ describe("EmDash plugin Store authority", () => {
 
 	test("rehearses encrypted idempotent authority for every declared domain Store", async () => {
 		await synchronizeSuperBoardPluginCatalog(env.DB, {
+			...targetProof,
 			instance_id: "parity-all",
 			target: "local",
 			approved_by: "operator-1",

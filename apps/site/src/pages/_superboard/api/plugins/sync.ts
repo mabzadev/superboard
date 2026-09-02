@@ -7,6 +7,7 @@ import { getSiteEnv } from "../../../../lib/site-env.js";
 import {
 	installSuperBoardPluginCatalog,
 	resolveSuperBoardPluginTarget,
+	resolveSuperBoardTargetPluginIds,
 } from "../../../../lib/superboard-plugin-catalog.js";
 
 export const prerender = false;
@@ -41,6 +42,8 @@ export const POST: APIRoute = async (context) => {
 			plan_id:
 				typeof body.plan_id === "string" ? body.plan_id : `plugin-plan-${crypto.randomUUID()}`,
 			approved_by: operatorId,
+			target_artifact_checksum: env.TARGET_ARTIFACT_CHECKSUM,
+			target_plugin_ids: resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS),
 			checked_at: checkedAt,
 			expires_at: new Date(Date.parse(checkedAt) + expiresInHours * 60 * 60 * 1_000).toISOString(),
 		});

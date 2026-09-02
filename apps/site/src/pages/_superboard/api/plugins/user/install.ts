@@ -4,7 +4,10 @@ import { handleError } from "emdash/api/error";
 import { jsonResponse, requireReleaseOperator } from "../../../../../lib/operator-guard.js";
 import { isRecord } from "../../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../../lib/site-env.js";
-import { resolveSuperBoardPluginTarget } from "../../../../../lib/superboard-plugin-catalog.js";
+import {
+	resolveSuperBoardPluginTarget,
+	resolveSuperBoardTargetPluginIds,
+} from "../../../../../lib/superboard-plugin-catalog.js";
 import { installCompiledUserPlugin } from "../../../../../lib/user-plugin-installation.js";
 
 export const prerender = false;
@@ -34,6 +37,8 @@ export const POST: APIRoute = async (context) => {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local"),
 			approved_by: operatorId,
+			target_artifact_checksum: env.TARGET_ARTIFACT_CHECKSUM,
+			target_plugin_ids: resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS),
 			checked_at: checkedAt,
 			expires_at: new Date(Date.parse(checkedAt) + expiresInHours * 60 * 60 * 1_000).toISOString(),
 		});

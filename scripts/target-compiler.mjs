@@ -284,6 +284,11 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 		vars: {
 			SUPERBOARD_INSTANCE_ID: compiledTarget.target,
 			SUPERBOARD_ENVIRONMENT: compiledTarget.environment,
+			SUPERBOARD_PLUGIN_IDS: JSON.stringify(
+				compiledTarget.graph.plugins
+					.filter(({ pluginId }) => !pluginId.includes("*"))
+					.map(({ pluginId }) => pluginId),
+			),
 			SUPERBOARD_RELEASE_OPERATIONS: "disabled",
 			D1_EXPECTED_MIGRATION: siteMigration?.files.at(-1)?.file,
 			TARGET_ARTIFACT_CHECKSUM: compiledTarget.checksum,

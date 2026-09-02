@@ -12,7 +12,14 @@ import {
 } from "../src/lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../src/lib/user-front-release.js";
 
+const targetProof = {
+	target_artifact_checksum: `sha256:${"1".repeat(64)}`,
+	target_plugin_ids: superBoardRuntimePluginCatalog().plugins.map(
+		({ manifest }) => manifest.plugin_id,
+	),
+};
 const scope = {
+	...targetProof,
 	instance_id: "blank-instance",
 	target: "development" as const,
 	approved_by: "operator-1",
@@ -43,6 +50,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			status: "installed",
 			plugin_count: 18,
 			target: "development",
+			target_artifact_checksum: targetProof.target_artifact_checksum,
 		});
 		expect(plan.plugins).toHaveLength(18);
 		expect(plan.plugins).toEqual(
@@ -163,6 +171,7 @@ describe("SuperBoard plugin lifecycle", () => {
 
 	test("rejects an installation plan whose derived contract was modified", async () => {
 		const plan = await installSuperBoardPluginCatalog(env.DB, {
+			...targetProof,
 			instance_id: "tampered-instance",
 			target: "production",
 			approved_by: "operator-1",
@@ -199,6 +208,7 @@ describe("SuperBoard plugin lifecycle", () => {
 
 	test("cannot activate plugins before the corresponding Front Release is active", async () => {
 		const inactiveScope = {
+			...targetProof,
 			instance_id: "release-gated-instance",
 			target: "local" as const,
 			approved_by: "operator-1",
@@ -242,6 +252,7 @@ describe("SuperBoard plugin lifecycle", () => {
 
 	test("rejects a Plugin Lock when its health evidence has expired", async () => {
 		const expiredScope = {
+			...targetProof,
 			instance_id: "expired-health-instance",
 			target: "local" as const,
 			approved_by: "operator-1",
@@ -259,6 +270,7 @@ describe("SuperBoard plugin lifecycle", () => {
 
 	test("rejects a prepared Release when lifecycle changes before the pointer swap", async () => {
 		const staleScope = {
+			...targetProof,
 			instance_id: "stale-preparation-instance",
 			target: "development" as const,
 			approved_by: "operator-1",
@@ -288,6 +300,36 @@ describe("SuperBoard plugin lifecycle", () => {
 		await expect(
 			activateReleasePointer(env.DB, staleScope.instance_id, releaseId, staleScopeTime),
 		).rejects.toThrow(/plugin lifecycle reconciliation is stale/u);
+	});
+
+	test("keeps plugins outside the compiled target available but not releasable", async () => {
+		const targetPluginIds = targetProof.target_plugin_ids.filter(
+			(pluginId) =>
+				pluginId !== "supbrd-plugmod-paywalls" && pluginId !== "supbrd-plugmod-onboardings",
+		);
+		const targetScope = {
+			instance_id: "feature-scoped-instance",
+			target: "development" as const,
+			approved_by: "operator-1",
+			target_artifact_checksum: `sha256:${"2".repeat(64)}`,
+			target_plugin_ids: targetPluginIds,
+		};
+		const plan = await installSuperBoardPluginCatalog(env.DB, {
+			...targetScope,
+			plan_id: "plugin-plan-feature-scoped",
+			checked_at: "2026-09-02T13:00:00.000Z",
+			expires_at: "2999-09-03T13:00:00.000Z",
+		});
+		expect(plan.plugin_count).toBe(16);
+		expect(await loadReleasableSuperBoardPluginLock(env.DB, targetScope)).toHaveLength(16);
+		const available = await env.DB.prepare(
+			`SELECT COUNT(*) count FROM superboard_plugin_lifecycle
+			 WHERE instance_id = ? AND target = ? AND state = 'available'`,
+		)
+			.bind(targetScope.instance_id, targetScope.target)
+			.first<{ count: number }>();
+		expect(available?.count).toBe(2);
+		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(18);
 	});
 });
 

@@ -13,6 +13,8 @@ export async function installCompiledUserPlugin(
 		instance_id: string;
 		target?: SuperBoardPluginTarget;
 		approved_by: string;
+		target_artifact_checksum: string;
+		target_plugin_ids: readonly string[];
 		checked_at: string;
 		expires_at: string;
 	},

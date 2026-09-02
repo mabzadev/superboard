@@ -95,6 +95,7 @@ test("the local Site configuration is generated and guarded by the target artifa
 	);
 	assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, "mbza-development");
 	assert.equal(config.vars.SUPERBOARD_ENVIRONMENT, "local");
+	assert.equal(JSON.parse(config.vars.SUPERBOARD_PLUGIN_IDS).length, 16);
 	assert.match(config.vars.TARGET_ARTIFACT_CHECKSUM, CHECKSUM_PATTERN);
 	assertTargetServiceConfiguration(compiled, "site", config);
 

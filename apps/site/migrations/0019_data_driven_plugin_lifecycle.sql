@@ -1,9 +1,22 @@
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS superboard_plugin_target_artifacts (
+  instance_id TEXT NOT NULL,
+  target TEXT NOT NULL CHECK (target IN ('local', 'development', 'production')),
+  artifact_checksum TEXT NOT NULL,
+  plugin_ids_json TEXT NOT NULL CHECK (json_valid(plugin_ids_json)),
+  registered_at TEXT NOT NULL,
+  PRIMARY KEY (instance_id, target)
+);
+
+CREATE INDEX IF NOT EXISTS idx_plugin_target_artifacts_checksum
+  ON superboard_plugin_target_artifacts(artifact_checksum);
+
 CREATE TABLE IF NOT EXISTS superboard_plugin_installation_plans (
   plan_id TEXT PRIMARY KEY,
   instance_id TEXT NOT NULL,
   target TEXT NOT NULL CHECK (target IN ('local', 'development', 'production')),
+  target_artifact_checksum TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('installing', 'installed', 'active', 'failed')),
   catalog_checksum TEXT NOT NULL,
   plugin_count INTEGER NOT NULL CHECK (plugin_count > 0),
@@ -173,6 +186,7 @@ CREATE TABLE IF NOT EXISTS superboard_plugin_release_reconciliations (
   target TEXT NOT NULL CHECK (target IN ('local', 'development', 'production')),
   release_id TEXT NOT NULL
     REFERENCES superboard_front_release_candidates(release_id),
+  target_artifact_checksum TEXT NOT NULL,
   plugin_lock_json TEXT NOT NULL CHECK (json_valid(plugin_lock_json)),
   status TEXT NOT NULL CHECK (status IN ('prepared', 'applied')),
   prepared_at TEXT NOT NULL,
@@ -223,6 +237,13 @@ WHEN EXISTS (
     AND reconciliation.release_id = NEW.active_release_id
     AND reconciliation.status = 'prepared'
     AND (
+      reconciliation.target_artifact_checksum <> COALESCE((
+        SELECT target_artifact.artifact_checksum
+        FROM superboard_plugin_target_artifacts target_artifact
+        WHERE target_artifact.instance_id = reconciliation.instance_id
+          AND target_artifact.target = reconciliation.target
+      ), '')
+      OR
       EXISTS (
         SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
         WHERE json_extract(lock.value, '$.plugin_id') <> 'supbrd-core'
@@ -266,6 +287,13 @@ WHEN EXISTS (
     AND reconciliation.release_id = NEW.active_release_id
     AND reconciliation.status = 'prepared'
     AND (
+      reconciliation.target_artifact_checksum <> COALESCE((
+        SELECT target_artifact.artifact_checksum
+        FROM superboard_plugin_target_artifacts target_artifact
+        WHERE target_artifact.instance_id = reconciliation.instance_id
+          AND target_artifact.target = reconciliation.target
+      ), '')
+      OR
       EXISTS (
         SELECT 1 FROM json_each(reconciliation.plugin_lock_json) lock
         WHERE json_extract(lock.value, '$.plugin_id') <> 'supbrd-core'
