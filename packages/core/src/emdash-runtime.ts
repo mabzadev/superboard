@@ -217,7 +217,7 @@ import {
 	type RouteMeta,
 } from "./plugins/routes.js";
 import type { CronScheduler } from "./plugins/scheduler/types.js";
-import { PluginStateRepository } from "./plugins/state.js";
+import { isPluginStateEnabled, PluginStateRepository } from "./plugins/state.js";
 import { syncDeclaredStorageIndexes } from "./plugins/storage-indexes.js";
 import { normalizeRegistryConfig } from "./registry/config.js";
 import { requestCached } from "./request-cache.js";
@@ -267,6 +267,10 @@ const LIST_COLUMN_FIELD_TYPES: ReadonlySet<FieldType> = new Set([
 export interface SandboxedPluginEntry {
 	id: string;
 	version: string;
+	/** Build-time default used only when no persisted plugin state exists. */
+	defaultEnabled?: boolean;
+	/** Host-owned lifecycle blocks generic admin enable/disable actions. */
+	lifecycleManaged?: boolean;
 	options: Record<string, unknown>;
 	code: string;
 	/** Capabilities the plugin requests */
@@ -1512,10 +1516,10 @@ export class EmDashRuntime {
 			for (const plugin of bypassedPlugins) {
 				allPipelinePlugins.push(plugin);
 				bypassedPluginsList.push(plugin);
-				// Respect plugin state: only enable if active or no record exists.
-				// Plugins an admin previously disabled should stay disabled.
+				// Persisted state overrides the descriptor's missing-state default.
 				const status = pluginStates.get(plugin.id);
-				if (status === undefined || status === "active") {
+				const configured = deps.sandboxedPluginEntries.find((entry) => entry.id === plugin.id);
+				if (isPluginStateEnabled(status, configured?.defaultEnabled)) {
 					enabledPlugins.add(plugin.id);
 				}
 			}
@@ -2586,7 +2590,7 @@ export class EmDashRuntime {
 		// Add sandboxed plugins (use entries for admin config)
 		for (const entry of this.sandboxedPluginEntries) {
 			const status = this.pluginStates.get(entry.id);
-			const enabled = status === undefined || status === "active";
+			const enabled = isPluginStateEnabled(status, entry.defaultEnabled);
 
 			const hasAdminPages = (entry.adminPages?.length ?? 0) > 0;
 			const hasWidgets = (entry.adminWidgets?.length ?? 0) > 0;
@@ -4365,6 +4369,9 @@ export class EmDashRuntime {
 
 	private isPluginEnabled(pluginId: string): boolean {
 		const status = this.pluginStates.get(pluginId);
-		return status === undefined || status === "active";
+		const defaultEnabled = this.sandboxedPluginEntries.find(
+			(entry) => entry.id === pluginId,
+		)?.defaultEnabled;
+		return isPluginStateEnabled(status, defaultEnabled);
 	}
 }

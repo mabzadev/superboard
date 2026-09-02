@@ -14,6 +14,11 @@ import { createD1FrontReleaseRepository } from "../../../../lib/release-reposito
 import { loadLastVerifiedFrontRelease } from "../../../../lib/release-source.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
+import {
+	finalizeSuperBoardPluginLifecycleForRelease,
+	prepareSuperBoardPluginLifecycleForRelease,
+	resolveSuperBoardPluginTarget,
+} from "../../../../lib/superboard-plugin-catalog.js";
 
 export const prerender = false;
 
@@ -54,6 +59,14 @@ export const POST: APIRoute = async (context) => {
 			409,
 		);
 	}
+	const pluginTarget = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT);
+	await prepareSuperBoardPluginLifecycleForRelease(env.DB, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		target: pluginTarget,
+		release_id: target.release.payload.release_id,
+		plugin_lock: target.release.payload.plugin_lock,
+		prepared_at: now,
+	});
 	const result = await repository.compareAndSwapActive({
 		candidate: target,
 		command: {
@@ -68,6 +81,24 @@ export const POST: APIRoute = async (context) => {
 	});
 	if (result.status !== "activated") return jsonResponse({ error: result }, 409);
 	await env.RELEASE_CACHE.delete(`last_verified_release:${env.SUPERBOARD_INSTANCE_ID}`);
-	await loadLastVerifiedFrontRelease(env, env.SUPERBOARD_INSTANCE_ID);
-	return jsonResponse({ ...result, rollback: "pointer_only" }, 201);
+	const loaded = await loadLastVerifiedFrontRelease(env, env.SUPERBOARD_INSTANCE_ID);
+	if (!loaded || loaded.release.payload.release_id !== result.active_release_id) {
+		return jsonResponse({ error: { code: "LAST_VERIFIED_CACHE_RELOAD_FAILED" } }, 500);
+	}
+	const pluginLifecycle = await finalizeSuperBoardPluginLifecycleForRelease(env.DB, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		target: pluginTarget,
+		release_id: loaded.release.payload.release_id,
+		finalized_at: now,
+	});
+	for (const pluginId of pluginLifecycle.activated_plugin_ids) {
+		await context.locals.emdash.setPluginStatus(pluginId, "active");
+	}
+	for (const pluginId of pluginLifecycle.disabled_plugin_ids) {
+		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
+	}
+	return jsonResponse(
+		{ ...result, rollback: "pointer_only", plugin_lifecycle: pluginLifecycle },
+		201,
+	);
 };

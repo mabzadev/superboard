@@ -5,12 +5,14 @@ import {
 	resolveRepositoryCommandScope,
 } from "./plugin-command-authority.js";
 import { importPluginStoreEncryptionKey } from "./plugin-store-repository.js";
+import { resolveSuperBoardPluginTarget } from "./superboard-plugin-catalog.js";
 
 interface OperatorApiProxyEnv {
 	API_SERVICE?: { fetch(request: Request): Promise<Response> };
 	SITE_OPERATOR_BRIDGE_TOKEN?: string;
 	DB?: D1Database;
 	SUPERBOARD_INSTANCE_ID?: string;
+	SUPERBOARD_ENVIRONMENT?: string;
 	SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY?: string;
 }
 
@@ -114,6 +116,7 @@ async function executeRepositoryFirstCommand(input: {
 		const accepted = await beginRepositoryCommand(db, {
 			operation_id: operationId,
 			instance_id: instanceId,
+			target: resolveSuperBoardPluginTarget(input.env.SUPERBOARD_ENVIRONMENT ?? "local"),
 			project_ref: scope.project_ref,
 			plugin_id: scope.plugin_id,
 			command_id: input.request_headers.get("X-SuperBoard-Command-Id")?.trim() || undefined,
