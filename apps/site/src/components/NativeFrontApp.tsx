@@ -13,9 +13,6 @@ import {
 import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
 
-import "../styles/native-front.css";
-import "../styles/dashboard-views.css";
-
 export function NativeFrontApp({ projection }: { projection: NativeFrontPresentationProjection }) {
 	const i18n = setupI18n({
 		locale: projection.locale,

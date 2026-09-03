@@ -13,6 +13,8 @@ export default defineConfig({
 				compatibilityDate: "2026-08-08",
 				bindings: {
 					SUPERBOARD_INSTANCE_ID: "vocostar",
+					SUPERBOARD_ENVIRONMENT: "local",
+					SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 					SUPERBOARD_RELEASE_OPERATIONS: "enabled",
 					...d1RuntimeBindings(
 						await readD1Migrations(fileURLToPath(new URL("./migrations", import.meta.url))),

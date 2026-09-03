@@ -19,6 +19,7 @@ import { root } from "./cloudflare-target.mjs";
 const ADAPTERS = new Set(["local", "cloudflare"]);
 const LOCAL_PORT_BASE = 8787;
 const LOCAL_INSPECTOR_PORT_BASE = 9229;
+const PLUGIN_MIGRATION_ID_PATTERN = /^\d{4}_[a-z0-9_]+$/u;
 
 export async function compileTarget(target, environment, options = {}) {
 	const environmentResources = target.environments?.[environment];
@@ -41,7 +42,10 @@ export async function compileTarget(target, environment, options = {}) {
 			.toSorted(compareBy("kind", "key")),
 		bindings: compileBindings(target, environment, physicalResources),
 		secrets: secretInventory(target)
-			.map(({ service, names }) => ({ service, names: names.toSorted() }))
+			.map(({ service, names }) => ({
+				service,
+				names: names.toSorted((left, right) => left.localeCompare(right)),
+			}))
 			.toSorted(compareBy("service")),
 		migrations,
 		plugins: compilePlugins(target, pluginTopology, migrations),
@@ -581,7 +585,7 @@ function compilePlugins(target, topology, migrations) {
 			const stores = (manifest.stores ?? []).map(
 				({ store_id: storeId, checksum, migrations: storeMigrations = [] }) => {
 					for (const migration of storeMigrations) {
-						if (!migrationPaths.has(migration)) {
+						if (!PLUGIN_MIGRATION_ID_PATTERN.test(migration) && !migrationPaths.has(migration)) {
 							throw new Error(
 								`Plugin ${manifest.plugin_id} Store ${storeId} references unknown migration ${migration}`,
 							);

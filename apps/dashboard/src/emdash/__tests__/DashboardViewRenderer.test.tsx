@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import navigation from "../../../../../config/superboard-dashboard-navigation.json";
+import parityRelease from "../../../../../config/superboard-parity-release.json";
 import seed from "../../../../site/seed/seed.json";
 import { DashboardViewRenderer } from "../DashboardViewRenderer";
 
@@ -18,15 +18,42 @@ describe("EmDash Dashboard View renderer", () => {
     );
   });
 
-  it("renders application content for every editable View", () => {
-    const paths = navigation.sections.flatMap((section) =>
-      section.pages.map((page) => page.href)
+  it("renders every active Release submenu without a client rendering error", () => {
+    const errors: unknown[][] = [];
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation((...args) => errors.push(args));
+    const release = parityRelease.release.payload;
+    const routes = new Map(
+      release.front_route_manifest.routes.map((route) => [
+        route.route_id,
+        route,
+      ])
+    );
+    const submenuItems = release.presentation.navigation.flatMap(
+      ({ items }) => items
     );
 
-    expect(paths).toHaveLength(71);
-    for (const path of paths) {
-      const markup = renderView(path);
-      expect(markup.length, path).toBeGreaterThan(100);
+    try {
+      expect(submenuItems).toHaveLength(71);
+      for (const item of submenuItems) {
+        const route = routes.get(item.route_id);
+        expect(route, item.route_id).toBeDefined();
+        expect(route?.path_pattern.replace(":lang", "en"), item.route_id).toBe(
+          item.href
+        );
+        const markup = renderView(item.href);
+        expect(markup.length, item.href).toBeGreaterThan(100);
+        expect(markup, item.href).not.toContain(
+          "View configuration is incomplete."
+        );
+        expect(markup, item.href).not.toContain(
+          "No data available for this surface yet."
+        );
+      }
+      expect(errors).toEqual([]);
+    } finally {
+      errorSpy.mockRestore();
     }
   });
 

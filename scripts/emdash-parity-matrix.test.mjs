@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import { verifySuperBoardPluginManifest } from "../packages/supbrd-core/dist/index.js";
+import { validateUserPluginManifest } from "../packages/supbrd-runtime-plugins/dist/front-catalog.js";
 import {
 	buildParityMatrix,
 	buildPluginTopology,
@@ -37,7 +38,11 @@ test("the plugin topology exposes both closed execution families", () => {
 
 test("every topology manifest uses the shared closed runtime contract", async () => {
 	for (const { manifest } of buildPluginTopology().plugins) {
-		assert.deepEqual(await verifySuperBoardPluginManifest(manifest), { valid: true, errors: [] });
+		const verification =
+			manifest.plugin_id === "supbrd-plug-user"
+				? await validateUserPluginManifest(manifest)
+				: await verifySuperBoardPluginManifest(manifest);
+		assert.deepEqual(verification, { valid: true, errors: [] });
 		assert.equal(manifest.execution.backend, "sandboxed", manifest.plugin_id);
 	}
 });

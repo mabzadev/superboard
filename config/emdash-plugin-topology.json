@@ -10,14 +10,15 @@
         "schema_version": "1.0.0",
         "plugin_id": "supbrd-plug-user",
         "plugin_kind": "full",
-        "plugin_version": "1.0.0",
-        "artifact_id": "supbrd-plug-user@1.0.0",
+        "plugin_version": "1.3.0",
+        "artifact_id": "supbrd-plug-user@1.3.0",
         "publisher": "superboard",
         "resources": [
-          "supbrd-plug-user.store.user_credentials",
-          "supbrd-plug-user.store.user_directory",
-          "supbrd-plug-user.store.user_sessions",
-          "PLUGIN_PRIVATE_KV"
+          "USER_DIRECTORY_STORE",
+          "USER_CREDENTIALS_STORE",
+          "USER_SESSIONS_STORE",
+          "PLUGIN_PRIVATE_KV",
+          "SECRET:APPLICATION_JWT_SIGNING_KEY"
         ],
         "settings": {
           "render_mode": "block_kit",
@@ -26,9 +27,9 @@
             "type": "object",
             "additionalProperties": false,
             "required": [
+              "mfa_policy",
               "allow_anonymous_upgrade",
-              "max_active_sessions",
-              "mfa_policy"
+              "max_active_sessions"
             ],
             "properties": {
               "mfa_policy": {
@@ -55,151 +56,51 @@
           "renderer": "native_bundle"
         },
         "capabilities": [
-          "plugin.storage"
+          "plugin.storage",
+          "identity.directory.read",
+          "identity.directory.write",
+          "identity.credentials.read",
+          "identity.credentials.write",
+          "identity.providers.read",
+          "identity.providers.write",
+          "identity.sessions.read",
+          "identity.sessions.write",
+          "identity.tokens.sign",
+          "renderer.register"
         ],
-        "aliases": {},
+        "aliases": {
+          "user.login-form": "supbrd-plug-user.renderer.login_form",
+          "user.profile-card": "supbrd-plug-user.renderer.profile_card",
+          "user.members-table": "supbrd-plug-user.renderer.members_table"
+        },
         "stores": [
-          {
-            "store_id": "supbrd-plug-user.store.user_credentials",
-            "kind": "d1",
-            "authority": "supbrd-plug-user",
-            "schema_version": "1",
-            "migrations": [
-              "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql",
-              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
-              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
-              "apps/site/migrations/0010_plugin_store_project_scope.sql",
-              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
-              "apps/site/migrations/0012_functional_front_contracts.sql",
-              "workers/identity/migrations/0001_identity.sql",
-              "workers/identity/migrations/0002_project_scope.sql",
-              "workers/identity/migrations/0101_melody_create_app_table.sql",
-              "workers/identity/migrations/0102_melody_create_user_table.sql",
-              "workers/identity/migrations/0103_melody_create_user_app_consent_table.sql",
-              "workers/identity/migrations/0104_melody_create_role_table.sql",
-              "workers/identity/migrations/0105_melody_create_user_role_table.sql",
-              "workers/identity/migrations/0106_melody_create_scope_table.sql",
-              "workers/identity/migrations/0107_melody_create_app_scope_table.sql",
-              "workers/identity/migrations/0108_melody_add_login_count_to_user_table.sql",
-              "workers/identity/migrations/0109_melody_add_locale_to_user_table.sql",
-              "workers/identity/migrations/0110_melody_create_scope_locale_table.sql",
-              "workers/identity/migrations/0111_melody_add_opt_secret_mfa_type_to_user_table.sql",
-              "workers/identity/migrations/0112_melody_add_otp_verified_to_user_table.sql",
-              "workers/identity/migrations/0113_melody_rename_mfa_type_in_user_table.sql",
-              "workers/identity/migrations/0114_melody_add_google_id_to_user_table.sql",
-              "workers/identity/migrations/0115_melody_create_email_log_table.sql",
-              "workers/identity/migrations/0116_melody_create_sign_in_log_table.sql",
-              "workers/identity/migrations/0117_melody_social_columns_in_user_table.sql",
-              "workers/identity/migrations/0118_melody_add_sms_phone_number_to_user_table.sql",
-              "workers/identity/migrations/0119_melody_add_sms_phone_number_verified_to_user_table.sql",
-              "workers/identity/migrations/0120_melody_create_sms_log_table.sql",
-              "workers/identity/migrations/0121_melody_add_user_id_to_sign_in_log_table.sql",
-              "workers/identity/migrations/0122_melody_add_linked_auth_id_to_user_table.sql",
-              "workers/identity/migrations/0123_melody_create_org_table.sql",
-              "workers/identity/migrations/0124_melody_add_org_related_system_scopes.sql",
-              "workers/identity/migrations/0125_melody_add_org_slug_to_org_table.sql",
-              "workers/identity/migrations/0126_melody_add_org_slug_to_user_table.sql",
-              "workers/identity/migrations/0127_melody_create_user_passkey_table.sql",
-              "workers/identity/migrations/0128_melody_add_skip_passkey_enroll_to_user_table.sql",
-              "workers/identity/migrations/0129_melody_add_company_email_logo_url_to_org_table.sql",
-              "workers/identity/migrations/0130_melody_add_mfa_config_to_app_table.sql",
-              "workers/identity/migrations/0131_melody_add_allow_public_registration_to_org_table.sql",
-              "workers/identity/migrations/0132_melody_create_user_attribute_table.sql",
-              "workers/identity/migrations/0133_melody_create_user_attribute_value_table.sql",
-              "workers/identity/migrations/0134_melody_add_locales_to_user_attribute_table.sql",
-              "workers/identity/migrations/0135_melody_create_saml_idp_table.sql",
-              "workers/identity/migrations/0136_melody_add_branding_override_to_org_table.sql",
-              "workers/identity/migrations/0137_melody_add_isActive_to_saml_idp_table.sql",
-              "workers/identity/migrations/0138_melody_create_org_group_table.sql",
-              "workers/identity/migrations/0139_melody_create_user_org_group_table.sql",
-              "workers/identity/migrations/0140_melody_add_recovery_code_to_user_table.sql",
-              "workers/identity/migrations/0141_melody_create_banner_table.sql",
-              "workers/identity/migrations/0142_melody_create_user_org_table.sql",
-              "workers/identity/migrations/0143_melody_add_unique_to_user_attribute_table.sql",
-              "workers/identity/migrations/0144_melody_add_validation_fields_to_user_attribute_table.sql",
-              "workers/identity/migrations/0145_melody_add_invitation_to_user_table.sql",
-              "workers/identity/migrations/0146_melody_add_scopes_to_user_app_consent_table.sql",
-              "workers/identity/migrations/0147_superboard_identity_runtime.sql",
-              "workers/identity/migrations/0148_superboard_identity_resource_scope.sql",
-              "workers/identity/migrations/0149_superboard_identity_log_scope.sql"
-            ],
-            "availability": "required",
-            "classification": "secret",
-            "encryption": "required",
-            "version": "1.0.0",
-            "checksum": "sha256:f3436433ed4332fdb9342652f907938cfef2abfba9e3bed9872da153201c0b39"
-          },
           {
             "store_id": "supbrd-plug-user.store.user_directory",
             "kind": "d1",
             "authority": "supbrd-plug-user",
             "schema_version": "1",
             "migrations": [
-              "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql",
-              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
-              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
-              "apps/site/migrations/0010_plugin_store_project_scope.sql",
-              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
-              "apps/site/migrations/0012_functional_front_contracts.sql",
-              "workers/identity/migrations/0001_identity.sql",
-              "workers/identity/migrations/0002_project_scope.sql",
-              "workers/identity/migrations/0101_melody_create_app_table.sql",
-              "workers/identity/migrations/0102_melody_create_user_table.sql",
-              "workers/identity/migrations/0103_melody_create_user_app_consent_table.sql",
-              "workers/identity/migrations/0104_melody_create_role_table.sql",
-              "workers/identity/migrations/0105_melody_create_user_role_table.sql",
-              "workers/identity/migrations/0106_melody_create_scope_table.sql",
-              "workers/identity/migrations/0107_melody_create_app_scope_table.sql",
-              "workers/identity/migrations/0108_melody_add_login_count_to_user_table.sql",
-              "workers/identity/migrations/0109_melody_add_locale_to_user_table.sql",
-              "workers/identity/migrations/0110_melody_create_scope_locale_table.sql",
-              "workers/identity/migrations/0111_melody_add_opt_secret_mfa_type_to_user_table.sql",
-              "workers/identity/migrations/0112_melody_add_otp_verified_to_user_table.sql",
-              "workers/identity/migrations/0113_melody_rename_mfa_type_in_user_table.sql",
-              "workers/identity/migrations/0114_melody_add_google_id_to_user_table.sql",
-              "workers/identity/migrations/0115_melody_create_email_log_table.sql",
-              "workers/identity/migrations/0116_melody_create_sign_in_log_table.sql",
-              "workers/identity/migrations/0117_melody_social_columns_in_user_table.sql",
-              "workers/identity/migrations/0118_melody_add_sms_phone_number_to_user_table.sql",
-              "workers/identity/migrations/0119_melody_add_sms_phone_number_verified_to_user_table.sql",
-              "workers/identity/migrations/0120_melody_create_sms_log_table.sql",
-              "workers/identity/migrations/0121_melody_add_user_id_to_sign_in_log_table.sql",
-              "workers/identity/migrations/0122_melody_add_linked_auth_id_to_user_table.sql",
-              "workers/identity/migrations/0123_melody_create_org_table.sql",
-              "workers/identity/migrations/0124_melody_add_org_related_system_scopes.sql",
-              "workers/identity/migrations/0125_melody_add_org_slug_to_org_table.sql",
-              "workers/identity/migrations/0126_melody_add_org_slug_to_user_table.sql",
-              "workers/identity/migrations/0127_melody_create_user_passkey_table.sql",
-              "workers/identity/migrations/0128_melody_add_skip_passkey_enroll_to_user_table.sql",
-              "workers/identity/migrations/0129_melody_add_company_email_logo_url_to_org_table.sql",
-              "workers/identity/migrations/0130_melody_add_mfa_config_to_app_table.sql",
-              "workers/identity/migrations/0131_melody_add_allow_public_registration_to_org_table.sql",
-              "workers/identity/migrations/0132_melody_create_user_attribute_table.sql",
-              "workers/identity/migrations/0133_melody_create_user_attribute_value_table.sql",
-              "workers/identity/migrations/0134_melody_add_locales_to_user_attribute_table.sql",
-              "workers/identity/migrations/0135_melody_create_saml_idp_table.sql",
-              "workers/identity/migrations/0136_melody_add_branding_override_to_org_table.sql",
-              "workers/identity/migrations/0137_melody_add_isActive_to_saml_idp_table.sql",
-              "workers/identity/migrations/0138_melody_create_org_group_table.sql",
-              "workers/identity/migrations/0139_melody_create_user_org_group_table.sql",
-              "workers/identity/migrations/0140_melody_add_recovery_code_to_user_table.sql",
-              "workers/identity/migrations/0141_melody_create_banner_table.sql",
-              "workers/identity/migrations/0142_melody_create_user_org_table.sql",
-              "workers/identity/migrations/0143_melody_add_unique_to_user_attribute_table.sql",
-              "workers/identity/migrations/0144_melody_add_validation_fields_to_user_attribute_table.sql",
-              "workers/identity/migrations/0145_melody_add_invitation_to_user_table.sql",
-              "workers/identity/migrations/0146_melody_add_scopes_to_user_app_consent_table.sql",
-              "workers/identity/migrations/0147_superboard_identity_runtime.sql",
-              "workers/identity/migrations/0148_superboard_identity_resource_scope.sql",
-              "workers/identity/migrations/0149_superboard_identity_log_scope.sql"
+              "0001_user_directory"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:7e4e69decf75bb68e18555b454b9a057efaf214b132af51dfc21207302372928"
+            "checksum": "sha256:447e2d1f4751b85a5fd2cd590ff85bddc9bd2f6ab2d2404cd2c02a5454893a26"
+          },
+          {
+            "store_id": "supbrd-plug-user.store.user_credentials",
+            "kind": "d1",
+            "authority": "supbrd-plug-user",
+            "schema_version": "1",
+            "migrations": [
+              "0002_user_credentials_providers"
+            ],
+            "availability": "required",
+            "classification": "secret",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:df81066da4bdf3654cb75cd481caf6115c17f631573a6bdacfb3fe5981be837a"
           },
           {
             "store_id": "supbrd-plug-user.store.user_sessions",
@@ -207,153 +108,150 @@
             "authority": "supbrd-plug-user",
             "schema_version": "1",
             "migrations": [
-              "apps/site/migrations/0005_plugin_store_authority.sql",
-              "apps/site/migrations/0006_plugin_manifest_registry.sql",
-              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
-              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
-              "apps/site/migrations/0010_plugin_store_project_scope.sql",
-              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
-              "apps/site/migrations/0012_functional_front_contracts.sql",
-              "workers/identity/migrations/0001_identity.sql",
-              "workers/identity/migrations/0002_project_scope.sql",
-              "workers/identity/migrations/0101_melody_create_app_table.sql",
-              "workers/identity/migrations/0102_melody_create_user_table.sql",
-              "workers/identity/migrations/0103_melody_create_user_app_consent_table.sql",
-              "workers/identity/migrations/0104_melody_create_role_table.sql",
-              "workers/identity/migrations/0105_melody_create_user_role_table.sql",
-              "workers/identity/migrations/0106_melody_create_scope_table.sql",
-              "workers/identity/migrations/0107_melody_create_app_scope_table.sql",
-              "workers/identity/migrations/0108_melody_add_login_count_to_user_table.sql",
-              "workers/identity/migrations/0109_melody_add_locale_to_user_table.sql",
-              "workers/identity/migrations/0110_melody_create_scope_locale_table.sql",
-              "workers/identity/migrations/0111_melody_add_opt_secret_mfa_type_to_user_table.sql",
-              "workers/identity/migrations/0112_melody_add_otp_verified_to_user_table.sql",
-              "workers/identity/migrations/0113_melody_rename_mfa_type_in_user_table.sql",
-              "workers/identity/migrations/0114_melody_add_google_id_to_user_table.sql",
-              "workers/identity/migrations/0115_melody_create_email_log_table.sql",
-              "workers/identity/migrations/0116_melody_create_sign_in_log_table.sql",
-              "workers/identity/migrations/0117_melody_social_columns_in_user_table.sql",
-              "workers/identity/migrations/0118_melody_add_sms_phone_number_to_user_table.sql",
-              "workers/identity/migrations/0119_melody_add_sms_phone_number_verified_to_user_table.sql",
-              "workers/identity/migrations/0120_melody_create_sms_log_table.sql",
-              "workers/identity/migrations/0121_melody_add_user_id_to_sign_in_log_table.sql",
-              "workers/identity/migrations/0122_melody_add_linked_auth_id_to_user_table.sql",
-              "workers/identity/migrations/0123_melody_create_org_table.sql",
-              "workers/identity/migrations/0124_melody_add_org_related_system_scopes.sql",
-              "workers/identity/migrations/0125_melody_add_org_slug_to_org_table.sql",
-              "workers/identity/migrations/0126_melody_add_org_slug_to_user_table.sql",
-              "workers/identity/migrations/0127_melody_create_user_passkey_table.sql",
-              "workers/identity/migrations/0128_melody_add_skip_passkey_enroll_to_user_table.sql",
-              "workers/identity/migrations/0129_melody_add_company_email_logo_url_to_org_table.sql",
-              "workers/identity/migrations/0130_melody_add_mfa_config_to_app_table.sql",
-              "workers/identity/migrations/0131_melody_add_allow_public_registration_to_org_table.sql",
-              "workers/identity/migrations/0132_melody_create_user_attribute_table.sql",
-              "workers/identity/migrations/0133_melody_create_user_attribute_value_table.sql",
-              "workers/identity/migrations/0134_melody_add_locales_to_user_attribute_table.sql",
-              "workers/identity/migrations/0135_melody_create_saml_idp_table.sql",
-              "workers/identity/migrations/0136_melody_add_branding_override_to_org_table.sql",
-              "workers/identity/migrations/0137_melody_add_isActive_to_saml_idp_table.sql",
-              "workers/identity/migrations/0138_melody_create_org_group_table.sql",
-              "workers/identity/migrations/0139_melody_create_user_org_group_table.sql",
-              "workers/identity/migrations/0140_melody_add_recovery_code_to_user_table.sql",
-              "workers/identity/migrations/0141_melody_create_banner_table.sql",
-              "workers/identity/migrations/0142_melody_create_user_org_table.sql",
-              "workers/identity/migrations/0143_melody_add_unique_to_user_attribute_table.sql",
-              "workers/identity/migrations/0144_melody_add_validation_fields_to_user_attribute_table.sql",
-              "workers/identity/migrations/0145_melody_add_invitation_to_user_table.sql",
-              "workers/identity/migrations/0146_melody_add_scopes_to_user_app_consent_table.sql",
-              "workers/identity/migrations/0147_superboard_identity_runtime.sql",
-              "workers/identity/migrations/0148_superboard_identity_resource_scope.sql",
-              "workers/identity/migrations/0149_superboard_identity_log_scope.sql"
+              "0003_application_sessions"
             ],
             "availability": "required",
             "classification": "restricted",
             "encryption": "required",
             "version": "1.0.0",
-            "checksum": "sha256:fccd524ac296c9c90bff992591136b683379dfa3a3710c1464213f7df1a9480d"
+            "checksum": "sha256:f0b534d5d0a07c1ecc2b882a4584b3ae84a399bfa54001720af67862754a4218"
           }
         ],
         "schemas": [
           {
-            "schema_id": "supbrd-plug-user.schema.user_credentials_record.v1",
+            "schema_id": "supbrd-plug-user.schema.login_form_props_v1",
             "closed": true,
             "json_schema": {
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "entity_id",
-                "revision",
-                "payload"
+                "kind",
+                "title_message_id"
               ],
               "properties": {
-                "entity_id": {
-                  "type": "string"
+                "kind": {
+                  "const": "login"
                 },
-                "revision": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "payload": {
-                  "type": "object"
+                "title_message_id": {
+                  "const": "user.page.sign_in"
                 }
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:3f42d188e09ae4fa996929c395a93e5f3fdc4ac402477b248d9b53d144868c9c"
+            "checksum": "sha256:1e4ebb73fac2fcf04fad24ca85403c2e1364563078cfc0503704e7b570a1843f"
           },
           {
-            "schema_id": "supbrd-plug-user.schema.user_directory_record.v1",
+            "schema_id": "supbrd-plug-user.schema.profile_card_props_v1",
             "closed": true,
             "json_schema": {
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "entity_id",
-                "revision",
-                "payload"
+                "kind",
+                "operator"
               ],
               "properties": {
-                "entity_id": {
-                  "type": "string"
+                "kind": {
+                  "const": "profile"
                 },
-                "revision": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "payload": {
-                  "type": "object"
+                "operator": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "email",
+                    "name",
+                    "role",
+                    "disabled"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "role": {
+                      "type": "integer"
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    }
+                  }
                 }
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:031acc192e7e92840c5bfc5edeb050240de80a39886e72547032d709a1158980"
+            "checksum": "sha256:e4d679321622ebd828ba992b60ed9706b60923b5bf505fe406c07dd2d3fa6c39"
           },
           {
-            "schema_id": "supbrd-plug-user.schema.user_sessions_record.v1",
+            "schema_id": "supbrd-plug-user.schema.members_table_props_v1",
             "closed": true,
             "json_schema": {
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "entity_id",
-                "revision",
-                "payload"
+                "kind",
+                "page_size",
+                "members"
               ],
               "properties": {
-                "entity_id": {
-                  "type": "string"
+                "kind": {
+                  "const": "members"
                 },
-                "revision": {
+                "page_size": {
                   "type": "integer",
-                  "minimum": 1
+                  "minimum": 10,
+                  "maximum": 100
                 },
-                "payload": {
-                  "type": "object"
+                "members": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "email",
+                      "name",
+                      "role",
+                      "disabled"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "name": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "role": {
+                        "type": "integer"
+                      },
+                      "disabled": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
                 }
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:6f38733b23665121db1f9c46be55cf71a5329151d08db62a113010d4194a3d02"
+            "checksum": "sha256:fa1f95ac6c460d006dafab694e69b566b1b87fffe9a19821c2572954dc0c1b2c"
           },
           {
             "schema_id": "supbrd-plug-user.schema.admin_surface_props_v1",
@@ -362,10 +260,14 @@
               "type": "object",
               "additionalProperties": false,
               "required": [
+                "kind",
                 "route_id",
                 "path"
               ],
               "properties": {
+                "kind": {
+                  "const": "admin_surface"
+                },
                 "route_id": {
                   "type": "string",
                   "minLength": 1
@@ -377,133 +279,425 @@
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:4d062b18265e8c200e6565fcaa0ec85156bbbc4e03dd16275d47ce6a5edced1a"
+            "checksum": "sha256:d08bd03fa8cdabb0bf15d9a2e6a46f86f9843c42d9ac0a417b4e52f7ec78ed9f"
           },
           {
-            "schema_id": "supbrd-plug-user.schema.command_input_v1",
+            "schema_id": "supbrd-plug-user.schema.empty.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [],
+              "properties": {}
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:f0d8ac23a5cf86b577b6065506011fe86538f72b59e821cd5cc54e81a6ec55b9"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.application_sign_in.v1",
             "closed": true,
             "json_schema": {
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "instance_id",
-                "payload"
+                "email",
+                "password"
               ],
               "properties": {
-                "instance_id": {
+                "email": {
                   "type": "string",
-                  "minLength": 1
+                  "format": "email"
                 },
-                "payload": {
-                  "type": "object"
+                "password": {
+                  "type": "string"
                 }
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:2a5d9300998a1a2706135353b01ea9a6dd9c932b7b4d6bc8391e0a77ceb71dd3"
+            "checksum": "sha256:bfa270ce5ebd5012c8756fb46a2c5bd22208b4dda791b2551fdf7bf1a3b73de7"
           },
           {
-            "schema_id": "supbrd-plug-user.schema.command_output_v1",
+            "schema_id": "supbrd-plug-user.schema.application_session.v1",
             "closed": true,
             "json_schema": {
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "operation_id",
-                "status",
-                "result"
+                "session_id",
+                "expires_at"
               ],
               "properties": {
-                "operation_id": {
-                  "type": "string",
-                  "minLength": 1
+                "session_id": {
+                  "type": "string"
                 },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "accepted",
-                    "completed",
-                    "failed"
-                  ]
-                },
-                "result": {
-                  "type": "object"
+                "expires_at": {
+                  "type": "string"
                 }
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:13c1ff0845ca0ce2323b8a0b7795ddccbd2053ce81be9210891ee77e5fd071c2"
+            "checksum": "sha256:f22f774ffefffaee0d500673374b501aaebbb929d2194ad57cc209a1b03aa76b"
           },
           {
-            "schema_id": "supbrd-plug-user.schema.data_source_query_v1",
+            "schema_id": "supbrd-plug-user.schema.user_profile_update.v1",
             "closed": true,
             "json_schema": {
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "instance_id",
-                "query"
+                "user_id",
+                "display_name"
               ],
               "properties": {
-                "instance_id": {
-                  "type": "string",
-                  "minLength": 1
+                "user_id": {
+                  "type": "string"
                 },
-                "query": {
-                  "type": "object"
+                "display_name": {
+                  "type": "string"
                 }
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:5e057c1de82605416acfca201986861ccd4c931f102138f603019789469a4033"
+            "checksum": "sha256:d206b5e33cb69c37a698f9259fbf5cb7e9a732930d83f40efbac753e8a6e339c"
           },
           {
-            "schema_id": "supbrd-plug-user.schema.data_source_page_v1",
+            "schema_id": "supbrd-plug-user.schema.user_profile.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "user_id",
+                "email",
+                "display_name"
+              ],
+              "properties": {
+                "user_id": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "display_name": {
+                  "type": "string"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:6717c2ebe45100b3d847eabe28ff50038712812c91e6844f3c0a125ea004284e"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.user_members_query.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "page",
+                "page_size"
+              ],
+              "properties": {
+                "page": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000
+                },
+                "page_size": {
+                  "type": "integer",
+                  "minimum": 10,
+                  "maximum": 100
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:02099bd30318b3be9b1d031e39ccf4b62e31aceeff3fcad9444dc2394952cf02"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.user_members_page.v1",
             "closed": true,
             "json_schema": {
               "type": "object",
               "additionalProperties": false,
               "required": [
                 "items",
-                "next_cursor"
+                "next_page"
               ],
               "properties": {
                 "items": {
                   "type": "array",
                   "items": {
-                    "type": "object"
+                    "type": "string"
                   }
                 },
-                "next_cursor": {
-                  "type": [
-                    "string",
-                    "null"
+                "next_page": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:5932d1b627fb043c094c5247cc5a7097895e79f405e8b9eea5c9034e33cc583e"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.user_member_suspend.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "user_id",
+                "reason"
+              ],
+              "properties": {
+                "user_id": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:3c351381012de4b2c867fa822943afda73df838a82f7198514ccda219ef3b31f"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.user_member.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "user_id",
+                "status"
+              ],
+              "properties": {
+                "user_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "suspended"
                   ]
                 }
               }
             },
             "version": "1.0.0",
-            "checksum": "sha256:bb9914b3cf7a5cf846f121711f0cb57de65a0bf2f4dd2515b0ca7331d761446e"
+            "checksum": "sha256:43e26507029315964caa8941daee172dec800476581bf51d81e9a4d368d17b95"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.provider_link.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "user_id",
+                "provider"
+              ],
+              "properties": {
+                "user_id": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "apple",
+                    "google"
+                  ]
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:33308b5db43c77470bf61a630e5f451e2df2800186559e46dd47051112a295e3"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.provider.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "provider",
+                "linked"
+              ],
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "apple",
+                    "google"
+                  ]
+                },
+                "linked": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:d70b69eb5bdaf47a3fc37491750ec8cb19d3740d5e41420f368c3477c20ed086"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.session_revoke.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "session_id"
+              ],
+              "properties": {
+                "session_id": {
+                  "type": "string"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:bdfbb459025fc76634e81f6d6be60dfb0e2033c1f91e7ae58aec98c35228e9be"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.providers.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "providers"
+              ],
+              "properties": {
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:fa40eff682d7b44b4f221c354fb4f63e46fddb668fc284d9850f32ec3409fc08"
+          },
+          {
+            "schema_id": "supbrd-plug-user.schema.sessions.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "session_ids"
+              ],
+              "properties": {
+                "session_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:85e950fc9caad9c40738a9fd1a5ab775743e2be56ded99a5d3bb5cde6f7009d5"
           }
         ],
         "renderers": [
           {
+            "renderer_id": "supbrd-plug-user.renderer.login_form",
+            "plugin_id": "supbrd-plug-user",
+            "plugin_version": "1.3.0",
+            "build_id": "01J00000000000000000000240",
+            "build_checksum": "sha256:aa00180a13f49e99c82fea3c692dbd6669c3c8e1bc64bd3b446c2a6d4cf3d6d9",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "supbrd-plug-user.schema.login_form_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:1e4ebb73fac2fcf04fad24ca85403c2e1364563078cfc0503704e7b570a1843f"
+            },
+            "capabilities": [
+              "renderer.mount"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          },
+          {
+            "renderer_id": "supbrd-plug-user.renderer.profile_card",
+            "plugin_id": "supbrd-plug-user",
+            "plugin_version": "1.3.0",
+            "build_id": "01J00000000000000000000241",
+            "build_checksum": "sha256:ef3bf263ff47a387e89277a4d0beddaf44ec4ebbc0c00fc691de970bfe56a336",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "supbrd-plug-user.schema.profile_card_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:e4d679321622ebd828ba992b60ed9706b60923b5bf505fe406c07dd2d3fa6c39"
+            },
+            "capabilities": [
+              "renderer.mount"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          },
+          {
+            "renderer_id": "supbrd-plug-user.renderer.members_table",
+            "plugin_id": "supbrd-plug-user",
+            "plugin_version": "1.3.0",
+            "build_id": "01J00000000000000000000242",
+            "build_checksum": "sha256:3426d2ed11a46785a7728e3c706296419f76cdb173edf2c6f61305daaab856c4",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "supbrd-plug-user.schema.members_table_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:fa1f95ac6c460d006dafab694e69b566b1b87fffe9a19821c2572954dc0c1b2c"
+            },
+            "capabilities": [
+              "renderer.mount"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          },
+          {
             "renderer_id": "supbrd-plug-user.renderer.admin_surface",
             "plugin_id": "supbrd-plug-user",
-            "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "plugin_version": "1.3.0",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
               "schema_id": "supbrd-plug-user.schema.admin_surface_props_v1",
               "version": "1.0.0",
-              "checksum": "sha256:4d062b18265e8c200e6565fcaa0ec85156bbbc4e03dd16275d47ce6a5edced1a"
+              "checksum": "sha256:d08bd03fa8cdabb0bf15d9a2e6a46f86f9843c42d9ac0a417b4e52f7ec78ed9f"
             },
             "capabilities": [
-              "renderer.mount",
-              "data_source.bind",
-              "action.bind"
+              "renderer.mount"
             ],
             "slots": [],
             "supported_states": [
@@ -520,110 +714,110 @@
         "commands": [
           {
             "command_id": "supbrd-plug-user.command.application_sign_in",
-            "input_schema_id": "supbrd-plug-user.schema.command_input_v1",
-            "output_schema_id": "supbrd-plug-user.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "supbrd-plug-user.write",
+            "input_schema_id": "supbrd-plug-user.schema.application_sign_in.v1",
+            "output_schema_id": "supbrd-plug-user.schema.application_session.v1",
+            "audience": "application_client",
+            "permission": "application.identity.sign_in",
             "failure_policy": "fail_closed",
             "version": "1.0.0",
-            "checksum": "sha256:878a36073230cf40b9bbd905bcccfe8e45dfd3bc02b23232338e35c6b2ec51b9"
+            "checksum": "sha256:a202b136cbf6abece6a2464e86f04f65e6f1720b9cf808797fccc0367a128049"
           },
           {
             "command_id": "supbrd-plug-user.command.update_profile",
-            "input_schema_id": "supbrd-plug-user.schema.command_input_v1",
-            "output_schema_id": "supbrd-plug-user.schema.command_output_v1",
+            "input_schema_id": "supbrd-plug-user.schema.user_profile_update.v1",
+            "output_schema_id": "supbrd-plug-user.schema.user_profile.v1",
             "audience": "superboard_front",
-            "permission": "supbrd-plug-user.write",
+            "permission": "users.write",
             "failure_policy": "fail_closed",
             "version": "1.0.0",
-            "checksum": "sha256:7ddb9ad08dc1f23c34e8861deb64b9492b457ddbbe7e3ed7f47cceac958c58ed"
+            "checksum": "sha256:afef14dd2788cd090b8560876d195fd4c7443a1402c6eeddaaed6b9f55bbe2d3"
           },
           {
             "command_id": "supbrd-plug-user.command.suspend_member",
-            "input_schema_id": "supbrd-plug-user.schema.command_input_v1",
-            "output_schema_id": "supbrd-plug-user.schema.command_output_v1",
+            "input_schema_id": "supbrd-plug-user.schema.user_member_suspend.v1",
+            "output_schema_id": "supbrd-plug-user.schema.user_member.v1",
             "audience": "superboard_front",
-            "permission": "supbrd-plug-user.write",
+            "permission": "users.write",
             "failure_policy": "fail_closed",
             "version": "1.0.0",
-            "checksum": "sha256:8f70c73b16a2478f1c3d34bf8c1525364b2a49185c50b5142141b6c22bb9f054"
+            "checksum": "sha256:abc47218c7d25529c7652eb03a930dfbea191bbc9861829bd0b3ea002c007a0b"
           },
           {
             "command_id": "supbrd-plug-user.command.link_provider",
-            "input_schema_id": "supbrd-plug-user.schema.command_input_v1",
-            "output_schema_id": "supbrd-plug-user.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "supbrd-plug-user.write",
+            "input_schema_id": "supbrd-plug-user.schema.provider_link.v1",
+            "output_schema_id": "supbrd-plug-user.schema.provider.v1",
+            "audience": "application_client",
+            "permission": "application.identity.providers.write",
             "failure_policy": "fail_closed",
             "version": "1.0.0",
-            "checksum": "sha256:ec61ce7c46ba3f5aa0c325cc0373e5ea2f073c7acebbefb25c371cf817cc0aa3"
+            "checksum": "sha256:167f82e15044a49df07b145bbebdd852005a21f721dce4d18d209eaf5bb8029f"
           },
           {
             "command_id": "supbrd-plug-user.command.revoke_application_session",
-            "input_schema_id": "supbrd-plug-user.schema.command_input_v1",
-            "output_schema_id": "supbrd-plug-user.schema.command_output_v1",
-            "audience": "superboard_front",
-            "permission": "supbrd-plug-user.write",
+            "input_schema_id": "supbrd-plug-user.schema.session_revoke.v1",
+            "output_schema_id": "supbrd-plug-user.schema.application_session.v1",
+            "audience": "application_client",
+            "permission": "application.identity.sessions.write",
             "failure_policy": "fail_closed",
             "version": "1.0.0",
-            "checksum": "sha256:ead25ef6d894178f2c28e432c8ea9da0ce54a254cdec31e34e6af83d56accfd2"
+            "checksum": "sha256:d0880eb0494f2156fa68d717561c30bd2c65830e06011c6fb2d5f3be99a4cf96"
           }
         ],
         "data_sources": [
           {
             "data_source_id": "supbrd-plug-user.data_source.current_profile",
-            "input_schema_id": "supbrd-plug-user.schema.data_source_query_v1",
-            "output_schema_id": "supbrd-plug-user.schema.data_source_page_v1",
+            "input_schema_id": "supbrd-plug-user.schema.empty.v1",
+            "output_schema_id": "supbrd-plug-user.schema.user_profile.v1",
             "audience": "superboard_front",
-            "permission": "supbrd-plug-user.read",
-            "store_id": "supbrd-plug-user.store.user_credentials",
+            "permission": "users.read",
+            "store_id": "supbrd-plug-user.store.user_directory",
             "consistency": "strong",
             "unavailable_state": "unavailable",
             "version": "1.0.0",
-            "checksum": "sha256:92bf4d63a6a95f98ce366a1e1a9bd6e66a8a7b587338b41529249c3be8b4be7a"
+            "checksum": "sha256:d5de6bda82269a9d9d29a5ffe72a88aa9ecb88095c6611f35ec97547d3f186ea"
           },
           {
             "data_source_id": "supbrd-plug-user.data_source.members",
-            "input_schema_id": "supbrd-plug-user.schema.data_source_query_v1",
-            "output_schema_id": "supbrd-plug-user.schema.data_source_page_v1",
+            "input_schema_id": "supbrd-plug-user.schema.user_members_query.v1",
+            "output_schema_id": "supbrd-plug-user.schema.user_members_page.v1",
             "audience": "superboard_front",
-            "permission": "supbrd-plug-user.read",
-            "store_id": "supbrd-plug-user.store.user_credentials",
+            "permission": "users.read",
+            "store_id": "supbrd-plug-user.store.user_directory",
             "consistency": "strong",
             "unavailable_state": "unavailable",
             "version": "1.0.0",
-            "checksum": "sha256:3b70960ac2efde069737baf486487f46432a69c29c433bbaa3f506e9fd18ae70"
+            "checksum": "sha256:95c10a73e1f1a931cff4364ea5c5769b9d56695fecc12e4ecf7e5ad1fd3ec891"
           },
           {
             "data_source_id": "supbrd-plug-user.data_source.linked_providers",
-            "input_schema_id": "supbrd-plug-user.schema.data_source_query_v1",
-            "output_schema_id": "supbrd-plug-user.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "supbrd-plug-user.read",
+            "input_schema_id": "supbrd-plug-user.schema.empty.v1",
+            "output_schema_id": "supbrd-plug-user.schema.providers.v1",
+            "audience": "application_client",
+            "permission": "application.identity.providers.read",
             "store_id": "supbrd-plug-user.store.user_credentials",
             "consistency": "strong",
             "unavailable_state": "unavailable",
             "version": "1.0.0",
-            "checksum": "sha256:8383882fc169f46a21ff8d049aebba1efaa75dc22a41b0ba76ce4b1de4bffeaf"
+            "checksum": "sha256:d6b0b4bf1e0b7a08bf65b5b09ccf5a9f3fda94973ceaba497498df0a4108865f"
           },
           {
             "data_source_id": "supbrd-plug-user.data_source.active_sessions",
-            "input_schema_id": "supbrd-plug-user.schema.data_source_query_v1",
-            "output_schema_id": "supbrd-plug-user.schema.data_source_page_v1",
-            "audience": "superboard_front",
-            "permission": "supbrd-plug-user.read",
-            "store_id": "supbrd-plug-user.store.user_credentials",
+            "input_schema_id": "supbrd-plug-user.schema.empty.v1",
+            "output_schema_id": "supbrd-plug-user.schema.sessions.v1",
+            "audience": "application_client",
+            "permission": "application.identity.sessions.read",
+            "store_id": "supbrd-plug-user.store.user_sessions",
             "consistency": "strong",
             "unavailable_state": "unavailable",
             "version": "1.0.0",
-            "checksum": "sha256:98697a0300c1d125bab8ab1dd96caded546f9824a43c59a663f838834f52eed2"
+            "checksum": "sha256:e85f2c0fe5c446836057306ca9fe9167e6847e5e684d0a452741d223fa9c7755"
           }
         ],
         "failure_policies": {
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:7bb1c42cbd2dcab5bd50e6cdb8d042d3dedda165ec823bad54f566875c5fe34b"
+        "artifact_checksum": "sha256:25674944b76a7d7fea6b38e97d4615ead1f9521d9b6523b35c6d4e44c41aa0ba"
       },
       "repositories": [
         {
@@ -949,8 +1143,8 @@
             "renderer_id": "supbrd-plug-settings.renderer.admin_surface",
             "plugin_id": "supbrd-plug-settings",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1049,7 +1243,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:22ebe8e40b83e91b003bd28c5e420748eeebf2a08eea293c98e4526ec6dcb8eb"
+        "artifact_checksum": "sha256:12a3e771777c39c3775410d5f55cd86d1937be4080844838c4a7618fdb0284a2"
       },
       "repositories": [
         {
@@ -1409,8 +1603,8 @@
             "renderer_id": "supbrd-plug-content.renderer.admin_surface",
             "plugin_id": "supbrd-plug-content",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1509,7 +1703,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e8e051c4e9fcf6c854afdf1a3c230472f5f2780266dfd6e5d2b6e0e7d8391fe9"
+        "artifact_checksum": "sha256:3a4041623ef83df688f4aed31493dc40f9f0737ba72ca95fceddd8cbefcdaff8"
       },
       "repositories": [
         {
@@ -1889,8 +2083,8 @@
             "renderer_id": "supbrd-plug-products.renderer.admin_surface",
             "plugin_id": "supbrd-plug-products",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2125,7 +2319,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:082b88903e92c6feb8034d83dab9a2c9c900765cb495eb58c24ad1aedb673e19"
+        "artifact_checksum": "sha256:80bf6411572839b7c4a47c691fa96f4b67f1197d520ae8645f6afb937ea14bbc"
       },
       "repositories": [
         {
@@ -2447,8 +2641,8 @@
             "renderer_id": "supbrd-plug-audit.renderer.admin_surface",
             "plugin_id": "supbrd-plug-audit",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2537,7 +2731,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:f2eff4cbd94576d5bf7c5a92a3a682df928807d746fa91d8c253d312a3aef7da"
+        "artifact_checksum": "sha256:a5b32b500cec73907ad17a7d0422f8bbf14d546e23a7dcdef9e14d8489ab1aaa"
       },
       "repositories": [
         {
@@ -2974,8 +3168,8 @@
             "renderer_id": "supbrd-plugmod-gateway.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-gateway",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3074,7 +3268,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:372d64d9f2df6fb7dc671d0d1620ecbd51e10fb51b7cf76d522a6a989f4a3a4f"
+        "artifact_checksum": "sha256:14bcc868f5cb88f8ca810bf12aa1760ae783cf02759e917a13ed6223d3e969be"
       },
       "repositories": [
         {
@@ -3467,8 +3661,8 @@
             "renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-billing",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3623,7 +3817,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:80bfe634cb7dc48491bd5243d230ca0e3134424bdec7612aac3e365169d044e7"
+        "artifact_checksum": "sha256:13dcf3059dcdb390b99f26063b185615554f7dc8888b9141bc49bd0180d0eea5"
       },
       "repositories": [
         {
@@ -4109,8 +4303,8 @@
             "renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-support",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4437,7 +4631,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c29a1d0394edbe95df6156bfe80400e6c53fb3e3c391a07250b3100c174ae93b"
+        "artifact_checksum": "sha256:06b6bc504738f34b6eec181908be9269bd1e314fddd001c3f8ac5536ae87f3a9"
       },
       "repositories": [
         {
@@ -4799,8 +4993,8 @@
             "renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-flows",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4999,7 +5193,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:f24901f46b2b296fad9d3ad00a2c32c0201d91895a247d3d36ae5e2c5590a16a"
+        "artifact_checksum": "sha256:9b02f2a9c2c195946bcc176f4bdc0da452e9aaa839415928262651613393b425"
       },
       "repositories": [
         {
@@ -5335,8 +5529,8 @@
             "renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-analytics",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5705,7 +5899,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:97c8edcfb33a72e6130587f31c24a7e400df865bc1d92cbad57689eee1babf4b"
+        "artifact_checksum": "sha256:735c96d09bffe2116b85dff52603da4f461a900334ba009dbf702e62c1994860"
       },
       "repositories": [
         {
@@ -6121,8 +6315,8 @@
             "renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-marketing",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6375,7 +6569,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c8bd294482855700a282e081c1bbaacd977ce7f28f694bb7a249395aef76316e"
+        "artifact_checksum": "sha256:e219e1ae14911e020fe62a1dce0bf4c8082338a9ceb7bd0ae36ba62d8fb162d1"
       },
       "repositories": [
         {
@@ -6769,8 +6963,8 @@
             "renderer_id": "supbrd-plugmod-email.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-email",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6943,7 +7137,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:615d6ef588201760f057152c86becdaeb74ac3dcc935375d5edef084a2a0c14f"
+        "artifact_checksum": "sha256:4352e1d8e2c5c2b64ca4f1af8bc3fcdc6116f296e210745957329e8a3bbfa1e4"
       },
       "repositories": [
         {
@@ -7290,8 +7484,8 @@
             "renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-dynamic-links",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7562,7 +7756,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:04ecffb8a2b8adf143f55d3216c7ef00e0708655d4601914e8b2ce0b790623c1"
+        "artifact_checksum": "sha256:341d36595d4a0548017515041a2b4d5cc58543ac9aed5260dd85658a57a8febd"
       },
       "repositories": [
         {
@@ -7897,8 +8091,8 @@
             "renderer_id": "supbrd-plugmod-files.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-files",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8019,7 +8213,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:217ded3eedcb44d12a582c8829d48881743a0fec8e98c8b3d02e3d820cc983b1"
+        "artifact_checksum": "sha256:26bc3e25a0acdb63a220db668293d7f3078c7e3c323dcf1a5ddc12bb607b35ef"
       },
       "repositories": [
         {
@@ -8361,8 +8555,8 @@
             "renderer_id": "supbrd-plugmod-paywalls.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-paywalls",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8545,7 +8739,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:113c82018076777e678ba0f1f1cf2fb5d101ef5d07789dd410df20ba6786d601"
+        "artifact_checksum": "sha256:be90463f16d3e76bd983318420bf2227a4d66af6e787d5b99d70f4c1b7b720d7"
       },
       "repositories": [
         {
@@ -8887,8 +9081,8 @@
             "renderer_id": "supbrd-plugmod-onboardings.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-onboardings",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9083,7 +9277,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:1df9ca3c0acd0e01a1c17551efaa970b7f44725f32e0829ef7e33479b4ce5e84"
+        "artifact_checksum": "sha256:f6e8f8252f6eb7a2464ab16503a5e80dc912df9e6058caca660c5c381f6ab11f"
       },
       "repositories": [
         {
@@ -9369,8 +9563,8 @@
             "renderer_id": "supbrd-plugmod-observability.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-observability",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9525,7 +9719,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:2ad0e74d079d4c3587f2507aaf30a1ceeef0dbf4097df2dd146b65f541e595f8"
+        "artifact_checksum": "sha256:d3a525087f3c4ae41beec09bb012147bf654f634be612d1b86226ca3cd1e75af"
       },
       "repositories": [
         {
@@ -9843,8 +10037,8 @@
             "renderer_id": "supbrd-plugmod-mcp.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-mcp",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9943,7 +10137,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:66e34a0cee7f860a0642bce7657a21f920355a6caa4fd864498d99f0ba53ecb4"
+        "artifact_checksum": "sha256:a0eeb3b3ba7d28523b70b8208ab7460b1b6c09e96cf83c468423fb56f85683b8"
       },
       "repositories": [
         {
@@ -10210,8 +10404,8 @@
             "renderer_id": "supbrd-plugmod-custom-*.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-custom-*",
             "plugin_version": "1.0.0",
-            "build_id": "3VBEKJ77KMWD41H0C7A341VQVP",
-            "build_checksum": "sha256:4d35604483516491490e2c7e5d2a58ea7d5719a11c101b66c6d4987ad735d8e2",
+            "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+            "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10266,7 +10460,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:ad372acf6ed6c708b079dc97f335afe4fde5dc60bf329af7190e0642d998ffe1"
+        "artifact_checksum": "sha256:5071cc457dae5cd0f5578c429d03f86893c89c5a68c8a03bcee3bb0c10779dbf"
       },
       "repositories": [
         {
