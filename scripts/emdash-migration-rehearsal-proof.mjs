@@ -15,12 +15,14 @@ import { MODULE_CUTOVER_REGISTRY } from "./module-cutover/registry.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-export async function buildMigrationRehearsalProof() {
+export async function buildMigrationRehearsalProof({ pluginIds } = {}) {
 	const topology = JSON.parse(
 		readFileSync(resolve(root, "config/emdash-plugin-topology.json"), "utf8"),
 	);
+	const selectedPluginIds = pluginIds ? new Set(pluginIds) : null;
 	const stores = [];
 	for (const { manifest } of topology.plugins) {
+		if (selectedPluginIds && !selectedPluginIds.has(manifest.plugin_id)) continue;
 		for (const store of manifest.stores) {
 			const entities = MODULE_CUTOVER_REGISTRY.filter(
 				(entity) => entity.storeId === store.store_id,
@@ -156,7 +158,52 @@ export async function buildMigrationRehearsalProof() {
 		store_count: stores.length,
 		public_cutover: false,
 	};
+	if (
+		selectedPluginIds &&
+		canonical([...new Set(stores.map(({ plugin_id: pluginId }) => pluginId))].toSorted()) !==
+			canonical([...selectedPluginIds].toSorted())
+	) {
+		throw new Error("The Store rehearsal selection contains an unknown or Store-less plugin");
+	}
 	return { ...payload, receipt_checksum: hash(payload) };
+}
+
+export function summarizeMigrationRehearsalProof(proof) {
+	const stores = proof.stores.map((store) => {
+		const converged =
+			store.migration_kind === "source_to_store" &&
+			store.double_import === "passed" &&
+			store.checkpoint_resume === "passed" &&
+			store.shadow_read === "passed" &&
+			store.reverse_delta === "replayable_without_deletes" &&
+			canonical(store.fixture_source) === canonical(store.fixture_target);
+		return {
+			plugin_id: store.plugin_id,
+			store_id: store.store_id,
+			descriptor_checksum: store.descriptor_checksum,
+			migration_kind: store.migration_kind,
+			status:
+				store.migration_kind === "new_empty_store"
+					? "requires_schema_and_runtime"
+					: converged
+						? "converged"
+						: "failed",
+		};
+	});
+	return {
+		store_count: stores.length,
+		converged_count: stores.filter(({ status }) => status === "converged").length,
+		requires_schema_and_runtime_count: stores.filter(
+			({ status }) => status === "requires_schema_and_runtime",
+		).length,
+		source_to_store_count: stores.filter(({ migration_kind: kind }) => kind === "source_to_store")
+			.length,
+		new_empty_store_count: stores.filter(({ migration_kind: kind }) => kind === "new_empty_store")
+			.length,
+		plugin_ids: [...new Set(stores.map(({ plugin_id: pluginId }) => pluginId))].toSorted(),
+		stores,
+		receipt_checksum: proof.receipt_checksum,
+	};
 }
 
 function sampleRow(entity, index) {
@@ -202,12 +249,21 @@ function canonical(value) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-	const proof = await buildMigrationRehearsalProof();
+	const pluginIdsIndex = process.argv.indexOf("--plugin-ids");
+	const pluginIds =
+		pluginIdsIndex === -1 ? undefined : JSON.parse(process.argv[pluginIdsIndex + 1] ?? "null");
+	if (pluginIds !== undefined && !Array.isArray(pluginIds)) {
+		throw new TypeError("--plugin-ids must be a JSON array");
+	}
+	const proof = await buildMigrationRehearsalProof({ pluginIds });
 	if (process.argv.includes("--write")) {
 		const path = resolve(root, "docs/evidence/issue-54/store-migration-rehearsal.receipt.json");
 		mkdirSync(dirname(path), { recursive: true });
 		writeFileSync(path, `${JSON.stringify(proof, null, 2)}\n`);
 	}
+	console.log(
+		`SUPERBOARD_FRESH_INSTANCE_STORES=${JSON.stringify(summarizeMigrationRehearsalProof(proof))}`,
+	);
 	console.log(
 		JSON.stringify({ store_count: proof.store_count, receipt_checksum: proof.receipt_checksum }),
 	);

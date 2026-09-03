@@ -232,6 +232,7 @@
 		"emdash:seed:check": "node scripts/superboard-emdash-seed.mjs",
 		"emdash:store-restore:test": "node scripts/emdash-store-restore-proof.mjs && node --test scripts/emdash-store-restore.test.mjs",
 		"emdash:migration-rehearsal:test": "node scripts/emdash-migration-rehearsal-proof.mjs && node --test scripts/emdash-migration-rehearsal-proof.test.mjs",
+		"emdash:fresh-instance:proof": "node scripts/superboard-fresh-instance-proof.mjs",
 		"site:types": "node scripts/cloudflare-types.mjs --service site --reference --allow-unprovisioned",
 		"site:typecheck": "pnpm --dir apps/site run typecheck",
 		"site:test": "pnpm --dir apps/site test",

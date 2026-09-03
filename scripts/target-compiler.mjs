@@ -10,6 +10,7 @@ import {
 	DOMAIN_SERVICES,
 	DOMAIN_SERVICE_BINDINGS,
 	DOMAIN_SERVICE_REGISTRY,
+	healthPathForService,
 	managedWorkerDefinitions,
 	managedWorkerOperationalBinding,
 	workerNameForService,
@@ -96,12 +97,32 @@ export async function compileTarget(target, environment, options = {}) {
 	return Object.freeze({ ...content, checksum: canonicalChecksum(content) });
 }
 
+export function targetWithAbsentResources(target) {
+	const freshTarget = structuredClone(target);
+	removeProvisionedResourceIds(freshTarget.environments);
+	return freshTarget;
+}
+
 export function materializeTarget(compiledTarget, adapter) {
 	if (!ADAPTERS.has(adapter)) {
 		throw new Error(`Unknown target adapter ${adapter}`);
 	}
 	const local = adapter === "local";
 	const workers = new Map(compiledTarget.materialization.workers.map(({ id, name }) => [id, name]));
+	const services = compiledTarget.graph.services.map((service, index) => ({
+		...service,
+		workerName: workers.get(service.id),
+		...(local
+			? {
+					localEndpoint: {
+						host: "127.0.0.1",
+						port: LOCAL_PORT_BASE + index,
+						inspectorPort: LOCAL_INSPECTOR_PORT_BASE + index,
+					},
+				}
+			: {}),
+	}));
+	const serviceEndpoints = new Map(services.map((service) => [service.id, service.localEndpoint]));
 	return {
 		schemaVersion: 1,
 		kind: "superboard-target-materialization",
@@ -110,19 +131,7 @@ export function materializeTarget(compiledTarget, adapter) {
 		environment: compiledTarget.environment,
 		artifactChecksum: compiledTarget.checksum,
 		graphChecksum: compiledTarget.graphChecksum,
-		services: compiledTarget.graph.services.map((service, index) => ({
-			...service,
-			workerName: workers.get(service.id),
-			...(local
-				? {
-						localEndpoint: {
-							host: "127.0.0.1",
-							port: LOCAL_PORT_BASE + index,
-							inspectorPort: LOCAL_INSPECTOR_PORT_BASE + index,
-						},
-					}
-				: {}),
-		})),
+		services,
 		resources: compiledTarget.materialization.resources.map((resource) => ({
 			...resource,
 			...(local ? { id: null, persistence: "local" } : {}),
@@ -134,7 +143,16 @@ export function materializeTarget(compiledTarget, adapter) {
 		secrets: compiledTarget.materialization.requiredSecrets,
 		migrations: compiledTarget.graph.migrations,
 		routes: compiledTarget.materialization.routes,
-		healthChecks: compiledTarget.materialization.healthChecks,
+		healthChecks: compiledTarget.materialization.healthChecks.map((healthCheck) => {
+			const endpoint = serviceEndpoints.get(healthCheck.service);
+			return local && healthCheck.kind === "worker" && endpoint
+				? {
+						...healthCheck,
+						transport: "local_http",
+						url: `http://${endpoint.host}:${endpoint.port}${healthCheck.path}`,
+					}
+				: healthCheck;
+		}),
 	};
 }
 
@@ -286,7 +304,7 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 			SUPERBOARD_ENVIRONMENT: compiledTarget.environment,
 			SUPERBOARD_PLUGIN_IDS: JSON.stringify(
 				compiledTarget.graph.plugins
-					.filter(({ pluginId }) => !pluginId.includes("*"))
+					.filter(({ targetState }) => targetState === "active")
 					.map(({ pluginId }) => pluginId),
 			),
 			SUPERBOARD_RELEASE_OPERATIONS: "disabled",
@@ -568,8 +586,9 @@ function compilePlugins(target, topology, migrations) {
 		),
 	);
 	return topology.plugins
-		.filter(({ manifest }) => pluginEnabled(target, manifest?.plugin_id))
+		.filter(({ manifest }) => !manifest?.plugin_id.includes("*"))
 		.map(({ manifest, worker_descriptor: workerDescriptor }) => {
+			const targetState = pluginEnabled(target, manifest.plugin_id) ? "active" : "installed";
 			const storeIds = new Set((manifest.stores ?? []).map(({ store_id: storeId }) => storeId));
 			for (const storeId of workerDescriptor?.store_ids ?? []) {
 				if (!storeIds.has(storeId)) {
@@ -581,7 +600,7 @@ function compilePlugins(target, topology, migrations) {
 			const stores = (manifest.stores ?? []).map(
 				({ store_id: storeId, checksum, migrations: storeMigrations = [] }) => {
 					for (const migration of storeMigrations) {
-						if (!migrationPaths.has(migration)) {
+					if (targetState === "active" && !migrationPaths.has(migration)) {
 							throw new Error(
 								`Plugin ${manifest.plugin_id} Store ${storeId} references unknown migration ${migration}`,
 							);
@@ -592,6 +611,7 @@ function compilePlugins(target, topology, migrations) {
 			);
 			return {
 				pluginId: manifest.plugin_id,
+				targetState,
 				kind: manifest.plugin_kind,
 				version: manifest.plugin_version,
 				artifactChecksum: manifest.artifact_checksum,
@@ -644,16 +664,34 @@ function compileLogicalRoutes(target) {
 
 function compileLogicalHealthChecks(target) {
 	return [
-		{ id: "site", service: "site", path: "/superboard-system/health" },
-		{ id: "api", service: "api", path: "/health" },
-		{ id: "sdk", service: "api", path: "/health" },
-		{ id: "shortlinks", service: "api", path: "/health" },
-		{ id: "files", service: "api", path: "/health" },
-		{ id: "mcp", service: "mcp", path: "/health" },
-		{ id: "dashboard", service: "dashboard", path: "/" },
-		...(target.domains.mailPreview ? [{ id: "mail-preview", service: "email", path: "/" }] : []),
+		...compileServices(target).map(({ id: service }) => ({
+			id: `worker:${service}`,
+			kind: "worker",
+			service,
+			path: healthPathForService(service),
+			...(service === "observability"
+				? {
+						authentication: {
+							type: "secret",
+							binding: "OBSERVABILITY_INTERNAL_TOKEN",
+							header: "x-observability-token",
+						},
+					}
+				: {}),
+		})),
+		{ id: "site", kind: "public_surface", service: "site", path: "/superboard-system/health" },
+		{ id: "api", kind: "public_surface", service: "api", path: "/health" },
+		{ id: "sdk", kind: "public_surface", service: "api", path: "/health" },
+		{ id: "shortlinks", kind: "public_surface", service: "api", path: "/health" },
+		{ id: "files", kind: "public_surface", service: "api", path: "/health" },
+		{ id: "mcp", kind: "public_surface", service: "mcp", path: "/health" },
+		{ id: "dashboard", kind: "public_surface", service: "dashboard", path: "/" },
+		...(target.domains.mailPreview
+			? [{ id: "mail-preview", kind: "public_surface", service: "email", path: "/" }]
+			: []),
 		...(target.publicSurfaceMonitors ?? []).map((monitor) => ({
 			id: monitor.id,
+			kind: "public_surface",
 			service: "external",
 			path: new URL(monitor.healthUrl ?? monitor.url).pathname,
 		})),
@@ -683,7 +721,7 @@ function compilePhysicalRoutes(target, environment) {
 }
 
 function compilePhysicalHealthChecks(target) {
-	const hostnames = {
+	const publicHostnames = {
 		site: target.domains.site,
 		api: target.domains.api,
 		sdk: target.domains.sdk,
@@ -696,12 +734,15 @@ function compilePhysicalHealthChecks(target) {
 	const declared = new Map(
 		(target.publicSurfaceMonitors ?? []).map((monitor) => [monitor.id, monitor]),
 	);
-	return compileLogicalHealthChecks(target).map((healthCheck) => ({
-		...healthCheck,
-		url:
-			declared.get(healthCheck.id)?.healthUrl ??
-			`https://${hostnames[healthCheck.id]}${healthCheck.path}`,
-	}));
+	return compileLogicalHealthChecks(target).map((healthCheck) => {
+		const declaredUrl = declared.get(healthCheck.id)?.healthUrl;
+		const hostname = healthCheck.kind === "public_surface" ? publicHostnames[healthCheck.id] : null;
+		return {
+			...healthCheck,
+			transport: declaredUrl || hostname ? "https" : "service_binding",
+			url: declaredUrl ?? (hostname ? `https://${hostname}${healthCheck.path}` : null),
+		};
+	});
 }
 
 function compileLogicalSchedules(target) {
@@ -959,7 +1000,7 @@ function assertHealthChecks(compiledTarget, configuration) {
 	}
 	const actual = configured.map(({ id, healthUrl }) => `${id}:${healthUrl}`).toSorted();
 	const expected = compiledTarget.materialization.healthChecks
-		.filter(({ id }) => id !== "site")
+		.filter(({ id, kind }) => kind === "public_surface" && id !== "site")
 		.map(({ id, url }) => `${id}:${url}`)
 		.toSorted();
 	if (!sameStrings(expected, actual)) {
@@ -971,6 +1012,12 @@ function sameStrings(left, right) {
 	if (left.length !== right.length) return false;
 	const sortedRight = right.toSorted();
 	return left.toSorted().every((value, index) => value === sortedRight[index]);
+}
+
+function removeProvisionedResourceIds(value) {
+	if (!value || typeof value !== "object") return;
+	if (!Array.isArray(value) && typeof value.name === "string") delete value.id;
+	for (const child of Object.values(value)) removeProvisionedResourceIds(child);
 }
 
 function normalizeCompiledConsumer(consumer) {

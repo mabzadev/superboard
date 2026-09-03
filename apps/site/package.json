@@ -26,6 +26,7 @@
 		"@superboard/supbrd-plug-user": "workspace:*",
 		"astro": "catalog:",
 		"emdash": "workspace:*",
+		"kysely": "catalog:",
 		"layerr": "^3.0.0",
 		"react": "catalog:",
 		"react-dom": "catalog:"

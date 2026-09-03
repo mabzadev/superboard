@@ -89,6 +89,25 @@ describe("SuperBoard observability Worker", () => {
     });
   });
 
+  it("stays healthy locally when remote analytics reads are not configured", async () => {
+    const response = await worker.fetch?.(
+      new Request("https://observability.internal/internal/v1/health", {
+        headers: { "x-observability-token": TOKEN },
+      }),
+      environment([], {
+        ENVIRONMENT: "local",
+        CLOUDFLARE_ANALYTICS_ACCOUNT_ID: undefined,
+        CLOUDFLARE_ANALYTICS_TOKEN: undefined,
+      }),
+      {} as ExecutionContext,
+    );
+    expect(response?.status).toBe(200);
+    expect(await response?.json()).toMatchObject({
+      status: "degraded",
+      analyticsQueryConfigured: false,
+    });
+  });
+
   it("returns an empty development summary when optional analytics reads are not configured", async () => {
     const response = await worker.fetch?.(
       new Request("https://observability.internal/internal/v1/summary", {
