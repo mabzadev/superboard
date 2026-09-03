@@ -130,6 +130,7 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 
 	for (const { manifest } of catalog) {
 		const plugin = createConfiguredSuperBoardPlugin(manifest.plugin_id);
+		expect(plugin.version, manifest.plugin_id).toBe(manifest.plugin_version);
 		const contract = await plugin.routes.contract.handler({} as never);
 		const healthResponse = await operatorRequest(
 			`/_emdash/api/plugins/${encodeURIComponent(manifest.plugin_id)}/health`,
@@ -143,7 +144,11 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 			plugin_id: manifest.plugin_id,
 			artifact_checksum: manifest.artifact_checksum,
 		});
-		expect(health).toMatchObject({ status: "ready", error_code: null });
+		expect(health).toMatchObject({
+			plugin_version: manifest.plugin_version,
+			status: "ready",
+			error_code: null,
+		});
 		expect(commands).toEqual({ items: manifest.commands });
 		expect(dataSources).toEqual({ items: manifest.data_sources });
 
@@ -192,10 +197,15 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 		for (const command of manifest.commands) {
 			commandIndex += 1;
 			const operationId = `issue-70-command-${commandIndex}`;
+			const inputSchema = manifest.schemas.find(
+				({ schema_id: schemaId }) => schemaId === command.input_schema_id,
+			);
+			if (!inputSchema) throw new Error(`Missing input schema: ${command.command_id}`);
+			const input = fixtureFromSchema(inputSchema.json_schema);
 			const path = `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/commands/${encodeURIComponent(command.command_id)}?project_ref=${projectRef}`;
 			const execute = () =>
 				operatorRequest(path, {
-					body: { command_id: command.command_id, fixture: commandIndex },
+					body: input,
 					headers: { "Idempotency-Key": operationId },
 				});
 			const response = await execute();
@@ -211,6 +221,29 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 			expect(await replay.json()).toEqual(result);
 		}
 	}
+	const signInCommand = catalog
+		.find(({ manifest }) => manifest.plugin_id === "supbrd-plug-user")
+		?.manifest.commands.find(({ command_id: commandId }) =>
+			commandId.endsWith(".application_sign_in"),
+		);
+	if (!signInCommand) throw new Error("Application sign-in command is missing");
+	const executeInvalidAction = () =>
+		operatorRequest(
+			`/_emdash/api/superboard/plugins/supbrd-plug-user/commands/${signInCommand.command_id}?project_ref=${projectRef}`,
+			{
+				body: {},
+				headers: { "Idempotency-Key": "issue-70-invalid-sign-in" },
+			},
+		);
+	const invalidAction = await executeInvalidAction();
+	expect(invalidAction.status).toBe(400);
+	const invalidActionBody = await invalidAction.json();
+	expect(invalidActionBody).toEqual({
+		error: { code: "PLUGIN_COMMAND_INPUT_INVALID" },
+	});
+	const invalidActionReplay = await executeInvalidAction();
+	expect(invalidActionReplay.status).toBe(400);
+	expect(await invalidActionReplay.json()).toEqual(invalidActionBody);
 	const completedCommands = await env.DB.prepare(
 		`SELECT COUNT(*) count FROM superboard_plugin_command_operations
 			 WHERE instance_id = ? AND state = 'completed'`,
@@ -218,6 +251,20 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 		.bind(instanceId)
 		.first<{ count: number }>();
 	expect(completedCommands?.count).toBe(commandIndex);
+	const failedCommands = await env.DB.prepare(
+		`SELECT COUNT(*) count FROM superboard_plugin_command_operations
+			 WHERE instance_id = ? AND state = 'failed'`,
+	)
+		.bind(instanceId)
+		.first<{ count: number }>();
+	expect(failedCommands?.count).toBe(1);
+	const commandStoreRecords = await env.DB.prepare(
+		`SELECT COUNT(*) count FROM superboard_plugin_store_records
+			 WHERE instance_id = ? AND entity_type = 'command_execution'`,
+	)
+		.bind(instanceId)
+		.first<{ count: number }>();
+	expect(commandStoreRecords?.count).toBe(commandIndex);
 
 	const runtimeHealth = await env.DB.prepare(
 		`SELECT plugin_id, status FROM superboard_plugin_runtime_health
@@ -410,4 +457,43 @@ function concretePath(path: string) {
 		.replaceAll(/:lang/gu, "en")
 		.replaceAll(/:[^/]+/gu, "parity-id")
 		.replaceAll(/\*[^/]+/gu, "parity/path");
+}
+
+function fixtureFromSchema(schema: unknown): unknown {
+	if (!isRecord(schema)) return {};
+	if ("const" in schema) return schema.const;
+	if (Array.isArray(schema.enum) && schema.enum.length > 0) return schema.enum[0];
+	if (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) {
+		return fixtureFromSchema(schema.oneOf[0]);
+	}
+	const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+	const type = types.find((candidate) => candidate !== "null");
+	if (type === "string") {
+		if (schema.format === "email") return "parity@example.com";
+		if (schema.format === "uri") return "https://example.test";
+		return typeof schema.pattern === "string" && schema.pattern.includes("[A-Z]{3}")
+			? "USD"
+			: "parity-value";
+	}
+	if (type === "integer" || type === "number") {
+		return typeof schema.minimum === "number" ? schema.minimum : 1;
+	}
+	if (type === "boolean") return true;
+	if (type === "array") {
+		return typeof schema.minItems === "number" && schema.minItems > 0
+			? [fixtureFromSchema(schema.items)]
+			: [];
+	}
+	if (type === "object" || isRecord(schema.properties)) {
+		const properties = isRecord(schema.properties) ? schema.properties : {};
+		const required = Array.isArray(schema.required)
+			? schema.required.filter((key): key is string => typeof key === "string")
+			: [];
+		return Object.fromEntries(required.map((key) => [key, fixtureFromSchema(properties[key])]));
+	}
+	return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

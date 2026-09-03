@@ -31,7 +31,24 @@ test("renders every active Release route and submenu in the client without an er
 			expect(route, item.route_id).toBeDefined();
 			expect(route?.path_pattern.replace(":lang", "en"), item.route_id).toBe(item.href);
 		}
-		expect(release.front_route_manifest.routes).toHaveLength(110);
+		const referencedRenderers = new Set(
+			release.front_route_manifest.routes.flatMap(({ renderer_ids: rendererIds }) => rendererIds),
+		);
+		const pluginRenderers = release.renderers
+			.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
+			.map(({ renderer_id: rendererId }) => rendererId);
+		expect(pluginRenderers.filter((rendererId) => !referencedRenderers.has(rendererId))).toEqual(
+			[],
+		);
+		const consumedDependencies = new Set(
+			release.front_route_manifest.routes.flatMap(({ dependencies }) => dependencies),
+		);
+		expect(
+			release.dependency_policies
+				.map(({ dependency_id: dependencyId }) => dependencyId)
+				.filter((dependencyId) => !consumedDependencies.has(dependencyId)),
+		).toEqual([]);
+		expect(release.front_route_manifest.routes.length).toBeGreaterThan(100);
 		for (const route of release.front_route_manifest.routes) {
 			const element = releaseRouteElement(route);
 			const container = document.createElement("div");

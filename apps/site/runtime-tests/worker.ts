@@ -77,7 +77,7 @@ export default {
 			session: {
 				get: async () =>
 					reauthenticated
-						? { userId: "operator-1", verifiedAt: new Date().toISOString() }
+						? { userId: "operator-1", verifiedAt: new Date(Date.now() - 1_000).toISOString() }
 						: undefined,
 			},
 		} as never);

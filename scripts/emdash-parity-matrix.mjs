@@ -781,7 +781,7 @@ export function buildReleaseParityRows(parityRelease, topology) {
 				id: `release:worker-health:${pluginId}`,
 				kind: "worker_health",
 				target: pluginId,
-				test: parityInstanceTest,
+				test: workerDescriptor?.evidence ?? parityInstanceTest,
 				worker_descriptor_checksum: workerDescriptor?.checksum ?? null,
 			}),
 		];

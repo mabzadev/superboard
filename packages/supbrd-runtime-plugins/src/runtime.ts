@@ -25,7 +25,8 @@ interface RuntimeManifest {
 	artifact_checksum: string;
 	settings: { schema: { properties: Record<string, JsonSetting> } };
 	stores: Array<{ store_id: string }>;
-	commands: Array<{ command_id: string; permission: string }>;
+	schemas: Array<{ schema_id: string; json_schema: Record<string, unknown> }>;
+	commands: Array<{ command_id: string; permission: string; input_schema_id: string }>;
 	data_sources: Array<{ data_source_id: string; permission: string }>;
 	renderers: Array<{ renderer_id: string }>;
 }
@@ -49,7 +50,6 @@ const topologyManifests = new Map(
 export function createConfiguredSuperBoardPlugin(pluginId: string) {
 	const manifest = topologyManifests.get(pluginId);
 	if (!manifest) throw new Error(`Unknown SuperBoard plugin manifest: ${pluginId}`);
-	const version = pluginId === "supbrd-plug-user" ? "1.3.0" : manifest.plugin_version;
 	const settingsSchema = toEmDashSettingsSchema(manifest.settings.schema.properties);
 	const storage = Object.fromEntries(
 		manifest.stores.map(({ store_id: storeId }) => [storeId.split(".").at(-1)!, { indexes: [] }]),
@@ -57,7 +57,7 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 
 	return {
 		id: manifest.plugin_id,
-		version,
+		version: manifest.plugin_version,
 		capabilities: [],
 		allowedHosts: [],
 		storage,
@@ -139,8 +139,17 @@ function executeCommand(manifest: RuntimeManifest, input: unknown) {
 	) {
 		throw new TypeError("PLUGIN_COMMAND_INPUT_INVALID");
 	}
-	if (!manifest.commands.some(({ command_id: commandId }) => commandId === input.command_id)) {
+	const command = manifest.commands.find(
+		({ command_id: commandId }) => commandId === input.command_id,
+	);
+	if (!command) {
 		throw new TypeError("PLUGIN_COMMAND_NOT_DECLARED");
+	}
+	const inputSchema = manifest.schemas.find(
+		({ schema_id: schemaId }) => schemaId === command.input_schema_id,
+	);
+	if (!inputSchema || !matchesJsonSchema(inputSchema.json_schema, input.payload)) {
+		throw new TypeError("PLUGIN_COMMAND_INPUT_INVALID");
 	}
 	return {
 		operation_id: input.operation_id,
@@ -151,6 +160,67 @@ function executeCommand(manifest: RuntimeManifest, input: unknown) {
 			payload: input.payload,
 		},
 	};
+}
+
+function matchesJsonSchema(schema: Record<string, unknown>, value: unknown): boolean {
+	if ("const" in schema && value !== schema.const) return false;
+	if (Array.isArray(schema.enum) && !schema.enum.includes(value)) return false;
+	if (Array.isArray(schema.oneOf)) {
+		return schema.oneOf.some(
+			(candidate) => isRecord(candidate) && matchesJsonSchema(candidate, value),
+		);
+	}
+	const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+	if (!types.some((type) => matchesType(type, value))) return false;
+	if (typeof value === "string") {
+		if (typeof schema.minLength === "number" && value.length < schema.minLength) return false;
+		if (typeof schema.pattern === "string" && !new RegExp(schema.pattern, "u").test(value)) {
+			return false;
+		}
+	}
+	if (typeof value === "number") {
+		if (typeof schema.minimum === "number" && value < schema.minimum) return false;
+		if (typeof schema.maximum === "number" && value > schema.maximum) return false;
+	}
+	if (Array.isArray(value) && isRecord(schema.items)) {
+		const itemSchema = schema.items;
+		return value.every((item) => matchesJsonSchema(itemSchema, item));
+	}
+	if (isRecord(value)) {
+		const properties = isRecord(schema.properties) ? schema.properties : {};
+		if (
+			Array.isArray(schema.required) &&
+			schema.required.some((key) => typeof key !== "string" || !(key in value))
+		) {
+			return false;
+		}
+		if (schema.additionalProperties === false) {
+			if (Object.keys(value).some((key) => !(key in properties))) return false;
+		}
+		for (const [key, propertySchema] of Object.entries(properties)) {
+			if (
+				key in value &&
+				isRecord(propertySchema) &&
+				!matchesJsonSchema(propertySchema, value[key])
+			) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+function matchesType(type: unknown, value: unknown): boolean {
+	if (type === undefined) return true;
+	if (type === "null") return value === null;
+	if (type === "array") return Array.isArray(value);
+	if (type === "object") return isRecord(value);
+	if (type === "integer") return Number.isInteger(value);
+	return typeof value === type;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function adminBlocks(manifest: RuntimeManifest) {
@@ -239,11 +309,7 @@ function settingField(key: string, field: JsonSetting): RuntimeSettingField {
 }
 
 function pluginLabel(pluginId: string) {
-	return pluginId
-		.replace(pluginIdPrefixPattern, "")
-		.split("-")
-		.map(settingLabel)
-		.join(" ");
+	return pluginId.replace(pluginIdPrefixPattern, "").split("-").map(settingLabel).join(" ");
 }
 
 function settingLabel(value: string) {
