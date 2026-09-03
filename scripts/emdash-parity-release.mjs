@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { compileFrontRelease } from "../packages/supbrd-core/dist/index.js";
+import { compileFrontRelease, verifyFrontRelease } from "../packages/supbrd-core/dist/index.js";
 import {
 	composeParityFrontReleaseInput,
 	parityRuntimePluginCatalog,
@@ -57,6 +57,7 @@ export async function buildParityReleaseArtifact() {
 		composeParityFrontReleaseInput({ ...identifiers, plugin_lock: pluginLock }),
 		{ kid: "issue-70-parity", private_key: keys.privateKey },
 	);
+	const verificationKey = await crypto.subtle.exportKey("jwk", keys.publicKey);
 	const activePluginIds = pluginLock.map(({ plugin_id: pluginId }) => pluginId).toSorted();
 	return {
 		schema_version: 1,
@@ -70,25 +71,75 @@ export async function buildParityReleaseArtifact() {
 				.map(({ plugin_id: pluginId, artifact_checksum: checksum }) => [pluginId, checksum])
 				.toSorted(([left], [right]) => left.localeCompare(right)),
 		),
-		release: {
-			content_checksum: release.content_checksum,
-			payload: release.payload,
-			validation_receipts: release.validation_receipts,
-		},
+		verification_key: { ...verificationKey, kid: release.signature.kid },
+		release,
 	};
 }
 
 export async function verifyParityReleaseArtifact(options = {}) {
-	const artifact = await buildParityReleaseArtifact();
-	const generated = `${JSON.stringify(artifact, null, 2)}\n`;
+	const current = await buildParityReleaseArtifact();
 	if (options.write) {
-		writeFileSync(artifactPath, generated);
-		return artifact;
+		if (existsSync(artifactPath)) {
+			const committed = JSON.parse(readFileSync(artifactPath, "utf8"));
+			if (
+				(await verifyCommittedRelease(committed)).valid &&
+				JSON.stringify(stableArtifact(committed)) === JSON.stringify(stableArtifact(current))
+			) {
+				return committed;
+			}
+		}
+		writeFileSync(artifactPath, `${JSON.stringify(current, null, 2)}\n`);
+		return current;
 	}
-	if (!existsSync(artifactPath) || readFileSync(artifactPath, "utf8") !== generated) {
+	if (!existsSync(artifactPath)) {
 		throw new Error("Generated artifact drift: config/superboard-parity-release.json");
 	}
-	return artifact;
+	const committed = JSON.parse(readFileSync(artifactPath, "utf8"));
+	const verification = await verifyCommittedRelease(committed);
+	if (!verification.valid) {
+		throw new Error(`Committed parity Release is invalid: ${verification.errors.join(",")}`);
+	}
+	if (JSON.stringify(stableArtifact(committed)) !== JSON.stringify(stableArtifact(current))) {
+		throw new Error("Generated artifact drift: config/superboard-parity-release.json");
+	}
+	return committed;
+}
+
+async function verifyCommittedRelease(committed) {
+	const publicKey = await crypto.subtle.importKey(
+		"jwk",
+		committed.verification_key,
+		{ name: "ECDSA", namedCurve: "P-256" },
+		true,
+		["verify"],
+	);
+	return verifyFrontRelease(committed.release, {
+		kid: committed.verification_key.kid,
+		public_key: publicKey,
+	});
+}
+
+function stableArtifact(artifact) {
+	return {
+		schema_version: artifact.schema_version,
+		target: artifact.target,
+		environment: artifact.environment,
+		target_artifact_checksum: artifact.target_artifact_checksum,
+		target_graph_checksum: artifact.target_graph_checksum,
+		active_plugin_ids: artifact.active_plugin_ids,
+		manifest_artifact_checksums: artifact.manifest_artifact_checksums,
+		release: {
+			payload: artifact.release.payload,
+			content_checksum: artifact.release.content_checksum,
+			signature: {
+				algorithm: artifact.release.signature.algorithm,
+				kid: artifact.release.signature.kid,
+			},
+			validation_receipts: artifact.release.validation_receipts,
+			validation_set_checksum: artifact.release.validation_set_checksum,
+			verification_status: artifact.release.verification_status,
+		},
+	};
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

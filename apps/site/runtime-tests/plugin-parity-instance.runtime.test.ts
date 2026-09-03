@@ -1,6 +1,6 @@
 import { REQUIRED_FRONT_STATES, resolveFrontRequest } from "@superboard/supbrd-core";
-import { env } from "cloudflare:workers";
-import { expect, test, vi } from "vitest";
+import { SELF, env } from "cloudflare:test";
+import { expect, test } from "vitest";
 
 import parityRelease from "../../../config/superboard-parity-release.json";
 import { createConfiguredSuperBoardPlugin } from "../../../packages/supbrd-runtime-plugins/src/runtime.js";
@@ -9,67 +9,47 @@ import {
 	CORE_FRONT_RENDERER_DESCRIPTORS,
 	CORE_STATE_RENDERER_IDS,
 } from "../src/lib/core-front-contract.js";
-import {
-	beginRepositoryCommand,
-	completeRepositoryCommand,
-} from "../src/lib/plugin-command-authority.js";
+import { getFrontReleaseCandidate } from "../src/lib/front-workflow-repository.js";
 import {
 	importPluginStoreEncryptionKey,
 	listPluginStoreRecords,
 	putPluginStoreRecord,
 } from "../src/lib/plugin-store-repository.js";
 import {
-	finalizeSuperBoardPluginLifecycleForRelease,
-	installSuperBoardPluginCatalog,
 	loadActiveSuperBoardPluginLock,
-	loadReleasableSuperBoardPluginLock,
-	prepareSuperBoardPluginLifecycleForRelease,
 	superBoardRuntimePluginCatalog,
 	transitionSuperBoardPluginLifecycle,
 } from "../src/lib/superboard-plugin-catalog.js";
-import { GET as queryDataSource } from "../src/pages/_superboard/api/plugins/[pluginId]/data-sources/[dataSourceId].js";
-import { GET as siteHealth } from "../src/pages/_superboard/health.js";
 
 const encodedEncryptionKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 const instanceId = "vocostar";
 const target = "local" as const;
 const projectRef = "1-test";
 const checkedAt = "2026-09-03T08:05:00.000Z";
+const observedGatewayRoutes = new Set<string>();
+const releaseIds = {
+	front_draft_id: "01J00000000000000000007101",
+	draft_snapshot_id: "01J00000000000000000007102",
+	compilation_id: "01J00000000000000000007103",
+	candidate_id: "01J00000000000000000007104",
+	release_id: "01J00000000000000000007105",
+};
 
-test("exercises every active plugin contribution in a migrated Instance", async () => {
+test("exercises every active plugin contribution through a real Instance lifecycle", async () => {
+	observedGatewayRoutes.clear();
 	const activeIds = parityRelease.active_plugin_ids;
 	const catalog = superBoardRuntimePluginCatalog().plugins.filter(({ manifest }) =>
 		activeIds.includes(manifest.plugin_id),
 	);
 	expect(catalog.map(({ manifest }) => manifest.plugin_id).toSorted()).toEqual(activeIds);
-	await env.DB.prepare(
-		`CREATE TABLE IF NOT EXISTS _plugin_state (
-			  plugin_id TEXT PRIMARY KEY,
-			  version TEXT NOT NULL,
-			  status TEXT NOT NULL DEFAULT 'installed',
-			  installed_at TEXT,
-			  activated_at TEXT,
-			  deactivated_at TEXT,
-			  source TEXT NOT NULL DEFAULT 'config'
-			)`,
-	).run();
-	const scope = {
-		instance_id: instanceId,
-		target,
-		target_artifact_checksum: parityRelease.target_artifact_checksum,
-		target_plugin_ids: activeIds,
-	};
-	const plan = await installSuperBoardPluginCatalog(env.DB, {
-		...scope,
-		plan_id: "issue-70-parity-plan",
-		approved_by: "operator-1",
-		checked_at: checkedAt,
-		expires_at: "2999-09-04T08:05:00.000Z",
+
+	const syncResponse = await operatorRequest("/_emdash/api/superboard/plugins/sync", {
+		body: { plan_id: "issue-70-parity-plan", expires_in_hours: 1 },
 	});
-	expect(plan.plugin_count).toBe(activeIds.length);
-	await expect(loadActiveSuperBoardPluginLock(env.DB, scope)).rejects.toThrow(
-		"PLUGIN_CATALOG_ACTIVE_SET_EMPTY",
-	);
+	expect(syncResponse.status).toBe(201);
+	expect(await syncResponse.json()).toMatchObject({
+		plan: { status: "installed", plugin_count: activeIds.length },
+	});
 	const implicitActive = await env.DB.prepare(
 		`SELECT COUNT(*) count FROM superboard_plugin_lifecycle
 			 WHERE instance_id = ? AND target = ? AND state = 'active'`,
@@ -78,31 +58,92 @@ test("exercises every active plugin contribution in a migrated Instance", async 
 		.first<{ count: number }>();
 	expect(implicitActive?.count).toBe(0);
 
-	const pluginLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
-	await activatePluginRelease(
-		env.DB,
-		scope,
-		parityRelease.release.payload.release_id,
-		pluginLock,
-		checkedAt,
-	);
-	expect(await loadActiveSuperBoardPluginLock(env.DB, scope)).toEqual(pluginLock);
+	const sliceResponse = await operatorRequest("/_emdash/api/superboard/releases/user-slice", {
+		body: releaseIds,
+	});
+	expect(sliceResponse.status).toBe(201);
+	expect(await sliceResponse.json()).toMatchObject({
+		front_draft_id: releaseIds.front_draft_id,
+		draft_snapshot_id: releaseIds.draft_snapshot_id,
+		draft_revision: 1,
+	});
+	const compileResponse = await operatorRequest("/_emdash/api/superboard/releases/compile", {
+		body: { draft_snapshot_id: releaseIds.draft_snapshot_id },
+	});
+	expect(compileResponse.status).toBe(201);
+	const compiled = await compileResponse.json<{
+		candidate_id: string;
+		content_checksum: string;
+		validation_set_checksum: string;
+		signature: { algorithm: string; kid: string; value: string };
+		validation_receipts: Array<{ receipt_id: string; level: string }>;
+	}>();
+	expect(compiled).toMatchObject({
+		candidate_id: releaseIds.candidate_id,
+		signature: { algorithm: "ES256", kid: "site-runtime-parity" },
+	});
+	expect(compiled.validation_receipts.length).toBeGreaterThan(0);
+
+	const previewResponse = await operatorRequest("/_emdash/api/superboard/releases/preview", {
+		body: { candidate_id: releaseIds.candidate_id, expires_in_hours: 1 },
+	});
+	expect(previewResponse.status).toBe(201);
+	expect(await previewResponse.json()).toMatchObject({
+		candidate_id: releaseIds.candidate_id,
+		content_checksum: compiled.content_checksum,
+	});
+	const approvalResponse = await operatorRequest("/_emdash/api/superboard/releases/approve", {
+		body: {
+			candidate_id: releaseIds.candidate_id,
+			warnings_acknowledged: compiled.validation_receipts
+				.filter(({ level }) => level === "warning")
+				.map(({ receipt_id: id }) => id),
+		},
+		reauthenticated: true,
+	});
+	const approval = await approvalResponse.json();
+	expect(approvalResponse.status, JSON.stringify(approval)).toBe(201);
+	const activationResponse = await operatorRequest("/_emdash/api/superboard/releases/activate", {
+		body: {
+			candidate_id: releaseIds.candidate_id,
+			activation_id: "issue-70-parity-activation",
+			expected_active_release_id: null,
+		},
+		reauthenticated: true,
+	});
+	const activation = await activationResponse.json();
+	expect(activationResponse.status, JSON.stringify(activation)).toBe(201);
+	expect(activation).toMatchObject({
+		active_release_id: releaseIds.release_id,
+		plugin_lifecycle: { status: "reconciled", plugin_count: activeIds.length },
+	});
+
+	const scope = { instance_id: instanceId, target };
+	const pluginLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
+	expect(pluginLock.map(({ plugin_id: pluginId }) => pluginId).toSorted()).toEqual(activeIds);
+	const candidate = await getFrontReleaseCandidate(env.DB, releaseIds.candidate_id);
+	if (!candidate) throw new Error("Compiled parity candidate is missing");
+	const release = candidate.release.payload;
 	const encryptionKey = await importPluginStoreEncryptionKey(encodedEncryptionKey);
-	const kv = { get: vi.fn(async () => null) };
 	let storeIndex = 0;
 	let commandIndex = 0;
 
 	for (const { manifest } of catalog) {
 		const plugin = createConfiguredSuperBoardPlugin(manifest.plugin_id);
 		const contract = await plugin.routes.contract.handler({} as never);
-		const health = await plugin.routes.health.handler({ kv } as never);
+		const healthResponse = await operatorRequest(
+			`/_emdash/api/plugins/${encodeURIComponent(manifest.plugin_id)}/health`,
+			{ method: "GET" },
+		);
+		expect(healthResponse.status, manifest.plugin_id).toBe(200);
+		const health = await healthResponse.json();
 		const commands = await plugin.routes["commands/catalog"].handler({} as never);
 		const dataSources = await plugin.routes["data-sources/catalog"].handler({} as never);
 		expect(contract).toMatchObject({
 			plugin_id: manifest.plugin_id,
 			artifact_checksum: manifest.artifact_checksum,
 		});
-		expect(health).toMatchObject({ status: "ready" });
+		expect(health).toMatchObject({ status: "ready", error_code: null });
 		expect(commands).toEqual({ items: manifest.commands });
 		expect(dataSources).toEqual({ items: manifest.data_sources });
 
@@ -135,18 +176,10 @@ test("exercises every active plugin contribution in a migrated Instance", async 
 		}
 
 		for (const dataSource of manifest.data_sources) {
-			const url = new URL(
-				`https://site.example/_emdash/api/plugins/${manifest.plugin_id}/data-sources/${dataSource.data_source_id}?project_ref=${projectRef}&entity_type=parity`,
+			const response = await operatorRequest(
+				`/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/data-sources/${encodeURIComponent(dataSource.data_source_id)}?project_ref=${projectRef}&entity_type=parity`,
+				{ method: "GET" },
 			);
-			const response = await queryDataSource({
-				locals: { user: { role: 50 } },
-				params: {
-					pluginId: manifest.plugin_id,
-					dataSourceId: dataSource.data_source_id,
-				},
-				request: new Request(url),
-				url,
-			} as Parameters<typeof queryDataSource>[0]);
 			expect(response.status, dataSource.data_source_id).toBe(200);
 			expect(await response.json()).toMatchObject({
 				plugin_id: manifest.plugin_id,
@@ -159,35 +192,32 @@ test("exercises every active plugin contribution in a migrated Instance", async 
 		for (const command of manifest.commands) {
 			commandIndex += 1;
 			const operationId = `issue-70-command-${commandIndex}`;
-			const requestBody = new TextEncoder().encode(
-				JSON.stringify({ command_id: command.command_id }),
-			);
-			const input = {
+			const path = `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/commands/${encodeURIComponent(command.command_id)}?project_ref=${projectRef}`;
+			const execute = () =>
+				operatorRequest(path, {
+					body: { command_id: command.command_id, fixture: commandIndex },
+					headers: { "Idempotency-Key": operationId },
+				});
+			const response = await execute();
+			expect(response.status, command.command_id).toBe(200);
+			const result = await response.json();
+			expect(result).toMatchObject({
 				operation_id: operationId,
-				instance_id: instanceId,
-				target,
-				project_ref: projectRef,
-				plugin_id: manifest.plugin_id,
-				command_id: command.command_id,
-				adapter_operation: "parity-gate",
-				method: "POST" as const,
-				request_path: `/api/v1/parity/${commandIndex}`,
-				request_body: requestBody,
-				accepted_at: checkedAt,
-				encryption_key: encryptionKey,
-			};
-			expect(await beginRepositoryCommand(env.DB, input)).toMatchObject({
-				status: "accepted",
+				status: "completed",
+				result: { plugin_id: manifest.plugin_id, command_id: command.command_id },
 			});
-			await completeRepositoryCommand(env.DB, {
-				operation_id: operationId,
-				response: Response.json({ command_id: command.command_id }),
-				completed_at: checkedAt,
-				encryption_key: encryptionKey,
-			});
-			expect(await beginRepositoryCommand(env.DB, input)).toMatchObject({ status: "replay" });
+			const replay = await execute();
+			expect(replay.status, command.command_id).toBe(200);
+			expect(await replay.json()).toEqual(result);
 		}
 	}
+	const completedCommands = await env.DB.prepare(
+		`SELECT COUNT(*) count FROM superboard_plugin_command_operations
+			 WHERE instance_id = ? AND state = 'completed'`,
+	)
+		.bind(instanceId)
+		.first<{ count: number }>();
+	expect(completedCommands?.count).toBe(commandIndex);
 
 	const runtimeHealth = await env.DB.prepare(
 		`SELECT plugin_id, status FROM superboard_plugin_runtime_health
@@ -197,7 +227,7 @@ test("exercises every active plugin contribution in a migrated Instance", async 
 		.all<{ plugin_id: string; status: string }>();
 	expect(runtimeHealth.results).toHaveLength(activeIds.length);
 	expect(runtimeHealth.results.every(({ status }) => status === "ready")).toBe(true);
-	const healthResponse = await siteHealth({} as never);
+	const healthResponse = await operatorRequest("/superboard-system/health", { method: "GET" });
 	expect(healthResponse.status).toBe(200);
 	expect(await healthResponse.json()).toEqual({
 		status: "ok",
@@ -206,35 +236,100 @@ test("exercises every active plugin contribution in a migrated Instance", async 
 	});
 
 	const dependencyHealth = Object.fromEntries(
-		parityRelease.release.payload.dependency_policies.map(({ dependency_id: id }) => [
-			id,
-			"ready" as const,
-		]),
+		release.dependency_policies.map(({ dependency_id: id }) => [id, "ready" as const]),
 	);
-	const permissions = parityRelease.release.payload.front_route_manifest.routes
+	const permissions = release.front_route_manifest.routes
 		.map(({ permission_expression: permission }) => permission)
 		.filter((permission) => permission !== "allow");
-	for (const route of parityRelease.release.payload.front_route_manifest.routes) {
-		const path = route.path_pattern
-			.replaceAll(/:lang/gu, "en")
-			.replaceAll(/:[^/]+/gu, "parity-id")
-			.replaceAll(/\*[^/]+/gu, "parity/path");
-		const resolution = resolveFrontRequest({
+	for (const route of release.front_route_manifest.routes) {
+		const path = concretePath(route.path_pattern);
+		expect(
+			resolveFrontRequest({
+				last_verified_release: {
+					front_route_manifest: release.front_route_manifest,
+					dependency_policies: release.dependency_policies,
+				},
+				requested_path: path,
+				admin_session: route.auth_policy === "anonymous_only" ? "absent" : "valid",
+				permissions,
+				dependency_health: dependencyHealth,
+			}).result,
+			route.route_id,
+		).toBe("rendered");
+	}
+	expect(
+		resolveFrontRequest({
+			last_verified_release: null,
+			requested_path: "/dashboard",
+			admin_session: "valid",
+			permissions,
+			dependency_health: {},
+		}).result,
+	).toBe("maintenance");
+	expect(
+		resolveFrontRequest({
 			last_verified_release: {
-				front_route_manifest: parityRelease.release.payload.front_route_manifest,
-				dependency_policies: parityRelease.release.payload.dependency_policies,
+				front_route_manifest: release.front_route_manifest,
+				dependency_policies: release.dependency_policies,
 			},
-			requested_path: path,
-			admin_session: route.auth_policy === "anonymous_only" ? "absent" : "valid",
+			requested_path: "/outside-release",
+			admin_session: "valid",
 			permissions,
 			dependency_health: dependencyHealth,
-		});
-		expect(resolution.result, route.route_id).toBe("rendered");
-	}
+		}).result,
+	).toBe("not_found");
+	const protectedRoute = release.front_route_manifest.routes.find(
+		({ auth_policy: authPolicy }) => authPolicy === "authenticated",
+	);
+	if (!protectedRoute) throw new Error("Protected parity route is missing");
+	expect(
+		resolveFrontRequest({
+			last_verified_release: {
+				front_route_manifest: release.front_route_manifest,
+				dependency_policies: release.dependency_policies,
+			},
+			requested_path: concretePath(protectedRoute.path_pattern),
+			admin_session: "valid",
+			permissions: [],
+			dependency_health: dependencyHealth,
+		}).result,
+	).toBe("forbidden");
+	const unavailableHealth = {
+		...dependencyHealth,
+		[protectedRoute.dependencies[0]!]: "unavailable" as const,
+	};
+	expect(
+		resolveFrontRequest({
+			last_verified_release: {
+				front_route_manifest: release.front_route_manifest,
+				dependency_policies: release.dependency_policies,
+			},
+			requested_path: concretePath(protectedRoute.path_pattern),
+			admin_session: "valid",
+			permissions,
+			dependency_health: unavailableHealth,
+		}).result,
+	).toBe("unavailable");
+
+	await env.RELEASE_CACHE.put(
+		"runtime:health",
+		JSON.stringify({ status: "unavailable", error_code: "WORKER_UNREACHABLE" }),
+	);
+	const failedHealthResponse = await operatorRequest(
+		"/_emdash/api/plugins/supbrd-plugmod-analytics/health",
+		{ method: "GET" },
+	);
+	expect(failedHealthResponse.status).toBe(200);
+	const failedHealth = await failedHealthResponse.json();
+	expect(failedHealth).toMatchObject({
+		status: "unavailable",
+		error_code: "WORKER_UNREACHABLE",
+	});
+	await env.RELEASE_CACHE.delete("runtime:health");
 	for (const state of REQUIRED_FRONT_STATES) {
 		const rendererId = CORE_STATE_RENDERER_IDS[state];
 		const renderer = CORE_FRONT_RENDERER_DESCRIPTORS.find(
-			({ renderer_id: candidate }) => candidate === rendererId,
+			({ renderer_id: candidateId }) => candidateId === rendererId,
 		);
 		if (!renderer) throw new Error(`Missing state renderer: ${state}`);
 		expect(
@@ -249,91 +344,70 @@ test("exercises every active plugin contribution in a migrated Instance", async 
 		).toMatchObject({ kind: "state", state });
 	}
 
-	const quarantinedPlugin = catalog.find(
+	const analytics = catalog.find(
 		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
 	)?.manifest;
-	if (!quarantinedPlugin) throw new Error("Missing Analytics plugin");
+	if (!analytics) throw new Error("Missing Analytics plugin");
 	await transitionSuperBoardPluginLifecycle(env.DB, {
 		instance_id: instanceId,
 		target,
-		plugin_id: quarantinedPlugin.plugin_id,
+		plugin_id: analytics.plugin_id,
 		to_state: "quarantined",
 		changed_at: "2026-09-03T08:06:00.000Z",
 		reason: "parity failure-state exercise",
 	});
-	await expect(
-		beginRepositoryCommand(env.DB, {
-			operation_id: "issue-70-quarantined-command",
-			instance_id: instanceId,
-			target,
-			project_ref: projectRef,
-			plugin_id: quarantinedPlugin.plugin_id,
-			command_id: quarantinedPlugin.commands[0]!.command_id,
-			adapter_operation: "parity-gate",
-			method: "POST",
-			request_path: "/api/v1/parity/quarantined",
-			request_body: new Uint8Array(),
-			accepted_at: "2026-09-03T08:06:00.000Z",
-			encryption_key: encryptionKey,
-		}),
-	).rejects.toThrow("PLUGIN_MANIFEST_NOT_ACTIVE");
+	const rejected = await operatorRequest(
+		`/_emdash/api/superboard/plugins/${analytics.plugin_id}/commands/${analytics.commands[0]!.command_id}?project_ref=${projectRef}`,
+		{
+			body: {},
+			headers: { "Idempotency-Key": "issue-70-quarantined-command" },
+		},
+	);
+	expect(rejected.status).toBe(409);
+	expect(await rejected.json()).toEqual({ error: { code: "PLUGIN_MANIFEST_NOT_ACTIVE" } });
+	const expectedGatewayRoutes = release.gateway_manifest.routes
+		.map(({ method, path_pattern: path }) => `${method} ${path}`)
+		.toSorted();
+	const exercisedGatewayRoutes = [...observedGatewayRoutes]
+		.filter(
+			(route) =>
+				route.includes("/superboard-system/health") ||
+				route.includes("/_emdash/api/plugins/") ||
+				route.includes("/commands/") ||
+				route.includes("/data-sources/"),
+		)
+		.toSorted();
+	expect(exercisedGatewayRoutes).toEqual(expectedGatewayRoutes);
 }, 60_000);
 
-async function activatePluginRelease(
-	db: D1Database,
-	scope: {
-		instance_id: string;
-		target: "local" | "development" | "production";
-		target_artifact_checksum: string;
-	},
-	releaseId: string,
-	pluginLock: Parameters<typeof prepareSuperBoardPluginLifecycleForRelease>[1]["plugin_lock"],
-	activatedAt: string,
+function operatorRequest(
+	path: string,
+	options: {
+		method?: "GET" | "POST";
+		body?: unknown;
+		headers?: Record<string, string>;
+		reauthenticated?: boolean;
+	} = {},
 ) {
-	await db.batch([
-		db
-			.prepare(
-				`INSERT INTO superboard_release_signing_keys
-				 (kid, public_jwk, status, created_at, retired_at)
-				 VALUES ('issue-70-parity-key', '{}', 'active', ?, NULL)
-				 ON CONFLICT(kid) DO NOTHING`,
-			)
-			.bind(activatedAt),
-		db
-			.prepare(
-				`INSERT INTO superboard_front_release_candidates
-				 (candidate_id, instance_id, release_id, release_json, content_checksum,
-				  validation_set_checksum, signing_kid, status, approval_json, created_at, approved_at)
-				 VALUES (?, ?, ?, ?, 'sha256:issue-70', 'sha256:issue-70',
-				         'issue-70-parity-key', 'approved', '{}', ?, ?)`,
-			)
-			.bind(
-				`${releaseId}-candidate`,
-				scope.instance_id,
-				releaseId,
-				JSON.stringify({ payload: { plugin_lock: pluginLock } }),
-				activatedAt,
-				activatedAt,
-			),
-	]);
-	await prepareSuperBoardPluginLifecycleForRelease(db, {
-		...scope,
-		release_id: releaseId,
-		plugin_lock: pluginLock,
-		prepared_at: activatedAt,
+	const method = options.method ?? "POST";
+	observedGatewayRoutes.add(`${method} ${new URL(path, "https://site.example").pathname}`);
+	return SELF.fetch(`https://site.example${path}`, {
+		method,
+		headers: {
+			Origin: "https://site.example",
+			"X-EmDash-Request": "1",
+			"X-Parity-Operator": "1",
+			...(options.reauthenticated ? { "X-Parity-Reauthenticated": "1" } : {}),
+			...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
+			...options.headers,
+		},
+		body: options.body === undefined ? undefined : JSON.stringify(options.body),
 	});
-	await db
-		.prepare(
-			`INSERT INTO superboard_front_active_releases
-			 (instance_id, active_release_id, previous_release_id, pointer_revision,
-			  activation_id, activated_at)
-			 VALUES (?, ?, NULL, 1, ?, ?)`,
-		)
-		.bind(scope.instance_id, releaseId, `${releaseId}-activation`, activatedAt)
-		.run();
-	return finalizeSuperBoardPluginLifecycleForRelease(db, {
-		...scope,
-		release_id: releaseId,
-		finalized_at: activatedAt,
-	});
+}
+
+function concretePath(path: string) {
+	return path
+		.replaceAll(/:lang/gu, "en")
+		.replaceAll(/:[^/]+/gu, "parity-id")
+		.replaceAll(/\*[^/]+/gu, "parity/path");
 }

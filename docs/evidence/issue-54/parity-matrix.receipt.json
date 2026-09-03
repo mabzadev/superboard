@@ -1,17 +1,39 @@
 {
   "schema_version": 1,
-  "matrix_sha256": "sha256:034642da38affdf0909d5b36010fd31df6ce2c7a1aa7aa413389513e7c1ee43e",
-  "topology_sha256": "sha256:91243403dff65b2331a7f85fd344cf4dd252f811fc4ddff1afd3308a72cc6dae",
-  "row_count": 649,
-  "required_row_count": 526,
+  "matrix_sha256": "sha256:d9cbed3e60d7ff994040c377d9b5fc5bf36a9a54a0f8eef75d3f597412efe3c4",
+  "topology_sha256": "sha256:51d37cef58905aee76f74558c34da06410ecdbafede0bdc74ae5fd8e2aac866a",
+  "row_count": 864,
+  "required_row_count": 699,
   "public_cutover": false,
   "release": {
     "source": "config/superboard-parity-release.json",
     "release_id": "01J00000000000000000007005",
-    "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+    "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
+    "signature": {
+      "algorithm": "ES256",
+      "kid": "issue-70-parity",
+      "value": "2zaQlY4Sz6-RfgVTxfgRJEOTWMV-9S1T2r-YMYgvlg_s4JJrOTS5qWD6omIhRuwpmBmUiyVSUwdFTVqXZQIMqg"
+    },
+    "validation_set_checksum": "sha256:bcd7b4d85724991c1d7fc941ba4d77bac5cb15a4609fb5168518a7b70d9be5de",
+    "validation_receipt_checksums": [
+      "sha256:cf235b2d6213864a5fa987ee4e32032241a72d3e6bb1045882c19f27e094219a",
+      "sha256:b05090146b3f93aa005ff5f896686805056b039285fb8eb94d48c83d2da3e722",
+      "sha256:5d849a6938eeec26e518c266203fd7d3204dbeb834258277f3f04b6b66d911b2",
+      "sha256:7b8197f69e1f50f40e06e235c19aa3c95de3795d5e2938d5f73017ecf45fb2a2",
+      "sha256:8bdc8564215679908796b79449a824667858b12fedd97f94c3215390e7007739",
+      "sha256:297b89b9f8856207c64b0780c569615c42ec088dfd7b8bf8e6f1f2db8c57dfe8",
+      "sha256:5ee54a9a005d8e1d851d3ce9f71cb967237e69cdb2a26dfee5a22ac4d4cd098a",
+      "sha256:c8434a13ea3193530d1fa6dea1871ea46c11edde2517676205f9398ecc35cb92",
+      "sha256:634bad29e14589ffb82a4f9587151f0e0760f88cf7283ef8155a402b60f76e30",
+      "sha256:4ab057fe26b3ea2b37b593f12a76392c648fc42d09103cc08946f58b91423c63",
+      "sha256:e1ecf4fcb92cb577ae1cddd9acfd2b16a41d22d4ac2f31c38ff553b1034de7e0",
+      "sha256:882e1df0c0c21bade76f9d969ab04dca1c898bd42f1043db49abf73017dfae8d",
+      "sha256:a9bc5a912224571e4e80a560c86b28e273c88a61cfd269ec0aec6db0f1f7f30a"
+    ],
+    "verification_status": "verified",
     "target": "mbza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:0fd6014de08f43d0502d3659cf26173bfb996dbe1a8d8d9cdf7bdf7eb2b4f7ba",
+    "target_artifact_checksum": "sha256:10f421b9a68a76427c57a3f3462aa55e46f9b69be61dd61beb0e333c5475ceb5",
     "active_plugin_ids": [
       "supbrd-plug-audit",
       "supbrd-plug-content",
@@ -33,8 +55,8 @@
   },
   "front_bundle": {
     "schema_version": 1,
-    "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
-    "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
+    "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
+    "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
     "source_count": 599
   },
   "store_coverage": [

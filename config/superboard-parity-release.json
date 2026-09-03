@@ -2,8 +2,8 @@
   "schema_version": 1,
   "target": "mbza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:0fd6014de08f43d0502d3659cf26173bfb996dbe1a8d8d9cdf7bdf7eb2b4f7ba",
-  "target_graph_checksum": "sha256:d19e8be41b511e331310e20fd6c68a8d960406ed8a4155ae30eeb0f8b7b09b56",
+  "target_artifact_checksum": "sha256:10f421b9a68a76427c57a3f3462aa55e46f9b69be61dd61beb0e333c5475ceb5",
+  "target_graph_checksum": "sha256:61300dbf3d2cc85e9bec5432eddbe9493beed7efd411d7ce6d116601c46fad9f",
   "active_plugin_ids": [
     "supbrd-plug-audit",
     "supbrd-plug-content",
@@ -23,25 +23,35 @@
     "supbrd-plugmod-support"
   ],
   "manifest_artifact_checksums": {
-    "supbrd-plug-audit": "sha256:a5b32b500cec73907ad17a7d0422f8bbf14d546e23a7dcdef9e14d8489ab1aaa",
-    "supbrd-plug-content": "sha256:3a4041623ef83df688f4aed31493dc40f9f0737ba72ca95fceddd8cbefcdaff8",
-    "supbrd-plug-products": "sha256:80bf6411572839b7c4a47c691fa96f4b67f1197d520ae8645f6afb937ea14bbc",
-    "supbrd-plug-settings": "sha256:12a3e771777c39c3775410d5f55cd86d1937be4080844838c4a7618fdb0284a2",
-    "supbrd-plug-user": "sha256:25674944b76a7d7fea6b38e97d4615ead1f9521d9b6523b35c6d4e44c41aa0ba",
-    "supbrd-plugmod-analytics": "sha256:735c96d09bffe2116b85dff52603da4f461a900334ba009dbf702e62c1994860",
-    "supbrd-plugmod-billing": "sha256:13dcf3059dcdb390b99f26063b185615554f7dc8888b9141bc49bd0180d0eea5",
-    "supbrd-plugmod-dynamic-links": "sha256:341d36595d4a0548017515041a2b4d5cc58543ac9aed5260dd85658a57a8febd",
-    "supbrd-plugmod-email": "sha256:4352e1d8e2c5c2b64ca4f1af8bc3fcdc6116f296e210745957329e8a3bbfa1e4",
-    "supbrd-plugmod-files": "sha256:26bc3e25a0acdb63a220db668293d7f3078c7e3c323dcf1a5ddc12bb607b35ef",
-    "supbrd-plugmod-flows": "sha256:9b02f2a9c2c195946bcc176f4bdc0da452e9aaa839415928262651613393b425",
-    "supbrd-plugmod-gateway": "sha256:14bcc868f5cb88f8ca810bf12aa1760ae783cf02759e917a13ed6223d3e969be",
-    "supbrd-plugmod-marketing": "sha256:e219e1ae14911e020fe62a1dce0bf4c8082338a9ceb7bd0ae36ba62d8fb162d1",
-    "supbrd-plugmod-mcp": "sha256:a0eeb3b3ba7d28523b70b8208ab7460b1b6c09e96cf83c468423fb56f85683b8",
-    "supbrd-plugmod-observability": "sha256:d3a525087f3c4ae41beec09bb012147bf654f634be612d1b86226ca3cd1e75af",
-    "supbrd-plugmod-support": "sha256:06b6bc504738f34b6eec181908be9269bd1e314fddd001c3f8ac5536ae87f3a9"
+    "supbrd-plug-audit": "sha256:853adac1bda5774658ed4862773fabba0dcd3dbe214ef9716856d799e0ebed1e",
+    "supbrd-plug-content": "sha256:ecca713f377cb0e7b94d8d442d2f924055ef7bd7bdcd475577c34789c6ad58de",
+    "supbrd-plug-products": "sha256:e2b377ecfc0c9fee5ea6155dfaab78c055ecb527cdafe72544aeef83e45de6b6",
+    "supbrd-plug-settings": "sha256:8e2073ced01e6a81259a77810138558e4c96655553e73a33a9776030fc9af1e8",
+    "supbrd-plug-user": "sha256:7b951aff3211b82c40643c232cde022fd793165a2dd091379e54b564e872b0da",
+    "supbrd-plugmod-analytics": "sha256:196de751ba0ca55d37c8f58a4d25ec382487a24e367cb32150596f6ed600219f",
+    "supbrd-plugmod-billing": "sha256:e5e562109b4d59b578ade86483af65fb62563a05547197a28723a30716d0dd28",
+    "supbrd-plugmod-dynamic-links": "sha256:199e166ba2dc76f65b964ecefac9ada36dd420c0a3ed9107141e6a1961f7694e",
+    "supbrd-plugmod-email": "sha256:94859c224838a7a1c1319afeefebd8f4f3d08a7642e997595ed013d75ffafff1",
+    "supbrd-plugmod-files": "sha256:842856bc0b2356667737aa6586a090a9f0e0ffdfe0d0bb0bcf0df8d472386d93",
+    "supbrd-plugmod-flows": "sha256:d33f254024cdef3d50bffa06720816b6185b6cefef72180b23e93db0827087bb",
+    "supbrd-plugmod-gateway": "sha256:9bbcd70a44a12bda1a74aebb5e4f0ed6c34e26b96b5dbd5a8168a3931b9844fd",
+    "supbrd-plugmod-marketing": "sha256:8b033f535f5391df6e6c133923cda43833f064b910df547d0ba1b4f2c91c286f",
+    "supbrd-plugmod-mcp": "sha256:24e3e11acd59dd182e384046a9c82ac9cee4652569d75043a011bd93c996f9da",
+    "supbrd-plugmod-observability": "sha256:b6e07022690705a58912364f79e8f736bd1d0ffa33dd06407e66540447614ef8",
+    "supbrd-plugmod-support": "sha256:ad7e075548fa4f1a41d13f77bdb11e2843ee1c0ffa4d73dd1af061468ad8b601"
+  },
+  "verification_key": {
+    "key_ops": [
+      "verify"
+    ],
+    "ext": true,
+    "kty": "EC",
+    "x": "9I1Ppp18xORMJrPOKs2lIQyFcCsOhbVBvODAeMSjoGc",
+    "y": "uqhq0bRNVwzMlKkukQTXO1JqoOhSTDCg9cS2fKtWYRg",
+    "crv": "P-256",
+    "kid": "issue-70-parity"
   },
   "release": {
-    "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
     "payload": {
       "candidate_id": "01J00000000000000000007004",
       "compilation_id": "01J00000000000000000007003",
@@ -3802,9 +3812,2780 @@
       },
       "gateway_manifest": {
         "gateway_manifest_id": "01J00000000000000000000221",
-        "routes": [],
+        "routes": [
+          {
+            "audience": "system",
+            "auth_policy": "public",
+            "destination": "superboard-site",
+            "method": "GET",
+            "path_pattern": "/superboard-system/health",
+            "route_id": "gateway.superboard_site.health",
+            "scopes": [],
+            "timeout_ms": 1000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-audit",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plug-audit/health",
+            "route_id": "gateway.supbrd-plug-audit.health",
+            "scopes": [
+              "supbrd-plug-audit.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-audit",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-audit/commands/supbrd-plug-audit.command.archive_ledger",
+            "route_id": "gateway.supbrd-plug-audit.command.archive_ledger",
+            "scopes": [
+              "supbrd-plug-audit.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-audit",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-audit/commands/supbrd-plug-audit.command.verify_ledger",
+            "route_id": "gateway.supbrd-plug-audit.command.verify_ledger",
+            "scopes": [
+              "supbrd-plug-audit.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-audit",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-audit/data-sources/supbrd-plug-audit.data_source.ledger",
+            "route_id": "gateway.supbrd-plug-audit.data_source.ledger",
+            "scopes": [
+              "supbrd-plug-audit.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-audit",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-audit/data-sources/supbrd-plug-audit.data_source.ledger_search",
+            "route_id": "gateway.supbrd-plug-audit.data_source.ledger_search",
+            "scopes": [
+              "supbrd-plug-audit.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-audit",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-audit/data-sources/supbrd-plug-audit.data_source.archives",
+            "route_id": "gateway.supbrd-plug-audit.data_source.archives",
+            "scopes": [
+              "supbrd-plug-audit.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-content",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plug-content/health",
+            "route_id": "gateway.supbrd-plug-content.health",
+            "scopes": [
+              "supbrd-plug-content.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-content",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-content/commands/supbrd-plug-content.command.create_document",
+            "route_id": "gateway.supbrd-plug-content.command.create_document",
+            "scopes": [
+              "supbrd-plug-content.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-content",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-content/commands/supbrd-plug-content.command.update_document",
+            "route_id": "gateway.supbrd-plug-content.command.update_document",
+            "scopes": [
+              "supbrd-plug-content.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-content",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-content/commands/supbrd-plug-content.command.publish_document",
+            "route_id": "gateway.supbrd-plug-content.command.publish_document",
+            "scopes": [
+              "supbrd-plug-content.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-content",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-content/data-sources/supbrd-plug-content.data_source.documents",
+            "route_id": "gateway.supbrd-plug-content.data_source.documents",
+            "scopes": [
+              "supbrd-plug-content.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-content",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-content/data-sources/supbrd-plug-content.data_source.taxonomies",
+            "route_id": "gateway.supbrd-plug-content.data_source.taxonomies",
+            "scopes": [
+              "supbrd-plug-content.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-content",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-content/data-sources/supbrd-plug-content.data_source.revisions",
+            "route_id": "gateway.supbrd-plug-content.data_source.revisions",
+            "scopes": [
+              "supbrd-plug-content.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plug-products/health",
+            "route_id": "gateway.supbrd-plug-products.health",
+            "scopes": [
+              "supbrd-plug-products.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.create_product",
+            "route_id": "gateway.supbrd-plug-products.command.create_product",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.update_product",
+            "route_id": "gateway.supbrd-plug-products.command.update_product",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.archive_product",
+            "route_id": "gateway.supbrd-plug-products.command.archive_product",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.create_package",
+            "route_id": "gateway.supbrd-plug-products.command.create_package",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.update_package",
+            "route_id": "gateway.supbrd-plug-products.command.update_package",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.archive_package",
+            "route_id": "gateway.supbrd-plug-products.command.archive_package",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.create_offering",
+            "route_id": "gateway.supbrd-plug-products.command.create_offering",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.update_offering",
+            "route_id": "gateway.supbrd-plug-products.command.update_offering",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.archive_offering",
+            "route_id": "gateway.supbrd-plug-products.command.archive_offering",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.create_entitlement",
+            "route_id": "gateway.supbrd-plug-products.command.create_entitlement",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.update_entitlement",
+            "route_id": "gateway.supbrd-plug-products.command.update_entitlement",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.archive_entitlement",
+            "route_id": "gateway.supbrd-plug-products.command.archive_entitlement",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/commands/supbrd-plug-products.command.sync_store_catalog",
+            "route_id": "gateway.supbrd-plug-products.command.sync_store_catalog",
+            "scopes": [
+              "supbrd-plug-products.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/data-sources/supbrd-plug-products.data_source.products",
+            "route_id": "gateway.supbrd-plug-products.data_source.products",
+            "scopes": [
+              "supbrd-plug-products.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/data-sources/supbrd-plug-products.data_source.packages",
+            "route_id": "gateway.supbrd-plug-products.data_source.packages",
+            "scopes": [
+              "supbrd-plug-products.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/data-sources/supbrd-plug-products.data_source.offerings",
+            "route_id": "gateway.supbrd-plug-products.data_source.offerings",
+            "scopes": [
+              "supbrd-plug-products.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/data-sources/supbrd-plug-products.data_source.entitlements",
+            "route_id": "gateway.supbrd-plug-products.data_source.entitlements",
+            "scopes": [
+              "supbrd-plug-products.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/data-sources/supbrd-plug-products.data_source.product_statistics",
+            "route_id": "gateway.supbrd-plug-products.data_source.product_statistics",
+            "scopes": [
+              "supbrd-plug-products.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-products",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-products/data-sources/supbrd-plug-products.data_source.store_sync_runs",
+            "route_id": "gateway.supbrd-plug-products.data_source.store_sync_runs",
+            "scopes": [
+              "supbrd-plug-products.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-settings",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plug-settings/health",
+            "route_id": "gateway.supbrd-plug-settings.health",
+            "scopes": [
+              "supbrd-plug-settings.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-settings",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-settings/commands/supbrd-plug-settings.command.update_effective_settings",
+            "route_id": "gateway.supbrd-plug-settings.command.update_effective_settings",
+            "scopes": [
+              "supbrd-plug-settings.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-settings",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-settings/commands/supbrd-plug-settings.command.save_sdk_configuration",
+            "route_id": "gateway.supbrd-plug-settings.command.save_sdk_configuration",
+            "scopes": [
+              "supbrd-plug-settings.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-settings",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-settings/commands/supbrd-plug-settings.command.test_sdk_configuration",
+            "route_id": "gateway.supbrd-plug-settings.command.test_sdk_configuration",
+            "scopes": [
+              "supbrd-plug-settings.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-settings",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-settings/data-sources/supbrd-plug-settings.data_source.effective_settings",
+            "route_id": "gateway.supbrd-plug-settings.data_source.effective_settings",
+            "scopes": [
+              "supbrd-plug-settings.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-settings",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-settings/data-sources/supbrd-plug-settings.data_source.settings_versions",
+            "route_id": "gateway.supbrd-plug-settings.data_source.settings_versions",
+            "scopes": [
+              "supbrd-plug-settings.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-settings",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-settings/data-sources/supbrd-plug-settings.data_source.sdk_configurations",
+            "route_id": "gateway.supbrd-plug-settings.data_source.sdk_configurations",
+            "scopes": [
+              "supbrd-plug-settings.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plug-user/health",
+            "route_id": "gateway.supbrd-plug-user.health",
+            "scopes": [
+              "supbrd-plug-user.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "application_client",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/commands/supbrd-plug-user.command.application_sign_in",
+            "route_id": "gateway.supbrd-plug-user.command.application_sign_in",
+            "scopes": [
+              "application.identity.sign_in"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/commands/supbrd-plug-user.command.update_profile",
+            "route_id": "gateway.supbrd-plug-user.command.update_profile",
+            "scopes": [
+              "users.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/commands/supbrd-plug-user.command.suspend_member",
+            "route_id": "gateway.supbrd-plug-user.command.suspend_member",
+            "scopes": [
+              "users.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "application_client",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/commands/supbrd-plug-user.command.link_provider",
+            "route_id": "gateway.supbrd-plug-user.command.link_provider",
+            "scopes": [
+              "application.identity.providers.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "application_client",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/commands/supbrd-plug-user.command.revoke_application_session",
+            "route_id": "gateway.supbrd-plug-user.command.revoke_application_session",
+            "scopes": [
+              "application.identity.sessions.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/data-sources/supbrd-plug-user.data_source.current_profile",
+            "route_id": "gateway.supbrd-plug-user.data_source.current_profile",
+            "scopes": [
+              "users.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/data-sources/supbrd-plug-user.data_source.members",
+            "route_id": "gateway.supbrd-plug-user.data_source.members",
+            "scopes": [
+              "users.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "application_client",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/data-sources/supbrd-plug-user.data_source.linked_providers",
+            "route_id": "gateway.supbrd-plug-user.data_source.linked_providers",
+            "scopes": [
+              "application.identity.providers.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "application_client",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plug-user",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plug-user/data-sources/supbrd-plug-user.data_source.active_sessions",
+            "route_id": "gateway.supbrd-plug-user.data_source.active_sessions",
+            "scopes": [
+              "application.identity.sessions.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-analytics/health",
+            "route_id": "gateway.supbrd-plugmod-analytics.health",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.create_analytics_report",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_report",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.update_analytics_report",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_report",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.delete_analytics_report",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.delete_analytics_report",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.create_analytics_operation",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_operation",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.create_analytics_dashboard",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_dashboard",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.update_analytics_dashboard",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_dashboard",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.delete_analytics_dashboard",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.delete_analytics_dashboard",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.create_analytics_cohort",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_cohort",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.create_analytics_alert",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_alert",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/commands/supbrd-plugmod-analytics.command.update_analytics_settings",
+            "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_settings",
+            "scopes": [
+              "supbrd-plugmod-analytics.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_overview",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_overview",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_events",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_events",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_event_analysis",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_event_analysis",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_installations",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_installations",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_purchases",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_purchases",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_retention",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_retention",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_reports",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_reports",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_dashboards",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_dashboards",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_sessions",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_sessions",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_profiles",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_profiles",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_views",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_views",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_dimensions",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_dimensions",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_crashes",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_crashes",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_feedback",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_feedback",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_cohorts",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_cohorts",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_remote_config",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_remote_config",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_alerts",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_alerts",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-analytics",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-analytics/data-sources/supbrd-plugmod-analytics.data_source.analytics_settings",
+            "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_settings",
+            "scopes": [
+              "supbrd-plugmod-analytics.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-billing/health",
+            "route_id": "gateway.supbrd-plugmod-billing.health",
+            "scopes": [
+              "supbrd-plugmod-billing.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/commands/supbrd-plugmod-billing.command.create_purchase",
+            "route_id": "gateway.supbrd-plugmod-billing.command.create_purchase",
+            "scopes": [
+              "supbrd-plugmod-billing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/commands/supbrd-plugmod-billing.command.create_refund",
+            "route_id": "gateway.supbrd-plugmod-billing.command.create_refund",
+            "scopes": [
+              "supbrd-plugmod-billing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/commands/supbrd-plugmod-billing.command.update_refund",
+            "route_id": "gateway.supbrd-plugmod-billing.command.update_refund",
+            "scopes": [
+              "supbrd-plugmod-billing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/commands/supbrd-plugmod-billing.command.update_subscription",
+            "route_id": "gateway.supbrd-plugmod-billing.command.update_subscription",
+            "scopes": [
+              "supbrd-plugmod-billing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/commands/supbrd-plugmod-billing.command.reconcile_store",
+            "route_id": "gateway.supbrd-plugmod-billing.command.reconcile_store",
+            "scopes": [
+              "supbrd-plugmod-billing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/data-sources/supbrd-plugmod-billing.data_source.purchases",
+            "route_id": "gateway.supbrd-plugmod-billing.data_source.purchases",
+            "scopes": [
+              "supbrd-plugmod-billing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/data-sources/supbrd-plugmod-billing.data_source.purchase",
+            "route_id": "gateway.supbrd-plugmod-billing.data_source.purchase",
+            "scopes": [
+              "supbrd-plugmod-billing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/data-sources/supbrd-plugmod-billing.data_source.refunds",
+            "route_id": "gateway.supbrd-plugmod-billing.data_source.refunds",
+            "scopes": [
+              "supbrd-plugmod-billing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/data-sources/supbrd-plugmod-billing.data_source.subscriptions",
+            "route_id": "gateway.supbrd-plugmod-billing.data_source.subscriptions",
+            "scopes": [
+              "supbrd-plugmod-billing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/data-sources/supbrd-plugmod-billing.data_source.financial_customer_entitlements",
+            "route_id": "gateway.supbrd-plugmod-billing.data_source.financial_customer_entitlements",
+            "scopes": [
+              "supbrd-plugmod-billing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-billing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-billing/data-sources/supbrd-plugmod-billing.data_source.billing_ledger",
+            "route_id": "gateway.supbrd-plugmod-billing.data_source.billing_ledger",
+            "scopes": [
+              "supbrd-plugmod-billing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-dynamic-links/health",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.health",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.create_link",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_link",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.update_link",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.update_link",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.delete_link",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_link",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.create_link_campaign",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_link_campaign",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.delete_link_campaign",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_link_campaign",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.create_redirect_rule",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_redirect_rule",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.update_redirect_rule",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.update_redirect_rule",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.create_domain",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_domain",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.verify_domain",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.verify_domain",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.delete_domain",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_domain",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.save_social_preview",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.save_social_preview",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/commands/supbrd-plugmod-dynamic-links.command.save_tracking",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.command.save_tracking",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.links",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.links",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.resolved_link",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.resolved_link",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.link_campaigns",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_campaigns",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.redirect_rules",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.redirect_rules",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.domains",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.domains",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.social_preview",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.social_preview",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.tracking",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.tracking",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-dynamic-links",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-dynamic-links/data-sources/supbrd-plugmod-dynamic-links.data_source.link_statistics",
+            "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_statistics",
+            "scopes": [
+              "supbrd-plugmod-dynamic-links.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-email/health",
+            "route_id": "gateway.supbrd-plugmod-email.health",
+            "scopes": [
+              "supbrd-plugmod-email.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.send_transactional_email",
+            "route_id": "gateway.supbrd-plugmod-email.command.send_transactional_email",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.save_smtp_settings",
+            "route_id": "gateway.supbrd-plugmod-email.command.save_smtp_settings",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.delete_smtp_settings",
+            "route_id": "gateway.supbrd-plugmod-email.command.delete_smtp_settings",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.test_smtp_settings",
+            "route_id": "gateway.supbrd-plugmod-email.command.test_smtp_settings",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.verify_smtp_domain",
+            "route_id": "gateway.supbrd-plugmod-email.command.verify_smtp_domain",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.retry_delivery_outbox",
+            "route_id": "gateway.supbrd-plugmod-email.command.retry_delivery_outbox",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.replay_dead_letter",
+            "route_id": "gateway.supbrd-plugmod-email.command.replay_dead_letter",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/commands/supbrd-plugmod-email.command.discard_dead_letter",
+            "route_id": "gateway.supbrd-plugmod-email.command.discard_dead_letter",
+            "scopes": [
+              "supbrd-plugmod-email.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/data-sources/supbrd-plugmod-email.data_source.smtp_settings",
+            "route_id": "gateway.supbrd-plugmod-email.data_source.smtp_settings",
+            "scopes": [
+              "supbrd-plugmod-email.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/data-sources/supbrd-plugmod-email.data_source.delivery_outbox",
+            "route_id": "gateway.supbrd-plugmod-email.data_source.delivery_outbox",
+            "scopes": [
+              "supbrd-plugmod-email.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/data-sources/supbrd-plugmod-email.data_source.dead_letters",
+            "route_id": "gateway.supbrd-plugmod-email.data_source.dead_letters",
+            "scopes": [
+              "supbrd-plugmod-email.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/data-sources/supbrd-plugmod-email.data_source.provider_webhooks",
+            "route_id": "gateway.supbrd-plugmod-email.data_source.provider_webhooks",
+            "scopes": [
+              "supbrd-plugmod-email.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-email",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-email/data-sources/supbrd-plugmod-email.data_source.provider_events",
+            "route_id": "gateway.supbrd-plugmod-email.data_source.provider_events",
+            "scopes": [
+              "supbrd-plugmod-email.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-files/health",
+            "route_id": "gateway.supbrd-plugmod-files.health",
+            "scopes": [
+              "supbrd-plugmod-files.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/commands/supbrd-plugmod-files.command.create_upload_ticket",
+            "route_id": "gateway.supbrd-plugmod-files.command.create_upload_ticket",
+            "scopes": [
+              "supbrd-plugmod-files.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/commands/supbrd-plugmod-files.command.complete_upload",
+            "route_id": "gateway.supbrd-plugmod-files.command.complete_upload",
+            "scopes": [
+              "supbrd-plugmod-files.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/commands/supbrd-plugmod-files.command.delete_object",
+            "route_id": "gateway.supbrd-plugmod-files.command.delete_object",
+            "scopes": [
+              "supbrd-plugmod-files.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/commands/supbrd-plugmod-files.command.collect_garbage",
+            "route_id": "gateway.supbrd-plugmod-files.command.collect_garbage",
+            "scopes": [
+              "supbrd-plugmod-files.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/data-sources/supbrd-plugmod-files.data_source.objects",
+            "route_id": "gateway.supbrd-plugmod-files.data_source.objects",
+            "scopes": [
+              "supbrd-plugmod-files.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/data-sources/supbrd-plugmod-files.data_source.object_metadata",
+            "route_id": "gateway.supbrd-plugmod-files.data_source.object_metadata",
+            "scopes": [
+              "supbrd-plugmod-files.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/data-sources/supbrd-plugmod-files.data_source.download_ticket",
+            "route_id": "gateway.supbrd-plugmod-files.data_source.download_ticket",
+            "scopes": [
+              "supbrd-plugmod-files.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-files",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-files/data-sources/supbrd-plugmod-files.data_source.storage_usage",
+            "route_id": "gateway.supbrd-plugmod-files.data_source.storage_usage",
+            "scopes": [
+              "supbrd-plugmod-files.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-flows/health",
+            "route_id": "gateway.supbrd-plugmod-flows.health",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/supbrd-plugmod-flows.command.create_workflow",
+            "route_id": "gateway.supbrd-plugmod-flows.command.create_workflow",
+            "scopes": [
+              "supbrd-plugmod-flows.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/supbrd-plugmod-flows.command.update_workflow",
+            "route_id": "gateway.supbrd-plugmod-flows.command.update_workflow",
+            "scopes": [
+              "supbrd-plugmod-flows.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/supbrd-plugmod-flows.command.publish_workflow",
+            "route_id": "gateway.supbrd-plugmod-flows.command.publish_workflow",
+            "scopes": [
+              "supbrd-plugmod-flows.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/supbrd-plugmod-flows.command.activate_version",
+            "route_id": "gateway.supbrd-plugmod-flows.command.activate_version",
+            "scopes": [
+              "supbrd-plugmod-flows.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/supbrd-plugmod-flows.command.create_environment",
+            "route_id": "gateway.supbrd-plugmod-flows.command.create_environment",
+            "scopes": [
+              "supbrd-plugmod-flows.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/supbrd-plugmod-flows.command.rotate_environment_key",
+            "route_id": "gateway.supbrd-plugmod-flows.command.rotate_environment_key",
+            "scopes": [
+              "supbrd-plugmod-flows.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/commands/supbrd-plugmod-flows.command.save_localization",
+            "route_id": "gateway.supbrd-plugmod-flows.command.save_localization",
+            "scopes": [
+              "supbrd-plugmod-flows.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.overview",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.overview",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.components",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.components",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.workflows",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.workflows",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.workflow",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.workflow",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.environments",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.environments",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.localization",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.localization",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.users",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.users",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-flows",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-flows/data-sources/supbrd-plugmod-flows.data_source.user_details",
+            "route_id": "gateway.supbrd-plugmod-flows.data_source.user_details",
+            "scopes": [
+              "supbrd-plugmod-flows.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-gateway",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-gateway/health",
+            "route_id": "gateway.supbrd-plugmod-gateway.health",
+            "scopes": [
+              "supbrd-plugmod-gateway.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-gateway",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-gateway/commands/supbrd-plugmod-gateway.command.publish_gateway_manifest",
+            "route_id": "gateway.supbrd-plugmod-gateway.command.publish_gateway_manifest",
+            "scopes": [
+              "supbrd-plugmod-gateway.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-gateway",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-gateway/commands/supbrd-plugmod-gateway.command.update_gateway_route",
+            "route_id": "gateway.supbrd-plugmod-gateway.command.update_gateway_route",
+            "scopes": [
+              "supbrd-plugmod-gateway.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-gateway",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-gateway/commands/supbrd-plugmod-gateway.command.rotate_access_policy",
+            "route_id": "gateway.supbrd-plugmod-gateway.command.rotate_access_policy",
+            "scopes": [
+              "supbrd-plugmod-gateway.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-gateway",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-gateway/data-sources/supbrd-plugmod-gateway.data_source.active_gateway_manifest",
+            "route_id": "gateway.supbrd-plugmod-gateway.data_source.active_gateway_manifest",
+            "scopes": [
+              "supbrd-plugmod-gateway.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-gateway",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-gateway/data-sources/supbrd-plugmod-gateway.data_source.gateway_routes",
+            "route_id": "gateway.supbrd-plugmod-gateway.data_source.gateway_routes",
+            "scopes": [
+              "supbrd-plugmod-gateway.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-gateway",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-gateway/data-sources/supbrd-plugmod-gateway.data_source.rate_limits",
+            "route_id": "gateway.supbrd-plugmod-gateway.data_source.rate_limits",
+            "scopes": [
+              "supbrd-plugmod-gateway.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-marketing/health",
+            "route_id": "gateway.supbrd-plugmod-marketing.health",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.create_email_campaign",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.create_email_campaign",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.update_email_campaign",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.update_email_campaign",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.transition_email_campaign",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.transition_email_campaign",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.schedule_email_campaign",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.schedule_email_campaign",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.create_marketing_journey",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.create_marketing_journey",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.update_marketing_journey",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.update_marketing_journey",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.transition_marketing_journey",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.transition_marketing_journey",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.create_marketing_channel_connector",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.create_marketing_channel_connector",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.update_marketing_channel_connector",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.update_marketing_channel_connector",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/commands/supbrd-plugmod-marketing.command.delete_marketing_channel_connector",
+            "route_id": "gateway.supbrd-plugmod-marketing.command.delete_marketing_channel_connector",
+            "scopes": [
+              "supbrd-plugmod-marketing.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.email_subscribers",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_subscribers",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.subscriber_lists",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.subscriber_lists",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.subscriber_segments",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.subscriber_segments",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.email_templates",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_templates",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.email_campaigns",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_campaigns",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.marketing_statistics",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_statistics",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.marketing_journeys",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_journeys",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.journey_enrollments",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.journey_enrollments",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.journey_statistics",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.journey_statistics",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-marketing",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-marketing/data-sources/supbrd-plugmod-marketing.data_source.marketing_channel_connectors",
+            "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_channel_connectors",
+            "scopes": [
+              "supbrd-plugmod-marketing.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-mcp",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-mcp/health",
+            "route_id": "gateway.supbrd-plugmod-mcp.health",
+            "scopes": [
+              "supbrd-plugmod-mcp.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-mcp",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-mcp/commands/supbrd-plugmod-mcp.command.approve_consent",
+            "route_id": "gateway.supbrd-plugmod-mcp.command.approve_consent",
+            "scopes": [
+              "supbrd-plugmod-mcp.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-mcp",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-mcp/commands/supbrd-plugmod-mcp.command.revoke_token",
+            "route_id": "gateway.supbrd-plugmod-mcp.command.revoke_token",
+            "scopes": [
+              "supbrd-plugmod-mcp.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-mcp",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-mcp/commands/supbrd-plugmod-mcp.command.invoke_tool",
+            "route_id": "gateway.supbrd-plugmod-mcp.command.invoke_tool",
+            "scopes": [
+              "supbrd-plugmod-mcp.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-mcp",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-mcp/data-sources/supbrd-plugmod-mcp.data_source.tokens",
+            "route_id": "gateway.supbrd-plugmod-mcp.data_source.tokens",
+            "scopes": [
+              "supbrd-plugmod-mcp.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-mcp",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-mcp/data-sources/supbrd-plugmod-mcp.data_source.sessions",
+            "route_id": "gateway.supbrd-plugmod-mcp.data_source.sessions",
+            "scopes": [
+              "supbrd-plugmod-mcp.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-mcp",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-mcp/data-sources/supbrd-plugmod-mcp.data_source.tool_receipts",
+            "route_id": "gateway.supbrd-plugmod-mcp.data_source.tool_receipts",
+            "scopes": [
+              "supbrd-plugmod-mcp.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-observability/health",
+            "route_id": "gateway.supbrd-plugmod-observability.health",
+            "scopes": [
+              "supbrd-plugmod-observability.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/commands/supbrd-plugmod-observability.command.acknowledge_incident",
+            "route_id": "gateway.supbrd-plugmod-observability.command.acknowledge_incident",
+            "scopes": [
+              "supbrd-plugmod-observability.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/commands/supbrd-plugmod-observability.command.resolve_incident",
+            "route_id": "gateway.supbrd-plugmod-observability.command.resolve_incident",
+            "scopes": [
+              "supbrd-plugmod-observability.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/commands/supbrd-plugmod-observability.command.retry_custom_job",
+            "route_id": "gateway.supbrd-plugmod-observability.command.retry_custom_job",
+            "scopes": [
+              "supbrd-plugmod-observability.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/commands/supbrd-plugmod-observability.command.replay_email_dead_letter",
+            "route_id": "gateway.supbrd-plugmod-observability.command.replay_email_dead_letter",
+            "scopes": [
+              "supbrd-plugmod-observability.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/commands/supbrd-plugmod-observability.command.discard_email_dead_letter",
+            "route_id": "gateway.supbrd-plugmod-observability.command.discard_email_dead_letter",
+            "scopes": [
+              "supbrd-plugmod-observability.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/data-sources/supbrd-plugmod-observability.data_source.platform_status",
+            "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_status",
+            "scopes": [
+              "supbrd-plugmod-observability.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/data-sources/supbrd-plugmod-observability.data_source.runtime_metrics",
+            "route_id": "gateway.supbrd-plugmod-observability.data_source.runtime_metrics",
+            "scopes": [
+              "supbrd-plugmod-observability.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/data-sources/supbrd-plugmod-observability.data_source.service_health",
+            "route_id": "gateway.supbrd-plugmod-observability.data_source.service_health",
+            "scopes": [
+              "supbrd-plugmod-observability.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/data-sources/supbrd-plugmod-observability.data_source.incidents",
+            "route_id": "gateway.supbrd-plugmod-observability.data_source.incidents",
+            "scopes": [
+              "supbrd-plugmod-observability.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/data-sources/supbrd-plugmod-observability.data_source.platform_custom_jobs",
+            "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_custom_jobs",
+            "scopes": [
+              "supbrd-plugmod-observability.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-observability",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-observability/data-sources/supbrd-plugmod-observability.data_source.platform_email_operations",
+            "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_email_operations",
+            "scopes": [
+              "supbrd-plugmod-observability.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/plugins/supbrd-plugmod-support/health",
+            "route_id": "gateway.supbrd-plugmod-support.health",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 5000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.update_support_settings",
+            "route_id": "gateway.supbrd-plugmod-support.command.update_support_settings",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.create_support_configuration",
+            "route_id": "gateway.supbrd-plugmod-support.command.create_support_configuration",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.update_support_configuration",
+            "route_id": "gateway.supbrd-plugmod-support.command.update_support_configuration",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.delete_support_configuration",
+            "route_id": "gateway.supbrd-plugmod-support.command.delete_support_configuration",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.rotate_support_webhook_secret",
+            "route_id": "gateway.supbrd-plugmod-support.command.rotate_support_webhook_secret",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.revoke_support_webhook_secret",
+            "route_id": "gateway.supbrd-plugmod-support.command.revoke_support_webhook_secret",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.send_inbox_message",
+            "route_id": "gateway.supbrd-plugmod-support.command.send_inbox_message",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.update_inbox_conversation",
+            "route_id": "gateway.supbrd-plugmod-support.command.update_inbox_conversation",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.create_support_provider",
+            "route_id": "gateway.supbrd-plugmod-support.command.create_support_provider",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.update_support_provider",
+            "route_id": "gateway.supbrd-plugmod-support.command.update_support_provider",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.delete_support_provider",
+            "route_id": "gateway.supbrd-plugmod-support.command.delete_support_provider",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.create_support_integration",
+            "route_id": "gateway.supbrd-plugmod-support.command.create_support_integration",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.update_support_integration",
+            "route_id": "gateway.supbrd-plugmod-support.command.update_support_integration",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.delete_support_integration",
+            "route_id": "gateway.supbrd-plugmod-support.command.delete_support_integration",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "POST",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/commands/supbrd-plugmod-support.command.publish_support_article",
+            "route_id": "gateway.supbrd-plugmod-support.command.publish_support_article",
+            "scopes": [
+              "supbrd-plugmod-support.write"
+            ],
+            "timeout_ms": 30000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_settings",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_settings",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.unified_inbox_items",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.unified_inbox_items",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.inbox_conversations",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.inbox_conversations",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.inbox_messages",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.inbox_messages",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_channels",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_channels",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_providers",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_providers",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_integrations",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_integrations",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_portals",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_portals",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_categories",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_categories",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_folders",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_folders",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_articles",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_articles",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          },
+          {
+            "audience": "superboard_front",
+            "auth_policy": "authenticated",
+            "destination": "supbrd-plugmod-support",
+            "method": "GET",
+            "path_pattern": "/_emdash/api/superboard/plugins/supbrd-plugmod-support/data-sources/supbrd-plugmod-support.data_source.support_assistant_tasks",
+            "route_id": "gateway.supbrd-plugmod-support.data_source.support_assistant_tasks",
+            "scopes": [
+              "supbrd-plugmod-support.read"
+            ],
+            "timeout_ms": 10000
+          }
+        ],
         "schema_version": "1.0.0",
-        "gateway_checksum": "sha256:1245858680f5b183a93deac76802033093853a4fb09d8528f58bdd3b25739d28"
+        "gateway_checksum": "sha256:f6030823216e8aacc4faf04cfc1f75fd9e0e61ab75a9af0106ebd97ed53bc7ff"
       },
       "instance_id": "mbza-development",
       "plugin_lock": [
@@ -3815,97 +6596,97 @@
           "version": "0.1.0"
         },
         {
-          "artifact_checksum": "sha256:a5b32b500cec73907ad17a7d0422f8bbf14d546e23a7dcdef9e14d8489ab1aaa",
+          "artifact_checksum": "sha256:853adac1bda5774658ed4862773fabba0dcd3dbe214ef9716856d799e0ebed1e",
           "native": false,
           "plugin_id": "supbrd-plug-audit",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:3a4041623ef83df688f4aed31493dc40f9f0737ba72ca95fceddd8cbefcdaff8",
+          "artifact_checksum": "sha256:ecca713f377cb0e7b94d8d442d2f924055ef7bd7bdcd475577c34789c6ad58de",
           "native": false,
           "plugin_id": "supbrd-plug-content",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:80bf6411572839b7c4a47c691fa96f4b67f1197d520ae8645f6afb937ea14bbc",
+          "artifact_checksum": "sha256:e2b377ecfc0c9fee5ea6155dfaab78c055ecb527cdafe72544aeef83e45de6b6",
           "native": false,
           "plugin_id": "supbrd-plug-products",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:12a3e771777c39c3775410d5f55cd86d1937be4080844838c4a7618fdb0284a2",
+          "artifact_checksum": "sha256:8e2073ced01e6a81259a77810138558e4c96655553e73a33a9776030fc9af1e8",
           "native": false,
           "plugin_id": "supbrd-plug-settings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:25674944b76a7d7fea6b38e97d4615ead1f9521d9b6523b35c6d4e44c41aa0ba",
+          "artifact_checksum": "sha256:7b951aff3211b82c40643c232cde022fd793165a2dd091379e54b564e872b0da",
           "native": false,
           "plugin_id": "supbrd-plug-user",
           "version": "1.3.0"
         },
         {
-          "artifact_checksum": "sha256:735c96d09bffe2116b85dff52603da4f461a900334ba009dbf702e62c1994860",
+          "artifact_checksum": "sha256:196de751ba0ca55d37c8f58a4d25ec382487a24e367cb32150596f6ed600219f",
           "native": false,
           "plugin_id": "supbrd-plugmod-analytics",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:13dcf3059dcdb390b99f26063b185615554f7dc8888b9141bc49bd0180d0eea5",
+          "artifact_checksum": "sha256:e5e562109b4d59b578ade86483af65fb62563a05547197a28723a30716d0dd28",
           "native": false,
           "plugin_id": "supbrd-plugmod-billing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:341d36595d4a0548017515041a2b4d5cc58543ac9aed5260dd85658a57a8febd",
+          "artifact_checksum": "sha256:199e166ba2dc76f65b964ecefac9ada36dd420c0a3ed9107141e6a1961f7694e",
           "native": false,
           "plugin_id": "supbrd-plugmod-dynamic-links",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:4352e1d8e2c5c2b64ca4f1af8bc3fcdc6116f296e210745957329e8a3bbfa1e4",
+          "artifact_checksum": "sha256:94859c224838a7a1c1319afeefebd8f4f3d08a7642e997595ed013d75ffafff1",
           "native": false,
           "plugin_id": "supbrd-plugmod-email",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:26bc3e25a0acdb63a220db668293d7f3078c7e3c323dcf1a5ddc12bb607b35ef",
+          "artifact_checksum": "sha256:842856bc0b2356667737aa6586a090a9f0e0ffdfe0d0bb0bcf0df8d472386d93",
           "native": false,
           "plugin_id": "supbrd-plugmod-files",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:9b02f2a9c2c195946bcc176f4bdc0da452e9aaa839415928262651613393b425",
+          "artifact_checksum": "sha256:d33f254024cdef3d50bffa06720816b6185b6cefef72180b23e93db0827087bb",
           "native": false,
           "plugin_id": "supbrd-plugmod-flows",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:14bcc868f5cb88f8ca810bf12aa1760ae783cf02759e917a13ed6223d3e969be",
+          "artifact_checksum": "sha256:9bbcd70a44a12bda1a74aebb5e4f0ed6c34e26b96b5dbd5a8168a3931b9844fd",
           "native": false,
           "plugin_id": "supbrd-plugmod-gateway",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:e219e1ae14911e020fe62a1dce0bf4c8082338a9ceb7bd0ae36ba62d8fb162d1",
+          "artifact_checksum": "sha256:8b033f535f5391df6e6c133923cda43833f064b910df547d0ba1b4f2c91c286f",
           "native": false,
           "plugin_id": "supbrd-plugmod-marketing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:a0eeb3b3ba7d28523b70b8208ab7460b1b6c09e96cf83c468423fb56f85683b8",
+          "artifact_checksum": "sha256:24e3e11acd59dd182e384046a9c82ac9cee4652569d75043a011bd93c996f9da",
           "native": false,
           "plugin_id": "supbrd-plugmod-mcp",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:d3a525087f3c4ae41beec09bb012147bf654f634be612d1b86226ca3cd1e75af",
+          "artifact_checksum": "sha256:b6e07022690705a58912364f79e8f736bd1d0ffa33dd06407e66540447614ef8",
           "native": false,
           "plugin_id": "supbrd-plugmod-observability",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:06b6bc504738f34b6eec181908be9269bd1e314fddd001c3f8ac5536ae87f3a9",
+          "artifact_checksum": "sha256:ad7e075548fa4f1a41d13f77bdb11e2843ee1c0ffa4d73dd1af061468ad8b601",
           "native": false,
           "plugin_id": "supbrd-plugmod-support",
           "version": "1.0.0"
@@ -5373,8 +8154,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5402,8 +8183,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5431,8 +8212,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5460,8 +8241,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5489,8 +8270,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount"
           ],
@@ -5516,8 +8297,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:aa00180a13f49e99c82fea3c692dbd6669c3c8e1bc64bd3b446c2a6d4cf3d6d9",
-          "build_id": "01J00000000000000000000240",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount"
           ],
@@ -5543,8 +8324,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:3426d2ed11a46785a7728e3c706296419f76cdb173edf2c6f61305daaab856c4",
-          "build_id": "01J00000000000000000000242",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount"
           ],
@@ -5570,8 +8351,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:ef3bf263ff47a387e89277a4d0beddaf44ec4ebbc0c00fc691de970bfe56a336",
-          "build_id": "01J00000000000000000000241",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount"
           ],
@@ -5597,8 +8378,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5626,8 +8407,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5655,8 +8436,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5684,8 +8465,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5713,8 +8494,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5742,8 +8523,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5771,8 +8552,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5800,8 +8581,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5829,8 +8610,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5858,8 +8639,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5887,8 +8668,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:fefdc946794b9aa9245f3e5754998c5606e0644e854d6d2edf6d8d0c2cb68daa",
-          "build_id": "6K40XY6XJ8XKGRS3ZJ2R04KCYT",
+          "build_checksum": "sha256:a55f39def8c62faff158c633fe4e2153d0801b0dd5c64a27ed2100cbe3f18b70",
+          "build_id": "3GZZVS1PSBFZ9M7B70GTQSZKES",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -5922,6 +8703,12 @@
       },
       "schema_version": "1.0.0"
     },
+    "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
+    "signature": {
+      "algorithm": "ES256",
+      "kid": "issue-70-parity",
+      "value": "2zaQlY4Sz6-RfgVTxfgRJEOTWMV-9S1T2r-YMYgvlg_s4JJrOTS5qWD6omIhRuwpmBmUiyVSUwdFTVqXZQIMqg"
+    },
     "validation_receipts": [
       {
         "receipt_id": "01J00000000000000000007004:schema",
@@ -5930,9 +8717,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "schema validation passed",
-        "receipt_checksum": "sha256:eca42b0b041ba0fc56aa2e73a8b264551c115c55a239086803a903196ece95ea"
+        "receipt_checksum": "sha256:cf235b2d6213864a5fa987ee4e32032241a72d3e6bb1045882c19f27e094219a"
       },
       {
         "receipt_id": "01J00000000000000000007004:normalization",
@@ -5941,9 +8728,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "normalization validation passed",
-        "receipt_checksum": "sha256:1aef6ee9690cda3b70d4f47949b2c72156e62213c9cdcbd20a7a2c70d8f7499f"
+        "receipt_checksum": "sha256:b05090146b3f93aa005ff5f896686805056b039285fb8eb94d48c83d2da3e722"
       },
       {
         "receipt_id": "01J00000000000000000007004:identity",
@@ -5952,9 +8739,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "identity validation passed",
-        "receipt_checksum": "sha256:f3a2db8c5fbd343b69a100c7ae255a4b58c7d5e26f8dcafafe2ad33d3375d6f0"
+        "receipt_checksum": "sha256:5d849a6938eeec26e518c266203fd7d3204dbeb834258277f3f04b6b66d911b2"
       },
       {
         "receipt_id": "01J00000000000000000007004:reference_graph",
@@ -5963,9 +8750,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "reference_graph validation passed",
-        "receipt_checksum": "sha256:b006873528a0f3f8c27ff0036de97153c80fe6ad57f281d25ff7379db139853f"
+        "receipt_checksum": "sha256:7b8197f69e1f50f40e06e235c19aa3c95de3795d5e2938d5f73017ecf45fb2a2"
       },
       {
         "receipt_id": "01J00000000000000000007004:routing",
@@ -5974,9 +8761,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "routing validation passed",
-        "receipt_checksum": "sha256:7a7b3604ba667046acdf40d6d1a485b9920f8a7a50d08c4cebfc8679f63f2dce"
+        "receipt_checksum": "sha256:8bdc8564215679908796b79449a824667858b12fedd97f94c3215390e7007739"
       },
       {
         "receipt_id": "01J00000000000000000007004:renderer_compatibility",
@@ -5985,9 +8772,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "renderer_compatibility validation passed",
-        "receipt_checksum": "sha256:4881ba0094cdd9ce28fa93a47717ff77bf3e9ea812d19ef10df30a9f2a826738"
+        "receipt_checksum": "sha256:297b89b9f8856207c64b0780c569615c42ec088dfd7b8bf8e6f1f2db8c57dfe8"
       },
       {
         "receipt_id": "01J00000000000000000007004:actions_data_sources",
@@ -5996,9 +8783,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "actions_data_sources validation passed",
-        "receipt_checksum": "sha256:b629a1b10ca9485de11f02d06263243bb557a49405fff35b8356141aeeb39fd0"
+        "receipt_checksum": "sha256:5ee54a9a005d8e1d851d3ce9f71cb967237e69cdb2a26dfee5a22ac4d4cd098a"
       },
       {
         "receipt_id": "01J00000000000000000007004:permissions_security",
@@ -6007,9 +8794,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "permissions_security validation passed",
-        "receipt_checksum": "sha256:8b7b7fd493d485f1ea5d45ef6c7a81064113856363026f6a7db260afe993792c"
+        "receipt_checksum": "sha256:c8434a13ea3193530d1fa6dea1871ea46c11edde2517676205f9398ecc35cb92"
       },
       {
         "receipt_id": "01J00000000000000000007004:translations_media",
@@ -6018,9 +8805,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "translations_media validation passed",
-        "receipt_checksum": "sha256:b3d4a29f4a762722d5b41982b24aca9d13dc90293cd65d9113f58fb2e46a1881"
+        "receipt_checksum": "sha256:634bad29e14589ffb82a4f9587151f0e0760f88cf7283ef8155a402b60f76e30"
       },
       {
         "receipt_id": "01J00000000000000000007004:plugins_stores_workers",
@@ -6029,9 +8816,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "plugins_stores_workers validation passed",
-        "receipt_checksum": "sha256:fe112eea77aaee51e035c6a38d54afb841e7e56b7848daf19bbc8360ab2b299c"
+        "receipt_checksum": "sha256:4ab057fe26b3ea2b37b593f12a76392c648fc42d09103cc08946f58b91423c63"
       },
       {
         "receipt_id": "01J00000000000000000007004:migrations",
@@ -6040,9 +8827,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "migrations validation passed",
-        "receipt_checksum": "sha256:23b3d27f5610f72e4531267d373d773a8e81858741fc8a852321d9cfa0aa924b"
+        "receipt_checksum": "sha256:e1ecf4fcb92cb577ae1cddd9acfd2b16a41d22d4ac2f31c38ff553b1034de7e0"
       },
       {
         "receipt_id": "01J00000000000000000007004:rollback_readiness",
@@ -6051,9 +8838,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "rollback_readiness validation passed",
-        "receipt_checksum": "sha256:e41e3bd7c8a8f324a46e4a13a9210cad531692b5984a248c1e871f1ade154e9e"
+        "receipt_checksum": "sha256:882e1df0c0c21bade76f9d969ab04dca1c898bd42f1043db49abf73017dfae8d"
       },
       {
         "receipt_id": "01J00000000000000000007004:integrity",
@@ -6062,10 +8849,12 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:1cec9061ead97f7d59b17e8686024ae95469d068e5adba257a3f6f89c3b64bdb",
+        "content_checksum": "sha256:4c361eba0e838eef502b7817bbee00696c5e7a0cafebf364c14bee8c7f95f3e7",
         "message": "integrity validation passed",
-        "receipt_checksum": "sha256:d52bd57854f21b3f9f4b7ed33dadeafdb31f33dbce50cda13ea11ba667b4d61d"
+        "receipt_checksum": "sha256:a9bc5a912224571e4e80a560c86b28e273c88a61cfd269ec0aec6db0f1f7f30a"
       }
-    ]
+    ],
+    "validation_set_checksum": "sha256:bcd7b4d85724991c1d7fc941ba4d77bac5cb15a4609fb5168518a7b70d9be5de",
+    "verification_status": "verified"
   }
 }

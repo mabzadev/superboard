@@ -17,6 +17,7 @@ test("injects every release operator endpoint below the authenticated EmDash API
 			"/_emdash/api/superboard/plugins/[pluginId]/lifecycle",
 			"/_emdash/api/superboard/plugins/stores",
 			"/_emdash/api/superboard/plugins/[pluginId]/data-sources/[dataSourceId]",
+			"/_emdash/api/superboard/plugins/[pluginId]/commands/[commandId]",
 			"/_emdash/superboard/releases/[candidateId]",
 			"/_emdash/superboard/activations/[candidateId]",
 			"/_emdash/superboard/rollbacks",

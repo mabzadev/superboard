@@ -45,6 +45,7 @@ export function configureSuperBoardPlugins(plugins) {
 					"health",
 					"settings/effective",
 					"commands/catalog",
+					"commands/execute",
 					"data-sources/catalog",
 				],
 				superboardManifest: manifest,

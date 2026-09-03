@@ -16,6 +16,14 @@ void test("the parity matrix is bound to the exact active Front Release", () => 
 		.toSorted();
 
 	assert.equal(matrix.release.content_checksum, release.release.content_checksum);
+	assert.deepEqual(matrix.release.signature, release.release.signature);
+	assert.equal(matrix.release.validation_set_checksum, release.release.validation_set_checksum);
+	assert.deepEqual(
+		matrix.release.validation_receipt_checksums,
+		release.release.validation_receipts.map(({ receipt_checksum: checksum }) => checksum),
+	);
+	assert.equal(matrix.release.verification_status, "verified");
+	assert.ok(release.release.validation_receipts.length > 0);
 	assert.equal(matrix.release.release_id, release.release.payload.release_id);
 	assert.equal(matrix.release.target_artifact_checksum, release.target_artifact_checksum);
 	assert.deepEqual(matrix.release.active_plugin_ids, activePluginIds);
@@ -62,6 +70,10 @@ void test("the release graph contains no route or submenu outside the generated 
 		({ kind, release_id: releaseId }) =>
 			kind === "submenu" && releaseId === release.release.payload.release_id,
 	);
+	const apiRows = matrix.rows.filter(
+		({ kind, release_id: releaseId }) =>
+			kind === "api" && releaseId === release.release.payload.release_id,
+	);
 
 	assert.deepEqual(
 		pageRows.map(({ route_id: routeId }) => routeId).toSorted(),
@@ -74,5 +86,29 @@ void test("the release graph contains no route or submenu outside the generated 
 		release.release.payload.presentation.navigation
 			.flatMap(({ items }) => items.map(({ route_id: routeId }) => routeId))
 			.toSorted(),
+	);
+	assert.deepEqual(
+		apiRows.map(({ gateway_route_id: routeId }) => routeId).toSorted(),
+		release.release.payload.gateway_manifest.routes
+			.map(({ route_id: routeId }) => routeId)
+			.toSorted(),
+	);
+	const activePlugins = new Set(release.active_plugin_ids);
+	const releasePaths = new Set(
+		release.release.payload.front_route_manifest.routes.map(({ path_pattern: path }) => path),
+	);
+	const activeDashboardPaths = matrix.rows
+		.filter(({ kind, target }) => kind === "dashboard" && activePlugins.has(target))
+		.map(({ id }) =>
+			id
+				.slice("dashboard:".length)
+				.replaceAll("[lang]", ":lang")
+				.replaceAll("[id]", ":id")
+				.replaceAll("[authId]", ":authId"),
+		);
+	assert.deepEqual(
+		activeDashboardPaths.filter((path) => !releasePaths.has(path)),
+		[],
+		"an active Dashboard route is coded outside the Front Route Manifest",
 	);
 });

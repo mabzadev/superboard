@@ -31,8 +31,13 @@ interface RuntimeManifest {
 }
 
 interface RuntimeRouteContext {
-	kv: { get<T>(key: string): Promise<T | null> };
+	kv: { get(key: string): Promise<unknown> };
+	input?: unknown;
 }
+
+const multilineSettingPattern = /(?:origins|locales|content_types|scopes|json)$/u;
+const pluginIdPrefixPattern = /^supbrd-(?:plug|plugmod)-/u;
+const settingLabelSeparatorPattern = /[_-]/u;
 
 const topologyManifests = new Map(
 	topology.plugins.map(({ manifest }) => [
@@ -61,28 +66,89 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 			admin: { handler: async () => adminBlocks(manifest) },
 			contract: { handler: async () => manifest },
 			health: {
-				handler: async (ctx: RuntimeRouteContext) => ({
-					plugin_id: manifest.plugin_id,
-					plugin_version: manifest.plugin_version,
-					artifact_checksum: manifest.artifact_checksum,
-					status: "ready",
-					stores: manifest.stores.length,
-					commands: manifest.commands.length,
-					data_sources: manifest.data_sources.length,
-					renderers: manifest.renderers.length,
-					settings: await effectiveSettings(ctx.kv, manifest.settings.schema.properties),
-				}),
+				handler: async (ctx: RuntimeRouteContext) => {
+					const runtime = await runtimeHealth(ctx.kv);
+					return {
+						plugin_id: manifest.plugin_id,
+						plugin_version: manifest.plugin_version,
+						artifact_checksum: manifest.artifact_checksum,
+						...runtime,
+						stores: manifest.stores.length,
+						commands: manifest.commands.length,
+						data_sources: manifest.data_sources.length,
+						renderers: manifest.renderers.length,
+						settings: await effectiveSettings(ctx.kv, manifest.settings.schema.properties),
+					};
+				},
 			},
 			"settings/effective": {
 				handler: async (ctx: RuntimeRouteContext) =>
 					effectiveSettings(ctx.kv, manifest.settings.schema.properties),
 			},
 			"commands/catalog": { handler: async () => ({ items: manifest.commands }) },
+			"commands/execute": {
+				handler: async (ctx: RuntimeRouteContext) => executeCommand(manifest, ctx.input),
+			},
 			"data-sources/catalog": { handler: async () => ({ items: manifest.data_sources }) },
 		},
 		admin: {
 			settingsSchema,
 			pages: [{ path: "/", label: pluginLabel(manifest.plugin_id), icon: "settings" }],
+		},
+	};
+}
+
+async function runtimeHealth(kv: RuntimeRouteContext["kv"]) {
+	const value = await kv.get("runtime:health");
+	if (
+		typeof value === "object" &&
+		value !== null &&
+		"status" in value &&
+		value.status === "unavailable"
+	) {
+		return {
+			status: "unavailable" as const,
+			error_code:
+				"error_code" in value && typeof value.error_code === "string"
+					? value.error_code
+					: "PLUGIN_RUNTIME_UNAVAILABLE",
+		};
+	}
+	return { status: "ready" as const, error_code: null };
+}
+
+export async function executeConfiguredSuperBoardCommand(pluginId: string, input: unknown) {
+	const plugin = createConfiguredSuperBoardPlugin(pluginId);
+	return plugin.routes["commands/execute"].handler({
+		input,
+		kv: { get: async () => null },
+	});
+}
+
+function executeCommand(manifest: RuntimeManifest, input: unknown) {
+	if (
+		typeof input !== "object" ||
+		input === null ||
+		!("command_id" in input) ||
+		typeof input.command_id !== "string" ||
+		!("operation_id" in input) ||
+		typeof input.operation_id !== "string" ||
+		!("payload" in input) ||
+		typeof input.payload !== "object" ||
+		input.payload === null
+	) {
+		throw new TypeError("PLUGIN_COMMAND_INPUT_INVALID");
+	}
+	if (!manifest.commands.some(({ command_id: commandId }) => commandId === input.command_id)) {
+		throw new TypeError("PLUGIN_COMMAND_NOT_DECLARED");
+	}
+	return {
+		operation_id: input.operation_id,
+		status: "completed",
+		result: {
+			plugin_id: manifest.plugin_id,
+			command_id: input.command_id,
+			payload: input.payload,
 		},
 	};
 }
@@ -130,13 +196,13 @@ function adminBlocks(manifest: RuntimeManifest) {
 }
 
 async function effectiveSettings(
-	kv: { get<T>(key: string): Promise<T | null> },
+	kv: { get(key: string): Promise<unknown> },
 	properties: Record<string, JsonSetting>,
 ) {
 	const values: Record<string, unknown> = {};
 	const secrets_set: Record<string, boolean> = {};
 	for (const [key, field] of Object.entries(properties)) {
-		const value = await kv.get<unknown>(`settings:${key}`);
+		const value = await kv.get(`settings:${key}`);
 		if (field.writeOnly === true) secrets_set[key] = value !== null && value !== "";
 		else values[key] = value;
 	}
@@ -168,13 +234,13 @@ function settingField(key: string, field: JsonSetting): RuntimeSettingField {
 	return {
 		type: "string",
 		label,
-		multiline: /(?:origins|locales|content_types|scopes|json)$/u.test(key),
+		multiline: multilineSettingPattern.test(key),
 	};
 }
 
 function pluginLabel(pluginId: string) {
 	return pluginId
-		.replace(/^supbrd-(?:plug|plugmod)-/u, "")
+		.replace(pluginIdPrefixPattern, "")
 		.split("-")
 		.map(settingLabel)
 		.join(" ");
@@ -182,7 +248,7 @@ function pluginLabel(pluginId: string) {
 
 function settingLabel(value: string) {
 	return value
-		.split(/[_-]/u)
+		.split(settingLabelSeparatorPattern)
 		.filter(Boolean)
 		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
 		.join(" ");

@@ -51,6 +51,6 @@ const title = viewTitle ? i18n._(viewTitle) : i18n._("site.front.title");
 		<title>{title}</title>
 	</head>
 	<body>
-		<NativeFrontApp projection={projection} client:load />
+		<NativeFrontApp projection={projection} client:only="react" />
 	</body>
 </html>

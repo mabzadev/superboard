@@ -25,6 +25,7 @@
 		"@noble/secp256k1": "^3.0.0",
 		"@superboard/supbrd-core": "workspace:*",
 		"@superboard/supbrd-plug-user": "workspace:*",
+		"@superboard/supbrd-runtime-plugins": "workspace:*",
 		"astro": "catalog:",
 		"emdash": "workspace:*",
 		"layerr": "^3.0.0",

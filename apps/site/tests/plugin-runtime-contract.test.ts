@@ -18,6 +18,7 @@ test("every SuperBoard plugin has an executable sandbox contract, settings and B
 				"health",
 				"settings/effective",
 				"commands/catalog",
+				"commands/execute",
 				"data-sources/catalog",
 			]),
 		);

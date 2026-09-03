@@ -226,7 +226,7 @@
 		"sdk:catalog:test": "node --test scripts/sdk-catalog.test.mjs scripts/sdk-release-history.test.mjs",
 		"sdk:documentation:write": "node scripts/sdk-documentation.mjs write",
 		"sdk:documentation:check": "node scripts/sdk-documentation.mjs check && node --test scripts/sdk-documentation.test.mjs",
-		"emdash:parity:generate": "pnpm --filter @superboard/supbrd-core build && pnpm --filter @superboard/supbrd-runtime-plugins build && node scripts/emdash-parity-matrix.mjs --topology-only --write && pnpm --filter @superboard/supbrd-runtime-plugins build && node scripts/emdash-parity-matrix.mjs --topology-only --write && pnpm --filter @superboard/supbrd-runtime-plugins build && node scripts/emdash-parity-release.mjs --write && node scripts/emdash-parity-matrix.mjs --write && node scripts/superboard-emdash-seed.mjs --write",
+		"emdash:parity:generate": "node scripts/emdash-parity-generate.mjs",
 		"emdash:parity:check": "pnpm --filter @superboard/site... build && node scripts/emdash-parity-matrix.mjs --topology-only && node scripts/emdash-parity-release.mjs && node scripts/emdash-parity-matrix.mjs && node scripts/superboard-emdash-seed.mjs && node --test scripts/emdash-parity-matrix.test.mjs scripts/emdash-plugin-parity-gate.test.mjs scripts/emdash-required-proof-runner.test.mjs scripts/target-compiler.test.mjs scripts/emdash-runtime-boundary.test.mjs && node scripts/emdash-required-proof-runner.mjs",
 		"emdash:seed:generate": "node scripts/superboard-emdash-seed.mjs --write",
 		"emdash:seed:check": "node scripts/superboard-emdash-seed.mjs",

@@ -1,10 +1,6 @@
-import {
-	resolveFrontRequest,
-	type CompiledFrontRelease,
-	type FrontReleasePayload,
-} from "@superboard/supbrd-core";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { resolveFrontRequest, type CompiledFrontRelease } from "@superboard/supbrd-core";
+import { createElement, type ReactElement } from "react";
+import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import parityRelease from "../../../config/superboard-parity-release.json";
@@ -14,18 +10,11 @@ import type { FrontPageModel } from "../src/lib/front-page.js";
 import { projectNativeFrontPresentation } from "../src/lib/native-front-presentation.js";
 import { editableViewFromEntry } from "../src/lib/native-front-views.js";
 
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- generated artifact is schema-validated before this test runs
-const release = parityRelease.release.payload as unknown as FrontReleasePayload;
-const compiledRelease: CompiledFrontRelease = {
-	payload: release,
-	content_checksum: parityRelease.release.content_checksum,
-	signature: { algorithm: "ES256", kid: "issue-70-parity", value: "verified-by-generator" },
-	validation_receipts: [],
-	validation_set_checksum: `sha256:${"0".repeat(64)}`,
-	verification_status: "verified",
-};
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the generator verifies the signed artifact before this test runs
+const compiledRelease = parityRelease.release as unknown as CompiledFrontRelease;
+const release = compiledRelease.payload;
 
-test("renders every active Release route and submenu without a client error", () => {
+test("renders every active Release route and submenu in the client without an error", async () => {
 	const clientErrors: unknown[][] = [];
 	const errorSpy = vi
 		.spyOn(console, "error")
@@ -44,20 +33,34 @@ test("renders every active Release route and submenu without a client error", ()
 		}
 		expect(release.front_route_manifest.routes).toHaveLength(110);
 		for (const route of release.front_route_manifest.routes) {
-			const markup = renderReleaseRoute(route);
-			expect(markup.length, route.route_id).toBeGreaterThan(100);
-			expect(markup, route.route_id).not.toContain("View configuration is incomplete.");
-			expect(markup, route.route_id).not.toContain("No data available for this surface yet.");
+			const element = releaseRouteElement(route);
+			const container = document.createElement("div");
+			document.body.append(container);
+			const root = createRoot(container, {
+				onRecoverableError: (error) => clientErrors.push([error]),
+			});
+			root.render(element);
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(container.querySelector(".native-front"), route.route_id).not.toBeNull();
+			expect(container.innerHTML.length, route.route_id).toBeGreaterThan(100);
+			expect(container.innerHTML, route.route_id).not.toContain(
+				"View configuration is incomplete.",
+			);
+			expect(container.innerHTML, route.route_id).not.toContain(
+				"No data available for this surface yet.",
+			);
+			root.unmount();
+			container.remove();
 		}
 		expect(clientErrors).toEqual([]);
 	} finally {
 		errorSpy.mockRestore();
 	}
-});
+}, 60_000);
 
-function renderReleaseRoute(
-	route: FrontReleasePayload["front_route_manifest"]["routes"][number],
-): string {
+function releaseRouteElement(
+	route: CompiledFrontRelease["payload"]["front_route_manifest"]["routes"][number],
+): ReactElement {
 	const path = route.path_pattern
 		.replaceAll(/:lang/gu, "en")
 		.replaceAll(/:[^/]+/gu, "parity-id")
@@ -111,5 +114,5 @@ function renderReleaseRoute(
 	const seededView = seed.content.views.find(({ data }) => data.path === path);
 	const view = seededView ? editableViewFromEntry({ data: seededView.data }) : null;
 	const projection = projectNativeFrontPresentation(model, "en", view ? { view } : undefined);
-	return renderToStaticMarkup(createElement(NativeFrontApp, { projection }));
+	return createElement(NativeFrontApp, { projection });
 }

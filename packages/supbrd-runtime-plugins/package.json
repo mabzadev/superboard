@@ -5,6 +5,10 @@
 	"private": true,
 	"type": "module",
 	"exports": {
+		"./command-runtime": {
+			"types": "./src/runtime.ts",
+			"default": "./dist/command-runtime.js"
+		},
 		"./*": "./dist/*.js"
 	},
 	"files": ["dist"],
@@ -14,7 +18,7 @@
 	},
 	"devDependencies": {
 		"@superboard/supbrd-core": "workspace:*",
-		"esbuild": "0.25.4",
+		"esbuild": "0.25.12",
 		"tsdown": "catalog:",
 		"typescript": "catalog:"
 	}

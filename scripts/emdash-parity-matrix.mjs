@@ -634,6 +634,12 @@ export function buildParityMatrix() {
 					source: relative(root, parityReleasePath),
 					release_id: parityRelease.release.payload.release_id,
 					content_checksum: parityRelease.release.content_checksum,
+					signature: parityRelease.release.signature,
+					validation_set_checksum: parityRelease.release.validation_set_checksum,
+					validation_receipt_checksums: parityRelease.release.validation_receipts.map(
+						({ receipt_checksum: receiptChecksum }) => receiptChecksum,
+					),
+					verification_status: parityRelease.release.verification_status,
 					target: parityRelease.target,
 					environment: parityRelease.environment,
 					target_artifact_checksum: parityRelease.target_artifact_checksum,
@@ -772,13 +778,6 @@ export function buildReleaseParityRows(parityRelease, topology) {
 		return [
 			...contributionRows,
 			releaseRow({
-				id: `release:api:${pluginId}`,
-				kind: "api",
-				target: pluginId,
-				test: parityInstanceTest,
-				artifact_checksum: manifest.artifact_checksum,
-			}),
-			releaseRow({
 				id: `release:worker-health:${pluginId}`,
 				kind: "worker_health",
 				target: pluginId,
@@ -787,6 +786,18 @@ export function buildReleaseParityRows(parityRelease, topology) {
 			}),
 		];
 	});
+	const gatewayRows = payload.gateway_manifest.routes.map((route) =>
+		releaseRow({
+			id: `release:api:${route.route_id}`,
+			kind: "api",
+			target: activePluginIds.includes(route.destination) ? route.destination : "supbrd-core",
+			test: parityInstanceTest,
+			gateway_route_id: route.route_id,
+			method: route.method,
+			path: route.path_pattern,
+			destination: route.destination,
+		}),
+	);
 	const dependencyRows = payload.dependency_policies.map((dependency) => {
 		const pluginId = activePluginIds.find(
 			(candidate) => `dependency.${candidate.replaceAll("-", "_")}` === dependency.dependency_id,
@@ -818,7 +829,14 @@ export function buildReleaseParityRows(parityRelease, topology) {
 		release_id: releaseId,
 		state,
 	}));
-	return [...pageRows, ...submenuRows, ...pluginRows, ...dependencyRows, ...failureRows];
+	return [
+		...pageRows,
+		...submenuRows,
+		...pluginRows,
+		...gatewayRows,
+		...dependencyRows,
+		...failureRows,
+	];
 }
 
 function readParityRelease() {
@@ -1369,6 +1387,19 @@ function writeJson(path, value) {
 	writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function writeManifestMigration(topology) {
+	const generated = manifestRegistryMigration(topology);
+	if (!existsSync(manifestMigrationPath)) {
+		writeFileSync(manifestMigrationPath, generated);
+		return;
+	}
+	if (readFileSync(manifestMigrationPath, "utf8") !== generated) {
+		throw new Error(
+			`Published migration drift: ${relative(root, manifestMigrationPath)}; add the next migration instead`,
+		);
+	}
+}
+
 function manifestRegistryMigration(topology) {
 	const lines = ["PRAGMA foreign_keys = ON;", ""];
 	for (const { manifest } of topology.plugins) {
@@ -1420,6 +1451,7 @@ function pluginCompatibilityRegistry() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const topology = buildPluginTopology();
 	const topologyOnly = process.argv.includes("--topology-only");
+	const manageMigration = !process.argv.includes("--skip-migration");
 	const matrix = topologyOnly ? { rows: [], release: null } : buildParityMatrix();
 	const compatibility = pluginCompatibilityRegistry();
 	const errors = validateArtifacts(matrix, topology, { requireRelease: !topologyOnly });
@@ -1465,8 +1497,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 				[compatibilityPath, compatibility],
 			];
 	if (process.argv.includes("--write")) {
+		if (manageMigration) writeManifestMigration(topology);
 		for (const [path, value] of generatedArtifacts) writeJson(path, value);
-		writeFileSync(manifestMigrationPath, manifestRegistryMigration(topology));
 	} else {
 		for (const [path, value] of generatedArtifacts) {
 			if (
@@ -1478,8 +1510,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			}
 		}
 		if (
-			!existsSync(manifestMigrationPath) ||
-			readFileSync(manifestMigrationPath, "utf8") !== manifestRegistryMigration(topology)
+			manageMigration &&
+			(!existsSync(manifestMigrationPath) ||
+				readFileSync(manifestMigrationPath, "utf8") !== manifestRegistryMigration(topology))
 		) {
 			console.error(`Generated artifact drift: ${relative(root, manifestMigrationPath)}`);
 			process.exitCode = 1;

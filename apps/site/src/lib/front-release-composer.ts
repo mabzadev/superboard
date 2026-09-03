@@ -91,6 +91,50 @@ export function composeFrontReleaseInput(
 			redirect: null,
 		}));
 	const navigation = composeNavigation(surfaces);
+	const gatewayRoutes = [
+		{
+			route_id: "gateway.superboard_site.health",
+			method: "GET" as const,
+			path_pattern: "/superboard-system/health",
+			destination: "superboard-site",
+			auth_policy: "public" as const,
+			audience: "system",
+			scopes: [],
+			timeout_ms: 1_000,
+		},
+		...activePlugins.flatMap(({ manifest }) => [
+			{
+				route_id: `gateway.${manifest.plugin_id}.health`,
+				method: "GET" as const,
+				path_pattern: `/_emdash/api/plugins/${manifest.plugin_id}/health`,
+				destination: manifest.plugin_id,
+				auth_policy: "authenticated" as const,
+				audience: "superboard_front",
+				scopes: [`${manifest.plugin_id}.read`],
+				timeout_ms: 5_000,
+			},
+			...manifest.commands.map((command) => ({
+				route_id: `gateway.${command.command_id}`,
+				method: "POST" as const,
+				path_pattern: `/_emdash/api/superboard/plugins/${manifest.plugin_id}/commands/${command.command_id}`,
+				destination: manifest.plugin_id,
+				auth_policy: "authenticated" as const,
+				audience: command.audience,
+				scopes: [command.permission],
+				timeout_ms: 30_000,
+			})),
+			...manifest.data_sources.map((dataSource) => ({
+				route_id: `gateway.${dataSource.data_source_id}`,
+				method: "GET" as const,
+				path_pattern: `/_emdash/api/superboard/plugins/${manifest.plugin_id}/data-sources/${dataSource.data_source_id}`,
+				destination: manifest.plugin_id,
+				auth_policy: "authenticated" as const,
+				audience: dataSource.audience,
+				scopes: [dataSource.permission],
+				timeout_ms: 10_000,
+			})),
+		]),
+	];
 	const renderers = new Map<string, RendererDescriptor>();
 	for (const renderer of CORE_FRONT_RENDERER_DESCRIPTORS) {
 		renderers.set(renderer.renderer_id, renderer);
@@ -122,7 +166,7 @@ export function composeFrontReleaseInput(
 		gateway_manifest: {
 			schema_version: "1.0.0",
 			gateway_manifest_id: "01J00000000000000000000221",
-			routes: [],
+			routes: gatewayRoutes,
 		},
 		presentation: {
 			pages: surfaces

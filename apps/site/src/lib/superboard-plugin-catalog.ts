@@ -366,6 +366,25 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 					input.checked_at,
 					input.expires_at,
 				),
+			db
+				.prepare(
+					`INSERT INTO superboard_dependency_health
+					 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
+					 VALUES (?, ?, ?, ?, ?, ?)
+					 ON CONFLICT(instance_id, dependency_id) DO UPDATE SET
+					   status = excluded.status,
+					   evidence_checksum = excluded.evidence_checksum,
+					   checked_at = excluded.checked_at,
+					   expires_at = excluded.expires_at`,
+				)
+				.bind(
+					input.instance_id,
+					dependencyId(manifest.plugin_id),
+					derived.worker_status === "ready" ? "ready" : "unavailable",
+					plugin.health_evidence_checksum,
+					input.checked_at,
+					input.expires_at,
+				),
 		);
 
 		const nextState: SuperBoardPluginLifecycleState = failed ? "staged" : "installed";

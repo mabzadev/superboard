@@ -379,13 +379,10 @@ const manifestArtifact = {
 function pluginArtifactContent(manifest: unknown): unknown {
 	return {
 		manifest,
-		renderer_implementations: rendererBuilds.map(
-			({ renderer_id, build_id, props_schema_name }) => ({
-				renderer_id,
-				build_id,
-				props_schema_name,
-			}),
-		),
+		front_bundle: {
+			build_id: frontBundle.build_id,
+			build_checksum: frontBundle.build_checksum,
+		},
 	};
 }
 
@@ -516,18 +513,8 @@ async function rendererDescriptor(
 		renderer_id: definition.renderer_id,
 		plugin_id: pluginId,
 		plugin_version: pluginVersion,
-		build_id:
-			definition.renderer_id === USER_RENDERER_IDS.admin
-				? frontBundle.build_id
-				: definition.build_id,
-		build_checksum:
-			definition.renderer_id === USER_RENDERER_IDS.admin
-				? frontBundle.build_checksum
-				: await sha256Canonical({
-						renderer_id: definition.renderer_id,
-						build_id: definition.build_id,
-						props_schema_checksum: propsSchema.checksum,
-					}),
+		build_id: frontBundle.build_id,
+		build_checksum: frontBundle.build_checksum,
 		abi_version: "1.0.0",
 		runtime_range: ">=0.1.0 <0.2.0",
 		props_schema: {

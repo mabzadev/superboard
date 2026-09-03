@@ -10,10 +10,7 @@ export function superboardReleaseOperatorApi() {
 				injectRoute({
 					pattern: "/_emdash/api/superboard/plugins/user/install",
 					entrypoint: fileURLToPath(
-						new URL(
-							"./src/pages/_superboard/api/plugins/user/install.ts",
-							import.meta.url,
-						),
+						new URL("./src/pages/_superboard/api/plugins/user/install.ts", import.meta.url),
 					),
 				});
 				injectRoute({
@@ -25,10 +22,7 @@ export function superboardReleaseOperatorApi() {
 				injectRoute({
 					pattern: "/_emdash/api/superboard/plugins/[pluginId]/lifecycle",
 					entrypoint: fileURLToPath(
-						new URL(
-							"./src/pages/_superboard/api/plugins/[pluginId]/lifecycle.ts",
-							import.meta.url,
-						),
+						new URL("./src/pages/_superboard/api/plugins/[pluginId]/lifecycle.ts", import.meta.url),
 					),
 				});
 				injectRoute({
@@ -38,8 +32,7 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
-					pattern:
-						"/_emdash/api/superboard/plugins/[pluginId]/data-sources/[dataSourceId]",
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/data-sources/[dataSourceId]",
 					entrypoint: fileURLToPath(
 						new URL(
 							"./src/pages/_superboard/api/plugins/[pluginId]/data-sources/[dataSourceId].ts",
@@ -48,21 +41,24 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
-					pattern: "/_emdash/superboard/releases/[candidateId]",
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/commands/[commandId]",
 					entrypoint: fileURLToPath(
 						new URL(
-							"./src/pages/_superboard/release-console/[candidateId].ts",
+							"./src/pages/_superboard/api/plugins/[pluginId]/commands/[commandId].ts",
 							import.meta.url,
 						),
 					),
 				});
 				injectRoute({
+					pattern: "/_emdash/superboard/releases/[candidateId]",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/release-console/[candidateId].ts", import.meta.url),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/superboard/activations/[candidateId]",
 					entrypoint: fileURLToPath(
-						new URL(
-							"./src/pages/_superboard/activation-console/[candidateId].ts",
-							import.meta.url,
-						),
+						new URL("./src/pages/_superboard/activation-console/[candidateId].ts", import.meta.url),
 					),
 				});
 				injectRoute({
