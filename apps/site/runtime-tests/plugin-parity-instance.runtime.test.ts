@@ -13,6 +13,7 @@ import { getFrontReleaseCandidate } from "../src/lib/front-workflow-repository.j
 import {
 	importPluginStoreEncryptionKey,
 	listPluginStoreRecords,
+	loadPluginStoreRecord,
 	putPluginStoreRecord,
 } from "../src/lib/plugin-store-repository.js";
 import {
@@ -127,8 +128,9 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 	const encryptionKey = await importPluginStoreEncryptionKey(encodedEncryptionKey);
 	let storeIndex = 0;
 	let commandIndex = 0;
+	let workerCommandIndex = 0;
 
-	for (const { manifest } of catalog) {
+	for (const { manifest, worker_descriptor: workerDescriptor } of catalog) {
 		const plugin = createConfiguredSuperBoardPlugin(manifest.plugin_id);
 		expect(plugin.version, manifest.plugin_id).toBe(manifest.plugin_version);
 		const contract = await plugin.routes.contract.handler({} as never);
@@ -148,6 +150,13 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 			plugin_version: manifest.plugin_version,
 			status: "ready",
 			error_code: null,
+			checks: {
+				handshake: "ready",
+				dependencies: "ready",
+				callback: workerDescriptor?.lease === "attempt_scoped" ? "ready" : "not_required",
+				capacity: "ready",
+				last_result: "ready",
+			},
 		});
 		expect(commands).toEqual({ items: manifest.commands });
 		expect(dataSources).toEqual({ items: manifest.data_sources });
@@ -196,6 +205,7 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 
 		for (const command of manifest.commands) {
 			commandIndex += 1;
+			if (workerDescriptor?.lease === "attempt_scoped") workerCommandIndex += 1;
 			const operationId = `issue-70-command-${commandIndex}`;
 			const inputSchema = manifest.schemas.find(
 				({ schema_id: schemaId }) => schemaId === command.input_schema_id,
@@ -214,7 +224,44 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 			expect(result).toMatchObject({
 				operation_id: operationId,
 				status: "completed",
-				result: { plugin_id: manifest.plugin_id, command_id: command.command_id },
+				result: {
+					plugin_id: manifest.plugin_id,
+					command_id: command.command_id,
+					effect: expect.any(String),
+					worker: {
+						status: "completed",
+						execution: workerDescriptor ? "dedicated" : "native",
+						descriptor_checksum: workerDescriptor?.checksum ?? null,
+						attempt_id:
+							workerDescriptor?.lease === "attempt_scoped"
+								? `${operationId}:attempt:1`
+								: operationId,
+					},
+					mutation: expect.objectContaining({
+						store_id: expect.stringMatching(`${manifest.plugin_id}\\.store\\.`),
+						entity_type: expect.any(String),
+						entity_id: expect.any(String),
+					}),
+				},
+			});
+			const mutation = result.result.mutation as {
+				store_id: string;
+				entity_type: string;
+				entity_id: string;
+			};
+			const storedEffect = await loadPluginStoreRecord(
+				env.DB,
+				manifest.plugin_id,
+				mutation.store_id,
+				instanceId,
+				mutation.entity_type,
+				mutation.entity_id,
+				encryptionKey,
+				projectRef,
+			);
+			expect(storedEffect?.payload).toMatchObject({
+				command_id: command.command_id,
+				effect: result.result.effect,
 			});
 			const replay = await execute();
 			expect(replay.status, command.command_id).toBe(200);
@@ -227,23 +274,34 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 			commandId.endsWith(".application_sign_in"),
 		);
 	if (!signInCommand) throw new Error("Application sign-in command is missing");
-	const executeInvalidAction = () =>
+	const executeInvalidAction = (body: Record<string, unknown>, operationId: string) =>
 		operatorRequest(
 			`/_emdash/api/superboard/plugins/supbrd-plug-user/commands/${signInCommand.command_id}?project_ref=${projectRef}`,
 			{
-				body: {},
-				headers: { "Idempotency-Key": "issue-70-invalid-sign-in" },
+				body,
+				headers: { "Idempotency-Key": operationId },
 			},
 		);
-	const invalidAction = await executeInvalidAction();
+	const invalidAction = await executeInvalidAction({}, "issue-70-invalid-sign-in");
 	expect(invalidAction.status).toBe(400);
 	const invalidActionBody = await invalidAction.json();
 	expect(invalidActionBody).toEqual({
 		error: { code: "PLUGIN_COMMAND_INPUT_INVALID" },
 	});
-	const invalidActionReplay = await executeInvalidAction();
+	const invalidActionReplay = await executeInvalidAction({}, "issue-70-invalid-sign-in");
 	expect(invalidActionReplay.status).toBe(400);
 	expect(await invalidActionReplay.json()).toEqual(invalidActionBody);
+	const invalidEmailAction = await executeInvalidAction(
+		{
+			email: "not-an-email",
+			password: "secret",
+		},
+		"issue-70-invalid-email",
+	);
+	expect(invalidEmailAction.status).toBe(400);
+	expect(await invalidEmailAction.json()).toEqual({
+		error: { code: "PLUGIN_COMMAND_INPUT_INVALID" },
+	});
 	const completedCommands = await env.DB.prepare(
 		`SELECT COUNT(*) count FROM superboard_plugin_command_operations
 			 WHERE instance_id = ? AND state = 'completed'`,
@@ -257,14 +315,20 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 	)
 		.bind(instanceId)
 		.first<{ count: number }>();
-	expect(failedCommands?.count).toBe(1);
+	expect(failedCommands?.count).toBe(2);
 	const commandStoreRecords = await env.DB.prepare(
 		`SELECT COUNT(*) count FROM superboard_plugin_store_records
-			 WHERE instance_id = ? AND entity_type = 'command_execution'`,
+			 WHERE instance_id = ? AND last_operation_id LIKE 'issue-70-command-%:store'`,
 	)
 		.bind(instanceId)
 		.first<{ count: number }>();
 	expect(commandStoreRecords?.count).toBe(commandIndex);
+	const workerLeases = await env.DB.prepare(
+		`SELECT COUNT(*) count,
+		        SUM(CASE WHEN consumed_at IS NOT NULL THEN 1 ELSE 0 END) consumed
+		 FROM superboard_worker_execution_leases`,
+	).first<{ count: number; consumed: number }>();
+	expect(workerLeases).toEqual({ count: workerCommandIndex, consumed: workerCommandIndex });
 
 	const runtimeHealth = await env.DB.prepare(
 		`SELECT plugin_id, status FROM superboard_plugin_runtime_health

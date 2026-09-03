@@ -1,3 +1,4 @@
+import { canonicalizeReleasePayload, sha256Canonical } from "@superboard/supbrd-core";
 import { executeConfiguredSuperBoardCommand } from "@superboard/supbrd-runtime-plugins/command-runtime";
 import type { APIRoute } from "astro";
 
@@ -9,6 +10,9 @@ import {
 } from "../../../../../../lib/plugin-command-authority.js";
 import {
 	importPluginStoreEncryptionKey,
+	acceptWorkerCallback,
+	issueWorkerExecutionLease,
+	loadPluginStoreRecord,
 	putPluginStoreRecord,
 } from "../../../../../../lib/plugin-store-repository.js";
 import { getSiteEnv } from "../../../../../../lib/site-env.js";
@@ -26,6 +30,9 @@ const clientErrorCodes = new Set([
 	"PROJECT_REF_INVALID",
 ]);
 const unavailableCodes = new Set([
+	"PLUGIN_COMMAND_HANDLER_NOT_IMPLEMENTED",
+	"PLUGIN_COMMAND_SCHEMA_MISSING",
+	"PLUGIN_COMMAND_SCHEMA_UNSUPPORTED",
 	"PLUGIN_MANIFEST_NOT_ACTIVE",
 	"PLUGIN_STORE_ENCRYPTION_KEY_INVALID",
 ]);
@@ -35,10 +42,11 @@ export const POST: APIRoute = async (context) => {
 	if (denied) return denied;
 	const pluginId = context.params.pluginId ?? "";
 	const commandId = context.params.commandId ?? "";
-	const manifest = superBoardRuntimePluginCatalog().plugins.find(
+	const plugin = superBoardRuntimePluginCatalog().plugins.find(
 		({ manifest: candidate }) => candidate.plugin_id === pluginId,
-	)?.manifest;
-	if (!manifest) return jsonResponse({ error: { code: "PLUGIN_NOT_FOUND" } }, 404);
+	);
+	if (!plugin) return jsonResponse({ error: { code: "PLUGIN_NOT_FOUND" } }, 404);
+	const { manifest, worker_descriptor: workerDescriptor } = plugin;
 	const fullCommandId = commandId.includes(".command.")
 		? commandId
 		: `${pluginId}.command.${commandId}`;
@@ -72,26 +80,59 @@ export const POST: APIRoute = async (context) => {
 		if (operation.status === "replay") return operation.response;
 		pendingOperation = { operation_id: operationId, encryption_key: encryptionKey };
 		const requestPayload: unknown = await context.request.json();
+		const workerAttempt =
+			workerDescriptor?.lease === "attempt_scoped"
+				? await createWorkerAttempt(env.DB, pluginId, operationId, acceptedAt)
+				: null;
 		const result = await executeConfiguredSuperBoardCommand(pluginId, {
 			command_id: fullCommandId,
 			operation_id: operationId,
+			...(workerAttempt ? { attempt_id: workerAttempt.attempt_id } : {}),
 			payload: typeof requestPayload === "object" && requestPayload !== null ? requestPayload : {},
 		});
-		await putPluginStoreRecord(env.DB, {
+		if (workerAttempt) {
+			await consumeWorkerAttempt(env.DB, pluginId, operationId, workerAttempt, result);
+		}
+		const mutation = result.result.mutation;
+		const current = await loadPluginStoreRecord(
+			env.DB,
+			pluginId,
+			mutation.store_id,
+			env.SUPERBOARD_INSTANCE_ID,
+			mutation.entity_type,
+			mutation.entity_id,
+			encryptionKey,
+			projectRef,
+		);
+		const stored = await putPluginStoreRecord(env.DB, {
 			plugin_id: pluginId,
-			store_id: commandStoreId(manifest.stores, fullCommandId),
+			store_id: mutation.store_id,
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
 			project_ref: projectRef,
-			entity_type: "command_execution",
-			entity_id: operationId,
-			expected_revision: null,
+			entity_type: mutation.entity_type,
+			entity_id: mutation.entity_id,
+			expected_revision: current?.revision ?? null,
 			operation_id: `${operationId}:store`,
-			payload: { command_id: fullCommandId, input: requestPayload, output: result },
+			payload: {
+				command_id: fullCommandId,
+				effect: result.result.effect,
+				value: mutation.value,
+				worker: result.result.worker,
+			},
 			updated_at: new Date().toISOString(),
 			encryption_key: encryptionKey,
 		});
-		const response = jsonResponse(result, 200);
+		const response = jsonResponse(
+			{
+				...result,
+				result: {
+					...result.result,
+					mutation: { ...mutation, revision: stored.revision },
+				},
+			},
+			200,
+		);
 		await completeRepositoryCommand(env.DB, {
 			operation_id: operationId,
 			response,
@@ -120,12 +161,63 @@ export const POST: APIRoute = async (context) => {
 	}
 };
 
-function commandStoreId(stores: Array<{ store_id: string }>, commandId: string): string {
-	const operation = commandId.split(".command.").at(-1)?.replaceAll("-", "_") ?? "";
-	const matching = stores
-		.filter(({ store_id: storeId }) => operation.includes(storeId.split(".store.").at(-1) ?? ""))
-		.toSorted((left, right) => right.store_id.length - left.store_id.length)[0];
-	const storeId = matching?.store_id ?? stores[0]?.store_id;
-	if (!storeId) throw new Error("PLUGIN_COMMAND_STORE_UNAVAILABLE");
-	return storeId;
+async function createWorkerAttempt(
+	db: D1Database,
+	pluginId: string,
+	operationId: string,
+	issuedAt: string,
+) {
+	const keyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+		"sign",
+		"verify",
+	]);
+	const attemptId = `${operationId}:attempt:1`;
+	const callbackToken = crypto.randomUUID();
+	await issueWorkerExecutionLease(db, {
+		attempt_id: attemptId,
+		plugin_id: pluginId,
+		operation_id: operationId,
+		callback_token: callbackToken,
+		callback_public_jwk: await crypto.subtle.exportKey("jwk", keyPair.publicKey),
+		issued_at: issuedAt,
+		expires_at: new Date(Date.parse(issuedAt) + 30_000).toISOString(),
+	});
+	return { attempt_id: attemptId, callback_token: callbackToken, private_key: keyPair.privateKey };
+}
+
+async function consumeWorkerAttempt(
+	db: D1Database,
+	pluginId: string,
+	operationId: string,
+	attempt: Awaited<ReturnType<typeof createWorkerAttempt>>,
+	result: unknown,
+) {
+	const completedAt = new Date().toISOString();
+	const payloadChecksum = await sha256Canonical(result);
+	const signedPayload = canonicalizeReleasePayload({
+		attempt_id: attempt.attempt_id,
+		plugin_id: pluginId,
+		operation_id: operationId,
+		payload_checksum: payloadChecksum,
+		completed_at: completedAt,
+	});
+	const signature = await crypto.subtle.sign(
+		{ name: "ECDSA", hash: "SHA-256" },
+		attempt.private_key,
+		new TextEncoder().encode(signedPayload),
+	);
+	await acceptWorkerCallback(db, {
+		attempt_id: attempt.attempt_id,
+		plugin_id: pluginId,
+		callback_token: attempt.callback_token,
+		payload_checksum: payloadChecksum,
+		signature: bytesToBase64(new Uint8Array(signature)),
+		completed_at: completedAt,
+	});
+}
+
+function bytesToBase64(value: Uint8Array): string {
+	let binary = "";
+	for (const byte of value) binary += String.fromCodePoint(byte);
+	return btoa(binary);
 }

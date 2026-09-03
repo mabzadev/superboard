@@ -1037,6 +1037,7 @@ function pluginTopologyEntry(pluginId, kind, worker) {
 			command_id: `${pluginId}.command.${name}`,
 			input_schema_id: schemaReference("command_input_v1"),
 			output_schema_id: schemaReference("command_output_v1"),
+			store_id: `${pluginId}.store.${storeForOperation(name, storeNames)}`,
 			audience: "superboard_front",
 			permission: `${pluginId}.write`,
 			failure_policy: "fail_closed",

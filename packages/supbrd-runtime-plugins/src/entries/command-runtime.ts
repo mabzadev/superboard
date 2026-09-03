@@ -1,1 +1,1 @@
-export { executeConfiguredSuperBoardCommand } from "../runtime.js";
+export { executeConfiguredSuperBoardCommand, probeConfiguredSuperBoardPlugin } from "../runtime.js";

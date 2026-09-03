@@ -5,6 +5,7 @@ import {
 	type SuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
 import { userPluginManifest, validateUserPluginManifest } from "@superboard/supbrd-plug-user";
+import { probeConfiguredSuperBoardPlugin } from "@superboard/supbrd-runtime-plugins/command-runtime";
 
 import topologyJson from "../../../../config/emdash-plugin-topology.json";
 import compatibilityJson from "../../../../config/superboard-plugin-compatibility.json";
@@ -21,7 +22,6 @@ export type SuperBoardPluginLifecycleState =
 	| "purged";
 
 interface WorkerDescriptor {
-	deployment_status: "ready" | "not_ready";
 	checksum: string;
 	authoritative_writes: boolean;
 	store_ids: string[];
@@ -1063,10 +1063,8 @@ async function derivePluginContract(
 			migrations_checksum: await sha256Canonical(store.migrations),
 		})),
 	);
-	const workerStatus =
-		manifest.plugin_kind === "full" || workerDescriptor?.deployment_status === "ready"
-			? ("ready" as const)
-			: ("unavailable" as const);
+	const runtimeHealth = await probeConfiguredSuperBoardPlugin(manifest.plugin_id);
+	const workerStatus = runtimeHealth.status;
 	const capabilities = manifest.capabilities.toSorted();
 	const capabilityApprovalChecksum = await sha256Canonical({
 		target_artifact_checksum: input.target_artifact_checksum,
@@ -1159,6 +1157,7 @@ async function derivePluginContract(
 			artifact_checksum: manifest.artifact_checksum,
 			worker_descriptor_checksum: workerDescriptor?.checksum ?? null,
 			status: workerStatus,
+			runtime_health: runtimeHealth,
 			checked_at: input.checked_at,
 			expires_at: input.expires_at,
 		}),
