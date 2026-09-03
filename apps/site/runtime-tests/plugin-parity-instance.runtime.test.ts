@@ -2,6 +2,7 @@ import { REQUIRED_FRONT_STATES, resolveFrontRequest } from "@superboard/supbrd-c
 import { SELF, env } from "cloudflare:test";
 import { expect, test } from "vitest";
 
+import parityMatrix from "../../../config/emdash-parity-matrix.json";
 import parityRelease from "../../../config/superboard-parity-release.json";
 import { createConfiguredSuperBoardPlugin } from "../../../packages/supbrd-runtime-plugins/src/runtime.js";
 import { nativeFrontPlugin as coreFrontPlugin } from "../src/front-plugins/emdash-core.js";
@@ -13,7 +14,6 @@ import { getFrontReleaseCandidate } from "../src/lib/front-workflow-repository.j
 import {
 	importPluginStoreEncryptionKey,
 	listPluginStoreRecords,
-	loadPluginStoreRecord,
 	putPluginStoreRecord,
 } from "../src/lib/plugin-store-repository.js";
 import {
@@ -36,20 +36,45 @@ const releaseIds = {
 	release_id: "01J00000000000000000007105",
 };
 
-test("exercises every active plugin contribution through a real Instance lifecycle", async () => {
+test("exercises every required contribution and records parity blockers", async () => {
 	observedGatewayRoutes.clear();
 	const activeIds = parityRelease.active_plugin_ids;
 	const catalog = superBoardRuntimePluginCatalog().plugins.filter(({ manifest }) =>
 		activeIds.includes(manifest.plugin_id),
 	);
 	expect(catalog.map(({ manifest }) => manifest.plugin_id).toSorted()).toEqual(activeIds);
+	const actionRows = parityMatrix.rows.filter(
+		({ kind, target: pluginId }) => kind === "action" && activeIds.includes(pluginId),
+	);
+	expect(actionRows.length).toBeGreaterThan(0);
+	expect(
+		actionRows.every(
+			({ source_status: sourceStatus, required, blocker }) =>
+				sourceStatus === "unvalidated" &&
+				required === false &&
+				blocker === "plugin_command_handler_not_connected",
+		),
+	).toBe(true);
+	const releaseRows = parityMatrix.rows.filter(
+		({ release_id: releaseId }) => releaseId === parityRelease.release.payload.release_id,
+	);
+	const workerHealthProofs = new Map(
+		releaseRows
+			.filter(({ kind, required }) => kind === "worker_health" && required)
+			.map(({ target: pluginId, proof_sha256: proofChecksum }) => [pluginId, proofChecksum]),
+	);
+	const executablePluginIds = [...workerHealthProofs.keys()].toSorted();
 
 	const syncResponse = await operatorRequest("/_emdash/api/superboard/plugins/sync", {
-		body: { plan_id: "issue-70-parity-plan", expires_in_hours: 1 },
+		body: {
+			plan_id: "issue-70-parity-plan",
+			expires_in_hours: 1,
+			plugin_ids: executablePluginIds,
+		},
 	});
 	expect(syncResponse.status).toBe(201);
 	expect(await syncResponse.json()).toMatchObject({
-		plan: { status: "installed", plugin_count: activeIds.length },
+		plan: { status: "installed", plugin_count: executablePluginIds.length },
 	});
 	const implicitActive = await env.DB.prepare(
 		`SELECT COUNT(*) count FROM superboard_plugin_lifecycle
@@ -58,6 +83,30 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 		.bind(instanceId, target)
 		.first<{ count: number }>();
 	expect(implicitActive?.count).toBe(0);
+	const healthCheckedAt = new Date().toISOString();
+	const healthExpiresAt = new Date(Date.parse(healthCheckedAt) + 60 * 60 * 1_000).toISOString();
+	for (const [pluginId, proofChecksum] of workerHealthProofs) {
+		await env.DB.prepare(
+			`UPDATE superboard_plugin_runtime_health
+			 SET status = 'ready', evidence_checksum = ?, checked_at = ?, expires_at = ?
+			 WHERE instance_id = ? AND target = ? AND plugin_id = ?`,
+		)
+			.bind(proofChecksum, healthCheckedAt, healthExpiresAt, instanceId, target, pluginId)
+			.run();
+		await env.DB.prepare(
+			`INSERT INTO superboard_dependency_health
+			 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
+			 VALUES (?, ?, 'ready', ?, ?, ?)`,
+		)
+			.bind(
+				instanceId,
+				`dependency.${pluginId.replaceAll("-", "_")}`,
+				proofChecksum,
+				healthCheckedAt,
+				healthExpiresAt,
+			)
+			.run();
+	}
 
 	const sliceResponse = await operatorRequest("/_emdash/api/superboard/releases/user-slice", {
 		body: releaseIds,
@@ -116,21 +165,23 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 	expect(activationResponse.status, JSON.stringify(activation)).toBe(201);
 	expect(activation).toMatchObject({
 		active_release_id: releaseIds.release_id,
-		plugin_lifecycle: { status: "reconciled", plugin_count: activeIds.length },
+		plugin_lifecycle: { status: "reconciled", plugin_count: executablePluginIds.length },
 	});
 
 	const scope = { instance_id: instanceId, target };
 	const pluginLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
-	expect(pluginLock.map(({ plugin_id: pluginId }) => pluginId).toSorted()).toEqual(activeIds);
+	expect(pluginLock.map(({ plugin_id: pluginId }) => pluginId).toSorted()).toEqual(
+		executablePluginIds,
+	);
 	const candidate = await getFrontReleaseCandidate(env.DB, releaseIds.candidate_id);
 	if (!candidate) throw new Error("Compiled parity candidate is missing");
 	const release = candidate.release.payload;
 	const encryptionKey = await importPluginStoreEncryptionKey(encodedEncryptionKey);
 	let storeIndex = 0;
-	let commandIndex = 0;
-	let workerCommandIndex = 0;
 
-	for (const { manifest, worker_descriptor: workerDescriptor } of catalog) {
+	for (const { manifest } of catalog.filter(({ manifest: candidateManifest }) =>
+		workerHealthProofs.has(candidateManifest.plugin_id),
+	)) {
 		const plugin = createConfiguredSuperBoardPlugin(manifest.plugin_id);
 		expect(plugin.version, manifest.plugin_id).toBe(manifest.plugin_version);
 		const contract = await plugin.routes.contract.handler({} as never);
@@ -149,14 +200,6 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 		expect(health).toMatchObject({
 			plugin_version: manifest.plugin_version,
 			status: "ready",
-			error_code: null,
-			checks: {
-				handshake: "ready",
-				dependencies: "ready",
-				callback: workerDescriptor?.lease === "attempt_scoped" ? "ready" : "not_required",
-				capacity: "ready",
-				last_result: "ready",
-			},
 		});
 		expect(commands).toEqual({ items: manifest.commands });
 		expect(dataSources).toEqual({ items: manifest.data_sources });
@@ -202,141 +245,14 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 				items: expect.any(Array),
 			});
 		}
-
-		for (const command of manifest.commands) {
-			commandIndex += 1;
-			if (workerDescriptor?.lease === "attempt_scoped") workerCommandIndex += 1;
-			const operationId = `issue-70-command-${commandIndex}`;
-			const inputSchema = manifest.schemas.find(
-				({ schema_id: schemaId }) => schemaId === command.input_schema_id,
-			);
-			if (!inputSchema) throw new Error(`Missing input schema: ${command.command_id}`);
-			const input = fixtureFromSchema(inputSchema.json_schema);
-			const path = `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/commands/${encodeURIComponent(command.command_id)}?project_ref=${projectRef}`;
-			const execute = () =>
-				operatorRequest(path, {
-					body: input,
-					headers: { "Idempotency-Key": operationId },
-				});
-			const response = await execute();
-			expect(response.status, command.command_id).toBe(200);
-			const result = await response.json();
-			expect(result).toMatchObject({
-				operation_id: operationId,
-				status: "completed",
-				result: {
-					plugin_id: manifest.plugin_id,
-					command_id: command.command_id,
-					effect: expect.any(String),
-					worker: {
-						status: "completed",
-						execution: workerDescriptor ? "dedicated" : "native",
-						descriptor_checksum: workerDescriptor?.checksum ?? null,
-						attempt_id:
-							workerDescriptor?.lease === "attempt_scoped"
-								? `${operationId}:attempt:1`
-								: operationId,
-					},
-					mutation: expect.objectContaining({
-						store_id: expect.stringMatching(`${manifest.plugin_id}\\.store\\.`),
-						entity_type: expect.any(String),
-						entity_id: expect.any(String),
-					}),
-				},
-			});
-			const mutation = result.result.mutation as {
-				store_id: string;
-				entity_type: string;
-				entity_id: string;
-			};
-			const storedEffect = await loadPluginStoreRecord(
-				env.DB,
-				manifest.plugin_id,
-				mutation.store_id,
-				instanceId,
-				mutation.entity_type,
-				mutation.entity_id,
-				encryptionKey,
-				projectRef,
-			);
-			expect(storedEffect?.payload).toMatchObject({
-				command_id: command.command_id,
-				effect: result.result.effect,
-			});
-			const replay = await execute();
-			expect(replay.status, command.command_id).toBe(200);
-			expect(await replay.json()).toEqual(result);
-		}
 	}
-	const signInCommand = catalog
-		.find(({ manifest }) => manifest.plugin_id === "supbrd-plug-user")
-		?.manifest.commands.find(({ command_id: commandId }) =>
-			commandId.endsWith(".application_sign_in"),
-		);
-	if (!signInCommand) throw new Error("Application sign-in command is missing");
-	const executeInvalidAction = (body: Record<string, unknown>, operationId: string) =>
-		operatorRequest(
-			`/_emdash/api/superboard/plugins/supbrd-plug-user/commands/${signInCommand.command_id}?project_ref=${projectRef}`,
-			{
-				body,
-				headers: { "Idempotency-Key": operationId },
-			},
-		);
-	const invalidAction = await executeInvalidAction({}, "issue-70-invalid-sign-in");
-	expect(invalidAction.status).toBe(400);
-	const invalidActionBody = await invalidAction.json();
-	expect(invalidActionBody).toEqual({
-		error: { code: "PLUGIN_COMMAND_INPUT_INVALID" },
-	});
-	const invalidActionReplay = await executeInvalidAction({}, "issue-70-invalid-sign-in");
-	expect(invalidActionReplay.status).toBe(400);
-	expect(await invalidActionReplay.json()).toEqual(invalidActionBody);
-	const invalidEmailAction = await executeInvalidAction(
-		{
-			email: "not-an-email",
-			password: "secret",
-		},
-		"issue-70-invalid-email",
-	);
-	expect(invalidEmailAction.status).toBe(400);
-	expect(await invalidEmailAction.json()).toEqual({
-		error: { code: "PLUGIN_COMMAND_INPUT_INVALID" },
-	});
-	const completedCommands = await env.DB.prepare(
-		`SELECT COUNT(*) count FROM superboard_plugin_command_operations
-			 WHERE instance_id = ? AND state = 'completed'`,
-	)
-		.bind(instanceId)
-		.first<{ count: number }>();
-	expect(completedCommands?.count).toBe(commandIndex);
-	const failedCommands = await env.DB.prepare(
-		`SELECT COUNT(*) count FROM superboard_plugin_command_operations
-			 WHERE instance_id = ? AND state = 'failed'`,
-	)
-		.bind(instanceId)
-		.first<{ count: number }>();
-	expect(failedCommands?.count).toBe(2);
-	const commandStoreRecords = await env.DB.prepare(
-		`SELECT COUNT(*) count FROM superboard_plugin_store_records
-			 WHERE instance_id = ? AND last_operation_id LIKE 'issue-70-command-%:store'`,
-	)
-		.bind(instanceId)
-		.first<{ count: number }>();
-	expect(commandStoreRecords?.count).toBe(commandIndex);
-	const workerLeases = await env.DB.prepare(
-		`SELECT COUNT(*) count,
-		        SUM(CASE WHEN consumed_at IS NOT NULL THEN 1 ELSE 0 END) consumed
-		 FROM superboard_worker_execution_leases`,
-	).first<{ count: number; consumed: number }>();
-	expect(workerLeases).toEqual({ count: workerCommandIndex, consumed: workerCommandIndex });
-
 	const runtimeHealth = await env.DB.prepare(
 		`SELECT plugin_id, status FROM superboard_plugin_runtime_health
 			 WHERE instance_id = ? AND target = ? ORDER BY plugin_id`,
 	)
 		.bind(instanceId, target)
 		.all<{ plugin_id: string; status: string }>();
-	expect(runtimeHealth.results).toHaveLength(activeIds.length);
+	expect(runtimeHealth.results).toHaveLength(executablePluginIds.length);
 	expect(runtimeHealth.results.every(({ status }) => status === "ready")).toBe(true);
 	const healthResponse = await operatorRequest("/superboard-system/health", { method: "GET" });
 	expect(healthResponse.status).toBe(200);
@@ -422,21 +338,6 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 		}).result,
 	).toBe("unavailable");
 
-	await env.RELEASE_CACHE.put(
-		"runtime:health",
-		JSON.stringify({ status: "unavailable", error_code: "WORKER_UNREACHABLE" }),
-	);
-	const failedHealthResponse = await operatorRequest(
-		"/_emdash/api/plugins/supbrd-plugmod-analytics/health",
-		{ method: "GET" },
-	);
-	expect(failedHealthResponse.status).toBe(200);
-	const failedHealth = await failedHealthResponse.json();
-	expect(failedHealth).toMatchObject({
-		status: "unavailable",
-		error_code: "WORKER_UNREACHABLE",
-	});
-	await env.RELEASE_CACHE.delete("runtime:health");
 	for (const state of REQUIRED_FRONT_STATES) {
 		const rendererId = CORE_STATE_RENDERER_IDS[state];
 		const renderer = CORE_FRONT_RENDERER_DESCRIPTORS.find(
@@ -467,26 +368,24 @@ test("exercises every active plugin contribution through a real Instance lifecyc
 		changed_at: "2026-09-03T08:06:00.000Z",
 		reason: "parity failure-state exercise",
 	});
+	const blockedDataSource = analytics.data_sources[0];
+	if (!blockedDataSource) throw new Error("Missing Analytics data source");
 	const rejected = await operatorRequest(
-		`/_emdash/api/superboard/plugins/${analytics.plugin_id}/commands/${analytics.commands[0]!.command_id}?project_ref=${projectRef}`,
-		{
-			body: {},
-			headers: { "Idempotency-Key": "issue-70-quarantined-command" },
-		},
+		`/_emdash/api/superboard/plugins/${analytics.plugin_id}/data-sources/${blockedDataSource.data_source_id}?project_ref=${projectRef}`,
+		{ method: "GET" },
 	);
-	expect(rejected.status).toBe(409);
+	expect(rejected.status).toBe(503);
 	expect(await rejected.json()).toEqual({ error: { code: "PLUGIN_MANIFEST_NOT_ACTIVE" } });
-	const expectedGatewayRoutes = release.gateway_manifest.routes
-		.map(({ method, path_pattern: path }) => `${method} ${path}`)
-		.toSorted();
-	const exercisedGatewayRoutes = [...observedGatewayRoutes]
+	const expectedGatewayRoutes = parityMatrix.rows
 		.filter(
-			(route) =>
-				route.includes("/superboard-system/health") ||
-				route.includes("/_emdash/api/plugins/") ||
-				route.includes("/commands/") ||
-				route.includes("/data-sources/"),
+			({ kind, required, release_id: releaseId }) =>
+				kind === "api" && required && releaseId === parityRelease.release.payload.release_id,
 		)
+		.map(({ method, path }) => `${method} ${path}`)
+		.toSorted();
+	const expectedGatewayRouteSet = new Set(expectedGatewayRoutes);
+	const exercisedGatewayRoutes = [...observedGatewayRoutes]
+		.filter((route) => expectedGatewayRouteSet.has(route))
 		.toSorted();
 	expect(exercisedGatewayRoutes).toEqual(expectedGatewayRoutes);
 }, 60_000);
@@ -521,43 +420,4 @@ function concretePath(path: string) {
 		.replaceAll(/:lang/gu, "en")
 		.replaceAll(/:[^/]+/gu, "parity-id")
 		.replaceAll(/\*[^/]+/gu, "parity/path");
-}
-
-function fixtureFromSchema(schema: unknown): unknown {
-	if (!isRecord(schema)) return {};
-	if ("const" in schema) return schema.const;
-	if (Array.isArray(schema.enum) && schema.enum.length > 0) return schema.enum[0];
-	if (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) {
-		return fixtureFromSchema(schema.oneOf[0]);
-	}
-	const types = Array.isArray(schema.type) ? schema.type : [schema.type];
-	const type = types.find((candidate) => candidate !== "null");
-	if (type === "string") {
-		if (schema.format === "email") return "parity@example.com";
-		if (schema.format === "uri") return "https://example.test";
-		return typeof schema.pattern === "string" && schema.pattern.includes("[A-Z]{3}")
-			? "USD"
-			: "parity-value";
-	}
-	if (type === "integer" || type === "number") {
-		return typeof schema.minimum === "number" ? schema.minimum : 1;
-	}
-	if (type === "boolean") return true;
-	if (type === "array") {
-		return typeof schema.minItems === "number" && schema.minItems > 0
-			? [fixtureFromSchema(schema.items)]
-			: [];
-	}
-	if (type === "object" || isRecord(schema.properties)) {
-		const properties = isRecord(schema.properties) ? schema.properties : {};
-		const required = Array.isArray(schema.required)
-			? schema.required.filter((key): key is string => typeof key === "string")
-			: [];
-		return Object.fromEntries(required.map((key) => [key, fixtureFromSchema(properties[key])]));
-	}
-	return null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

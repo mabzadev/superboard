@@ -63,20 +63,6 @@ describe("supbrd-plug-user", () => {
 				.map(({ store_id }) => store_id)
 				.every((storeId) => userPluginManifest.stores.some(({ store_id }) => store_id === storeId)),
 		).toBe(true);
-		expect(
-			userPluginManifest.commands.every(({ store_id: storeId }) =>
-				userPluginManifest.stores.some(({ store_id }) => store_id === storeId),
-			),
-		).toBe(true);
-	});
-
-	test("rejects a command whose Store is outside the plugin manifest", async () => {
-		const drifted = structuredClone(userPluginManifest);
-		drifted.commands[0]!.store_id = "supbrd-plug-user.store.undeclared";
-		expect(await validateUserPluginManifest(drifted)).toMatchObject({
-			valid: false,
-			errors: expect.arrayContaining(["COMMAND_STORE_REFERENCE_INVALID"]),
-		});
 	});
 
 	test("detects mutation of the packaged implementation contract", async () => {

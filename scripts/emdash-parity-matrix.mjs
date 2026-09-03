@@ -749,6 +749,9 @@ export function buildReleaseParityRows(parityRelease, topology) {
 					kind: "action",
 					target: pluginId,
 					test: parityInstanceTest,
+					source_status: "unvalidated",
+					blocker: "plugin_command_handler_not_connected",
+					required: false,
 					contribution_id: command.command_id,
 					contribution_checksum: command.checksum,
 				}),
@@ -792,6 +795,13 @@ export function buildReleaseParityRows(parityRelease, topology) {
 			kind: "api",
 			target: activePluginIds.includes(route.destination) ? route.destination : "supbrd-core",
 			test: parityInstanceTest,
+			...(route.path_pattern.includes("/commands/")
+				? {
+						source_status: "unvalidated",
+						blocker: "plugin_command_handler_not_connected",
+						required: false,
+					}
+				: {}),
 			gateway_route_id: route.route_id,
 			method: route.method,
 			path: route.path_pattern,
@@ -1037,7 +1047,6 @@ function pluginTopologyEntry(pluginId, kind, worker) {
 			command_id: `${pluginId}.command.${name}`,
 			input_schema_id: schemaReference("command_input_v1"),
 			output_schema_id: schemaReference("command_output_v1"),
-			store_id: `${pluginId}.store.${storeForOperation(name, storeNames)}`,
 			audience: "superboard_front",
 			permission: `${pluginId}.write`,
 			failure_policy: "fail_closed",

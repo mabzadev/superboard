@@ -222,6 +222,7 @@ export async function listPluginStoreRecords(
 		plugin_id: string;
 		store_id: string;
 		instance_id: string;
+		target?: "local" | "development" | "production";
 		project_ref: string;
 		entity_type?: string;
 		limit?: number;
@@ -230,6 +231,32 @@ export async function listPluginStoreRecords(
 	},
 ) {
 	assertPlugin(input.plugin_id);
+	const installed = await db
+		.prepare(
+			`SELECT artifact.manifest_json
+			 FROM superboard_plugin_lifecycle AS lifecycle
+			 JOIN superboard_plugin_manifest_artifacts AS artifact
+			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
+			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ? AND lifecycle.plugin_id = ?
+			   AND lifecycle.state = 'active' AND artifact.plugin_id = lifecycle.plugin_id`,
+		)
+		.bind(input.instance_id, input.target ?? "local", input.plugin_id)
+		.first<{ manifest_json: string }>();
+	if (!installed) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
+	const manifest: unknown = JSON.parse(installed.manifest_json);
+	const manifestVerification =
+		input.plugin_id === "supbrd-plug-user"
+			? await validateUserPluginManifest(manifest)
+			: await verifySuperBoardPluginManifest(manifest);
+	if (
+		!manifestVerification.valid ||
+		!isManifest(manifest) ||
+		!manifest.stores.some(
+			(store) => store.store_id === input.store_id && store.authority === input.plugin_id,
+		)
+	) {
+		throw new Error("STORE_READ_AUTHORITY_REJECTED");
+	}
 	if (!input.store_id.startsWith(`${input.plugin_id}.store.`)) {
 		throw new Error("STORE_NAMESPACE_REJECTED");
 	}

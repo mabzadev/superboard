@@ -249,7 +249,6 @@ const commands = await Promise.all([
 	contribution("command", "application_sign_in", {
 		input_schema_id: schemaId("application_sign_in.v1"),
 		output_schema_id: schemaId("application_session.v1"),
-		store_id: `${pluginId}.store.user_sessions`,
 		audience: "application_client",
 		permission: "application.identity.sign_in",
 		failure_policy: "fail_closed",
@@ -257,7 +256,6 @@ const commands = await Promise.all([
 	contribution("command", "update_profile", {
 		input_schema_id: schemaId("user_profile_update.v1"),
 		output_schema_id: schemaId("user_profile.v1"),
-		store_id: `${pluginId}.store.user_directory`,
 		audience: "superboard_front",
 		permission: "users.write",
 		failure_policy: "fail_closed",
@@ -265,7 +263,6 @@ const commands = await Promise.all([
 	contribution("command", "suspend_member", {
 		input_schema_id: schemaId("user_member_suspend.v1"),
 		output_schema_id: schemaId("user_member.v1"),
-		store_id: `${pluginId}.store.user_directory`,
 		audience: "superboard_front",
 		permission: "users.write",
 		failure_policy: "fail_closed",
@@ -273,7 +270,6 @@ const commands = await Promise.all([
 	contribution("command", "link_provider", {
 		input_schema_id: schemaId("provider_link.v1"),
 		output_schema_id: schemaId("provider.v1"),
-		store_id: `${pluginId}.store.user_credentials`,
 		audience: "application_client",
 		permission: "application.identity.providers.write",
 		failure_policy: "fail_closed",
@@ -281,7 +277,6 @@ const commands = await Promise.all([
 	contribution("command", "revoke_application_session", {
 		input_schema_id: schemaId("session_revoke.v1"),
 		output_schema_id: schemaId("application_session.v1"),
-		store_id: `${pluginId}.store.user_sessions`,
 		audience: "application_client",
 		permission: "application.identity.sessions.write",
 		failure_policy: "fail_closed",

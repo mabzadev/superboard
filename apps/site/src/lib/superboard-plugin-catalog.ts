@@ -5,7 +5,6 @@ import {
 	type SuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
 import { userPluginManifest, validateUserPluginManifest } from "@superboard/supbrd-plug-user";
-import { probeConfiguredSuperBoardPlugin } from "@superboard/supbrd-runtime-plugins/command-runtime";
 
 import topologyJson from "../../../../config/emdash-plugin-topology.json";
 import compatibilityJson from "../../../../config/superboard-plugin-compatibility.json";
@@ -22,6 +21,7 @@ export type SuperBoardPluginLifecycleState =
 	| "purged";
 
 interface WorkerDescriptor {
+	deployment_status: "ready" | "not_ready";
 	checksum: string;
 	authoritative_writes: boolean;
 	store_ids: string[];
@@ -362,25 +362,6 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 					manifest.plugin_id,
 					manifest.artifact_checksum,
 					derived.worker_status,
-					plugin.health_evidence_checksum,
-					input.checked_at,
-					input.expires_at,
-				),
-			db
-				.prepare(
-					`INSERT INTO superboard_dependency_health
-					 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
-					 VALUES (?, ?, ?, ?, ?, ?)
-					 ON CONFLICT(instance_id, dependency_id) DO UPDATE SET
-					   status = excluded.status,
-					   evidence_checksum = excluded.evidence_checksum,
-					   checked_at = excluded.checked_at,
-					   expires_at = excluded.expires_at`,
-				)
-				.bind(
-					input.instance_id,
-					dependencyId(manifest.plugin_id),
-					derived.worker_status === "ready" ? "ready" : "unavailable",
 					plugin.health_evidence_checksum,
 					input.checked_at,
 					input.expires_at,
@@ -1063,8 +1044,10 @@ async function derivePluginContract(
 			migrations_checksum: await sha256Canonical(store.migrations),
 		})),
 	);
-	const runtimeHealth = await probeConfiguredSuperBoardPlugin(manifest.plugin_id);
-	const workerStatus = runtimeHealth.status;
+	const workerStatus =
+		manifest.plugin_kind === "full" || workerDescriptor?.deployment_status === "ready"
+			? ("ready" as const)
+			: ("unavailable" as const);
 	const capabilities = manifest.capabilities.toSorted();
 	const capabilityApprovalChecksum = await sha256Canonical({
 		target_artifact_checksum: input.target_artifact_checksum,
@@ -1157,7 +1140,6 @@ async function derivePluginContract(
 			artifact_checksum: manifest.artifact_checksum,
 			worker_descriptor_checksum: workerDescriptor?.checksum ?? null,
 			status: workerStatus,
-			runtime_health: runtimeHealth,
 			checked_at: input.checked_at,
 			expires_at: input.expires_at,
 		}),

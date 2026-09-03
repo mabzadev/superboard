@@ -41,15 +41,6 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
-					pattern: "/_emdash/api/superboard/plugins/[pluginId]/commands/[commandId]",
-					entrypoint: fileURLToPath(
-						new URL(
-							"./src/pages/_superboard/api/plugins/[pluginId]/commands/[commandId].ts",
-							import.meta.url,
-						),
-					),
-				});
-				injectRoute({
 					pattern: "/_emdash/superboard/releases/[candidateId]",
 					entrypoint: fileURLToPath(
 						new URL("./src/pages/_superboard/release-console/[candidateId].ts", import.meta.url),

@@ -5,10 +5,6 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		"./command-runtime": {
-			"types": "./src/runtime.ts",
-			"default": "./dist/command-runtime.js"
-		},
 		"./*": "./dist/*.js"
 	},
 	"files": ["dist"],

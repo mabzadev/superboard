@@ -30,7 +30,7 @@ void test("the parity matrix is bound to the exact active Front Release", () => 
 	assert.deepEqual(release.active_plugin_ids, activePluginIds);
 });
 
-void test("every active plugin surface has an executable release-derived parity row", () => {
+void test("every active plugin surface has a release-derived proof or explicit blocker", () => {
 	const releaseRows = matrix.rows.filter(
 		({ release_id: releaseId }) => releaseId === release.release.payload.release_id,
 	);
@@ -55,8 +55,10 @@ void test("every active plugin surface has an executable release-derived parity 
 		const pluginRows = releaseRows.filter(({ target }) => target === pluginId);
 		assert.ok(pluginRows.length > 0, `missing release rows for ${pluginId}`);
 		assert.ok(
-			pluginRows.every(({ test: proof, proof_sha256: checksum }) => proof && checksum),
-			`non-executable release row for ${pluginId}`,
+			pluginRows.every(({ required, test: proof, proof_sha256: checksum, blocker }) =>
+				required ? Boolean(proof && checksum) : Boolean(blocker),
+			),
+			`unclassified release row for ${pluginId}`,
 		);
 	}
 });

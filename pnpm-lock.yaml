@@ -994,9 +994,6 @@ importers:
       '@superboard/supbrd-plug-user':
         specifier: workspace:*
         version: link:../../packages/supbrd-plug-user
-      '@superboard/supbrd-runtime-plugins':
-        specifier: workspace:*
-        version: link:../../packages/supbrd-runtime-plugins
       astro:
         specifier: 'catalog:'
         version: 7.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)(@types/node@25.9.5)(aws4fetch@1.0.20)(jiti@2.7.0)(less@4.9.0)(rollup@4.55.2)(sass@1.103.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0)

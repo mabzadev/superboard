@@ -1,39 +1,39 @@
 {
   "schema_version": 1,
-  "matrix_sha256": "sha256:26fe8f36c21acafeebdef5f813df0fcb377942ef525acf3c6066bade7cf1c058",
-  "topology_sha256": "sha256:be61c6973733e3317598817f56914cdaa623b9905f7013f63c8b7de4d6ae0668",
+  "matrix_sha256": "sha256:bf6c65c9829bf3ebeff6c664fe53ec5ac4236839eea5e8dd6922460d4f077c2a",
+  "topology_sha256": "sha256:c0c898eb4a75ed59b8ad79039504014e294442516fd2a65353bc7a32534ad87a",
   "row_count": 870,
-  "required_row_count": 705,
+  "required_row_count": 527,
   "public_cutover": false,
   "release": {
     "source": "config/superboard-parity-release.json",
     "release_id": "01J00000000000000000007005",
-    "content_checksum": "sha256:e5322ab31c562370f7acd984351177b8e9192ba11fbaa04d83654ccee58ce6c6",
+    "content_checksum": "sha256:67531196e7436f72b44489f65252bf0dd7a8cde6bc1299e0c8cc33b0ce498165",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "Zii6CSg04wbc6H-O6076uV-erkd4pdyevNujJe8u7tJMlaFxU5x6Rv5JqdOO3950FJtgEqEHnMTt_t1ACxWx_w"
+      "value": "h634lVaJLWrN9hUVPuV4C0u5q_CDDfvjJ3nC86z5VN6hmSWFh8Vd_JJWPlYY4xn0O-Z_FUs4kcpuRwq1TDjc5g"
     },
-    "validation_set_checksum": "sha256:68b666759f900ce113aa6eb01aee3a2ba6eba254a5a8186bd80401c627bec31c",
+    "validation_set_checksum": "sha256:05f9eb9e86aca2ed50aba8548d8aa8ef06adb3e590e66451a5b4ab6e2ff75ffb",
     "validation_receipt_checksums": [
-      "sha256:565f870b84b8d4c91be13095a0e37e1ab00e2e6d0b22804299259a6a7dbd22d3",
-      "sha256:20bf30d0a961a76b7e36dd4c5ec2571f3a03daaa995ffdf70063aa0b71bc1bf4",
-      "sha256:63ec07efa36885ae32a54e776eeb73c7415cac5372226f79a03cc4fcdded1ec9",
-      "sha256:e224d4f8647f8a7a837b70d04f3cd0f32a9c6f2348e7bcf348c02180720d967f",
-      "sha256:8fc42de1cc9a575be0987fa9de848e6b96aac1f1d35e84e66ebe08498046e0fb",
-      "sha256:0ad8cc8447ef128bb20f7a12e306fef279acb27dd719deee558484c92cf5775e",
-      "sha256:483b0953f8ba6154c62332d519c8dad4734f9074cf7a97b987a6cfcd296fcc56",
-      "sha256:14d455f069f3f03d83a2d266c2e9724d776a1c00c79a567bac44f2e7dd44d162",
-      "sha256:02d4291a92b3dcc8e2dcc9f010c555a01e825340f58d3b71b678e4f272ce3cf4",
-      "sha256:e4bbb82fcfc48a3658437cfbe5a1883cc81782996070791680cee7ce8cae0790",
-      "sha256:743093a62e4fd1879ddd15625fe3b412b103aee6a4b49e0d0883e5ae26e80104",
-      "sha256:ac9fe3a20a9e5ee2cccb8fae99540757212ee6b8df484d123e5293679cbe6a7c",
-      "sha256:28017b69b3dad48eb2af017626fb2f47ba1c9c0d8c895a20dc1e5761a951029f"
+      "sha256:3bec11526c1b7ccb54163207931ba71405cee2fef4d28df18baf958107ec39a1",
+      "sha256:a8ca1dd37a1c92b28c17f7ab99c8c485376c638be789890d377592a941c03c40",
+      "sha256:9b560c23615d600ab5cacefc26ed4919fe46b6bf2fdb08b94ec7313cbca988a4",
+      "sha256:0570ef6ad442f5e7896faf4c71b882e9e1b638b224c4098d82f33fa3ead5e97d",
+      "sha256:e02490562dd17e2eb510cd9bf1214aefd806d98796b3fa2ef9071b93c8004940",
+      "sha256:bbc4d815d46a4466150806b91f846ad791b74079d82d18d34b8a4d1aa5710046",
+      "sha256:b39ff1015aca66e25ab8c32bc37b2d877918770fa424c94280344a81662d2726",
+      "sha256:cd79815ca6b5c557c17c1e827d7daec36e47f6c07db9874e986e97d0c6e39fec",
+      "sha256:2d9c2c304bbd11ae3e7ca0bee98e8aa946e507b45bdaa40a1be2174de6d550a0",
+      "sha256:86d7005ef3337ab95cdb4bfff54df1b3fd5b8f1295666a00a5f20dc13959be87",
+      "sha256:6dd2d2ef585161aea8fda8c1f788dcbdc4fdfdc00785293220a10ecb63defaf4",
+      "sha256:fa03e769671ec5459297d47aed5e0892891bc1a08d01be32725f5d3cab5396bf",
+      "sha256:4ac496116dec62e4eed7afecc41432fd154c7f2f05aca717da4377f0db5d8123"
     ],
     "verification_status": "verified",
     "target": "mbza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:fa0578047baaae74a6befdee221bffbacaa4d0d897cda7a819f1fc9075b0f3f7",
+    "target_artifact_checksum": "sha256:073effeb21bcae85caeccb80c5d9ffd126f000bcfcded131ae49662016e90c88",
     "active_plugin_ids": [
       "supbrd-plug-audit",
       "supbrd-plug-content",
@@ -55,8 +55,8 @@
   },
   "front_bundle": {
     "schema_version": 1,
-    "build_id": "30M3XVF2D6P57826F4YC2P441M",
-    "build_checksum": "sha256:7d8d27b235acc0aacff37ad41519c76c3a40f3890af29e1930b9965e12c4a233",
+    "build_id": "62MC191R1DMT7KG2QCRYPSATMF",
+    "build_checksum": "sha256:f84178383c0cd30899b9fc328563dbf5a18012a175945364bded8bf710efcc97",
     "source_count": 599
   },
   "store_coverage": [

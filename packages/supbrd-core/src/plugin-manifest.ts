@@ -27,7 +27,6 @@ export interface SuperBoardCommandDescriptor extends SuperBoardContributionDescr
 	command_id: string;
 	input_schema_id: string;
 	output_schema_id: string;
-	store_id: string;
 	audience: string;
 	permission: string;
 	failure_policy: "fail_closed";
@@ -190,13 +189,6 @@ export async function verifySuperBoardPluginManifest(
 				)
 			: [],
 	);
-	const storeIds = new Set(
-		Array.isArray(value.stores)
-			? value.stores.flatMap((store) =>
-					isRecord(store) && typeof store.store_id === "string" ? [store.store_id] : [],
-				)
-			: [],
-	);
 	for (const descriptor of [
 		...(Array.isArray(value.commands) ? value.commands : []),
 		...(Array.isArray(value.data_sources) ? value.data_sources : []),
@@ -209,12 +201,6 @@ export async function verifySuperBoardPluginManifest(
 			!schemaIds.has(descriptor.output_schema_id)
 		) {
 			errors.push("CONTRIBUTION_SCHEMA_REFERENCE_INVALID");
-		}
-		if (
-			"command_id" in descriptor &&
-			(typeof descriptor.store_id !== "string" || !storeIds.has(descriptor.store_id))
-		) {
-			errors.push("COMMAND_STORE_REFERENCE_INVALID");
 		}
 	}
 
@@ -265,7 +251,6 @@ function contributionKeys(
 			"input_schema_id",
 			"output_schema_id",
 			"permission",
-			"store_id",
 			"version",
 		],
 		data_sources: [
