@@ -3863,8 +3863,8 @@
         "outbox": "required",
         "callback_verification": "not_applicable",
         "deployment_status": "ready",
-        "evidence": "workers/billing/src/index.test.ts",
-        "evidence_sha256": "sha256:5e7cb707fb0b710106587ff70a47c7899d555df8b6f38a4fa8117c5afae8545e",
+        "evidence": "workers/billing/runtime-tests/billing-authority.runtime.test.ts",
+        "evidence_sha256": "sha256:af4325aec14862245d70c765b4dc66ea29bff90ff158a88e389fd7838f75fc5b",
         "store_ids": [
           "supbrd-plugmod-billing.store.ledger",
           "supbrd-plugmod-billing.store.purchases",
@@ -3875,7 +3875,7 @@
           "supbrd-plugmod-billing.repository.purchases",
           "supbrd-plugmod-billing.repository.subscriptions"
         ],
-        "checksum": "sha256:e2619df30161d258b30ed202ae7124a260a4993ac13de92401ae5c5379312569"
+        "checksum": "sha256:0b3e05d705ce17ef860b15ecd601604d814b21ca3d8769a167e4b2c526ce61e6"
       }
     },
     {
@@ -4677,8 +4677,8 @@
         "outbox": "required",
         "callback_verification": "not_applicable",
         "deployment_status": "ready",
-        "evidence": "workers/support/src/index.test.ts",
-        "evidence_sha256": "sha256:625170cf88cc3786a8e32cb904499682cb90090eb992484b589789767c452ff0",
+        "evidence": "workers/support/runtime-tests/support.runtime.test.ts",
+        "evidence_sha256": "sha256:ac0362016b8141c3da07bf2537e0254d53c625eea4ddbec70bbbe814850e626b",
         "store_ids": [
           "supbrd-plugmod-support.store.contacts",
           "supbrd-plugmod-support.store.conversations",
@@ -4689,7 +4689,7 @@
           "supbrd-plugmod-support.repository.conversations",
           "supbrd-plugmod-support.repository.messages"
         ],
-        "checksum": "sha256:c16705f5112073818055876a970a1d7259436ae2e533e8432649096cd2460bf4"
+        "checksum": "sha256:4702819fcd5616b84500ccd092df83fca3259c51d3936bf0e7e1a1fac1ffaa09"
       }
     },
     {
@@ -6615,8 +6615,8 @@
         "outbox": "required",
         "callback_verification": "not_applicable",
         "deployment_status": "ready",
-        "evidence": "workers/marketing/src/index.test.ts",
-        "evidence_sha256": "sha256:6789ce8995d52d6cd21daf4a889c08d1a7da0c466507af13a28b90122c919cf2",
+        "evidence": "workers/marketing/runtime-tests/marketing.runtime.test.ts",
+        "evidence_sha256": "sha256:8a643c272e559644fa99aba09a360cd6c82ab538340892553368d7d6c9e0cebd",
         "store_ids": [
           "supbrd-plugmod-marketing.store.campaigns",
           "supbrd-plugmod-marketing.store.consent",
@@ -6627,7 +6627,7 @@
           "supbrd-plugmod-marketing.repository.consent",
           "supbrd-plugmod-marketing.repository.journeys"
         ],
-        "checksum": "sha256:c6cbcae8744495da1a68344c623c4fbce650be7d5bb2f98f00ab826c6b24c668"
+        "checksum": "sha256:ee8d9cbc7f80c0170d0e68376b385d3befff7c15c111c5fec11c4038ae8c4644"
       }
     },
     {
@@ -7791,8 +7791,8 @@
         "outbox": "not_applicable",
         "callback_verification": "not_applicable",
         "deployment_status": "ready",
-        "evidence": "workers/dynamic-links/src/index.test.ts",
-        "evidence_sha256": "sha256:9089fdb15a812a04a1c79a2487686ac334ba933293c074f3d5e7890791b42f42",
+        "evidence": "workers/dynamic-links/runtime-tests/dynamic-links.runtime.test.ts",
+        "evidence_sha256": "sha256:5628a83a27998b6719d2e65ca804098ae721223b0a74d855087131ec671e2ca8",
         "store_ids": [
           "supbrd-plugmod-dynamic-links.store.attribution",
           "supbrd-plugmod-dynamic-links.store.links"
@@ -7801,7 +7801,7 @@
           "supbrd-plugmod-dynamic-links.repository.attribution",
           "supbrd-plugmod-dynamic-links.repository.links"
         ],
-        "checksum": "sha256:7f3abfd4ec412f5b5b899ee4f051119d243c6d952f168fcfb79d9b6fa0168208"
+        "checksum": "sha256:35874a02ea81aa55cdb5ce8b7c71780aa0879dff49de2d682786bd1713dd7586"
       }
     },
     {
@@ -8774,8 +8774,8 @@
         "outbox": "not_applicable",
         "callback_verification": "not_applicable",
         "deployment_status": "ready",
-        "evidence": "workers/paywalls/src/index.test.ts",
-        "evidence_sha256": "sha256:18bba8da66e59073ea2a635a5fc109d9d1e74b1537e5727b3e3d52f3e52f7d7f",
+        "evidence": "workers/paywalls/runtime-tests/paywalls.runtime.test.ts",
+        "evidence_sha256": "sha256:4410aa8da555037504503e186bc7cd0e9f98d14c7957d6b2b7f9aab2b2918da9",
         "store_ids": [
           "supbrd-plugmod-paywalls.store.definitions",
           "supbrd-plugmod-paywalls.store.exposures"
@@ -8784,7 +8784,7 @@
           "supbrd-plugmod-paywalls.repository.definitions",
           "supbrd-plugmod-paywalls.repository.exposures"
         ],
-        "checksum": "sha256:9e1253184af3f0d3d75794d131151c17b6f47e25e2adad235bc5d325f253715d"
+        "checksum": "sha256:6567062609f1b86082977ecb769d1fae9234acbd6d4c49eafa1bf6f5dd03c058"
       }
     },
     {
@@ -9312,8 +9312,8 @@
         "outbox": "not_applicable",
         "callback_verification": "not_applicable",
         "deployment_status": "ready",
-        "evidence": "workers/onboardings/src/index.test.ts",
-        "evidence_sha256": "sha256:36fd3920512dbf4a5fa0a6902d585e8329638c99b7aa038c15abbf879b52cd2d",
+        "evidence": "workers/onboardings/runtime-tests/onboardings.runtime.test.ts",
+        "evidence_sha256": "sha256:441d34a1c67a571e82e0bffe9ec82bc881c6bbd22c3b45d4311e185cc5e8c4a5",
         "store_ids": [
           "supbrd-plugmod-onboardings.store.definitions",
           "supbrd-plugmod-onboardings.store.progress"
@@ -9322,7 +9322,7 @@
           "supbrd-plugmod-onboardings.repository.definitions",
           "supbrd-plugmod-onboardings.repository.progress"
         ],
-        "checksum": "sha256:7a0c775a048454c3d3fa4bee2b04d08d47f45c177b46a99eebecaec2d82d1c4c"
+        "checksum": "sha256:c5a6ab83edab1a2786730debe6fb3fb3dd507880a8bb09e5f6614178e10cd31d"
       }
     },
     {

@@ -58,11 +58,28 @@ test("exercises every required contribution and records parity blockers", async 
 	const releaseRows = parityMatrix.rows.filter(
 		({ release_id: releaseId }) => releaseId === parityRelease.release.payload.release_id,
 	);
-	const workerHealthProofs = new Map(
-		releaseRows
-			.filter(({ kind, required }) => kind === "worker_health" && required)
-			.map(({ target: pluginId, proof_sha256: proofChecksum }) => [pluginId, proofChecksum]),
+	const proofReceipt = parseProofReceipt(
+		String(Reflect.get(env, "PARITY_VERIFIED_PROOF_RECEIPTS")),
 	);
+	const catalogByPlugin = new Map(catalog.map((entry) => [entry.manifest.plugin_id, entry]));
+	const workerHealthProofs = new Map<string, string>();
+	for (const row of releaseRows.filter(
+		({ kind, required }) => kind === "worker_health" && required,
+	)) {
+		const entry = catalogByPlugin.get(row.target);
+		if (!entry) throw new Error(`Missing plugin for Worker proof: ${row.target}`);
+		if (!entry.worker_descriptor) {
+			const health = await createConfiguredSuperBoardPlugin(row.target).routes.health.handler({
+				kv: { get: async () => null },
+			} as never);
+			expect(health).toMatchObject({ status: "ready" });
+			workerHealthProofs.set(row.target, row.proof_sha256);
+			continue;
+		}
+		const verified = proofReceipt.proofs[row.test] === row.proof_sha256;
+		if (proofReceipt.complete) expect(verified, row.target).toBe(true);
+		if (verified) workerHealthProofs.set(row.target, row.proof_sha256);
+	}
 	const executablePluginIds = [...workerHealthProofs.keys()].toSorted();
 
 	const syncResponse = await operatorRequest("/_emdash/api/superboard/plugins/sync", {
@@ -356,30 +373,34 @@ test("exercises every required contribution and records parity blockers", async 
 		).toMatchObject({ kind: "state", state });
 	}
 
-	const analytics = catalog.find(
-		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
+	const failedPlugin = catalog.find(
+		({ manifest }) =>
+			workerHealthProofs.has(manifest.plugin_id) && manifest.data_sources.length > 0,
 	)?.manifest;
-	if (!analytics) throw new Error("Missing Analytics plugin");
+	if (!failedPlugin) throw new Error("Missing executable plugin with a data source");
 	await transitionSuperBoardPluginLifecycle(env.DB, {
 		instance_id: instanceId,
 		target,
-		plugin_id: analytics.plugin_id,
+		plugin_id: failedPlugin.plugin_id,
 		to_state: "quarantined",
 		changed_at: "2026-09-03T08:06:00.000Z",
 		reason: "parity failure-state exercise",
 	});
-	const blockedDataSource = analytics.data_sources[0];
-	if (!blockedDataSource) throw new Error("Missing Analytics data source");
+	const blockedDataSource = failedPlugin.data_sources[0];
+	if (!blockedDataSource) throw new Error("Missing blocked data source");
 	const rejected = await operatorRequest(
-		`/_emdash/api/superboard/plugins/${analytics.plugin_id}/data-sources/${blockedDataSource.data_source_id}?project_ref=${projectRef}`,
+		`/_emdash/api/superboard/plugins/${failedPlugin.plugin_id}/data-sources/${blockedDataSource.data_source_id}?project_ref=${projectRef}`,
 		{ method: "GET" },
 	);
 	expect(rejected.status).toBe(503);
 	expect(await rejected.json()).toEqual({ error: { code: "PLUGIN_MANIFEST_NOT_ACTIVE" } });
 	const expectedGatewayRoutes = parityMatrix.rows
 		.filter(
-			({ kind, required, release_id: releaseId }) =>
-				kind === "api" && required && releaseId === parityRelease.release.payload.release_id,
+			({ kind, required, release_id: releaseId, target: pluginId }) =>
+				kind === "api" &&
+				required &&
+				releaseId === parityRelease.release.payload.release_id &&
+				(pluginId === "supbrd-core" || executablePluginIds.includes(pluginId)),
 		)
 		.map(({ method, path }) => `${method} ${path}`)
 		.toSorted();
@@ -420,4 +441,22 @@ function concretePath(path: string) {
 		.replaceAll(/:lang/gu, "en")
 		.replaceAll(/:[^/]+/gu, "parity-id")
 		.replaceAll(/\*[^/]+/gu, "parity/path");
+}
+
+function parseProofReceipt(value: string): { complete: boolean; proofs: Record<string, string> } {
+	const parsed: unknown = JSON.parse(value);
+	if (
+		typeof parsed !== "object" ||
+		parsed === null ||
+		!("complete" in parsed) ||
+		typeof parsed.complete !== "boolean" ||
+		!("proofs" in parsed) ||
+		typeof parsed.proofs !== "object" ||
+		parsed.proofs === null ||
+		Array.isArray(parsed.proofs) ||
+		Object.values(parsed.proofs).some((checksum) => typeof checksum !== "string")
+	) {
+		throw new Error("Parity proof receipt is invalid");
+	}
+	return { complete: parsed.complete, proofs: Object.fromEntries(Object.entries(parsed.proofs)) };
 }

@@ -1354,10 +1354,14 @@ function apiProof(namespace) {
 }
 
 function workerProof(worker, directory) {
-	const preferred = join(directory, "src/index.test.ts");
-	if (existsSync(preferred)) return preferred;
 	const runtime = join(directory, `runtime-tests/${worker}.runtime.test.ts`);
 	if (existsSync(runtime)) return runtime;
+	const runtimeProof = walk(join(directory, "runtime-tests"), (path) =>
+		path.endsWith(".runtime.test.ts"),
+	)[0];
+	if (runtimeProof) return runtimeProof;
+	const preferred = join(directory, "src/index.test.ts");
+	if (existsSync(preferred)) return preferred;
 	return walk(directory, (path) => TEST_FILE_PATTERN.test(path))[0];
 }
 

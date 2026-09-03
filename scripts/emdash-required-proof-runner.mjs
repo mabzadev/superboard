@@ -5,12 +5,16 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(import.meta.dirname, "..");
 const WORKER_UNIT_PROOF_PATTERN = /^workers\/(?!api\/)[^/]+\/src\/index\.test\.ts$/u;
+const WORKER_RUNTIME_PROOF_PATTERN = /^workers\/[^/]+\/runtime-tests\/[^/]+\.runtime\.test\.ts$/u;
 
 export function buildRequiredProofPlan(matrix) {
 	const requiredProofs = [
 		...new Set(matrix.rows.filter(({ required }) => required).map(({ test }) => test)),
 	].toSorted((left, right) => left.localeCompare(right));
 	const apiProofs = requiredProofs.filter((path) => path.startsWith("workers/api/"));
+	const workerRuntimeProofs = requiredProofs.filter((path) =>
+		WORKER_RUNTIME_PROOF_PATTERN.test(path),
+	);
 	const workerUnitProofs = requiredProofs.filter((path) => WORKER_UNIT_PROOF_PATTERN.test(path));
 	const steps = [
 		{
@@ -24,22 +28,6 @@ export function buildRequiredProofPlan(matrix) {
 				"--test",
 				"scripts/dashboard-route-parity.test.mjs",
 				"sdks/javascript/test/emdash-store-parity.test.js",
-			],
-			cwd: root,
-		},
-		{
-			name: "Site runtime Instance",
-			proofs: ["apps/site/runtime-tests/plugin-parity-instance.runtime.test.ts"],
-			command: "pnpm",
-			args: [
-				"--dir",
-				"apps/site",
-				"exec",
-				"vitest",
-				"run",
-				"--config",
-				"vitest.runtime.config.ts",
-				"runtime-tests/plugin-parity-instance.runtime.test.ts",
 			],
 			cwd: root,
 		},
@@ -75,22 +63,25 @@ export function buildRequiredProofPlan(matrix) {
 			],
 			cwd: root,
 		},
-		{
-			name: "Analytics Worker runtime",
-			proofs: ["workers/analytics/runtime-tests/analytics.runtime.test.ts"],
-			command: "pnpm",
-			args: [
-				"--dir",
-				"workers/analytics",
-				"exec",
-				"vitest",
-				"run",
-				"--config",
-				"vitest.runtime.config.ts",
-				"runtime-tests/analytics.runtime.test.ts",
-			],
-			cwd: root,
-		},
+		...workerRuntimeProofs.map((proof) => {
+			const directory = proof.split("/").slice(0, 2).join("/");
+			return {
+				name: `${directory} runtime contract`,
+				proofs: [proof],
+				command: "pnpm",
+				args: [
+					"--dir",
+					directory,
+					"exec",
+					"vitest",
+					"run",
+					"--config",
+					"vitest.runtime.config.ts",
+					proof.slice(`${directory}/`.length),
+				],
+				cwd: root,
+			};
+		}),
 		...workerUnitProofs.map((proof) => {
 			const directory = proof.split("/").slice(0, 2).join("/");
 			return {
@@ -101,6 +92,22 @@ export function buildRequiredProofPlan(matrix) {
 				cwd: root,
 			};
 		}),
+		{
+			name: "Site runtime Instance",
+			proofs: ["apps/site/runtime-tests/plugin-parity-instance.runtime.test.ts"],
+			command: "pnpm",
+			args: [
+				"--dir",
+				"apps/site",
+				"exec",
+				"vitest",
+				"run",
+				"--config",
+				"vitest.runtime.config.ts",
+				"runtime-tests/plugin-parity-instance.runtime.test.ts",
+			],
+			cwd: root,
+		},
 		{
 			name: "React Native SDK contract",
 			proofs: ["sdks/react-native/src/__tests__/index.test.tsx"],
@@ -146,17 +153,35 @@ export function buildRequiredProofPlan(matrix) {
 }
 
 export function runRequiredProofs(matrix) {
+	const proofChecksums = new Map(
+		matrix.rows
+			.filter(({ required, test, proof_sha256: checksum }) => required && test && checksum)
+			.map(({ test: proof, proof_sha256: checksum }) => [proof, checksum]),
+	);
+	const completedProofs = new Map();
 	for (const step of buildRequiredProofPlan(matrix)) {
 		console.log(`\n[parity] ${step.name}`);
+		const receipt =
+			step.name === "Site runtime Instance"
+				? JSON.stringify({ complete: true, proofs: Object.fromEntries(completedProofs) })
+				: undefined;
 		const result = spawnSync(step.command, step.args, {
 			cwd: step.cwd,
 			encoding: "utf8",
 			stdio: "inherit",
-			env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+			env: {
+				...process.env,
+				NEXT_TELEMETRY_DISABLED: "1",
+				...(receipt ? { SUPERBOARD_VERIFIED_PROOF_RECEIPTS: receipt } : {}),
+			},
 		});
 		if (result.error) throw result.error;
 		if (result.status !== 0) {
 			throw new Error(`Required parity proof failed: ${step.name}`);
+		}
+		for (const proof of step.proofs) {
+			const checksum = proofChecksums.get(proof);
+			if (checksum) completedProofs.set(proof, checksum);
 		}
 	}
 }

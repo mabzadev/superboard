@@ -2,8 +2,8 @@
   "schema_version": 1,
   "target": "mbza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:073effeb21bcae85caeccb80c5d9ffd126f000bcfcded131ae49662016e90c88",
-  "target_graph_checksum": "sha256:887c3ddbf3d19c8ccb6d6aaa79c69e078eed2f50292fbaa9e3ec0e22108c02b1",
+  "target_artifact_checksum": "sha256:6f0bb58d3c8ca7143e3f5a657904a9067d4edbe234db92dc68b1514f8a902eac",
+  "target_graph_checksum": "sha256:0ffb68be421bcf1ffc4993e30c1053ef9aa4eb97da22fc6e8dc79ea27d7ac919",
   "active_plugin_ids": [
     "supbrd-plug-audit",
     "supbrd-plug-content",
@@ -46,8 +46,8 @@
     ],
     "ext": true,
     "kty": "EC",
-    "x": "TV1TdLYr5qFwpOlyfjomDCcvM7kA-vziVnDmpEzLDNk",
-    "y": "fl0BQGfgCKN3njbTDt2EJF29dY37klmiMpCM5G6X1og",
+    "x": "rd8-rdar6zXBCBlszjbXdW33IZiQjRPMZF-qe4qmCv4",
+    "y": "XSJPgdsTzubnr_pBy0JRhQGisS2M9wRLn0Xjkm-NYLc",
     "crv": "P-256",
     "kid": "issue-70-parity"
   },
@@ -8923,7 +8923,7 @@
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "h634lVaJLWrN9hUVPuV4C0u5q_CDDfvjJ3nC86z5VN6hmSWFh8Vd_JJWPlYY4xn0O-Z_FUs4kcpuRwq1TDjc5g"
+      "value": "Qu_bcB_4AxBwaZhsq-cFYY1u4r20Fp6SjY-h_D6_YNHaY96cnB9KRtxQfblLGIKZOqljfVQHEpJGunXGFNETUw"
     },
     "validation_receipts": [
       {

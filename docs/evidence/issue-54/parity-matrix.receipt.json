@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "matrix_sha256": "sha256:bf6c65c9829bf3ebeff6c664fe53ec5ac4236839eea5e8dd6922460d4f077c2a",
-  "topology_sha256": "sha256:c0c898eb4a75ed59b8ad79039504014e294442516fd2a65353bc7a32534ad87a",
+  "matrix_sha256": "sha256:251c764b8d86d6fc0d94afcad75d26105d48a5ec29d74d7e6011e3d72d9b106e",
+  "topology_sha256": "sha256:f72c06204b63bcfd7066f470c8592202b07766878d682e4297c654f2357d0a8e",
   "row_count": 870,
   "required_row_count": 527,
   "public_cutover": false,
@@ -12,7 +12,7 @@
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "h634lVaJLWrN9hUVPuV4C0u5q_CDDfvjJ3nC86z5VN6hmSWFh8Vd_JJWPlYY4xn0O-Z_FUs4kcpuRwq1TDjc5g"
+      "value": "Qu_bcB_4AxBwaZhsq-cFYY1u4r20Fp6SjY-h_D6_YNHaY96cnB9KRtxQfblLGIKZOqljfVQHEpJGunXGFNETUw"
     },
     "validation_set_checksum": "sha256:05f9eb9e86aca2ed50aba8548d8aa8ef06adb3e590e66451a5b4ab6e2ff75ffb",
     "validation_receipt_checksums": [
@@ -33,7 +33,7 @@
     "verification_status": "verified",
     "target": "mbza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:073effeb21bcae85caeccb80c5d9ffd126f000bcfcded131ae49662016e90c88",
+    "target_artifact_checksum": "sha256:6f0bb58d3c8ca7143e3f5a657904a9067d4edbe234db92dc68b1514f8a902eac",
     "active_plugin_ids": [
       "supbrd-plug-audit",
       "supbrd-plug-content",
