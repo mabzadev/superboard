@@ -137,7 +137,11 @@ async function main(argv = process.argv.slice(2)) {
 }
 
 export function buildLocalSite(prepared, execute = run, env = process.env) {
-	execute("pnpm", ["site:build"], siteEmailBuildEnvironment(prepared.target, env));
+	execute(
+		"pnpm",
+		["--filter", "@superboard/site...", "build"],
+		siteEmailBuildEnvironment(prepared.target, env),
+	);
 }
 
 async function configureTarget(prepared) {

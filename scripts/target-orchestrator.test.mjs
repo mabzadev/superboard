@@ -22,7 +22,7 @@ test("local target start builds the Site with the selected target email settings
 	assert.deepEqual(calls, [
 		{
 			command: "pnpm",
-			args: ["site:build"],
+			args: ["--filter", "@superboard/site...", "build"],
 			env: {
 				SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mbza.dev",
 				SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard Development",
