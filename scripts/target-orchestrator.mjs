@@ -19,6 +19,7 @@ import {
 	compileTarget,
 	materializeTarget,
 } from "./target-compiler.mjs";
+import { siteEmailBuildEnvironment } from "./cloudflare-site-build.mjs";
 
 const OPERATIONS = new Set([
 	"plan",
@@ -105,7 +106,7 @@ async function main(argv = process.argv.slice(2)) {
 		migrateTarget(prepared, args);
 	} else if (operation === "start") {
 		if (adapter !== "local") throw new Error("Start is available only locally");
-		run("pnpm", ["site:build"]);
+		buildLocalSite(prepared);
 		await configureTarget(prepared);
 		await startLocalTarget(prepared);
 	} else if (operation === "deploy") {
@@ -133,6 +134,10 @@ async function main(argv = process.argv.slice(2)) {
 	process.stdout.write(
 		`${JSON.stringify({ ...targetResult(prepared, operation), artifactPath: relative(root, artifactPath) }, null, 2)}\n`,
 	);
+}
+
+export function buildLocalSite(prepared, execute = run, env = process.env) {
+	execute("pnpm", ["site:build"], siteEmailBuildEnvironment(prepared.target, env));
 }
 
 async function configureTarget(prepared) {
@@ -338,10 +343,10 @@ async function startLocalTarget(prepared) {
 	});
 }
 
-function run(command, args) {
+function run(command, args, env = process.env) {
 	const result = spawnSync(command, args, {
 		cwd: root,
-		env: process.env,
+		env,
 		stdio: "inherit",
 		shell: false,
 	});
