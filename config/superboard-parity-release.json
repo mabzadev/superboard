@@ -2,8 +2,8 @@
   "schema_version": 1,
   "target": "mbza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:2a92c6c5e985eaa7b2db46f692245df429ade656e64cfbdb4cec104450af58d0",
-  "target_graph_checksum": "sha256:7e19ead00033b8d571d1c1f152dbcf76235a5c4464ebeb0a39e6fa81966aa375",
+  "target_artifact_checksum": "sha256:b584fc4e9506bb13285f43d07a03dd2aebe2d2c8a7a96e40fd62ba3f1d5b246a",
+  "target_graph_checksum": "sha256:465d2ce24b8f70d75c476242bdc0d256948ad0b39ed0f7d038f1d482dc46fd75",
   "active_plugin_ids": [
     "supbrd-plug-audit",
     "supbrd-plug-content",
@@ -50,8 +50,8 @@
     ],
     "ext": true,
     "kty": "EC",
-    "x": "wA1wsuUDS6KpC_PJZleZOXQDBUUMFLvDpRzWzF8xUdk",
-    "y": "kqjY-OteHigQfqwo8Jc9d4NSgBhe2O0C6Td9y0RTum0",
+    "x": "AN0Rjmjg6BIvG8hj356AQPdTXNoQRySISNNyRUsN690",
+    "y": "GWuSchW7Wain6xpArkgmWZ_U5gK5vGalavkuN9BRXgk",
     "crv": "P-256",
     "kid": "issue-70-parity"
   },
@@ -9529,7 +9529,7 @@
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "SSmLFmDyHa1923KMdQUAlhsmiYBM_s_gx_BxNrZ8hzi4vuvau59mLYBuKxL5Ms9cfehCSWMXYfPFyyqa35gQSQ"
+      "value": "5kOPRUgiyHq21LCrfJcipH3gd75AYNqgmI2Rw3K5Sq1n3SQT6Wop7Fd2pnv8mfH22h348ldjAtNYu-FfOpLuSA"
     },
     "validation_receipts": [
       {

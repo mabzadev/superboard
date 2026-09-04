@@ -3,20 +3,20 @@
 	"kind": "superboard-fresh-instance-proof-receipt",
 	"status": "passed",
 	"target": "mbza-development",
-	"plan_checksum": "sha256:6f9d262ea0b44e5de22a54a0b2273c161b54e45f29c16610cb223242ede129cb",
+	"plan_checksum": "sha256:a486adf4f41e0b1e234e8fcc39871c087fe6ec87f1ff77ff07c661cfc0116942",
 	"adapters": [
 		{
 			"environment": "local",
 			"adapter": "local",
-			"artifact_checksum": "sha256:2a92c6c5e985eaa7b2db46f692245df429ade656e64cfbdb4cec104450af58d0",
-			"graph_checksum": "sha256:7e19ead00033b8d571d1c1f152dbcf76235a5c4464ebeb0a39e6fa81966aa375",
+			"artifact_checksum": "sha256:b584fc4e9506bb13285f43d07a03dd2aebe2d2c8a7a96e40fd62ba3f1d5b246a",
+			"graph_checksum": "sha256:465d2ce24b8f70d75c476242bdc0d256948ad0b39ed0f7d038f1d482dc46fd75",
 			"service_count": 17
 		},
 		{
 			"environment": "development",
 			"adapter": "cloudflare",
-			"artifact_checksum": "sha256:236e0061004e7ce0763fab3f2b91a948d716aeaf39d91af0b0559cbb37a350dc",
-			"graph_checksum": "sha256:7e19ead00033b8d571d1c1f152dbcf76235a5c4464ebeb0a39e6fa81966aa375",
+			"artifact_checksum": "sha256:b3e9a0c69f5dd61db81b1d00efa86792adf38758e56cf6f02590c6cb256e4c85",
+			"graph_checksum": "sha256:465d2ce24b8f70d75c476242bdc0d256948ad0b39ed0f7d038f1d482dc46fd75",
 			"service_count": 17
 		}
 	],
@@ -125,7 +125,7 @@
 					"checksum": "sha256:c6b96c14e8e4a4a7cbbbb483283f906f68064d3fe7126a5e0424b63efa69b3a5"
 				}
 			],
-			"result_checksum": "sha256:ae5b774938279f8704f11464850218bc62f8926865973a2687ae4d9404371aca",
+			"result_checksum": "sha256:29538d8630064b34eb38b0077535abee820863a2bd09352fa145615e040d53fd",
 			"status": "passed"
 		},
 		{
@@ -136,7 +136,7 @@
 					"checksum": "sha256:c6b96c14e8e4a4a7cbbbb483283f906f68064d3fe7126a5e0424b63efa69b3a5"
 				}
 			],
-			"result_checksum": "sha256:80e2176a7542f86663e731c8ef8976ed2d34fb164732108b613fc354c9a06b36",
+			"result_checksum": "sha256:0f99460a894207489fb09beeab0811283925d07deb52f574956ceee2344f1cf0",
 			"status": "passed"
 		},
 		{
@@ -151,7 +151,7 @@
 					"checksum": "sha256:2bca269f4362a19ec82dcc6a497a89275e9aba1969285bb15ab80d52f50a1d5d"
 				}
 			],
-			"result_checksum": "sha256:f74134b3444fa2414e8efe439c3dc2a890aa93a329060d2f3e7dd32c96296afb",
+			"result_checksum": "sha256:129d3e3aacd4052ba53531277994cf6568193af3952c5e899b2cfa18c8336d36",
 			"status": "passed"
 		},
 		{
@@ -170,5 +170,5 @@
 			"status": "passed"
 		}
 	],
-	"receipt_checksum": "sha256:2dc0ce2944712769ad30628e50c2970f427812ba0ff6010674ec000c3a0f5655"
+	"receipt_checksum": "sha256:3e89a694d8ff14bda33c3e8a681a131bba0ceffcd73c3d2d9be8f5bc122acb36"
 }
