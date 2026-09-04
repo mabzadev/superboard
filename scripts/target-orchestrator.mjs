@@ -423,7 +423,7 @@ async function startLocalTarget(prepared, args, { verify = false } = {}) {
 			await stopLocalChildren(children);
 		}
 	}
-	const children = prepared.materialization.services.map(spawnService);
+	const children = await spawnLocalServices(prepared.materialization.services, spawnService);
 	await new Promise((resolvePromise, reject) => {
 		let settled = false;
 		const stop = (skip) => {
@@ -432,6 +432,12 @@ async function startLocalTarget(prepared, args, { verify = false } = {}) {
 			}
 		};
 		for (const child of children) {
+			if (child.exitCode !== null) {
+				settled = true;
+				stop(child);
+				reject(new Error(`Local Worker exited with status ${child.exitCode}`));
+				return;
+			}
 			child.once("error", (error) => {
 				if (settled) return;
 				settled = true;
@@ -456,6 +462,20 @@ async function startLocalTarget(prepared, args, { verify = false } = {}) {
 			resolvePromise();
 		});
 	});
+}
+
+export async function spawnLocalServices(
+	services,
+	spawnService,
+	pause = (milliseconds) =>
+		new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)),
+) {
+	const children = [];
+	for (const [index, service] of services.entries()) {
+		children.push(spawnService(service));
+		if (index < services.length - 1) await pause(150);
+	}
+	return children;
 }
 
 async function stopLocalChildren(children) {
