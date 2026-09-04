@@ -8,6 +8,7 @@ import {
 	assertFreshLocalState,
 	buildLocalSite,
 	prepareTarget,
+	spawnLocalServices,
 	verifyLocalTargetHealth,
 } from "./target-orchestrator.mjs";
 
@@ -89,5 +90,28 @@ test("local target start builds the Site with the selected target email settings
 				SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mbza.dev",
 			},
 		},
+	]);
+});
+
+test("local target start staggers Worker processes", async () => {
+	const events = [];
+	const children = await spawnLocalServices(
+		[{ id: "api" }, { id: "site" }, { id: "dashboard" }],
+		(service) => {
+			events.push(`spawn:${service.id}`);
+			return service.id;
+		},
+		async (milliseconds) => {
+			events.push(`wait:${milliseconds}`);
+		},
+	);
+
+	assert.deepEqual(children, ["api", "site", "dashboard"]);
+	assert.deepEqual(events, [
+		"spawn:api",
+		"wait:150",
+		"spawn:site",
+		"wait:150",
+		"spawn:dashboard",
 	]);
 });
