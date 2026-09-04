@@ -519,7 +519,11 @@ export async function prepareSuperBoardPluginLifecycleForRelease(
 	const desiredLocks = input.plugin_lock.filter(
 		({ plugin_id: pluginId }) => pluginId !== "supbrd-core",
 	);
-	const releasableLocks = await loadReleasableSuperBoardPluginLock(db, input);
+	const releasableLocks = await loadSelectedSuperBoardPluginLock(
+		db,
+		input,
+		desiredLocks.map(({ plugin_id: pluginId }) => pluginId),
+	);
 	const releasable = new Map(releasableLocks.map((lock) => [lock.plugin_id, lock]));
 	for (const lock of desiredLocks) {
 		const current = releasable.get(lock.plugin_id);
