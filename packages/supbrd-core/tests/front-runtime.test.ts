@@ -92,6 +92,24 @@ describe("Front SuperBoard runtime", () => {
 		expect(
 			resolveFrontRequest({
 				last_verified_release: release,
+				requested_path: "/",
+				admin_session: "absent",
+				permissions: [],
+				dependency_health: {},
+			}),
+		).toMatchObject({ result: "redirect", location: "/login" });
+		expect(
+			resolveFrontRequest({
+				last_verified_release: release,
+				requested_path: "/",
+				admin_session: "valid",
+				permissions: [],
+				dependency_health: {},
+			}),
+		).toMatchObject({ result: "redirect", location: "/app" });
+		expect(
+			resolveFrontRequest({
+				last_verified_release: release,
 				requested_path: "/app",
 				admin_session: "absent",
 				application_token_audience: "superboard_api",

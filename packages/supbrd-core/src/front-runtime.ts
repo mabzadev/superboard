@@ -39,6 +39,14 @@ export function resolveFrontRequest(context: FrontRequestContext): FrontRequestR
 
 	const match = resolveFrontRoute(release.front_route_manifest, context.requested_path);
 	if (match.result !== "matched") {
+		if (context.requested_path === "/") {
+			return redirectToTransition(
+				release.front_route_manifest,
+				context.admin_session === "valid"
+					? release.front_route_manifest.auth_transitions.authenticated_home_route_id
+					: release.front_route_manifest.auth_transitions.login_route_id,
+			);
+		}
 		return { result: "not_found", route_id: null, state_renderer_id: null };
 	}
 
