@@ -27,6 +27,8 @@ export interface PluginInfo {
 	sandboxed?: boolean;
 	/** True when the host owns activation outside generic plugin actions. */
 	lifecycleManaged?: boolean;
+	/** Host route that performs the complete managed activation workflow. */
+	lifecycleEnablePath?: string;
 	marketplaceVersion?: string;
 	/** Publisher DID, for registry-source plugins */
 	registryPublisherDid?: string;
@@ -140,6 +142,7 @@ function buildSandboxedPluginInfo(
 		source: "config",
 		sandboxed: true,
 		lifecycleManaged: entry.lifecycleManaged ?? false,
+		lifecycleEnablePath: entry.lifecycleEnablePath,
 		capabilities: entry.capabilities,
 		hasAdminPages: (entry.adminPages?.length ?? 0) > 0,
 		hasDashboardWidgets: (entry.adminWidgets?.length ?? 0) > 0,
