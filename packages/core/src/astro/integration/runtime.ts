@@ -84,6 +84,8 @@ export interface PluginDescriptor<TOptions = Record<string, unknown>> {
 	defaultEnabled?: boolean;
 	/** Whether the host owns activation and rejects generic admin enable/disable actions. */
 	lifecycleManaged?: boolean;
+	/** Host route that performs the complete managed activation workflow. */
+	lifecycleEnablePath?: string;
 	/** Module specifier to import (e.g., "@emdash-cms/plugin-api-test") */
 	entrypoint: string;
 	/**

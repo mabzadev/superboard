@@ -821,6 +821,45 @@ export async function transitionSuperBoardPluginLifecycle(
 	return { ...input, from_state: current.state, state: input.to_state };
 }
 
+export async function stageSuperBoardPluginDependencyHealth(
+	db: D1Database,
+	input: PluginScope & { plugin_id: string; checked_at: string },
+): Promise<void> {
+	assertScope(input);
+	const health = await db
+		.prepare(
+			`SELECT status, evidence_checksum, expires_at
+			 FROM superboard_plugin_runtime_health
+			 WHERE instance_id = ? AND target = ? AND plugin_id = ?`,
+		)
+		.bind(input.instance_id, input.target, input.plugin_id)
+		.first<{ status: "ready" | "unavailable"; evidence_checksum: string; expires_at: string }>();
+	if (
+		!health ||
+		health.status !== "ready" ||
+		Date.parse(health.expires_at) <= Date.parse(input.checked_at)
+	) {
+		throw new Error(`PLUGIN_ACTIVATION_HEALTH_NOT_READY:${input.plugin_id}`);
+	}
+	await db
+		.prepare(
+			`INSERT INTO superboard_dependency_health
+			 (instance_id, dependency_id, status, evidence_checksum, checked_at, expires_at)
+			 VALUES (?, ?, 'ready', ?, ?, ?)
+			 ON CONFLICT(instance_id, dependency_id) DO UPDATE SET
+			   status = 'ready', evidence_checksum = excluded.evidence_checksum,
+			   checked_at = excluded.checked_at, expires_at = excluded.expires_at`,
+		)
+		.bind(
+			input.instance_id,
+			dependencyId(input.plugin_id),
+			health.evidence_checksum,
+			input.checked_at,
+			health.expires_at,
+		)
+		.run();
+}
+
 export async function synchronizeSuperBoardPluginCatalog(
 	db: D1Database,
 	input: {
@@ -870,10 +909,24 @@ export function loadReleasableSuperBoardPluginLock(db: D1Database, scope: Plugin
 	return loadSuperBoardPluginLock(db, scope, true);
 }
 
+export function loadSelectedSuperBoardPluginLock(
+	db: D1Database,
+	scope: PluginScope,
+	installedPluginIds: readonly string[],
+) {
+	if (
+		installedPluginIds.length === 0 ||
+		new Set(installedPluginIds).size !== installedPluginIds.length
+	) {
+		throw new TypeError("Selected plugin lock requires unique plugin identifiers");
+	}
+	return loadSuperBoardPluginLock(db, scope, new Set(installedPluginIds));
+}
+
 async function loadSuperBoardPluginLock(
 	db: D1Database,
 	scope: PluginScope,
-	includeInstalled: boolean,
+	includeInstalled: boolean | ReadonlySet<string>,
 ) {
 	assertScope(scope);
 	const result = await db
@@ -922,12 +975,27 @@ async function loadSuperBoardPluginLock(
 			completed_count: number | null;
 			target_artifact_checksum: string | null;
 		}>();
-	const rows = includeInstalled
-		? result.results
-		: result.results.filter(({ state }) => state === "active");
+	const rows =
+		typeof includeInstalled === "boolean"
+			? includeInstalled
+				? result.results
+				: result.results.filter(({ state }) => state === "active")
+			: result.results.filter(
+					({ plugin_id: pluginId, state }) => state === "active" || includeInstalled.has(pluginId),
+				);
+	if (
+		typeof includeInstalled !== "boolean" &&
+		[...includeInstalled].some(
+			(pluginId) => !rows.some(({ plugin_id: rowPluginId }) => rowPluginId === pluginId),
+		)
+	) {
+		throw new Error("PLUGIN_CATALOG_SELECTED_SET_INCOMPLETE");
+	}
 	if (rows.length === 0) {
 		throw new Error(
-			includeInstalled ? "PLUGIN_CATALOG_RELEASABLE_SET_EMPTY" : "PLUGIN_CATALOG_ACTIVE_SET_EMPTY",
+			includeInstalled === true
+				? "PLUGIN_CATALOG_RELEASABLE_SET_EMPTY"
+				: "PLUGIN_CATALOG_ACTIVE_SET_EMPTY",
 		);
 	}
 	const catalog = new Map(

@@ -271,6 +271,8 @@ export interface SandboxedPluginEntry {
 	defaultEnabled?: boolean;
 	/** Host-owned lifecycle blocks generic admin enable/disable actions. */
 	lifecycleManaged?: boolean;
+	/** Host route that performs the complete managed activation workflow. */
+	lifecycleEnablePath?: string;
 	options: Record<string, unknown>;
 	code: string;
 	/** Capabilities the plugin requests */

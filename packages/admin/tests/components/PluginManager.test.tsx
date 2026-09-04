@@ -173,6 +173,30 @@ describe("PluginManager", () => {
 		await expect.element(disableToggle).toBeInTheDocument();
 	});
 
+	it("passes the host lifecycle action through the enable button", async () => {
+		const managed = makePlugin({
+			id: "managed-plugin",
+			name: "Managed Plugin",
+			enabled: false,
+			status: "inactive",
+			lifecycleManaged: true,
+			lifecycleEnablePath: "/_emdash/api/host/plugins/managed-plugin/enable",
+		});
+		mockFetchPlugins.mockResolvedValue([managed]);
+		mockEnablePlugin.mockResolvedValue({ ...managed, enabled: true, status: "active" });
+		const screen = await render(
+			<Wrapper>
+				<PluginManager />
+			</Wrapper>,
+		);
+
+		await screen.getByRole("switch", { name: "Enable plugin" }).click();
+
+		await vi.waitFor(() => {
+			expect(mockEnablePlugin.mock.calls[0]?.[0]).toEqual(managed);
+		});
+	});
+
 	it("pages link shown only for enabled plugins with admin pages", async () => {
 		const screen = await render(
 			<Wrapper>
