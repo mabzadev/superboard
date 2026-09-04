@@ -68,8 +68,8 @@
 		"SUPERBOARD_ENVIRONMENT": "local",
 		"SUPERBOARD_PLUGIN_IDS": "[\"supbrd-plug-audit\",\"supbrd-plug-content\",\"supbrd-plug-products\",\"supbrd-plug-settings\",\"supbrd-plug-user\",\"supbrd-plugmod-analytics\",\"supbrd-plugmod-billing\",\"supbrd-plugmod-dynamic-links\",\"supbrd-plugmod-email\",\"supbrd-plugmod-files\",\"supbrd-plugmod-flows\",\"supbrd-plugmod-gateway\",\"supbrd-plugmod-marketing\",\"supbrd-plugmod-mcp\",\"supbrd-plugmod-observability\",\"supbrd-plugmod-support\"]",
 		"SUPERBOARD_RELEASE_OPERATIONS": "disabled",
-		"D1_EXPECTED_MIGRATION": "0019_data_driven_plugin_lifecycle.sql",
-		"TARGET_ARTIFACT_CHECKSUM": "sha256:bc55c4aa0e9f5a408776d3c9b9ae1dd0295f5b6544506c4ea1198d74ebc02da8",
+		"D1_EXPECTED_MIGRATION": "0020_revalidated_plugin_manifests.sql",
+		"TARGET_ARTIFACT_CHECKSUM": "sha256:6f0bb58d3c8ca7143e3f5a657904a9067d4edbe234db92dc68b1514f8a902eac",
 	},
 	"triggers": {
 		"crons": ["* * * * *"],

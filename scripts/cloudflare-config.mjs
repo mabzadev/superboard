@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import {
@@ -1323,7 +1323,12 @@ function resourceId(resource, kind) {
     throw new Error(
       `Missing provisioned ${kind} id for ${resource?.name || "resource"}`,
     );
-  return kind === "kv"
-    ? "00000000000000000000000000000000"
-    : "00000000-0000-4000-8000-000000000000";
+  const resourceName = String(resource?.name || "").trim();
+  if (!resourceName) throw new Error(`Missing validation-only ${kind} resource name`);
+  const resourceKind = kind === "kv" ? "kv" : "d1";
+  const digest = createHash("sha256")
+    .update(`superboard.local.${resourceKind}.${resourceName}`)
+    .digest("hex");
+  if (resourceKind === "kv") return digest.slice(0, 32);
+  return `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-8${digest.slice(17, 20)}-${digest.slice(20, 32)}`;
 }
