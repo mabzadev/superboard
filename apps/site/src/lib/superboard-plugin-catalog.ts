@@ -101,7 +101,7 @@ const LIFECYCLE_TRANSITIONS: Record<
 	staged: ["installed", "quarantined"],
 	installed: ["quarantined"],
 	active: ["draining", "quarantined"],
-	draining: ["quarantined"],
+	draining: ["active", "quarantined"],
 	disabled: ["staged", "quarantined"],
 	quarantined: ["staged", "purged"],
 	purged: ["available"],
@@ -903,6 +903,27 @@ export async function synchronizeSuperBoardPluginCatalog(
 
 export function loadActiveSuperBoardPluginLock(db: D1Database, scope: PluginScope) {
 	return loadSuperBoardPluginLock(db, scope, false);
+}
+
+export async function loadActiveSuperBoardPluginLockExcluding(
+	db: D1Database,
+	scope: PluginScope,
+	excludedPluginIds: readonly string[],
+) {
+	if (
+		excludedPluginIds.length === 0 ||
+		new Set(excludedPluginIds).size !== excludedPluginIds.length
+	) {
+		throw new TypeError("Active plugin lock exclusion requires unique plugin identifiers");
+	}
+	const locks = await loadSuperBoardPluginLock(db, scope, false);
+	const excluded = new Set(excludedPluginIds);
+	if (excludedPluginIds.some((pluginId) => !locks.some((lock) => lock.plugin_id === pluginId))) {
+		throw new Error("PLUGIN_CATALOG_ACTIVE_EXCLUSION_INCOMPLETE");
+	}
+	const selected = locks.filter(({ plugin_id: pluginId }) => !excluded.has(pluginId));
+	if (selected.length === 0) throw new Error("PLUGIN_CATALOG_ACTIVE_SET_EMPTY");
+	return selected;
 }
 
 export function loadReleasableSuperBoardPluginLock(db: D1Database, scope: PluginScope) {

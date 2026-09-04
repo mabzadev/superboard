@@ -113,6 +113,7 @@ async function listIds(runtime: EmDashRuntime) {
 				sandboxed?: boolean;
 				enabled: boolean;
 				lifecycleEnablePath?: string;
+				lifecycleDisablePath?: string;
 			}>;
 		};
 	};
@@ -152,11 +153,13 @@ describe("admin plugin routes: statically-sandboxed plugins (real runtime)", () 
 				defaultEnabled: false,
 				lifecycleManaged: true,
 				lifecycleEnablePath: "/_emdash/api/host/plugins/webhook-notifier/enable",
+				lifecycleDisablePath: "/_emdash/api/host/plugins/webhook-notifier/disable",
 			}),
 		]);
 		const listed = await listIds(runtime);
 		expect(listed.items.find((item) => item.id === "webhook-notifier")).toMatchObject({
 			lifecycleEnablePath: "/_emdash/api/host/plugins/webhook-notifier/enable",
+			lifecycleDisablePath: "/_emdash/api/host/plugins/webhook-notifier/disable",
 		});
 		const enable = await enablePlugin(ctx(runtime, { id: "webhook-notifier" }));
 		expect(enable.status).toBe(400);
