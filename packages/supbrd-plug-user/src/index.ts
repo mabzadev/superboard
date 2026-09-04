@@ -13,7 +13,7 @@ import type {
 import frontBundle from "../../../config/superboard-front-bundle.json";
 
 const pluginId = "supbrd-plug-user";
-const pluginVersion = "1.3.0";
+const pluginVersion = "1.4.0";
 const rendererRuntime = { abi_version: "1.0.0", runtime_version: "0.1.0" } as const;
 
 export const USER_RENDERER_IDS = {
@@ -379,10 +379,10 @@ const manifestArtifact = {
 function pluginArtifactContent(manifest: unknown): unknown {
 	return {
 		manifest,
-		renderer_implementations: rendererBuilds.map(({ renderer_id, implementation }) => ({
-			renderer_id,
-			source: implementation.toString(),
-		})),
+		front_bundle: {
+			build_id: frontBundle.build_id,
+			build_checksum: frontBundle.build_checksum,
+		},
 	};
 }
 
@@ -513,17 +513,8 @@ async function rendererDescriptor(
 		renderer_id: definition.renderer_id,
 		plugin_id: pluginId,
 		plugin_version: pluginVersion,
-		build_id:
-			definition.renderer_id === USER_RENDERER_IDS.admin
-				? frontBundle.build_id
-				: definition.build_id,
-		build_checksum:
-			definition.renderer_id === USER_RENDERER_IDS.admin
-				? frontBundle.build_checksum
-				: await sha256Canonical({
-						source: definition.implementation.toString(),
-						props_schema_checksum: propsSchema.checksum,
-					}),
+		build_id: frontBundle.build_id,
+		build_checksum: frontBundle.build_checksum,
 		abi_version: "1.0.0",
 		runtime_range: ">=0.1.0 <0.2.0",
 		props_schema: {

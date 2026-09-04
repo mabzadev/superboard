@@ -104,6 +104,65 @@ test("all domain services are accepted by shared service validation", () => {
   assert.throws(() => assertService("unknown"), /must be one of/);
 });
 
+test("validation-only local D1 resources receive stable distinct ids", () => {
+  const services = ["api", "app", "dynamic-links"];
+  const ids = services.map((service) => {
+    execFileSync(
+      process.execPath,
+      [
+        "scripts/cloudflare-config.mjs",
+        "--service",
+        service,
+        "--target",
+        "mbza-development",
+        "--environment",
+        "local",
+        "--allow-unprovisioned",
+        "--no-routes",
+      ],
+      { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+    );
+    const config = JSON.parse(
+      readFileSync(
+        new URL(
+          `../deploy/generated/mbza-development-${service}-local.jsonc`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    return config.d1_databases[0].database_id;
+  });
+  assert.equal(new Set(ids).size, ids.length);
+  for (const id of ids) assert.match(id, /^[a-f0-9-]{36}$/u);
+
+  execFileSync(
+    process.execPath,
+    [
+      "scripts/cloudflare-config.mjs",
+      "--service",
+      "dynamic-links",
+      "--target",
+      "mbza-development",
+      "--environment",
+      "local",
+      "--allow-unprovisioned",
+      "--no-routes",
+    ],
+    { cwd: new URL("..", import.meta.url), stdio: "pipe" },
+  );
+  const repeated = JSON.parse(
+    readFileSync(
+      new URL(
+        "../deploy/generated/mbza-development-dynamic-links-local.jsonc",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ).d1_databases[0].database_id;
+  assert.equal(repeated, ids[2]);
+});
+
 test("generated Site config uses only explicit target resources and keeps public release disabled", async () => {
   for (const [targetName, environment] of [
     ["mbza-development", "development"],

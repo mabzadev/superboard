@@ -66,6 +66,11 @@ const contribution = defineNativeFrontPlugin({
 			navigation: app("Users", 1),
 		},
 		{
+			path_pattern: "/app/members",
+			title: "Application members",
+			renderer_id: USER_RENDERER_IDS.members,
+		},
+		{
 			path_pattern: "/app/customers",
 			title: "Customers",
 			navigation: app("Customers", 0),

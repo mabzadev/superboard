@@ -250,7 +250,9 @@ function assertCommandInput(input: RepositoryCommandInput) {
 		throw new Error("PROJECT_REF_INVALID");
 	}
 	if (!input.adapter_operation.trim()) throw new Error("ADAPTER_OPERATION_REQUIRED");
-	if (!input.request_path.startsWith("/api/")) throw new Error("COMMAND_PATH_INVALID");
+	if (!input.request_path.startsWith("/api/") && !input.request_path.startsWith("/_emdash/api/")) {
+		throw new Error("COMMAND_PATH_INVALID");
+	}
 }
 
 async function loadOperation(db: D1Database, operationId: string) {

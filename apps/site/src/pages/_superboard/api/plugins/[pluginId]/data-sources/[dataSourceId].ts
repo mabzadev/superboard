@@ -7,7 +7,10 @@ import {
 	listPluginStoreRecords,
 } from "../../../../../../lib/plugin-store-repository.js";
 import { getSiteEnv } from "../../../../../../lib/site-env.js";
-import { superBoardRuntimePluginCatalog } from "../../../../../../lib/superboard-plugin-catalog.js";
+import {
+	resolveSuperBoardPluginTarget,
+	superBoardRuntimePluginCatalog,
+} from "../../../../../../lib/superboard-plugin-catalog.js";
 
 export const prerender = false;
 const clientInputErrorPattern = /(?:INVALID|REQUIRED|REJECTED)$/u;
@@ -37,6 +40,7 @@ export const GET: APIRoute = async (context) => {
 			plugin_id: pluginId,
 			store_id: dataSource.store_id,
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
+			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
 			project_ref: context.url.searchParams.get("project_ref") ?? "",
 			entity_type: context.url.searchParams.get("entity_type") ?? undefined,
 			cursor: context.url.searchParams.get("cursor") ?? undefined,

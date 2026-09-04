@@ -2,7 +2,6 @@ import { fileURLToPath } from "node:url";
 
 import topology from "../../config/emdash-plugin-topology.json" with { type: "json" };
 
-const VERSION_OVERRIDES = Object.freeze({ "supbrd-plug-user": "1.3.0" });
 export const SUPERBOARD_PLUGIN_TEMPLATES = Object.freeze(
 	topology.plugins
 		.filter(({ manifest }) => manifest.plugin_id.includes("*"))
@@ -14,7 +13,6 @@ export function configureSuperBoardPlugins(plugins) {
 	return plugins
 		.filter(({ manifest }) => !manifest.plugin_id.includes("*"))
 		.map(({ manifest }) => {
-			const version = VERSION_OVERRIDES[manifest.plugin_id] ?? manifest.plugin_version;
 			const displayName = pluginDisplayName(manifest.plugin_id);
 			const settingsSchema = emdashSettingsSchema(manifest.settings.schema.properties);
 			const entrypoint = fileURLToPath(
@@ -25,7 +23,7 @@ export function configureSuperBoardPlugins(plugins) {
 			);
 			return {
 				id: manifest.plugin_id,
-				version,
+				version: manifest.plugin_version,
 				defaultEnabled: false,
 				lifecycleManaged: true,
 				entrypoint,
@@ -45,6 +43,7 @@ export function configureSuperBoardPlugins(plugins) {
 					"health",
 					"settings/effective",
 					"commands/catalog",
+					"commands/execute",
 					"data-sources/catalog",
 				],
 				superboardManifest: manifest,

@@ -17,7 +17,7 @@ test("adapts every concrete SuperBoard manifest into one configured EmDash plugi
 	);
 	assert.equal(
 		superboardConfiguredPlugins.find(({ id }) => id === "supbrd-plug-user")?.version,
-		"1.3.0",
+		"1.4.0",
 	);
 	assert.deepEqual(SUPERBOARD_PLUGIN_TEMPLATES, ["supbrd-plugmod-custom-*"]);
 	assert.ok(superboardConfiguredPlugins.every(({ id }) => !id.includes("*")));
