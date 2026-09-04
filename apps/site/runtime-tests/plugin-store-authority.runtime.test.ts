@@ -55,7 +55,7 @@ describe("EmDash plugin Store authority", () => {
 		expect(
 			receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user"),
 		).toMatchObject({
-			plugin_version: "1.3.0",
+			plugin_version: "1.4.0",
 			status: "installed",
 		});
 
@@ -182,7 +182,7 @@ describe("EmDash plugin Store authority", () => {
 			.first<{ artifact_checksum: string; manifest_json: string }>();
 		expect(installed?.artifact_checksum).toBe(userPluginManifest.artifact_checksum);
 		expect(JSON.parse(installed?.manifest_json ?? "{}")).toMatchObject({
-			plugin_version: "1.3.0",
+			plugin_version: "1.4.0",
 		});
 
 		const health = await env.DB.prepare(

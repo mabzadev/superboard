@@ -21,6 +21,7 @@ import {
 	materializeTarget,
 	targetWithAbsentResources,
 } from "./target-compiler.mjs";
+import { siteEmailBuildEnvironment } from "./cloudflare-site-build.mjs";
 
 const OPERATIONS = new Set([
 	"plan",
@@ -170,6 +171,14 @@ async function main(argv = process.argv.slice(2)) {
 	);
 }
 
+export function buildLocalSite(prepared, execute = run, env = process.env) {
+	execute(
+		"pnpm",
+		["--filter", "@superboard/site...", "build"],
+		siteEmailBuildEnvironment(prepared.target, env),
+	);
+}
+
 async function configureTarget(
 	prepared,
 	{ validationOnly = false, writeTrackedSiteConfig = true } = {},
@@ -207,7 +216,7 @@ async function configureTarget(
 }
 
 function buildLocalTarget(prepared) {
-	run("pnpm", ["run", "--filter", "@superboard/site...", "build"]);
+	buildLocalSite(prepared);
 	run("pnpm", ["identity:build"]);
 	runNode("dashboard-cloudflare.mjs", [
 		"--target",
@@ -566,10 +575,10 @@ export async function assertFreshLocalState(args) {
 	}
 }
 
-function run(command, args) {
+function run(command, args, env = process.env) {
 	const result = spawnSync(command, args, {
 		cwd: root,
-		env: process.env,
+		env,
 		stdio: "inherit",
 		shell: false,
 	});

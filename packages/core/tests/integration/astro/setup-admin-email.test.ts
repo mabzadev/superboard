@@ -40,6 +40,22 @@ function context(
 	} as unknown as APIContext;
 }
 
+function withoutTransactions(db: Kysely<Database>): Kysely<Database> {
+	return new Proxy(db, {
+		get(target, property) {
+			if (property === "transaction") {
+				return () => ({
+					execute: async () => {
+						throw new Error("Transactions are not supported yet.");
+					},
+				});
+			}
+			const value: unknown = Reflect.get(target, property, target);
+			return typeof value === "function" ? value.bind(target) : value;
+		},
+	});
+}
+
 describe("email-verified administrator setup", () => {
 	let db: Kysely<Database>;
 
@@ -56,6 +72,25 @@ describe("email-verified administrator setup", () => {
 
 	afterEach(async () => {
 		await teardownTestDatabase(db);
+	});
+
+	it("completes setup on transactionless databases such as D1", async () => {
+		const sent: Array<{ text: string }> = [];
+		const sessionValues = new Map<string, unknown>();
+		const request = new Request("https://site.mbza.dev/_emdash/api/setup/admin/email", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ email: "mabzadev@gmail.com", name: "Mabza" }),
+		});
+		await sendSetupEmail(context(db, request, sent, sessionValues));
+		const link = sent[0]!.text.match(/https:\/\/\S+/u)?.[0];
+
+		const verifyResponse = await verifySetupEmail(
+			context(withoutTransactions(db), new Request(link!), sent, sessionValues),
+		);
+
+		expect(verifyResponse.headers.get("Location")).toBe("/_emdash/admin");
+		expect(sessionValues.get("user")).toMatchObject({ id: expect.any(String) });
 	});
 
 	it("sends the setup link and creates a strongly reauthenticated admin after verification", async () => {

@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
 	assertFreshLocalState,
+	buildLocalSite,
 	prepareTarget,
 	verifyLocalTargetHealth,
 } from "./target-orchestrator.mjs";
@@ -60,4 +61,33 @@ test("the local target health gate probes every Worker through its declared cont
 	assert.ok(
 		requests.some((request) => request.url === "http://127.0.0.1:8802/superboard-system/health"),
 	);
+});
+
+test("local target start builds the Site with the selected target email settings", () => {
+	const calls = [];
+	buildLocalSite(
+		{
+			target: {
+				mail: {
+					fromAddress: "noreply@mbza.dev",
+					fromName: "SuperBoard Development",
+					replyToAddress: "support@mbza.dev",
+				},
+			},
+		},
+		(command, args, env) => calls.push({ command, args, env }),
+		{},
+	);
+
+	assert.deepEqual(calls, [
+		{
+			command: "pnpm",
+			args: ["--filter", "@superboard/site...", "build"],
+			env: {
+				SUPERBOARD_SITE_EMAIL_FROM_ADDRESS: "noreply@mbza.dev",
+				SUPERBOARD_SITE_EMAIL_FROM_NAME: "SuperBoard Development",
+				SUPERBOARD_SITE_EMAIL_REPLY_TO: "support@mbza.dev",
+			},
+		},
+	]);
 });
