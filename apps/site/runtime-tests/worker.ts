@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 
 import { createConfiguredSuperBoardPlugin } from "../../../packages/supbrd-runtime-plugins/src/runtime.js";
 import { GET as queryDataSource } from "../src/pages/_superboard/api/plugins/[pluginId]/data-sources/[dataSourceId].js";
+import { POST as disableManagedPlugin } from "../src/pages/_superboard/api/plugins/[pluginId]/disable.js";
 import { POST as enableManagedPlugin } from "../src/pages/_superboard/api/plugins/[pluginId]/enable.js";
 import { POST as synchronizePlugins } from "../src/pages/_superboard/api/plugins/sync.js";
 import { POST as activateRelease } from "../src/pages/_superboard/api/releases/activate.js";
@@ -21,14 +22,14 @@ const routes = new Map<string, APIRoute>([
 	["POST /_emdash/api/superboard/releases/activate", activateRelease],
 ]);
 const dataSourcePath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/data-sources\/([^/]+)$/u;
-const managedPluginEnablePath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/enable$/u;
+const managedPluginActionPath = /^\/_emdash\/api\/superboard\/plugins\/([^/]+)\/(enable|disable)$/u;
 const pluginHealthPath = /^\/_emdash\/api\/plugins\/([^/]+)\/health$/u;
 
 export default {
 	async fetch(request, workerEnv) {
 		const url = new URL(request.url);
 		const dataSource = url.pathname.match(dataSourcePath);
-		const managedPluginEnable = url.pathname.match(managedPluginEnablePath);
+		const managedPluginAction = url.pathname.match(managedPluginActionPath);
 		const pluginHealth = url.pathname.match(pluginHealthPath);
 		if (pluginHealth && request.method === "GET") {
 			const plugin = createConfiguredSuperBoardPlugin(decodeURIComponent(pluginHealth[1]!));
@@ -41,7 +42,12 @@ export default {
 			);
 		}
 		const handler =
-			(managedPluginEnable && request.method === "POST" ? enableManagedPlugin : null) ??
+			(managedPluginAction?.[2] === "enable" && request.method === "POST"
+				? enableManagedPlugin
+				: null) ??
+			(managedPluginAction?.[2] === "disable" && request.method === "POST"
+				? disableManagedPlugin
+				: null) ??
 			(dataSource && request.method === "GET" ? queryDataSource : null) ??
 			routes.get(`${request.method} ${url.pathname}`);
 		if (!handler) return Response.json({ error: { code: "ROUTE_NOT_FOUND" } }, { status: 404 });
@@ -54,8 +60,8 @@ export default {
 		return handler({
 			request,
 			url,
-			params: managedPluginEnable
-				? { pluginId: decodeURIComponent(managedPluginEnable[1]!) }
+			params: managedPluginAction
+				? { pluginId: decodeURIComponent(managedPluginAction[1]!) }
 				: dataSource
 					? {
 							pluginId: decodeURIComponent(dataSource[1]!),

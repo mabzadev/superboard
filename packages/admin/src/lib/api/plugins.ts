@@ -29,6 +29,8 @@ export interface PluginInfo {
 	lifecycleManaged?: boolean;
 	/** Host route that performs the complete managed activation workflow. */
 	lifecycleEnablePath?: string;
+	/** Host route that performs the complete managed deactivation workflow. */
+	lifecycleDisablePath?: string;
 	/** Installed marketplace version (set when source = 'marketplace') */
 	marketplaceVersion?: string;
 	/** Publisher DID, for registry-source plugins. */
@@ -163,10 +165,18 @@ export async function enablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
 /**
  * Disable a plugin
  */
-export async function disablePlugin(pluginId: string): Promise<PluginInfo> {
-	const response = await apiFetch(`${API_BASE}/admin/plugins/${pluginId}/disable`, {
+export async function disablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
+	const path =
+		plugin.lifecycleManaged && plugin.lifecycleDisablePath
+			? plugin.lifecycleDisablePath
+			: `${API_BASE}/admin/plugins/${plugin.id}/disable`;
+	const response = await apiFetch(path, {
 		method: "POST",
 	});
+	if (plugin.lifecycleManaged) {
+		if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to disable plugin`));
+		return { ...plugin, enabled: false, status: "inactive" };
+	}
 	const result = await parseApiResponse<{ item: PluginInfo }>(
 		response,
 		i18n._(msg`Failed to disable plugin`),

@@ -197,6 +197,30 @@ describe("PluginManager", () => {
 		});
 	});
 
+	it("passes the host lifecycle action through the disable button", async () => {
+		const managed = makePlugin({
+			id: "managed-plugin",
+			name: "Managed Plugin",
+			enabled: true,
+			status: "active",
+			lifecycleManaged: true,
+			lifecycleDisablePath: "/_emdash/api/host/plugins/managed-plugin/disable",
+		});
+		mockFetchPlugins.mockResolvedValue([managed]);
+		mockDisablePlugin.mockResolvedValue({ ...managed, enabled: false, status: "inactive" });
+		const screen = await render(
+			<Wrapper>
+				<PluginManager />
+			</Wrapper>,
+		);
+
+		await screen.getByRole("switch", { name: "Disable plugin" }).click();
+
+		await vi.waitFor(() => {
+			expect(mockDisablePlugin.mock.calls[0]?.[0]).toEqual(managed);
+		});
+	});
+
 	it("pages link shown only for enabled plugins with admin pages", async () => {
 		const screen = await render(
 			<Wrapper>

@@ -4,4 +4,5 @@ import { runManagedPluginLifecycleAction } from "../../../../../lib/managed-plug
 
 export const prerender = false;
 
-export const POST: APIRoute = async (context) => runManagedPluginLifecycleAction(context, "enable");
+export const POST: APIRoute = async (context) =>
+	runManagedPluginLifecycleAction(context, "disable");

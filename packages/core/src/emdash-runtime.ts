@@ -273,6 +273,8 @@ export interface SandboxedPluginEntry {
 	lifecycleManaged?: boolean;
 	/** Host route that performs the complete managed activation workflow. */
 	lifecycleEnablePath?: string;
+	/** Host route that performs the complete managed deactivation workflow. */
+	lifecycleDisablePath?: string;
 	options: Record<string, unknown>;
 	code: string;
 	/** Capabilities the plugin requests */

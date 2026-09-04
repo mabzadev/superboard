@@ -27,6 +27,7 @@ export function configureSuperBoardPlugins(plugins) {
 				defaultEnabled: false,
 				lifecycleManaged: true,
 				lifecycleEnablePath: `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/enable`,
+				lifecycleDisablePath: `/_emdash/api/superboard/plugins/${encodeURIComponent(manifest.plugin_id)}/disable`,
 				entrypoint,
 				adminPages: [{ path: "/", label: displayName, icon: "settings" }],
 				settingsSchema,
