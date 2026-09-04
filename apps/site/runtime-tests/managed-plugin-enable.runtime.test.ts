@@ -17,6 +17,13 @@ test("the host lifecycle actions enable and disable only the selected managed pl
 		}),
 	});
 	expect(installed.status, await installed.clone().text()).toBe(201);
+	await env.DB.prepare(
+		`UPDATE superboard_plugin_runtime_health
+		 SET expires_at = '2000-01-01T00:00:00.000Z'
+		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
+	)
+		.bind("vocostar", "supbrd-plug-settings")
+		.run();
 
 	const response = await SELF.fetch(
 		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-user/enable",
