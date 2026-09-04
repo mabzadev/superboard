@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "matrix_sha256": "sha256:4b3517d42706ce237df626ac051a225516355dece080e0c6c8b0a0e552baf6cb",
+  "matrix_sha256": "sha256:f4c526bf0ec092a20045340170c565457281cac92d25dcc659a56f841a7253a1",
   "topology_sha256": "sha256:0438974c2f27b49070f2403abc07516dcb56b1797883cca1ec9ecd7b1961b64f",
   "row_count": 944,
   "required_row_count": 565,
@@ -12,7 +12,7 @@
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "SSmLFmDyHa1923KMdQUAlhsmiYBM_s_gx_BxNrZ8hzi4vuvau59mLYBuKxL5Ms9cfehCSWMXYfPFyyqa35gQSQ"
+      "value": "5kOPRUgiyHq21LCrfJcipH3gd75AYNqgmI2Rw3K5Sq1n3SQT6Wop7Fd2pnv8mfH22h348ldjAtNYu-FfOpLuSA"
     },
     "validation_set_checksum": "sha256:6c68717b7fb05542fb1331d0b09cfa3ee13695331589cb5a42a80d2bfb41216a",
     "validation_receipt_checksums": [
@@ -33,7 +33,7 @@
     "verification_status": "verified",
     "target": "mbza-development",
     "environment": "local",
-    "target_artifact_checksum": "sha256:2a92c6c5e985eaa7b2db46f692245df429ade656e64cfbdb4cec104450af58d0",
+    "target_artifact_checksum": "sha256:b584fc4e9506bb13285f43d07a03dd2aebe2d2c8a7a96e40fd62ba3f1d5b246a",
     "active_plugin_ids": [
       "supbrd-plug-audit",
       "supbrd-plug-content",
