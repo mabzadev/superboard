@@ -1,7 +1,7 @@
 import { SELF, env } from "cloudflare:test";
 import { expect, test } from "vitest";
 
-test("the host lifecycle action installs and activates a managed plugin", async () => {
+test("the host lifecycle actions enable and disable only the selected managed plugin", async () => {
 	const installed = await SELF.fetch("https://site.example/_emdash/api/superboard/plugins/sync", {
 		method: "POST",
 		headers: {
@@ -52,4 +52,49 @@ test("the host lifecycle action installs and activates a managed plugin", async 
 		.bind("vocostar", "supbrd-plug-settings")
 		.first<{ state: string; activated_release_id: string | null }>();
 	expect(unrelatedLifecycle).toEqual({ state: "installed", activated_release_id: null });
+
+	const enabledSettings = await SELF.fetch(
+		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/enable",
+		{
+			method: "POST",
+			headers: {
+				Origin: "https://site.example",
+				"X-EmDash-Request": "1",
+				"X-Parity-Operator": "1",
+			},
+		},
+	);
+	expect(enabledSettings.status, await enabledSettings.clone().text()).toBe(201);
+
+	const disabledSettings = await SELF.fetch(
+		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/disable",
+		{
+			method: "POST",
+			headers: {
+				Origin: "https://site.example",
+				"X-EmDash-Request": "1",
+				"X-Parity-Operator": "1",
+			},
+		},
+	);
+	expect(disabledSettings.status, await disabledSettings.clone().text()).toBe(201);
+	expect(await disabledSettings.json()).toMatchObject({
+		plugin_id: "supbrd-plug-settings",
+		status: "disabled",
+		release_id: expect.any(String),
+	});
+
+	const lifecycleAfterDisable = await env.DB.prepare(
+		`SELECT plugin_id, state
+		 FROM superboard_plugin_lifecycle
+		 WHERE instance_id = ? AND target = 'local'
+		   AND plugin_id IN (?, ?)
+		 ORDER BY plugin_id`,
+	)
+		.bind("vocostar", "supbrd-plug-settings", "supbrd-plug-user")
+		.all<{ plugin_id: string; state: string }>();
+	expect(lifecycleAfterDisable.results).toEqual([
+		{ plugin_id: "supbrd-plug-settings", state: "disabled" },
+		{ plugin_id: "supbrd-plug-user", state: "active" },
+	]);
 });

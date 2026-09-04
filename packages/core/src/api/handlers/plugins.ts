@@ -29,6 +29,8 @@ export interface PluginInfo {
 	lifecycleManaged?: boolean;
 	/** Host route that performs the complete managed activation workflow. */
 	lifecycleEnablePath?: string;
+	/** Host route that performs the complete managed deactivation workflow. */
+	lifecycleDisablePath?: string;
 	marketplaceVersion?: string;
 	/** Publisher DID, for registry-source plugins */
 	registryPublisherDid?: string;
@@ -143,6 +145,7 @@ function buildSandboxedPluginInfo(
 		sandboxed: true,
 		lifecycleManaged: entry.lifecycleManaged ?? false,
 		lifecycleEnablePath: entry.lifecycleEnablePath,
+		lifecycleDisablePath: entry.lifecycleDisablePath,
 		capabilities: entry.capabilities,
 		hasAdminPages: (entry.adminPages?.length ?? 0) > 0,
 		hasDashboardWidgets: (entry.adminWidgets?.length ?? 0) > 0,

@@ -86,6 +86,8 @@ export interface PluginDescriptor<TOptions = Record<string, unknown>> {
 	lifecycleManaged?: boolean;
 	/** Host route that performs the complete managed activation workflow. */
 	lifecycleEnablePath?: string;
+	/** Host route that performs the complete managed deactivation workflow. */
+	lifecycleDisablePath?: string;
 	/** Module specifier to import (e.g., "@emdash-cms/plugin-api-test") */
 	entrypoint: string;
 	/**

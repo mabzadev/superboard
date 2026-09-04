@@ -14,6 +14,12 @@ export function superboardReleaseOperatorApi() {
 					),
 				});
 				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/disable",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/api/plugins/[pluginId]/disable.ts", import.meta.url),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/api/superboard/plugins/user/install",
 					entrypoint: fileURLToPath(
 						new URL("./src/pages/_superboard/api/plugins/user/install.ts", import.meta.url),

@@ -695,6 +695,7 @@ export const sandboxedPlugins = [];
     defaultEnabled: ${JSON.stringify(descriptor.defaultEnabled ?? true)},
     lifecycleManaged: ${JSON.stringify(descriptor.lifecycleManaged ?? false)},
     lifecycleEnablePath: ${JSON.stringify(descriptor.lifecycleEnablePath)},
+    lifecycleDisablePath: ${JSON.stringify(descriptor.lifecycleDisablePath)},
     options: ${JSON.stringify(descriptor.options ?? {})},
     capabilities: ${JSON.stringify(descriptor.capabilities ?? [])},
     allowedHosts: ${JSON.stringify(descriptor.allowedHosts ?? [])},

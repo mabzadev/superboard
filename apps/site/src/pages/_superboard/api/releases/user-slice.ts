@@ -10,6 +10,7 @@ import { createD1FrontReleaseRepository } from "../../../../lib/release-reposito
 import { isRecord, isUlid } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 import {
+	loadActiveSuperBoardPluginLockExcluding,
 	loadReleasableSuperBoardPluginLock,
 	loadSelectedSuperBoardPluginLock,
 	resolveSuperBoardPluginTarget,
@@ -31,7 +32,9 @@ export const POST: APIRoute = async (context) => {
 			!isUlid(body.compilation_id) ||
 			!isUlid(body.candidate_id) ||
 			!isUlid(body.release_id) ||
-			!isPluginSelection(body.plugin_ids)
+			!isPluginSelection(body.plugin_ids) ||
+			!isPluginSelection(body.excluded_plugin_ids) ||
+			(body.plugin_ids !== undefined && body.excluded_plugin_ids !== undefined)
 		)
 			return jsonResponse({ error: { code: "INVALID_USER_SLICE_REQUEST" } }, 422);
 		const identifiers = {
@@ -57,9 +60,11 @@ export const POST: APIRoute = async (context) => {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local"),
 		};
-		const pluginLock = body.plugin_ids
-			? await loadSelectedSuperBoardPluginLock(env.DB, pluginScope, body.plugin_ids)
-			: await loadReleasableSuperBoardPluginLock(env.DB, pluginScope);
+		const pluginLock = body.excluded_plugin_ids
+			? await loadActiveSuperBoardPluginLockExcluding(env.DB, pluginScope, body.excluded_plugin_ids)
+			: body.plugin_ids
+				? await loadSelectedSuperBoardPluginLock(env.DB, pluginScope, body.plugin_ids)
+				: await loadReleasableSuperBoardPluginLock(env.DB, pluginScope);
 		const input = await composeUserFrontReleaseInput({
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			...identifiers,
