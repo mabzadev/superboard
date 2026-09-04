@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { buildMigrationRehearsalProof } from "./emdash-migration-rehearsal-proof.mjs";
+import {
+	buildMigrationRehearsalProof,
+	summarizeMigrationRehearsalProof,
+} from "./emdash-migration-rehearsal-proof.mjs";
 
 const CHECKSUM_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
@@ -30,4 +33,19 @@ test("every declared Store has deterministic source/Store and non-destructive ev
 	}
 	assert.equal(proof.public_cutover, false);
 	assert.match(proof.receipt_checksum, CHECKSUM_PATTERN);
+	const summary = summarizeMigrationRehearsalProof(proof);
+	for (const store of summary.stores.filter(
+		({ migration_kind: migrationKind }) => migrationKind === "new_empty_store",
+	)) {
+		assert.equal(store.status, "requires_schema_and_runtime");
+	}
+});
+
+test("a target-scoped rehearsal converges only Stores owned by its installed plugins", async () => {
+	const pluginIds = ["supbrd-plugmod-onboardings", "supbrd-plugmod-paywalls"];
+	const proof = await buildMigrationRehearsalProof({ pluginIds });
+
+	assert.deepEqual([...new Set(proof.stores.map(({ plugin_id: pluginId }) => pluginId))].toSorted(), pluginIds);
+	assert.ok(proof.stores.length > 0);
+	assert.ok(proof.stores.every(({ schema_proof: schemaProof }) => CHECKSUM_PATTERN.test(schemaProof.checksum)));
 });

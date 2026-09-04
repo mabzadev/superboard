@@ -141,6 +141,28 @@ be audited offline with `pnpm run configuration:check`.
 Use the [Site local validation guide](apps/site/README.md#local-validation) to
 configure, migrate, and start the complete local graph.
 
+### Prove a blank Instance
+
+Run the blank-Instance proof from one target manifest:
+
+```bash
+pnpm emdash:fresh-instance:proof -- --target mbza-development --write
+```
+
+The command builds the local and development materializations from absent
+resource inventories, checks their graph checksum, and runs the plugin,
+Store, Worker health, Front Release, and route-state proofs in isolated D1 and
+Workerd runtimes. It writes the value-free receipt to
+`docs/evidence/issue-69/fresh-instance.receipt.json`; it does not mutate a
+Cloudflare account.
+
+Verify the committed receipt and its source checksums with the following
+command:
+
+```bash
+pnpm emdash:fresh-instance:proof -- --target mbza-development --check
+```
+
 The following command displays the local lifecycle plan:
 
 ```bash

@@ -1000,6 +1000,9 @@ importers:
       emdash:
         specifier: workspace:*
         version: link:../../packages/core
+      kysely:
+        specifier: 'catalog:'
+        version: 0.29.2
       layerr:
         specifier: ^3.0.0
         version: 3.0.0

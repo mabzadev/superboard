@@ -47,6 +47,18 @@ test("one target compiles to the same closed graph for local and Cloudflare", as
 		),
 	);
 	assert.ok(local.graph.plugins.some(({ pluginId }) => pluginId === "supbrd-plugmod-gateway"));
+	assert.ok(
+		local.graph.plugins.some(
+			({ pluginId, targetState }) =>
+				pluginId === "supbrd-plugmod-gateway" && targetState === "active",
+		),
+	);
+	assert.ok(
+		local.graph.plugins.some(
+			({ pluginId, targetState }) =>
+				pluginId === "supbrd-plugmod-paywalls" && targetState === "installed",
+		),
+	);
 	assert.ok(local.graph.resources.some(({ key }) => key === "siteD1"));
 	assert.ok(local.graph.migrations.every(({ checksum }) => CHECKSUM_PATTERN.test(checksum)));
 	assert.ok(
@@ -68,6 +80,16 @@ test("one target compiles to the same closed graph for local and Cloudflare", as
 		localMaterialization.services.map(({ id }) => id),
 		cloudflareMaterialization.services.map(({ id }) => id),
 	);
+	for (const service of localMaterialization.services) {
+		const health = localMaterialization.healthChecks.find(
+			({ id }) => id === `worker:${service.id}`,
+		);
+		assert.ok(health, `missing local health check for ${service.id}`);
+		assert.equal(
+			health.url,
+			`http://${service.localEndpoint.host}:${service.localEndpoint.port}${health.path}`,
+		);
+	}
 	assertTargetGraphParity([localMaterialization, cloudflareMaterialization]);
 });
 
@@ -316,6 +338,49 @@ test("the same target executes local and Cloudflare configuration adapters", asy
 	}
 });
 
+test("the local adapter gives every unprovisioned D1 and KV resource isolated storage", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const compiled = await compileTarget(target, "local");
+	const artifactPath = resolve(root, "deploy/generated/issue-69-local-target.json");
+	await mkdir(resolve(root, "deploy/generated"), { recursive: true });
+	await writeFile(artifactPath, `${JSON.stringify(compiled)}\n`);
+	try {
+		for (const service of ["api", "dynamic-links", "site"]) {
+			const result = runConfigurationAdapter(
+				"local",
+				artifactPath,
+				compiled.checksum,
+				["--allow-unprovisioned"],
+				{ service, outputSuffix: "issue-69" },
+			);
+			assert.equal(result.status, 0, result.stderr);
+		}
+		const api = await readIssue69Configuration("api");
+		const dynamicLinks = await readIssue69Configuration("dynamic-links");
+		const site = await readIssue69Configuration("site");
+		const d1Ids = [
+			api.d1_databases[0].database_id,
+			dynamicLinks.d1_databases[0].database_id,
+			site.d1_databases[0].database_id,
+		];
+		const kvIds = [api.kv_namespaces[0].id, ...site.kv_namespaces.map(({ id }) => id)];
+
+		assert.equal(new Set(d1Ids).size, d1Ids.length);
+		assert.equal(new Set(kvIds).size, kvIds.length);
+	} finally {
+		await rm(artifactPath, { force: true });
+	}
+});
+
+async function readIssue69Configuration(service) {
+	return JSON.parse(
+		await readFile(
+			resolve(root, `deploy/generated/mbza-development-${service}-local-issue-69.jsonc`),
+			"utf8",
+		),
+	);
+}
+
 test("plugin Stores cannot escape the compiled migration graph", async () => {
 	const { target } = await loadTarget("mbza-development");
 	const topology = JSON.parse(
@@ -336,7 +401,7 @@ function runConfigurationAdapter(
 	artifactPath,
 	checksum,
 	extraArgs = [],
-	{ noRoutes = true, outputSuffix } = {},
+	{ noRoutes = true, outputSuffix, service = "api" } = {},
 ) {
 	return spawnSync(
 		process.execPath,
@@ -347,7 +412,7 @@ function runConfigurationAdapter(
 			"--environment",
 			environment,
 			"--service",
-			"api",
+			service,
 			...(noRoutes ? ["--no-routes"] : []),
 			...(outputSuffix ? ["--output-suffix", outputSuffix] : []),
 			"--target-artifact",

@@ -58,14 +58,14 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === OBSERVABILITY_HEALTH_PATH) {
       const analyticsQueryConfigured = configured(env);
-      const optionalInDevelopment =
-        env.ENVIRONMENT === "development" && !analyticsQueryConfigured;
+      const optionalOutsideProduction =
+        env.ENVIRONMENT !== "production" && !analyticsQueryConfigured;
       return json(
         {
           service: "observability",
           status: analyticsQueryConfigured
             ? "ok"
-            : optionalInDevelopment
+            : optionalOutsideProduction
               ? "degraded"
               : "misconfigured",
           environment: env.ENVIRONMENT,
@@ -73,7 +73,7 @@ export default {
           analyticsQueryConfigured,
           timestamp: new Date().toISOString(),
         },
-        analyticsQueryConfigured || optionalInDevelopment ? 200 : 503,
+        analyticsQueryConfigured || optionalOutsideProduction ? 200 : 503,
       );
     }
     if (url.pathname === OBSERVABILITY_SUMMARY_PATH) {
