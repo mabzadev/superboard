@@ -99,7 +99,7 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 	});
 
 	const enableMutation = useMutation({
-		mutationFn: enablePlugin,
+		mutationFn: (plugin: PluginInfo) => enablePlugin(plugin),
 		onSuccess: (plugin) => {
 			void queryClient.invalidateQueries({ queryKey: ["plugins"] });
 			void queryClient.invalidateQueries({ queryKey: ["manifest"] });
@@ -198,7 +198,7 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 						key={plugin.id}
 						plugin={plugin}
 						updateInfo={updateMap.get(plugin.id)}
-						onEnable={() => enableMutation.mutate(plugin.id)}
+						onEnable={() => enableMutation.mutate(plugin)}
 						onDisable={() => disableMutation.mutate(plugin.id)}
 						isToggling={enableMutation.isPending || disableMutation.isPending}
 						hasMarketplace={hasMarketplace}

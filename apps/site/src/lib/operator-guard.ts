@@ -7,6 +7,13 @@ import type { APIContext } from "astro";
 
 import type { SuperBoardSiteEnv } from "./site-env.js";
 
+const LOCAL_OPERATOR_REAUTHENTICATION = Symbol("superboard.localOperatorReauthentication");
+
+interface LocalOperatorReauthentication {
+	userId: string;
+	verifiedAt: string;
+}
+
 export function requireReleaseOperator(
 	context: Pick<APIContext, "locals" | "request" | "url">,
 	env: SuperBoardSiteEnv,
@@ -65,7 +72,12 @@ export async function recentOperatorReauthentication(
 	},
 ): Promise<OperatorReauthenticationReceipt | null> {
 	if (!context.locals.user || !context.session) return null;
-	const marker = await context.session.get("strongReauthentication");
+	const localMarker = (
+		context.locals as typeof context.locals & {
+			[LOCAL_OPERATOR_REAUTHENTICATION]?: LocalOperatorReauthentication;
+		}
+	)[LOCAL_OPERATOR_REAUTHENTICATION];
+	const marker = localMarker ?? (await context.session.get("strongReauthentication"));
 	if (!marker || marker.userId !== context.locals.user.id) return null;
 	const verified = Date.parse(marker.verifiedAt);
 	const now = Date.parse(input.now);
@@ -81,6 +93,24 @@ export async function recentOperatorReauthentication(
 		reauthenticated_at: new Date(verified).toISOString(),
 		expires_at: new Date(verified + 5 * 60 * 1_000).toISOString(),
 	});
+}
+
+export function withLocalOperatorReauthentication<T extends APIContext>(
+	context: T,
+	env: SuperBoardSiteEnv,
+	verifiedAt: string,
+): T {
+	if (env.SUPERBOARD_ENVIRONMENT !== "local" || !context.locals.user) return context;
+	return {
+		...context,
+		locals: {
+			...context.locals,
+			[LOCAL_OPERATOR_REAUTHENTICATION]: {
+				userId: context.locals.user.id,
+				verifiedAt,
+			},
+		},
+	};
 }
 
 function errorResponse(code: string, status: number): Response {

@@ -106,7 +106,15 @@ async function listIds(runtime: EmDashRuntime) {
 	const res = await listPlugins(ctx(runtime));
 	expect(res.status).toBe(200);
 	const body = (await res.json()) as {
-		data: { items: Array<{ id: string; source?: string; sandboxed?: boolean; enabled: boolean }> };
+		data: {
+			items: Array<{
+				id: string;
+				source?: string;
+				sandboxed?: boolean;
+				enabled: boolean;
+				lifecycleEnablePath?: string;
+			}>;
+		};
 	};
 	return body.data;
 }
@@ -139,7 +147,17 @@ describe("admin plugin routes: statically-sandboxed plugins (real runtime)", () 
 	});
 
 	it("rejects generic activation for a host-managed plugin", async () => {
-		runtime = buildRuntime(db, [sandboxedEntry({ defaultEnabled: false, lifecycleManaged: true })]);
+		runtime = buildRuntime(db, [
+			sandboxedEntry({
+				defaultEnabled: false,
+				lifecycleManaged: true,
+				lifecycleEnablePath: "/_emdash/api/host/plugins/webhook-notifier/enable",
+			}),
+		]);
+		const listed = await listIds(runtime);
+		expect(listed.items.find((item) => item.id === "webhook-notifier")).toMatchObject({
+			lifecycleEnablePath: "/_emdash/api/host/plugins/webhook-notifier/enable",
+		});
 		const enable = await enablePlugin(ctx(runtime, { id: "webhook-notifier" }));
 		expect(enable.status).toBe(400);
 		expect(await enable.json()).toMatchObject({

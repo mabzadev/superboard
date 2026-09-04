@@ -25,6 +25,10 @@ export interface PluginInfo {
 	deactivatedAt?: string;
 	/** Plugin source: 'config' (declared in astro.config), 'marketplace', or 'registry' */
 	source?: "config" | "marketplace" | "registry";
+	/** True when activation is owned by the host application. */
+	lifecycleManaged?: boolean;
+	/** Host route that performs the complete managed activation workflow. */
+	lifecycleEnablePath?: string;
 	/** Installed marketplace version (set when source = 'marketplace') */
 	marketplaceVersion?: string;
 	/** Publisher DID, for registry-source plugins. */
@@ -137,10 +141,18 @@ export async function updatePluginSettings(
 /**
  * Enable a plugin
  */
-export async function enablePlugin(pluginId: string): Promise<PluginInfo> {
-	const response = await apiFetch(`${API_BASE}/admin/plugins/${pluginId}/enable`, {
+export async function enablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
+	const path =
+		plugin.lifecycleManaged && plugin.lifecycleEnablePath
+			? plugin.lifecycleEnablePath
+			: `${API_BASE}/admin/plugins/${plugin.id}/enable`;
+	const response = await apiFetch(path, {
 		method: "POST",
 	});
+	if (plugin.lifecycleManaged) {
+		if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to enable plugin`));
+		return { ...plugin, enabled: true, status: "active" };
+	}
 	const result = await parseApiResponse<{ item: PluginInfo }>(
 		response,
 		i18n._(msg`Failed to enable plugin`),

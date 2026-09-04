@@ -11,6 +11,7 @@ import { isRecord, isUlid } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 import {
 	loadReleasableSuperBoardPluginLock,
+	loadSelectedSuperBoardPluginLock,
 	resolveSuperBoardPluginTarget,
 } from "../../../../lib/superboard-plugin-catalog.js";
 import { composeUserFrontReleaseInput } from "../../../../lib/user-front-release.js";
@@ -29,7 +30,8 @@ export const POST: APIRoute = async (context) => {
 			!isUlid(body.draft_snapshot_id) ||
 			!isUlid(body.compilation_id) ||
 			!isUlid(body.candidate_id) ||
-			!isUlid(body.release_id)
+			!isUlid(body.release_id) ||
+			!isPluginSelection(body.plugin_ids)
 		)
 			return jsonResponse({ error: { code: "INVALID_USER_SLICE_REQUEST" } }, 422);
 		const identifiers = {
@@ -51,10 +53,13 @@ export const POST: APIRoute = async (context) => {
 		}
 		const releaseSequence = (predecessor?.release.payload.release_sequence ?? 0) + 1;
 		const previousReleaseId = active?.active_release_id ?? null;
-		const pluginLock = await loadReleasableSuperBoardPluginLock(env.DB, {
+		const pluginScope = {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local"),
-		});
+		};
+		const pluginLock = body.plugin_ids
+			? await loadSelectedSuperBoardPluginLock(env.DB, pluginScope, body.plugin_ids)
+			: await loadReleasableSuperBoardPluginLock(env.DB, pluginScope);
 		const input = await composeUserFrontReleaseInput({
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			...identifiers,
@@ -85,3 +90,17 @@ export const POST: APIRoute = async (context) => {
 		return handleError(error, "User Front slice creation failed", "USER_SLICE_CREATE_FAILED");
 	}
 };
+
+function isPluginSelection(value: unknown): value is string[] | undefined {
+	return (
+		value === undefined ||
+		(Array.isArray(value) &&
+			value.length > 0 &&
+			value.length <= 100 &&
+			value.every(
+				(pluginId) =>
+					typeof pluginId === "string" && pluginId.startsWith("supbrd-") && !pluginId.includes("*"),
+			) &&
+			new Set(value).size === value.length)
+	);
+}

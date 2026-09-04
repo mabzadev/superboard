@@ -8,6 +8,12 @@ export function superboardReleaseOperatorApi() {
 		hooks: {
 			"astro:config:setup": ({ injectRoute }) => {
 				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/enable",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/api/plugins/[pluginId]/enable.ts", import.meta.url),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/api/superboard/plugins/user/install",
 					entrypoint: fileURLToPath(
 						new URL("./src/pages/_superboard/api/plugins/user/install.ts", import.meta.url),
