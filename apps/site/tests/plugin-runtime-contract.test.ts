@@ -3,7 +3,7 @@ import { expect, test, vi } from "vitest";
 import { createConfiguredSuperBoardPlugin } from "../../../packages/supbrd-runtime-plugins/src/runtime.js";
 import { superBoardRuntimePluginCatalog } from "../src/lib/superboard-plugin-catalog.js";
 
-test("every SuperBoard plugin has an executable sandbox contract, settings and Block Kit Admin page", async () => {
+test("every SuperBoard plugin exposes its validated sandbox contract without inventing command handlers", async () => {
 	for (const { manifest } of superBoardRuntimePluginCatalog().plugins) {
 		const plugin = createConfiguredSuperBoardPlugin(manifest.plugin_id);
 		expect(plugin.id).toBe(manifest.plugin_id);
@@ -21,6 +21,7 @@ test("every SuperBoard plugin has an executable sandbox contract, settings and B
 				"data-sources/catalog",
 			]),
 		);
+		expect(Object.keys(plugin.routes)).not.toContain("commands/execute");
 		const admin = await plugin.routes.admin!.handler({} as never);
 		expect(admin).toMatchObject({ blocks: expect.any(Array) });
 		const health = await plugin.routes.health!.handler({

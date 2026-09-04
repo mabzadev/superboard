@@ -59,6 +59,12 @@ test("one target compiles to the same closed graph for local and Cloudflare", as
 				pluginId === "supbrd-plugmod-paywalls" && targetState === "installed",
 		),
 	);
+	const userPlugin = local.graph.plugins.find(({ pluginId }) => pluginId === "supbrd-plug-user");
+	assert.equal(userPlugin?.version, "1.4.0");
+	assert.deepEqual(
+		userPlugin?.stores.flatMap(({ migrations }) => migrations),
+		["0001_user_directory", "0002_user_credentials_providers", "0003_application_sessions"],
+	);
 	assert.ok(local.graph.resources.some(({ key }) => key === "siteD1"));
 	assert.ok(local.graph.migrations.every(({ checksum }) => CHECKSUM_PATTERN.test(checksum)));
 	assert.ok(

@@ -1,16 +1,17 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
+const parityReleasePath = join(root, "config/superboard-parity-release.json");
 const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.json");
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
 const manifestMigrationPath = join(
 	root,
-	"apps/site/migrations/0018_native_front_view_bindings.sql",
+	"apps/site/migrations/0020_revalidated_plugin_manifests.sql",
 );
 const compatibilityPath = join(root, "config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
@@ -25,6 +26,8 @@ const SUPPORT_OR_FLOWS_ROUTE_PATTERN = /\/(?:support|flows)(?:\/|$)/u;
 const SUPPORT_ROUTE_PATTERN = /\/support(?:\/|$)/u;
 const FLOWS_ROUTE_PATTERN = /\/flows(?:\/|$)/u;
 const TEST_FILE_PATTERN = /\.(?:runtime\.)?test\.ts$/u;
+const FRONT_SOURCE_PATTERN = /\.(?:css|json|ts|tsx)$/u;
+const FRONT_TEST_SOURCE_PATTERN = /(?:\/__tests__\/|\.(?:spec|test)\.[cm]?[jt]sx?$)/u;
 const APP_USER_ROUTE_PATTERN = /^\/app\/(?:users|customers)/u;
 const REQUIRED_FRONT_STATES = [
 	"loading",
@@ -35,6 +38,16 @@ const REQUIRED_FRONT_STATES = [
 	"unavailable",
 	"maintenance",
 ];
+const parityFrontTest = "apps/site/tests/front-release-dom-parity.test.tsx";
+const parityInstanceTest = "apps/site/runtime-tests/plugin-parity-instance.runtime.test.ts";
+const frontCatalogPath = join(root, "packages/supbrd-runtime-plugins/dist/front-catalog.js");
+const userManifestOverride = existsSync(frontCatalogPath)
+	? (
+			await import(
+				`${pathToFileURL(frontCatalogPath).href}?parity=${statSync(frontCatalogPath).mtimeMs}`
+			)
+		).userPluginManifest
+	: null;
 
 const fullPlugins = ["user", "settings", "content", "products", "audit"];
 const modulePlugins = [
@@ -498,7 +511,11 @@ export function buildPluginTopology() {
 		...modulePlugins.map(([name, worker]) =>
 			pluginTopologyEntry(`supbrd-plugmod-${name}`, "module", workerRuntimeContract(name, worker)),
 		),
-	];
+	].map((entry) =>
+		entry.manifest.plugin_id === "supbrd-plug-user" && userManifestOverride
+			? { ...entry, manifest: userManifestOverride }
+			: entry,
+	);
 	return {
 		schema_version: 1,
 		aliases: { projectId: "instance_id", pid: "instance_id" },
@@ -599,8 +616,12 @@ export function buildParityMatrix() {
 		}),
 	);
 
-	const rows = [...dashboardRows, ...apiRows, ...workerRows, ...sdkRows].toSorted((a, b) =>
-		a.id.localeCompare(b.id),
+	const parityRelease = readParityRelease();
+	const releaseRows = parityRelease
+		? buildReleaseParityRows(parityRelease, buildPluginTopology())
+		: [];
+	const rows = [...dashboardRows, ...apiRows, ...workerRows, ...sdkRows, ...releaseRows].toSorted(
+		(a, b) => a.id.localeCompare(b.id),
 	);
 	return {
 		schema_version: 1,
@@ -608,13 +629,240 @@ export function buildParityMatrix() {
 		baseline_inventory_revision: "b25677f122613de5b01fd2d4c21fa5c669c24cb4",
 		working_tree_base_revision: "3dc65564",
 		public_cutover: false,
+		release: parityRelease
+			? {
+					source: relative(root, parityReleasePath),
+					release_id: parityRelease.release.payload.release_id,
+					content_checksum: parityRelease.release.content_checksum,
+					signature: parityRelease.release.signature,
+					validation_set_checksum: parityRelease.release.validation_set_checksum,
+					validation_receipt_checksums: parityRelease.release.validation_receipts.map(
+						({ receipt_checksum: receiptChecksum }) => receiptChecksum,
+					),
+					verification_status: parityRelease.release.verification_status,
+					target: parityRelease.target,
+					environment: parityRelease.environment,
+					target_artifact_checksum: parityRelease.target_artifact_checksum,
+					active_plugin_ids: [...parityRelease.active_plugin_ids].toSorted((left, right) =>
+						left.localeCompare(right),
+					),
+				}
+			: null,
 		rows,
 	};
 }
 
-export function validateArtifacts(matrix, topology) {
+export function buildReleaseParityRows(parityRelease, topology) {
+	const payload = parityRelease.release.payload;
+	const releaseId = payload.release_id;
+	const manifests = new Map(
+		topology.plugins.map(({ manifest, worker_descriptor: workerDescriptor }) => [
+			manifest.plugin_id,
+			{ manifest, workerDescriptor },
+		]),
+	);
+	const activePluginIds = parityRelease.active_plugin_ids.toSorted();
+	const lockedPluginIds = payload.plugin_lock
+		.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
+		.map(({ plugin_id: pluginId }) => pluginId)
+		.toSorted();
+	if (canonical(activePluginIds) !== canonical(lockedPluginIds)) {
+		throw new Error("Parity Release active plugin set does not match its Plugin Lock");
+	}
+	const renderers = new Map(payload.renderers.map((renderer) => [renderer.renderer_id, renderer]));
+	const routes = new Map(
+		payload.front_route_manifest.routes.map((route) => [route.route_id, route]),
+	);
+	const pluginForRoute = (route) => {
+		const renderer = renderers.get(route.renderer_ids[0]);
+		if (!renderer || !activePluginIds.includes(renderer.plugin_id)) {
+			throw new Error(`Parity Release route has no active plugin renderer: ${route.route_id}`);
+		}
+		return renderer.plugin_id;
+	};
+	const releaseRow = ({ id, kind, target, test, ...details }) => {
+		const sourceStatus = sourceStatusForPlugin(target);
+		return {
+			id,
+			kind,
+			baseline: relative(root, parityReleasePath),
+			target,
+			test,
+			proof_sha256: fileChecksum(join(root, test)),
+			source_status: sourceStatus,
+			blocker:
+				sourceStatus === "unvalidated"
+					? target.includes("support")
+						? "support_extended_gate"
+						: "flows_complete_gate"
+					: null,
+			required: sourceStatus === "delivered",
+			release_id: releaseId,
+			...details,
+		};
+	};
+	const pageRows = payload.front_route_manifest.routes.map((route) =>
+		releaseRow({
+			id: `release:page:${route.route_id}`,
+			kind: "page",
+			target: pluginForRoute(route),
+			test: parityFrontTest,
+			route_id: route.route_id,
+			path: route.path_pattern,
+			page_id: route.page_id,
+			renderer_ids: route.renderer_ids,
+		}),
+	);
+	const submenuRows = payload.presentation.navigation.flatMap((group) =>
+		group.items.map((item) => {
+			const route = routes.get(item.route_id);
+			if (!route) throw new Error(`Parity Release submenu route is missing: ${item.route_id}`);
+			return releaseRow({
+				id: `release:submenu:${group.group_id}:${item.route_id}`,
+				kind: "submenu",
+				target: pluginForRoute(route),
+				test: parityFrontTest,
+				group_id: group.group_id,
+				route_id: item.route_id,
+				href: item.href,
+			});
+		}),
+	);
+	const pluginRows = activePluginIds.flatMap((pluginId) => {
+		const entry = manifests.get(pluginId);
+		if (!entry) throw new Error(`Parity Release manifest is missing: ${pluginId}`);
+		const { manifest, workerDescriptor } = entry;
+		const contributionRows = [
+			...manifest.renderers.map((renderer) =>
+				releaseRow({
+					id: `release:renderer:${renderer.renderer_id}`,
+					kind: "renderer",
+					target: pluginId,
+					test: parityFrontTest,
+					contribution_id: renderer.renderer_id,
+					contribution_checksum: renderer.checksum ?? renderer.build_checksum,
+				}),
+			),
+			...manifest.commands.map((command) =>
+				releaseRow({
+					id: `release:action:${command.command_id}`,
+					kind: "action",
+					target: pluginId,
+					test: parityInstanceTest,
+					source_status: "unvalidated",
+					blocker: "plugin_command_handler_not_connected",
+					required: false,
+					contribution_id: command.command_id,
+					contribution_checksum: command.checksum,
+				}),
+			),
+			...manifest.data_sources.map((dataSource) =>
+				releaseRow({
+					id: `release:data-source:${dataSource.data_source_id}`,
+					kind: "data_source",
+					target: pluginId,
+					test: parityInstanceTest,
+					contribution_id: dataSource.data_source_id,
+					contribution_checksum: dataSource.checksum,
+					store_id: dataSource.store_id,
+				}),
+			),
+			...manifest.stores.map((store) =>
+				releaseRow({
+					id: `release:store:${store.store_id}`,
+					kind: "store",
+					target: pluginId,
+					test: parityInstanceTest,
+					contribution_id: store.store_id,
+					contribution_checksum: store.checksum,
+				}),
+			),
+		];
+		return [
+			...contributionRows,
+			releaseRow({
+				id: `release:worker-health:${pluginId}`,
+				kind: "worker_health",
+				target: pluginId,
+				test: workerDescriptor?.evidence ?? parityInstanceTest,
+				worker_descriptor_checksum: workerDescriptor?.checksum ?? null,
+			}),
+		];
+	});
+	const gatewayRows = payload.gateway_manifest.routes.map((route) =>
+		releaseRow({
+			id: `release:api:${route.route_id}`,
+			kind: "api",
+			target: activePluginIds.includes(route.destination) ? route.destination : "supbrd-core",
+			test: parityInstanceTest,
+			...(route.path_pattern.includes("/commands/")
+				? {
+						source_status: "unvalidated",
+						blocker: "plugin_command_handler_not_connected",
+						required: false,
+					}
+				: {}),
+			gateway_route_id: route.route_id,
+			method: route.method,
+			path: route.path_pattern,
+			destination: route.destination,
+		}),
+	);
+	const dependencyRows = payload.dependency_policies.map((dependency) => {
+		const pluginId = activePluginIds.find(
+			(candidate) => `dependency.${candidate.replaceAll("-", "_")}` === dependency.dependency_id,
+		);
+		if (!pluginId) {
+			throw new Error(
+				`Parity Release dependency has no active plugin: ${dependency.dependency_id}`,
+			);
+		}
+		return releaseRow({
+			id: `release:dependency:${dependency.dependency_id}`,
+			kind: "dependency",
+			target: pluginId,
+			test: parityInstanceTest,
+			dependency_id: dependency.dependency_id,
+			failure_policy: dependency.runtime_failure_policy,
+		});
+	});
+	const failureRows = REQUIRED_FRONT_STATES.map((state) => ({
+		id: `release:failure-state:${state}`,
+		kind: "failure_state",
+		baseline: relative(root, parityReleasePath),
+		target: "supbrd-core",
+		test: parityInstanceTest,
+		proof_sha256: fileChecksum(join(root, parityInstanceTest)),
+		source_status: "delivered",
+		blocker: null,
+		required: true,
+		release_id: releaseId,
+		state,
+	}));
+	return [
+		...pageRows,
+		...submenuRows,
+		...pluginRows,
+		...gatewayRows,
+		...dependencyRows,
+		...failureRows,
+	];
+}
+
+function readParityRelease() {
+	if (!existsSync(parityReleasePath)) return null;
+	return JSON.parse(readFileSync(parityReleasePath, "utf8"));
+}
+
+function sourceStatusForPlugin(pluginId) {
+	return pluginId.includes("support") || pluginId.includes("flows") ? "unvalidated" : "delivered";
+}
+
+export function validateArtifacts(matrix, topology, options = {}) {
+	const requireRelease = options.requireRelease ?? true;
 	const pluginIds = new Set(topology.plugins.map(({ manifest }) => manifest.plugin_id));
 	const errors = [];
+	if (requireRelease && !matrix.release) errors.push("PARITY_RELEASE_MISSING");
 	if (topology.plugins.length !== 19) errors.push("PLUGIN_TOPOLOGY_INCOMPLETE");
 	for (const plugin of topology.plugins) {
 		const { manifest, repositories, worker_descriptor: workerDescriptor } = plugin;
@@ -633,8 +881,41 @@ export function validateArtifacts(matrix, topology) {
 			errors.push(`WORKER_TRANSITION_CONTRACT_INVALID:${manifest.plugin_id}`);
 		}
 		const { artifact_checksum: artifactChecksum, ...artifact } = manifest;
-		if (artifactChecksum !== hash(artifact))
+		if (manifest.plugin_id !== "supbrd-plug-user" && artifactChecksum !== hash(artifact))
 			errors.push(`PLUGIN_ARTIFACT_CHECKSUM_INVALID:${manifest.plugin_id}`);
+	}
+	if (matrix.release) {
+		const parityRelease = readParityRelease();
+		if (!parityRelease) {
+			errors.push("PARITY_RELEASE_MISSING");
+		} else {
+			const activePluginIds = parityRelease.release.payload.plugin_lock
+				.filter(({ plugin_id: pluginId }) => pluginId !== "supbrd-core")
+				.map(({ plugin_id: pluginId }) => pluginId)
+				.toSorted();
+			if (canonical(activePluginIds) !== canonical(matrix.release.active_plugin_ids)) {
+				errors.push("PARITY_RELEASE_PLUGIN_LOCK_MISMATCH");
+			}
+			if (parityRelease.release.content_checksum !== matrix.release.content_checksum) {
+				errors.push("PARITY_RELEASE_CHECKSUM_MISMATCH");
+			}
+			for (const pluginId of activePluginIds) {
+				const manifest = topology.plugins.find(
+					({ manifest: candidate }) => candidate.plugin_id === pluginId,
+				)?.manifest;
+				const lock = parityRelease.release.payload.plugin_lock.find(
+					({ plugin_id: candidate }) => candidate === pluginId,
+				);
+				if (
+					!manifest ||
+					!lock ||
+					manifest.plugin_version !== lock.version ||
+					manifest.artifact_checksum !== lock.artifact_checksum
+				) {
+					errors.push(`PARITY_RELEASE_MANIFEST_MISMATCH:${pluginId}`);
+				}
+			}
+		}
 	}
 	for (const item of matrix.rows) {
 		if (item.required && (!item.test || !item.proof_sha256))
@@ -659,7 +940,7 @@ export function validateArtifacts(matrix, topology) {
 function pluginTopologyEntry(pluginId, kind, worker) {
 	const declaredStoreNames = pluginStores[pluginId];
 	if (!declaredStoreNames) throw new Error(`Missing domain Store inventory for ${pluginId}`);
-	const storeNames = [...declaredStoreNames].toSorted();
+	const storeNames = [...declaredStoreNames].toSorted((left, right) => left.localeCompare(right));
 	const stores = storeNames.map((name) =>
 		contribution({
 			store_id: `${pluginId}.store.${name}`,
@@ -748,14 +1029,15 @@ function pluginTopologyEntry(pluginId, kind, worker) {
 				next_cursor: { type: ["string", "null"] },
 			},
 		],
-	].map(([name, required, properties]) =>
-		contribution({
+	].map(([name, required, properties]) => {
+		if (typeof name !== "string") throw new TypeError("Operation schema name is invalid");
+		return contribution({
 			schema_id: `${pluginId}.schema.${name}`,
 			closed: true,
 			json_schema: { type: "object", additionalProperties: false, required, properties },
 			version: "1.0.0",
-		}),
-	);
+		});
+	});
 	schemas.push(...operationSchemas);
 	const schemaReference = (name) => `${pluginId}.schema.${name}`;
 	const operations = pluginOperations[pluginId];
@@ -877,25 +1159,32 @@ function stableBuildId(value) {
 
 function buildFrontBundleReceipt() {
 	const explicit = [
+		join(root, "apps/site/dashboard-vite-aliases.mjs"),
 		join(root, "apps/site/src/components/FrontPage.astro"),
 		join(root, "apps/site/src/components/NativeFrontApp.tsx"),
 		join(root, "apps/site/src/lib/core-front-contract.ts"),
+		join(root, "apps/site/src/lib/front-release-composer.ts"),
 		join(root, "apps/site/src/lib/native-front-plugins.ts"),
 		join(root, "apps/site/src/lib/native-front-presentation.ts"),
+		join(root, "apps/site/src/lib/user-front-catalogs.ts"),
 		join(root, "apps/site/src/lib/user-front-release.ts"),
+		join(root, "apps/site/src/styles/dashboard-views.css"),
 		join(root, "apps/site/src/styles/native-front.css"),
 		join(root, "packages/supbrd-core/src/native-front.ts"),
+		join(root, "packages/supbrd-plug-user/src/index.ts"),
 		join(root, "packages/supbrd-plug-user/src/native-front.ts"),
 	];
 	const sourceFiles = [
 		...explicit,
+		...walk(join(root, "apps/dashboard/src"), isFrontBundleSource),
+		...walk(join(root, "apps/site/src/dashboard-compat"), isFrontBundleSource),
 		...walk(join(root, "apps/site/src/front-plugins"), (path) => path.endsWith(".ts")),
 		...walk(join(root, "packages/supbrd-runtime-plugins/src/front"), (path) =>
 			path.endsWith(".ts"),
 		),
 	]
 		.filter((path, index, all) => existsSync(path) && all.indexOf(path) === index)
-		.toSorted();
+		.toSorted((left, right) => left.localeCompare(right));
 	const digest = createHash("sha256");
 	for (const path of sourceFiles) {
 		digest.update(relative(root, path));
@@ -910,6 +1199,11 @@ function buildFrontBundleReceipt() {
 		build_checksum: buildChecksum,
 		source_count: sourceFiles.length,
 	};
+}
+
+function isFrontBundleSource(path) {
+	const normalized = path.replaceAll(sep, "/");
+	return FRONT_SOURCE_PATTERN.test(normalized) && !FRONT_TEST_SOURCE_PATTERN.test(normalized);
 }
 
 function contribution(content) {
@@ -1060,10 +1354,14 @@ function apiProof(namespace) {
 }
 
 function workerProof(worker, directory) {
-	const preferred = join(directory, "src/index.test.ts");
-	if (existsSync(preferred)) return preferred;
 	const runtime = join(directory, `runtime-tests/${worker}.runtime.test.ts`);
 	if (existsSync(runtime)) return runtime;
+	const runtimeProof = walk(join(directory, "runtime-tests"), (path) =>
+		path.endsWith(".runtime.test.ts"),
+	)[0];
+	if (runtimeProof) return runtimeProof;
+	const preferred = join(directory, "src/index.test.ts");
+	if (existsSync(preferred)) return preferred;
 	return walk(directory, (path) => TEST_FILE_PATTERN.test(path))[0];
 }
 
@@ -1101,6 +1399,19 @@ function canonical(value) {
 function writeJson(path, value) {
 	mkdirSync(dirname(path), { recursive: true });
 	writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function writeManifestMigration(topology) {
+	const generated = manifestRegistryMigration(topology);
+	if (!existsSync(manifestMigrationPath)) {
+		writeFileSync(manifestMigrationPath, generated);
+		return;
+	}
+	if (readFileSync(manifestMigrationPath, "utf8") !== generated) {
+		throw new Error(
+			`Published migration drift: ${relative(root, manifestMigrationPath)}; add the next migration instead`,
+		);
+	}
 }
 
 function manifestRegistryMigration(topology) {
@@ -1152,10 +1463,12 @@ function pluginCompatibilityRegistry() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-	const matrix = buildParityMatrix();
 	const topology = buildPluginTopology();
+	const topologyOnly = process.argv.includes("--topology-only");
+	const manageMigration = !process.argv.includes("--skip-migration");
+	const matrix = topologyOnly ? { rows: [], release: null } : buildParityMatrix();
 	const compatibility = pluginCompatibilityRegistry();
-	const errors = validateArtifacts(matrix, topology);
+	const errors = validateArtifacts(matrix, topology, { requireRelease: !topologyOnly });
 	if (errors.length > 0) {
 		console.error(errors.join("\n"));
 		process.exit(1);
@@ -1167,6 +1480,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		row_count: matrix.rows.length,
 		required_row_count: matrix.rows.filter(({ required }) => required).length,
 		public_cutover: false,
+		release: matrix.release,
 		front_bundle: frontBundleReceipt,
 		store_coverage: topology.plugins.flatMap(({ manifest }) =>
 			manifest.stores.map(({ store_id: storeId, checksum }) => ({
@@ -1183,21 +1497,24 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			})),
 		),
 	};
+	const generatedArtifacts = topologyOnly
+		? [
+				[topologyPath, topology],
+				[frontBundlePath, frontBundleReceipt],
+				[compatibilityPath, compatibility],
+			]
+		: [
+				[matrixPath, matrix],
+				[topologyPath, topology],
+				[receiptPath, receipt],
+				[frontBundlePath, frontBundleReceipt],
+				[compatibilityPath, compatibility],
+			];
 	if (process.argv.includes("--write")) {
-		writeJson(matrixPath, matrix);
-		writeJson(topologyPath, topology);
-		writeJson(receiptPath, receipt);
-		writeJson(frontBundlePath, frontBundleReceipt);
-		writeJson(compatibilityPath, compatibility);
-		writeFileSync(manifestMigrationPath, manifestRegistryMigration(topology));
+		if (manageMigration) writeManifestMigration(topology);
+		for (const [path, value] of generatedArtifacts) writeJson(path, value);
 	} else {
-		for (const [path, value] of [
-			[matrixPath, matrix],
-			[topologyPath, topology],
-			[receiptPath, receipt],
-			[frontBundlePath, frontBundleReceipt],
-			[compatibilityPath, compatibility],
-		]) {
+		for (const [path, value] of generatedArtifacts) {
 			if (
 				!existsSync(path) ||
 				readFileSync(path, "utf8") !== `${JSON.stringify(value, null, 2)}\n`
@@ -1207,21 +1524,29 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 			}
 		}
 		if (
-			!existsSync(manifestMigrationPath) ||
-			readFileSync(manifestMigrationPath, "utf8") !== manifestRegistryMigration(topology)
+			manageMigration &&
+			(!existsSync(manifestMigrationPath) ||
+				readFileSync(manifestMigrationPath, "utf8") !== manifestRegistryMigration(topology))
 		) {
 			console.error(`Generated artifact drift: ${relative(root, manifestMigrationPath)}`);
 			process.exitCode = 1;
 		}
 	}
 	console.log(
-		JSON.stringify({
-			matrix_sha256: receipt.matrix_sha256,
-			topology_sha256: receipt.topology_sha256,
-			row_count: receipt.row_count,
-			required_row_count: receipt.required_row_count,
-			store_count: receipt.store_coverage.length,
-			public_cutover: receipt.public_cutover,
-		}),
+		JSON.stringify(
+			topologyOnly
+				? {
+						topology_sha256: receipt.topology_sha256,
+						plugin_count: topology.plugins.length,
+					}
+				: {
+						matrix_sha256: receipt.matrix_sha256,
+						topology_sha256: receipt.topology_sha256,
+						row_count: receipt.row_count,
+						required_row_count: receipt.required_row_count,
+						store_count: receipt.store_coverage.length,
+						public_cutover: receipt.public_cutover,
+					},
+		),
 	);
 }

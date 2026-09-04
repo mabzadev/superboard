@@ -22,11 +22,13 @@ export const POST: APIRoute = async (context) => {
 			return jsonResponse({ error: { code: "INVALID_PLUGIN_CATALOG_SYNC_REQUEST" } }, 422);
 		}
 		const expiresInHours = body.expires_in_hours;
+		const pluginIds = pluginSelection(body.plugin_ids);
 		if (
 			typeof expiresInHours !== "number" ||
 			!Number.isSafeInteger(expiresInHours) ||
 			expiresInHours < 1 ||
 			expiresInHours > 24 ||
+			pluginIds === null ||
 			body.activate !== undefined ||
 			(body.plan_id !== undefined && (typeof body.plan_id !== "string" || !body.plan_id.trim()))
 		) {
@@ -46,6 +48,7 @@ export const POST: APIRoute = async (context) => {
 			target_plugin_ids: resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS),
 			checked_at: checkedAt,
 			expires_at: new Date(Date.parse(checkedAt) + expiresInHours * 60 * 60 * 1_000).toISOString(),
+			...(pluginIds ? { plugin_ids: pluginIds } : {}),
 		});
 		return jsonResponse({ plan }, 201);
 	} catch (error) {
@@ -56,3 +59,20 @@ export const POST: APIRoute = async (context) => {
 		);
 	}
 };
+
+function pluginSelection(value: unknown): string[] | undefined | null {
+	if (value === undefined) return undefined;
+	if (
+		!Array.isArray(value) ||
+		value.length === 0 ||
+		value.length > 100 ||
+		value.some(
+			(pluginId) =>
+				typeof pluginId !== "string" || !pluginId.startsWith("supbrd-") || pluginId.includes("*"),
+		) ||
+		new Set(value).size !== value.length
+	) {
+		return null;
+	}
+	return value;
+}

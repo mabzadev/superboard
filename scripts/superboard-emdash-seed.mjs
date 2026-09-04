@@ -270,10 +270,14 @@ function viewPresentation() {
 
 function viewRenderer(pluginId) {
 	const renderers = pluginManifestFor(pluginId).renderers;
-	if (renderers.length !== 1 || typeof renderers[0]?.renderer_id !== "string") {
+	const adminRenderer = renderers.filter(
+		({ renderer_id: rendererId }) =>
+			typeof rendererId === "string" && rendererId.endsWith(".renderer.admin_surface"),
+	);
+	if (adminRenderer.length !== 1) {
 		throw new TypeError(`Dashboard View renderer is ambiguous: ${pluginId}`);
 	}
-	return renderers[0].renderer_id;
+	return adminRenderer[0].renderer_id;
 }
 
 function viewBindings(_href, pluginId) {

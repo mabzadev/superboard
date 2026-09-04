@@ -4,5 +4,5 @@ export const nativeFrontPlugin = defineNativeFrontPlugin({
 	plugin_id: "supbrd-plugmod-gateway",
 	plugin_label: "Gateway",
 	description: "Gateway presentation is contributed when a Front Draft selects a Gateway surface.",
-	surfaces: [],
+	surfaces: [{ path_pattern: "/system/gateway", title: "Gateway routes" }],
 });

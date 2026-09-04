@@ -44,7 +44,6 @@ const topologyManifests = new Map(
 export function createConfiguredSuperBoardPlugin(pluginId: string) {
 	const manifest = topologyManifests.get(pluginId);
 	if (!manifest) throw new Error(`Unknown SuperBoard plugin manifest: ${pluginId}`);
-	const version = pluginId === "supbrd-plug-user" ? "1.3.0" : manifest.plugin_version;
 	const settingsSchema = toEmDashSettingsSchema(manifest.settings.schema.properties);
 	const storage = Object.fromEntries(
 		manifest.stores.map(({ store_id: storeId }) => [storeId.split(".").at(-1)!, { indexes: [] }]),
@@ -52,7 +51,7 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 
 	return {
 		id: manifest.plugin_id,
-		version,
+		version: manifest.plugin_version,
 		capabilities: [],
 		allowedHosts: [],
 		storage,

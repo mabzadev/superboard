@@ -7,6 +7,7 @@ import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 
 import { finalizeSetup } from "#api/setup-complete.js";
 import { OptionsRepository } from "#db/repositories/options.js";
+import { withTransaction } from "#db/transaction.js";
 
 export const GET: APIRoute = async ({ url, locals, session, redirect }) => {
 	const { emdash } = locals;
@@ -15,7 +16,7 @@ export const GET: APIRoute = async ({ url, locals, session, redirect }) => {
 	if (!token) return redirect("/_emdash/admin/setup?error=missing_token");
 
 	try {
-		const user = await emdash.db.transaction().execute(async (transaction) => {
+		const user = await withTransaction(emdash.db, async (transaction) => {
 			const adapter = createKyselyAdapter(transaction);
 			if ((await adapter.countUsers()) > 0) throw new Error("SETUP_COMPLETE");
 			const options = new OptionsRepository(transaction);
