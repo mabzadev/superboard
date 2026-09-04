@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { randomBytes, randomUUID } from "node:crypto";
+import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { generateDevelopmentSecretAssignments } from "./cloudflare-development-secrets.mjs";
 import {
 	environmentFromArgs,
 	loadTarget,
@@ -18,6 +19,7 @@ import {
 	compileLocalSiteConfiguration,
 	compileTarget,
 	materializeTarget,
+	targetWithAbsentResources,
 } from "./target-compiler.mjs";
 
 const OPERATIONS = new Set([
@@ -27,12 +29,14 @@ const OPERATIONS = new Set([
 	"configure",
 	"migrate",
 	"start",
+	"exercise",
 	"deploy",
 	"check",
 ]);
 
-export async function prepareTarget({ targetName, environment, adapter }) {
-	const { target } = await loadTarget(targetName);
+export async function prepareTarget({ targetName, environment, adapter, fresh = false }) {
+	const { target: loadedTarget } = await loadTarget(targetName);
+	const target = fresh ? targetWithAbsentResources(loadedTarget) : loadedTarget;
 	const compiled = await compileTarget(target, environment);
 	const materialization = materializeTarget(compiled, adapter);
 	const parityEnvironment =
@@ -54,6 +58,7 @@ export async function prepareTarget({ targetName, environment, adapter }) {
 		compiled,
 		materialization,
 		plan: buildTargetOperationPlan(materialization),
+		fresh,
 	};
 }
 
@@ -69,7 +74,12 @@ async function main(argv = process.argv.slice(2)) {
 	if (adapter === "local" && environment !== "local") {
 		throw new Error("The local adapter requires --environment local");
 	}
-	const prepared = await prepareTarget({ targetName, environment, adapter });
+	const prepared = await prepareTarget({
+		targetName,
+		environment,
+		adapter,
+		fresh: Boolean(args.fresh),
+	});
 
 	if (operation === "plan") {
 		process.stdout.write(`${JSON.stringify(prepared.plan, null, 2)}\n`);
@@ -105,9 +115,34 @@ async function main(argv = process.argv.slice(2)) {
 		migrateTarget(prepared, args);
 	} else if (operation === "start") {
 		if (adapter !== "local") throw new Error("Start is available only locally");
-		run("pnpm", ["site:build"]);
 		await configureTarget(prepared);
-		await startLocalTarget(prepared);
+		buildLocalTarget(prepared);
+		await startLocalTarget(prepared, args);
+	} else if (operation === "exercise") {
+		await assertFreshLocalState(args);
+		await configureTarget(prepared, {
+			validationOnly: true,
+			writeTrackedSiteConfig: false,
+		});
+		const runtimePrepared =
+			adapter === "local"
+				? prepared
+				: { ...prepared, materialization: materializeTarget(prepared.compiled, "local") };
+		migrateLocalTarget(runtimePrepared, args);
+		buildLocalTarget(prepared);
+		const healthChecks = await startLocalTarget(runtimePrepared, args, { verify: true });
+		const exerciseResult = {
+			...targetResult(prepared, "exercised"),
+			artifactPath: relative(root, artifactPath),
+			healthChecks,
+		};
+		process.stdout.write(
+			`SUPERBOARD_FRESH_INSTANCE_WORKERS=${JSON.stringify(exerciseResult)}\n`,
+		);
+		process.stdout.write(
+			`${JSON.stringify(exerciseResult, null, 2)}\n`,
+		);
+		return;
 	} else if (operation === "deploy") {
 		if (adapter !== "cloudflare") {
 			throw new Error("Deploy requires the Cloudflare adapter");
@@ -135,7 +170,10 @@ async function main(argv = process.argv.slice(2)) {
 	);
 }
 
-async function configureTarget(prepared) {
+async function configureTarget(
+	prepared,
+	{ validationOnly = false, writeTrackedSiteConfig = true } = {},
+) {
 	for (const { id: service } of prepared.materialization.services) {
 		runNode("cloudflare-config.mjs", [
 			"--target",
@@ -145,17 +183,41 @@ async function configureTarget(prepared) {
 			"--service",
 			service,
 			...artifactSelectionArgs(prepared),
-			...(prepared.materialization.adapter === "local"
+			...(prepared.materialization.adapter === "local" || validationOnly
 				? ["--allow-unprovisioned", "--no-routes"]
 				: []),
+			...(prepared.fresh ? ["--fresh"] : []),
 		]);
 	}
-	if (prepared.materialization.adapter === "local") {
+	if (prepared.materialization.adapter === "local" && writeTrackedSiteConfig) {
 		await writeJsonAtomically(
 			resolve(root, "apps/site/wrangler.jsonc"),
 			compileLocalSiteConfiguration(prepared.compiled),
+			"\t",
 		);
+		run("pnpm", [
+			"exec",
+			"prettier",
+			"--ignore-path",
+			".gitignore",
+			"--write",
+			"apps/site/wrangler.jsonc",
+		]);
 	}
+}
+
+function buildLocalTarget(prepared) {
+	run("pnpm", ["run", "--filter", "@superboard/site...", "build"]);
+	run("pnpm", ["identity:build"]);
+	runNode("dashboard-cloudflare.mjs", [
+		"--target",
+		prepared.compiled.target,
+		"--environment",
+		prepared.compiled.environment,
+		"--allow-unprovisioned",
+		...(prepared.fresh ? ["--fresh"] : []),
+		...artifactSelectionArgs(prepared),
+	]);
 }
 
 function migrateTarget(prepared, args) {
@@ -177,6 +239,10 @@ function migrateTarget(prepared, args) {
 		]);
 		return;
 	}
+	migrateLocalTarget(prepared, args);
+}
+
+function migrateLocalTarget(prepared, args) {
 	const resources = new Map(
 		prepared.materialization.resources.map((resource) => [resource.key, resource]),
 	);
@@ -205,6 +271,7 @@ function migrateTarget(prepared, args) {
 			"--local",
 			"--config",
 			configPath,
+			...localStateArgs(args),
 		]);
 	}
 }
@@ -231,11 +298,11 @@ async function writeTargetArtifact(compiled) {
 	return path;
 }
 
-async function writeJsonAtomically(path, value) {
+async function writeJsonAtomically(path, value, indentation = 2) {
 	await mkdir(dirname(path), { recursive: true });
 	const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
 	try {
-		await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+		await writeFile(temporary, `${JSON.stringify(value, null, indentation)}\n`, {
 			flag: "wx",
 			mode: 0o600,
 		});
@@ -278,17 +345,20 @@ function runNode(script, args) {
 	run(process.execPath, [resolve(root, "scripts", script), ...args]);
 }
 
-async function startLocalTarget(prepared) {
-	const children = prepared.materialization.services.map((service) => {
+async function startLocalTarget(prepared, args, { verify = false } = {}) {
+	const secretAssignments = verify
+		? await localSecretAssignments(prepared.target, prepared.compiled.environment)
+		: {};
+	const spawnService = (service) => {
 		const configPath = resolve(
 			root,
 			"deploy/generated",
 			`${prepared.compiled.target}-${service.id}-${prepared.compiled.environment}.jsonc`,
 		);
 		return spawn(
-			"npx",
+			process.execPath,
 			[
-				"wrangler",
+				resolve(root, "node_modules/wrangler/bin/wrangler.js"),
 				"dev",
 				"--config",
 				configPath,
@@ -300,10 +370,51 @@ async function startLocalTarget(prepared) {
 				"--inspector-port",
 				String(service.localEndpoint.inspectorPort),
 				"--show-interactive-dev-session=false",
+				...localStateArgs(args),
 			],
-			{ cwd: root, env: process.env, stdio: "inherit", shell: false },
+			{
+				cwd: root,
+				env: { ...process.env, ...secretAssignments[service.id] },
+				stdio: "inherit",
+				shell: false,
+			},
 		);
-	});
+	};
+	if (verify) {
+		let stopping = false;
+		let rejectChildFailure;
+		const childFailure = new Promise((resolvePromise, reject) => {
+			rejectChildFailure = reject;
+		});
+		const children = [];
+		try {
+			for (const [index, service] of prepared.materialization.services.entries()) {
+				const child = spawnService(service);
+				children.push(child);
+				child.once("error", rejectChildFailure);
+				child.once("exit", (code, signal) => {
+					if (stopping) return;
+					rejectChildFailure(
+						new Error(`Local Worker exited before health verification: ${code ?? signal}`),
+					);
+				});
+				if (index < prepared.materialization.services.length - 1) {
+					await Promise.race([
+						new Promise((resolvePromise) => setTimeout(resolvePromise, 150)),
+						childFailure,
+					]);
+				}
+			}
+			return await Promise.race([
+				verifyLocalTargetHealth(prepared.materialization, secretAssignments),
+				childFailure,
+			]);
+		} finally {
+			stopping = true;
+			await stopLocalChildren(children);
+		}
+	}
+	const children = prepared.materialization.services.map(spawnService);
 	await new Promise((resolvePromise, reject) => {
 		let settled = false;
 		const stop = (skip) => {
@@ -336,6 +447,123 @@ async function startLocalTarget(prepared) {
 			resolvePromise();
 		});
 	});
+}
+
+async function stopLocalChildren(children) {
+	const exits = children.map((child) =>
+		child.exitCode === null
+			? new Promise((resolvePromise) => child.once("exit", resolvePromise))
+			: Promise.resolve(),
+	);
+	for (const child of children) {
+		if (child.exitCode === null) child.kill("SIGINT");
+	}
+	await Promise.race([
+		Promise.all(exits),
+		new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000)),
+	]);
+	for (const child of children) {
+		if (child.exitCode === null) child.kill("SIGTERM");
+	}
+}
+
+export async function verifyLocalTargetHealth(
+	materialization,
+	secretAssignments,
+	{ fetchImpl = fetch, attempts = 120, intervalMs = 500 } = {},
+) {
+	const checks = materialization.healthChecks.filter(({ kind }) => kind === "worker");
+	let receipts = [];
+	for (let attempt = 1; attempt <= attempts; attempt += 1) {
+		receipts = [];
+		for (const healthCheck of checks) {
+			receipts.push(await probeLocalHealth(healthCheck, secretAssignments, fetchImpl));
+		}
+		if (receipts.every(({ status }) => status === 200)) return receipts;
+		if (attempt < attempts)
+			await new Promise((resolvePromise) => setTimeout(resolvePromise, intervalMs));
+	}
+	throw new Error(
+		`Local target health verification failed: ${receipts
+			.filter(({ status }) => status !== 200)
+			.map(({ service, status, error }) => `${service}=${status}${error ? `:${error}` : ""}`)
+			.join(", ")}`,
+	);
+}
+
+async function probeLocalHealth(healthCheck, secretAssignments, fetchImpl) {
+	const headers = new Headers();
+	if (healthCheck.authentication?.type === "secret") {
+		const value = secretAssignments[healthCheck.service]?.[healthCheck.authentication.binding];
+		if (!value) {
+			return {
+				id: healthCheck.id,
+				service: healthCheck.service,
+				url: healthCheck.url,
+				status: 0,
+				error: `missing ${healthCheck.authentication.binding}`,
+			};
+		}
+		headers.set(healthCheck.authentication.header, value);
+	}
+	try {
+		const response = await fetchImpl(
+			new Request(healthCheck.url, {
+				headers,
+				signal: AbortSignal.timeout(5_000),
+			}),
+		);
+		return {
+			id: healthCheck.id,
+			service: healthCheck.service,
+			url: healthCheck.url,
+			status: response.status,
+		};
+	} catch (error) {
+		return {
+			id: healthCheck.id,
+			service: healthCheck.service,
+			url: healthCheck.url,
+			status: 0,
+			error: error instanceof Error ? error.message : String(error),
+		};
+	}
+}
+
+function localSecretAssignments(target, environment) {
+	return generateDevelopmentSecretAssignments({
+		target,
+		environment,
+		accountId: "0".repeat(32),
+		analyticsToken: ephemeralSecret(),
+		appleRootBase64: randomBytes(32).toString("base64"),
+		awsSesSmtpUsername: `local-${ephemeralSecret()}`,
+		awsSesSmtpPassword: ephemeralSecret(),
+		awsSesSnsTopicArn: `arn:aws:sns:eu-central-1:000000000000:${target.target}-${environment}`,
+	});
+}
+
+function ephemeralSecret() {
+	return randomBytes(48).toString("base64url");
+}
+
+function localStateArgs(args) {
+	const directory = args["local-state"];
+	return typeof directory === "string" ? ["--persist-to", resolve(directory)] : [];
+}
+
+export async function assertFreshLocalState(args) {
+	const directory = args["local-state"];
+	if (typeof directory !== "string") {
+		throw new Error("The blank Instance exercise requires --local-state");
+	}
+	try {
+		if ((await readdir(resolve(directory))).length > 0) {
+			throw new Error("The blank Instance exercise requires an empty local state directory");
+		}
+	} catch (error) {
+		if (error?.code !== "ENOENT") throw error;
+	}
 }
 
 function run(command, args) {

@@ -4,6 +4,7 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
   paywalls: domainService("PAYWALLS_MODULE", "paywalls"),
   "dynamic-links": domainService("DYNAMIC_LINKS_MODULE", "dynamicLinks"),
   support: domainService("SUPPORT_MODULE", "support", {
+    healthPath: "/health",
     secrets: [
       "INTERNAL_API_TOKEN",
       "INTERNAL_API_TOKEN_PREVIOUS",
@@ -115,6 +116,7 @@ export const DOMAIN_SERVICE_REGISTRY = Object.freeze({
   }),
   onboardings: domainService("ONBOARDINGS_MODULE", "onboardings"),
   flows: domainService("FLOWS_MODULE", "flows", {
+    healthPath: "/health",
     secrets: [
       "INTERNAL_API_TOKEN",
       "INTERNAL_API_TOKEN_PREVIOUS",
@@ -162,19 +164,23 @@ export const DOMAIN_SERVICES = Object.freeze(
   Object.keys(DOMAIN_SERVICE_REGISTRY),
 );
 
-export const PLATFORM_SERVICES = Object.freeze([
-  "api",
-  "site",
-  "dashboard",
-  "billing",
-  "messaging",
-  "email",
-  "identity",
-  "files",
-  "observability",
-  "mcp",
-  "custom",
-]);
+export const PLATFORM_SERVICE_REGISTRY = Object.freeze({
+  api: platformService("/health"),
+  site: platformService("/superboard-system/health"),
+  dashboard: platformService("/"),
+  billing: platformService("/internal/v1/health"),
+  messaging: platformService("/health"),
+  email: platformService("/health"),
+  identity: platformService("/health"),
+  files: platformService("/health"),
+  observability: platformService("/internal/v1/health"),
+  mcp: platformService("/health"),
+  custom: platformService("/health"),
+});
+
+export const PLATFORM_SERVICES = Object.freeze(
+  Object.keys(PLATFORM_SERVICE_REGISTRY),
+);
 
 const BILLING_SECRETS = Object.freeze([
   "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
@@ -363,6 +369,14 @@ export function moduleResourceKey(service) {
   return DOMAIN_SERVICE_REGISTRY[service].resourceKey;
 }
 
+export function healthPathForService(service) {
+  if (service.startsWith(MANAGED_WORKER_SERVICE_PREFIX)) return "/health";
+  const definition =
+    PLATFORM_SERVICE_REGISTRY[service] ?? DOMAIN_SERVICE_REGISTRY[service];
+  if (!definition) throw new Error(`No health check path declared for ${service}`);
+  return definition.healthPath;
+}
+
 export function isOptionalSecretBinding(name) {
   return typeof name === "string" && name.endsWith("_PREVIOUS");
 }
@@ -398,5 +412,10 @@ function domainService(binding, resourceKey, options = {}) {
       options.durableObjectMigrations ?? [],
     ),
     internalRoute: "/internal/v1",
+    healthPath: options.healthPath ?? "/internal/v1/health",
   });
+}
+
+function platformService(healthPath) {
+  return Object.freeze({ healthPath });
 }

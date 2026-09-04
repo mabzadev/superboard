@@ -33,6 +33,15 @@ run(process.execPath, [
   "--target", targetName,
   "--environment", environment,
   ...(args["allow-unprovisioned"] ? ["--allow-unprovisioned"] : []),
+  ...(args.fresh ? ["--fresh"] : []),
+  ...(args["target-artifact"] && args["target-artifact-checksum"]
+    ? [
+        "--target-artifact",
+        args["target-artifact"],
+        "--target-artifact-checksum",
+        args["target-artifact-checksum"],
+      ]
+    : []),
 ]);
 
 const dashboardEnvironment = {

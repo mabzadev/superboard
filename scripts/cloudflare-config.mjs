@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import {
@@ -44,6 +44,7 @@ import {
 import {
   assertTargetServiceConfiguration,
   compiledTargetFromArgs,
+  targetWithAbsentResources,
 } from "./target-compiler.mjs";
 
 const args = parseArgs();
@@ -59,7 +60,10 @@ const outputSuffix = args["output-suffix"];
 if (outputSuffix && !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(outputSuffix)) {
   throw new Error("--output-suffix must be a safe lowercase name");
 }
-const { target } = await loadTarget(targetName);
+const { target: loadedTarget } = await loadTarget(targetName);
+const target = args.fresh
+  ? targetWithAbsentResources(loadedTarget)
+  : loadedTarget;
 const compiledTarget = await compiledTargetFromArgs(target, environment, args);
 const sitePreviewRoute = resolveSitePreviewRoute({
   requested: Boolean(args["site-preview-route"]),
@@ -249,7 +253,7 @@ function siteConfig() {
       SUPERBOARD_ENVIRONMENT: environment,
       SUPERBOARD_PLUGIN_IDS: JSON.stringify(
         compiledTarget.graph.plugins
-          .filter(({ pluginId }) => !pluginId.includes("*"))
+          .filter(({ targetState }) => targetState === "active")
           .map(({ pluginId }) => pluginId),
       ),
       SUPERBOARD_RELEASE_OPERATIONS: siteReleaseOperations.value,
@@ -1323,7 +1327,9 @@ function resourceId(resource, kind) {
     throw new Error(
       `Missing provisioned ${kind} id for ${resource?.name || "resource"}`,
     );
-  return kind === "kv"
-    ? "00000000000000000000000000000000"
-    : "00000000-0000-4000-8000-000000000000";
+  const digest = createHash("sha256")
+    .update(`${kind}:${resource?.name || "resource"}`)
+    .digest("hex");
+  if (kind === "kv") return digest.slice(0, 32);
+  return `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-8${digest.slice(17, 20)}-${digest.slice(20, 32)}`;
 }

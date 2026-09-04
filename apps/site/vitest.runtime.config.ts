@@ -4,6 +4,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-worker
 import { defineConfig } from "vitest/config";
 
 import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
+import { buildFreshInstancePlan } from "../../scripts/superboard-fresh-instance-proof.mjs";
 
 export default defineConfig({
 	plugins: [
@@ -14,6 +15,9 @@ export default defineConfig({
 				bindings: {
 					SUPERBOARD_INSTANCE_ID: "vocostar",
 					SUPERBOARD_RELEASE_OPERATIONS: "enabled",
+					FRESH_INSTANCE_PLAN_JSON: JSON.stringify(
+						await buildFreshInstancePlan("mbza-development"),
+					),
 					...d1RuntimeBindings(
 						await readD1Migrations(fileURLToPath(new URL("./migrations", import.meta.url))),
 					),
