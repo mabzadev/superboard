@@ -122,7 +122,7 @@
 			"sources": [
 				{
 					"path": "scripts/target-orchestrator.mjs",
-					"checksum": "sha256:c6b96c14e8e4a4a7cbbbb483283f906f68064d3fe7126a5e0424b63efa69b3a5"
+					"checksum": "sha256:2005ad71a4694ca2d3029c9e65e3e1a95771632d59b3dccba44eb0fce428f154"
 				}
 			],
 			"result_checksum": "sha256:29538d8630064b34eb38b0077535abee820863a2bd09352fa145615e040d53fd",
@@ -133,7 +133,7 @@
 			"sources": [
 				{
 					"path": "scripts/target-orchestrator.mjs",
-					"checksum": "sha256:c6b96c14e8e4a4a7cbbbb483283f906f68064d3fe7126a5e0424b63efa69b3a5"
+					"checksum": "sha256:2005ad71a4694ca2d3029c9e65e3e1a95771632d59b3dccba44eb0fce428f154"
 				}
 			],
 			"result_checksum": "sha256:0f99460a894207489fb09beeab0811283925d07deb52f574956ceee2344f1cf0",
@@ -170,5 +170,5 @@
 			"status": "passed"
 		}
 	],
-	"receipt_checksum": "sha256:3e89a694d8ff14bda33c3e8a681a131bba0ceffcd73c3d2d9be8f5bc122acb36"
+	"receipt_checksum": "sha256:91fd75f7d166b6cc6857a6e83a8d4bf2908caee07767384035f4b18d541a702b"
 }
