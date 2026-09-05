@@ -31,6 +31,7 @@ const RESOURCE_DRIFT_PATTERN = /configuration drift.*DB must use/u;
 const SCHEDULE_DRIFT_PATTERN = /configuration drift.*scheduled activation/u;
 const ROUTE_DRIFT_PATTERN = /configuration drift.*route activation changed/u;
 const QUEUE_DRIFT_PATTERN = /configuration drift.*queue consumers/u;
+const UNDECLARED_SECRET_PATTERN = /unexpected secret contract UNDECLARED_SIGNING_KEY/u;
 
 test("one target compiles to the same closed graph for local and Cloudflare", async () => {
 	const { target } = await loadTarget("mbza-development");
@@ -170,6 +171,20 @@ test("the local Site configuration is generated and guarded by the target artifa
 	assert.throws(
 		() => assertTargetServiceConfiguration(compiled, "site", manualConsumer),
 		QUEUE_DRIFT_PATTERN,
+	);
+});
+
+test("the Site can require its declared Release secret while rejecting undeclared secrets", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const compiled = await compileTarget(target, "local");
+	const config = compileLocalSiteConfiguration(compiled);
+	config.secrets.required.push("SUPERBOARD_RELEASE_PRIVATE_JWK");
+	assertTargetServiceConfiguration(compiled, "site", config);
+
+	config.secrets.required.push("UNDECLARED_SIGNING_KEY");
+	assert.throws(
+		() => assertTargetServiceConfiguration(compiled, "site", config),
+		UNDECLARED_SECRET_PATTERN,
 	);
 });
 

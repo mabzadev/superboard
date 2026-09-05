@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -14,6 +15,41 @@ import {
 
 const LOCAL_STATE_REQUIRED_PATTERN = /requires --local-state/u;
 const EMPTY_LOCAL_STATE_REQUIRED_PATTERN = /requires an empty local state directory/u;
+
+test("local configuration forwards the Release opt-in and loads its signing secret", async () => {
+	for (const enabled of [false, true]) {
+		execFileSync(
+			process.execPath,
+			[
+				"scripts/target-orchestrator.mjs",
+				"configure",
+				"--target",
+				"mbza-development",
+				"--environment",
+				"local",
+				"--adapter",
+				"local",
+				...(enabled ? ["--release-operations"] : []),
+			],
+			{ cwd: new URL("..", import.meta.url), stdio: "pipe" },
+		);
+		const site = JSON.parse(
+			await readFile(
+				new URL("../deploy/generated/mbza-development-site-local.jsonc", import.meta.url),
+				"utf8",
+			),
+		);
+		assert.equal(site.vars.SUPERBOARD_RELEASE_OPERATIONS, enabled ? "enabled" : "disabled");
+		assert.equal(site.secrets.required.includes("SUPERBOARD_RELEASE_PRIVATE_JWK"), enabled);
+		const gateway = JSON.parse(
+			await readFile(
+				new URL("../deploy/generated/mbza-development-api-local.jsonc", import.meta.url),
+				"utf8",
+			),
+		);
+		assert.equal(gateway.secrets.required.includes("SUPERBOARD_RELEASE_PRIVATE_JWK"), false);
+	}
+});
 
 test("the blank Instance exercise refuses reused or implicit local state", async () => {
 	await assert.rejects(assertFreshLocalState({}), LOCAL_STATE_REQUIRED_PATTERN);
