@@ -1,7 +1,43 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveSitePreviewRoute } from "./cloudflare-site-preview.mjs";
+import {
+	resolveSitePreviewRoute,
+	resolveSiteReleaseOperations,
+} from "./cloudflare-site-preview.mjs";
+
+const RELEASE_OPERATIONS_PATTERN = /--release-operations/u;
+
+test("Release operations require an explicit opt-in on a local Site or development preview", () => {
+	for (const selection of [
+		{ service: "site", environment: "local" },
+		{
+			service: "site",
+			environment: "development",
+			sitePreviewRoute: { hostname: "site.example.com" },
+		},
+	]) {
+		assert.equal(
+			resolveSiteReleaseOperations({ ...selection, requested: false }).value,
+			"disabled",
+		);
+		assert.equal(resolveSiteReleaseOperations({ ...selection, requested: true }).value, "enabled");
+	}
+	for (const selection of [
+		{ service: "api", environment: "local" },
+		{ service: "site", environment: "development" },
+		{
+			service: "site",
+			environment: "production",
+			sitePreviewRoute: { hostname: "site.example.com" },
+		},
+	]) {
+		assert.throws(
+			() => resolveSiteReleaseOperations({ ...selection, requested: true }),
+			RELEASE_OPERATIONS_PATTERN,
+		);
+	}
+});
 
 test("the Site preview selection returns one exact route and one propagated CLI option", () => {
 	assert.deepEqual(

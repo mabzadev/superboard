@@ -383,6 +383,7 @@ export function assertTargetServiceConfiguration(
 		}
 	}
 	const allowedSecrets = new Set([
+		...(compiledTarget.graph.secrets.find((entry) => entry.service === service)?.names ?? []),
 		...(expectedSecrets?.names ?? []),
 		...(expectedSecrets?.alternatives ?? []).flatMap(({ oneOf }) => oneOf),
 	]);

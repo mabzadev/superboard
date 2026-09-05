@@ -75,6 +75,9 @@ async function main(argv = process.argv.slice(2)) {
 	if (adapter === "local" && environment !== "local") {
 		throw new Error("The local adapter requires --environment local");
 	}
+	const configurationOptions = {
+		releaseOperations: adapter === "local" && Boolean(args["release-operations"]),
+	};
 	const prepared = await prepareTarget({
 		targetName,
 		environment,
@@ -102,7 +105,7 @@ async function main(argv = process.argv.slice(2)) {
 	}
 	if (operation === "provision") {
 		if (adapter === "local") {
-			await configureTarget(prepared);
+			await configureTarget(prepared, configurationOptions);
 		} else {
 			runNode(
 				"cloudflare-bootstrap.mjs",
@@ -110,18 +113,19 @@ async function main(argv = process.argv.slice(2)) {
 			);
 		}
 	} else if (operation === "configure") {
-		await configureTarget(prepared);
+		await configureTarget(prepared, configurationOptions);
 	} else if (operation === "migrate") {
-		await configureTarget(prepared);
+		await configureTarget(prepared, configurationOptions);
 		migrateTarget(prepared, args);
 	} else if (operation === "start") {
 		if (adapter !== "local") throw new Error("Start is available only locally");
-		await configureTarget(prepared);
+		await configureTarget(prepared, configurationOptions);
 		buildLocalTarget(prepared);
 		await startLocalTarget(prepared, args);
 	} else if (operation === "exercise") {
 		await assertFreshLocalState(args);
 		await configureTarget(prepared, {
+			...configurationOptions,
 			validationOnly: true,
 			writeTrackedSiteConfig: false,
 		});
@@ -181,7 +185,7 @@ export function buildLocalSite(prepared, execute = run, env = process.env) {
 
 async function configureTarget(
 	prepared,
-	{ validationOnly = false, writeTrackedSiteConfig = true } = {},
+	{ validationOnly = false, writeTrackedSiteConfig = true, releaseOperations = false } = {},
 ) {
 	for (const { id: service } of prepared.materialization.services) {
 		runNode("cloudflare-config.mjs", [
@@ -191,6 +195,7 @@ async function configureTarget(
 			prepared.compiled.environment,
 			"--service",
 			service,
+			...(service === "site" && releaseOperations ? ["--release-operations"] : []),
 			...artifactSelectionArgs(prepared),
 			...(prepared.materialization.adapter === "local" || validationOnly
 				? ["--allow-unprovisioned", "--no-routes"]
