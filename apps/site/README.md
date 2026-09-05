@@ -49,10 +49,20 @@ pnpm target:orchestrate migrate --target mbza-development --environment local --
 pnpm target:orchestrate start --target mbza-development --environment local --adapter local
 ```
 
-The generated local configuration keeps Release operations disabled. Copy
-`.dev.vars.example` to `.dev.vars` only for an authorized local exercise and
-provide a private P-256 JWK with `alg: ES256` and an immutable `kid`. Never
-commit that file or key.
+To test plugin activation and deactivation from EmDash Admin, provide
+`SUPERBOARD_RELEASE_PRIVATE_JWK` in the repository-root `.env`: a private P-256
+JWK with `alg: ES256` and an immutable `kid`. Keep the file and key out of Git.
+Start the local target with Release operations enabled:
+
+```bash
+pnpm target:orchestrate start --target mbza-development --environment local --adapter local --release-operations
+```
+
+The option also applies to local `configure` and `migrate` commands. Each
+generation enables Release operations and includes the signing secret in the
+Site's required bindings. Omitting the option keeps Release operations disabled.
+Wrangler loads `.env` only when no `.dev.vars` file takes precedence; see
+[local environment variables and secrets](https://developers.cloudflare.com/workers/local-development/environment-variables/).
 
 An authorized development rehearsal may enable the release endpoints only on
 the explicit Site preview route:

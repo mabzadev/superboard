@@ -33,9 +33,12 @@ export function resolveSiteReleaseOperations({
 	sitePreviewRoute,
 }) {
 	if (!requested) return { value: "disabled", cliArgs: [] };
-	if (service !== "site" || environment !== "development" || !sitePreviewRoute) {
+	if (
+		service !== "site" ||
+		(environment !== "local" && (environment !== "development" || !sitePreviewRoute))
+	) {
 		throw new Error(
-			"--release-operations requires an active development Site preview route",
+			"--release-operations requires a local Site or an active development Site preview route",
 		);
 	}
 	return { value: "enabled", cliArgs: ["--release-operations"] };

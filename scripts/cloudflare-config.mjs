@@ -233,6 +233,9 @@ function requiredSecretNamesForService() {
   if (!requirement) return [];
   return [
     ...requirement.names,
+    ...(siteReleaseOperations.value === "enabled"
+      ? ["SUPERBOARD_RELEASE_PRIVATE_JWK"]
+      : []),
     ...requirement.alternatives.map(({ oneOf }) =>
       oneOf.includes("STORE_CREDENTIALS_ENCRYPTION_KEYS")
         ? "STORE_CREDENTIALS_ENCRYPTION_KEYS"
