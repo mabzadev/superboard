@@ -18,12 +18,12 @@
     "messaging": false,
     "app": true,
     "products": true,
-    "paywalls": false,
+    "paywalls": true,
     "dynamic-links": true,
     "support": true,
     "analytics": true,
     "marketing": true,
-    "onboardings": false,
+    "onboardings": true,
     "flows": true
   },
   "applicationIdentity": {

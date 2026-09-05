@@ -57,7 +57,7 @@ test("one target compiles to the same closed graph for local and Cloudflare", as
 	assert.ok(
 		local.graph.plugins.some(
 			({ pluginId, targetState }) =>
-				pluginId === "supbrd-plugmod-paywalls" && targetState === "installed",
+				pluginId === "supbrd-plugmod-paywalls" && targetState === "active",
 		),
 	);
 	const userPlugin = local.graph.plugins.find(({ pluginId }) => pluginId === "supbrd-plug-user");
@@ -124,7 +124,7 @@ test("the local Site configuration is generated and guarded by the target artifa
 	);
 	assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, "mbza-development");
 	assert.equal(config.vars.SUPERBOARD_ENVIRONMENT, "local");
-	assert.equal(JSON.parse(config.vars.SUPERBOARD_PLUGIN_IDS).length, 16);
+	assert.equal(JSON.parse(config.vars.SUPERBOARD_PLUGIN_IDS).length, 18);
 	assert.match(config.vars.TARGET_ARTIFACT_CHECKSUM, CHECKSUM_PATTERN);
 	assertTargetServiceConfiguration(compiled, "site", config);
 
@@ -185,6 +185,28 @@ test("the Site can require its declared Release secret while rejecting undeclare
 	assert.throws(
 		() => assertTargetServiceConfiguration(compiled, "site", config),
 		UNDECLARED_SECRET_PATTERN,
+	);
+});
+
+test("enabling optional modules preserves existing local endpoints", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const withoutModules = structuredClone(target);
+	withoutModules.features.paywalls = false;
+	withoutModules.features.onboardings = false;
+	const before = materializeTarget(await compileTarget(withoutModules, "local"), "local");
+	const after = materializeTarget(await compileTarget(target, "local"), "local");
+	for (const service of before.services) {
+		assert.deepEqual(
+			after.services.find(({ id }) => id === service.id)?.localEndpoint,
+			service.localEndpoint,
+			service.id,
+		);
+	}
+	assert.ok(after.services.some(({ id }) => id === "paywalls"));
+	assert.ok(after.services.some(({ id }) => id === "onboardings"));
+	assert.equal(
+		new Set(after.services.map(({ localEndpoint }) => localEndpoint.port)).size,
+		after.services.length,
 	);
 });
 
@@ -274,7 +296,7 @@ test("operations consume the written artifact and reject later target drift", as
 		assert.equal(loaded.checksum, compiled.checksum);
 
 		const drifted = structuredClone(target);
-		drifted.features.paywalls = true;
+		drifted.features.paywalls = !target.features.paywalls;
 		await assert.rejects(
 			compiledTargetFromArgs(drifted, "development", args),
 			ARTIFACT_DRIFT_PATTERN,

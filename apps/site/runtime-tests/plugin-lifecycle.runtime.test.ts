@@ -5,7 +5,9 @@ import {
 	finalizeSuperBoardPluginLifecycleForRelease,
 	installSuperBoardPluginCatalog,
 	loadActiveSuperBoardPluginLock,
+	loadActiveSuperBoardPluginIdsRequiringValidation,
 	loadReleasableSuperBoardPluginLock,
+	loadSelectedSuperBoardPluginLock,
 	prepareSuperBoardPluginLifecycleForRelease,
 	superBoardRuntimePluginCatalog,
 	transitionSuperBoardPluginLifecycle,
@@ -26,6 +28,58 @@ const scope = {
 };
 
 describe("SuperBoard plugin lifecycle", () => {
+	test("revalidates unchanged active plugins when the target gains additional plugins", async () => {
+		const oldTarget = {
+			instance_id: "expanded-target-instance",
+			target: "local" as const,
+			approved_by: "operator-1",
+			target_artifact_checksum: `sha256:${"7".repeat(64)}`,
+			target_plugin_ids: ["supbrd-plug-user"],
+			checked_at: "2026-09-05T08:00:00.000Z",
+			expires_at: "2999-09-05T08:00:00.000Z",
+		};
+		await installSuperBoardPluginCatalog(env.DB, {
+			...oldTarget,
+			plan_id: "plugin-plan-before-expansion",
+		});
+		const oldLock = await loadReleasableSuperBoardPluginLock(env.DB, oldTarget);
+		const previousReleaseId = "01J00000000000000000000470";
+		await activatePluginRelease(
+			env.DB,
+			oldTarget,
+			previousReleaseId,
+			oldLock,
+			oldTarget.checked_at,
+		);
+		const addedPluginIds = ["supbrd-plugmod-paywalls", "supbrd-plugmod-onboardings"];
+		const expandedTarget = {
+			...oldTarget,
+			target_artifact_checksum: `sha256:${"8".repeat(64)}`,
+			target_plugin_ids: [...oldTarget.target_plugin_ids, ...addedPluginIds],
+			checked_at: "2026-09-05T08:10:00.000Z",
+		};
+		expect(await loadActiveSuperBoardPluginIdsRequiringValidation(env.DB, expandedTarget)).toEqual([
+			"supbrd-plug-user",
+		]);
+		await installSuperBoardPluginCatalog(env.DB, {
+			...expandedTarget,
+			plan_id: "plugin-plan-after-expansion",
+		});
+		const lock = await loadSelectedSuperBoardPluginLock(env.DB, expandedTarget, addedPluginIds);
+		expect(lock.map(({ plugin_id }) => plugin_id).toSorted()).toEqual([
+			"supbrd-plug-user",
+			"supbrd-plugmod-onboardings",
+			"supbrd-plugmod-paywalls",
+		]);
+		const active = await env.DB.prepare(
+			`SELECT state, activated_release_id FROM superboard_plugin_lifecycle
+			 WHERE instance_id = ? AND target = 'local' AND plugin_id = 'supbrd-plug-user'`,
+		)
+			.bind(oldTarget.instance_id)
+			.first();
+		expect(active).toMatchObject({ state: "active", activated_release_id: previousReleaseId });
+	});
+
 	test("installs all manifests through a plan before explicit activation", async () => {
 		await env.DB.prepare(
 			`CREATE TABLE IF NOT EXISTS _plugin_state (
