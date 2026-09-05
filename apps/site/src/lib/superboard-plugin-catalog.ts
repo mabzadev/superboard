@@ -368,6 +368,23 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 				),
 		);
 
+		if (!failed && currentState === "active") {
+			statements.push(
+				db
+					.prepare(
+						`UPDATE superboard_plugin_lifecycle SET plan_id = ?
+					 WHERE instance_id = ? AND target = ? AND plugin_id = ?
+					   AND state = 'active' AND artifact_checksum = ?`,
+					)
+					.bind(
+						input.plan_id,
+						input.instance_id,
+						input.target,
+						manifest.plugin_id,
+						manifest.artifact_checksum,
+					),
+			);
+		}
 		const nextState: SuperBoardPluginLifecycleState = failed ? "staged" : "installed";
 		statements.push(
 			db
@@ -825,9 +842,9 @@ export async function transitionSuperBoardPluginLifecycle(
 	return { ...input, from_state: current.state, state: input.to_state };
 }
 
-export async function loadExpiredActiveSuperBoardPluginIds(
+export async function loadActiveSuperBoardPluginIdsRequiringValidation(
 	db: D1Database,
-	input: PluginScope & { checked_at: string },
+	input: PluginScope & { checked_at: string; target_artifact_checksum: string },
 ): Promise<string[]> {
 	assertScope(input);
 	const result = await db
@@ -837,11 +854,13 @@ export async function loadExpiredActiveSuperBoardPluginIds(
 			   ON health.instance_id = lifecycle.instance_id AND health.target = lifecycle.target
 			  AND health.plugin_id = lifecycle.plugin_id
 			  AND health.artifact_checksum = lifecycle.artifact_checksum
+			 JOIN superboard_plugin_installation_plans plan ON plan.plan_id = lifecycle.plan_id
 			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ? AND lifecycle.state = 'active'
-			   AND health.status = 'ready' AND health.expires_at <= ?
+			   AND health.status = 'ready'
+			   AND (health.expires_at <= ? OR plan.target_artifact_checksum <> ?)
 			 ORDER BY lifecycle.plugin_id`,
 		)
-		.bind(input.instance_id, input.target, input.checked_at)
+		.bind(input.instance_id, input.target, input.checked_at, input.target_artifact_checksum)
 		.all<{ plugin_id: string }>();
 	return result.results.map(({ plugin_id: pluginId }) => pluginId);
 }

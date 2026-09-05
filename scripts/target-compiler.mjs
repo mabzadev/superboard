@@ -20,6 +20,28 @@ import { root } from "./cloudflare-target.mjs";
 const ADAPTERS = new Set(["local", "cloudflare"]);
 const LOCAL_PORT_BASE = 8787;
 const LOCAL_INSPECTOR_PORT_BASE = 9229;
+const LOCAL_SERVICE_PORT_ORDER = [
+	"observability",
+	"email",
+	"files",
+	"identity",
+	"app",
+	"products",
+	"dynamic-links",
+	"support",
+	"analytics",
+	"marketing",
+	"flows",
+	"billing",
+	"custom",
+	"api",
+	"mcp",
+	"site",
+	"dashboard",
+	"paywalls",
+	"onboardings",
+	"messaging",
+];
 const PLUGIN_MIGRATION_ID_PATTERN = /^\d{4}_[a-z0-9_]+$/u;
 
 export async function compileTarget(target, environment, options = {}) {
@@ -113,15 +135,24 @@ export function materializeTarget(compiledTarget, adapter) {
 	}
 	const local = adapter === "local";
 	const workers = new Map(compiledTarget.materialization.workers.map(({ id, name }) => [id, name]));
-	const services = compiledTarget.graph.services.map((service, index) => ({
+	const localPortIndexes = new Map(
+		[
+			...LOCAL_SERVICE_PORT_ORDER,
+			...compiledTarget.graph.services
+				.map(({ id }) => id)
+				.filter((id) => !LOCAL_SERVICE_PORT_ORDER.includes(id))
+				.toSorted(),
+		].map((id, index) => [id, index]),
+	);
+	const services = compiledTarget.graph.services.map((service) => ({
 		...service,
 		workerName: workers.get(service.id),
 		...(local
 			? {
 					localEndpoint: {
 						host: "127.0.0.1",
-						port: LOCAL_PORT_BASE + index,
-						inspectorPort: LOCAL_INSPECTOR_PORT_BASE + index,
+						port: LOCAL_PORT_BASE + localPortIndexes.get(service.id),
+						inspectorPort: LOCAL_INSPECTOR_PORT_BASE + localPortIndexes.get(service.id),
 					},
 				}
 			: {}),

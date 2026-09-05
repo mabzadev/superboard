@@ -13,7 +13,7 @@ import {
 } from "./operator-guard.js";
 import { getSiteEnv } from "./site-env.js";
 import {
-	loadExpiredActiveSuperBoardPluginIds,
+	loadActiveSuperBoardPluginIdsRequiringValidation,
 	resolveSuperBoardPluginTarget,
 	stageSuperBoardPluginDependencyHealth,
 	transitionSuperBoardPluginLifecycle,
@@ -62,12 +62,13 @@ export async function runManagedPluginLifecycleAction(
 		release_id: localId(),
 	};
 	const checkedAt = new Date().toISOString();
-	const expiredPluginIds = await loadExpiredActiveSuperBoardPluginIds(env.DB, {
+	const stalePluginIds = await loadActiveSuperBoardPluginIdsRequiringValidation(env.DB, {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		target,
 		checked_at: checkedAt,
+		target_artifact_checksum: env.TARGET_ARTIFACT_CHECKSUM,
 	});
-	const pluginIds = [...new Set([...expiredPluginIds, ...(action === "enable" ? [pluginId] : [])])];
+	const pluginIds = [...new Set([...stalePluginIds, ...(action === "enable" ? [pluginId] : [])])];
 	if (pluginIds.length > 0) {
 		const synchronized = await invoke(synchronizePlugins, workflowContext, "plugins/sync", {
 			plan_id: `plugin-${action}-${crypto.randomUUID()}`,

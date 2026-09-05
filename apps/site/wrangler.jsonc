@@ -66,10 +66,10 @@
 	"vars": {
 		"SUPERBOARD_INSTANCE_ID": "mbza-development",
 		"SUPERBOARD_ENVIRONMENT": "local",
-		"SUPERBOARD_PLUGIN_IDS": "[\"supbrd-plug-audit\",\"supbrd-plug-content\",\"supbrd-plug-products\",\"supbrd-plug-settings\",\"supbrd-plug-user\",\"supbrd-plugmod-analytics\",\"supbrd-plugmod-billing\",\"supbrd-plugmod-dynamic-links\",\"supbrd-plugmod-email\",\"supbrd-plugmod-files\",\"supbrd-plugmod-flows\",\"supbrd-plugmod-gateway\",\"supbrd-plugmod-marketing\",\"supbrd-plugmod-mcp\",\"supbrd-plugmod-observability\",\"supbrd-plugmod-support\"]",
+		"SUPERBOARD_PLUGIN_IDS": "[\"supbrd-plug-audit\",\"supbrd-plug-content\",\"supbrd-plug-products\",\"supbrd-plug-settings\",\"supbrd-plug-user\",\"supbrd-plugmod-analytics\",\"supbrd-plugmod-billing\",\"supbrd-plugmod-dynamic-links\",\"supbrd-plugmod-email\",\"supbrd-plugmod-files\",\"supbrd-plugmod-flows\",\"supbrd-plugmod-gateway\",\"supbrd-plugmod-marketing\",\"supbrd-plugmod-mcp\",\"supbrd-plugmod-observability\",\"supbrd-plugmod-onboardings\",\"supbrd-plugmod-paywalls\",\"supbrd-plugmod-support\"]",
 		"SUPERBOARD_RELEASE_OPERATIONS": "disabled",
 		"D1_EXPECTED_MIGRATION": "0020_revalidated_plugin_manifests.sql",
-		"TARGET_ARTIFACT_CHECKSUM": "sha256:b584fc4e9506bb13285f43d07a03dd2aebe2d2c8a7a96e40fd62ba3f1d5b246a",
+		"TARGET_ARTIFACT_CHECKSUM": "sha256:306d6e3d783f7ee3b208aa17bca738738a5b7f15e7b3251b312102e6a5e1626d",
 	},
 	"triggers": {
 		"crons": ["* * * * *"],
