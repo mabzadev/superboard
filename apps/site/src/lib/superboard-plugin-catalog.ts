@@ -825,6 +825,27 @@ export async function transitionSuperBoardPluginLifecycle(
 	return { ...input, from_state: current.state, state: input.to_state };
 }
 
+export async function loadExpiredActiveSuperBoardPluginIds(
+	db: D1Database,
+	input: PluginScope & { checked_at: string },
+): Promise<string[]> {
+	assertScope(input);
+	const result = await db
+		.prepare(
+			`SELECT lifecycle.plugin_id FROM superboard_plugin_lifecycle lifecycle
+			 JOIN superboard_plugin_runtime_health health
+			   ON health.instance_id = lifecycle.instance_id AND health.target = lifecycle.target
+			  AND health.plugin_id = lifecycle.plugin_id
+			  AND health.artifact_checksum = lifecycle.artifact_checksum
+			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ? AND lifecycle.state = 'active'
+			   AND health.status = 'ready' AND health.expires_at <= ?
+			 ORDER BY lifecycle.plugin_id`,
+		)
+		.bind(input.instance_id, input.target, input.checked_at)
+		.all<{ plugin_id: string }>();
+	return result.results.map(({ plugin_id: pluginId }) => pluginId);
+}
+
 export async function stageSuperBoardPluginDependencyHealth(
 	db: D1Database,
 	input: PluginScope & { plugin_id: string; checked_at: string },

@@ -13,6 +13,7 @@ import {
 } from "./operator-guard.js";
 import { getSiteEnv } from "./site-env.js";
 import {
+	loadExpiredActiveSuperBoardPluginIds,
 	resolveSuperBoardPluginTarget,
 	stageSuperBoardPluginDependencyHealth,
 	transitionSuperBoardPluginLifecycle,
@@ -60,19 +61,30 @@ export async function runManagedPluginLifecycleAction(
 		candidate_id: candidateId,
 		release_id: localId(),
 	};
-	if (action === "enable") {
+	const checkedAt = new Date().toISOString();
+	const expiredPluginIds = await loadExpiredActiveSuperBoardPluginIds(env.DB, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		target,
+		checked_at: checkedAt,
+	});
+	const pluginIds = [...new Set([...expiredPluginIds, ...(action === "enable" ? [pluginId] : [])])];
+	if (pluginIds.length > 0) {
 		const synchronized = await invoke(synchronizePlugins, workflowContext, "plugins/sync", {
-			plan_id: `plugin-enable-${crypto.randomUUID()}`,
+			plan_id: `plugin-${action}-${crypto.randomUUID()}`,
 			expires_in_hours: 1,
-			plugin_ids: [pluginId],
+			plugin_ids: pluginIds,
 		});
 		if (!synchronized.ok) return synchronized;
-		await stageSuperBoardPluginDependencyHealth(env.DB, {
-			instance_id: env.SUPERBOARD_INSTANCE_ID,
-			target,
-			plugin_id: pluginId,
-			checked_at: new Date().toISOString(),
-		});
+		await Promise.all(
+			pluginIds.map((refreshedPluginId) =>
+				stageSuperBoardPluginDependencyHealth(env.DB, {
+					instance_id: env.SUPERBOARD_INSTANCE_ID,
+					target,
+					plugin_id: refreshedPluginId,
+					checked_at: checkedAt,
+				}),
+			),
+		);
 	}
 
 	const sliced = await invoke(createUserSlice, workflowContext, "releases/user-slice", {
