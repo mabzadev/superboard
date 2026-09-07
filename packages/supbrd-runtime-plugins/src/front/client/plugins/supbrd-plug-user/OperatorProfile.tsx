@@ -117,7 +117,9 @@ export function OperatorProfile({ security = false }: { security?: boolean }) {
 								required
 							/>
 						</label>
-						<Button disabled={busy}>{busy ? text.busy : text.register}</Button>
+						<Button type="submit" disabled={busy}>
+							{busy ? text.busy : text.register}
+						</Button>
 					</form>
 					<a href="/app/profile">{text.editProfile}</a>
 				</>
@@ -144,7 +146,7 @@ export function OperatorProfile({ security = false }: { security?: boolean }) {
 							required
 						/>
 					</label>
-					<Button disabled={busy || !operator || operator.role < 40}>
+					<Button type="submit" disabled={busy || !operator || operator.role < 40}>
 						{busy ? text.busy : text.save}
 					</Button>
 					<a href="/account">{text.security}</a>

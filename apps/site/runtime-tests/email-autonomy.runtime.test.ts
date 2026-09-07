@@ -7,6 +7,7 @@ import { expect, test } from "vitest";
 import api from "../../../workers/api/src/index.js";
 import type { Env as ApiEnv } from "../../../workers/api/src/types.js";
 import { decryptJson as decryptEmail } from "../../../workers/email/src/admin-secrets.js";
+import { handleEmailAdmin } from "../../../workers/email/src/admin.js";
 import email from "../../../workers/email/src/index.js";
 import marketing from "../../../workers/marketing/src/index.js";
 import { encryptJson as encryptLegacy } from "../../../workers/marketing/src/secrets.js";
@@ -44,6 +45,7 @@ async function emailRequest(
 	operation?: string,
 	role = "owner",
 	runtime = emailEnv,
+	operations?: Parameters<typeof handleEmailAdmin>[2],
 ) {
 	const url = new URL(path, "https://email.internal");
 	const context = {
@@ -78,7 +80,9 @@ async function emailRequest(
 	});
 	const init: RequestInit = { method, headers };
 	if (body !== undefined) init.body = JSON.stringify(body);
-	return email.fetch(new Request(url, init), runtime);
+	return operations
+		? handleEmailAdmin(new Request(url, init), runtime, operations)
+		: email.fetch(new Request(url, init), runtime);
 }
 
 test("Email alone owns SMTP settings and captures an idempotent transactional message", async () => {
@@ -535,4 +539,48 @@ test("Email captures and replays a local operator message using the legacy envir
 	expect(await outbox.json()).toMatchObject({
 		data: [expect.objectContaining({ subject: "Local capture regression", status: "captured" })],
 	});
+});
+
+test("Email rejects an oversized SMTP receipt without marking the profile tested successfully", async () => {
+	const savedResponse = await emailRequest(
+		"PUT",
+		"/internal/v1/admin/settings/smtp",
+		{
+			host: "smtp.example.test",
+			port: 587,
+			security: "starttls",
+			username: "qa",
+			password: "qa-smtp-secret",
+			from_email: "sender@example.test",
+		},
+		85,
+		"bounded-smtp-profile",
+	);
+	expect(savedResponse.status).toBe(200);
+	const saved = (await savedResponse.json()) as { data: { id: string } };
+	const unused = async () => Response.json({ error: "unexpected_operation" }, { status: 599 });
+	const response = await emailRequest(
+		"POST",
+		"/internal/v1/admin/settings/smtp/test",
+		{ smtp_profile_id: saved.data.id, recipient: "qa@example.test" },
+		85,
+		"oversized-smtp-receipt",
+		"owner",
+		emailEnv,
+		{
+			enqueue: unused,
+			replayDeadLetter: unused,
+			discardDeadLetter: unused,
+			smtp: async () =>
+				Response.json({ id: "oversized-receipt", status: "captured", padding: "x".repeat(32768) }),
+		},
+	);
+	expect(response.status).toBe(503);
+	expect(await response.json()).toMatchObject({ error: { code: "smtp_response_invalid" } });
+	expect(
+		await emailDb
+			.prepare("SELECT last_test_status FROM email_smtp_profiles WHERE id=?")
+			.bind(saved.data.id)
+			.first(),
+	).not.toEqual({ last_test_status: "sent" });
 });

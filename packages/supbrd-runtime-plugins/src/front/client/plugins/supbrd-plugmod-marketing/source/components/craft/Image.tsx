@@ -71,7 +71,6 @@ export const ImageComponent = ({
 				<ComponentToolbar label="Image" nodeId={id} dragConnector={drag} />
 			)}
 
-			{/* eslint-disable-next-line @next/next/no-img-element */}
 			<img
 				src={src}
 				alt={alt}

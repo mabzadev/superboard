@@ -18,8 +18,8 @@ const TRAILING_WHITESPACE_PATTERN = /\s+$/;
 const overlay = {
 	package: {
 		metadata: { name: "superboard", private: true },
-		scripts: { test: "superboard-test", "dashboard:test": "dashboard-test" },
-		workspaces: ["apps/dashboard", "workers/api", "sdks/javascript"],
+		scripts: { test: "superboard-test", "site:test": "site-test" },
+		workspaces: ["apps/site", "workers/api", "sdks/javascript"],
 		overrides: { postcss: "8.5.26", "glob@12.0.0": { minimatch: "10.2.6" } },
 		devDependencies: { prettier: "overlay", eslint: "overlay-eslint" },
 		optionalDependencies: {
@@ -46,7 +46,7 @@ void test("root package keeps the EmDash base and composes colliding gates", () 
 	assert.equal(result.scripts["superboard:test"], "superboard-test");
 	assert.equal(result.scripts.test, "pnpm run emdash:test && pnpm run superboard:test");
 	assert.equal(result.scripts.build, "emdash-build");
-	assert.equal(result.scripts["dashboard:test"], "dashboard-test");
+	assert.equal(result.scripts["site:test"], "site-test");
 	assert.equal(result.devDependencies.prettier, "upstream");
 	assert.equal(result.devDependencies.eslint, "overlay-eslint");
 	assert.equal(
@@ -93,7 +93,7 @@ void test("pnpm workspace retains upstream projects and adds uncovered SuperBoar
 	});
 
 	assert.ok(result.includes("  - apps/*"));
-	assert.ok(!result.includes("  - apps/dashboard\n"));
+	assert.ok(!result.includes("  - apps/site\n"));
 	assert.ok(result.includes("  - workers/api"));
 	assert.ok(result.includes("  - sdks/javascript"));
 	assert.ok(result.includes('"eslint-import-resolver-typescript": "4.4.5"'));
@@ -165,7 +165,7 @@ void test("local SuperBoard packages cannot fall back to the npm registry", () =
 void test("workspace dependency normalization excludes vendored examples", () => {
 	const exact = new Set(["workers/api", "sdks/flows/upstream/packages/js"]);
 
-	assert.equal(isIntegratedWorkspaceDirectory("apps/dashboard", exact), true);
+	assert.equal(isIntegratedWorkspaceDirectory("apps/site", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("packages/contracts", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("workers/api", exact), true);
 	assert.equal(isIntegratedWorkspaceDirectory("sdks/flows/upstream/packages/js", exact), true);

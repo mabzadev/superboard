@@ -1,0 +1,51 @@
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id apps/aggregator
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  12:47:28
+   Duration  9.29s (transform 3.29s, setup 6.72s, import 44ms, tests 995ms, environment 0ms)
+
+
+[
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_email_operations",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "data_ids": [
+      "2794fa03-b107-4d50-b0bf-e9d5583ef474",
+      "b2de27eb-f7e6-401a-a520-f2cdff9643a5",
+      "fadd519b-b93a-46b4-ab96-ea5425fe7b4d"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.command.replay_email_dead_letter",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "data_ids": [
+      "b2de27eb-f7e6-401a-a520-f2cdff9643a5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.command.discard_email_dead_letter",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability-email.runtime.test.ts",
+    "data_ids": [
+      "fadd519b-b93a-46b4-ab96-ea5425fe7b4d"
+    ]
+  }
+]

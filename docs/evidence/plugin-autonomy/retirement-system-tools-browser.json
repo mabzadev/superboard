@@ -1,0 +1,46 @@
+[
+  {
+    "plugin_id": "supbrd-plug-audit",
+    "route_id": "superboard.system_audit",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "lifecycle:2e91f3ef-925b-4774-8ade-313af162a72b",
+      "d10de095-9e7f-498f-baba-31ff31ebdf24"
+    ],
+    "description": "Synchronized and verified the real ledger, searched its persisted operation, archived that sequence and reloaded the immutable checksum.",
+    "source_test": "apps/site/e2e/tests/settings/system-tools.spec.ts",
+    "captured_at": "2026-09-07T10:55:55.227Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
+  },
+  {
+    "plugin_id": "supbrd-plug-content",
+    "route_id": "superboard.system_content",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "01M1XR5B9YVKVSNS8WPHR7NY2W"
+    ],
+    "description": "Created and edited a real CMS document, published it, compared its stored locale and content, then reloaded and opened revision history.",
+    "source_test": "apps/site/e2e/tests/settings/system-tools.spec.ts",
+    "captured_at": "2026-09-07T10:55:57.964Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
+  },
+  {
+    "plugin_id": "supbrd-plugmod-gateway",
+    "route_id": "superboard.system_gateway",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "retirement-route-1788778558211-jyxok",
+      "f3164e5d-325f-41e2-90cb-94d4678cb43b"
+    ],
+    "description": "Saved a draft gateway route, published and re-read its manifest, invoked the real health target through the UI and reopened the persisted route after reload.",
+    "source_test": "apps/site/e2e/tests/settings/system-tools.spec.ts",
+    "captured_at": "2026-09-07T10:56:00.645Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-system-tools-browser.json"
+  }
+]

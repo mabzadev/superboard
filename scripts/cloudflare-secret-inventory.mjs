@@ -81,7 +81,6 @@ export function requiredSecretInventory(target, environment) {
 		api.push(...BILLING_REQUIRED.filter((name) => !api.includes(name)));
 	}
 	add("api", api, apiAlternatives);
-	add("dashboard", ["CLIENT_SECRET"]);
 	add("site", [
 		"EMDASH_ENCRYPTION_KEY",
 		"SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",

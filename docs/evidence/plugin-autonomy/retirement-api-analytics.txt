@@ -1,0 +1,385 @@
+Actual canonical Analytics integration, projected events from real Worker queue and D1 persistence.
+[
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_overview",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
+      "9e419563-d227-4e9b-8f28-8919684562ef",
+      "54eec4b8-19fa-4566-80ef-4d0c5b220493",
+      "796cdaee-43f5-4993-a8ef-d81fce4006fd",
+      "3465fa2c-5c70-4bea-84d7-e67bbebde41a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_events",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
+      "9e419563-d227-4e9b-8f28-8919684562ef",
+      "54eec4b8-19fa-4566-80ef-4d0c5b220493",
+      "796cdaee-43f5-4993-a8ef-d81fce4006fd",
+      "3465fa2c-5c70-4bea-84d7-e67bbebde41a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_event_analysis",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_installations",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "796cdaee-43f5-4993-a8ef-d81fce4006fd"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_purchases",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "3465fa2c-5c70-4bea-84d7-e67bbebde41a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_retention",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "796cdaee-43f5-4993-a8ef-d81fce4006fd"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_sessions",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "fa8fd914-f1de-4a3c-a580-a13e529107ec"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_profiles",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "b5d10086-fa19-44e2-b110-e72704a4bb7c"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_views",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_dimensions",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "e6e9b1c1-d455-4fa6-b14c-f044a28f76a4",
+      "9e419563-d227-4e9b-8f28-8919684562ef",
+      "54eec4b8-19fa-4566-80ef-4d0c5b220493",
+      "796cdaee-43f5-4993-a8ef-d81fce4006fd",
+      "3465fa2c-5c70-4bea-84d7-e67bbebde41a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_crashes",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "9e419563-d227-4e9b-8f28-8919684562ef"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_feedback",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "54eec4b8-19fa-4566-80ef-4d0c5b220493"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_report",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_reports",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_report",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_dashboard",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_dashboard",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_dashboards",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_cohort",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "c5d41815-3e27-4c23-87e7-5ddf76013a93"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.evaluate_analytics_cohort",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "c5d41815-3e27-4c23-87e7-5ddf76013a93"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_cohorts",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "c5d41815-3e27-4c23-87e7-5ddf76013a93"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.upsert_analytics_remote_config",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "53f40b69-8f82-4d33-8595-d938a5191586"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_remote_config",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "53f40b69-8f82-4d33-8595-d938a5191586"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_alert",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "9379317f-9f03-4759-a3ef-e381e1ffa409"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_alerts",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "9379317f-9f03-4759-a3ef-e381e1ffa409"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.update_analytics_settings",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.data_source.analytics_settings",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.create_analytics_operation",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "4b7068e6-6b98-4506-8e32-f1549b1eb61a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.delete_analytics_report",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "6ee1b410-a50c-46c7-a04f-b2549a1d903a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-analytics",
+    "route_id": "gateway.supbrd-plugmod-analytics.command.delete_analytics_dashboard",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-analytics.txt",
+    "test": "apps/site/runtime-tests/retirement-api-analytics.runtime.test.ts",
+    "data_ids": [
+      "92be367a-6874-4b8a-92bc-dc5a1f518ad5"
+    ]
+  }
+]
+
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  12:42:37
+   Duration  10.66s (transform 3.58s, setup 7.49s, import 53ms, tests 1.53s, environment 0ms)

@@ -1,0 +1,284 @@
+Canonical Site API integration evidence
+
+Test: apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts
+Runner exit code: 0
+All 10 files and 27 tests in this run passed.
+
+Recorded observations (emitted after semantic and persistence assertions):
+[
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_link_campaign",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_campaigns",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_link",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.links",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.update_link",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.resolved_link",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_redirect_rule",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.redirect_rules",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.update_redirect_rule",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_redirect_rule",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "ed19e8a0-3e4c-48f2-8d4c-b0336c462040"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.save_social_preview",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.social_preview",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.save_tracking",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.tracking",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_campaign_analytics",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.link_statistics",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.create_domain",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "c5f6f4d4-6f59-43e9-a07f-81f122244650"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.data_source.domains",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "c5f6f4d4-6f59-43e9-a07f-81f122244650"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.verify_domain",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "c5f6f4d4-6f59-43e9-a07f-81f122244650"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_domain",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "c5f6f4d4-6f59-43e9-a07f-81f122244650"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_link",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "0dad2ebf-5f9c-4ae6-a964-90a949f6a26b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-dynamic-links",
+    "route_id": "gateway.supbrd-plugmod-dynamic-links.command.delete_link_campaign",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-dynamic-links.txt",
+    "test": "apps/site/runtime-tests/retirement-api-dynamic-links.runtime.test.ts",
+    "data_ids": [
+      "6be4d956-62d8-42bb-8dc6-b7705a0ce0b1"
+    ]
+  }
+]
+
+Runner output:
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id packages/supbrd-front-ui
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  10 passed (10)
+      Tests  27 passed (27)
+   Start at  12:25:01
+   Duration  40.76s (transform 14.93s, setup 62.67s, import 3.78s, tests 16.91s, environment 1ms)

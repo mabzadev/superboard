@@ -8,7 +8,7 @@ and never fork this code.
 - Archived-repository record: [`docs/LEGACY_REPOSITORIES.md`](docs/LEGACY_REPOSITORIES.md)
 - FlutterFlow reference application: [`apps/reference`](apps/reference)
 - Development reference app: <https://reference.mbza.dev>
-- Development dashboard: <https://board.mbza.dev>
+- Development Front: <https://board.mbza.dev>
 - Development API: <https://api.mbza.dev>
 - Development short links: <https://in.mbza.dev>
 - Development MCP: <https://mcp.mbza.dev/mcp>
@@ -18,22 +18,18 @@ and never fork this code.
 
 This repository contains the complete EmDash 0.35.0 source at commit
 `1717d31b351164a5f78e95fe004ee582c7c50f40` from
-[`emdash-cms/emdash`](https://github.com/emdash-cms/emdash.git). The non-squashed merge keeps the
-upstream history, and
-`config/emdash-integration.json` pins the imported commit and deterministic
-root overlay.
+[`emdash-cms/emdash`](https://github.com/emdash-cms/emdash.git).
+`config/emdash-integration.json` records the imported revision and the root
+overlay used by the integrated repository.
 
-The historical Next/OpenNext Dashboard remains available while the Release Front
-parity, migration receipts, development rehearsal, production cutover, and
-observation required by [issue #33](https://github.com/mabzadev/superboard/issues/33)
-are incomplete. It is not the target Front SuperBoard. The audited integration
-details are in
-[`docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md`](docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md).
+The operator Front runs in `apps/site`. EmDash supplies operator sessions,
+the administration interface and the publication of active plugin views.
+The plugins own their React components, business commands and Worker runtimes.
+`packages/supbrd-front-ui` contains their shared presentation components.
 
-The first executable target slice lives in `apps/site`. It mounts the native
-EmDash Admin, a generic fail-closed Front runtime, the closed Release Front
-contract, D1 activation receipts, and a Last Verified Release cache that never
-becomes activation authority. Release operations are disabled by default.
+Plugin activation publishes a verified Front Release and preserves plugin data
+when its views are disabled. The historical route and menu inventory is retained
+in `config/superboard-plugin-independence-baseline.json`.
 
 Use the integrated pnpm gates from the repository root:
 
@@ -51,7 +47,7 @@ pnpm flows:check
 
 | Path                         | Purpose                                                               |
 | ---------------------------- | --------------------------------------------------------------------- |
-| `apps/dashboard`             | SuperBoard back-office deployed with OpenNext on Workers              |
+| `apps/site`                  | Site EmDash, operator authentication and plugin Front on Workers      |
 | `apps/reference`             | Executable Flutter/FlutterFlow reference application and its tests    |
 | `workers/api`                | Hono API, OAuth, short links, purchases and queues                    |
 | `workers/mcp`                | Target-deployed stateless MCP Worker with a private API binding       |
@@ -90,7 +86,7 @@ SUPERBOARD_CLIENT_SOURCE_VOCOSTAR=/absolute/path/to/app-vocostar-ff \
   pnpm run flutterflow:migration:plan:vocostar
 ```
 
-`test:all` includes every Worker, the Dashboard, MCP, Flutter/FlutterFlow,
+`test:all` includes every Worker, the EmDash Site and its plugins, MCP, Flutter/FlutterFlow,
 JavaScript, React Native and the internal Support audit tools. Affected iOS and
 Android changes are tested on their provisioned GitHub runners. The readiness
 report is read-only and lists unresolved resource IDs, Git state, pending SDK
@@ -122,78 +118,34 @@ pushes or uploads secret values.
 
 ## Cloudflare targets
 
-`deploy/targets/<target>.json` selects an Instance's features, Workers, domains,
-and physical resources. The target compiler joins that manifest with the plugin
-topology, migrations, bindings, routes, secret contracts, and health checks.
-Its `environments` entries materialize the same logical graph for local and
-Cloudflare execution. Separate Instances use separate targets and may live in
-different Cloudflare accounts. The account is selected at runtime with a scoped
-environment variable derived from `accountAlias`, with
-`CLOUDFLARE_ACCOUNT_ID` as a CI-friendly fallback.
-
-`pnpm target:orchestrate` compiles the selected target before every lifecycle
-operation. The compiler compares the logical graph checksum across available
-environments and stops when their plugins, bindings, resources, migrations,
-routes, secrets, or health checks differ.
+`deploy/targets/<target>.json` contains non-secret names, domains and resource
+identifiers, but never credentials or Cloudflare account IDs. Development and
+production are separate targets and may live in different Cloudflare accounts.
+The account is selected at runtime with a scoped environment variable derived
+from `accountAlias`, with `CLOUDFLARE_ACCOUNT_ID` as a CI-friendly fallback.
 The automated ownership rules are documented in
 [`docs/CONFIGURATION_BOUNDARIES.md`](docs/CONFIGURATION_BOUNDARIES.md) and can
 be audited offline with `pnpm run configuration:check`.
-Use the [Site local validation guide](apps/site/README.md#local-validation) to
-configure, migrate, and start the complete local graph.
-
-### Prove a blank Instance
-
-Run the blank-Instance proof from one target manifest:
 
 ```bash
-pnpm emdash:fresh-instance:proof -- --target mbza-development --write
-```
+# Validate the SuperBoard development target (no remote write)
+pnpm run cloudflare:bootstrap -- --target mbza-development --environment development
 
-The command builds the local and development materializations from absent
-resource inventories, checks their graph checksum, and runs the plugin,
-Store, Worker health, Front Release, and route-state proofs in isolated D1 and
-Workerd runtimes. It writes the value-free receipt to
-`docs/evidence/issue-69/fresh-instance.receipt.json`; it does not mutate a
-Cloudflare account.
-
-Verify the committed receipt and its source checksums with the following
-command:
-
-```bash
-pnpm emdash:fresh-instance:proof -- --target mbza-development --check
-```
-
-The following command displays the local lifecycle plan:
-
-```bash
-pnpm target:orchestrate plan --target mbza-development --environment local --adapter local
-```
-
-The following command compares the complete remote inventory with the compiled
-development artifact:
-
-```bash
+# Compare the complete paginated remote inventory with a target-scoped token
 CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
-  pnpm target:orchestrate provision \
-  --target mbza-development --environment development --adapter cloudflare --remote
-```
+  pnpm run cloudflare:bootstrap -- \
+  --target mbza-development --environment development --remote
 
-Apply the unchanged plan with the exact confirmation emitted by the preceding
-command:
-
-```bash
+# Apply only the unchanged reviewed plan and its emitted exact confirmation
 CLOUDFLARE_ACCOUNT_ID_MBZA_DEVELOPMENT=... CLOUDFLARE_API_TOKEN=... \
-  pnpm target:orchestrate provision \
-  --target mbza-development --environment development --adapter cloudflare \
-  --remote --apply \
+  pnpm run cloudflare:bootstrap -- \
+  --target mbza-development --environment development --apply \
   --confirm "CLOUDFLARE:BOOTSTRAP:mbza-development:development:<plan-digest>"
-```
 
-The following command generates, migrates, and deploys the API Worker:
-
-```bash
-pnpm target:orchestrate deploy --target mbza-development \
-  --environment development --adapter cloudflare --service api
+# Generate and deploy
+pnpm run cloudflare:deploy -- --target mbza-development --service api --environment development
+pnpm run cloudflare:deploy -- --target mbza-development --service mcp --environment development
+pnpm run cloudflare:deploy -- --target mbza-development --service site --environment development
 ```
 
 Google/Apple audiences, web origins and numeric Support project IDs can be
@@ -258,20 +210,6 @@ be deployed once with the current token unchanged before the first rotation;
 non-overlap shared promotion is limited to a private, traffic-free bootstrap or
 an explicitly approved maintenance window.
 
-OAuth rotation is planned before mutation and requires migration 0056. The
-command uploads a tagged inactive Dashboard version, moves the current D1
-verifier into a bounded overlap slot, activates that exact version, and restores
-the previous verifier if activation fails. No clear client secret is written to
-disk or printed.
-
-```bash
-pnpm run cloudflare:rotate-oauth -- --target mbza-development --environment development
-
-pnpm run cloudflare:rotate-oauth -- \
-  --target mbza-development --environment development \
-  --apply --confirm CLOUDFLARE:OAUTH-ROTATE:<target>:<environment>:<digest>
-```
-
 See `docs/CLOUDFLARE.md` for the GitHub-controlled Cloudflare rollout.
 The production hostname gate and its snapshot-bound FlutterFlow client receipt
 are documented in `docs/PUBLIC_ROUTING_CUTOVER.md`.
@@ -294,7 +232,7 @@ It records each package path, source version, latest immutable release, install
 snippet when one really exists, package-local MIT licence and whether the
 current source is `released`, `pending-release` or still `unreleased`. An
 unreleased entry cannot declare a release ref, release SHA or installation
-command. The Dashboard exposes the same read-only catalogue and licence links at
+command. The plugin Front exposes the same read-only catalogue and licence links at
 `/app/libraries`; it never rewrites Git.
 
 - `pnpm run sdk:catalog:check` verifies source versions, tags and the complete

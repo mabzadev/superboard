@@ -63,9 +63,9 @@ export function hasEditChanges(
 		(hasText(form.socialMediaSubTitle) &&
 			(selectedLink.subtitle ?? "") !== form.socialMediaSubTitle) ||
 		socialMediaImageChanged ||
-		!deepEqual(form.androidRedirectURL, selectedLink.android_custom_redirect) ||
-		!deepEqual(form.iOSRedirectURL, selectedLink.ios_custom_redirect) ||
-		!deepEqual(form.desktopRedirectURL, selectedLink.desktop_custom_redirect) ||
+		!deepEqual(form.androidRedirectURL, selectedLink.android_custom_redirect ?? null) ||
+		!deepEqual(form.iOSRedirectURL, selectedLink.ios_custom_redirect ?? null) ||
+		!deepEqual(form.desktopRedirectURL, selectedLink.desktop_custom_redirect ?? null) ||
 		(form.utmCampaign ?? "") !== (selectedLink.tracking_campaign ?? "") ||
 		(form.utmMedium ?? "") !== (selectedLink.tracking_medium ?? "") ||
 		(form.utmSource ?? "") !== (selectedLink.tracking_source ?? "") ||

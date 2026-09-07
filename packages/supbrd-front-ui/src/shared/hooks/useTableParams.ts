@@ -22,7 +22,7 @@ export function useTableParams(options?: UseTableParamsOptions) {
 	// Helper to update multiple params at once
 	const updateParams = useCallback(
 		(updates: Record<string, string | null>) => {
-			const params = new URLSearchParams(searchParams.toString());
+			const params = new URLSearchParams(globalThis.location?.search ?? searchParams.toString());
 			for (const [key, val] of Object.entries(updates)) {
 				if (val === null || val === "") {
 					params.delete(key);

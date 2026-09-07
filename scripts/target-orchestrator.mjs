@@ -6,6 +6,7 @@ import { dirname, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { generateDevelopmentSecretAssignments } from "./cloudflare-development-secrets.mjs";
+import { siteEmailBuildEnvironment } from "./cloudflare-site-build.mjs";
 import {
 	environmentFromArgs,
 	loadTarget,
@@ -21,7 +22,6 @@ import {
 	materializeTarget,
 	targetWithAbsentResources,
 } from "./target-compiler.mjs";
-import { siteEmailBuildEnvironment } from "./cloudflare-site-build.mjs";
 
 const OPERATIONS = new Set([
 	"plan",
@@ -141,12 +141,8 @@ async function main(argv = process.argv.slice(2)) {
 			artifactPath: relative(root, artifactPath),
 			healthChecks,
 		};
-		process.stdout.write(
-			`SUPERBOARD_FRESH_INSTANCE_WORKERS=${JSON.stringify(exerciseResult)}\n`,
-		);
-		process.stdout.write(
-			`${JSON.stringify(exerciseResult, null, 2)}\n`,
-		);
+		process.stdout.write(`SUPERBOARD_FRESH_INSTANCE_WORKERS=${JSON.stringify(exerciseResult)}\n`);
+		process.stdout.write(`${JSON.stringify(exerciseResult, null, 2)}\n`);
 		return;
 	} else if (operation === "deploy") {
 		if (adapter !== "cloudflare") {
@@ -223,15 +219,6 @@ async function configureTarget(
 function buildLocalTarget(prepared) {
 	buildLocalSite(prepared);
 	run("pnpm", ["identity:build"]);
-	runNode("dashboard-cloudflare.mjs", [
-		"--target",
-		prepared.compiled.target,
-		"--environment",
-		prepared.compiled.environment,
-		"--allow-unprovisioned",
-		...(prepared.fresh ? ["--fresh"] : []),
-		...artifactSelectionArgs(prepared),
-	]);
 }
 
 function migrateTarget(prepared, args) {

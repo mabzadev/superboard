@@ -44,6 +44,7 @@ export interface NativeFrontViewConfiguration {
 }
 
 export interface NativeFrontPresentationProjection {
+	public_endpoints?: FrontPageModel["public_endpoints"];
 	operator?: FrontPageModel["operator"];
 	project_scope?: import("@superboard/contracts/site-operator").OperatorProjectScope;
 	instance_id: string;
@@ -78,6 +79,7 @@ export function projectNativeFrontPresentation(
 			({ renderer_id: rendererId }) => rendererId === CORE_STATE_RENDERER_IDS.maintenance,
 		)!;
 		return {
+			public_endpoints: model.public_endpoints,
 			instance_id: model.instance_id,
 			release_id: null,
 			path: model.requested_path,
@@ -152,6 +154,7 @@ export function projectNativeFrontPresentation(
 			);
 		if (!stateRenderer) throw new Error(`State renderer is missing: ${stateRendererId}`);
 		return {
+			public_endpoints: model.public_endpoints,
 			instance_id: model.instance_id,
 			release_id: payload.release_id,
 			path: model.requested_path,
@@ -195,6 +198,7 @@ export function projectNativeFrontPresentation(
 		return mountInput(model, renderer, route.route_id, viewTitle, parameters, view);
 	});
 	return {
+		public_endpoints: model.public_endpoints,
 		instance_id: model.instance_id,
 		release_id: payload.release_id,
 		path: model.requested_path,

@@ -1,0 +1,177 @@
+Canonical Site API integration validation, 7 September 2026
+
+apps/site/runtime-tests/retirement-api-email.runtime.test.ts
+SHA-256: 2c9b5f1938f6550a8b48d2cebe58c0d567b17db276b991553af90d67eeea7d8b
+
+Grouped run: Products, Billing and Email (3 files, 3 tests passed).
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  3 passed (3)
+      Tests  3 passed (3)
+   Start at  12:27:46
+   Duration  14.28s (transform 11.74s, setup 26.63s, import 173ms, tests 3.61s, environment 0ms)
+
+
+Recorded successful operations:
+[
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.save_smtp_settings",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "1719f648-60ae-4b1c-9c50-dc52f514814e"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.data_source.smtp_settings",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "1719f648-60ae-4b1c-9c50-dc52f514814e"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.test_smtp_settings",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "1719f648-60ae-4b1c-9c50-dc52f514814e"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.verify_smtp_domain",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "1719f648-60ae-4b1c-9c50-dc52f514814e"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.send_transactional_email",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "3538e6e5-5a40-4904-850d-266ab422b696"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.data_source.delivery_outbox",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "3538e6e5-5a40-4904-850d-266ab422b696"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.data_source.provider_webhooks",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "772960d0-360b-4898-a4f7-b43394dd6440"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.data_source.provider_events",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "f510f08a-757e-49d3-a24d-e2805e49c9d0"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.data_source.dead_letters",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "438e8032-07a4-4eb5-8a9b-4d55f7ed8538",
+      "4562be4e-e743-430f-ae33-0f2dedaa7e73"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.retry_delivery_outbox",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "3538e6e5-5a40-4904-850d-266ab422b696"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.replay_dead_letter",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "438e8032-07a4-4eb5-8a9b-4d55f7ed8538"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.discard_dead_letter",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "4562be4e-e743-430f-ae33-0f2dedaa7e73"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-email",
+    "route_id": "gateway.supbrd-plugmod-email.command.delete_smtp_settings",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-email.txt",
+    "test": "apps/site/runtime-tests/retirement-api-email.runtime.test.ts",
+    "data_ids": [
+      "1719f648-60ae-4b1c-9c50-dc52f514814e"
+    ]
+  }
+]

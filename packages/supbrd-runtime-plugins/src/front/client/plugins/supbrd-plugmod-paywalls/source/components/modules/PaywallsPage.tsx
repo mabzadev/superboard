@@ -10,7 +10,7 @@ import {
 	Rocket,
 	Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	ModulePage,
@@ -89,6 +89,8 @@ export function PaywallsPage() {
 	const [document, setDocument] = useState<ExperienceDocument>(createExperienceDocument);
 	const [documentValid, setDocumentValid] = useState(true);
 	const [editorKey, setEditorKey] = useState("new");
+	const [editorLoading, setEditorLoading] = useState(false);
+	const editorRequest = useRef(0);
 	const [name, setName] = useState("");
 	const [identifier, setIdentifier] = useState("");
 	const [changelog, setChangelog] = useState("");
@@ -123,21 +125,26 @@ export function PaywallsPage() {
 
 	const open = async (item: Paywall) => {
 		if (!selectedProject) return;
-		setSelected(item);
-		setMetadata({
-			identifier: item.identifier,
-			display_name: displayName(item),
-			description: item.description ?? "",
-		});
+		const request = ++editorRequest.current;
+		setEditorLoading(true);
 		try {
 			const result = await getPaywallVersions(selectedProject.id, item.id);
+			if (request !== editorRequest.current) return;
+			setSelected(item);
+			setMetadata({
+				identifier: item.identifier,
+				display_name: displayName(item),
+				description: item.description ?? "",
+			});
 			setVersions(result);
 			const latest = result[0];
 			setDocument(fromPaywallDefinition(latest?.definition as unknown as Record<string, unknown>));
 			setEditorKey(`${item.id}:${latest?.id ?? "new"}`);
 			setChangelog("");
 		} catch (cause) {
-			showErrorNotification(errorMessage(cause));
+			if (request === editorRequest.current) showErrorNotification(errorMessage(cause));
+		} finally {
+			if (request === editorRequest.current) setEditorLoading(false);
 		}
 	};
 
@@ -313,7 +320,11 @@ export function PaywallsPage() {
 									Drag blocks, configure the theme and verify the mobile preview.
 								</CardDescription>
 							</CardHeader>
-							<CardContent className="space-y-4">
+							<CardContent
+								className="space-y-4"
+								inert={busy || editorLoading}
+								aria-busy={busy || editorLoading}
+							>
 								{selected && (
 									<div className="grid gap-3 rounded-lg border p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_2fr_auto_auto]">
 										<label className="space-y-1 text-xs">
@@ -391,7 +402,7 @@ export function PaywallsPage() {
 										/>
 									</label>
 									<Button
-										disabled={!selected || busy || !documentValid}
+										disabled={!selected || busy || editorLoading || !documentValid}
 										onClick={() => void saveDraft()}
 									>
 										<Plus />

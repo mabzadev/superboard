@@ -5,6 +5,7 @@ import {
 import { Context, Next } from "hono";
 
 import { getRequestAuthContext } from "../lib/auth";
+import { resolveSdkProjectContext } from "../lib/domain-modules.js";
 import { AppVariables, Env } from "../types";
 
 export async function authMiddleware(
@@ -197,6 +198,18 @@ export async function sdkMiddleware(
 	const projectKey = c.req.header("PROJECT-KEY") || c.req.header("project-key");
 	if (!apiKey && !projectKey) {
 		return c.json({ error: "API key required" }, 401);
+	}
+
+	if (projectKey?.trim().startsWith("og_app_")) {
+		const resolved = await resolveSdkProjectContext(c.env.DB, c.req.raw, c.env);
+		if (!resolved.ok) return c.json({ error: resolved.message }, resolved.status);
+		c.set("instanceId", resolved.context.instanceId);
+		c.set("projectId", resolved.context.projectId);
+		c.set("sdkAuthMode", "mobile");
+		c.set("sdkPlatform", resolved.platform);
+		c.set("sdkIdentifier", resolved.identifier);
+		await next();
+		return;
 	}
 
 	if (projectKey) {

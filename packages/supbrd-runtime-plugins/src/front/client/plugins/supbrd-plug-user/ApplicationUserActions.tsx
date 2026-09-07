@@ -81,7 +81,9 @@ export default function ApplicationUserActions({
 						onChange={(event) => setDisplayName(event.target.value)}
 					/>
 				</label>
-				<Button disabled={busy || !displayName.trim()}>{t.save}</Button>
+				<Button type="submit" disabled={busy || !displayName.trim()}>
+					{t.save}
+				</Button>
 			</form>
 			<form
 				onSubmit={(event) => {
@@ -99,7 +101,7 @@ export default function ApplicationUserActions({
 						onChange={(event) => setReason(event.target.value)}
 					/>
 				</label>
-				<Button variant="destructive" disabled={busy || !reason.trim()}>
+				<Button type="submit" variant="destructive" disabled={busy || !reason.trim()}>
 					{t.suspend}
 				</Button>
 			</form>

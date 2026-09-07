@@ -12,7 +12,7 @@ api=false
 billing=false
 messaging=false
 mcp=false
-dashboard=false
+front=false
 flutter=false
 flutterflow=false
 flutterflow_messaging=false
@@ -26,7 +26,7 @@ mark_all() {
   billing=true
   messaging=true
   mcp=true
-  dashboard=true
+  front=true
   flutter=true
   flutterflow=true
   flutterflow_messaging=true
@@ -42,7 +42,7 @@ mark_root_node_workspaces() {
   billing=true
   messaging=true
   mcp=true
-  dashboard=true
+  front=true
 }
 
 mark_cloudflare_services() {
@@ -50,7 +50,7 @@ mark_cloudflare_services() {
   billing=true
   messaging=true
   mcp=true
-  dashboard=true
+  front=true
 }
 
 plan_path() {
@@ -88,8 +88,8 @@ plan_path() {
       mcp=true
       return
       ;;
-    apps/dashboard/*)
-      dashboard=true
+    apps/site/*|packages/supbrd-front-ui/*|packages/supbrd-runtime-plugins/*|packages/supbrd-plug-user/*|packages/supbrd-core/*|apps/dashboard/*)
+      front=true
       return
       ;;
     apps/reference/*)
@@ -189,7 +189,7 @@ else
 fi
 
 for name in \
-  api billing messaging mcp workers dashboard \
+  api billing messaging mcp workers front \
   reference \
   flutter flutterflow flutterflow_messaging flutter_packages \
   ios android javascript react_native node_sdks native_sdks; do

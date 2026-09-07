@@ -60,7 +60,7 @@ test("the declarative registry exposes exactly nine domain services", () => {
 		"FILES_DOWNLOAD_SIGNING_KEY",
 		"FILES_DOWNLOAD_SIGNING_KEY_PREVIOUS",
 	]);
-	assert.deepEqual(PLATFORM_SERVICE_SECRETS.dashboard, ["CLIENT_SECRET"]);
+	assert.equal(PLATFORM_SERVICE_SECRETS.dashboard, undefined);
 	assert.deepEqual(PLATFORM_SERVICE_SECRETS.mcp, []);
 	assert.ok(PLATFORM_SERVICE_SECRETS.api.includes("JWT_SECRET"));
 	assert.ok(PLATFORM_SERVICE_SECRETS.api.includes("MODULE_INTERNAL_TOKEN"));
@@ -77,7 +77,7 @@ test("the declarative registry exposes exactly nine domain services", () => {
 	}
 	for (const service of [
 		"api",
-		"dashboard",
+		"site",
 		"billing",
 		"messaging",
 		"email",
@@ -150,7 +150,7 @@ test("validation-only local D1 resources receive stable distinct ids", () => {
 	assert.equal(repeated, ids[2]);
 });
 
-test("generated Site config uses only explicit target resources and keeps public release disabled", async () => {
+test("generated Site config uses target resources and follows public routing activation", async () => {
 	for (const [targetName, environment] of [
 		["mbza-development", "development"],
 		["vocostar", "production"],
@@ -203,7 +203,15 @@ test("generated Site config uses only explicit target resources and keeps public
 				allowed_sender_addresses: [target.mail.fromAddress],
 			},
 		]);
-		assert.equal(config.routes, undefined);
+		assert.deepEqual(
+			config.routes,
+			resources.publicRouting === "active"
+				? [
+						{ pattern: target.domains.site, custom_domain: true },
+						{ pattern: target.domains.dashboard, custom_domain: true },
+					]
+				: undefined,
+		);
 
 		execFileSync(
 			process.execPath,
@@ -227,13 +235,13 @@ test("generated Site config uses only explicit target resources and keeps public
 			),
 		);
 		const siteMonitor = JSON.parse(apiConfig.vars.PUBLIC_SURFACES_JSON).find(
-			({ id }) => id === "site-preview",
+			({ id }) => id === "site",
 		);
 		assert.equal(siteMonitor.url, `https://${target.domains.site}`);
 		assert.equal(
 			JSON.parse(apiConfig.vars.PLATFORM_WORKERS_JSON)
 				.workers.find(({ id }) => id === "site")
-				.publicSurfaceIds.includes("site-preview"),
+				.publicSurfaceIds.includes("site"),
 			true,
 		);
 	}
@@ -821,7 +829,7 @@ test("legacy single-binding secret upload never reads or mutates an allowed valu
 	assert.match(plan.replacement.command, /cloudflare:secrets:upload/u);
 });
 
-test("legacy Dashboard secret upload redirects to paired OAuth rotation", () => {
+test("retired Dashboard secret upload is rejected before reading a value", () => {
 	const rejected = spawnSync(
 		process.execPath,
 		[
@@ -841,10 +849,9 @@ test("legacy Dashboard secret upload redirects to paired OAuth rotation", () => 
 			encoding: "utf8",
 		},
 	);
-	assert.equal(rejected.status, 2);
-	const plan = JSON.parse(rejected.stdout);
-	assert.equal(plan.owningContract.id, "dashboard-client-secret");
-	assert.match(plan.replacement.command, /cloudflare:rotate-oauth/u);
+	assert.notEqual(rejected.status, 0);
+	assert.match(rejected.stderr, /Dashboard service has been retired/u);
+	assert.doesNotMatch(rejected.stdout + rejected.stderr, /not-read/u);
 });
 
 test("observability secret rotation rejects undeclared values before invoking Wrangler", () => {
@@ -874,7 +881,7 @@ test("observability secret rotation rejects undeclared values before invoking Wr
 test("all common platform services reject undeclared secret names", () => {
 	for (const service of [
 		"api",
-		"dashboard",
+		"site",
 		"billing",
 		"messaging",
 		"email",
@@ -1064,6 +1071,7 @@ test("staged production API stays private while exposing service bindings", asyn
 	assert.deepEqual(workerCatalog.customDependencies, []);
 	assert.deepEqual(JSON.parse(mbza.vars.CORS_ORIGINS_JSON), [
 		"https://board.mbza.dev",
+		"https://site.mbza.dev",
 		"https://auth.mbza.dev",
 		"https://reference.mbza.dev",
 	]);
@@ -1074,6 +1082,7 @@ test("staged production API stays private while exposing service bindings", asyn
 			"sdk",
 			"shortlinks",
 			"files",
+			"site",
 			"dashboard",
 			"mcp",
 			"mail-preview",

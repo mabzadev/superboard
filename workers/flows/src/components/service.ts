@@ -14,6 +14,8 @@ import {
   requiredString,
 } from "../http/validation";
 
+const COMPONENT_TYPE = /^[A-Za-z][A-Za-z0-9_-]*$/u;
+
 export async function listComponents(context: FlowContext) {
   const [libraries, definitions] = await Promise.all([
     context.env.DB.prepare(
@@ -112,7 +114,10 @@ export async function createComponent(
   const versionId = crypto.randomUUID();
   const name = requiredString(body.name, "name", 180);
   const key = identifier(body.key, "key");
-  const componentType = identifier(body.component_type, "component_type");
+  const componentType = requiredString(body.component_type, "component_type", 128);
+  if (!COMPONENT_TYPE.test(componentType)) {
+    throw failure("validation_failed", "component_type must start with a letter and contain letters, numbers, underscores or hyphens", 422, { field: "component_type" });
+  }
   const schema = object(body.schema);
   const exitNodes = stringArray(body.exit_nodes, "exit_nodes");
   const cssVariables = object(body.css_variables);

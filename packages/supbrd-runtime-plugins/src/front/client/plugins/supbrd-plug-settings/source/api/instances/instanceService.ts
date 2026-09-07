@@ -39,6 +39,7 @@ export interface UserRoleResponse {
 
 export interface ExportUsageResponse {
 	message: string;
+	download_path?: string;
 }
 
 export interface SetupProgressStep {
@@ -132,7 +133,23 @@ export const exportUsageApiCall = async (
 	instanceId: string,
 	data: ExportUsagePayload,
 ): Promise<AxiosResponse<ExportUsageResponse>> => {
-	return POST(config.apiPath + `/instances/${instanceId}/exports/usage`, data);
+	const response: AxiosResponse<ExportUsageResponse> = await POST(
+		config.apiPath + `/instances/${instanceId}/exports/usage`,
+		data,
+	);
+	const path = response.data.download_path;
+	if (path) {
+		if (!path.startsWith("/api/v1/projects/exports/") || path.includes(".."))
+			throw new Error("Invalid export download path");
+		const download: AxiosResponse<Blob> = await GET(path, { responseType: "blob" });
+		const url = URL.createObjectURL(download.data);
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = decodeURIComponent(path.split("/").at(-1) ?? "usage.csv");
+		anchor.click();
+		window.setTimeout(() => URL.revokeObjectURL(url), 0);
+	}
+	return response;
 };
 
 export const setRevenueCollectionEnabledApiCall = async (

@@ -1,0 +1,31 @@
+{
+  "source_commit": "74949468d104b112db40d1d35a6022fff3bc2589",
+  "resources": [
+    {
+      "target": "mbza-development",
+      "workers": {
+        "development": "superboard-dashboard-dev",
+        "local": "superboard-dashboard-local"
+      },
+      "cache": {
+        "development": {
+          "name": "superboard-dev-dashboard-cache"
+        },
+        "local": {
+          "name": "superboard-local-dashboard-cache"
+        }
+      }
+    },
+    {
+      "target": "vocostar",
+      "workers": {
+        "production": "opengrow"
+      },
+      "cache": {
+        "production": {
+          "name": "opengrow-dashboard-cache"
+        }
+      }
+    }
+  ]
+}

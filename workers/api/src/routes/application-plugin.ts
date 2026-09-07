@@ -15,7 +15,7 @@ export async function applicationPluginApi(c: Context<{ Bindings: Env }>): Promi
 		return failure(404, "APPLICATION_OPERATION_NOT_FOUND");
 	if (!c.env.IDENTITY_SERVICE || !c.env.MODULE_INTERNAL_TOKEN)
 		return failure(503, "IDENTITY_WORKER_UNAVAILABLE");
-	const resolved = await resolveSdkProjectContext(c.env.DB, c.req.raw);
+	const resolved = await resolveSdkProjectContext(c.env.DB, c.req.raw, c.env);
 	if (!resolved.ok) return failure(resolved.status, resolved.code);
 	const instance = await resolveSiteOperatorInstance(
 		c.env.DB,

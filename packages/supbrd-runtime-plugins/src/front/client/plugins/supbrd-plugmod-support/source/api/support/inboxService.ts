@@ -244,11 +244,17 @@ export const createInboxRealtimeTicket = async (
 		)
 	).data.data;
 
-export function inboxRealtimeUrl(projectId: string, conversationId: string, ticket: string) {
+export function inboxRealtimeUrl(
+	projectId: string,
+	conversationId: string,
+	ticket: string,
+	apiUrl: string = config.apiUrl,
+) {
+	if (!apiUrl.trim()) throw new Error("Public Support API endpoint is not configured");
 	void projectId;
 	void conversationId;
 	const resource = `${config.apiPath}/support/realtime/${encodeURIComponent(ticket)}`;
-	const url = new URL(resource, config.apiUrl);
+	const url = new URL(resource, apiUrl);
 	if (url.protocol === "https:") url.protocol = "wss:";
 	else if (url.protocol === "http:") url.protocol = "ws:";
 	else throw new Error("Support realtime requires an HTTP or HTTPS API URL");

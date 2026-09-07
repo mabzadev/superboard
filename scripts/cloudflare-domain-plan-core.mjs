@@ -23,11 +23,9 @@ export function expectedDomainOwners(target, environment) {
     ],
     ["sdk", target.domains.sdk, target.workers.api?.[environment]],
     ["files", target.domains.files, target.workers.api?.[environment]],
-    [
-      "dashboard",
-      target.domains.dashboard,
-      target.workers.dashboard?.[environment],
-    ],
+    ...(target.domains.dashboard && target.domains.dashboard !== target.domains.site
+      ? [["dashboard", target.domains.dashboard, target.workers.site?.[environment]]]
+      : []),
     ["site", target.domains.site, target.workers.site?.[environment]],
     ["mcp", target.domains.mcp, target.workers.mcp?.[environment]],
     ...(target.domains.mailPreview

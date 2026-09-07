@@ -1,0 +1,1163 @@
+{
+  "schema_version": 1,
+  "application_release_id": "0A554C54D8AEF4A3EB189D21CD",
+  "application_changed_between_runs": false,
+  "complete": true,
+  "total_scenarios": 141,
+  "full_run": {
+    "report_path": "docs/evidence/plugin-autonomy/retirement-browser-full-run.json",
+    "passed": 140,
+    "failed": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "duration_ms": 477181.518
+  },
+  "targeted_rerun": {
+    "report_path": "docs/evidence/plugin-autonomy/retirement-browser-fixture-rerun.json",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "duration_ms": 5912.533
+  },
+  "effective_passed": 141,
+  "resolution": {
+    "file": "apps/site/e2e/tests/support/support-management.spec.ts",
+    "title": "Support integrations save and reopen a dashboard app without external delivery",
+    "cause": "The unscoped Configure locator matched six integration cards before the asynchronous search result settled.",
+    "change": "Scope Configure to the card containing the uniquely named integration created by the test.",
+    "application_code_changed": false,
+    "business_assertions_changed": false
+  },
+  "cases": [
+    {
+      "file": "real/production-flows.spec.ts",
+      "title": "native App key provisions the SDK without a historical Front token",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "Application audience /app/users searches and saves a native profile",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "Application audience /app/members searches and saves a native profile",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "App customers creates, edits and filters the actual acquisition customer",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "App referrals filters and sorts real attributed records",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "operator profile updates the authenticated core user and persists after reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "shows the native email and passkey sign-in methods",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "a real credential establishes the operator session",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "invalid email-link credentials do not establish a session",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "respects the requested local return path",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "revoking a credential prevents subsequent authentication with it",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "empty email cannot submit a sign-in request",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "keeps the core authentication entry available for configured SSO providers",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "explains recovery through the operator email address",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "/reset_password recovers the same real operator through the captured email link",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "/new_password recovers the same real operator through the captured email link",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "invalid email cannot send a recovery request",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "shows the registration entry and email verification requirement",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "requires a valid email before requesting registration",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "/register completes email verification and creates a real passkey account",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "/register/with_email completes email verification and creates a real passkey account",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/campaigns/campaigns-table.spec.ts",
+      "title": "creates a campaign and reopens its real named detail from the list",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "funnel query counts a real ordered pair of events for the same installation",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "analytics timeline annotations persist through the settings form",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "SDK attribution creates exactly one installation visible in Analytics",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "an unverified SDK claim cannot appear in the verified purchase register",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "event explorer filters and analyses its real event",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "views displays the projected screen event",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "user sessions and profiles come from the ingested subject",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "feedback shows the actual submitted rating and comment",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "a crash is inspected and resolved durably",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "technology dimensions reflect the accepted event context",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "creates and reloads a dashboard widget",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "creates and reloads a behavioural cohort",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "publishes a remote configuration value and reads it back",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "creates an alert rule without an external notification recipient",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "saves a report definition and reopens it",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/dashboard displays the persisted analytics count",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/ displays the persisted analytics count",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/app displays the persisted analytics count",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/analytics displays the persisted analytics count",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "dashboard date range changes the live integration query",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "dashboard top links are backed by actual links data",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "edits, validates, saves and publishes a real workflow",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "opens workflow and survey analytics from its stored graph",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "creates exact SDK blocks from a persisted versioned component catalog",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "identifies outdated instances and synchronizes both stored drafts explicitly",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "SDK settings use the selected project in en",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "SDK settings use the selected project in fr",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "renders the French editor and its workflow migration choices",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "preserves the light workflow editor reference",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "preserves the dark workflow editor reference",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-native-runtime.spec.ts",
+      "title": "a real SDK user traverses the published graph and appears in native analytics",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "new workflow dialog persists a draft and the list filters it",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "environment form creates a real isolated development environment",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "localization saves language fallback rules and reloads the selected group",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "SDK examples use and copy the selected real project environment",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "launchpad group persists its environment and pause state",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "the native user detail resolves its identity, translates passkeys and cancels deletion",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "email log detail displays its persisted record in English and French",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "sms log detail displays its persisted record in English and French",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "sign-in log detail displays its persisted record in English and French",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity roots and overview use real project configuration and navigation",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity users search filters actual subjects and restores the list",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity log lists expose real native events and cancel cleanup without deleting them",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity account buttons initiate each registered OAuth policy with a fresh PKCE challenge",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity roles creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity scopes creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity orgs creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity user-attributes creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity app form preserves selected OAuth scopes and changes",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity banner form persists message and disabled state",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity SAML form saves metadata and attribute mapping",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/create-link.spec.ts",
+      "title": "creates a link with platform routing and reads its saved values after reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "a branded domain remains pending until its DNS is verified",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "platform routing rules persist their destination and priority",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "social preview saves metadata and renders the selected network preview",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "tracking preferences survive reload and are restored after the check",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "loads real persisted links",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "search removes unrelated links and restores the matching record",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "edits a selected row and preserves the new name after reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "archived filtering finds inactive records and excludes them from active results",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/marketing-final.spec.ts",
+      "title": "provider webhook settings persist an encrypted inbound credential",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/marketing-final.spec.ts",
+      "title": "statistics refresh reflects the real subscriber count and selected interval",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "subscriber search and CSV export contain the subscriber created in the form",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "email template and campaign draft persist without sending a campaign",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "journey graph becomes a persisted version and can be activated then paused",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "disabled channel settings survive creation and reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/messaging-table.spec.ts",
+      "title": "creates an in-app message without external push and filters the persisted table",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/messaging/messaging-table.spec.ts",
+      "title": "empty message cannot bypass the publish validation",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "retains every historical menu destination from active plugins",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "opens the links view from its plugin menu",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "opens project settings from the account menu",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "switches the real module project and preserves its environment after reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "keeps account actions inside the menu and signs out through the core session",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "opens and closes mobile navigation from the top bar",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "displays the configured instance name",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "preserves shell dimensions, flat account menu and collapse behaviour",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/observability/infrastructure.spec.ts",
+      "title": "Infrastructure displays real health, target endpoints and metrics then refreshes its observation",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/revenue/revenue-page.spec.ts",
+      "title": "Products offerings retains a linked catalog and archives only the selected offering",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/revenue/revenue-page.spec.ts",
+      "title": "Billing customers searches a real SDK-created identity and persists block/unblock",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/experience-native.spec.ts",
+      "title": "paywall editor saves and publishes a version that has measured views",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/experience-native.spec.ts",
+      "title": "onboarding statistics reflect native completion events and the selected version",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/experience-native.spec.ts",
+      "title": "onboarding editor keeps a block added after creating its first draft",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/libraries.spec.ts",
+      "title": "the library catalogue refreshes and copies the published release and installation",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/sdk-setup.spec.ts",
+      "title": "android SDK setup saves, verifies, reloads and removes its Test configuration",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/sdk-setup.spec.ts",
+      "title": "ios SDK setup saves, verifies, reloads and removes its Test configuration",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/sdk-setup.spec.ts",
+      "title": "web SDK setup saves, verifies, reloads and removes its Test configuration",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "project settings keeps the selected reporting period on reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "the native team section can open and cancel the invitation form",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "project deletion requires its confirmation and cancellation preserves the project",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "usage export produces a retrievable CSV from the chosen dates",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/system-tools.spec.ts",
+      "title": "audit synchronizes its ledger, searches persisted receipts and creates an immutable archive",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/system-tools.spec.ts",
+      "title": "content creates, edits, publishes and reopens a document with its revision history",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/settings/system-tools.spec.ts",
+      "title": "gateway saves a route, publishes the manifest and invokes the real API target",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "contacts save and reopen a real customer record",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "workforce creates a team that survives reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "automations persists a service-level policy",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "help center creates a real portal draft",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "Captain saves an assistant configuration without invoking an external model",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Support Inbox persists a private note and closed-state filters",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Support Quality refreshes live conversation metrics and the audit trail",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Support Reports exports the selected reporting period and downloads its real queued result",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Proactive Support saves and searches an undelivered campaign draft",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support settings persist the selected Test profile and restore its business name",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support configuration creates and edits a validated label",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support channels attach a connection to a native inbox and restore it after reload",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support integrations save and reopen a dashboard app without external delivery",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "failed",
+      "proof": "targeted_rerun"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Inbox loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Contacts loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Workforce loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Channels loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Automations loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Proactive Support loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Help Center loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Captain loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Integrations loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Reports loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Settings loads as a complete Support surface",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "the Support subnavigation exposes exactly the eleven native pages",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "compatibility Support paths expose the owning quality and configuration surfaces",
+      "project": "chromium",
+      "status": "passed",
+      "full_run_status": "passed",
+      "proof": "full_run"
+    }
+  ],
+  "command": "pnpm --dir apps/site test:e2e"
+}

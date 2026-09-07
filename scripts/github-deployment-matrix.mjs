@@ -118,7 +118,6 @@ export function validateDeploymentConfiguration(configuration) {
         "api",
         "mcp",
         "site",
-        "dashboard",
       ];
       if (
         deployment.branch !== "dev" ||

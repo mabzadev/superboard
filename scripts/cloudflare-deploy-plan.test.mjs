@@ -21,7 +21,7 @@ test("full production deployment backs up and migrates every D1 before Workers",
     ["d1-batch", "identity-cutover", "workers"],
   );
   assert.equal(plan.identityCutover, true);
-  assert.equal(plan.services.at(-1), "dashboard");
+  assert.equal(plan.services.at(-1), "site");
   assert.ok(plan.schemaServices.includes("api"));
   assert.ok(plan.schemaServices.includes("custom"));
   assert.deepEqual(
@@ -130,7 +130,7 @@ test("no production topology can use the skip-migrations escape hatch", async ()
       buildDeploymentExecutionPlan({
         target,
         environment: "production",
-        requestedServices: "dashboard",
+        requestedServices: "site",
         skipMigrations: true,
       }),
     /cannot skip migrations/u,
@@ -177,7 +177,7 @@ test("the deploy orchestrator consumes a verified batch before its Worker loop",
     "await enforceIdentityProjectCutover",
   );
   const workerDeployment = deployService.lastIndexOf(
-    'if (service === "dashboard")',
+    'if (service === "site")',
   );
   assert.ok(identityCutover > 0 && identityCutover < finalConfigGeneration);
   assert.ok(

@@ -19,7 +19,10 @@ import { Checkbox } from "../../../../../../../../../supbrd-front-ui/src/shared/
 import { Input } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/input.js";
 import { Label } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/label.js";
 import { useProjectSelection } from "../../../../../../../../../supbrd-front-ui/src/shared/context/useProjectSelection.js";
-import { config } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
+import {
+	config,
+	usePublicConfig,
+} from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
 import {
 	showErrorNotification,
 	showSuccessNotification,
@@ -324,10 +327,12 @@ async function beginAuthorization(
 	projectRef: string,
 	integrationId: string,
 	provider: IntegrationProvider,
+	apiUrl?: string,
 ) {
+	if (!apiUrl) throw new Error("Public Support API endpoint is not configured");
 	const callback = new URL(
 		`${config.apiPath}/support/providers/${encodeURIComponent(provider)}/oauth/callback`,
-		config.apiUrl,
+		apiUrl,
 	);
 	const returnUrl = new URL("/support/integrations", window.location.origin);
 	returnUrl.searchParams.set("integration", integrationId);
@@ -380,6 +385,7 @@ function WebhookEvents({
 }
 
 export default function SupportIntegrationsPage() {
+	const publicConfig = usePublicConfig();
 	const { selectedProject, selectedInstance } = useProjectSelection();
 	const projectRef = selectedProject?.id;
 	const canManageCredentials = new Set(["owner", "admin"]).has(selectedInstance?.role || "member");
@@ -508,7 +514,12 @@ export default function SupportIntegrationsPage() {
 			}
 			if (oauthProviders.has(provider)) {
 				try {
-					const authorization = await beginAuthorization(projectRef, result.data.id, provider);
+					const authorization = await beginAuthorization(
+						projectRef,
+						result.data.id,
+						provider,
+						publicConfig.apiUrl,
+					);
 					clearCreateForm();
 					showSuccessNotification("Continue to authorize the Support integration");
 					window.location.assign(authorization);
@@ -569,16 +580,18 @@ export default function SupportIntegrationsPage() {
 			await updateSupportIntegration(projectRef, selectedIntegration.id, {
 				settings,
 			});
-			await saveSupportIntegrationCredentials(
-				projectRef,
-				selectedIntegration.id,
-				submittedCredentials,
-			);
+			if (selectedDefinition.credentialFields.length > 0)
+				await saveSupportIntegrationCredentials(
+					projectRef,
+					selectedIntegration.id,
+					submittedCredentials,
+				);
 			if (oauthProviders.has(selectedIntegration.provider)) {
 				const authorization = await beginAuthorization(
 					projectRef,
 					selectedIntegration.id,
 					selectedIntegration.provider,
+					publicConfig.apiUrl,
 				);
 				closeConfiguration();
 				showSuccessNotification("Continue to authorize the Support integration");
@@ -587,7 +600,11 @@ export default function SupportIntegrationsPage() {
 			}
 			closeConfiguration();
 			await resources.reload();
-			showSuccessNotification("Integration credentials saved securely");
+			showSuccessNotification(
+				selectedDefinition.credentialFields.length > 0
+					? "Integration credentials saved securely"
+					: "Support integration configured",
+			);
 		} catch (cause) {
 			const detail = moduleErrorMessage(cause);
 			setConfigurationError(detail);
@@ -625,6 +642,7 @@ export default function SupportIntegrationsPage() {
 				projectRef,
 				integration.id,
 				integration.provider,
+				publicConfig.apiUrl,
 			);
 			showSuccessNotification("Continue to authorize the Support integration");
 			window.location.assign(authorization);
@@ -815,8 +833,7 @@ export default function SupportIntegrationsPage() {
 							{resources.items.map((item) => {
 								const itemProvider = isIntegrationProvider(item.provider) ? item.provider : null;
 								const itemDefinition = itemProvider ? integrations[itemProvider] : null;
-								const canConfigure =
-									canManageCredentials && Boolean(itemDefinition?.credentialFields.length);
+								const canConfigure = canManageCredentials && Boolean(itemDefinition);
 								return (
 									<Card key={item.id}>
 										<CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -852,7 +869,7 @@ export default function SupportIntegrationsPage() {
 														onClick={() => openConfiguration(item)}
 													>
 														<KeyRound />
-														{item.status === "configuration_required"
+														{!itemDefinition?.credentialFields.length || item.status === "configuration_required"
 															? "Configure"
 															: "Replace credentials"}
 													</Button>
@@ -887,11 +904,11 @@ export default function SupportIntegrationsPage() {
 							</CardHeader>
 							<CardContent className="space-y-4">
 								<SupportError message={configurationError} />
-								<p className="text-sm text-muted-foreground">
+								{selectedDefinition.credentialFields.length > 0 && <p className="text-sm text-muted-foreground">
 									Stored credentials are write-only. They are never returned by the API or loaded
 									into this page; saving replaces the complete credential set.
-								</p>
-								{selectedIntegration.status !== "configuration_required" ? (
+								</p>}
+								{selectedDefinition.credentialFields.length > 0 && selectedIntegration.status !== "configuration_required" ? (
 									<div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
 										<span>Stored credentials</span>
 										<span aria-label="Stored credentials are masked" className="font-mono">

@@ -1,5 +1,5 @@
 import { ALL_SERVICES, DOMAIN_SERVICES, DOMAIN_SERVICE_REGISTRY } from "./cloudflare-services.mjs";
-import { customTargetOptions, dashboardCacheResourceName } from "./superboard-target-options.mjs";
+import { customTargetOptions } from "./superboard-target-options.mjs";
 
 export function newTargetManifest({ args, target, selectedEnvironment }) {
 	const platformName = "superboard";
@@ -34,9 +34,8 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 	});
 	const enabledServices = ALL_SERVICES.filter(
 		(service) =>
-			["api", "site", "dashboard", "email", "identity", "files", "observability", "mcp"].includes(
-				service,
-			) || (service === "custom" ? Boolean(customOptions) : features[service]),
+			["api", "site", "email", "identity", "files", "observability", "mcp"].includes(service) ||
+			(service === "custom" ? Boolean(customOptions) : features[service]),
 	);
 	const queues = () => ({
 		events: `${resourcePrefix()}-events`,
@@ -63,9 +62,6 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 		},
 		kv: { name: resourcePrefix(), id: null },
 		r2: { name: resourcePrefix() },
-		dashboardCache: {
-			name: dashboardCacheResourceName(resourcePrefix()),
-		},
 		...(legacyMessagingEnabled
 			? {
 					messagingD1: {
@@ -199,7 +195,7 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 			auth: args["auth-domain"],
 			shortlinks: args["shortlinks-domain"],
 			sdk: args["sdk-domain"],
-			dashboard: args["dashboard-domain"],
+			...(args["dashboard-domain"] ? { dashboard: args["dashboard-domain"] } : {}),
 			site:
 				args["site-domain"] || `site.${args["zone-name"] || registrableZone(args["api-domain"])}`,
 			files: args["files-domain"],
@@ -215,7 +211,6 @@ export function newTargetManifest({ args, target, selectedEnvironment }) {
 			]),
 		),
 		...(customOptions ? { customWorker: customOptions.worker } : {}),
-		oauth: { dashboardClientId: `${prefix}-dashboard` },
 		authGateway: {
 			issuer: args["auth-gateway-issuer"],
 			audience: args["auth-gateway-audience"],

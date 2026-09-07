@@ -240,8 +240,10 @@ if (process.argv.includes("--write")) {
 }
 
 function pluginForView(href) {
-	const inventoryPath = href.replace(IDENTITY_LOCALE_PATTERN, "/identity/[lang]");
-	const pluginId = pluginByDashboardPath.get(inventoryPath);
+	const inventoryPath = href.replace(IDENTITY_LOCALE_PATTERN, "/identity/:lang");
+	const pluginId =
+		pluginByDashboardPath.get(inventoryPath) ??
+		pluginByDashboardPath.get(inventoryPath.replace("/identity/:lang", "/identity/[lang]"));
 	if (!pluginId) throw new TypeError(`Dashboard View plugin is missing: ${href}`);
 	return pluginId;
 }

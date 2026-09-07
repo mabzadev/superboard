@@ -1,0 +1,41 @@
+[
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "superboard.infrastructure",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "autonomy-qa",
+      "central",
+      "configuration",
+      "application-files",
+      "identity",
+      "file-metadata",
+      "email",
+      "app",
+      "products",
+      "paywalls",
+      "dynamic-links",
+      "support",
+      "support-attachments",
+      "support-realtime",
+      "marketing",
+      "marketing-media",
+      "onboardings",
+      "flows",
+      "flows-archive",
+      "flows-user-runtime",
+      "flows-realtime",
+      "custom",
+      "site",
+      "site-media",
+      "site-sessions",
+      "site-release-cache"
+    ],
+    "description": "Compared rendered health badges, project count, explicit unavailable historical metrics, configured endpoint links and a real D1 schema with canonical Worker responses, then clicked Refresh and verified a newer response. Non-healthy or disabled services remained explicit: [{\"id\":\"messaging\",\"status\":\"disabled\"},{\"id\":\"observability\",\"status\":\"misconfigured\"},{\"id\":\"mcp\",\"status\":\"unavailable\"},{\"id\":\"custom\",\"status\":\"degraded\"}]. External Custom status: unavailable.",
+    "source_test": "apps/site/e2e/tests/observability/infrastructure.spec.ts",
+    "captured_at": "2026-09-07T12:24:20.712Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-infrastructure-browser.json"
+  }
+]

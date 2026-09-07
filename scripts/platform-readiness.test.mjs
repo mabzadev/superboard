@@ -51,8 +51,8 @@ test("target readiness distinguishes unresolved fixtures from provisioned target
   const mbzaResult = targetReadiness(mbza, "development");
   const vocostarResult = targetReadiness(vocostar, "production");
 
-  assert.equal(requiredResourceIds(mbza, "development").length, 13);
-  assert.equal(mbzaResult.resourceIds.missing.length, 13);
+  assert.equal(requiredResourceIds(mbza, "development").length, 18);
+  assert.equal(mbzaResult.resourceIds.missing.length, 18);
   assert.equal(mbzaResult.resourceIdentity.logicalName, "superboard");
   assert.equal(mbzaResult.resourceIdentity.physicalName, "superboard");
   assert.equal(
@@ -63,14 +63,46 @@ test("target readiness distinguishes unresolved fixtures from provisioned target
     true,
   );
   assert.equal(mbzaResult.manifestProvisioned, false);
-  assert.equal(mbzaResult.acceptance.dashboardCacheIsolated, true);
+  assert.equal(mbzaResult.acceptance.frontMediaIsolated, true);
   assert.equal(mbzaResult.acceptance.legacyMessagingDisabled, true);
-  assert.equal(vocostarResult.resourceIds.required, 13);
+  assert.equal(vocostarResult.resourceIds.required, 16);
   assert.deepEqual(
     vocostarResult.resourceIds.missing.map(({ key, name }) => ({ key, name })),
-    [{ key: "moduleD1.support", name: "opengrow-support-v2-db" }],
+    [
+      { key: "siteD1", name: "opengrow-site-db" },
+      { key: "siteSessionKv", name: "opengrow-site-session" },
+      { key: "siteReleaseKv", name: "opengrow-site-last-verified-release" },
+      { key: "moduleD1.support", name: "opengrow-support-v2-db" },
+    ],
   );
   assert.equal(vocostarResult.manifestProvisioned, false);
+});
+
+test("Site storage IDs block readiness independently and together", async () => {
+  const { target: source } = await loadTarget("mbza-development");
+  const keys = ["siteD1", "siteSessionKv", "siteReleaseKv"];
+  assert.equal(targetReadiness(source, "development").manifestProvisioned, true);
+  for (const missingKeys of [...keys.map((key) => [key]), keys]) {
+    const target = structuredClone(source);
+    for (const key of missingKeys) target.environments.development[key].id = null;
+    const result = targetReadiness(target, "development");
+    assert.equal(result.manifestProvisioned, false, missingKeys.join(", "));
+    assert.deepEqual(result.resourceIds.missing.map(({ key }) => key), missingKeys);
+  }
+});
+
+test("Site media isolation requires both named buckets and rejects shared storage", async () => {
+  const { target: source } = await loadTarget("mbza-development");
+  const missingSite = structuredClone(source);
+  delete missingSite.environments.development.siteMedia;
+  assert.equal(targetReadiness(missingSite, "development").acceptance.frontMediaIsolated, false);
+  const missingApi = structuredClone(source);
+  delete missingApi.environments.development.r2;
+  assert.equal(targetReadiness(missingApi, "development").acceptance.frontMediaIsolated, false);
+  const shared = structuredClone(source);
+  shared.environments.development.siteMedia.name = shared.environments.development.r2.name;
+  assert.equal(targetReadiness(shared, "development").acceptance.frontMediaIsolated, false);
+  assert.equal(targetReadiness(source, "development").acceptance.frontMediaIsolated, true);
 });
 
 test("SDK readiness keeps unreleased source versions visible", () => {
@@ -772,7 +804,12 @@ test("current offline report is fail-closed and contains actionable blockers", a
       key,
       name,
     })),
-    [{ key: "moduleD1.support", name: "opengrow-support-v2-db" }],
+    [
+      { key: "siteD1", name: "opengrow-site-db" },
+      { key: "siteSessionKv", name: "opengrow-site-session" },
+      { key: "siteReleaseKv", name: "opengrow-site-last-verified-release" },
+      { key: "moduleD1.support", name: "opengrow-support-v2-db" },
+    ],
   );
   assert.ok(
     report.blockers.some((blocker) => blocker.id === "vocostar.credentials"),
@@ -803,26 +840,40 @@ test("current offline report is fail-closed and contains actionable blockers", a
     "mabzadev/superboard",
   );
   assert.equal(report.stages.localContracts.ready, false);
-  assert.deepEqual(report.stages.flutterFlowLibrary, { ready: true });
-  assert.deepEqual(report.stages.flutterFlowApplications, { ready: true });
-  assert.deepEqual(report.flutterFlowLibrary, {
+  assert.deepEqual(report.stages.flutterFlowLibrary, { ready: false });
+  assert.deepEqual(report.stages.flutterFlowApplications, { ready: false });
+  const { errors: libraryErrors, ...libraryContract } = report.flutterFlowLibrary;
+  assert.deepEqual(libraryContract, {
     schemaVersion: 1,
-    status: "ok",
+    status: "blocked",
     displayName: "SuperBoard",
     dependencies: 1,
     libraryValues: 11,
     widgets: 9,
     pages: 3,
     actions: 88,
-    errors: [],
   });
-  assert.deepEqual(report.flutterFlowApplications, {
+  assert.match(libraryErrors[0], /library sync workflow is unavailable:.*sync-flutterflow-library\.yml/u);
+  assert.deepEqual(libraryErrors.slice(1), [
+    "Library sync workflow is missing FF_LIBRARY_PROJECT_ID",
+    "Library sync workflow is missing FF_API_KEY",
+    "Library sync workflow is missing flutterflow-library",
+    "Library sync workflow is missing tools/flutterflow-library",
+    "Library sync workflow is missing flutterflow ai test",
+    "Library sync workflow is missing flutterflow ai run",
+  ]);
+  const { errors: applicationErrors, ...applicationContract } = report.flutterFlowApplications;
+  assert.deepEqual(applicationContract, {
     schemaVersion: 1,
-    status: "ok",
+    status: "blocked",
     applications: 1,
     bindings: 11,
-    errors: [],
   });
+  assert.equal(applicationErrors.length, 1);
+  assert.match(applicationErrors[0], /application sync workflow is unavailable:.*sync-flutterflow-applications\.yml/u);
+  for (const id of ["flutterflow.library_contract", "flutterflow.application_configuration"]) {
+    assert.ok(report.blockers.some((blocker) => blocker.id === id));
+  }
   assert.equal(report.stages.clientConvergence.ready, false);
   const vocostarClient = report.applicationClients.vocostar;
   assert.deepEqual(

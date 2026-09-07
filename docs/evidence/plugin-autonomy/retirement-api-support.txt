@@ -1,0 +1,338 @@
+Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
+[
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.update_support_settings",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "1-prod"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_settings",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "1-prod"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.create_support_configuration",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "0f386b86-2065-46d4-91b3-5841663aa980"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.update_support_configuration",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "0f386b86-2065-46d4-91b3-5841663aa980"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.rotate_support_webhook_secret",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "0f386b86-2065-46d4-91b3-5841663aa980"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.revoke_support_webhook_secret",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "0f386b86-2065-46d4-91b3-5841663aa980"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.create_support_provider",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.update_support_provider",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_providers",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_channels",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "15b24c85-1e11-4f44-ac40-d431c8766459",
+      "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.create_support_integration",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.update_support_integration",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_integrations",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.send_inbox_message",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "2e64f413-9791-48cc-93c8-d6fe9f7b7295"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.inbox_messages",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "2e64f413-9791-48cc-93c8-d6fe9f7b7295"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.update_inbox_conversation",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.inbox_conversations",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.unified_inbox_items",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "e62ccc6c-0555-42f7-b2b3-df4d738a9171"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.publish_support_article",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "aaf98c5f-4954-43fe-9edb-c7392313f98a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_portals",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "ad675b1e-236c-4e70-8d71-fdc6155d3f01"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_categories",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "aa2e1f30-8954-413e-97d5-f60975c43d7f"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_folders",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "5d484d36-70d1-45e7-8109-c99babb3ef3f"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_articles",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "aaf98c5f-4954-43fe-9edb-c7392313f98a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.data_source.support_assistant_tasks",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "8d18dc5e-1d10-4ceb-b859-8382fe8d57f0"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.delete_support_provider",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "56753ae1-4bc0-4910-b6ae-9f3e6c8ef547"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.delete_support_integration",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "1ca1ea54-d366-43aa-b4bc-d1849c7b807a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-support",
+    "route_id": "gateway.supbrd-plugmod-support.command.delete_support_configuration",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-support.txt",
+    "test": "apps/site/runtime-tests/retirement-api-support.runtime.test.ts",
+    "data_ids": [
+      "0f386b86-2065-46d4-91b3-5841663aa980"
+    ]
+  }
+]
+
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  13:02:45
+   Duration  12.33s (transform 7.60s, setup 16.44s, import 96ms, tests 2.36s, environment 0ms)

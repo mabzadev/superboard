@@ -1,0 +1,19 @@
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+Running 11 tests using 1 worker
+
+(node:13360) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › e2e/tests/identity/identity-navigation.spec.ts:16:1 › Identity roots and overview use real project configuration and navigation (4.0s)
+  ✓   2 [chromium] › e2e/tests/identity/identity-navigation.spec.ts:59:1 › Identity users search filters actual subjects and restores the list (4.1s)
+  ✓   3 [chromium] › e2e/tests/identity/identity-navigation.spec.ts:87:1 › Identity log lists expose real native events and cancel cleanup without deleting them (4.5s)
+  ✓   4 [chromium] › e2e/tests/identity/identity-navigation.spec.ts:125:1 › Identity account buttons initiate each registered OAuth policy with a fresh PKCE challenge (14.7s)
+  ✓   5 [chromium] › e2e/tests/identity/identity.spec.ts:35:2 › Identity roles creates, edits, reloads and finds the persisted record (12.4s)
+  ✓   6 [chromium] › e2e/tests/identity/identity.spec.ts:35:2 › Identity scopes creates, edits, reloads and finds the persisted record (8.6s)
+  ✓   7 [chromium] › e2e/tests/identity/identity.spec.ts:35:2 › Identity orgs creates, edits, reloads and finds the persisted record (5.4s)
+  ✓   8 [chromium] › e2e/tests/identity/identity.spec.ts:35:2 › Identity user-attributes creates, edits, reloads and finds the persisted record (5.3s)
+  ✓   9 [chromium] › e2e/tests/identity/identity.spec.ts:85:1 › Identity app form preserves selected OAuth scopes and changes (5.9s)
+  ✓  10 [chromium] › e2e/tests/identity/identity.spec.ts:129:1 › Identity banner form persists message and disabled state (4.2s)
+  ✓  11 [chromium] › e2e/tests/identity/identity.spec.ts:168:1 › Identity SAML form saves metadata and attribute mapping (6.0s)
+
+  11 passed (1.3m)
