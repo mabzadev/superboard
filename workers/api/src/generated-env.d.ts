@@ -45,11 +45,14 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	AUTH_GATEWAY_JWKS_URL: string;
 	MAIL_PROVIDER: string;
 	MAIL_FROM: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	ADMIN_API_KEY: string;
 	APPLE_ROOT_CERTIFICATES_B64: string;
 	CUSTOM_WORKER_TOKEN: string;
 	DIAGNOSTICS_API_KEY: string;
 	EMAIL_INTERNAL_TOKEN: string;
+	FILES_INTERNAL_TOKEN: string;
 	FLOWS_INTERNAL_TOKEN: string;
 	IAP_PROCESS_KEY: string;
 	JWT_SECRET: string;
@@ -63,6 +66,8 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	SITE_OPERATOR_BRIDGE_TOKEN: string;
 	STORE_CREDENTIALS_ACTIVE_KEY_VERSION: string;
 	STORE_CREDENTIALS_ENCRYPTION_KEYS: string;
+	SITE_SERVICE: Fetcher;
+	MCP_SERVICE: Fetcher;
 	BILLING: Fetcher;
 	EMAIL_SERVICE: Fetcher;
 	IDENTITY_SERVICE: Fetcher;
@@ -71,10 +76,12 @@ interface __BaseEnv_ApiWorkerGeneratedEnv {
 	CUSTOM_WORKER: Fetcher;
 	APP_MODULE: Fetcher;
 	PRODUCTS_MODULE: Fetcher;
+	PAYWALLS_MODULE: Fetcher;
 	DYNAMIC_LINKS_MODULE: Fetcher;
 	SUPPORT_MODULE: Fetcher;
 	ANALYTICS_MODULE: Fetcher;
 	MARKETING_MODULE: Fetcher;
+	ONBOARDINGS_MODULE: Fetcher;
 	FLOWS_MODULE: Fetcher;
 }
-interface ApiWorkerGeneratedEnv extends __BaseEnv_ApiWorkerGeneratedEnv {}
+export interface ApiWorkerGeneratedEnv extends __BaseEnv_ApiWorkerGeneratedEnv {}

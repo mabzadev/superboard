@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./project-context": "./src/project-context.ts",
+    "./site-operator": "./src/site-operator.ts",
+    "./plugin-task": "./src/plugin-task.ts",
+    "./plugin-workflow": "./src/plugin-workflow.ts",
     "./email": "./src/email.ts",
     "./custom-worker": "./src/custom-worker.ts",
     "./observability": "./src/observability.ts",
@@ -19,6 +22,9 @@
     "./flows": "./src/flows.ts",
     "./support": "./src/support.ts",
     "./support-notifications": "./src/support-notifications.ts",
-    "./fixtures/support/v1.json": "./fixtures/support/v1.json"
+    "./fixtures/support/v1.json": "./fixtures/support/v1.json",
+    "./billing-catalog": "./src/billing-catalog.ts",
+    "./application-plugin-api": "./src/application-plugin-api.ts",
+    "./plugin-api-owner": "./src/plugin-api-owner.ts"
   }
 }

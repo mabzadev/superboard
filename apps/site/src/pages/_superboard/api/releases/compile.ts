@@ -3,6 +3,7 @@ import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
 import { loadDraftSnapshot, recordCompilation } from "../../../../lib/front-workflow-repository.js";
+import { requireManagedPluginOperationAccess } from "../../../../lib/managed-plugin-operation.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
 import { stageCompiledFrontRelease } from "../../../../lib/release-repository.js";
 import { isRecord } from "../../../../lib/request-validation.js";
@@ -28,6 +29,12 @@ export const POST: APIRoute = async (context) => {
 	const env = getSiteEnv();
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
+	const busy = await requireManagedPluginOperationAccess(
+		context,
+		env.DB,
+		env.SUPERBOARD_INSTANCE_ID,
+	);
+	if (busy) return busy;
 	if (!env.SUPERBOARD_RELEASE_PRIVATE_JWK) {
 		return jsonResponse({ error: { code: "RELEASE_SIGNING_KEY_UNAVAILABLE" } }, 503);
 	}

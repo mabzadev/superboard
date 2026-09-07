@@ -1,0 +1,605 @@
+{
+  "captured_at": "2026-09-07T07:29:01.570Z",
+  "results": [
+    {
+      "plugin_id": "supbrd-plug-audit",
+      "status": "passed",
+      "front_path": "/system/content",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/system/audit",
+          "label": "Ledger"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plug-content",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/system/content",
+          "label": "Documents"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plug-products",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 1,
+      "owned_links": [
+        {
+          "href": "/products/offerings",
+          "label": "Offerings"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 4,
+      "owned_links": [
+        {
+          "href": "/app/android-setup",
+          "label": "Android Setup"
+        },
+        {
+          "href": "/app/ios-setup",
+          "label": "iOS Setup"
+        },
+        {
+          "href": "/app/libraries",
+          "label": "Libraries"
+        },
+        {
+          "href": "/app/web-setup",
+          "label": "Web Setup"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 78,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 14,
+      "owned_links": [
+        {
+          "href": "/app/access-key",
+          "label": "Access Key"
+        },
+        {
+          "href": "/app/customers",
+          "label": "Customers"
+        },
+        {
+          "href": "/app/referrals",
+          "label": "Referrals"
+        },
+        {
+          "href": "/app/users",
+          "label": "Users"
+        },
+        {
+          "href": "/identity/en/account",
+          "label": "Account Policies"
+        },
+        {
+          "href": "/identity/en/apps",
+          "label": "Applications"
+        },
+        {
+          "href": "/identity/en/dashboard",
+          "label": "Overview"
+        },
+        {
+          "href": "/identity/en/logs",
+          "label": "Logs"
+        },
+        {
+          "href": "/identity/en/orgs",
+          "label": "Organizations"
+        },
+        {
+          "href": "/identity/en/roles",
+          "label": "Roles"
+        },
+        {
+          "href": "/identity/en/saml",
+          "label": "SAML SSO"
+        },
+        {
+          "href": "/identity/en/scopes",
+          "label": "Scopes"
+        },
+        {
+          "href": "/identity/en/user-attributes",
+          "label": "User Attributes"
+        },
+        {
+          "href": "/identity/en/users",
+          "label": "Users"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 68,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 17,
+      "owned_links": [
+        {
+          "href": "/analytics",
+          "label": "Overview"
+        },
+        {
+          "href": "/analytics/alerts",
+          "label": "Alerts"
+        },
+        {
+          "href": "/analytics/cohorts",
+          "label": "Cohorts"
+        },
+        {
+          "href": "/analytics/crashes",
+          "label": "Crashes"
+        },
+        {
+          "href": "/analytics/dashboards",
+          "label": "Dashboards"
+        },
+        {
+          "href": "/analytics/dimensions",
+          "label": "Technology & Location"
+        },
+        {
+          "href": "/analytics/events",
+          "label": "Events"
+        },
+        {
+          "href": "/analytics/feedback",
+          "label": "Feedback"
+        },
+        {
+          "href": "/analytics/insights",
+          "label": "Funnels & Retention"
+        },
+        {
+          "href": "/analytics/installations",
+          "label": "Installations"
+        },
+        {
+          "href": "/analytics/purchases",
+          "label": "Verified Purchases"
+        },
+        {
+          "href": "/analytics/remote-config",
+          "label": "Remote Config"
+        },
+        {
+          "href": "/analytics/reports",
+          "label": "Reports & Exports"
+        },
+        {
+          "href": "/analytics/settings",
+          "label": "Settings"
+        },
+        {
+          "href": "/analytics/users",
+          "label": "Users & Sessions"
+        },
+        {
+          "href": "/analytics/views",
+          "label": "Views"
+        },
+        {
+          "href": "/dashboard",
+          "label": "Dashboard"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 65,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 3,
+      "owned_links": [
+        {
+          "href": "/products/customers",
+          "label": "Customers"
+        },
+        {
+          "href": "/products/entitlements",
+          "label": "Entitlements"
+        },
+        {
+          "href": "/products/purchases",
+          "label": "Purchases"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 79,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 6,
+      "owned_links": [
+        {
+          "href": "/dynamic-links/campaigns",
+          "label": "Campaigns"
+        },
+        {
+          "href": "/dynamic-links/domain",
+          "label": "Domain"
+        },
+        {
+          "href": "/dynamic-links/links",
+          "label": "Links"
+        },
+        {
+          "href": "/dynamic-links/redirect-rules",
+          "label": "Redirect Rules"
+        },
+        {
+          "href": "/dynamic-links/social-media-preview",
+          "label": "Social Media Preview"
+        },
+        {
+          "href": "/dynamic-links/tracking",
+          "label": "Tracking"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 76,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-email",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/system/email",
+          "label": "Delivery settings"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-files",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/system/files",
+          "label": "Files"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 8,
+      "owned_links": [
+        {
+          "href": "/flows",
+          "label": "Overview"
+        },
+        {
+          "href": "/flows/components",
+          "label": "Components"
+        },
+        {
+          "href": "/flows/launchpad",
+          "label": "Launchpad"
+        },
+        {
+          "href": "/flows/settings/environments",
+          "label": "Environments"
+        },
+        {
+          "href": "/flows/settings/localization",
+          "label": "Localization"
+        },
+        {
+          "href": "/flows/settings/sdk",
+          "label": "SDK"
+        },
+        {
+          "href": "/flows/users",
+          "label": "Users"
+        },
+        {
+          "href": "/flows/workflows",
+          "label": "Workflows"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 74,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-gateway",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/system/gateway",
+          "label": "Routes and access"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 7,
+      "owned_links": [
+        {
+          "href": "/marketing/campaigns",
+          "label": "Campaigns"
+        },
+        {
+          "href": "/marketing/channels",
+          "label": "Channels"
+        },
+        {
+          "href": "/marketing/email",
+          "label": "Email"
+        },
+        {
+          "href": "/marketing/in-app-messages",
+          "label": "In-app Messages"
+        },
+        {
+          "href": "/marketing/journeys",
+          "label": "Journeys"
+        },
+        {
+          "href": "/marketing/settings",
+          "label": "Settings"
+        },
+        {
+          "href": "/marketing/statistics",
+          "label": "Statistics"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 75,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/mcp",
+          "label": "Tools and access"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-observability",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/infrastructure",
+          "label": "Infrastructure"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 81,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/onboardings",
+          "label": "Onboardings"
+        },
+        {
+          "href": "/onboardings/statistics",
+          "label": "Statistics"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 80,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 0,
+      "owned_links": [
+        {
+          "href": "/paywalls",
+          "label": "Paywalls"
+        },
+        {
+          "href": "/paywalls/statistics",
+          "label": "Statistics"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 80,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "front_path": "/system/audit",
+      "historical_menu_count": 11,
+      "owned_links": [
+        {
+          "href": "/support/automations",
+          "label": "Automations"
+        },
+        {
+          "href": "/support/captain",
+          "label": "Captain"
+        },
+        {
+          "href": "/support/channels",
+          "label": "Channels"
+        },
+        {
+          "href": "/support/contacts",
+          "label": "Contacts"
+        },
+        {
+          "href": "/support/help-center",
+          "label": "Help Center"
+        },
+        {
+          "href": "/support/inbox",
+          "label": "Inbox"
+        },
+        {
+          "href": "/support/integrations",
+          "label": "Integrations"
+        },
+        {
+          "href": "/support/proactive-support",
+          "label": "Proactive Support"
+        },
+        {
+          "href": "/support/reports",
+          "label": "Reports"
+        },
+        {
+          "href": "/support/settings",
+          "label": "Settings"
+        },
+        {
+          "href": "/support/workforce",
+          "label": "Workforce"
+        }
+      ],
+      "disabled_links_absent": true,
+      "other_links_preserved": true,
+      "other_link_count": 71,
+      "restored_links_unchanged": true,
+      "live_tab_updated": true,
+      "core_home_rendered": true,
+      "core_admin_navigation_worked": true
+    }
+  ],
+  "errors": [],
+  "all_plugins_active_at_end": true
+}

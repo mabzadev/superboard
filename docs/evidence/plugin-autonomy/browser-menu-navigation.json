@@ -1,0 +1,1293 @@
+{
+  "expected_count": 71,
+  "actual": [
+    {
+      "href": "/dashboard",
+      "label": "Dashboard"
+    },
+    {
+      "href": "/app/customers",
+      "label": "Customers"
+    },
+    {
+      "href": "/app/users",
+      "label": "Users"
+    },
+    {
+      "href": "/app/referrals",
+      "label": "Referrals"
+    },
+    {
+      "href": "/app/access-key",
+      "label": "Access Key"
+    },
+    {
+      "href": "/app/libraries",
+      "label": "Libraries"
+    },
+    {
+      "href": "/app/android-setup",
+      "label": "Android Setup"
+    },
+    {
+      "href": "/app/ios-setup",
+      "label": "iOS Setup"
+    },
+    {
+      "href": "/app/web-setup",
+      "label": "Web Setup"
+    },
+    {
+      "href": "/identity/en/dashboard",
+      "label": "Overview"
+    },
+    {
+      "href": "/identity/en/users",
+      "label": "Users"
+    },
+    {
+      "href": "/identity/en/user-attributes",
+      "label": "User Attributes"
+    },
+    {
+      "href": "/identity/en/roles",
+      "label": "Roles"
+    },
+    {
+      "href": "/identity/en/apps",
+      "label": "Applications"
+    },
+    {
+      "href": "/identity/en/scopes",
+      "label": "Scopes"
+    },
+    {
+      "href": "/identity/en/orgs",
+      "label": "Organizations"
+    },
+    {
+      "href": "/identity/en/logs",
+      "label": "Logs"
+    },
+    {
+      "href": "/identity/en/saml",
+      "label": "SAML SSO"
+    },
+    {
+      "href": "/identity/en/account",
+      "label": "Account Policies"
+    },
+    {
+      "href": "/products/purchases",
+      "label": "Purchases"
+    },
+    {
+      "href": "/products/customers",
+      "label": "Customers"
+    },
+    {
+      "href": "/products/offerings",
+      "label": "Offerings"
+    },
+    {
+      "href": "/products/entitlements",
+      "label": "Entitlements"
+    },
+    {
+      "href": "/flows",
+      "label": "Overview"
+    },
+    {
+      "href": "/flows/workflows",
+      "label": "Workflows"
+    },
+    {
+      "href": "/flows/launchpad",
+      "label": "Launchpad"
+    },
+    {
+      "href": "/flows/users",
+      "label": "Users"
+    },
+    {
+      "href": "/flows/components",
+      "label": "Components"
+    },
+    {
+      "href": "/flows/settings/environments",
+      "label": "Environments"
+    },
+    {
+      "href": "/flows/settings/localization",
+      "label": "Localization"
+    },
+    {
+      "href": "/flows/settings/sdk",
+      "label": "SDK"
+    },
+    {
+      "href": "/dynamic-links/links",
+      "label": "Links"
+    },
+    {
+      "href": "/dynamic-links/campaigns",
+      "label": "Campaigns"
+    },
+    {
+      "href": "/dynamic-links/redirect-rules",
+      "label": "Redirect Rules"
+    },
+    {
+      "href": "/dynamic-links/domain",
+      "label": "Domain"
+    },
+    {
+      "href": "/dynamic-links/social-media-preview",
+      "label": "Social Media Preview"
+    },
+    {
+      "href": "/dynamic-links/tracking",
+      "label": "Tracking"
+    },
+    {
+      "href": "/support/inbox",
+      "label": "Inbox"
+    },
+    {
+      "href": "/support/contacts",
+      "label": "Contacts"
+    },
+    {
+      "href": "/support/workforce",
+      "label": "Workforce"
+    },
+    {
+      "href": "/support/channels",
+      "label": "Channels"
+    },
+    {
+      "href": "/support/automations",
+      "label": "Automations"
+    },
+    {
+      "href": "/support/proactive-support",
+      "label": "Proactive Support"
+    },
+    {
+      "href": "/support/help-center",
+      "label": "Help Center"
+    },
+    {
+      "href": "/support/captain",
+      "label": "Captain"
+    },
+    {
+      "href": "/support/integrations",
+      "label": "Integrations"
+    },
+    {
+      "href": "/support/reports",
+      "label": "Reports"
+    },
+    {
+      "href": "/support/settings",
+      "label": "Settings"
+    },
+    {
+      "href": "/marketing/in-app-messages",
+      "label": "In-app Messages"
+    },
+    {
+      "href": "/marketing/email",
+      "label": "Email"
+    },
+    {
+      "href": "/marketing/campaigns",
+      "label": "Campaigns"
+    },
+    {
+      "href": "/marketing/journeys",
+      "label": "Journeys"
+    },
+    {
+      "href": "/marketing/channels",
+      "label": "Channels"
+    },
+    {
+      "href": "/marketing/statistics",
+      "label": "Statistics"
+    },
+    {
+      "href": "/marketing/settings",
+      "label": "Settings"
+    },
+    {
+      "href": "/analytics",
+      "label": "Overview"
+    },
+    {
+      "href": "/analytics/dashboards",
+      "label": "Dashboards"
+    },
+    {
+      "href": "/analytics/users",
+      "label": "Users & Sessions"
+    },
+    {
+      "href": "/analytics/events",
+      "label": "Events"
+    },
+    {
+      "href": "/analytics/dimensions",
+      "label": "Technology & Location"
+    },
+    {
+      "href": "/analytics/views",
+      "label": "Views"
+    },
+    {
+      "href": "/analytics/installations",
+      "label": "Installations"
+    },
+    {
+      "href": "/analytics/purchases",
+      "label": "Verified Purchases"
+    },
+    {
+      "href": "/analytics/insights",
+      "label": "Funnels & Retention"
+    },
+    {
+      "href": "/analytics/cohorts",
+      "label": "Cohorts"
+    },
+    {
+      "href": "/analytics/crashes",
+      "label": "Crashes"
+    },
+    {
+      "href": "/analytics/feedback",
+      "label": "Feedback"
+    },
+    {
+      "href": "/analytics/remote-config",
+      "label": "Remote Config"
+    },
+    {
+      "href": "/analytics/alerts",
+      "label": "Alerts"
+    },
+    {
+      "href": "/analytics/reports",
+      "label": "Reports & Exports"
+    },
+    {
+      "href": "/analytics/settings",
+      "label": "Settings"
+    },
+    {
+      "href": "/paywalls",
+      "label": "Paywalls"
+    },
+    {
+      "href": "/paywalls/statistics",
+      "label": "Statistics"
+    },
+    {
+      "href": "/onboardings",
+      "label": "Onboardings"
+    },
+    {
+      "href": "/onboardings/statistics",
+      "label": "Statistics"
+    },
+    {
+      "href": "/system/audit",
+      "label": "Ledger"
+    },
+    {
+      "href": "/system/content",
+      "label": "Documents"
+    },
+    {
+      "href": "/system/email",
+      "label": "Delivery settings"
+    },
+    {
+      "href": "/system/files",
+      "label": "Files"
+    },
+    {
+      "href": "/system/gateway",
+      "label": "Routes and access"
+    },
+    {
+      "href": "/infrastructure",
+      "label": "Infrastructure"
+    },
+    {
+      "href": "/mcp",
+      "label": "Tools and access"
+    }
+  ],
+  "results": [
+    {
+      "group_id": "products",
+      "href": "/products/offerings",
+      "label": "Offerings",
+      "order": 2,
+      "permission": "supbrd-plug-products.read",
+      "route_id": "superboard.products_offerings",
+      "plugin_id": "supbrd-plug-products",
+      "status": "passed",
+      "headings": [
+        "Offerings"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/libraries",
+      "label": "Libraries",
+      "order": 4,
+      "permission": "supbrd-plug-settings.read",
+      "route_id": "superboard.app_libraries",
+      "plugin_id": "supbrd-plug-settings",
+      "status": "passed",
+      "headings": [
+        "Libraries",
+        "Required releases",
+        "Widgets",
+        "Event streams",
+        "Git source files",
+        "Reference-only UI adapters"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/android-setup",
+      "label": "Android Setup",
+      "order": 5,
+      "permission": "supbrd-plug-settings.read",
+      "route_id": "superboard.app_android_setup",
+      "plugin_id": "supbrd-plug-settings",
+      "status": "passed",
+      "headings": [
+        "Android Setup"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/ios-setup",
+      "label": "iOS Setup",
+      "order": 6,
+      "permission": "supbrd-plug-settings.read",
+      "route_id": "superboard.app_ios_setup",
+      "plugin_id": "supbrd-plug-settings",
+      "status": "passed",
+      "headings": [
+        "iOS Setup"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/web-setup",
+      "label": "Web Setup",
+      "order": 7,
+      "permission": "supbrd-plug-settings.read",
+      "route_id": "superboard.app_web_setup",
+      "plugin_id": "supbrd-plug-settings",
+      "status": "passed",
+      "headings": [
+        "Web Setup"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/customers",
+      "label": "Customers",
+      "order": 0,
+      "permission": "users.read",
+      "route_id": "superboard.app_customers",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Customers"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/users",
+      "label": "Users",
+      "order": 1,
+      "permission": "users.read",
+      "route_id": "superboard.users",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Application users"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/referrals",
+      "label": "Referrals",
+      "order": 2,
+      "permission": "users.read",
+      "route_id": "superboard.app_referrals",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Referrals"
+      ]
+    },
+    {
+      "group_id": "app",
+      "href": "/app/access-key",
+      "label": "Access Key",
+      "order": 3,
+      "permission": "users.read",
+      "route_id": "superboard.app_access_key",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Access Key"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/dashboard",
+      "label": "Overview",
+      "order": 0,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_dashboard",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Dashboard",
+        "System Links",
+        "Information Configs",
+        "Locale Configs",
+        "Suppression Configs",
+        "Auth Configs",
+        "MFA Configs",
+        "Brute-force Configs",
+        "SSO Configs",
+        "Log Configs"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/user-attributes",
+      "label": "User Attributes",
+      "order": 2,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_user_attributes",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "User Attributes"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/roles",
+      "label": "Roles",
+      "order": 3,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_roles",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Roles"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/apps",
+      "label": "Applications",
+      "order": 4,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_apps",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Apps",
+        "App Banners"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/scopes",
+      "label": "Scopes",
+      "order": 5,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_scopes",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Scopes"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/orgs",
+      "label": "Organizations",
+      "order": 6,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_orgs",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Orgs"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/logs",
+      "label": "Logs",
+      "order": 7,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_logs",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Logs",
+        "Email Logs",
+        "SMS Logs",
+        "Sign-in Logs"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/saml",
+      "label": "SAML SSO",
+      "order": 8,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_saml",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "SAML"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/account",
+      "label": "Account Policies",
+      "order": 9,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_account",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Account"
+      ]
+    },
+    {
+      "group_id": "dashboard",
+      "href": "/dashboard",
+      "label": "Dashboard",
+      "order": 0,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.dashboard",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Analytics",
+        "Dashboard"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics",
+      "label": "Overview",
+      "order": 0,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Analytics"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/dashboards",
+      "label": "Dashboards",
+      "order": 1,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_dashboards",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Dashboards"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/users",
+      "label": "Users & Sessions",
+      "order": 2,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_users",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Users & sessions"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/events",
+      "label": "Events",
+      "order": 3,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_events",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Event explorer"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/dimensions",
+      "label": "Technology & Location",
+      "order": 4,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_dimensions",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Technology & location"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/views",
+      "label": "Views",
+      "order": 5,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_views",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Views"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/installations",
+      "label": "Installations",
+      "order": 6,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_installations",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Installations"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/purchases",
+      "label": "Verified Purchases",
+      "order": 7,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_purchases",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Verified purchases"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/insights",
+      "label": "Funnels & Retention",
+      "order": 8,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_insights",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Funnels & retention"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/cohorts",
+      "label": "Cohorts",
+      "order": 9,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_cohorts",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Cohorts"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/crashes",
+      "label": "Crashes",
+      "order": 10,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_crashes",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Crashes"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/feedback",
+      "label": "Feedback",
+      "order": 11,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_feedback",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Feedback"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/remote-config",
+      "label": "Remote Config",
+      "order": 12,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_remote_config",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Remote Config"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/alerts",
+      "label": "Alerts",
+      "order": 13,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_alerts",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Alerts"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/reports",
+      "label": "Reports & Exports",
+      "order": 14,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_reports",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Reports & data operations"
+      ]
+    },
+    {
+      "group_id": "analytics",
+      "href": "/analytics/settings",
+      "label": "Settings",
+      "order": 15,
+      "permission": "supbrd-plugmod-analytics.read",
+      "route_id": "superboard.analytics_settings",
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "headings": [
+        "Analytics settings"
+      ]
+    },
+    {
+      "group_id": "products",
+      "href": "/products/purchases",
+      "label": "Purchases",
+      "order": 0,
+      "permission": "supbrd-plugmod-billing.read",
+      "route_id": "superboard.products_purchases",
+      "plugin_id": "supbrd-plugmod-billing",
+      "status": "passed",
+      "headings": [
+        "Purchases"
+      ]
+    },
+    {
+      "group_id": "products",
+      "href": "/products/customers",
+      "label": "Customers",
+      "order": 1,
+      "permission": "supbrd-plugmod-billing.read",
+      "route_id": "superboard.products_customers",
+      "plugin_id": "supbrd-plugmod-billing",
+      "status": "passed",
+      "headings": [
+        "Billing customers"
+      ]
+    },
+    {
+      "group_id": "products",
+      "href": "/products/entitlements",
+      "label": "Entitlements",
+      "order": 3,
+      "permission": "supbrd-plugmod-billing.read",
+      "route_id": "superboard.products_entitlements",
+      "plugin_id": "supbrd-plugmod-billing",
+      "status": "passed",
+      "headings": [
+        "Entitlements"
+      ]
+    },
+    {
+      "group_id": "dynamic-links",
+      "href": "/dynamic-links/links",
+      "label": "Links",
+      "order": 0,
+      "permission": "supbrd-plugmod-dynamic-links.read",
+      "route_id": "superboard.dynamic_links_links",
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "headings": [
+        "Links"
+      ]
+    },
+    {
+      "group_id": "dynamic-links",
+      "href": "/dynamic-links/campaigns",
+      "label": "Campaigns",
+      "order": 1,
+      "permission": "supbrd-plugmod-dynamic-links.read",
+      "route_id": "superboard.dynamic_links_campaigns",
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "headings": [
+        "Campaigns"
+      ]
+    },
+    {
+      "group_id": "dynamic-links",
+      "href": "/dynamic-links/redirect-rules",
+      "label": "Redirect Rules",
+      "order": 2,
+      "permission": "supbrd-plugmod-dynamic-links.read",
+      "route_id": "superboard.dynamic_links_redirect_rules",
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "headings": [
+        "Redirect Rules",
+        "Platform routing"
+      ]
+    },
+    {
+      "group_id": "dynamic-links",
+      "href": "/dynamic-links/domain",
+      "label": "Domain",
+      "order": 3,
+      "permission": "supbrd-plugmod-dynamic-links.read",
+      "route_id": "superboard.dynamic_links_domain",
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "headings": [
+        "Domain"
+      ]
+    },
+    {
+      "group_id": "dynamic-links",
+      "href": "/dynamic-links/social-media-preview",
+      "label": "Social Media Preview",
+      "order": 4,
+      "permission": "supbrd-plugmod-dynamic-links.read",
+      "route_id": "superboard.dynamic_links_social_media_preview",
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "headings": [
+        "Social Media Preview"
+      ]
+    },
+    {
+      "group_id": "dynamic-links",
+      "href": "/dynamic-links/tracking",
+      "label": "Tracking",
+      "order": 5,
+      "permission": "supbrd-plugmod-dynamic-links.read",
+      "route_id": "superboard.dynamic_links_tracking",
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "headings": [
+        "Tracking"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows",
+      "label": "Overview",
+      "order": 0,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "Flows overview"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows/workflows",
+      "label": "Workflows",
+      "order": 1,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows_workflows",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "Workflows"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows/launchpad",
+      "label": "Launchpad",
+      "order": 2,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows_launchpad",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "Launchpad"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows/users",
+      "label": "Users",
+      "order": 3,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows_users",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "Users"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows/components",
+      "label": "Components",
+      "order": 4,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows_components",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "Components",
+        "Basics V2"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows/settings/environments",
+      "label": "Environments",
+      "order": 5,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows_settings_environments",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "Environments"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows/settings/localization",
+      "label": "Localization",
+      "order": 6,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows_settings_localization",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "Localization"
+      ]
+    },
+    {
+      "group_id": "identity",
+      "href": "/identity/en/users",
+      "label": "Users",
+      "order": 1,
+      "permission": "users.read",
+      "route_id": "superboard.identity_by_lang_users",
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "headings": [
+        "Identity",
+        "Users"
+      ]
+    },
+    {
+      "group_id": "flows",
+      "href": "/flows/settings/sdk",
+      "label": "SDK",
+      "order": 7,
+      "permission": "supbrd-plugmod-flows.read",
+      "route_id": "superboard.flows_settings_sdk",
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "headings": [
+        "SDK setup"
+      ]
+    },
+    {
+      "group_id": "marketing",
+      "href": "/marketing/in-app-messages",
+      "label": "In-app Messages",
+      "order": 0,
+      "permission": "supbrd-plugmod-marketing.read",
+      "route_id": "superboard.marketing_in_app_messages",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "rendered_controls": [
+        "Create Message"
+      ],
+      "rendered_empty_state": "No messages yet"
+    },
+    {
+      "group_id": "marketing",
+      "href": "/marketing/email",
+      "label": "Email",
+      "order": 1,
+      "permission": "supbrd-plugmod-marketing.read",
+      "route_id": "superboard.marketing_email",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "headings": [
+        "Email"
+      ]
+    },
+    {
+      "group_id": "marketing",
+      "href": "/marketing/campaigns",
+      "label": "Campaigns",
+      "order": 2,
+      "permission": "supbrd-plugmod-marketing.read",
+      "route_id": "superboard.marketing_campaigns",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "headings": [
+        "Campaigns"
+      ]
+    },
+    {
+      "group_id": "marketing",
+      "href": "/marketing/journeys",
+      "label": "Journeys",
+      "order": 3,
+      "permission": "supbrd-plugmod-marketing.read",
+      "route_id": "superboard.marketing_journeys",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "headings": [
+        "Marketing journeys"
+      ]
+    },
+    {
+      "group_id": "marketing",
+      "href": "/marketing/channels",
+      "label": "Channels",
+      "order": 4,
+      "permission": "supbrd-plugmod-marketing.read",
+      "route_id": "superboard.marketing_channels",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "headings": [
+        "Marketing channels"
+      ]
+    },
+    {
+      "group_id": "marketing",
+      "href": "/marketing/statistics",
+      "label": "Statistics",
+      "order": 5,
+      "permission": "supbrd-plugmod-marketing.read",
+      "route_id": "superboard.marketing_statistics",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "headings": [
+        "Marketing statistics"
+      ]
+    },
+    {
+      "group_id": "marketing",
+      "href": "/marketing/settings",
+      "label": "Settings",
+      "order": 6,
+      "permission": "supbrd-plugmod-marketing.read",
+      "route_id": "superboard.marketing_settings",
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "headings": [
+        "Marketing settings"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/inbox",
+      "label": "Inbox",
+      "order": 0,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_inbox",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Support Inbox"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/contacts",
+      "label": "Contacts",
+      "order": 1,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_contacts",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Contacts",
+        "New contact",
+        "Companies"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/workforce",
+      "label": "Workforce",
+      "order": 2,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_workforce",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Workforce"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/channels",
+      "label": "Channels",
+      "order": 3,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_channels",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Channels"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/automations",
+      "label": "Automations",
+      "order": 4,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_automations",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Automations"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/proactive-support",
+      "label": "Proactive Support",
+      "order": 5,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_proactive_support",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Proactive Support"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/help-center",
+      "label": "Help Center",
+      "order": 6,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_help_center",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Help Center"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/captain",
+      "label": "Captain",
+      "order": 7,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_captain",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Captain"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/integrations",
+      "label": "Integrations",
+      "order": 8,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_integrations",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Integrations"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/reports",
+      "label": "Reports",
+      "order": 9,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_reports",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Reports"
+      ]
+    },
+    {
+      "group_id": "support",
+      "href": "/support/settings",
+      "label": "Settings",
+      "order": 10,
+      "permission": "supbrd-plugmod-support.read",
+      "route_id": "superboard.support_settings",
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "headings": [
+        "Settings"
+      ]
+    }
+  ],
+  "errors": []
+}

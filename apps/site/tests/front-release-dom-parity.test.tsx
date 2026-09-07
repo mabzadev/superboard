@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import parityRelease from "../../../config/superboard-parity-release.json";
+import independenceBaseline from "../../../config/superboard-plugin-independence-baseline.json";
 import seed from "../seed/seed.json";
 import { NativeFrontApp } from "../src/components/NativeFrontApp.js";
 import type { FrontPageModel } from "../src/lib/front-page.js";
@@ -25,7 +26,15 @@ test("renders every active Release route and submenu in the client without an er
 	const submenuItems = release.presentation.navigation.flatMap(({ items }) => items);
 
 	try {
-		expect(submenuItems).toHaveLength(71);
+		for (const historical of independenceBaseline.plugins.flatMap(({ navigation }) => navigation)) {
+			expect(
+				submenuItems.filter((item) => item.route_id === historical.route_id),
+				historical.route_id,
+			).toHaveLength(1);
+			expect(submenuItems.find((item) => item.route_id === historical.route_id)?.href).toBe(
+				historical.href,
+			);
+		}
 		for (const item of submenuItems) {
 			const route = routes.get(item.route_id);
 			expect(route, item.route_id).toBeDefined();

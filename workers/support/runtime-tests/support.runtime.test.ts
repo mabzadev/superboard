@@ -294,9 +294,9 @@ describe("Support in the Workers runtime", () => {
         status: "ok",
         schema: {
           status: "current",
-          expectedMigration: "0023_support_integration_oauth.sql",
-          latestMigration: "0023_support_integration_oauth.sql",
-          appliedMigrationCount: 24,
+          expectedMigration: "0024_operator_notification_preferences.sql",
+          latestMigration: "0024_operator_notification_preferences.sql",
+          appliedMigrationCount: 25,
         },
         metrics: {
           conversations: {

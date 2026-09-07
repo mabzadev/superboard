@@ -12,6 +12,7 @@ import {
 	CORE_FRONT_RENDERER_DESCRIPTORS,
 	CORE_STATE_RENDERER_IDS,
 	SUPBRD_CORE_ARTIFACT_CHECKSUM,
+	CORE_OPERATOR_SURFACES,
 } from "./core-front-contract.js";
 import { USER_FRONT_CATALOGS } from "./user-front-catalogs.js";
 
@@ -64,11 +65,10 @@ export function composeFrontReleaseInput(
 			assertPluginRenderers(nativePlugin, manifest.renderers);
 			return { lock, manifest, nativePlugin };
 		});
-	const surfaces = activePlugins.flatMap(({ nativePlugin }) => nativePlugin.surfaces);
-	const login = selectTransition(surfaces, "login");
-	const authenticatedHome = selectTransition(surfaces, "authenticated_home");
-	if (!login) throw new Error("FRONT_LOGIN_ROUTE_MISSING");
-	if (!authenticatedHome) throw new Error("FRONT_AUTHENTICATED_HOME_ROUTE_MISSING");
+	const surfaces = [
+		...CORE_OPERATOR_SURFACES,
+		...activePlugins.flatMap(({ nativePlugin }) => nativePlugin.surfaces),
+	];
 	const routes = surfaces
 		.toSorted((left, right) => left.path_pattern.localeCompare(right.path_pattern))
 		.map((surface) => ({
@@ -85,9 +85,13 @@ export function composeFrontReleaseInput(
 			layout_ids: surface.auth_policy === "anonymous_only" ? [] : [ADMIN_LAYOUT_ID],
 			renderer_ids: [surface.renderer_id],
 			state_policies: statePolicies,
-			dependencies: [
-				`dependency.${pluginIdForRenderer(surface.renderer_id, activePlugins).replaceAll("-", "_")}`,
-			],
+			dependencies: CORE_OPERATOR_SURFACES.some(
+				({ renderer_id }) => renderer_id === surface.renderer_id,
+			)
+				? []
+				: [
+						`dependency.${pluginIdForRenderer(surface.renderer_id, activePlugins).replaceAll("-", "_")}`,
+					],
 			redirect: null,
 		}));
 	const navigation = composeNavigation(surfaces);
@@ -157,8 +161,8 @@ export function composeFrontReleaseInput(
 				percent_decoding: "once",
 			},
 			auth_transitions: {
-				login_route_id: login.route_id,
-				authenticated_home_route_id: authenticatedHome.route_id,
+				login_route_id: "emdash.core.operator_login",
+				authenticated_home_route_id: "emdash.core.operator_home",
 			},
 			system_routes: [],
 			routes,
@@ -185,7 +189,18 @@ export function composeFrontReleaseInput(
 			navigation,
 			translations: Object.entries(USER_FRONT_CATALOGS).map(([locale, messages]) => ({
 				locale,
-				messages,
+				messages: {
+					...messages,
+					...Object.fromEntries(
+						activePlugins.flatMap(({ nativePlugin }) =>
+							Object.entries(nativePlugin.translations?.[locale] ?? {}).map(([key, value]) => {
+								if (!key.startsWith(`${nativePlugin.plugin_id}.`))
+									throw new Error(`PLUGIN_TRANSLATION_NAMESPACE_INVALID:${key}`);
+								return [key, value];
+							}),
+						),
+					),
+				},
 			})),
 			media: [],
 			theme: {
@@ -286,19 +301,6 @@ function routeParameters(path: string) {
 			{ type: token.includes("*") ? ("path" as const) : ("string" as const), required: true },
 		]),
 	);
-}
-
-function selectTransition(
-	surfaces: readonly NativeFrontPluginModule["surfaces"][number][],
-	transition: NonNullable<NativeFrontPluginModule["surfaces"][number]["transition"]>,
-) {
-	return surfaces
-		.filter((surface) => surface.transition === transition)
-		.toSorted(
-			(left, right) =>
-				left.path_pattern.length - right.path_pattern.length ||
-				left.path_pattern.localeCompare(right.path_pattern),
-		)[0];
 }
 
 function assertPluginRenderers(

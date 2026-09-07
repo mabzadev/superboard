@@ -1,5 +1,10 @@
 export const USER_FRONT_CATALOGS = {
 	en: {
+		"site.operator.home": "SuperBoard",
+		"site.operator.home_description":
+			"Choose an active plugin from the navigation or manage plugins in EmDash.",
+		"site.operator.login": "Operator sign in",
+		"site.operator.login_description": "Use your EmDash account to open this instance.",
 		"user.page.sign_in": "Sign in",
 		"user.page.profile": "Profile",
 		"user.page.users": "Users",
@@ -56,6 +61,11 @@ export const USER_FRONT_CATALOGS = {
 		"site.meta.source": "source",
 	},
 	fr: {
+		"site.operator.home": "SuperBoard",
+		"site.operator.home_description":
+			"Choisissez un plugin actif dans la navigation ou gérez les plugins dans EmDash.",
+		"site.operator.login": "Connexion opérateur",
+		"site.operator.login_description": "Utilisez votre compte EmDash pour ouvrir cette instance.",
 		"user.page.sign_in": "Connexion",
 		"user.page.profile": "Profil",
 		"user.page.users": "Utilisateurs",

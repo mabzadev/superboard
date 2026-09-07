@@ -352,7 +352,6 @@ async function frontReleaseInput(input: {
 		release_id: input.releaseId,
 		release_sequence: input.releaseSequence,
 		previous_release_id: input.previousReleaseId,
-		created_at: "2026-08-30T00:10:00.000Z",
 		plugin_lock: [
 			{
 				plugin_id: userPluginManifest.plugin_id,

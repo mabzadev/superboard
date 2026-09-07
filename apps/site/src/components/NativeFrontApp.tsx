@@ -1,24 +1,23 @@
 import { setupI18n } from "@lingui/core";
+import { watchPluginLifecycle } from "@superboard/front-ui/lifecycle";
 import type {
 	NativeRendererBlock,
 	NativeRendererCard,
 	NativeRendererDocument,
 } from "@superboard/supbrd-core";
-import type { CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
 
-import {
-	DashboardViewRenderer,
-	isDashboardViewPath,
-} from "../../../dashboard/src/emdash/DashboardViewRenderer.js";
 import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
+import { PluginFrontView } from "./PluginFrontView.js";
 
 export function NativeFrontApp({ projection }: { projection: NativeFrontPresentationProjection }) {
+	useEffect(watchPluginLifecycle, []);
 	const i18n = setupI18n({
 		locale: projection.locale,
 		messages: { [projection.locale]: projection.messages },
 	});
-	const message = (id: string) => i18n._(id);
+	const message = (id: string) => (Object.hasOwn(projection.messages, id) ? i18n._(id) : id);
 	const mount = (input: NativeFrontPresentationProjection["content_mounts"][number]) =>
 		mountNativeFrontRenderer({ mount: input, plugin_lock: projection.plugin_lock });
 	const layouts = projection.layout_mounts.map(mount);
@@ -26,21 +25,13 @@ export function NativeFrontApp({ projection }: { projection: NativeFrontPresenta
 	const dashboardMount = projection.content_mounts[0];
 	const state = projection.state_mount ? mount(projection.state_mount) : null;
 	const currentSurface = contents.find((document) => document.kind === "surface");
-	const style = {
+	const style: CSSProperties & { "--front-primary": string } = {
 		"--front-primary": projection.theme.accent,
-	} as CSSProperties;
+	};
 	const dashboardView =
-		!state && isDashboardViewPath(projection.path) ? (
+		!state && dashboardMount && dashboardMount.renderer.plugin_id !== "supbrd-core" ? (
 			<div className="native-front-dashboard-view">
-				<DashboardViewRenderer
-					bindings={dashboardMount?.view_bindings ?? { commands: [], data_sources: [] }}
-					configurationError={message("site.front.view_configuration_error")}
-					instanceId={projection.instance_id}
-					locale={projection.locale}
-					path={projection.path}
-					pluginId={dashboardMount?.renderer.plugin_id ?? ""}
-					rendererId={dashboardMount?.renderer.renderer_id ?? ""}
-				/>
+				<PluginFrontView projection={projection} message={message} />
 				{currentSurface?.blocks.length ? (
 					<div className="native-front-dashboard-additions">
 						{currentSurface.blocks.map((block, index) => (

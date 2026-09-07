@@ -1,0 +1,45 @@
+import type { OperatorProjectScope } from "@superboard/contracts/site-operator";
+import { createContext, useContext, type ReactNode } from "react";
+
+export interface FrontOperator {
+	id: string;
+	email: string;
+	name: string | null;
+	role: number;
+}
+
+export interface PluginViewProps {
+	parameters: Record<string, string>;
+	path: string;
+	locale: "en" | "fr";
+}
+
+export interface FrontContextValue extends PluginViewProps {
+	instanceId: string;
+	pluginId: string;
+	operator: FrontOperator | null;
+	projectScope: OperatorProjectScope | null;
+	activePluginIds: readonly string[];
+}
+
+const FrontContext = createContext<FrontContextValue | null>(null);
+
+export function FrontContextProvider({
+	value,
+	children,
+}: {
+	value: FrontContextValue;
+	children: ReactNode;
+}) {
+	return <FrontContext.Provider value={value}>{children}</FrontContext.Provider>;
+}
+
+export function useFrontContext(): FrontContextValue {
+	const value = useContext(FrontContext);
+	if (!value) throw new Error("Front context is missing");
+	return value;
+}
+
+export function usePluginEnabled(pluginId: string): boolean {
+	return useFrontContext().activePluginIds.includes(pluginId);
+}

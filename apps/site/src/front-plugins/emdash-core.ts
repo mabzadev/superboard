@@ -8,6 +8,8 @@ import {
 	CORE_ADMIN_SHELL_RENDERER_ID,
 	CORE_FRONT_RENDERER_DESCRIPTORS,
 	CORE_STATE_RENDERER_IDS,
+	CORE_OPERATOR_HOME_RENDERER_ID,
+	CORE_OPERATOR_LOGIN_RENDERER_ID,
 } from "../lib/core-front-contract.js";
 
 const stateCopy: Record<FrontState, { title: string; description: string }> = {
@@ -40,7 +42,7 @@ const stateByRenderer = new Map(
 
 export const nativeFrontPlugin: NativeFrontPluginModule = {
 	plugin_id: "supbrd-core",
-	renderer_ids: [CORE_ADMIN_SHELL_RENDERER_ID, ...stateByRenderer.keys()],
+	renderer_ids: CORE_FRONT_RENDERER_DESCRIPTORS.map(({ renderer_id }) => renderer_id),
 	renderer_builds: Object.fromEntries(
 		CORE_FRONT_RENDERER_DESCRIPTORS.map(({ renderer_id: rendererId, build_checksum: checksum }) => [
 			rendererId,
@@ -49,6 +51,26 @@ export const nativeFrontPlugin: NativeFrontPluginModule = {
 	),
 	surfaces: [],
 	mount_renderer(input) {
+		if (
+			input.renderer.renderer_id === CORE_OPERATOR_HOME_RENDERER_ID ||
+			input.renderer.renderer_id === CORE_OPERATOR_LOGIN_RENDERER_ID
+		) {
+			const home = input.renderer.renderer_id === CORE_OPERATOR_HOME_RENDERER_ID;
+			return {
+				kind: "surface",
+				eyebrow: "site.front.title",
+				title: home ? "site.operator.home" : "site.operator.login",
+				description: home ? "site.operator.home_description" : "site.operator.login_description",
+				actions: [
+					{
+						label: "site.admin.open",
+						href: home ? "/_emdash/admin/plugins-manager" : "/_emdash/admin/login",
+					},
+				],
+				blocks: [],
+				details: [],
+			};
+		}
 		if (input.renderer.renderer_id === CORE_ADMIN_SHELL_RENDERER_ID) {
 			return {
 				kind: "layout",

@@ -1,4 +1,10 @@
 import {
+	SITE_OPERATOR_HEADERS,
+	signSiteOperatorRequest,
+} from "@superboard/contracts/site-operator";
+
+import { requireActiveSuperBoardPlugin } from "./plugin-availability.js";
+import {
 	assertIdempotencyKey,
 	beginRepositoryCommand,
 	completeRepositoryCommand,
@@ -7,7 +13,7 @@ import {
 import { importPluginStoreEncryptionKey } from "./plugin-store-repository.js";
 import { resolveSuperBoardPluginTarget } from "./superboard-plugin-catalog.js";
 
-interface OperatorApiProxyEnv {
+export interface OperatorApiProxyEnv {
 	API_SERVICE?: { fetch(request: Request): Promise<Response> };
 	SITE_OPERATOR_BRIDGE_TOKEN?: string;
 	DB?: D1Database;
@@ -16,7 +22,16 @@ interface OperatorApiProxyEnv {
 	SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY?: string;
 }
 
+const CLIENT_COMMAND_ERROR_PATTERN = /(?:INVALID|REQUIRED|CONFLICT|NOT_DECLARED)$/u;
+
+export interface TrustedPluginApiContext {
+	plugin_id: string;
+	command_id?: string;
+	project_ref: string;
+}
+
 type CommandAuthority = (input: {
+	plugin_context?: TrustedPluginApiContext;
 	request_headers: Headers;
 	request_body: Uint8Array;
 	method: "POST" | "PUT" | "PATCH" | "DELETE";
@@ -27,23 +42,41 @@ type CommandAuthority = (input: {
 
 export async function proxyOperatorApiRequest(input: {
 	request: Request;
-	operator_email: string;
+	operator: { id: string; role: number };
 	env: OperatorApiProxyEnv;
 	command_authority?: CommandAuthority;
+	plugin_context?: TrustedPluginApiContext;
 }): Promise<Response> {
-	const email = input.operator_email.trim().toLowerCase();
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) {
-		return errorResponse(401, "OPERATOR_IDENTITY_INVALID");
+	const instanceId = input.env.SUPERBOARD_INSTANCE_ID?.trim();
+	if (
+		!input.operator.id ||
+		!Number.isInteger(input.operator.role) ||
+		input.operator.role < 40 ||
+		input.operator.role > 50
+	) {
+		return errorResponse(403, "OPERATOR_REQUIRED");
 	}
 	const token = input.env.SITE_OPERATOR_BRIDGE_TOKEN?.trim();
-	if (!input.env.API_SERVICE || !token) {
+	if (!input.env.API_SERVICE || !token || !instanceId) {
 		return errorResponse(503, "GATEWAY_BRIDGE_UNAVAILABLE");
 	}
 	const source = new URL(input.request.url);
 	if (!["GET", "HEAD", "OPTIONS"].includes(input.request.method)) {
+		if (input.request.headers.get("X-EmDash-Request") !== "1")
+			return errorResponse(403, "CSRF_HEADER_REQUIRED");
 		const origin = input.request.headers.get("Origin");
 		if (!origin || origin !== source.origin)
 			return errorResponse(403, "CROSS_ORIGIN_MUTATION_REJECTED");
+	}
+	const owner = input.plugin_context?.plugin_id ?? resolveRepositoryCommandScope(source).plugin_id;
+	if (owner !== "supbrd-core") {
+		if (!input.env.DB) return errorResponse(503, "PLUGIN_STATE_UNAVAILABLE");
+		const denied = await requireActiveSuperBoardPlugin(input.env.DB, {
+			instance_id: instanceId,
+			target: resolveSuperBoardPluginTarget(input.env.SUPERBOARD_ENVIRONMENT ?? "local"),
+			plugin_id: owner,
+		});
+		if (denied) return denied;
 	}
 	const target = new URL(`${source.pathname}${source.search}`, "https://api.internal");
 	const headers = new Headers(input.request.headers);
@@ -53,23 +86,35 @@ export async function proxyOperatorApiRequest(input: {
 		"host",
 		"x-superboard-site-operator",
 		"x-superboard-internal-token",
+		SITE_OPERATOR_HEADERS.context,
+		SITE_OPERATOR_HEADERS.signature,
 	]) {
 		headers.delete(name);
 	}
-	headers.set("X-SuperBoard-Site-Operator", email);
-	headers.set("X-SuperBoard-Internal-Token", token);
+
 	headers.set("X-Request-Id", headers.get("X-Request-Id")?.trim() || crypto.randomUUID());
-	const forwarded = new Request(new Request(target, input.request), { headers });
+	const unsigned = new Request(new Request(target, input.request), { headers });
+	const assertion = await signSiteOperatorRequest(
+		unsigned,
+		{ operator_id: input.operator.id, instance_id: instanceId, role: input.operator.role },
+		token,
+	);
+	assertion.forEach((value, name) => headers.set(name, value));
+	const forwarded = new Request(unsigned, { headers });
 	const dispatch = async () => input.env.API_SERVICE!.fetch(forwarded);
 	let response: Response;
 	if (["GET", "HEAD", "OPTIONS"].includes(input.request.method)) {
 		response = await dispatch();
 	} else {
+		const method = input.request.method;
+		if (method !== "POST" && method !== "PUT" && method !== "PATCH" && method !== "DELETE")
+			return Response.json({ error: { code: "METHOD_NOT_ALLOWED" } }, { status: 405 });
 		const commandRequest = forwarded.clone();
 		response = await (input.command_authority ?? executeRepositoryFirstCommand)({
+			plugin_context: input.plugin_context,
 			request_headers: commandRequest.headers,
 			request_body: new Uint8Array(await commandRequest.arrayBuffer()),
-			method: input.request.method as "POST" | "PUT" | "PATCH" | "DELETE",
+			method,
 			url: source,
 			env: input.env,
 			dispatch,
@@ -85,7 +130,8 @@ export async function proxyOperatorApiRequest(input: {
 	});
 }
 
-async function executeRepositoryFirstCommand(input: {
+export async function executeRepositoryFirstCommand(input: {
+	plugin_context?: TrustedPluginApiContext;
 	request_headers: Headers;
 	request_body: Uint8Array;
 	method: "POST" | "PUT" | "PATCH" | "DELETE";
@@ -117,9 +163,11 @@ async function executeRepositoryFirstCommand(input: {
 			operation_id: operationId,
 			instance_id: instanceId,
 			target: resolveSuperBoardPluginTarget(input.env.SUPERBOARD_ENVIRONMENT ?? "local"),
-			project_ref: scope.project_ref,
-			plugin_id: scope.plugin_id,
-			command_id: input.request_headers.get("X-SuperBoard-Command-Id")?.trim() || undefined,
+			project_ref: input.plugin_context?.project_ref ?? scope.project_ref,
+			plugin_id: input.plugin_context?.plugin_id ?? scope.plugin_id,
+			command_id:
+				input.plugin_context?.command_id ??
+				(input.request_headers.get("X-SuperBoard-Command-Id")?.trim() || undefined),
 			adapter_operation: scope.adapter_operation,
 			method,
 			request_path: input.url.pathname,
@@ -143,7 +191,12 @@ async function executeRepositoryFirstCommand(input: {
 		return response;
 	} catch (error) {
 		const code = error instanceof Error ? error.message : "COMMAND_REPOSITORY_FAILED";
-		const status = /(?:INVALID|REQUIRED|CONFLICT|NOT_DECLARED)$/u.test(code) ? 400 : 503;
+		const status =
+			code === "PLUGIN_MANIFEST_NOT_ACTIVE"
+				? 404
+				: CLIENT_COMMAND_ERROR_PATTERN.test(code)
+					? 400
+					: 503;
 		return errorResponse(status, code);
 	}
 }

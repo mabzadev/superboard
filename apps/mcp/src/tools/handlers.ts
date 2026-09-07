@@ -107,7 +107,7 @@ export async function handleGetLink(
 export async function handleUpdateLink(
   token: string,
   projectId: string,
-  linkId: number,
+  linkId: number | string,
   data: UpdateLinkData,
   client: ApiClient = api,
 ): Promise<ToolResult> {
@@ -121,7 +121,7 @@ export async function handleUpdateLink(
 export async function handleArchiveLink(
   token: string,
   projectId: string,
-  linkId: number,
+  linkId: number | string,
   client: ApiClient = api,
 ): Promise<ToolResult> {
   return success(
@@ -216,7 +216,7 @@ export async function handleListCampaigns(
 export async function handleArchiveCampaign(
   token: string,
   projectId: string,
-  campaignId: number,
+  campaignId: number | string,
   client: ApiClient = api,
 ): Promise<ToolResult> {
   return success(

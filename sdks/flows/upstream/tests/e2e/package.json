@@ -9,11 +9,11 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@superboard/flows-js": "*",
-    "@superboard/flows-js-components": "*",
-    "@superboard/flows-react": "*",
-    "@superboard/flows-react-components": "*",
-    "@superboard/flows-shared": "*",
+    "@superboard/flows-js": "workspace:*",
+    "@superboard/flows-js-components": "workspace:*",
+    "@superboard/flows-react": "workspace:*",
+    "@superboard/flows-react-components": "workspace:*",
+    "@superboard/flows-shared": "workspace:*",
     "lit": "^3.3.3",
     "react-router": "^8.3.0"
   },

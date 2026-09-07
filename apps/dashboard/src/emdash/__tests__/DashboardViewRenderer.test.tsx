@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import parityRelease from "../../../../../config/superboard-parity-release.json";
+import independenceBaseline from "../../../../../config/superboard-plugin-independence-baseline.json";
 import seed from "../../../../site/seed/seed.json";
 import { DashboardViewRenderer } from "../DashboardViewRenderer";
 
@@ -18,7 +19,7 @@ describe("EmDash Dashboard View renderer", () => {
     );
   });
 
-  it("renders every active Release submenu without a client rendering error", () => {
+  it("preserves and renders every historical submenu in the active Release", () => {
     const errors: unknown[][] = [];
     const errorSpy = vi
       .spyOn(console, "error")
@@ -30,13 +31,21 @@ describe("EmDash Dashboard View renderer", () => {
         route,
       ])
     );
-    const submenuItems = release.presentation.navigation.flatMap(
+    const activeSubmenuItems = release.presentation.navigation.flatMap(
       ({ items }) => items
+    );
+    const historicalSubmenus = independenceBaseline.plugins.flatMap(
+      ({ navigation }) => navigation
     );
 
     try {
-      expect(submenuItems).toHaveLength(71);
-      for (const item of submenuItems) {
+      for (const historical of historicalSubmenus) {
+        const matches = activeSubmenuItems.filter(
+          (item) => item.route_id === historical.route_id
+        );
+        expect(matches, historical.route_id).toHaveLength(1);
+        const item = matches[0]!;
+        expect(item.href).toBe(historical.href);
         const route = routes.get(item.route_id);
         expect(route, item.route_id).toBeDefined();
         expect(route?.path_pattern.replace(":lang", "en"), item.route_id).toBe(

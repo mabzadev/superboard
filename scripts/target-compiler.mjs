@@ -11,6 +11,7 @@ import {
 	DOMAIN_SERVICE_BINDINGS,
 	DOMAIN_SERVICE_REGISTRY,
 	healthPathForService,
+	taskApiServiceBinding,
 	managedWorkerDefinitions,
 	managedWorkerOperationalBinding,
 	workerNameForService,
@@ -336,6 +337,7 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 		secrets: { required: (siteSecrets?.names ?? []).toSorted() },
 		vars: {
 			SUPERBOARD_INSTANCE_ID: compiledTarget.target,
+			SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 			SUPERBOARD_ENVIRONMENT: compiledTarget.environment,
 			SUPERBOARD_PLUGIN_IDS: JSON.stringify(
 				compiledTarget.graph.plugins
@@ -363,6 +365,14 @@ export function assertTargetServiceConfiguration(
 			`Target configuration drift for ${service}: Worker name must be ${worker?.name ?? "declared"}`,
 		);
 	}
+	if (configuration.vars?.SUPERBOARD_PLUGIN_LIFECYCLE !== "required") {
+		throw new Error(`Target configuration drift for ${service}: plugin lifecycle must be required`);
+	}
+	if (configuration.vars?.SUPERBOARD_INSTANCE_ID !== compiledTarget.target) {
+		throw new Error(
+			`Target configuration drift for ${service}: instance must be ${compiledTarget.target}`,
+		);
+	}
 	const actualBindings = configuredBindings(configuration);
 	const expectedBindings = compiledTarget.graph.bindings.filter(
 		(binding) => binding.service === service,
@@ -385,6 +395,11 @@ export function assertTargetServiceConfiguration(
 			if (actual.service !== targetWorker) {
 				throw new Error(
 					`Target configuration drift for ${service}: ${expected.binding} must target ${targetWorker}`,
+				);
+			}
+			if (canonicalJson(actual.props ?? {}) !== canonicalJson(expected.props ?? {})) {
+				throw new Error(
+					`Target configuration drift for ${service}: ${expected.binding} task identity changed`,
 				);
 			}
 		}
@@ -493,8 +508,14 @@ function compileServices(target) {
 
 function compileBindings(target, environment, physicalResources) {
 	const bindings = [];
-	const addService = (service, binding, targetService) => {
-		bindings.push({ service, binding, kind: "service", targetService });
+	const addService = (service, binding, targetService, props) => {
+		bindings.push({
+			service,
+			binding,
+			kind: "service",
+			targetService,
+			...(props ? { props } : {}),
+		});
 	};
 	const addResource = (service, binding, resourceKey) => {
 		bindings.push({ service, binding, kind: "resource", resourceKey });
@@ -504,7 +525,18 @@ function compileBindings(target, environment, physicalResources) {
 	};
 
 	addService("site", "API_SERVICE", "api");
+	addService("api", "SITE_SERVICE", "site");
+	const emailTaskBinding = taskApiServiceBinding("email");
+	addService("email", emailTaskBinding.binding, emailTaskBinding.service, emailTaskBinding.props);
+	const observabilityTaskBinding = taskApiServiceBinding("observability");
+	addService(
+		"observability",
+		observabilityTaskBinding.binding,
+		observabilityTaskBinding.service,
+		observabilityTaskBinding.props,
+	);
 	addService("mcp", "API_SERVICE", "api");
+	addService("api", "MCP_SERVICE", "mcp");
 	addService("identity", "EMAIL_SERVICE", "email");
 	addService("identity", "FILES_SERVICE", "files");
 	addService("api", "EMAIL_SERVICE", "email");
@@ -513,6 +545,15 @@ function compileBindings(target, environment, physicalResources) {
 	addService("api", "OBSERVABILITY", "observability");
 	addService("dashboard", "WORKER_SELF_REFERENCE", "dashboard");
 	if (target.features.billing) addService("api", "BILLING", "billing");
+	if (target.features.billing) {
+		const billingTaskBinding = taskApiServiceBinding("billing");
+		addService(
+			"billing",
+			billingTaskBinding.binding,
+			billingTaskBinding.service,
+			billingTaskBinding.props,
+		);
+	}
 	if (target.features.messaging) addService("api", "MESSAGING", "messaging");
 	if (target.customWorker) addService("api", "CUSTOM_WORKER", "custom");
 	if (target.features.analytics && target.features.billing) {
@@ -522,7 +563,7 @@ function compileBindings(target, environment, physicalResources) {
 		addService("api", DOMAIN_SERVICE_BINDINGS[service], service);
 		const definition = DOMAIN_SERVICE_REGISTRY[service];
 		for (const dependency of definition.services) {
-			addService(service, dependency.binding, dependency.service);
+			addService(service, dependency.binding, dependency.service, dependency.props);
 		}
 		for (const resource of definition.r2) {
 			addResource(service, resource.binding, `moduleR2.${resource.resourceKey}`);

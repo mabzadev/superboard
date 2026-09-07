@@ -194,7 +194,8 @@ export async function buildFreshInstancePlan(targetName) {
 			catalog_count: catalogIds.length,
 			installed_count: installedIds.length,
 			target_count: targetIds.length,
-			target_inactive_count: installedIds.filter((pluginId) => !targetIds.includes(pluginId)).length,
+			target_inactive_count: installedIds.filter((pluginId) => !targetIds.includes(pluginId))
+				.length,
 			catalog_ids: catalogIds,
 			installed_ids: installedIds,
 			target_ids: targetIds,
@@ -390,11 +391,9 @@ export async function verifyFreshInstanceReceipt(receipt) {
 }
 
 function assertRuntimeEvidence(plan, target, evidence, runtime) {
-	const { localWorkers, developmentWorkers, storeSchema, storeRuntime, storeConvergence } = evidence;
-	if (
-		!Array.isArray(runtime) ||
-		runtime.length !== plan.adapters.length
-	) {
+	const { localWorkers, developmentWorkers, storeSchema, storeRuntime, storeConvergence } =
+		evidence;
+	if (!Array.isArray(runtime) || runtime.length !== plan.adapters.length) {
 		throw new Error("Fresh Instance runtime evidence is incomplete");
 	}
 	assertWorkerEvidence(plan.adapters[0], localWorkers);
@@ -429,7 +428,14 @@ function assertRuntimeEvidence(plan, target, evidence, runtime) {
 			throw new Error(`Fresh Instance runtime evidence is invalid for ${adapter?.environment}`);
 		}
 	}
-	const comparable = runtime.map(({ environment, adapter, artifact_checksum, ...evidence }) => evidence);
+	const comparable = runtime.map(
+		({
+			environment: _environment,
+			adapter: _adapter,
+			artifact_checksum: _artifact_checksum,
+			...evidence
+		}) => evidence,
+	);
 	if (canonical(comparable[0]) !== canonical(comparable[1])) {
 		throw new Error("Fresh Instance runtime outcomes differ between adapters");
 	}
@@ -457,7 +463,8 @@ function assertStoreEvidence(plan, evidence, externalProofs, runtime) {
 				!plan.plugins.installed_ids.includes(store.plugin_id) ||
 				!/^sha256:[a-f0-9]{64}$/u.test(store.descriptor_checksum),
 		) ||
-		new Set(evidence.stores.map(({ store_id: storeId }) => storeId)).size !== evidence.store_count ||
+		new Set(evidence.stores.map(({ store_id: storeId }) => storeId)).size !==
+			evidence.store_count ||
 		runtime.some(({ stores }) => stores?.declared_count !== evidence.store_count)
 	) {
 		throw new Error("Fresh Instance Store convergence evidence is invalid");

@@ -6,6 +6,10 @@ import {
 	getFrontReleaseCandidate,
 } from "../../../../lib/front-workflow-repository.js";
 import {
+	requireManagedPluginOperationAccess,
+	managedPluginOperationFromContext,
+} from "../../../../lib/managed-plugin-operation.js";
+import {
 	jsonResponse,
 	recentOperatorReauthentication,
 	requireReleaseOperator,
@@ -29,6 +33,12 @@ export const POST: APIRoute = async (context) => {
 	const env = getSiteEnv();
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
+	const busy = await requireManagedPluginOperationAccess(
+		context,
+		env.DB,
+		env.SUPERBOARD_INSTANCE_ID,
+	);
+	if (busy) return busy;
 	const body: unknown = await context.request.json();
 	if (
 		!isRecord(body) ||
@@ -90,15 +100,10 @@ export const POST: APIRoute = async (context) => {
 	) {
 		return jsonResponse({ error: { code: "ACTIVATION_RECEIPT_VERIFICATION_FAILED" } }, 500);
 	}
-	await env.RELEASE_CACHE.delete(`last_verified_release:${env.SUPERBOARD_INSTANCE_ID}`);
-	const loaded = await loadLastVerifiedFrontRelease(env, env.SUPERBOARD_INSTANCE_ID);
-	if (!loaded || loaded.release.payload.release_id !== result.active_release_id) {
-		return jsonResponse({ error: { code: "LAST_VERIFIED_CACHE_RELOAD_FAILED" } }, 500);
-	}
 	const pluginLifecycle = await finalizeSuperBoardPluginLifecycleForRelease(env.DB, {
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		target: pluginTarget,
-		release_id: loaded.release.payload.release_id,
+		release_id: result.active_release_id,
 		finalized_at: activatedAt,
 	});
 	for (const pluginId of pluginLifecycle.activated_plugin_ids) {
@@ -106,6 +111,15 @@ export const POST: APIRoute = async (context) => {
 	}
 	for (const pluginId of pluginLifecycle.disabled_plugin_ids) {
 		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
+	}
+	await env.RELEASE_CACHE.delete(`last_verified_release:${env.SUPERBOARD_INSTANCE_ID}`);
+	const loaded = await loadLastVerifiedFrontRelease(
+		env,
+		env.SUPERBOARD_INSTANCE_ID,
+		managedPluginOperationFromContext(context),
+	);
+	if (!loaded || loaded.release.payload.release_id !== result.active_release_id) {
+		return jsonResponse({ error: { code: "LAST_VERIFIED_CACHE_RELOAD_FAILED" } }, 500);
 	}
 	return jsonResponse({ ...result, plugin_lifecycle: pluginLifecycle }, 201);
 };

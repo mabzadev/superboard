@@ -110,6 +110,26 @@ describe("plugin settings handlers", () => {
 		expect("apiKey" in result.data.values).toBe(false);
 	});
 
+	it("preserves successful setting versions without retaining secret values", async () => {
+		await handlePluginSettingsUpdate(db, PLUGIN_ID, SCHEMA, {
+			apiUrl: "https://first.example",
+			apiKey: "test-only-private-value",
+		});
+		await handlePluginSettingsUpdate(db, PLUGIN_ID, SCHEMA, { apiUrl: "https://second.example" });
+		await handlePluginSettingsUpdate(db, PLUGIN_ID, SCHEMA, { unknown: "invalid" });
+		const rows = await db
+			.selectFrom("_emdash_plugin_setting_versions")
+			.selectAll()
+			.where("plugin_id", "=", PLUGIN_ID)
+			.orderBy("id")
+			.execute();
+		expect(rows).toHaveLength(2);
+		expect(JSON.parse(rows[0]!.values_json)).toMatchObject({ apiUrl: "https://first.example" });
+		expect(JSON.parse(rows[1]!.values_json)).toMatchObject({ apiUrl: "https://second.example" });
+		expect(JSON.stringify(rows)).not.toContain("test-only-private-value");
+		expect(JSON.parse(rows[1]!.secrets_set_json)).toEqual({ apiKey: true });
+	});
+
 	it("PUT stores values under the plugin's settings: KV keys", async () => {
 		const result = await handlePluginSettingsUpdate(db, PLUGIN_ID, SCHEMA, {
 			apiUrl: "https://api.example.com",

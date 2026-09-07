@@ -3,14 +3,51 @@ import {
 	sha256Canonical,
 	type FrontState,
 	type RendererDescriptor,
+	type NativeFrontSurfaceContribution,
 } from "@superboard/supbrd-core";
 
 const corePlugin = { plugin_id: "supbrd-core", plugin_version: "0.1.0" } as const;
 
 export const CORE_ADMIN_SHELL_RENDERER_ID = "emdash.core.renderer.admin_shell";
-export const CORE_STATE_RENDERER_IDS = Object.fromEntries(
-	REQUIRED_FRONT_STATES.map((state) => [state, `emdash.core.state.${state}`]),
-) as Record<FrontState, string>;
+export const CORE_OPERATOR_HOME_RENDERER_ID = "emdash.core.renderer.operator_home";
+export const CORE_OPERATOR_LOGIN_RENDERER_ID = "emdash.core.renderer.operator_login";
+export const CORE_OPERATOR_SURFACES: readonly NativeFrontSurfaceContribution[] = [
+	{
+		route_id: "emdash.core.operator_home",
+		path_pattern: "/superboard-system/home",
+		page_id: "page.emdash_operator_home",
+		title: "site.operator.home",
+		renderer_id: CORE_OPERATOR_HOME_RENDERER_ID,
+		audience: "superboard_front",
+		auth_policy: "authenticated",
+		permission_expression: "allow",
+		priority: 200,
+		navigation: null,
+		transition: "authenticated_home",
+	},
+	{
+		route_id: "emdash.core.operator_login",
+		path_pattern: "/_emdash/admin/login",
+		page_id: "page.emdash_operator_login",
+		title: "site.operator.login",
+		renderer_id: CORE_OPERATOR_LOGIN_RENDERER_ID,
+		audience: "superboard_front",
+		auth_policy: "anonymous_only",
+		permission_expression: "allow",
+		priority: 200,
+		navigation: null,
+		transition: "login",
+	},
+];
+export const CORE_STATE_RENDERER_IDS: Record<FrontState, string> = {
+	loading: "emdash.core.state.loading",
+	empty: "emdash.core.state.empty",
+	forbidden: "emdash.core.state.forbidden",
+	not_found: "emdash.core.state.not_found",
+	error: "emdash.core.state.error",
+	unavailable: "emdash.core.state.unavailable",
+	maintenance: "emdash.core.state.maintenance",
+};
 
 const propsSchemaChecksum = await sha256Canonical({
 	type: "object",
@@ -27,9 +64,11 @@ export const CORE_FRONT_RENDERER_DESCRIPTORS: RendererDescriptor[] = await Promi
 			[],
 		),
 	),
+	descriptor(CORE_OPERATOR_HOME_RENDERER_ID, "01J00000000000000000000260", []),
+	descriptor(CORE_OPERATOR_LOGIN_RENDERER_ID, "01J00000000000000000000261", []),
 ]);
 
-export const CORE_ADMIN_SHELL_DESCRIPTOR = CORE_FRONT_RENDERER_DESCRIPTORS[0]!;
+export const CORE_ADMIN_SHELL_DESCRIPTOR = CORE_FRONT_RENDERER_DESCRIPTORS[0];
 export const SUPBRD_CORE_ARTIFACT_CHECKSUM = await sha256Canonical({
 	runtime: "superboard.native_front.v1",
 	renderers: CORE_FRONT_RENDERER_DESCRIPTORS,

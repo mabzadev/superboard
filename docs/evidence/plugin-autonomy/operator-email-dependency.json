@@ -1,0 +1,54 @@
+{
+  "results": [
+    {
+      "plugin_id": "supbrd-plug-user",
+      "path": "/login",
+      "operation": "operator_email_dependency",
+      "http_status": 503,
+      "error_code": "EMAIL_NOT_CONFIGURED",
+      "status": "blocked_dependency",
+      "visible_error": true,
+      "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "path": "/new_password",
+      "operation": "operator_email_dependency",
+      "http_status": 503,
+      "error_code": "EMAIL_NOT_CONFIGURED",
+      "status": "blocked_dependency",
+      "visible_error": true,
+      "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "path": "/reset_password",
+      "operation": "operator_email_dependency",
+      "http_status": 503,
+      "error_code": "EMAIL_NOT_CONFIGURED",
+      "status": "blocked_dependency",
+      "visible_error": true,
+      "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "path": "/register",
+      "operation": "operator_email_dependency",
+      "http_status": 503,
+      "error_code": "EMAIL_NOT_CONFIGURED",
+      "status": "blocked_dependency",
+      "visible_error": true,
+      "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "path": "/register/with_email",
+      "operation": "operator_email_dependency",
+      "http_status": 503,
+      "error_code": "EMAIL_NOT_CONFIGURED",
+      "status": "blocked_dependency",
+      "visible_error": true,
+      "note": "Core EmDash email pipeline is not configured in QA; successful signup or email recovery is not claimed."
+    }
+  ]
+}

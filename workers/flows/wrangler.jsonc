@@ -73,9 +73,6 @@
       "class_name": "FlowMaintenanceExecution"
     }
   ],
-  "services": [
-    { "binding": "PRODUCTS_MODULE", "service": "superboard-products-template" }
-  ],
   "triggers": { "crons": ["17 2 * * *"] },
   "observability": {
     "enabled": true,

@@ -150,9 +150,11 @@ export async function enablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
 			: `${API_BASE}/admin/plugins/${plugin.id}/enable`;
 	const response = await apiFetch(path, {
 		method: "POST",
+		...(plugin.lifecycleManaged ? { headers: { "Idempotency-Key": crypto.randomUUID() } } : {}),
 	});
 	if (plugin.lifecycleManaged) {
 		if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to enable plugin`));
+		announceManagedPluginChange(plugin.id);
 		return { ...plugin, enabled: true, status: "active" };
 	}
 	const result = await parseApiResponse<{ item: PluginInfo }>(
@@ -172,9 +174,11 @@ export async function disablePlugin(plugin: PluginInfo): Promise<PluginInfo> {
 			: `${API_BASE}/admin/plugins/${plugin.id}/disable`;
 	const response = await apiFetch(path, {
 		method: "POST",
+		...(plugin.lifecycleManaged ? { headers: { "Idempotency-Key": crypto.randomUUID() } } : {}),
 	});
 	if (plugin.lifecycleManaged) {
 		if (!response.ok) await throwResponseError(response, i18n._(msg`Failed to disable plugin`));
+		announceManagedPluginChange(plugin.id);
 		return { ...plugin, enabled: false, status: "inactive" };
 	}
 	const result = await parseApiResponse<{ item: PluginInfo }>(
@@ -192,5 +196,16 @@ export async function setPluginMcpEnabled(pluginId: string, enabled: boolean): P
 	});
 	if (!response.ok) {
 		await throwResponseError(response, i18n._(msg`Failed to update plugin MCP access`));
+	}
+}
+
+function announceManagedPluginChange(pluginId: string): void {
+	if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
+	const channel = new BroadcastChannel("superboard-plugin-lifecycle");
+	try {
+		// oxlint-disable-next-line unicorn/require-post-message-target-origin -- BroadcastChannel is origin-scoped and has no targetOrigin parameter.
+		channel.postMessage({ type: "plugin-state-changed", plugin_id: pluginId });
+	} finally {
+		channel.close();
 	}
 }

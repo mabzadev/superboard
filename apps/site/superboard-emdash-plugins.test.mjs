@@ -8,7 +8,7 @@ import {
 	superboardConfiguredPlugins,
 } from "./superboard-emdash-plugins.mjs";
 
-test("adapts every concrete SuperBoard manifest into one configured EmDash plugin", () => {
+void test("adapts every concrete SuperBoard manifest into one configured EmDash plugin", () => {
 	const concrete = topology.plugins.filter(({ manifest }) => !manifest.plugin_id.includes("*"));
 	assert.equal(superboardConfiguredPlugins.length, 18);
 	assert.deepEqual(
@@ -23,7 +23,7 @@ test("adapts every concrete SuperBoard manifest into one configured EmDash plugi
 	assert.ok(superboardConfiguredPlugins.every(({ id }) => !id.includes("*")));
 });
 
-test("keeps a module available in the catalog while its Worker is not ready", () => {
+void test("keeps a module available in the catalog while its Worker is not ready", () => {
 	const module = topology.plugins.find(
 		({ manifest }) => manifest.plugin_id === "supbrd-plugmod-analytics",
 	);
@@ -39,7 +39,7 @@ test("keeps a module available in the catalog while its Worker is not ready", ()
 	);
 });
 
-test("registers the canonical settings, Admin page and functional contract for every plugin", () => {
+void test("registers the canonical settings, Admin page and functional contract for every plugin", () => {
 	for (const plugin of superboardConfiguredPlugins) {
 		assert.equal(plugin.format, "standard", `${plugin.id} is not sandbox-compatible`);
 		assert.equal(plugin.adminEntry, undefined, `${plugin.id} exposes a trusted React Admin entry`);

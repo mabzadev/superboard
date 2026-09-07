@@ -7,10 +7,42 @@ import { validateUserPluginManifest } from "../packages/supbrd-runtime-plugins/d
 import {
 	buildParityMatrix,
 	buildPluginTopology,
+	buildReleaseParityRows,
 	validateArtifacts,
 } from "./emdash-parity-matrix.mjs";
 
 const CHECKSUM_PATTERN = /^sha256:[a-f0-9]{64}$/u;
+
+test("a release with every business plugin disabled retains operator login and home parity", () => {
+	const release = JSON.parse(
+		readFileSync(new URL("../config/superboard-parity-release.json", import.meta.url), "utf8"),
+	);
+	release.active_plugin_ids = [];
+	const payload = release.release.payload;
+	payload.plugin_lock = payload.plugin_lock.filter((plugin) => plugin.plugin_id === "supbrd-core");
+	payload.renderers = payload.renderers.filter((renderer) => renderer.plugin_id === "supbrd-core");
+	payload.front_route_manifest.routes = payload.front_route_manifest.routes.filter((route) =>
+		route.route_id.startsWith("emdash.core."),
+	);
+	payload.presentation.navigation = [];
+	payload.gateway_manifest.routes = [];
+	payload.dependency_policies = [];
+	const rows = buildReleaseParityRows(release, buildPluginTopology());
+	assert.ok(
+		rows.some(
+			(row) =>
+				row.kind === "page" && row.path === "/_emdash/admin/login" && row.target === "supbrd-core",
+		),
+	);
+	assert.ok(
+		rows.some(
+			(row) =>
+				row.kind === "page" &&
+				row.path === "/superboard-system/home" &&
+				row.target === "supbrd-core",
+		),
+	);
+});
 
 void test("every required parity row has an executable immutable proof", () => {
 	const matrix = buildParityMatrix();

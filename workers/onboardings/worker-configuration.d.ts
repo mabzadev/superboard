@@ -8,6 +8,9 @@ interface __BaseEnv_Env {
 	AUTH_GATEWAY_ISSUER: string;
 	AUTH_GATEWAY_AUDIENCE: string;
 	AUTH_GATEWAY_JWKS_URL: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
+	INTERNAL_API_TOKEN: string;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}
@@ -17,7 +20,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "INTERNAL_API_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

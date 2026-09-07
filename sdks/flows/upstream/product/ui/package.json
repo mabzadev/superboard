@@ -24,7 +24,7 @@
     "@radix-ui/react-tabs": "^1.1.17",
     "@radix-ui/react-tooltip": "^1.2.12",
     "cmdk": "^1.1.1",
-    "@superboard/flows-icons": "*",
+    "@superboard/flows-icons": "workspace:*",
     "merge-refs": "^2.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -32,7 +32,7 @@
     "sonner": "^2.0.7"
   },
   "devDependencies": {
-    "@superboard/flows-product-types": "*",
+    "@superboard/flows-product-types": "workspace:*",
     "@pandacss/dev": "^1.12.0",
     "@storybook/addon-docs": "^10.3.4",
     "@storybook/addon-links": "^10.3.4",

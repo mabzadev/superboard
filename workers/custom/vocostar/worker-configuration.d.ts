@@ -8,6 +8,8 @@ interface __BaseEnv_Env {
 	FILES_INPUT_ORIGIN: string;
 	D1_EXPECTED_MIGRATION: string;
 	MAX_AUTOMATIC_DISPATCH_ATTEMPTS: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	CUSTOM_WORKER_TOKEN: string;
 	FILES_INTERNAL_TOKEN: string;
 	VOCALS_ORCHESTRATOR: Fetcher;
@@ -22,7 +24,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_KEY" | "ENVIRONMENT" | "CUSTOM_WORKER_CAPABILITIES" | "FILES_INPUT_ORIGIN" | "D1_EXPECTED_MIGRATION" | "MAX_AUTOMATIC_DISPATCH_ATTEMPTS" | "CUSTOM_WORKER_TOKEN" | "FILES_INTERNAL_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_KEY" | "ENVIRONMENT" | "CUSTOM_WORKER_CAPABILITIES" | "FILES_INPUT_ORIGIN" | "D1_EXPECTED_MIGRATION" | "MAX_AUTOMATIC_DISPATCH_ATTEMPTS" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "CUSTOM_WORKER_TOKEN" | "FILES_INTERNAL_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

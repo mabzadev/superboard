@@ -13,12 +13,14 @@ interface __BaseEnv_Env {
 	PUBLIC_API_URL: string;
 	QUEUE_NAME: string;
 	DLQ_NAME: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	FLOW_USER_ENCRYPTION_KEY: string;
 	FLOW_USER_HASH_KEY: string;
 	INTERNAL_API_TOKEN: string;
 	FLOW_USER_RUNTIME: DurableObjectNamespace<import("./src/index").FlowUserRuntime>;
 	FLOW_REALTIME_HUB: DurableObjectNamespace<import("./src/index").FlowRealtimeHub>;
-	PRODUCTS_MODULE: Fetcher;
+	API_SERVICE: Fetcher;
 	FLOW_DELAY_EXECUTION: Workflow<Parameters<import("./src/index").FlowDelayExecution['run']>[0]['payload']>;
 	FLOW_MAINTENANCE_EXECUTION: Workflow<Parameters<import("./src/index").FlowMaintenanceExecution['run']>[0]['payload']>;
 }
@@ -34,7 +36,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "PUBLIC_API_URL" | "QUEUE_NAME" | "DLQ_NAME" | "FLOW_USER_ENCRYPTION_KEY" | "FLOW_USER_HASH_KEY" | "INTERNAL_API_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "PUBLIC_API_URL" | "QUEUE_NAME" | "DLQ_NAME" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "FLOW_USER_ENCRYPTION_KEY" | "FLOW_USER_HASH_KEY" | "INTERNAL_API_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

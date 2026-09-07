@@ -15,10 +15,14 @@ interface __BaseEnv_Env {
 	EMAIL_DLQ_NAME: string;
 	AWS_REGION: string;
 	AWS_SES_CONFIGURATION_SET: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	AWS_SES_SMTP_PASSWORD: string;
 	AWS_SES_SMTP_USERNAME: string;
 	AWS_SES_SNS_TOPIC_ARN: string;
 	EMAIL_INTERNAL_TOKEN: string;
+	EMAIL_SMTP_ENCRYPTION_KEY: string;
+	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}
@@ -28,12 +32,13 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "MAIL_TRANSPORT" | "MAIL_PROVIDER" | "MAIL_FROM_NAME" | "MAIL_FROM_ADDRESS" | "MAIL_REPLY_TO" | "EMAIL_QUEUE_NAME" | "EMAIL_DLQ_NAME" | "AWS_REGION" | "AWS_SES_CONFIGURATION_SET" | "AWS_SES_SMTP_PASSWORD" | "AWS_SES_SMTP_USERNAME" | "AWS_SES_SNS_TOPIC_ARN" | "EMAIL_INTERNAL_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "D1_EXPECTED_MIGRATION" | "MAIL_TRANSPORT" | "MAIL_PROVIDER" | "MAIL_FROM_NAME" | "MAIL_FROM_ADDRESS" | "MAIL_REPLY_TO" | "EMAIL_QUEUE_NAME" | "EMAIL_DLQ_NAME" | "AWS_REGION" | "AWS_SES_CONFIGURATION_SET" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "AWS_SES_SMTP_PASSWORD" | "AWS_SES_SMTP_USERNAME" | "AWS_SES_SNS_TOPIC_ARN" | "EMAIL_INTERNAL_TOKEN" | "EMAIL_SMTP_ENCRYPTION_KEY">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.
 declare namespace Cloudflare {
 	interface Env {
+	EMAIL_SMTP_ENCRYPTION_KEY: string;
 	EMAIL_INTERNAL_TOKEN: string;
 	EMAIL_INTERNAL_TOKEN_PREVIOUS?: string;
 	MAIL_PREVIEW_TOKEN?: string;
@@ -48,6 +53,7 @@ declare namespace Cloudflare {
 	}
 }
 interface Env {
+	EMAIL_SMTP_ENCRYPTION_KEY: string;
 	EMAIL_INTERNAL_TOKEN: string;
 	EMAIL_INTERNAL_TOKEN_PREVIOUS?: string;
 	MAIL_PREVIEW_TOKEN?: string;

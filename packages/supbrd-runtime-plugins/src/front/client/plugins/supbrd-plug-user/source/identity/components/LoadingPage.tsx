@@ -1,0 +1,11 @@
+import { Spinner } from "./ui/spinner.js";
+
+const LoadingPage = () => {
+	return (
+		<section className="flex flex-col justify-center items-center w-full h-screen">
+			<Spinner data-testid="spinner" />
+		</section>
+	);
+};
+
+export default LoadingPage;

@@ -195,6 +195,12 @@ const businessSchemaContracts = {
 	"application_session.v1": closedObject(["session_id", "expires_at"], {
 		session_id: stringField,
 		expires_at: stringField,
+		access_token: stringField,
+		refresh_token: stringField,
+		token_type: { type: "string", enum: ["Bearer"] },
+		expires_in: { type: "integer", minimum: 1 },
+		user_id: stringField,
+		user: { type: "object" },
 	}),
 	"user_profile_update.v1": closedObject(["user_id", "display_name"], {
 		user_id: stringField,
@@ -202,7 +208,7 @@ const businessSchemaContracts = {
 	}),
 	"user_profile.v1": closedObject(["user_id", "email", "display_name"], {
 		user_id: stringField,
-		email: { type: "string", format: "email" },
+		email: { anyOf: [{ type: "string", format: "email" }, { type: "null" }] },
 		display_name: stringField,
 	}),
 	"user_members_query.v1": closedObject(["page", "page_size"], {
@@ -211,7 +217,7 @@ const businessSchemaContracts = {
 	}),
 	"user_members_page.v1": closedObject(["items", "next_page"], {
 		items: { type: "array", items: { type: "string" } },
-		next_page: { type: "integer", minimum: 1, maximum: 100_000 },
+		next_page: { anyOf: [{ type: "integer", minimum: 1, maximum: 100_000 }, { type: "null" }] },
 	}),
 	"user_member_suspend.v1": closedObject(["user_id", "reason"], {
 		user_id: stringField,
@@ -224,10 +230,14 @@ const businessSchemaContracts = {
 	"provider_link.v1": closedObject(["user_id", "provider"], {
 		user_id: stringField,
 		provider: { type: "string", enum: ["apple", "google"] },
+		id_token: { type: "string", maxLength: 16384, writeOnly: true },
+		token: { type: "string", maxLength: 16384, writeOnly: true },
 	}),
 	"provider.v1": closedObject(["provider", "linked"], {
 		provider: { type: "string", enum: ["apple", "google"] },
 		linked: { type: "boolean" },
+		idempotent: { type: "boolean" },
+		user: { type: "object" },
 	}),
 	"session_revoke.v1": closedObject(["session_id"], { session_id: stringField }),
 	"providers.v1": closedObject(["providers"], {
@@ -386,10 +396,27 @@ function pluginArtifactContent(manifest: unknown): unknown {
 	};
 }
 
-export const userPluginManifest: SuperBoardPluginManifest = deepFreeze({
-	...manifestArtifact,
-	artifact_checksum: await sha256Canonical(pluginArtifactContent(manifestArtifact)),
-});
+export async function buildUserPluginManifest(
+	bundle: { build_id: string; build_checksum: string } = frontBundle,
+): Promise<SuperBoardPluginManifest> {
+	const manifest = {
+		...manifestArtifact,
+		renderers: manifestArtifact.renderers.map((renderer) => ({
+			...renderer,
+			build_id: bundle.build_id,
+			build_checksum: bundle.build_checksum,
+		})),
+	};
+	return deepFreeze({
+		...manifest,
+		artifact_checksum: await sha256Canonical({
+			manifest,
+			front_bundle: { build_id: bundle.build_id, build_checksum: bundle.build_checksum },
+		}),
+	});
+}
+
+export const userPluginManifest = await buildUserPluginManifest();
 
 export async function validateUserPluginManifest(value: unknown) {
 	const manifestWithoutChecksum = isRecord(value)
@@ -544,8 +571,7 @@ async function contribution<
 	contract: T,
 ): Promise<T & Record<`${K}_id`, string> & { version: string; checksum: string }> {
 	const content = { [`${kind}_id`]: `${pluginId}.${kind}.${name}`, ...contract, version: "1.0.0" };
-	return { ...content, checksum: await sha256Canonical(content) } as T &
-		Record<`${K}_id`, string> & { version: string; checksum: string };
+	return { ...content, checksum: await sha256Canonical(content) };
 }
 
 function baseView(

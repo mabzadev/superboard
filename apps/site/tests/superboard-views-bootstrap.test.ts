@@ -1,12 +1,18 @@
 import { applySeed, type SeedFile } from "emdash";
 import { afterEach, expect, test } from "vitest";
 
+import baseline from "../../../config/superboard-plugin-independence-baseline.json";
+import { handleContentList } from "../../../packages/core/src/api/handlers/content.js";
+import { contentListQuery } from "../../../packages/core/src/api/schemas/content.js";
 import {
 	setupTestDatabase,
 	teardownTestDatabase,
 } from "../../../packages/core/tests/utils/test-db.js";
 import seedJson from "../seed/seed.json";
-import { ensureSuperBoardViews } from "../src/lib/superboard-views.js";
+import {
+	ensureSuperBoardViews,
+	restrictSuperBoardViewFilters,
+} from "../src/lib/superboard-views.js";
 
 let db: Awaited<ReturnType<typeof setupTestDatabase>>;
 
@@ -58,7 +64,7 @@ test("an existing EmDash instance upgrades from Pages and Posts to Views", async
 		{ slug: "posts", hidden: 1 },
 		{ slug: "views", hidden: 0 },
 	]);
-	expect(viewCount?.count).toBe(71);
+	expect(viewCount?.count).toBe(121);
 	expect(menuCount?.count).toBe(80);
 });
 
@@ -74,7 +80,7 @@ test("the Views bootstrap resumes after the schema was created without content",
 
 	const after = await countViews();
 	expect(before).toBe(0);
-	expect(after).toBe(71);
+	expect(after).toBe(121);
 });
 
 test("the Views bootstrap upgrades existing renderer bindings without overwriting edits", async () => {
@@ -119,7 +125,7 @@ test("the Views bootstrap upgrades existing renderer bindings without overwritin
 
 	const entries = await db
 		.selectFrom(db.dynamic.ref("ec_views"))
-		.select(["path", "name", "renderer_id", "bindings"])
+		.select(["path", "name", "route_id", "renderer_id", "bindings"])
 		.execute();
 	const edited = entries.find(({ path }) => path === "/analytics/views");
 	const marker = await db
@@ -128,16 +134,23 @@ test("the Views bootstrap upgrades existing renderer bindings without overwritin
 		.where("name", "=", "superboard_views_bootstrap")
 		.executeTakeFirst();
 
-	expect(entries).toHaveLength(71);
+	expect(entries).toHaveLength(121);
 	for (const entry of entries) {
-		expect(entry.renderer_id, entry.path).toMatch(/\.renderer\.admin_surface$/u);
+		const inventoried = baseline.plugins
+			.flatMap((plugin) => plugin.routes)
+			.find((route) => route.route_id === entry.route_id);
+		expect(
+			inventoried?.renderers ??
+				(entry.route_id === "superboard.mcp" ? ["supbrd-plugmod-mcp.renderer.admin_surface"] : []),
+			entry.path,
+		).toContain(entry.renderer_id);
 		expect(JSON.parse(String(entry.bindings)).data_sources.length, entry.path).toBeGreaterThan(0);
 	}
 	expect(edited?.name).toBe("Edited Analytics Views");
 	expect(JSON.parse(String(edited?.bindings)).data_sources).toEqual([
 		"supbrd-plugmod-analytics.data_source.operator_custom",
 	]);
-	expect(marker?.value).toBe(JSON.stringify("2.1.0"));
+	expect(marker?.value).toBe(JSON.stringify("3.1.0"));
 });
 
 async function countViews(): Promise<number> {
@@ -147,3 +160,94 @@ async function countViews(): Promise<number> {
 		.executeTakeFirst();
 	return result?.count ?? 0;
 }
+
+test("only active plugin Views are paginated and disabling preserves customizations", async () => {
+	db = await setupTestDatabase();
+	await ensureSuperBoardViews(db);
+	await db
+		.updateTable(db.dynamic.ref("ec_views"))
+		.set({ name: "Custom analytics page" })
+		.where("path", "=", "/analytics/views")
+		.execute();
+	const url = new URL("https://site.test/_emdash/api/content/views?limit=1&locale=en");
+	restrictSuperBoardViewFilters(url, ["supbrd-plugmod-analytics"]);
+	const first = await handleContentList(
+		db,
+		"views",
+		contentListQuery.parse(Object.fromEntries(url.searchParams)),
+	);
+	expect(first.success).toBe(true);
+	if (!first.success) throw new Error("content list failed");
+	expect(first.data.items).toHaveLength(1);
+	expect(first.data.items.every((item) => item.data.plugin_id === "supbrd-plugmod-analytics")).toBe(
+		true,
+	);
+	const disabled = new URL("https://site.test/_emdash/api/content/views?locale=en");
+	restrictSuperBoardViewFilters(disabled, []);
+	const hidden = await handleContentList(
+		db,
+		"views",
+		contentListQuery.parse(Object.fromEntries(disabled.searchParams)),
+	);
+	expect(hidden.success && hidden.data.items).toEqual([]);
+	const active = new URL("https://site.test/_emdash/api/content/views?limit=100&locale=en");
+	restrictSuperBoardViewFilters(active, ["supbrd-plugmod-analytics"]);
+	const restored = await handleContentList(
+		db,
+		"views",
+		contentListQuery.parse(Object.fromEntries(active.searchParams)),
+	);
+	expect(
+		restored.success &&
+			restored.data.items.some((item) => item.data.name === "Custom analytics page"),
+	).toBe(true);
+	expect(await countViews()).toBe(121);
+});
+
+test("a caller cannot opt a disabled plugin into the Views list", async () => {
+	db = await setupTestDatabase();
+	await ensureSuperBoardViews(db);
+	const url = new URL("https://site.test/_emdash/api/content/views?locale=en");
+	url.searchParams.set(
+		"fieldFilters",
+		JSON.stringify({ plugin_id: { in: ["supbrd-plugmod-paywalls", "supbrd-plug-settings"] } }),
+	);
+	restrictSuperBoardViewFilters(url, ["supbrd-plugmod-analytics"]);
+	const result = await handleContentList(
+		db,
+		"views",
+		contentListQuery.parse(Object.fromEntries(url.searchParams)),
+	);
+	expect(result.success && result.data.items).toEqual([]);
+});
+
+test("every inventoried plugin route owns a retained editable View, including parameterized and menu-less routes", async () => {
+	db = await setupTestDatabase();
+	await ensureSuperBoardViews(db);
+	const views = await db
+		.selectFrom(db.dynamic.ref("ec_views"))
+		.select(["id", "plugin_id", "route_id", "path", "renderer_id"])
+		.execute();
+	for (const plugin of baseline.plugins) {
+		for (const route of plugin.routes) {
+			const matching = views.filter((view) => view.route_id === route.route_id);
+			expect(matching, route.path).toHaveLength(1);
+			expect(matching[0]).toMatchObject({ plugin_id: plugin.plugin_id, path: route.path });
+		}
+	}
+	const paywall = views.find((view) => view.path === "/paywalls");
+	expect(paywall).toBeDefined();
+	await db
+		.updateTable(db.dynamic.ref("ec_views"))
+		.set({ name: "My retained paywall view" })
+		.where("id", "=", paywall!.id)
+		.execute();
+	await ensureSuperBoardViews(db);
+	expect(
+		await db
+			.selectFrom(db.dynamic.ref("ec_views"))
+			.select("name")
+			.where("id", "=", paywall!.id)
+			.executeTakeFirst(),
+	).toEqual({ name: "My retained paywall view" });
+});

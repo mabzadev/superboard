@@ -1,0 +1,42 @@
+[
+  {
+    "resource": "app-banners",
+    "http_status": 201,
+    "id": 1,
+    "error": null,
+    "api_path": "/api/v1/identity-admin/projects/1-prod/api/v1/app-banners",
+    "method": "POST",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "resource": "user-attributes",
+    "http_status": 201,
+    "id": 1,
+    "error": null,
+    "api_path": "/api/v1/identity-admin/projects/1-prod/api/v1/user-attributes",
+    "method": "POST",
+    "data_ids": [
+      "1"
+    ]
+  },
+  {
+    "resource": "saml/idps",
+    "http_status": 201,
+    "id": 1,
+    "error": null,
+    "api_path": "/api/v1/identity-admin/projects/1-prod/api/v1/saml/idps",
+    "method": "POST",
+    "data_ids": [
+      "1"
+    ],
+    "followup": {
+      "method": "PUT",
+      "api_path": "/api/v1/identity-admin/projects/1-prod/api/v1/saml/idps/1",
+      "http_status": 200,
+      "isActive": false
+    },
+    "limitation": "Draft SAML metadata; provider disabled; no SAML authentication claimed."
+  }
+]

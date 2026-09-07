@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "operation": "logout_session_replay",
+      "status": "passed",
+      "protected_path": "/system/files",
+      "redirect_path": "/_emdash/admin/login",
+      "server_session_revoked": true
+    },
+    {
+      "operation": "expired_browser_cookie",
+      "status": "passed",
+      "protected_path": "/system/files",
+      "redirect_path": "/_emdash/admin/login",
+      "control_unexpired_session_authenticated": true,
+      "control_server_session_not_revoked": true,
+      "note": "Expired client cookie only; server-side TTL expiration not covered"
+    }
+  ]
+}

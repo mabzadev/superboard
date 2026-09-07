@@ -127,7 +127,7 @@ export async function validateSignupToken(
 	adapter: AuthAdapter,
 	token: string,
 ): Promise<{ email: string; role: RoleLevel }> {
-	const hash = hashToken(token);
+	const hash = signupTokenHash(token);
 
 	const authToken = await adapter.getToken(hash, "email_verify");
 	if (!authToken) {
@@ -160,7 +160,7 @@ export async function completeSignup(
 		avatarUrl?: string;
 	},
 ): Promise<User> {
-	const hash = hashToken(token);
+	const hash = signupTokenHash(token);
 
 	// Validate token one more time
 	const authToken = await adapter.getToken(hash, "email_verify");
@@ -206,5 +206,13 @@ export class SignupError extends Error {
 	) {
 		super(message);
 		this.name = "SignupError";
+	}
+}
+
+function signupTokenHash(token: string): string {
+	try {
+		return hashToken(token);
+	} catch {
+		throw new SignupError("invalid_token", "Invalid or expired verification link");
 	}
 }

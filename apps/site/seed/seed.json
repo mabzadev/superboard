@@ -1146,14 +1146,16 @@
 							"supbrd-plugmod-billing.data_source.refunds",
 							"supbrd-plugmod-billing.data_source.subscriptions",
 							"supbrd-plugmod-billing.data_source.financial_customer_entitlements",
-							"supbrd-plugmod-billing.data_source.billing_ledger"
+							"supbrd-plugmod-billing.data_source.billing_ledger",
+							"supbrd-plugmod-billing.data_source.migration_status"
 						],
 						"commands": [
 							"supbrd-plugmod-billing.command.create_purchase",
 							"supbrd-plugmod-billing.command.create_refund",
 							"supbrd-plugmod-billing.command.update_refund",
 							"supbrd-plugmod-billing.command.update_subscription",
-							"supbrd-plugmod-billing.command.reconcile_store"
+							"supbrd-plugmod-billing.command.reconcile_store",
+							"supbrd-plugmod-billing.command.migrate_products"
 						]
 					}
 				}
@@ -1180,14 +1182,16 @@
 							"supbrd-plugmod-billing.data_source.refunds",
 							"supbrd-plugmod-billing.data_source.subscriptions",
 							"supbrd-plugmod-billing.data_source.financial_customer_entitlements",
-							"supbrd-plugmod-billing.data_source.billing_ledger"
+							"supbrd-plugmod-billing.data_source.billing_ledger",
+							"supbrd-plugmod-billing.data_source.migration_status"
 						],
 						"commands": [
 							"supbrd-plugmod-billing.command.create_purchase",
 							"supbrd-plugmod-billing.command.create_refund",
 							"supbrd-plugmod-billing.command.update_refund",
 							"supbrd-plugmod-billing.command.update_subscription",
-							"supbrd-plugmod-billing.command.reconcile_store"
+							"supbrd-plugmod-billing.command.reconcile_store",
+							"supbrd-plugmod-billing.command.migrate_products"
 						]
 					}
 				}
@@ -1256,14 +1260,16 @@
 							"supbrd-plugmod-billing.data_source.refunds",
 							"supbrd-plugmod-billing.data_source.subscriptions",
 							"supbrd-plugmod-billing.data_source.financial_customer_entitlements",
-							"supbrd-plugmod-billing.data_source.billing_ledger"
+							"supbrd-plugmod-billing.data_source.billing_ledger",
+							"supbrd-plugmod-billing.data_source.migration_status"
 						],
 						"commands": [
 							"supbrd-plugmod-billing.command.create_purchase",
 							"supbrd-plugmod-billing.command.create_refund",
 							"supbrd-plugmod-billing.command.update_refund",
 							"supbrd-plugmod-billing.command.update_subscription",
-							"supbrd-plugmod-billing.command.reconcile_store"
+							"supbrd-plugmod-billing.command.reconcile_store",
+							"supbrd-plugmod-billing.command.migrate_products"
 						]
 					}
 				}

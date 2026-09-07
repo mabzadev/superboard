@@ -25,7 +25,7 @@ Copie complète et exactement épinglée d’EmDash amont conservée dans le dé
 _À éviter_ : dépendance EmDash flottante, sous-module externe
 
 **Opérateur SuperBoard** :
-Propriétaire humain unique d’une Instance SuperBoard, seul autorisé à ouvrir EmDash Admin et le Front SuperBoard.
+Personne autorisée à administrer une Instance SuperBoard avec son Identité EmDash, selon les permissions qui lui sont attribuées.
 _À éviter_ : utilisateur d’application, client final
 
 **EmDash Admin** :
@@ -57,11 +57,11 @@ Vue accélérée ou agrégée reconstruisible depuis les Événements analytique
 _À éviter_ : audit, événement autoritatif, backup
 
 **Ledger d’audit EmDash** :
-Journal central immuable qui agrège les reçus atomiques de tous les repositories de plugins de l’Instance SuperBoard.
+Journal immuable du plugin Audit qui agrège les reçus des autorités métier de l’Instance SuperBoard. Le journal technique du socle reste distinct et disponible lorsque Audit est désactivé.
 _À éviter_ : logs de Worker, Analytics Engine, audit best-effort
 
 **Gateway API** :
-Plugin module `supbrd-plugmod-gateway` qui possède le catalogue complet des routes et politiques API dans EmDash tandis que son Worker exécute le routage sans posséder les données métier.
+Plugin facultatif qui permet à l’Opérateur de publier des routes supplémentaires et leurs politiques d’accès. Le dispatch technique vers les autres plugins appartient au socle.
 _À éviter_ : proxy sans configuration visible, base métier centrale
 
 **Route Gateway** :
@@ -69,7 +69,7 @@ Donnée EmDash qui décrit un chemin API, sa méthode, sa destination et toutes 
 _À éviter_ : route codée uniquement dans le Worker, chemin non inventorié
 
 **Gateway Manifest** :
-Artefact immuable, validé et activé atomiquement qui contient toutes les Routes Gateway exécutables d’une Instance SuperBoard.
+Publication immuable des routes supplémentaires et politiques du plugin Gateway. Elle complète le manifeste technique des API de la Release.
 _À éviter_ : table de routes lue à chaque requête, miroir incomplet du code
 
 **Front Draft** :
@@ -229,12 +229,12 @@ Ensemble des surfaces d’administration produit publiées par le Site EmDash et
 _À éviter_ : EmDash Admin, interface d’utilisateur d’application
 
 **Présentation EmDash** :
-Ensemble complet des Views SuperBoard, layouts, routes, menus, composants visibles, textes et états d’interface défini, composé et monté par le Site EmDash.
-_À éviter_ : interface possédée par un plugin, page codée dans un Worker
+Assemblage global des vues et contributions des plugins actifs, des personnalisations de l’Opérateur et des surfaces minimales du socle.
+_À éviter_ : registre métier du Dashboard historique, vue visible sans son plugin
 
 **Renderer de plugin** :
-Implémentation visuelle fournie par un plugin mais enregistrée, configurée, instanciée et montée exclusivement par la Présentation EmDash.
-_À éviter_ : page de plugin, interface autonome, montage direct
+Composant visuel possédé par un plugin et assemblé par la Présentation EmDash lorsque ce plugin est actif.
+_À éviter_ : composant métier central sans propriétaire, fournisseur implicite d’un autre plugin
 
 **Utilisateur d’application** :
 Utilisateur final d’une application cliente de l’Instance SuperBoard qui s’authentifie et consomme SuperBoard uniquement par les API et les SDK.
@@ -257,13 +257,29 @@ Représentation globale unique, complète, immuable et validée de toute la Pré
 _À éviter_ : draft, page partielle, release par plugin
 
 **Plugin full EmDash** :
-Plugin `supbrd-plug-*` dont l’exécution et les données appartiennent entièrement au Site EmDash et qui peut fournir des Renderers de plugin sans posséder d’interface.
+Plugin `supbrd-plug-*` qui possède ses fonctions métier, ses données, ses vues et ses contrats d’intégration au Site EmDash.
 _À éviter_ : plugin module, Worker métier, plugin d’interface
 
 **Plugin module** :
-Plugin `supbrd-plugmod-*` configuré dans EmDash, associé à un Worker pour son runtime métier ou asynchrone, et qui peut fournir des Renderers de plugin sans posséder d’interface.
+Plugin `supbrd-plugmod-*` qui possède ses fonctions métier, ses données et ses vues, avec un runtime métier ou asynchrone dédié.
 _À éviter_ : plugin full EmDash, Worker autonome, plugin d’interface
 
 **Core SuperBoard** :
-Plugin fondateur `supbrd-core` qui fournit le runtime générique utilisé par la Présentation EmDash sans posséder de View SuperBoard, de composition ou d’interface concrète.
-_À éviter_ : application SuperBoard, propriétaire de Views SuperBoard, propriétaire de l’affichage
+Socle technique qui fournit l’identité opérateur, l’accueil minimal, la composition des contributions actives, le dispatch et le journal techniques ainsi que les contrats de stockage.
+_À éviter_ : plugin métier obligatoire, propriétaire des vues métier
+
+**Activation de plugin** :
+Publication cohérente des contributions d’un plugin avec la Release qui les rend accessibles. Préparer un nouvel artefact ne modifie pas l’artefact ni les preuves encore actifs.
+_À éviter_ : installation égale activation, changement partiel de Release
+
+**Vue inactive** :
+Vue conservée avec ses personnalisations mais retirée du Front et de la liste administrative des Views tant que son plugin est désactivé.
+_À éviter_ : vue supprimée, redirection vers une autre vue
+
+**Session opérateur** :
+Session EmDash qui autorise l’accès administratif à une Instance SuperBoard. Elle ne représente jamais une session d’utilisateur d’application.
+_À éviter_ : JWT historique du Dashboard, session applicative
+
+**Session d’invocation MCP** :
+Regroupement temporaire des appels d’outils d’un opérateur dans une instance, avec leurs reçus. Ce regroupement ne donne aucun droit d’accès et reste distinct du transport MCP.
+_À éviter_ : jeton MCP, session de transport persistante
