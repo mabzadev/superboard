@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+	cpSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	symlinkSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 import { verifySuperBoardPluginManifest } from "../packages/supbrd-core/dist/index.js";
 import { validateUserPluginManifest } from "../packages/supbrd-runtime-plugins/dist/front-catalog.js";
@@ -153,4 +165,44 @@ void test("committed artifacts are reproducible", () => {
 			JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8")),
 		);
 	}
+});
+
+test("the frozen 120-route inventory remains enforceable without the retired application", (context) => {
+	const repository = resolve(import.meta.dirname, "..");
+	const fixture = mkdtempSync(join(tmpdir(), "superboard-parity-retired-"));
+	context.after(() => rmSync(fixture, { recursive: true, force: true }));
+	for (const directory of ["config", "packages", "workers", "docs", "sdks"])
+		symlinkSync(join(repository, directory), join(fixture, directory), "dir");
+	mkdirSync(join(fixture, "apps"));
+	symlinkSync(join(repository, "apps/site"), join(fixture, "apps/site"), "dir");
+	mkdirSync(join(fixture, "scripts"));
+	for (const file of readdirSync(join(repository, "scripts")))
+		symlinkSync(join(repository, "scripts", file), join(fixture, "scripts", file));
+	rmSync(join(fixture, "scripts/emdash-parity-matrix.mjs"));
+	cpSync(
+		join(repository, "scripts/emdash-parity-matrix.mjs"),
+		join(fixture, "scripts/emdash-parity-matrix.mjs"),
+	);
+	const result = spawnSync(
+		process.execPath,
+		[
+			"--input-type=module",
+			"--eval",
+			`const {buildParityMatrix}=await import(${JSON.stringify(pathToFileURL(join(fixture, "scripts/emdash-parity-matrix.mjs")).href)});console.log(JSON.stringify(buildParityMatrix().rows.filter(row=>row.kind==="dashboard")))`,
+		],
+		{ encoding: "utf8" },
+	);
+	assert.equal(result.status, 0, result.stderr);
+	const rows = JSON.parse(result.stdout);
+	const baseline = JSON.parse(
+		readFileSync(join(repository, "config/superboard-plugin-independence-baseline.json"), "utf8"),
+	);
+	assert.equal(rows.length, 120);
+	assert.equal(baseline.navigation_count, 71);
+	assert.deepEqual(
+		rows.map((row) => row.id).sort(),
+		baseline.plugins
+			.flatMap((plugin) => plugin.routes.map((route) => `dashboard:${route.path}`))
+			.sort(),
+	);
 });

@@ -21,15 +21,12 @@ const compatibilitySourcePaths = [
 ];
 const MANIFEST_ARTIFACT_PATTERN =
 	/VALUES \('(sha256:[a-f0-9]{64})', '([^']+)', '((?:[^']|'')*)', '[^']+'\)/gu;
-const PAGE_SUFFIX = "/page.tsx";
-const PAGE_SUFFIX_PATTERN = /\/page\.tsx$/u;
 const SUPPORT_OR_FLOWS_ROUTE_PATTERN = /\/(?:support|flows)(?:\/|$)/u;
 const SUPPORT_ROUTE_PATTERN = /\/support(?:\/|$)/u;
 const FLOWS_ROUTE_PATTERN = /\/flows(?:\/|$)/u;
 const TEST_FILE_PATTERN = /\.(?:runtime\.)?test\.ts$/u;
 const FRONT_SOURCE_PATTERN = /\.(?:css|json|ts|tsx)$/u;
 const FRONT_TEST_SOURCE_PATTERN = /(?:\/__tests__\/|\.(?:spec|test)\.[cm]?[jt]sx?$)/u;
-const APP_USER_ROUTE_PATTERN = /^\/app\/(?:users|customers)/u;
 const REQUIRED_FRONT_STATES = [
 	"loading",
 	"empty",
@@ -526,32 +523,51 @@ export function buildPluginTopology() {
 }
 
 export function buildParityMatrix() {
-	const dashboardPages = walk(join(root, "apps/dashboard/src/app"), (path) =>
-		path.replaceAll(sep, "/").endsWith(PAGE_SUFFIX),
+	const baseline = JSON.parse(
+		readFileSync(join(root, "config/superboard-plugin-independence-baseline.json"), "utf8"),
 	);
-	const dashboardRows = dashboardPages.map((absolute) => {
-		const relativePage = relative(join(root, "apps/dashboard/src/app"), absolute).replaceAll(
-			sep,
-			"/",
-		);
-		const path = (
-			relativePage === "page.tsx" ? "" : relativePage.replace(PAGE_SUFFIX_PATTERN, "")
-		).replaceAll("(protected)/", "");
-		const route = path === "" ? "/" : `/${path}`;
-		return row({
-			id: `dashboard:${route}`,
-			kind: "dashboard",
-			baseline: relative(root, absolute),
-			target: targetForRoute(route),
-			test: "scripts/dashboard-route-parity.test.mjs",
-			sourceStatus: SUPPORT_OR_FLOWS_ROUTE_PATTERN.test(route) ? "unvalidated" : "delivered",
-			blocker: SUPPORT_ROUTE_PATTERN.test(route)
-				? "support_extended_gate"
-				: FLOWS_ROUTE_PATTERN.test(route)
-					? "flows_complete_gate"
-					: null,
-		});
-	});
+	const implementations = JSON.parse(
+		readFileSync(join(root, "config/superboard-front-view-implementations.json"), "utf8"),
+	);
+	const views = new Map(implementations.views.map((view) => [view.route_id, view]));
+	const historicalRoutes = baseline.plugins.flatMap((plugin) =>
+		plugin.routes.map((route) => ({ ...route, plugin_id: plugin.plugin_id })),
+	);
+	if (
+		baseline.route_count !== 120 ||
+		baseline.navigation_count !== 71 ||
+		historicalRoutes.length !== 120 ||
+		baseline.plugins.reduce((sum, plugin) => sum + plugin.navigation.length, 0) !== 71
+	)
+		throw new Error("Frozen Front inventory is incomplete");
+	const dashboardRows = historicalRoutes.map(
+		({ path: route, route_id: routeId, plugin_id: pluginId }) => {
+			const implementation = views.get(routeId);
+			if (
+				!implementation ||
+				implementation.path !== route ||
+				implementation.plugin_id !== pluginId ||
+				!existsSync(join(root, implementation.module))
+			)
+				throw new Error(`Historical Front implementation is missing: ${routeId}`);
+			return {
+				...row({
+					id: `dashboard:${route}`,
+					kind: "dashboard",
+					baseline: "config/superboard-plugin-independence-baseline.json",
+					target: pluginId,
+					test: "scripts/emdash-parity-matrix.test.mjs",
+					sourceStatus: SUPPORT_OR_FLOWS_ROUTE_PATTERN.test(route) ? "unvalidated" : "delivered",
+					blocker: SUPPORT_ROUTE_PATTERN.test(route)
+						? "support_extended_gate"
+						: FLOWS_ROUTE_PATTERN.test(route)
+							? "flows_complete_gate"
+							: null,
+				}),
+				implementation: implementation.module,
+			};
+		},
+	);
 
 	const apiNamespaces = [
 		"/health|/.well-known/*",
@@ -1281,43 +1297,6 @@ function row({ id, kind, baseline, target, test, sourceStatus = "delivered", blo
 		blocker,
 		required: sourceStatus === "delivered",
 	};
-}
-
-function targetForRoute(route) {
-	if (
-		route.startsWith("/identity") ||
-		APP_USER_ROUTE_PATTERN.test(route) ||
-		new Set([
-			"/accept-invite",
-			"/account",
-			"/app/access-key",
-			"/app/referrals",
-			"/login",
-			"/new_password",
-			"/register",
-			"/register/with_email",
-			"/reset_password",
-		]).has(route)
-	)
-		return "supbrd-plug-user";
-	if (
-		route.startsWith("/app/android-setup") ||
-		route.startsWith("/app/ios-setup") ||
-		route.startsWith("/app/web-setup") ||
-		route === "/app/libraries" ||
-		route === "/project-settings"
-	)
-		return "supbrd-plug-settings";
-	if (route === "/products/offerings") return "supbrd-plug-products";
-	if (route.startsWith("/products")) return "supbrd-plugmod-billing";
-	for (const name of ["paywalls", "support", "analytics", "marketing", "onboardings", "flows"]) {
-		if (route.startsWith(`/${name}`)) return `supbrd-plugmod-${name}`;
-	}
-	if (route.startsWith("/dynamic-links")) return "supbrd-plugmod-dynamic-links";
-	if (route === "/infrastructure") return "supbrd-plugmod-observability";
-	if (route === "/mcp/authorize") return "supbrd-plugmod-mcp";
-	if (route === "/message-preview-craft") return "supbrd-plugmod-marketing";
-	return "supbrd-plugmod-analytics";
 }
 
 function apiProof(namespace) {

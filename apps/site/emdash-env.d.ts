@@ -24,8 +24,21 @@ export interface View {
   terms?: Record<string, TaxonomyTerm[]>;
 }
 
+export interface Document {
+  id: string;
+  slug: string | null;
+  status: string;
+  title?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt: Date | null;
+  bylines?: ContentBylineCredit[];
+  terms?: Record<string, TaxonomyTerm[]>;
+}
+
 declare module "emdash" {
   interface EmDashCollections {
     views: View;
+    documents: Document;
   }
 }

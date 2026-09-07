@@ -1,0 +1,116 @@
+Canonical Site API integration evidence
+
+Test: apps/site/runtime-tests/retirement-api-files.runtime.test.ts
+Runner exit code: 0
+All 10 files and 27 tests in this run passed.
+
+Recorded observations (emitted after semantic and persistence assertions):
+[
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.command.create_upload_ticket",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "57661d31-f181-4de5-9c25-063562785ac3"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.command.complete_upload",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "57661d31-f181-4de5-9c25-063562785ac3"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.data_source.objects",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "57661d31-f181-4de5-9c25-063562785ac3"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.data_source.object_metadata",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "57661d31-f181-4de5-9c25-063562785ac3"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.data_source.download_ticket",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "57661d31-f181-4de5-9c25-063562785ac3"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.data_source.storage_usage",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "57661d31-f181-4de5-9c25-063562785ac3"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.command.delete_object",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "57661d31-f181-4de5-9c25-063562785ac3"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-files",
+    "route_id": "gateway.supbrd-plugmod-files.command.collect_garbage",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-files.txt",
+    "test": "apps/site/runtime-tests/retirement-api-files.runtime.test.ts",
+    "data_ids": [
+      "dd89f90c-761a-4c2f-8042-fda38bf9439e"
+    ]
+  }
+]
+
+Runner output:
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id packages/supbrd-front-ui
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  10 passed (10)
+      Tests  27 passed (27)
+   Start at  12:25:01
+   Duration  40.76s (transform 14.93s, setup 62.67s, import 3.78s, tests 16.91s, environment 1ms)

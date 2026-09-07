@@ -1,0 +1,230 @@
+Final real browser validation after the coordinated QA restart.
+No Dashboard Worker or dashboard-cache store remains in the observed catalog; Site is present.
+
+{"plugin_id":"supbrd-plugmod-observability","route_id":"superboard.infrastructure","scenario":"functional","status":"passed","type":"browser","data_ids":["autonomy-qa","central","configuration","application-files","identity","file-metadata","email","app","products","paywalls","dynamic-links","support","support-attachments","support-realtime","marketing","marketing-media","onboardings","flows","flows-archive","flows-user-runtime","flows-realtime","custom","site","site-media","site-sessions","site-release-cache"],"description":"Compared rendered health badges, project count, explicit unavailable historical metrics, configured endpoint links and a real D1 schema with canonical Worker responses, then clicked Refresh and verified a newer response. Non-healthy or disabled services remained explicit: [{\"id\":\"messaging\",\"status\":\"disabled\"},{\"id\":\"observability\",\"status\":\"misconfigured\"},{\"id\":\"mcp\",\"status\":\"unavailable\"},{\"id\":\"custom\",\"status\":\"degraded\"}]. External Custom status: unavailable.","source_test":"apps/site/e2e/tests/observability/infrastructure.spec.ts","captured_at":"2026-09-07T12:24:20.712Z"}
+
+Observed canonical API data (no secrets):
+[
+  {
+    "generated_at": "2026-09-07T12:24:20.265Z",
+    "target": "autonomy-qa",
+    "projects": 2,
+    "historical_users": "unavailable",
+    "runtime_error": "Cloudflare analytics read credentials are not configured",
+    "custom_status": "unavailable",
+    "services": [
+      {
+        "id": "api",
+        "status": "ok"
+      },
+      {
+        "id": "site",
+        "status": "ok"
+      },
+      {
+        "id": "billing",
+        "status": "ok"
+      },
+      {
+        "id": "messaging",
+        "status": "disabled"
+      },
+      {
+        "id": "email",
+        "status": "ok"
+      },
+      {
+        "id": "identity",
+        "status": "ok"
+      },
+      {
+        "id": "files",
+        "status": "ok"
+      },
+      {
+        "id": "observability",
+        "status": "misconfigured"
+      },
+      {
+        "id": "mcp",
+        "status": "unavailable"
+      },
+      {
+        "id": "app",
+        "status": "ok"
+      },
+      {
+        "id": "products",
+        "status": "ok"
+      },
+      {
+        "id": "paywalls",
+        "status": "ok"
+      },
+      {
+        "id": "dynamic-links",
+        "status": "ok"
+      },
+      {
+        "id": "support",
+        "status": "ok"
+      },
+      {
+        "id": "analytics",
+        "status": "ok"
+      },
+      {
+        "id": "marketing",
+        "status": "ok"
+      },
+      {
+        "id": "onboardings",
+        "status": "ok"
+      },
+      {
+        "id": "flows",
+        "status": "ok"
+      },
+      {
+        "id": "custom",
+        "status": "degraded"
+      }
+    ],
+    "data_stores": [
+      {
+        "id": "central",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "configuration",
+        "kind": "KV",
+        "status": "configured"
+      },
+      {
+        "id": "application-files",
+        "kind": "R2",
+        "status": "configured"
+      },
+      {
+        "id": "identity",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "file-metadata",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "email",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "app",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "products",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "paywalls",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "dynamic-links",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "support",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "support-attachments",
+        "kind": "R2",
+        "status": "ok"
+      },
+      {
+        "id": "support-realtime",
+        "kind": "Durable Object",
+        "status": "ok"
+      },
+      {
+        "id": "marketing",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "marketing-media",
+        "kind": "R2",
+        "status": "ok"
+      },
+      {
+        "id": "onboardings",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "flows",
+        "kind": "D1",
+        "status": "ok"
+      },
+      {
+        "id": "flows-archive",
+        "kind": "R2",
+        "status": "ok"
+      },
+      {
+        "id": "flows-user-runtime",
+        "kind": "Durable Object",
+        "status": "ok"
+      },
+      {
+        "id": "flows-realtime",
+        "kind": "Durable Object",
+        "status": "ok"
+      },
+      {
+        "id": "custom",
+        "kind": "D1",
+        "status": "degraded"
+      },
+      {
+        "id": "site",
+        "kind": "D1",
+        "status": "unavailable"
+      },
+      {
+        "id": "site-media",
+        "kind": "R2",
+        "status": "unavailable"
+      },
+      {
+        "id": "site-sessions",
+        "kind": "KV",
+        "status": "unavailable"
+      },
+      {
+        "id": "site-release-cache",
+        "kind": "KV",
+        "status": "unavailable"
+      }
+    ]
+  }
+]
+
+
+Running 1 test using 1 worker
+
+(node:52059) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › e2e/tests/observability/infrastructure.spec.ts:151:1 › Infrastructure displays real health, target endpoints and metrics then refreshes its observation (6.7s)
+
+  1 passed (7.6s)

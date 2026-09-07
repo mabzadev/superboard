@@ -1,0 +1,80 @@
+Canonical Site API integration evidence
+
+Test: apps/site/runtime-tests/retirement-api-audit.runtime.test.ts
+Runner exit code: 0
+All 10 files and 27 tests in this run passed.
+
+Recorded observations (emitted after semantic and persistence assertions):
+[
+  {
+    "plugin_id": "supbrd-plug-audit",
+    "route_id": "gateway.supbrd-plug-audit.command.verify_ledger",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
+    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "data_ids": [
+      "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-audit",
+    "route_id": "gateway.supbrd-plug-audit.data_source.ledger",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
+    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "data_ids": [
+      "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-audit",
+    "route_id": "gateway.supbrd-plug-audit.data_source.ledger_search",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
+    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "data_ids": [
+      "lifecycle:fd140da5-64f9-48f3-ae4c-5df4c7854e8c"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-audit",
+    "route_id": "gateway.supbrd-plug-audit.command.archive_ledger",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
+    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "data_ids": [
+      "d2b9cb63-4d32-474f-b7e2-a001f80d7404"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-audit",
+    "route_id": "gateway.supbrd-plug-audit.data_source.archives",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-audit.txt",
+    "test": "apps/site/runtime-tests/retirement-api-audit.runtime.test.ts",
+    "data_ids": [
+      "d2b9cb63-4d32-474f-b7e2-a001f80d7404"
+    ]
+  }
+]
+
+Runner output:
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id packages/supbrd-front-ui
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  10 passed (10)
+      Tests  27 passed (27)
+   Start at  12:25:01
+   Duration  40.76s (transform 14.93s, setup 62.67s, import 3.78s, tests 16.91s, environment 1ms)

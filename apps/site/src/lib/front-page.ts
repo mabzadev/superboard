@@ -1,4 +1,5 @@
 import type { RoleLevel } from "@emdash-cms/auth";
+import type { PublicEndpoints } from "@superboard/front-ui/context";
 import {
 	assertRendererCompatibility,
 	parseFrontNavigation,
@@ -10,18 +11,18 @@ import {
 	type NativeFrontOperator,
 } from "@superboard/supbrd-core";
 
-import { probeSuperBoardPluginWorker } from "./plugin-readiness.js";
-import { requireActiveSuperBoardPlugin } from "./plugin-availability.js";
-import { resolveSuperBoardPluginTarget } from "./superboard-plugin-catalog.js";
-
 import { CORE_FRONT_RENDERER_DESCRIPTORS } from "./core-front-contract.js";
 import { assertNativeFrontRenderer } from "./native-front-plugins.js";
+import { requireActiveSuperBoardPlugin } from "./plugin-availability.js";
+import { probeSuperBoardPluginWorker } from "./plugin-readiness.js";
+import { parsePublicEndpoints } from "./public-endpoints.js";
 import {
 	loadDependencyHealth,
 	loadLastVerifiedFrontRelease,
 	type LoadedFrontRelease,
 } from "./release-source.js";
 import type { SuperBoardSiteEnv } from "./site-env.js";
+import { resolveSuperBoardPluginTarget } from "./superboard-plugin-catalog.js";
 
 interface EmDashUser {
 	id: string;
@@ -32,6 +33,7 @@ interface EmDashUser {
 }
 
 export interface FrontPageModel {
+	public_endpoints?: PublicEndpoints;
 	instance_id: string;
 	requested_path: string;
 	release: LoadedFrontRelease | null;
@@ -107,7 +109,7 @@ async function resolveFrontPageFromRelease(
 				for (const dependencyId of matched.route.dependencies) {
 					if (dependencyHealth[dependencyId] === "ready") continue;
 					const plugin = release.release.payload.plugin_lock.find(
-						({plugin_id}) => `dependency.${plugin_id.replaceAll("-", "_")}` === dependencyId,
+						({ plugin_id }) => `dependency.${plugin_id.replaceAll("-", "_")}` === dependencyId,
 					);
 					if (!plugin) continue;
 					const inactive = await requireActiveSuperBoardPlugin(env.DB, {
@@ -116,18 +118,24 @@ async function resolveFrontPageFromRelease(
 						plugin_id: plugin.plugin_id,
 					});
 					if (inactive) {
-						resolution = {result:"not_found", route_id:null, state_renderer_id:null};
+						resolution = { result: "not_found", route_id: null, state_renderer_id: null };
 						break;
 					}
 					await probeSuperBoardPluginWorker(env, plugin.plugin_id, {
-						operator_id:user.id, instance_id:env.SUPERBOARD_INSTANCE_ID, role:user.role,
+						operator_id: user.id,
+						instance_id: env.SUPERBOARD_INSTANCE_ID,
+						role: user.role,
 					});
 					dependencyHealth[dependencyId] = "ready";
 				}
-				if (resolution.result !== "not_found") resolution = resolveFrontRequest({
-					last_verified_release:release.runtime_release, requested_path:requestedPath,
-					admin_session:"valid", permissions, dependency_health:dependencyHealth,
-				});
+				if (resolution.result !== "not_found")
+					resolution = resolveFrontRequest({
+						last_verified_release: release.runtime_release,
+						requested_path: requestedPath,
+						admin_session: "valid",
+						permissions,
+						dependency_health: dependencyHealth,
+					});
 			} catch {
 				// An activation receipt does not establish the current availability of its Worker.
 			}
@@ -162,6 +170,7 @@ async function resolveFrontPageFromRelease(
 		? { id: user.id, email: user.email, name: user.name, role: user.role, disabled: user.disabled }
 		: null;
 	return {
+		public_endpoints: parsePublicEndpoints(env.SUPERBOARD_PUBLIC_ENDPOINTS_JSON),
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		requested_path: requestedPath,
 		release,

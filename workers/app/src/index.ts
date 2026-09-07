@@ -3,7 +3,7 @@ import {
 	verifyInternalProjectContextRequest,
 	type InternalProjectContext,
 } from "@superboard/contracts/project-context";
-import { configuredSecrets } from "@superboard/contracts/secret";
+import { configuredSecrets, matchesAnySecret } from "@superboard/contracts/secret";
 import { Hono, type Context, type Next } from "hono";
 
 type Variables = { projectId: string; projectContext: InternalProjectContext };
@@ -84,6 +84,82 @@ app.get("/internal/v1/health", async (c) => {
 		);
 	}
 });
+
+app.post("/internal/v1/sdk-credentials/resolve", async (c) => {
+	if (
+		!(await matchesAnySecret(
+			c.req.header("X-Internal-Token") ?? "",
+			configuredSecrets(c.env.INTERNAL_API_TOKEN, c.env.INTERNAL_API_TOKEN_PREVIOUS),
+		))
+	)
+		throw new AppError("internal_auth_invalid", "Internal authentication required", 401);
+	const body = await bodyObject(c.req.raw);
+	const key = text(body.key, "key", 128);
+	const platform = platformParam(text(body.platform, "platform", 16));
+	const identifier = text(body.identifier, "identifier", 2048);
+	if (!/^og_app_[a-f0-9]{64}$/.test(key))
+		throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
+	const record = await c.env.DB.prepare(
+		`SELECT k.id, k.project_id, s.configuration_json FROM access_keys k
+		JOIN sdk_configurations s ON s.project_id = k.project_id AND s.platform = ?
+		WHERE k.key_hash = ? AND k.revoked_at IS NULL AND s.status IN ('configured', 'verified') LIMIT 1`,
+	)
+		.bind(platform, await sha256(key))
+		.first<{ id: string; project_id: string; configuration_json: string }>();
+	const configuration: unknown = record ? JSON.parse(record.configuration_json) : null;
+	if (
+		!record ||
+		!configuration ||
+		typeof configuration !== "object" ||
+		Array.isArray(configuration)
+	)
+		throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
+	const values = configuration as Record<string, unknown>;
+	const configured =
+		platform === "ios"
+			? values.bundle_id
+			: platform === "android"
+				? values.package_name
+				: values.domain;
+	const matches =
+		platform === "web"
+			? sdkWebIdentifier(configured) !== null &&
+				sdkWebIdentifier(configured) === sdkWebIdentifier(identifier)
+			: typeof configured === "string" && configured === identifier;
+	if (!matches)
+		throw new AppError(
+			"sdk_application_forbidden",
+			"SDK application is not configured for this project",
+			403,
+		);
+	const updated = await c.env.DB.prepare(
+		"UPDATE access_keys SET last_used_at = datetime('now') WHERE id = ? AND revoked_at IS NULL",
+	)
+		.bind(record.id)
+		.run();
+	if (updated.meta.changes !== 1)
+		throw new AppError("sdk_credentials_invalid", "Invalid SDK credentials", 403);
+	return c.json({ data: { project_id: record.project_id } }, 200, { "Cache-Control": "no-store" });
+});
+
+function sdkWebIdentifier(value: unknown): string | null {
+	if (typeof value !== "string" || !value.trim()) return null;
+	try {
+		const parsed = new URL(value.includes("://") ? value : `https://${value}`);
+		if (
+			!["https:", "http:"].includes(parsed.protocol) ||
+			parsed.username ||
+			parsed.password ||
+			parsed.pathname !== "/" ||
+			parsed.search ||
+			parsed.hash
+		)
+			return null;
+		return parsed.host.toLowerCase();
+	} catch {
+		return null;
+	}
+}
 
 async function authenticate(c: AppContext, next: Next) {
 	const verification = await verifyInternalProjectContextRequest(

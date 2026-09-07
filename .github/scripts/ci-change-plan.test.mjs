@@ -13,7 +13,21 @@ test("API changes validate API and the isolated Billing Worker", () => {
   assert.equal(plan.api, "true");
   assert.equal(plan.billing, "true");
   assert.equal(plan.workers, "true");
-  assert.equal(plan.dashboard, "false");
+  assert.equal(plan.front, "false");
+});
+
+test("Site and plugin changes validate the operator Front after Dashboard removal", () => {
+  for (const path of [
+    "apps/site/src/components/NativeFrontApp.tsx",
+    "packages/supbrd-front-ui/src/context.tsx",
+    "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-content/ContentPage.tsx",
+    "packages/supbrd-plug-user/src/index.ts",
+  ]) {
+    const plan = runPlan([path]);
+    assert.equal(plan.front, "true", path);
+    assert.equal(plan.reference, "false", path);
+    assert.equal(plan.dashboard, undefined);
+  }
 });
 
 test("Flutter core changes validate Flutter and FlutterFlow only", () => {
@@ -44,13 +58,13 @@ test("reference changes validate only the embedded reference application", () =>
   const plan = runPlan(["apps/reference/lib/src/app.dart"]);
   assert.equal(plan.reference, "true");
   assert.equal(plan.workers, "false");
-  assert.equal(plan.dashboard, "false");
+  assert.equal(plan.front, "false");
 });
 
 test("documentation changes keep heavy jobs disabled", () => {
   const plan = runPlan(["docs/DEPLOYMENT.md"]);
   assert.equal(plan.workers, "false");
-  assert.equal(plan.dashboard, "false");
+  assert.equal(plan.front, "false");
   assert.equal(plan.flutter_packages, "false");
   assert.equal(plan.node_sdks, "false");
   assert.equal(plan.native_sdks, "false");
@@ -69,14 +83,14 @@ test("each standalone SDK selects its maintained validation job", () => {
     assert.equal(plan[flag], "true", path);
     assert.equal(plan[aggregate], "true", path);
     assert.equal(plan.workers, "false", path);
-    assert.equal(plan.dashboard, "false", path);
+    assert.equal(plan.front, "false", path);
   }
 });
 
 test("an unclassified production path fails safe with the supported matrix", () => {
   const plan = runPlan(["new-service/config.json"]);
   assert.equal(plan.workers, "true");
-  assert.equal(plan.dashboard, "true");
+  assert.equal(plan.front, "true");
   assert.equal(plan.flutter_packages, "true");
   assert.equal(plan.reference, "true");
   assert.equal(plan.node_sdks, "true");
@@ -88,7 +102,7 @@ test("manual dispatch selects the complete supported matrix", () => {
   assert.equal(plan.api, "true");
   assert.equal(plan.billing, "true");
   assert.equal(plan.messaging, "true");
-  assert.equal(plan.dashboard, "true");
+  assert.equal(plan.front, "true");
   assert.equal(plan.flutter_packages, "true");
 });
 

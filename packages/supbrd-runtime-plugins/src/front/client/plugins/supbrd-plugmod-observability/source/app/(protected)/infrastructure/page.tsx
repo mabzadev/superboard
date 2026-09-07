@@ -161,7 +161,7 @@ export default function InfrastructurePage() {
 						<Metric title="Projects" value={format(status.metrics.projects)} icon={<Database />} />
 						<Metric
 							title="Invocations (60 min)"
-							value={format(totalInvocations(status.runtime?.rows))}
+							value={format(status.runtime?.error ? null : totalInvocations(status.runtime?.rows))}
 							icon={<Gauge />}
 						/>
 					</div>

@@ -32,8 +32,6 @@ import {
 	publicAuthUrl,
 	publicDashboardUrl,
 	publicMcpUrl,
-	publicSdkUrl,
-	publicShortlinkUrl,
 	root,
 	targetSelectionFromArgs,
 } from "./cloudflare-target.mjs";
@@ -124,27 +122,25 @@ const config =
 		? apiConfig()
 		: service === "site"
 			? siteConfig()
-			: service === "dashboard"
-				? dashboardConfig()
-				: service === "billing"
-					? billingConfig()
-					: service === "messaging"
-						? messagingConfig()
-						: service === "email"
-							? emailConfig()
-							: service === "identity"
-								? identityConfig()
-								: service === "files"
-									? filesConfig()
-									: service === "observability"
-										? observabilityConfig()
-										: service === "mcp"
-											? mcpConfig()
-											: service === "custom"
-												? customConfig()
-												: managedWorker
-													? managedWorkerConfig()
-													: domainConfig();
+			: service === "billing"
+				? billingConfig()
+				: service === "messaging"
+					? messagingConfig()
+					: service === "email"
+						? emailConfig()
+						: service === "identity"
+							? identityConfig()
+							: service === "files"
+								? filesConfig()
+								: service === "observability"
+									? observabilityConfig()
+									: service === "mcp"
+										? mcpConfig()
+										: service === "custom"
+											? customConfig()
+											: managedWorker
+												? managedWorkerConfig()
+												: domainConfig();
 config.vars = {
 	...config.vars,
 	SUPERBOARD_INSTANCE_ID: target.target,
@@ -239,6 +235,13 @@ function siteConfig() {
 		vars: {
 			SUPERBOARD_INSTANCE_ID: target.target,
 			SUPERBOARD_ENVIRONMENT: environment,
+			SUPERBOARD_PUBLIC_ENDPOINTS_JSON: JSON.stringify(
+				Object.fromEntries(
+					["api", "auth", "sdk", "shortlinks", "files", "mcp", "site"].flatMap((key) =>
+						target.domains[key] ? [[key, `https://${target.domains[key]}`]] : [],
+					),
+				),
+			),
 			SUPERBOARD_PLUGIN_IDS: JSON.stringify(
 				compiledTarget.graph.plugins
 					.filter(({ targetState }) => targetState === "active")
@@ -275,7 +278,15 @@ function siteConfig() {
 				allowed_sender_addresses: [target.mail.fromAddress],
 			},
 		],
-		...(sitePreviewRoute ? { routes: sitePreviewRoute.routes } : {}),
+		...(sitePreviewRoute
+			? { routes: sitePreviewRoute.routes }
+			: publicRoutesEnabled
+				? {
+						routes: [
+							...new Set([target.domains.site, target.domains.dashboard].filter(Boolean)),
+						].map((hostname) => ({ pattern: hostname, custom_domain: true })),
+					}
+				: {}),
 		...(preflight ? {} : { triggers: { crons: [...target.siteRuntime.crons] } }),
 		observability: target.siteRuntime.observability,
 	};
@@ -306,12 +317,17 @@ function apiConfig() {
 			PLATFORM_WORKERS_JSON: JSON.stringify(platformWorkerTopology(target)),
 			CORS_ORIGIN: publicDashboardUrl(target),
 			CORS_ORIGINS_JSON: JSON.stringify([
-				publicDashboardUrl(target),
-				publicAuthUrl(target),
-				...target.applicationIdentity.webOrigins,
+				...new Set([
+					publicDashboardUrl(target),
+					`https://${target.domains.site}`,
+					publicAuthUrl(target),
+					...target.applicationIdentity.webOrigins,
+				]),
 			]),
 			APP_URL: appUrl,
-			DASHBOARD_CLIENT_ID: target.oauth.dashboardClientId,
+			...(target.oauth?.dashboardClientId
+				? { DASHBOARD_CLIENT_ID: target.oauth.dashboardClientId }
+				: {}),
 			REGISTRATION_MODE: target.registrationMode,
 			REGISTRATION_REALM: `${target.target}:${environment}`,
 			SSO_ENABLED: String(target.ssoEnabled),
@@ -1046,53 +1062,6 @@ function mcpConfig() {
 	};
 }
 
-function dashboardConfig() {
-	const apiUrl = publicApiUrl(target);
-	const appUrl = publicDashboardUrl(target);
-	const config = {
-		...baseConfig(),
-		main: "../../apps/dashboard/.open-next/worker.js",
-		assets: {
-			directory: "../../apps/dashboard/.open-next/assets",
-			binding: "ASSETS",
-			run_worker_first: false,
-		},
-		services: [
-			{
-				binding: "WORKER_SELF_REFERENCE",
-				service: target.workers.dashboard[environment],
-			},
-		],
-		images: { binding: "IMAGES" },
-		r2_buckets: [
-			{
-				binding: "NEXT_INC_CACHE_R2_BUCKET",
-				bucket_name: resources.dashboardCache.name,
-			},
-		],
-		vars: {
-			NEXT_PUBLIC_API_URL: apiUrl,
-			NEXT_PUBLIC_API_PATH: "/api/v1",
-			NEXT_PUBLIC_CLIENT_ID: target.oauth.dashboardClientId,
-			NEXT_PUBLIC_APP_URL: appUrl,
-			NEXT_PUBLIC_SDK_URL: publicSdkUrl(target),
-			NEXT_PUBLIC_SHORTLINK_URL: publicShortlinkUrl(target),
-			NEXT_PUBLIC_MCP_URL: publicMcpUrl(target),
-			NEXT_PUBLIC_DOCS_URL: target.operator.docsUrl,
-			...(target.operator.supportEmail
-				? { NEXT_PUBLIC_SUPPORT_EMAIL: target.operator.supportEmail }
-				: {}),
-			NEXT_PUBLIC_ENV: environment,
-			NEXT_PUBLIC_REGISTRATION_MODE: target.registrationMode,
-			NEXT_PUBLIC_SSO_ENABLED: String(target.ssoEnabled),
-		},
-	};
-	if (publicRoutesEnabled) {
-		config.routes = [{ pattern: target.domains.dashboard, custom_domain: true }];
-	}
-	return config;
-}
-
 function publicSurfaceMonitors(selectedTarget) {
 	const origin = (hostname) => `https://${hostname}`;
 	const monitored = [
@@ -1121,11 +1090,22 @@ function publicSurfaceMonitors(selectedTarget) {
 			description: "Public controlled file-delivery surface",
 		},
 		{
-			id: "dashboard",
-			url: origin(selectedTarget.domains.dashboard),
-			healthUrl: `${origin(selectedTarget.domains.dashboard)}/`,
-			description: "OpenGrow operator back office",
+			id: "site",
+			url: origin(selectedTarget.domains.site),
+			healthUrl: `${origin(selectedTarget.domains.site)}/superboard-system/health`,
+			description: "EmDash operator Front",
 		},
+		...(selectedTarget.domains.dashboard &&
+		selectedTarget.domains.dashboard !== selectedTarget.domains.site
+			? [
+					{
+						id: "dashboard",
+						url: origin(selectedTarget.domains.dashboard),
+						healthUrl: `${origin(selectedTarget.domains.dashboard)}/superboard-system/health`,
+						description: "EmDash Front compatibility hostname",
+					},
+				]
+			: []),
 		{
 			id: "mcp",
 			url: origin(selectedTarget.domains.mcp),
@@ -1157,8 +1137,13 @@ function publicSurfaceMonitors(selectedTarget) {
 function platformWorkerTopology(selectedTarget) {
 	const publicSurfaceIds = {
 		api: ["api", "sdk", "shortlinks"],
-		site: ["site-preview"],
-		dashboard: ["dashboard"],
+		site: [
+			"site",
+			...(selectedTarget.domains.dashboard &&
+			selectedTarget.domains.dashboard !== selectedTarget.domains.site
+				? ["dashboard"]
+				: []),
+		],
 		email: selectedTarget.domains.mailPreview ? ["mail-preview"] : [],
 		files: ["files"],
 		mcp: ["mcp"],

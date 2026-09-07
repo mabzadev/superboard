@@ -1,0 +1,16 @@
+[
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "superboard.products_customers",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "fd5fc990-a545-48a0-b790-29b2ae1c5c49"
+    ],
+    "description": "Created a real SDK anonymous customer, found it in the browser, blocked it, confirmed persistence after reload, then unblocked and verified no-result search.",
+    "source_test": "apps/site/e2e/tests/revenue/revenue-page.spec.ts",
+    "captured_at": "2026-09-07T10:53:33.311Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-billing-customers-browser.json"
+  }
+]

@@ -30,6 +30,7 @@ export type Bindings = {
   POSTMARK_SENDER_ADDRESS: string;
   SMS_MFA_IS_REQUIRED: boolean;
   SMS_MFA_MESSAGE_THRESHOLD: number;
+  SMS_TRANSPORT?: "twilio" | "capture";
   TWILIO_ACCOUNT_ID: string;
   TWILIO_AUTH_TOKEN: string;
   TWILIO_SENDER_NUMBER: string;

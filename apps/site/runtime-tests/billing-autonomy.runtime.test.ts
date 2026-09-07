@@ -371,3 +371,46 @@ test("Billing rejects conflicting legacy records without replacing the current c
 			.first(),
 	).toEqual({ display_name: "Billing value" });
 });
+
+test("Billing refuses an oversized migration status before exporting Products data", async () => {
+	await db.batch([
+		db.prepare(
+			"INSERT INTO instances(id,uri_scheme,api_key) VALUES(42,'billing-alone','billing-test-key') ON CONFLICT(id) DO NOTHING",
+		),
+		db.prepare(
+			"INSERT INTO projects(id,instance_id,is_test,name,identifier) VALUES(81,42,0,'Billing','billing-prod') ON CONFLICT(id) DO NOTHING",
+		),
+	]);
+	let sourceCalled = false;
+	const gatewayEnv = {
+		DB: db,
+		SUPERBOARD_TARGET: "billing-alone",
+		SITE_OPERATOR_BRIDGE_TOKEN: "billing-migration-bridge",
+		MODULE_INTERNAL_TOKEN: secret,
+		BILLING: {
+			fetch: async () =>
+				Response.json({
+					data: { complete: false, table: "products", cursor: [], padding: "x".repeat(32768) },
+				}),
+		},
+		PRODUCTS_MODULE: {
+			fetch: async () => {
+				sourceCalled = true;
+				return Response.json({ error: { code: "unexpected_export" } }, { status: 599 });
+			},
+		},
+	} as unknown as ApiEnv;
+	const input = new Request(
+		"https://api.internal/api/v1/billing/projects/42-prod/ledger/migrate-products",
+		{ method: "POST" },
+	);
+	const headers = await signSiteOperatorRequest(
+		input,
+		{ instance_id: "billing-alone", operator_id: "billing-only-operator", role: 50 },
+		"billing-migration-bridge",
+	);
+	const response = await api.fetch(new Request(input, { headers }), gatewayEnv);
+	expect(response.status).toBe(503);
+	expect(await response.json()).toMatchObject({ error: { code: "module_response_invalid" } });
+	expect(sourceCalled).toBe(false);
+});

@@ -199,3 +199,28 @@ test("application provider linking verifies the external proof and never links t
 		external.mockRestore();
 	}
 });
+
+test("operator MFA enrollment and reset resolve the project-bound application subject", async () => {
+	const user = await env.DB.prepare('INSERT INTO "user"("authId",email) VALUES(?,?) RETURNING id')
+		.bind("native-mfa-user", "mfa-subject@example.test")
+		.first<{ id: number }>();
+	await env.DB.batch([
+		env.DB.prepare(
+			"INSERT INTO application_users(id,project_id,email,is_anonymous) VALUES('application-mfa-user',81,'mfa-subject@example.test',0)",
+		),
+		env.DB.prepare(
+			"INSERT INTO identity_subject_bridge(id,realm,melody_user_id,project_id,application_user_id) VALUES('mfa-bridge',?,?,81,'application-mfa-user')",
+		).bind((env as unknown as { IDENTITY_REALM: string }).IDENTITY_REALM, user!.id),
+	]);
+	const path = "/internal/v1/melody-admin/api/v1/users/application-mfa-user/sms-mfa";
+	expect((await request(path, "POST", {}, 82)).status).toBe(404);
+	const enrolled = await request(path, "POST", {});
+	expect(enrolled.status, await enrolled.clone().text()).toBe(204);
+	expect(
+		await env.DB.prepare('SELECT "mfaTypes" FROM "user" WHERE id=?').bind(user!.id).first(),
+	).toEqual({ mfaTypes: "sms" });
+	expect((await request(path, "DELETE")).status).toBe(204);
+	expect(
+		await env.DB.prepare('SELECT "mfaTypes" FROM "user" WHERE id=?').bind(user!.id).first(),
+	).toEqual({ mfaTypes: "" });
+});

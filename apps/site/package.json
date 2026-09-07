@@ -14,7 +14,9 @@
 		"test": "vitest run --config vitest.config.ts && vitest run --config vitest.front.config.ts && vitest run --config vitest.runtime.config.ts",
 		"test:front": "vitest run --config vitest.front.config.ts",
 		"test:runtime": "vitest run --config vitest.runtime.config.ts",
-		"dry-run": "astro build && wrangler deploy --dry-run"
+		"dry-run": "astro build && wrangler deploy --dry-run",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui"
 	},
 	"dependencies": {
 		"@astrojs/cloudflare": "catalog:",

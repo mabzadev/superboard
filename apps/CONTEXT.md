@@ -17,5 +17,5 @@ Interface d’administration possédée par un plugin, identifiée par une route
 _À éviter_ : page générique de remplacement, contenu supprimé à la désactivation
 
 **Dashboard historique** :
-Application SuperBoard antérieure au Site EmDash, conservée uniquement tant que la parité et le retour arrière de la migration l’exigent.
+Application SuperBoard remplacée par le Site EmDash. Son code est conservé dans l’historique Git ; l’inventaire de retrait est `config/superboard-dashboard-retirement.json`. Les vues actives appartiennent aux plugins et utilisent la session opérateur EmDash.
 _À éviter_ : Front SuperBoard cible

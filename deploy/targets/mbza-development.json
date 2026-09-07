@@ -84,10 +84,6 @@
       "development": "superboard-site-dev",
       "local": "superboard-site-local"
     },
-    "dashboard": {
-      "development": "superboard-dashboard-dev",
-      "local": "superboard-dashboard-local"
-    },
     "billing": {
       "development": "superboard-billing-dev",
       "local": "superboard-billing-local"
@@ -248,9 +244,6 @@
       "r2": {
         "name": "superboard-dev-files"
       },
-      "dashboardCache": {
-        "name": "superboard-dev-dashboard-cache"
-      },
       "emailD1": {
         "name": "superboard-dev-email-db",
         "id": "aa7ecc13-5f11-4bdd-8505-2fcd921a47df"
@@ -401,9 +394,6 @@
       },
       "r2": {
         "name": "superboard-local-files"
-      },
-      "dashboardCache": {
-        "name": "superboard-local-dashboard-cache"
       },
       "emailD1": {
         "name": "superboard-local-email-db",

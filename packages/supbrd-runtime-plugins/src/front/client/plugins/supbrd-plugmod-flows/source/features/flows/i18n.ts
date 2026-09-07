@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useFrontContext } from "@superboard/front-ui/context";
+import { useCallback } from "react";
 
 const en = {
 	selectProject: "Select a project to manage Flows.",
@@ -398,8 +399,8 @@ const frCopy: Record<string, string> = {
 	"Migrated onboardings": "Onboardings migrés",
 	"Historical identifiers and statistics remain available through Flows.":
 		"Les identifiants et statistiques historiques restent disponibles dans Flows.",
-	"Start with an automatic Start block and an End block. You can add branches in the editor.":
-		"Commencez avec un bloc Start automatique et un bloc End. Vous pourrez ajouter des branches dans l’éditeur.",
+	"Start with an automatic Start block and a welcome card. You can add branches in the editor.":
+		"Commencez avec un bloc Start automatique et une carte de bienvenue. Vous pourrez ajouter des branches dans l’éditeur.",
 	Duplicated: "Dupliqué",
 	Archived: "Archivé",
 	Created: "Créé",
@@ -508,11 +509,7 @@ const frCopy: Record<string, string> = {
 export type FlowMessageKey = keyof typeof en;
 
 export function useFlowI18n() {
-	const [locale, setLocale] = useState<"en" | "fr">("en");
-
-	useEffect(() => {
-		setLocale(navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en");
-	}, []);
+	const { locale } = useFrontContext();
 
 	const messages = locale === "fr" ? fr : en;
 	const t = useCallback((key: FlowMessageKey) => messages[key], [messages]);

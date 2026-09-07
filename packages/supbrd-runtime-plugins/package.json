@@ -12,7 +12,10 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.mjs",
-		"typecheck": "tsgo --noEmit"
+		"typecheck": "tsgo --noEmit",
+		"test": "vitest run --config vitest.config.ts",
+		"test:support": "vitest run --config vitest.config.ts src/front/client/plugins/supbrd-plugmod-support/source/api/support/__tests__/nativeServices.test.ts src/front/client/plugins/supbrd-plugmod-support/source/components/modules/__tests__/SupportNativePages.test.tsx src/front/client/plugins/supbrd-plugmod-support/source/components/modules/__tests__/SupportIntegrationsPage.test.tsx",
+		"test:coverage": "vitest run --config vitest.config.ts --coverage"
 	},
 	"devDependencies": {
 		"@superboard/supbrd-core": "workspace:*",
@@ -71,6 +74,13 @@
 		"zod": "^4.3.6",
 		"@superboard/front-ui": "workspace:*",
 		"@types/react": "catalog:",
-		"@types/react-dom": "catalog:"
+		"@types/react-dom": "catalog:",
+		"@testing-library/react": "^16.3.2",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/user-event": "^14.6.1",
+		"jsdom": "26.1.0",
+		"@vitejs/plugin-react": "^6.0.1",
+		"vitest": "4.1.5",
+		"@vitest/coverage-v8": "4.1.5"
 	}
 }

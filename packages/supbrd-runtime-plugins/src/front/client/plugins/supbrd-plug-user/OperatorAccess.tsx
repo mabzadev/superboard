@@ -23,8 +23,23 @@ export function OperatorAccess({ mode }: { mode: Mode }) {
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [sent, setSent] = useState(false);
+	const [providers, setProviders] = useState<{ id: string; label: string }[]>([]);
 	const [invitation, setInvitation] = useState<{ email: string; roleName: string } | null>(null);
 	const registration = mode === "invite" || (mode === "signup" && Boolean(token));
+	useEffect(() => {
+		if (mode !== "login" && mode !== "signup") return;
+		let current = true;
+		void operatorGet<{ providers?: { id: string; label: string }[] }>("/_emdash/api/auth/mode")
+			.then((value) => {
+				if (current) setProviders(Array.isArray(value.providers) ? value.providers : []);
+			})
+			.catch(() => {
+				if (current) setProviders([]);
+			});
+		return () => {
+			current = false;
+		};
+	}, [mode]);
 	useEffect(() => {
 		if (!registration) return;
 		if (!token) {
@@ -45,13 +60,21 @@ export function OperatorAccess({ mode }: { mode: Mode }) {
 			current = false;
 		};
 	}, [registration, token, mode, text]);
-	const returnPath = () => {
+	const destination = () => {
 		const requested = search.get("redirect") ?? search.get("backTo") ?? "/superboard-system/home";
 		const safe =
 			requested.startsWith("/") &&
 			!requested.startsWith("//") &&
 			!/[\\\u0000-\u0020]/u.test(requested);
-		window.location.assign(safe ? requested : "/superboard-system/home");
+		return safe ? requested : "/superboard-system/home";
+	};
+	const returnPath = () => window.location.assign(destination());
+	const providerHref = (id: string) => {
+		const path =
+			id === "google" || id === "github" ? `/_emdash/api/auth/oauth/${id}` : "/_emdash/admin/login";
+		const params = new URLSearchParams({ redirect: destination() });
+		if (token) params.set("invite", token);
+		return `${path}?${params}`;
 	};
 	async function run(action: () => Promise<void>) {
 		if (busy) return;
@@ -142,6 +165,12 @@ export function OperatorAccess({ mode }: { mode: Mode }) {
 					{text.passkey}
 				</Button>
 			)}
+			{!registration &&
+				providers.map((provider) => (
+					<Button key={provider.id} asChild variant="outline">
+						<a href={providerHref(provider.id)}>{provider.label}</a>
+					</Button>
+				))}
 			<a href="/_emdash/admin/login">{text.login}</a>
 		</section>
 	);

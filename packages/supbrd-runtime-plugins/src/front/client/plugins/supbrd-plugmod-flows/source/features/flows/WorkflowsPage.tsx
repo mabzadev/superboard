@@ -321,7 +321,7 @@ function CreateWorkflowDialog({ onCreated }: { onCreated: () => void }) {
 				<DialogTitle>{t("newWorkflow")}</DialogTitle>
 				<DialogDescription>
 					{tr(
-						"Start with an automatic Start block and an End block. You can add branches in the editor.",
+						"Start with an automatic Start block and a welcome card. You can add branches in the editor.",
 					)}
 				</DialogDescription>
 			</DialogHeader>

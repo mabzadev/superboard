@@ -145,7 +145,6 @@ export default function SupportHelpCenterPage() {
 					excerpt: article.excerpt.trim() || null,
 					content: required(article.content),
 					status: "draft",
-					author_id: "dashboard",
 				});
 				setArticle((current) => ({
 					...current,

@@ -1239,7 +1239,7 @@ function currentSchema(expectedMigration: string, count: number) {
 function workerCatalog(managedWorkers: unknown[] = []) {
   const ids = [
     "api",
-    "dashboard",
+    "site",
     "billing",
     "messaging",
     "email",
@@ -1270,7 +1270,7 @@ function workerCatalog(managedWorkers: unknown[] = []) {
         publicSurfaceIds:
           id === "api"
             ? ["api", "sdk", "shortlinks"]
-            : id === "dashboard" || id === "mcp"
+            : id === "site" || id === "mcp"
               ? [id]
               : [],
       })),

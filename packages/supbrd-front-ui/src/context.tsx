@@ -1,6 +1,10 @@
 import type { OperatorProjectScope } from "@superboard/contracts/site-operator";
 import { createContext, useContext, type ReactNode } from "react";
 
+export type PublicEndpoints = Partial<
+	Record<"api" | "auth" | "sdk" | "shortlinks" | "files" | "mcp" | "site", string>
+>;
+
 export interface FrontOperator {
 	id: string;
 	email: string;
@@ -15,6 +19,7 @@ export interface PluginViewProps {
 }
 
 export interface FrontContextValue extends PluginViewProps {
+	publicEndpoints?: PublicEndpoints;
 	instanceId: string;
 	pluginId: string;
 	operator: FrontOperator | null;

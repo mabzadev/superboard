@@ -1,3 +1,4 @@
+import { runPluginTask, PluginTaskUnavailable } from "@superboard/contracts/plugin-task";
 import {
 	signProjectContext,
 	type DomainModuleName,
@@ -258,7 +259,7 @@ export async function proxyDomainSdkModule(
 ): Promise<Response> {
 	const requestId = requestIdFrom(c.req.raw);
 	try {
-		const resolved = await resolveSdkProjectContext(c.env.DB, c.req.raw);
+		const resolved = await resolveSdkProjectContext(c.env.DB, c.req.raw, c.env);
 		if (!resolved.ok) {
 			return domainError(requestId, resolved.status, resolved.code, resolved.message);
 		}
@@ -593,6 +594,7 @@ export async function forwardDomainRequest(
 export async function resolveSdkProjectContext(
 	db: D1Database,
 	request: Request,
+	env?: Env,
 ): Promise<
 	| {
 			ok: true;
@@ -602,7 +604,7 @@ export async function resolveSdkProjectContext(
 	  }
 	| {
 			ok: false;
-			status: 401 | 403 | 422;
+			status: 401 | 403 | 422 | 503;
 			code: string;
 			message: string;
 	  }
@@ -625,6 +627,10 @@ export async function resolveSdkProjectContext(
 			code: "sdk_platform_invalid",
 			message: "PLATFORM must be ios, android, web or desktop",
 		};
+	}
+
+	if (rawProjectKey.startsWith("og_app_")) {
+		return resolveNativeSdkProjectContext(db, request, env, rawProjectKey, platform, identifier);
 	}
 
 	const keySelectsTest = rawProjectKey.startsWith("test_");
@@ -714,6 +720,97 @@ export async function resolveSdkProjectContext(
 		platform,
 		identifier,
 	};
+}
+
+async function resolveNativeSdkProjectContext(
+	db: D1Database,
+	request: Request,
+	env: Env | undefined,
+	key: string,
+	platform: string,
+	identifier: string,
+): ReturnType<typeof resolveSdkProjectContext> {
+	const unavailable = {
+		ok: false as const,
+		status: 503 as const,
+		code: "sdk_credentials_unavailable",
+		message: "SDK credentials service is unavailable",
+	};
+	const invalid = {
+		ok: false as const,
+		status: 403 as const,
+		code: "sdk_credentials_invalid",
+		message: "Invalid SDK credentials",
+	};
+	const instanceSlug = env?.SUPERBOARD_TARGET ?? env?.OPENGROW_TARGET;
+	if (!env?.APP_MODULE || !env.MODULE_INTERNAL_TOKEN || !instanceSlug) return unavailable;
+	const selectedEnvironment = request.headers.get("ENVIRONMENT")?.trim().toLowerCase();
+	if (selectedEnvironment && selectedEnvironment !== "production" && selectedEnvironment !== "test")
+		return {
+			ok: false,
+			status: 422,
+			code: "sdk_environment_invalid",
+			message: "ENVIRONMENT must be production or test",
+		};
+	try {
+		const lookup = await runPluginTask(
+			env,
+			"supbrd-plug-user",
+			{ kind: "runtime", task_id: `sdk-credentials:${crypto.randomUUID()}`, duration_ms: 30000 },
+			async (_checkpoint, signal) =>
+				env.APP_MODULE!.fetch(
+					new Request("https://app.internal/internal/v1/sdk-credentials/resolve", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Internal-Token": env.MODULE_INTERNAL_TOKEN!,
+						},
+						body: JSON.stringify({ key, platform, identifier }),
+						signal,
+					}),
+				),
+		);
+		if (!lookup.ran) return unavailable;
+		if (!lookup.value.ok)
+			return lookup.value.status === 403 || lookup.value.status === 422 ? invalid : unavailable;
+		const payload = await readJsonObjectLimited(lookup.value, 16384);
+		const data = payload.data;
+		const projectId =
+			data && typeof data === "object" && !Array.isArray(data)
+				? Number((data as Record<string, unknown>).project_id)
+				: NaN;
+		if (!Number.isSafeInteger(projectId) || projectId <= 0) return unavailable;
+		const instanceId = await resolveSiteOperatorInstance(db, instanceSlug);
+		if (!instanceId) return invalid;
+		const project = await db
+			.prepare("SELECT id, is_test FROM projects WHERE id = ? AND instance_id = ? LIMIT 1")
+			.bind(projectId, instanceId)
+			.first<{ id: number; is_test: number }>();
+		if (!project) return invalid;
+		const environment: ProjectEnvironment = project.is_test ? "test" : "production";
+		if (selectedEnvironment && selectedEnvironment !== environment)
+			return {
+				ok: false,
+				status: 403,
+				code: "sdk_environment_mismatch",
+				message: "PROJECT-KEY and ENVIRONMENT select different projects",
+			};
+		return {
+			ok: true,
+			context: {
+				projectId,
+				instanceId,
+				environment,
+				projectRef: `${instanceId}-${environment === "test" ? "test" : "prod"}`,
+			},
+			platform,
+			identifier,
+		};
+	} catch (error) {
+		if (!(error instanceof PluginTaskUnavailable))
+			console.error("[sdk-credentials] owner lookup failed");
+		return unavailable;
+	}
 }
 
 export function extractDomainRoute(

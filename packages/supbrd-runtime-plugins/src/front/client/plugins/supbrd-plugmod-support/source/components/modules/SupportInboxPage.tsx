@@ -29,6 +29,7 @@ import { Badge } from "../../../../../../../../../supbrd-front-ui/src/shared/com
 import { Button } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/button.js";
 import { Card } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/card.js";
 import { useProjectSelection } from "../../../../../../../../../supbrd-front-ui/src/shared/context/useProjectSelection.js";
+import { usePublicConfig } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
 import {
 	showErrorNotification,
 	showSuccessNotification,
@@ -85,6 +86,8 @@ const sourceLabel: Record<UnifiedInboxItem["source_type"], string> = {
 };
 
 export default function InboxPage() {
+	const publicConfig = usePublicConfig();
+	const publicApiUrl = publicConfig.apiUrl;
 	const { selectedProject } = useProjectSelection();
 	const projectId = selectedProject?.id;
 	const [items, setItems] = useState<UnifiedInboxItem[]>([]);
@@ -266,7 +269,7 @@ export default function InboxPage() {
 		messagesEnd.current?.scrollIntoView({ block: "end" });
 	}, [messages]);
 	useEffect(() => {
-		if (!projectId || selected?.source_type !== "conversation") {
+		if (!projectId || selected?.source_type !== "conversation" || !publicApiUrl) {
 			setRealtimeStatus("idle");
 			setCustomerTyping(false);
 			return;
@@ -295,7 +298,9 @@ export default function InboxPage() {
 			try {
 				const issued = await createInboxRealtimeTicket(projectId, conversationId);
 				if (cancelled) return;
-				socket = new WebSocket(inboxRealtimeUrl(projectId, conversationId, issued.ticket));
+				socket = new WebSocket(
+					inboxRealtimeUrl(projectId, conversationId, issued.ticket, publicApiUrl),
+				);
 				socket.onopen = () => {
 					if (cancelled) return;
 					attempt = 0;
@@ -345,7 +350,7 @@ export default function InboxPage() {
 			setRealtimeStatus("idle");
 			socket?.close(1000, "Conversation changed");
 		};
-	}, [loadItems, projectId, selected?.source_id, selected?.source_type]);
+	}, [loadItems, projectId, selected?.source_id, selected?.source_type, publicApiUrl]);
 	useEffect(
 		() => () => {
 			if (typingTimer.current) window.clearTimeout(typingTimer.current);
@@ -494,6 +499,7 @@ export default function InboxPage() {
 
 	return (
 		<div className="flex min-h-full flex-col overflow-hidden">
+			{!publicApiUrl && <p role="alert">{publicConfig.endpointError("Support API")}</p>}
 			<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-6">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>

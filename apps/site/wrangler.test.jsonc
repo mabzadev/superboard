@@ -29,6 +29,11 @@
 			"binding": "FLOW_DELAY_EXECUTION",
 			"name": "plugin-autonomy-workflow",
 			"class_name": "PluginAutonomyWorkflow"
+		},
+		{
+			"binding": "FLOW_MAINTENANCE_EXECUTION",
+			"name": "retirement-flow-maintenance",
+			"class_name": "RetirementFlowMaintenanceExecution"
 		}
 	]
 }

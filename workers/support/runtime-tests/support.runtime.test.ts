@@ -1899,3 +1899,29 @@ describe("Support in the Workers runtime", () => {
     expect(replayed.status).toBe(401);
   });
 });
+
+
+it("report exports honor date bounds and project isolation in the actual queue consumer", async () => {
+  const fixtures = [
+    ["before", 12, "2035-04-05T23:59:59Z"],
+    ["start", 12, "2035-04-06 00:00:00"],
+    ["late", 12, "2035-04-06T23:59:59.999Z"],
+    ["offset", 12, "2035-04-07T01:00:00+02:00"],
+    ["after", 12, "2035-04-07T00:00:00Z"],
+    ["foreign", 11, "2035-04-06T12:00:00Z"],
+  ] as const;
+  await env.DB.batch(fixtures.map(([marker, projectId, occurredAt]) => env.DB.prepare(
+    "INSERT INTO support_report_events(id,project_id,event_type,occurred_at,dimensions_json) VALUES(?,?,?,?,?)",
+  ).bind(crypto.randomUUID(), projectId, "conversation.created", occurredAt, JSON.stringify({marker}))));
+  const requested = await SELF.fetch(await signedRequest("/internal/v1/projects/12/reports/exports", 12, "POST", {filters:{from:"2035-04-06",to:"2035-04-06"}}, crypto.randomUUID()));
+  expect(requested.status).toBe(202);
+  const result = await requested.json<{data:{id:string}}>();
+  const batch = createMessageBatch("support-test-bulk", [{id:crypto.randomUUID(),timestamp:new Date(),attempts:1,body:{type:"support.export.requested.v1",projectId:12,exportId:result.data.id}}]);
+  await handleSupportQueue(batch,env);
+  expect((await getQueueResult(batch,createExecutionContext())).explicitAcks).toHaveLength(1);
+  const download = await SELF.fetch(await signedRequest(`/internal/v1/projects/12/reports/exports/${result.data.id}/download`,12));
+  expect(download.status).toBe(200);
+  const exported = await download.json<{data:Array<{dimensions_json:string}>}>();
+  expect(exported.data).toHaveLength(3);
+  expect(exported.data.map(row=>JSON.parse(row.dimensions_json).marker)).toEqual(expect.arrayContaining(["late","offset","start"]));
+});

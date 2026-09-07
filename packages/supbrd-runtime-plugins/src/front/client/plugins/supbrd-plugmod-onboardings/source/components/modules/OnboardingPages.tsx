@@ -1,7 +1,7 @@
 "use client";
 
 import { FlaskConical, MapPin, Pencil, Plus, Rocket, Target, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	EmptyProject,
@@ -86,6 +86,8 @@ export function OnboardingsPage() {
 	const [document, setDocument] = useState<ExperienceDocument>(createExperienceDocument);
 	const [documentValid, setDocumentValid] = useState(true);
 	const [editorKey, setEditorKey] = useState("new");
+	const [editorLoading, setEditorLoading] = useState(false);
+	const editorRequest = useRef(0);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
@@ -114,19 +116,21 @@ export function OnboardingsPage() {
 
 	const open = async (item: Onboarding) => {
 		if (!selectedProject) return;
-		setSelected(item);
-		setMetadata({
-			display_name: item.display_name,
-			description: item.description ?? "",
-		});
+		const request = ++editorRequest.current;
+		setEditorLoading(true);
 		try {
 			const result = await getOnboardingVersions(selectedProject.id, item.id);
+			if (request !== editorRequest.current) return;
+			setSelected(item);
+			setMetadata({ display_name: item.display_name, description: item.description ?? "" });
 			setVersions(result);
 			const latest = result[0];
 			setDocument(fromOnboardingDefinition(latest?.configuration));
 			setEditorKey(`${item.id}:${latest?.id ?? "new"}`);
 		} catch (cause) {
-			showErrorNotification(errorMessage(cause));
+			if (request === editorRequest.current) showErrorNotification(errorMessage(cause));
+		} finally {
+			if (request === editorRequest.current) setEditorLoading(false);
 		}
 	};
 
@@ -283,7 +287,11 @@ export function OnboardingsPage() {
 									Reorder screens and blocks, configure transitions, theme and mobile preview.
 								</CardDescription>
 							</CardHeader>
-							<CardContent className="space-y-4">
+							<CardContent
+								className="space-y-4"
+								inert={busy || editorLoading}
+								aria-busy={busy || editorLoading}
+							>
 								{selected && (
 									<div className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_2fr_auto_auto]">
 										<label className="space-y-1 text-xs">
@@ -337,7 +345,10 @@ export function OnboardingsPage() {
 										setDocumentValid(valid);
 									}}
 								/>
-								<Button disabled={!selected || busy || !documentValid} onClick={() => void save()}>
+								<Button
+									disabled={!selected || busy || editorLoading || !documentValid}
+									onClick={() => void save()}
+								>
 									<Plus />
 									Save immutable draft
 								</Button>

@@ -1,0 +1,1847 @@
+{
+  "schema_version": 1,
+  "source_report_sha256": "b275c524ac1aa0a307e8bdef2a2809b37fbac36f72480406b54c7aedac1bf231",
+  "stats": {
+    "startTime": "2026-09-07T12:51:50.527Z",
+    "duration": 477181.518,
+    "expected": 140,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  },
+  "cases": [
+    {
+      "file": "real/production-flows.spec.ts",
+      "title": "native App key provisions the SDK without a historical Front token",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4314
+        }
+      ]
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "Application audience /app/users searches and saves a native profile",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2824
+        }
+      ]
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "Application audience /app/members searches and saves a native profile",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3031
+        }
+      ]
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "App customers creates, edits and filters the actual acquisition customer",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3703
+        }
+      ]
+    },
+    {
+      "file": "tests/app/app-audience.spec.ts",
+      "title": "App referrals filters and sorts real attributed records",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3270
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "operator profile updates the authenticated core user and persists after reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3781
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "shows the native email and passkey sign-in methods",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1104
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "a real credential establishes the operator session",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3113
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "invalid email-link credentials do not establish a session",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1340
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "respects the requested local return path",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3238
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "revoking a credential prevents subsequent authentication with it",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5973
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "empty email cannot submit a sign-in request",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1163
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/login.spec.ts",
+      "title": "keeps the core authentication entry available for configured SSO providers",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2728
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "explains recovery through the operator email address",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1137
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "/reset_password recovers the same real operator through the captured email link",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3956
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "/new_password recovers the same real operator through the captured email link",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4119
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/password-reset.spec.ts",
+      "title": "invalid email cannot send a recovery request",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1181
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "shows the registration entry and email verification requirement",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1089
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "requires a valid email before requesting registration",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1153
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "/register completes email verification and creates a real passkey account",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3887
+        }
+      ]
+    },
+    {
+      "file": "tests/auth/register.spec.ts",
+      "title": "/register/with_email completes email verification and creates a real passkey account",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4187
+        }
+      ]
+    },
+    {
+      "file": "tests/campaigns/campaigns-table.spec.ts",
+      "title": "creates a campaign and reopens its real named detail from the list",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5396
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "funnel query counts a real ordered pair of events for the same installation",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6830
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "analytics timeline annotations persist through the settings form",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2610
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "SDK attribution creates exactly one installation visible in Analytics",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 7955
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-final.spec.ts",
+      "title": "an unverified SDK claim cannot appear in the verified purchase register",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1612
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "event explorer filters and analyses its real event",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6828
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "views displays the projected screen event",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6676
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "user sessions and profiles come from the ingested subject",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6921
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "feedback shows the actual submitted rating and comment",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6639
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "a crash is inspected and resolved durably",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 8446
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "technology dimensions reflect the accepted event context",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6694
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "creates and reloads a dashboard widget",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2691
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "creates and reloads a behavioural cohort",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2535
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "publishes a remote configuration value and reads it back",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2761
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "creates an alert rule without an external notification recipient",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2305
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/analytics-operations.spec.ts",
+      "title": "saves a report definition and reopens it",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2376
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/dashboard displays the persisted analytics count",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 7057
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/ displays the persisted analytics count",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 7133
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/app displays the persisted analytics count",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6937
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "/analytics displays the persisted analytics count",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6684
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "dashboard date range changes the live integration query",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1987
+        }
+      ]
+    },
+    {
+      "file": "tests/dashboard/dashboard.spec.ts",
+      "title": "dashboard top links are backed by actual links data",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1556
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "edits, validates, saves and publishes a real workflow",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4330
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "opens workflow and survey analytics from its stored graph",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2427
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "creates exact SDK blocks from a persisted versioned component catalog",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2789
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "identifies outdated instances and synchronizes both stored drafts explicitly",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2997
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "SDK settings use the selected project in en",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1310
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "SDK settings use the selected project in fr",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1419
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "renders the French editor and its workflow migration choices",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2631
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "preserves the light workflow editor reference",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3369
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-editor.spec.ts",
+      "title": "preserves the dark workflow editor reference",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3203
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-native-runtime.spec.ts",
+      "title": "a real SDK user traverses the published graph and appears in native analytics",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 12890
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "new workflow dialog persists a draft and the list filters it",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3196
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "environment form creates a real isolated development environment",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2967
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "localization saves language fallback rules and reloads the selected group",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2513
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "SDK examples use and copy the selected real project environment",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2201
+        }
+      ]
+    },
+    {
+      "file": "tests/flows/flows-native-settings.spec.ts",
+      "title": "launchpad group persists its environment and pause state",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4023
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "the native user detail resolves its identity, translates passkeys and cancels deletion",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6298
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "email log detail displays its persisted record in English and French",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5656
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "sms log detail displays its persisted record in English and French",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5416
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-details.spec.ts",
+      "title": "sign-in log detail displays its persisted record in English and French",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5346
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity roots and overview use real project configuration and navigation",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3919
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity users search filters actual subjects and restores the list",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4275
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity log lists expose real native events and cancel cleanup without deleting them",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4521
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity-navigation.spec.ts",
+      "title": "Identity account buttons initiate each registered OAuth policy with a fresh PKCE challenge",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 14305
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity roles creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5411
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity scopes creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6236
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity orgs creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5549
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity user-attributes creates, edits, reloads and finds the persisted record",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5537
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity app form preserves selected OAuth scopes and changes",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 6162
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity banner form persists message and disabled state",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3979
+        }
+      ]
+    },
+    {
+      "file": "tests/identity/identity.spec.ts",
+      "title": "Identity SAML form saves metadata and attribute mapping",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5686
+        }
+      ]
+    },
+    {
+      "file": "tests/links/create-link.spec.ts",
+      "title": "creates a link with platform routing and reads its saved values after reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3109
+        }
+      ]
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "a branded domain remains pending until its DNS is verified",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2392
+        }
+      ]
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "platform routing rules persist their destination and priority",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2777
+        }
+      ]
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "social preview saves metadata and renders the selected network preview",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2456
+        }
+      ]
+    },
+    {
+      "file": "tests/links/dynamic-links-settings.spec.ts",
+      "title": "tracking preferences survive reload and are restored after the check",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2475
+        }
+      ]
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "loads real persisted links",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1568
+        }
+      ]
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "search removes unrelated links and restores the matching record",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1634
+        }
+      ]
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "edits a selected row and preserves the new name after reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3210
+        }
+      ]
+    },
+    {
+      "file": "tests/links/links-table.spec.ts",
+      "title": "archived filtering finds inactive records and excludes them from active results",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1988
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/marketing-final.spec.ts",
+      "title": "provider webhook settings persist an encrypted inbound credential",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2568
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/marketing-final.spec.ts",
+      "title": "statistics refresh reflects the real subscriber count and selected interval",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1586
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "subscriber search and CSV export contain the subscriber created in the form",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2106
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "email template and campaign draft persist without sending a campaign",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3238
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "journey graph becomes a persisted version and can be activated then paused",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3224
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/marketing-native.spec.ts",
+      "title": "disabled channel settings survive creation and reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2492
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/messaging-table.spec.ts",
+      "title": "creates an in-app message without external push and filters the persisted table",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3932
+        }
+      ]
+    },
+    {
+      "file": "tests/messaging/messaging-table.spec.ts",
+      "title": "empty message cannot bypass the publish validation",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1603
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "retains every historical menu destination from active plugins",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1429
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "opens the links view from its plugin menu",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2311
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "opens project settings from the account menu",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2502
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "switches the real module project and preserves its environment after reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1521
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "keeps account actions inside the menu and signs out through the core session",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2498
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "opens and closes mobile navigation from the top bar",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1416
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "displays the configured instance name",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1345
+        }
+      ]
+    },
+    {
+      "file": "tests/navigation/sidebar-navigation.spec.ts",
+      "title": "preserves shell dimensions, flat account menu and collapse behaviour",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1417
+        }
+      ]
+    },
+    {
+      "file": "tests/observability/infrastructure.spec.ts",
+      "title": "Infrastructure displays real health, target endpoints and metrics then refreshes its observation",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2447
+        }
+      ]
+    },
+    {
+      "file": "tests/revenue/revenue-page.spec.ts",
+      "title": "Products offerings retains a linked catalog and archives only the selected offering",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3892
+        }
+      ]
+    },
+    {
+      "file": "tests/revenue/revenue-page.spec.ts",
+      "title": "Billing customers searches a real SDK-created identity and persists block/unblock",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3334
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/experience-native.spec.ts",
+      "title": "paywall editor saves and publishes a version that has measured views",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4422
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/experience-native.spec.ts",
+      "title": "onboarding statistics reflect native completion events and the selected version",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1540
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/experience-native.spec.ts",
+      "title": "onboarding editor keeps a block added after creating its first draft",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1906
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/libraries.spec.ts",
+      "title": "the library catalogue refreshes and copies the published release and installation",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2500
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/sdk-setup.spec.ts",
+      "title": "android SDK setup saves, verifies, reloads and removes its Test configuration",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3918
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/sdk-setup.spec.ts",
+      "title": "ios SDK setup saves, verifies, reloads and removes its Test configuration",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3748
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/sdk-setup.spec.ts",
+      "title": "web SDK setup saves, verifies, reloads and removes its Test configuration",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3822
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "project settings keeps the selected reporting period on reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2181
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "the native team section can open and cancel the invitation form",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1874
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "project deletion requires its confirmation and cancellation preserves the project",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2568
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/settings-page.spec.ts",
+      "title": "usage export produces a retrievable CSV from the chosen dates",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1402
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/system-tools.spec.ts",
+      "title": "audit synchronizes its ledger, searches persisted receipts and creates an immutable archive",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2685
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/system-tools.spec.ts",
+      "title": "content creates, edits, publishes and reopens a document with its revision history",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2653
+        }
+      ]
+    },
+    {
+      "file": "tests/settings/system-tools.spec.ts",
+      "title": "gateway saves a route, publishes the manifest and invokes the real API target",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2729
+        }
+      ]
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "contacts save and reopen a real customer record",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2392
+        }
+      ]
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "workforce creates a team that survives reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2483
+        }
+      ]
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "automations persists a service-level policy",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2445
+        }
+      ]
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "help center creates a real portal draft",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2519
+        }
+      ]
+    },
+    {
+      "file": "tests/support/native-operations.spec.ts",
+      "title": "Captain saves an assistant configuration without invoking an external model",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2517
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Support Inbox persists a private note and closed-state filters",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3681
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Support Quality refreshes live conversation metrics and the audit trail",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1765
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Support Reports exports the selected reporting period and downloads its real queued result",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 8328
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-completion.spec.ts",
+      "title": "Proactive Support saves and searches an undelivered campaign draft",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2620
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support settings persist the selected Test profile and restore its business name",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2726
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support configuration creates and edits a validated label",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2768
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support channels attach a connection to a native inbox and restore it after reload",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3506
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-management.spec.ts",
+      "title": "Support integrations save and reopen a dashboard app without external delivery",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "unexpected",
+      "results": [
+        {
+          "status": "failed",
+          "duration_ms": 2588
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Inbox loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1608
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Contacts loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1159
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Workforce loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1261
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Channels loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1197
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Automations loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1147
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Proactive Support loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1143
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Help Center loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1144
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Captain loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1140
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Integrations loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1162
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Reports loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1140
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "Settings loads as a complete Support surface",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1195
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "the Support subnavigation exposes exactly the eleven native pages",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 515
+        }
+      ]
+    },
+    {
+      "file": "tests/support/support-native.spec.ts",
+      "title": "compatibility Support paths expose the owning quality and configuration surfaces",
+      "project": "chromium",
+      "expected_status": "passed",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2547
+        }
+      ]
+    }
+  ]
+}

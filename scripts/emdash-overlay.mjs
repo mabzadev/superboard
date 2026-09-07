@@ -117,22 +117,18 @@ export function renderIntegratedReadme(productReadme, upstream) {
 
 This repository contains the complete EmDash ${upstream.version} source at commit
 \`${upstream.commit}\` from
-[\`emdash-cms/emdash\`](${upstream.remote}). The non-squashed merge keeps the
-upstream history, and
-\`config/emdash-integration.json\` pins the imported commit and deterministic
-root overlay.
+[\`emdash-cms/emdash\`](${upstream.remote}).
+\`config/emdash-integration.json\` records the imported revision and the root
+overlay used by the integrated repository.
 
-The historical Next/OpenNext Dashboard remains available while the Release Front
-parity, migration receipts, development rehearsal, production cutover, and
-observation required by [issue #33](https://github.com/mabzadev/superboard/issues/33)
-are incomplete. It is not the target Front SuperBoard. The audited integration
-details are in
-[\`docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md\`](docs/EMDASH_UPSTREAM_1717D31_INTEGRATION_2026-08-29.md).
+The operator Front runs in \`apps/site\`. EmDash supplies operator sessions,
+the administration interface and the publication of active plugin views.
+The plugins own their React components, business commands and Worker runtimes.
+\`packages/supbrd-front-ui\` contains their shared presentation components.
 
-The first executable target slice lives in \`apps/site\`. It mounts the native
-EmDash Admin, a generic fail-closed Front runtime, the closed Release Front
-contract, D1 activation receipts, and a Last Verified Release cache that never
-becomes activation authority. Release operations are disabled by default.
+Plugin activation publishes a verified Front Release and preserves plugin data
+when its views are disabled. The historical route and menu inventory is retained
+in \`config/superboard-plugin-independence-baseline.json\`.
 
 Use the integrated pnpm gates from the repository root:
 
@@ -594,7 +590,9 @@ export async function expectedGeneratedFiles() {
 		["pnpm-workspace.yaml", renderPnpmWorkspace(upstreamWorkspace, overlay, config.compatibility)],
 		[".gitignore", renderGitignore(upstreamGitignore, overlay)],
 		["README.md", renderIntegratedReadme(overlay.readme, config.upstream)],
-		[".github/workflows/superboard-ci.yml", renderSuperboardCi(overlay.ci)],
+		...(typeof overlay.ci === "string"
+			? [[".github/workflows/superboard-ci.yml", renderSuperboardCi(overlay.ci)]]
+			: []),
 	]);
 }
 

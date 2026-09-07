@@ -139,6 +139,10 @@
 		"noIP": "Pas d'IP",
 		"lockedIPs": "IPs verrouillées",
 		"unlock": "Déverrouiller tout",
+		"passkey": "Clé d’accès",
+		"passkeyEnrolled": "Clé d’accès enregistrée",
+		"removePasskey": "Supprimer",
+		"removePasskeyTitle": "Voulez-vous supprimer cette clé d’accès ?",
 		"noUsers": "Aucun utilisateur trouvé",
 		"impersonate": "Impersonation",
 		"impersonateTitle": "Impersoner {user}",
@@ -233,6 +237,7 @@
 		"localeNote": "Ceci sera affiché sur la page de consentement de l'application utilisateur."
 	},
 	"orgs": {
+		"slug": "Identifiant",
 		"title": "Organisations",
 		"org": "Organisation",
 		"users": "Utilisateurs actuellement actifs dans cette organisation",

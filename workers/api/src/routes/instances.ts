@@ -1956,7 +1956,7 @@ instances.post("/:id/exports/usage", async (c) => {
 		await sendMail(c.env, downloadFileMessage(c.env, user.email, file.name, file.url));
 	}
 	return c.json(
-		{ message: "Export job has been queued. You will be notified when it's ready.", url: file.url },
+		{ message: "Export job has been queued. You will be notified when it's ready.", url: file.url, download_path: file.downloadPath },
 		202,
 	);
 });

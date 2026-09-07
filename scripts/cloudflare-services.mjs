@@ -176,7 +176,6 @@ export const DOMAIN_SERVICES = Object.freeze(Object.keys(DOMAIN_SERVICE_REGISTRY
 export const PLATFORM_SERVICE_REGISTRY = Object.freeze({
 	api: platformService("/health"),
 	site: platformService("/superboard-system/health"),
-	dashboard: platformService("/"),
 	billing: platformService("/internal/v1/health"),
 	messaging: platformService("/health"),
 	email: platformService("/health"),
@@ -227,7 +226,6 @@ export const PLATFORM_SERVICE_SECRETS = Object.freeze({
 		"OBSERVABILITY_INTERNAL_TOKEN",
 		...BILLING_SECRETS,
 	]),
-	dashboard: Object.freeze(["CLIENT_SECRET"]),
 	site: Object.freeze([
 		"EMDASH_ENCRYPTION_KEY",
 		"SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY",
@@ -306,6 +304,8 @@ export function managedWorkerServices(target) {
 }
 
 export function assertServiceForTarget(target, service) {
+	if (service === "dashboard")
+		throw new Error("The Dashboard service has been retired; use --service site");
 	if (!ALL_SERVICES.includes(service) && !managedWorkerDefinition(target, service)) {
 		throw new Error(
 			`--service must be a platform service or a managed Worker declared by ${target.target}`,
@@ -331,6 +331,8 @@ export const DOMAIN_SERVICE_BINDINGS = Object.freeze(
 );
 
 export function assertService(service) {
+	if (service === "dashboard")
+		throw new Error("The Dashboard service has been retired; use --service site");
 	if (!ALL_SERVICES.includes(service)) {
 		throw new Error(`--service must be one of: ${ALL_SERVICES.join(", ")}`);
 	}
@@ -338,11 +340,7 @@ export function assertService(service) {
 
 export function isServiceEnabled(target, service) {
 	if (managedWorkerDefinition(target, service)) return true;
-	if (
-		["api", "site", "dashboard", "email", "identity", "files", "observability", "mcp"].includes(
-			service,
-		)
-	)
+	if (["api", "site", "email", "identity", "files", "observability", "mcp"].includes(service))
 		return true;
 	if (service === "custom") return Boolean(target.customWorker);
 	return target.features?.[service] === true;
