@@ -1,0 +1,2619 @@
+{
+	"source_commit": "60ab8f5ed2aa04b171967cec3b656bfdd3f0f717",
+	"views": [
+		{
+			"plugin_id": "supbrd-plug-audit",
+			"route_id": "superboard.system_audit",
+			"path": "/system/audit",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-audit/views/superboard.system_audit.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-content",
+			"route_id": "superboard.system_content",
+			"path": "/system/content",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-content/views/superboard.system_content.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-products",
+			"route_id": "superboard.products_offerings",
+			"path": "/products/offerings",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-products/views/superboard.products_offerings.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"route_id": "superboard.app_android_setup",
+			"path": "/app/android-setup",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/views/superboard.app_android_setup.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"route_id": "superboard.app_ios_setup",
+			"path": "/app/ios-setup",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/views/superboard.app_ios_setup.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"route_id": "superboard.app_libraries",
+			"path": "/app/libraries",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/views/superboard.app_libraries.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"route_id": "superboard.app_web_setup",
+			"path": "/app/web-setup",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/views/superboard.app_web_setup.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-settings",
+			"route_id": "superboard.project_settings",
+			"path": "/project-settings",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/views/superboard.project_settings.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.accept_invite",
+			"path": "/accept-invite",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.accept_invite.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.account",
+			"path": "/account",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.account.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.app_access_key",
+			"path": "/app/access-key",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.app_access_key.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.app_customers",
+			"path": "/app/customers",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.app_customers.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.app_members",
+			"path": "/app/members",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.app_members.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.profile",
+			"path": "/app/profile",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.profile.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.app_referrals",
+			"path": "/app/referrals",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.app_referrals.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.users",
+			"path": "/app/users",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.users.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity",
+			"path": "/identity",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang",
+			"path": "/identity/:lang",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_account",
+			"path": "/identity/:lang/account",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_account.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_apps",
+			"path": "/identity/:lang/apps",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_apps.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_apps_by_id",
+			"path": "/identity/:lang/apps/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_apps_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_apps_banners_by_id",
+			"path": "/identity/:lang/apps/banners/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_apps_banners_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_apps_banners_new",
+			"path": "/identity/:lang/apps/banners/new",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_apps_banners_new.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_apps_new",
+			"path": "/identity/:lang/apps/new",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_apps_new.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_dashboard",
+			"path": "/identity/:lang/dashboard",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_dashboard.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_logs",
+			"path": "/identity/:lang/logs",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_logs.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_logs_email_by_id",
+			"path": "/identity/:lang/logs/email/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_logs_email_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_logs_sign_in_by_id",
+			"path": "/identity/:lang/logs/sign-in/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_logs_sign_in_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_logs_sms_by_id",
+			"path": "/identity/:lang/logs/sms/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_logs_sms_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_orgs",
+			"path": "/identity/:lang/orgs",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_orgs.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_orgs_by_id",
+			"path": "/identity/:lang/orgs/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_orgs_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_orgs_new",
+			"path": "/identity/:lang/orgs/new",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_orgs_new.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_roles",
+			"path": "/identity/:lang/roles",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_roles.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_roles_by_id",
+			"path": "/identity/:lang/roles/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_roles_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_roles_new",
+			"path": "/identity/:lang/roles/new",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_roles_new.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_saml",
+			"path": "/identity/:lang/saml",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_saml.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_saml_by_id",
+			"path": "/identity/:lang/saml/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_saml_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_saml_new",
+			"path": "/identity/:lang/saml/new",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_saml_new.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_scopes",
+			"path": "/identity/:lang/scopes",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_scopes.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_scopes_by_id",
+			"path": "/identity/:lang/scopes/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_scopes_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_scopes_new",
+			"path": "/identity/:lang/scopes/new",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_scopes_new.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_user_attributes",
+			"path": "/identity/:lang/user-attributes",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_user_attributes.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_user_attributes_by_id",
+			"path": "/identity/:lang/user-attributes/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_user_attributes_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_user_attributes_new",
+			"path": "/identity/:lang/user-attributes/new",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_user_attributes_new.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_users",
+			"path": "/identity/:lang/users",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_users.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.identity_by_lang_users_by_authid",
+			"path": "/identity/:lang/users/:authId",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.identity_by_lang_users_by_authid.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.login",
+			"path": "/login",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.login.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.new_password",
+			"path": "/new_password",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.new_password.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.register",
+			"path": "/register",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.register.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.register_with_email",
+			"path": "/register/with_email",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.register_with_email.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plug-user",
+			"route_id": "superboard.reset_password",
+			"path": "/reset_password",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/views/superboard.reset_password.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.home",
+			"path": "/",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.home.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics",
+			"path": "/analytics",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_alerts",
+			"path": "/analytics/alerts",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_alerts.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_cohorts",
+			"path": "/analytics/cohorts",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_cohorts.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_crashes",
+			"path": "/analytics/crashes",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_crashes.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_dashboards",
+			"path": "/analytics/dashboards",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_dashboards.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_dimensions",
+			"path": "/analytics/dimensions",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_dimensions.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_events",
+			"path": "/analytics/events",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_events.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_feedback",
+			"path": "/analytics/feedback",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_feedback.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_insights",
+			"path": "/analytics/insights",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_insights.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_installations",
+			"path": "/analytics/installations",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_installations.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_purchases",
+			"path": "/analytics/purchases",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_purchases.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_remote_config",
+			"path": "/analytics/remote-config",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_remote_config.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_reports",
+			"path": "/analytics/reports",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_reports.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_settings",
+			"path": "/analytics/settings",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_settings.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_users",
+			"path": "/analytics/users",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_users.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.analytics_views",
+			"path": "/analytics/views",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.analytics_views.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.app_shell",
+			"path": "/app",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.app_shell.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-analytics",
+			"route_id": "superboard.dashboard",
+			"path": "/dashboard",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/views/superboard.dashboard.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"route_id": "superboard.products_customers",
+			"path": "/products/customers",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-billing/views/superboard.products_customers.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"route_id": "superboard.products_entitlements",
+			"path": "/products/entitlements",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-billing/views/superboard.products_entitlements.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-billing",
+			"route_id": "superboard.products_purchases",
+			"path": "/products/purchases",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-billing/views/superboard.products_purchases.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"route_id": "superboard.dynamic_links_campaigns",
+			"path": "/dynamic-links/campaigns",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/views/superboard.dynamic_links_campaigns.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"route_id": "superboard.dynamic_links_campaigns_by_id",
+			"path": "/dynamic-links/campaigns/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/views/superboard.dynamic_links_campaigns_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"route_id": "superboard.dynamic_links_domain",
+			"path": "/dynamic-links/domain",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/views/superboard.dynamic_links_domain.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"route_id": "superboard.dynamic_links_links",
+			"path": "/dynamic-links/links",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/views/superboard.dynamic_links_links.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"route_id": "superboard.dynamic_links_redirect_rules",
+			"path": "/dynamic-links/redirect-rules",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/views/superboard.dynamic_links_redirect_rules.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"route_id": "superboard.dynamic_links_social_media_preview",
+			"path": "/dynamic-links/social-media-preview",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/views/superboard.dynamic_links_social_media_preview.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-dynamic-links",
+			"route_id": "superboard.dynamic_links_tracking",
+			"path": "/dynamic-links/tracking",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/views/superboard.dynamic_links_tracking.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-email",
+			"route_id": "superboard.system_email",
+			"path": "/system/email",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-email/views/superboard.system_email.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-files",
+			"route_id": "superboard.system_files",
+			"path": "/system/files",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-files/views/superboard.system_files.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows",
+			"path": "/flows",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_components",
+			"path": "/flows/components",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_components.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_launchpad",
+			"path": "/flows/launchpad",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_launchpad.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_settings_environments",
+			"path": "/flows/settings/environments",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_settings_environments.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_settings_localization",
+			"path": "/flows/settings/localization",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_settings_localization.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_settings_sdk",
+			"path": "/flows/settings/sdk",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_settings_sdk.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_users",
+			"path": "/flows/users",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_users.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_users_by_id",
+			"path": "/flows/users/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_users_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_workflows",
+			"path": "/flows/workflows",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_workflows.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-flows",
+			"route_id": "superboard.flows_workflows_by_id",
+			"path": "/flows/workflows/:id",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/views/superboard.flows_workflows_by_id.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-gateway",
+			"route_id": "superboard.system_gateway",
+			"path": "/system/gateway",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-gateway/views/superboard.system_gateway.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.marketing_campaigns",
+			"path": "/marketing/campaigns",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.marketing_campaigns.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.marketing_channels",
+			"path": "/marketing/channels",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.marketing_channels.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.marketing_email",
+			"path": "/marketing/email",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.marketing_email.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.marketing_in_app_messages",
+			"path": "/marketing/in-app-messages",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.marketing_in_app_messages.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.marketing_journeys",
+			"path": "/marketing/journeys",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.marketing_journeys.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.marketing_settings",
+			"path": "/marketing/settings",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.marketing_settings.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.marketing_statistics",
+			"path": "/marketing/statistics",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.marketing_statistics.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-marketing",
+			"route_id": "superboard.message_preview_craft",
+			"path": "/message-preview-craft",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/views/superboard.message_preview_craft.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"route_id": "superboard.mcp_authorize",
+			"path": "/mcp/authorize",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/views/superboard.mcp_authorize.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-observability",
+			"route_id": "superboard.infrastructure",
+			"path": "/infrastructure",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-observability/views/superboard.infrastructure.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"route_id": "superboard.onboardings",
+			"path": "/onboardings",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/views/superboard.onboardings.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-onboardings",
+			"route_id": "superboard.onboardings_statistics",
+			"path": "/onboardings/statistics",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/views/superboard.onboardings_statistics.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"route_id": "superboard.paywalls",
+			"path": "/paywalls",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/views/superboard.paywalls.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-paywalls",
+			"route_id": "superboard.paywalls_statistics",
+			"path": "/paywalls/statistics",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/views/superboard.paywalls_statistics.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_automations",
+			"path": "/support/automations",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_automations.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_captain",
+			"path": "/support/captain",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_captain.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_channels",
+			"path": "/support/channels",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_channels.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_configuration",
+			"path": "/support/configuration",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_configuration.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_contacts",
+			"path": "/support/contacts",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_contacts.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_help_center",
+			"path": "/support/help-center",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_help_center.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_inbox",
+			"path": "/support/inbox",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_inbox.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_integrations",
+			"path": "/support/integrations",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_integrations.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_proactive_support",
+			"path": "/support/proactive-support",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_proactive_support.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_quality",
+			"path": "/support/quality",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_quality.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_reports",
+			"path": "/support/reports",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_reports.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_settings",
+			"path": "/support/settings",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_settings.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-support",
+			"route_id": "superboard.support_workforce",
+			"path": "/support/workforce",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/views/superboard.support_workforce.tsx"
+		},
+		{
+			"plugin_id": "supbrd-plugmod-mcp",
+			"route_id": "superboard.mcp",
+			"path": "/mcp",
+			"status": "registered",
+			"module": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/views/superboard.mcp.tsx"
+		}
+	],
+	"provenance": [
+		{
+			"source": "apps/dashboard/src/lib/api.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/api.ts",
+			"owner": "core-context-replacement"
+		},
+		{
+			"source": "apps/dashboard/src/lib/config.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/config.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/api/products/productsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-products/source/api/products/productsService.ts",
+			"owner": "supbrd-plug-products"
+		},
+		{
+			"source": "apps/dashboard/src/lib/utils.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/utils.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/badge.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/badge.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/button.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/button.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/card.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/card.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/input.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/input.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/switch.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/switch.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/table.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/table.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/context/useProjectSelection.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/context/useProjectSelection.tsx",
+			"owner": "core-context-replacement"
+		},
+		{
+			"source": "apps/dashboard/src/lib/Notifications.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/Notifications.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/alert.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/alert.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/lib/ApiError.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/ApiError.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/ModulePage.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/modules/ModulePage.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/ProductsPages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-products/source/components/modules/ProductsPages.tsx",
+			"owner": "supbrd-plug-products"
+		},
+		{
+			"source": "apps/dashboard/src/api/app/appService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/api/app/appService.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/progress.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/progress.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/select.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/select.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/shadcn-io/code-block/index.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/shadcn-io/code-block/index.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/developers/SetupShared.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/developers/SetupShared.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/label.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/label.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/app/SdkSetupWizard.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/app/SdkSetupWizard.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/api/platform/platformService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/api/platform/platformService.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/app/LibrariesPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/app/LibrariesPageContent.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/popover.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/popover.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/calendar.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/calendar.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/dateRangePicker/DateRangePicker.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/dateRangePicker/DateRangePicker.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/dialog.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/dialog.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/common/delete-confirm.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/common/delete-confirm.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/settings/DangerZoneSection.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/settings/DangerZoneSection.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/skeleton.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/skeleton.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/chart.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/chart.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/api.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/api.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/instance.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/instance.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/user.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/user.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/link.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/link.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/campaign.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/campaign.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/notification.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/notification.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/visitor.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/visitor.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/purchase.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/purchase.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/dashboard.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/dashboard.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/event.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/event.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/configuration.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/configuration.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/query.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/query.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/craft.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/craft.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/types/index.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/types/index.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/settings/SettingsActiveUsersChart.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/settings/SettingsActiveUsersChart.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/avatar.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/avatar.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/constants/OptionsConstants.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/constants/OptionsConstants.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/context/useUserContext.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/context/useUserContext.tsx",
+			"owner": "core-context-replacement"
+		},
+		{
+			"source": "apps/dashboard/src/lib/adminOnlyDisplay.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/lib/adminOnlyDisplay.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/settings/MemberSectionElement.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/settings/MemberSectionElement.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/schemas/shared.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/schemas/shared.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/schemas/member.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/schemas/member.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/settings/AddNewMemberDialog.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/settings/AddNewMemberDialog.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/settings/TeamMebersSection.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/components/settings/TeamMebersSection.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/separator.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/separator.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/lib/queryKeys.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/queryKeys.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/api/events/eventsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/api/events/eventsService.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/queries/useEventQueries.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/hooks/queries/useEventQueries.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/api/instances/instanceService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/api/instances/instanceService.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/api/applications/configApplicationsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/api/applications/configApplicationsService.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/queries/useInstanceQueries.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/hooks/queries/useInstanceQueries.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/mutations/useInstanceMutations.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/hooks/mutations/useInstanceMutations.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/analytics/ads.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/analytics/ads.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/analytics/events.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/analytics/events.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/analytics/index.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/analytics/index.ts",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/lib/dateUtils.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/dateUtils.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/lib/SessionStorage.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/SessionStorage.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/project-settings/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-settings/source/app/(protected)/project-settings/page.tsx",
+			"owner": "supbrd-plug-settings"
+		},
+		{
+			"source": "apps/dashboard/src/api/app/appService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/api/app/appService.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/components/developers/SetupShared.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/components/developers/SetupShared.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/components/app/AccessKeyPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/components/app/AccessKeyPageContent.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/checkbox.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/checkbox.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/common/customize-columns.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/common/customize-columns.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/common/DataTable.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/common/DataTable.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/common/pagination-footer.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/common/pagination-footer.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/useTableParams.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/hooks/useTableParams.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/utils/formatCurrency.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/utils/formatCurrency.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/utils/numberFormatter.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/utils/numberFormatter.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/meta.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/meta.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/google.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/google.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/tiktok.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/tiktok.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/linkedIn.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/linkedIn.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/google_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/google_dark_mode.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/linkedIn_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/linkedIn_dark_mode.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/tiktok_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/tiktok_dark_mode.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/meta_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/meta_dark_mode.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/superboard.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/assets/icons/ads_platform/superboard.svg",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/api/dynamic-links/dynamicLinksService.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/linkAnalytics.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/components/dynamic_links/links/linkAnalytics.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/tooltip.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/tooltip.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/LinksTableColumns.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/components/dynamic_links/links/LinksTableColumns.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/components/app/AppAudiencePages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/components/app/AppAudiencePages.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/api/identity/applicationUsersService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/api/identity/applicationUsersService.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/api/billing/billingService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/api/billing/billingService.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/components/app/ApplicationUsersPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/components/app/ApplicationUsersPage.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ConfigBooleanValue.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ConfigBooleanValue.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/PageTitle.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/PageTitle.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/signals/error.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/signals/error.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/signals/config.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/signals/config.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/signals/index.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/signals/index.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/useSignalValue.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/useSignalValue.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/style.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/style.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/table.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/table.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/breadcrumb.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/breadcrumb.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/i18n/navigation.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/i18n/navigation.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/Breadcrumb.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/Breadcrumb.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/spinner.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/spinner.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/LoadingPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/LoadingPage.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/dashboard/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/dashboard/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/lib/LocalStorage.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/LocalStorage.ts",
+			"owner": "core-context-replacement"
+		},
+		{
+			"source": "apps/dashboard/src/identity/melody-react.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/melody-react.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/button.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/button.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/account/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/account/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/badge.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/badge.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/EntityStatusLabel.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/EntityStatusLabel.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/proxy.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/proxy.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/route.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/route.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/type.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/type.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/data.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/data.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/access.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/access.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/variable.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/variable.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/tools/index.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/tools/index.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/EditLink.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/EditLink.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/CreateButton.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/CreateButton.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ClientTypeLabel.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ClientTypeLabel.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/stores/app.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/stores/app.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/services/auth/index.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/services/auth/index.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/services/auth/api.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/services/auth/api.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/BannerTypeLabel.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/BannerTypeLabel.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/input.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/input.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/RedirectUriEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/RedirectUriEditor.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/useEditApp.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/useEditApp.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/switch.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/switch.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/alert.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/alert.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/SubmitError.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/SubmitError.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/FieldError.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/FieldError.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/checkbox.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/checkbox.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/label.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/label.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ScopesEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ScopesEditor.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/SaveButton.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/SaveButton.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/alert-dialog.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/alert-dialog.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ConfirmModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ConfirmModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/DeleteButton.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/DeleteButton.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/RequiredProperty.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/RequiredProperty.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/stores/index.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/stores/index.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/LocaleEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/LocaleEditor.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/banners/useEditBanner.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/banners/useEditBanner.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/select.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/select.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/BannerTypeSelector.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/BannerTypeSelector.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/banners/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/banners/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/banners/new/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/banners/new/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ClientTypeSelector.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ClientTypeSelector.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/apps/new/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/apps/new/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/pagination.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/pagination.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/Pagination.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/Pagination.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ViewLink.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ViewLink.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/logs/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/email/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/logs/email/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/sign-in/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/logs/sign-in/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/logs/sms/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/logs/sms/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/orgs/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/useEditOrg.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/orgs/useEditOrg.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ColorInput.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ColorInput.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/LinkInput.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/LinkInput.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/IsSelfLabel.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/IsSelfLabel.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/hooks/useDebounce.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/hooks/useDebounce.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/UserTable.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/UserTable.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/[id]/CreateOrgGroupModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/orgs/[id]/CreateOrgGroupModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/[id]/UpdateOrgGroupModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/orgs/[id]/UpdateOrgGroupModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/orgs/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/orgs/new/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/orgs/new/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/SystemLabel.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/SystemLabel.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/roles/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/roles/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/roles/useEditRole.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/roles/useEditRole.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/roles/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/roles/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/roles/new/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/roles/new/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/saml/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/saml/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/saml/useEditSaml.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/saml/useEditSaml.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/textarea.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/textarea.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/saml/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/saml/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/saml/new/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/saml/new/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/scopes/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/scopes/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/scopes/useEditScope.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/scopes/useEditScope.ts",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/scopes/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/scopes/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/scopes/new/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/scopes/new/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/user-attributes/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/user-attributes/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/user-attributes/useEditUserAttribute.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/user-attributes/useEditUserAttribute.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/user-attributes/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/user-attributes/[id]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/user-attributes/new/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/user-attributes/new/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/InviteDeliveryFields.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/InviteDeliveryFields.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/InviteUserModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/InviteUserModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/users/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/users/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/users/[authId]/ImpersonationModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/users/[authId]/ImpersonationModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/users/[authId]/ResendInviteModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/users/[authId]/ResendInviteModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/users/[authId]/UserOrgsModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/users/[authId]/UserOrgsModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/users/[authId]/UserOrgGroupModal.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/users/[authId]/UserOrgGroupModal.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/ui/card.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/ui/card.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/identity/components/UserEmailVerified.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/identity/components/UserEmailVerified.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/identity/[lang]/users/[authId]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plug-user/source/app/(protected)/identity/[lang]/users/[authId]/page.tsx",
+			"owner": "supbrd-plug-user"
+		},
+		{
+			"source": "apps/dashboard/src/api/app/appService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/api/app/appService.ts",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/api/dynamic-links/dynamicLinksService.ts",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/api/products/productsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/api/products/productsService.ts",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/components/common/ads-platform.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/common/ads-platform.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/layout/section-cards.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/components/layout/section-cards.tsx",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/constants/FilterOptions.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/constants/FilterOptions.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/dashboard/DashboardPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/components/dashboard/DashboardPageContent.tsx",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/api/analytics/analyticsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/api/analytics/analyticsService.ts",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/tabs.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/tabs.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/analytics/AnalyticsFeaturePages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/components/analytics/AnalyticsFeaturePages.tsx",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/components/analytics/AnalyticsPages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-analytics/source/components/analytics/AnalyticsPages.tsx",
+			"owner": "supbrd-plugmod-analytics"
+		},
+		{
+			"source": "apps/dashboard/src/api/billing/billingService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-billing/source/api/billing/billingService.ts",
+			"owner": "supbrd-plugmod-billing"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/BillingCustomersPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-billing/source/components/modules/BillingCustomersPage.tsx",
+			"owner": "supbrd-plugmod-billing"
+		},
+		{
+			"source": "apps/dashboard/src/api/products/productsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-billing/source/api/products/productsService.ts",
+			"owner": "supbrd-plugmod-billing"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/ProductsPages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-billing/source/components/modules/ProductsPages.tsx",
+			"owner": "supbrd-plugmod-billing"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/useUrlState.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/hooks/useUrlState.ts",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/api/dynamic-links/dynamicLinksService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/api/dynamic-links/dynamicLinksService.ts",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/campaigns/CampaignsEmptyState.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/campaigns/CampaignsEmptyState.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/campaigns/CampaignAnalyticsTable.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/campaigns/CampaignAnalyticsTable.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/meta.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/meta.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/google.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/google.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/tiktok.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/tiktok.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/linkedIn.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/linkedIn.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/google_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/google_dark_mode.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/linkedIn_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/linkedIn_dark_mode.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/tiktok_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/tiktok_dark_mode.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/meta_dark_mode.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/meta_dark_mode.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/superboard.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/assets/icons/ads_platform/superboard.svg",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/linkAnalytics.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/links/linkAnalytics.ts",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/LinksTableColumns.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/links/LinksTableColumns.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/campaigns/CampaignAnalyticsTableColumns.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/campaigns/CampaignAnalyticsTableColumns.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/campaigns/CampaignsPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/campaigns/CampaignsPageContent.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/LinksEmptyState.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/links/LinksEmptyState.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/LinksTable.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/links/LinksTable.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/LinksPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/links/LinksPageContent.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/dynamic-links/campaigns/[id]/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/app/(protected)/dynamic-links/campaigns/[id]/page.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/domain/DomainPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/domain/DomainPageContent.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/redirect-rules/RedirectRulesPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/redirect-rules/RedirectRulesPageContent.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/social-preview/SocialPreviewPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/social-preview/SocialPreviewPageContent.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/tracking/TrackingPageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-dynamic-links/source/components/dynamic_links/tracking/TrackingPageContent.tsx",
+			"owner": "supbrd-plugmod-dynamic-links"
+		},
+		{
+			"source": "apps/dashboard/src/api/flows/flowsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/api/flows/flowsService.ts",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/i18n.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/i18n.ts",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/FlowsContext.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/FlowsContext.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/FlowsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/FlowsPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/OverviewPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/OverviewPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/textarea.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/textarea.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/ComponentsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/ComponentsPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/FlowStatusBadge.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/FlowStatusBadge.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/LaunchpadPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/LaunchpadPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/SettingsPages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/SettingsPages.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/UsersPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/UsersPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/UserDetailsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/UserDetailsPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/WorkflowsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/WorkflowsPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/editor/graph.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/editor/graph.ts",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/editor/BlockCatalog.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/editor/BlockCatalog.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/editor/FlowNode.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/editor/FlowNode.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/editor/InspectorPanel.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/editor/InspectorPanel.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/editor/useFlowHistory.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/editor/useFlowHistory.ts",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/editor/FlowEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/editor/FlowEditor.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/features/flows/editor/WorkflowEditorPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-flows/source/features/flows/editor/WorkflowEditorPage.tsx",
+			"owner": "supbrd-plugmod-flows"
+		},
+		{
+			"source": "apps/dashboard/src/api/marketing/marketingService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/api/marketing/marketingService.ts",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/MarketingPages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/modules/MarketingPages.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/JourneyCanvasEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/modules/JourneyCanvasEditor.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/MarketingJourneyPages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/modules/MarketingJourneyPages.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/MessagingEmptyState.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/MessagingEmptyState.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/MessagingTable.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/MessagingTable.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/MessagingTableColumns.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/MessagingTableColumns.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/api/notifications/notificationService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/api/notifications/notificationService.ts",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/queries/useNotificationsQueries.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/hooks/queries/useNotificationsQueries.ts",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/useUrlState.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/hooks/useUrlState.ts",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/ComponentToolbar.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/ComponentToolbar.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/Button.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/Button.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/ui/radio-group.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/ui/radio-group.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/Text.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/Text.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/Container.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/Container.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/RootContainer.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/RootContainer.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/Image.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/Image.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/schemas/message.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/schemas/message.ts",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/CreateMessageOverview.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/CreateMessageOverview.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/CreateMessageDelivery.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/CreateMessageDelivery.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/hooks/mutations/useNotificationsMutations.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/hooks/mutations/useNotificationsMutations.ts",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/Toolbox.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/Toolbox.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/SettingsPanel.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/SettingsPanel.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/Editor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/Editor.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/CreateMessageContent.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/CreateMessageContent.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/ExportButton.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/ExportButton.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/PreviewOnlyButton.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/PreviewOnlyButton.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/common/action-confirm.tsx",
+			"destination": "packages/supbrd-front-ui/src/shared/components/common/action-confirm.tsx",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/dynamic_links/links/create_link/CreateLinkSidebar.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/dynamic_links/links/create_link/CreateLinkSidebar.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/PublishConfirmDialog.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/PublishConfirmDialog.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/MessagePreviewDialog.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/MessagePreviewDialog.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/MessageDialog.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/MessageDialog.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/messaging/MessageDialogWithEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/messaging/MessageDialogWithEditor.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/craft/DynamicEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/craft/DynamicEditor.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/InAppMessagesPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/components/modules/InAppMessagesPage.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/app/message-preview-craft/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-marketing/source/app/message-preview-craft/page.tsx",
+			"owner": "supbrd-plugmod-marketing"
+		},
+		{
+			"source": "apps/dashboard/src/assets/icons/ads_platform/superboard.svg",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/source/assets/icons/ads_platform/superboard.svg",
+			"owner": "supbrd-plugmod-mcp"
+		},
+		{
+			"source": "apps/dashboard/src/api/mcp/mcpService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/source/api/mcp/mcpService.ts",
+			"owner": "supbrd-plugmod-mcp"
+		},
+		{
+			"source": "apps/dashboard/src/api/auth/userService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/source/api/auth/userService.ts",
+			"owner": "supbrd-plugmod-mcp"
+		},
+		{
+			"source": "apps/dashboard/src/app/mcp/authorize/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-mcp/source/app/mcp/authorize/page.tsx",
+			"owner": "supbrd-plugmod-mcp"
+		},
+		{
+			"source": "apps/dashboard/src/api/platform/platformService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-observability/source/api/platform/platformService.ts",
+			"owner": "supbrd-plugmod-observability"
+		},
+		{
+			"source": "apps/dashboard/src/app/(protected)/infrastructure/page.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-observability/source/app/(protected)/infrastructure/page.tsx",
+			"owner": "supbrd-plugmod-observability"
+		},
+		{
+			"source": "apps/dashboard/src/api/onboardings/onboardingsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/api/onboardings/onboardingsService.ts",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/types.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/components/experience-editor/types.ts",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/model.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/components/experience-editor/model.ts",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/useEditorHistory.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/components/experience-editor/useEditorHistory.ts",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/ExperienceEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/components/experience-editor/ExperienceEditor.tsx",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/ExperienceStatisticsFilters.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/components/experience-editor/ExperienceStatisticsFilters.tsx",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/index.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/components/experience-editor/index.ts",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/OnboardingPages.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-onboardings/source/components/modules/OnboardingPages.tsx",
+			"owner": "supbrd-plugmod-onboardings"
+		},
+		{
+			"source": "apps/dashboard/src/api/paywalls/paywallsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/api/paywalls/paywallsService.ts",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/types.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/components/experience-editor/types.ts",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/model.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/components/experience-editor/model.ts",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/useEditorHistory.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/components/experience-editor/useEditorHistory.ts",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/ExperienceEditor.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/components/experience-editor/ExperienceEditor.tsx",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/ExperienceStatisticsFilters.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/components/experience-editor/ExperienceStatisticsFilters.tsx",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/components/experience-editor/index.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/components/experience-editor/index.ts",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/PaywallsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-paywalls/source/components/modules/PaywallsPage.tsx",
+			"owner": "supbrd-plugmod-paywalls"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/nativeClient.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/nativeClient.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/automationsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/automationsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/support/SupportUi.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/support/SupportUi.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportAutomationsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportAutomationsPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/captainService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/captainService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportCaptainPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportCaptainPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/channelsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/channelsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/workforceService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/workforceService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportChannelsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportChannelsPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/settingsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/settingsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/messaging/settingsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/messaging/settingsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportConfigurationPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportConfigurationPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/operationsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/operationsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportContactsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportContactsPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/helpCenterService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/helpCenterService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportHelpCenterPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportHelpCenterPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/inboxService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/inboxService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/inboxDeepLink.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/inboxDeepLink.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportInboxPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportInboxPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/integrationsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/integrationsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/lib/validation.ts",
+			"destination": "packages/supbrd-front-ui/src/shared/lib/validation.ts",
+			"owner": "shared"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportIntegrationsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportIntegrationsPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/proactiveService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/proactiveService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportProactivePage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportProactivePage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/messaging/operationsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/messaging/operationsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportQualityPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportQualityPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/reportsService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/reportsService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportReportsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportReportsPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/api/support/operationsHealthService.ts",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/api/support/operationsHealthService.ts",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportSettingsPage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportSettingsPage.tsx",
+			"owner": "supbrd-plugmod-support"
+		},
+		{
+			"source": "apps/dashboard/src/components/modules/SupportWorkforcePage.tsx",
+			"destination": "packages/supbrd-runtime-plugins/src/front/client/plugins/supbrd-plugmod-support/source/components/modules/SupportWorkforcePage.tsx",
+			"owner": "supbrd-plugmod-support"
+		}
+	]
+}

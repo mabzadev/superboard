@@ -1,0 +1,20 @@
+[
+  {
+    "entity": "roles",
+    "name": "autonomy-role",
+    "path": "/identity/en/roles/2",
+    "persisted": true
+  },
+  {
+    "entity": "orgs",
+    "name": "Autonomy Organization",
+    "path": "/identity/en/orgs/1",
+    "persisted": true
+  },
+  {
+    "entity": "scopes",
+    "name": "autonomy.read",
+    "path": "/identity/en/scopes/15",
+    "persisted": true
+  }
+]

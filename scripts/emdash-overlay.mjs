@@ -193,6 +193,12 @@ export function renderRootPackage(upstreamPackage, overlay) {
 	scripts["emdash:overlay:check"] = "node scripts/emdash-overlay.mjs check";
 	scripts["emdash:integration:test"] = "node --test scripts/emdash-overlay.test.mjs";
 	scripts["emdash:lint"] = "node scripts/emdash-overlay.mjs lint-upstream";
+	scripts.lint = "node --test scripts/superboard-lint.test.mjs && node scripts/superboard-lint.mjs";
+	scripts["lint:quick"] = "node scripts/superboard-lint.mjs --quick --json";
+	scripts["lint:json"] = "node scripts/superboard-lint.mjs --json";
+	scripts["lint:fix"] = "node scripts/superboard-lint.mjs --fix";
+	scripts["lint:coverage"] = "node scripts/superboard-lint.mjs --coverage";
+	scripts["lint:test"] = "node --test scripts/superboard-lint.test.mjs";
 	scripts["emdash:workspace-deps"] = "node scripts/emdash-overlay.mjs workspace-deps";
 	scripts["emdash:workspace-deps:check"] = "node scripts/emdash-overlay.mjs workspace-deps --check";
 	scripts["emdash:format:full"] = scripts.format;

@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 
 import { jsonResponse, requirePluginOperator } from "../../../../../../lib/operator-guard.js";
+import { dispatchPluginApiAdapter } from "../../../../../../lib/plugin-api-adapter.js";
+import { requireActiveSuperBoardPlugin } from "../../../../../../lib/plugin-availability.js";
 import { unwrapMigratedPayload } from "../../../../../../lib/plugin-data-source.js";
 import {
 	importPluginStoreEncryptionKey,
@@ -16,6 +18,8 @@ export const prerender = false;
 const clientInputErrorPattern = /(?:INVALID|REQUIRED|REJECTED)$/u;
 
 export const GET: APIRoute = async (context) => {
+	if (context.url.searchParams.has("request"))
+		return dispatchPluginApiAdapter(context, "data_source");
 	const denied = requirePluginOperator(context);
 	if (denied) return denied;
 	const pluginId = context.params.pluginId ?? "";
@@ -32,6 +36,12 @@ export const GET: APIRoute = async (context) => {
 	);
 	if (!dataSource) return jsonResponse({ error: { code: "DATA_SOURCE_NOT_FOUND" } }, 404);
 	const env = getSiteEnv();
+	const inactive = await requireActiveSuperBoardPlugin(env.DB, {
+		instance_id: env.SUPERBOARD_INSTANCE_ID,
+		target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
+		plugin_id: pluginId,
+	});
+	if (inactive) return inactive;
 	const encodedKey = env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY?.trim();
 	if (!encodedKey) return jsonResponse({ error: { code: "PLUGIN_STORE_KEY_UNAVAILABLE" } }, 503);
 	try {
@@ -60,7 +70,10 @@ export const GET: APIRoute = async (context) => {
 		});
 	} catch (error) {
 		const code = error instanceof Error ? error.message : "DATA_SOURCE_QUERY_FAILED";
-		const status = clientInputErrorPattern.test(code) ? 400 : 503;
+		const status =
+			code === "PLUGIN_MANIFEST_NOT_ACTIVE" ? 404 : clientInputErrorPattern.test(code) ? 400 : 503;
 		return jsonResponse({ error: { code } }, status);
 	}
 };
+
+export const POST: APIRoute = (context) => dispatchPluginApiAdapter(context, "data_source");

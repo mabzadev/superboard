@@ -392,8 +392,8 @@ test("exercises every required contribution and records parity blockers", async 
 		`/_emdash/api/superboard/plugins/${failedPlugin.plugin_id}/data-sources/${blockedDataSource.data_source_id}?project_ref=${projectRef}`,
 		{ method: "GET" },
 	);
-	expect(rejected.status).toBe(503);
-	expect(await rejected.json()).toEqual({ error: { code: "PLUGIN_MANIFEST_NOT_ACTIVE" } });
+	expect(rejected.status).toBe(404);
+	expect(await rejected.json()).toEqual({ error: { code: "PLUGIN_NOT_ACTIVE" } });
 	const expectedGatewayRoutes = parityMatrix.rows
 		.filter(
 			({ kind, required, release_id: releaseId, target: pluginId }) =>

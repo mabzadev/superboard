@@ -1,0 +1,24 @@
+{
+  "plugin_id": "supbrd-plugmod-billing",
+  "path": "/products/purchases",
+  "operation": "historical_import_ui_resume",
+  "responses": [
+    {
+      "http_status": 200,
+      "data": {
+        "complete": false,
+        "table": "audit_events",
+        "cursor": []
+      }
+    },
+    {
+      "http_status": 200,
+      "data": {
+        "complete": true
+      }
+    }
+  ],
+  "status": "passed",
+  "reloaded": true,
+  "note": "Resumed after a page reload interrupted the first import batch. QA source contained no historical purchase fixture; no transferred purchase count is claimed."
+}

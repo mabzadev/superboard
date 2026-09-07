@@ -89,6 +89,7 @@ const {
 			syncMarketplacePlugins: async () => undefined,
 			syncRegistryPlugins: async () => undefined,
 			setPluginStatus: async () => undefined,
+			inspectPluginHealth: ok,
 		},
 		PUBLIC_PLUGIN_RESULT: publicPluginResult,
 		mockGetPluginRouteMeta: getPluginRouteMeta,

@@ -5,6 +5,7 @@ import {
 	createFrontDraftWithSnapshot,
 	getCandidateByReleaseId,
 } from "../../../../lib/front-workflow-repository.js";
+import { requireManagedPluginOperationAccess } from "../../../../lib/managed-plugin-operation.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
 import { createD1FrontReleaseRepository } from "../../../../lib/release-repository.js";
 import { isRecord, isUlid } from "../../../../lib/request-validation.js";
@@ -23,6 +24,12 @@ export const POST: APIRoute = async (context) => {
 	const env = getSiteEnv();
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
+	const busy = await requireManagedPluginOperationAccess(
+		context,
+		env.DB,
+		env.SUPERBOARD_INSTANCE_ID,
+	);
+	if (busy) return busy;
 	try {
 		const body: unknown = await context.request.json();
 		if (

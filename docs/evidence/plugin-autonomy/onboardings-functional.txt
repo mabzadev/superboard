@@ -1,0 +1,68 @@
+CREATE 201 {"data":{"id":"625b763e-6ab2-4286-a66f-1499a505fddd","identifier":"autonomy-onboarding","display_name":"Onboarding autonome de test","active_version":null,"active_version_id":null,"draft_version":{"id":"0dc42fdb-58e0-4bce-a466-b23300b98592","version":1,"state":"draft","configuration":{"schema_version":1,"theme":{"accent_color":"#6366f1","background_color":"#ffffff","text_color":"#111827","font_family":"Inter","corner_radius":14},"screens":[{"id":"screen_fd60814bc4554b5f","name":"Welcome","blocks":[{"id":"heading_834fbc89f0224302","type":"heading","props":{"text":"Unlock everything","align":"center"}},{"id":"text_b2c63d901b3c4fdd","type":"text","props":{"text":"A better experience starts here.","align":"center"}},{"id":"button_266227fcda7a4768","type":"button","props":{"text":"Continue","action":"next"}}]}],"metadata":{}}}}}
+PUBLISH 200 {"data":{"id":"625b763e-6ab2-4286-a66f-1499a505fddd","active_version":1,"active_version_id":"0dc42fdb-58e0-4bce-a466-b23300b98592"}}
+BODY SuperBoard
+ONBOARDINGS
+Onboardings
+Statistics
+SUPERBOARD
+Onboardings
+Open EmDash Admin
+Onboardings
+
+Design multi-screen flows, target audiences and publish experiments.
+
+Onboardings
+Create a flow with its first visual draft.
+Create onboarding
+Onboarding autonome de test
+
+autonomy-onboarding · v1 published
+
+Visual onboarding editor
+Reorder screens and blocks, configure transitions, theme and mobile preview.
+Undo
+Redo
+Editor
+Preview
+Ready to save
+
+Screens
+
+Add
+Duplicate
+1. Welcome
+3 blocks
+
+Blocks
+
+Heading
+Text
+Image
+Benefits
+Products
+Button
+Legal
+Spacer
+Close
+Finish flow
+Screen display conditions
+HEADING
+Unlock everything
+TEXT
+A better experience starts here.
+BUTTON
+Continue
+
+Theme
+
+Select a block to edit its content.
+
+Accent Color
+Background Color
+Text Color
+Font family
+Corner radius
+Save immutable draft
+
+Version history
+ERRORS []

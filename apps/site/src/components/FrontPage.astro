@@ -11,6 +11,8 @@ import { projectNativeFrontPresentation } from "../lib/native-front-presentation
 import { ensureSuperBoardViews } from "../lib/superboard-views.js";
 import { createUserFrontI18n, resolveUserFrontLocale } from "../lib/user-front-i18n.js";
 import { NativeFrontApp } from "./NativeFrontApp.js";
+import { resolveOperatorProjectScope } from "../lib/operator-project-scope.js";
+import { getSiteEnv } from "../lib/site-env.js";
 
 import "../styles/dashboard-views.css";
 import "../styles/native-front.css";
@@ -26,9 +28,10 @@ const locale = resolveUserFrontLocale(requestedLocale);
 let configuration;
 if (model.resolution.result === "rendered" && model.operator) {
 	await ensureSuperBoardViews(Astro.locals.emdash.db);
+	const route = model.release?.release.payload.front_route_manifest.routes.find(({ route_id }) => route_id === model.resolution.route_id);
 	const [menu, viewResult] = await Promise.all([
 		getMenu("superboard-admin"),
-		getEmDashEntry("views", frontViewSlug(model.requested_path)),
+		getEmDashEntry("views", frontViewSlug(route?.path_pattern ?? model.requested_path)),
 	]);
 	if (Astro.cache?.enabled) Astro.cache.set(viewResult.cacheHint);
 	configuration = {
@@ -37,9 +40,14 @@ if (model.resolution.result === "rendered" && model.operator) {
 	};
 }
 const projection = projectNativeFrontPresentation(model, locale, configuration);
+projection.operator = model.operator;
+if (model.operator && model.resolution.result === "rendered" && projection.content_mounts.some(({ renderer }) => renderer.plugin_id !== "supbrd-core")) {
+	try { projection.project_scope = await resolveOperatorProjectScope(getSiteEnv(), model.operator); }
+	catch { /* The authenticated POST bootstrap resolves absent core projections in the client. */ }
+}
 const i18n = createUserFrontI18n(locale);
 const viewTitle = projection.content_mounts[0]?.view_title ?? model.page_title;
-const title = viewTitle ? i18n._(viewTitle) : i18n._("site.front.title");
+const title = viewTitle ? (Object.hasOwn(projection.messages, viewTitle) ? i18n._(viewTitle) : viewTitle) : i18n._("site.front.title");
 ---
 
 <!doctype html>

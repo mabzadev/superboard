@@ -1,0 +1,30 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"ignorePatterns": [
+		"example-templates",
+		"examples",
+		"node_modules",
+		".turbo",
+		".next",
+		"dist",
+		"pandacss-generated",
+		"schema.d.ts",
+		"next-env.d.ts",
+		"panda.config.ts"
+	],
+	"rules": {
+		"typescript/consistent-type-imports": "error",
+		"no-unused-vars": [
+			"error",
+			{
+				"argsIgnorePattern": "^_",
+				"destructuredArrayIgnorePattern": "^_",
+				"fix": {
+					"imports": "off"
+				}
+			}
+		],
+		"prefer-tag-over-role": "off",
+		"typescript/no-deprecated": "error"
+	}
+}

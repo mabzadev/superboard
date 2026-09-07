@@ -48,6 +48,7 @@ export interface NativeFrontSurfaceInput {
 
 export interface NativeFrontPluginModule {
 	plugin_id: string;
+	translations?: Readonly<Record<string, Readonly<Record<string, string>>>>;
 	renderer_ids: readonly string[];
 	renderer_builds: Readonly<Record<string, string>>;
 	surfaces: readonly NativeFrontSurfaceContribution[];
@@ -165,6 +166,7 @@ export function defineNativeFrontPlugin(input: {
 	plugin_id: string;
 	plugin_label: string;
 	description: string;
+	translations?: NativeFrontPluginModule["translations"];
 	permission_expression?: string;
 	surfaces: readonly NativeFrontSurfaceInput[];
 }): NativeFrontPluginModule {
@@ -193,6 +195,7 @@ export function defineNativeFrontPlugin(input: {
 
 	return {
 		plugin_id: input.plugin_id,
+		...(input.translations ? { translations: input.translations } : {}),
 		renderer_ids: rendererIds,
 		renderer_builds: {},
 		surfaces,
@@ -246,6 +249,7 @@ export function parseFrontNavigation(
 		if (
 			typeof entry.group_id !== "string" ||
 			typeof entry.label !== "string" ||
+			typeof entry.order !== "number" ||
 			!Number.isSafeInteger(entry.order) ||
 			!Array.isArray(entry.items)
 		) {
@@ -254,7 +258,7 @@ export function parseFrontNavigation(
 		return {
 			group_id: entry.group_id,
 			label: entry.label,
-			order: entry.order as number,
+			order: entry.order,
 			items: entry.items.map((item) => parseNavigationItem(item)),
 		};
 	});
@@ -285,6 +289,7 @@ function parseNavigationItem(value: unknown): FrontNavigationItem {
 		!value.href.startsWith("/") ||
 		typeof value.label !== "string" ||
 		typeof value.permission !== "string" ||
+		typeof value.order !== "number" ||
 		!Number.isSafeInteger(value.order)
 	) {
 		throw new TypeError("Front navigation item is invalid");
@@ -294,7 +299,7 @@ function parseNavigationItem(value: unknown): FrontNavigationItem {
 		href: value.href,
 		label: value.label,
 		permission: value.permission,
-		order: value.order as number,
+		order: value.order,
 	};
 }
 

@@ -13,7 +13,9 @@ import type {
 
 const PATH_SUFFIX_PATTERN = /[?#]/u;
 const PATH_EDGE_SLASH_PATTERN = /^\/+|\/+$/gu;
-const FIELD_CONTROLS = new Set<NativeRendererField["control"]>(["text", "textarea", "range"]);
+function isFieldControl(value: unknown): value is NativeRendererField["control"] {
+	return value === "text" || value === "textarea" || value === "range";
+}
 
 export function frontViewSlug(path: string): string {
 	const normalized =
@@ -120,7 +122,7 @@ function rendererField(value: unknown): NativeRendererField | null {
 		!isRecord(value) ||
 		typeof value.label !== "string" ||
 		typeof value.control !== "string" ||
-		!FIELD_CONTROLS.has(value.control as NativeRendererField["control"])
+		!isFieldControl(value.control)
 	) {
 		return null;
 	}
@@ -128,7 +130,7 @@ function rendererField(value: unknown): NativeRendererField | null {
 	if (value.value !== undefined && typeof value.value !== "string") return null;
 	return {
 		label: value.label,
-		control: value.control as NativeRendererField["control"],
+		control: value.control,
 		...(typeof value.placeholder === "string" ? { placeholder: value.placeholder } : {}),
 		...(typeof value.value === "string" ? { value: value.value } : {}),
 	};

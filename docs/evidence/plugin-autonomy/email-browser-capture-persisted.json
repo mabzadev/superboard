@@ -1,0 +1,10 @@
+{
+  "http_status": 200,
+  "data_ids": [
+    "7f5a2bd3-ea50-47bd-b270-2713856fa58e"
+  ],
+  "persisted": true,
+  "status": "captured",
+  "transport": "capture",
+  "external_delivery_claimed": false
+}

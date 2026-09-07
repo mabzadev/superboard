@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { superboardReleaseOperatorApi } from "./release-operator-api.mjs";
 
-test("injects every release operator endpoint below the authenticated EmDash API", () => {
+void test("injects every release operator endpoint below the authenticated EmDash API", () => {
 	const routes = [];
 	const integration = superboardReleaseOperatorApi();
 	integration.hooks["astro:config:setup"]({
@@ -12,6 +12,9 @@ test("injects every release operator endpoint below the authenticated EmDash API
 	assert.deepEqual(
 		routes.map(({ pattern }) => pattern),
 		[
+			"/_emdash/api/superboard/operator-context",
+			"/_emdash/api/superboard/plugins/[pluginId]/enable",
+			"/_emdash/api/superboard/plugins/[pluginId]/disable",
 			"/_emdash/api/superboard/plugins/user/install",
 			"/_emdash/api/superboard/plugins/sync",
 			"/_emdash/api/superboard/plugins/[pluginId]/lifecycle",

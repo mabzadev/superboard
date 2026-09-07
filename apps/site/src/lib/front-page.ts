@@ -10,6 +10,10 @@ import {
 	type NativeFrontOperator,
 } from "@superboard/supbrd-core";
 
+import { probeSuperBoardPluginWorker } from "./plugin-readiness.js";
+import { requireActiveSuperBoardPlugin } from "./plugin-availability.js";
+import { resolveSuperBoardPluginTarget } from "./superboard-plugin-catalog.js";
+
 import { CORE_FRONT_RENDERER_DESCRIPTORS } from "./core-front-contract.js";
 import { assertNativeFrontRenderer } from "./native-front-plugins.js";
 import {
@@ -96,6 +100,39 @@ async function resolveFrontPageFromRelease(
 		permissions,
 		dependency_health: dependencyHealth,
 	});
+	if (resolution.result === "unavailable" && release && user) {
+		const matched = resolveFrontRoute(release.runtime_release.front_route_manifest, requestedPath);
+		if (matched.result === "matched") {
+			try {
+				for (const dependencyId of matched.route.dependencies) {
+					if (dependencyHealth[dependencyId] === "ready") continue;
+					const plugin = release.release.payload.plugin_lock.find(
+						({plugin_id}) => `dependency.${plugin_id.replaceAll("-", "_")}` === dependencyId,
+					);
+					if (!plugin) continue;
+					const inactive = await requireActiveSuperBoardPlugin(env.DB, {
+						instance_id: env.SUPERBOARD_INSTANCE_ID,
+						target: resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT),
+						plugin_id: plugin.plugin_id,
+					});
+					if (inactive) {
+						resolution = {result:"not_found", route_id:null, state_renderer_id:null};
+						break;
+					}
+					await probeSuperBoardPluginWorker(env, plugin.plugin_id, {
+						operator_id:user.id, instance_id:env.SUPERBOARD_INSTANCE_ID, role:user.role,
+					});
+					dependencyHealth[dependencyId] = "ready";
+				}
+				if (resolution.result !== "not_found") resolution = resolveFrontRequest({
+					last_verified_release:release.runtime_release, requested_path:requestedPath,
+					admin_session:"valid", permissions, dependency_health:dependencyHealth,
+				});
+			} catch {
+				// An activation receipt does not establish the current availability of its Worker.
+			}
+		}
+	}
 	if (release) {
 		try {
 			assertReleasePresentation(release.release.payload);

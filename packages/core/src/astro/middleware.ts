@@ -917,6 +917,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 					handleRevisionRestore: runtime.handleRevisionRestore.bind(runtime),
 
 					// Plugin routes
+					inspectPluginHealth: runtime.inspectPluginHealth.bind(runtime),
 					handlePluginApiRoute: runtime.handlePluginApiRoute.bind(runtime),
 					handlePublicPluginApiRoute: createPublicPluginApiRouteHandler(runtime),
 					getPluginRouteMeta: runtime.getPluginRouteMeta.bind(runtime),

@@ -1,0 +1,28 @@
+{
+  "results": [
+    {
+      "plugin_id": "supbrd-plugmod-files",
+      "path": "/system/files",
+      "operation": "file_upload_download_trash_restore",
+      "status": "passed",
+      "persisted_id": "e24ec3bc-3a21-4a0e-aec5-e2d22f76b9ab",
+      "filename": "autonomy-file-1788763356923.txt",
+      "download_bytes_match": true,
+      "reloaded": true,
+      "restored": true
+    },
+    {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "path": "/mcp",
+      "operation": "mcp_call_receipt_reload",
+      "status": "passed",
+      "persisted_id": "4a7548b4-4737-4299-9934-bcb8692aa2a6",
+      "session_id": "295fb629-b1ad-4eac-9a07-5882a2ade877",
+      "tool": "get_status",
+      "reloaded": true,
+      "invalid_json_object_rejected": true
+    }
+  ],
+  "errors": [],
+  "failures": []
+}

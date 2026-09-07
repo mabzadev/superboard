@@ -8,4 +8,7 @@ paths = [
 	'''(^|/)(\.backups|\.build|\.dart_tool|\.git|\.next|\.open-next|\.wrangler|build|coverage|dist|node_modules)(/|$)''',
 	'''(^|/)\.yarn/cache(/|$)''',
 ]
-regexes = ['''^attachments/foreign$''']
+regexes = [
+	'''^attachments/foreign$''',
+	'''^(GetApiV1AppBannersByIdApiArg|PutApiV1AppBannersByIdApiArg|GetApiV1LogsSignInByIdApiArg|PutApiV1SamlIdpsByIdApiArg)$''',
+]

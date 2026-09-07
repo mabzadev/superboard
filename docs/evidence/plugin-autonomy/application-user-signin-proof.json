@@ -1,0 +1,46 @@
+{
+  "registration_status": 201,
+  "sign_in_received_session": true,
+  "same_user": true,
+  "data_ids": [
+    "f4407f41-dd40-4c47-8ef4-4fec933321d5"
+  ],
+  "identity_views": [
+    {
+      "path": "users",
+      "status": 200,
+      "count": 0,
+      "user_id": null,
+      "ids": [],
+      "error": null
+    },
+    {
+      "path": "users/f4407f41-dd40-4c47-8ef4-4fec933321d5",
+      "status": 404,
+      "count": null,
+      "user_id": null,
+      "ids": [],
+      "error": "No user found"
+    },
+    {
+      "path": "logs/email",
+      "status": 200,
+      "count": 0,
+      "user_id": null,
+      "ids": [],
+      "error": null
+    },
+    {
+      "path": "logs/sign-in",
+      "status": 200,
+      "count": 0,
+      "user_id": null,
+      "ids": [],
+      "error": null
+    }
+  ],
+  "sign_in_status": 200,
+  "native_profile_path": "/api/v1/application-users/projects/1-prod/users/f4407f41-dd40-4c47-8ef4-4fec933321d5",
+  "native_profile_status": 200,
+  "native_profile_id": "f4407f41-dd40-4c47-8ef4-4fec933321d5"
+}

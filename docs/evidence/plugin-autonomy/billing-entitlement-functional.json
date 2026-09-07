@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "path": "/products/entitlements",
+      "operation": "entitlement_create_reload",
+      "status": "passed",
+      "persisted_id": "30705082-76db-46c4-9234-b902dc5efe4f",
+      "identifier": "autonomy_browser_1788763020736",
+      "reloaded": true,
+      "readback_path": "/api/v1/billing/projects/1-prod/ledger/entitlements"
+    }
+  ]
+}

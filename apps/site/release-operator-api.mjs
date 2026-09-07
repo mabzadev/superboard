@@ -8,6 +8,12 @@ export function superboardReleaseOperatorApi() {
 		hooks: {
 			"astro:config:setup": ({ injectRoute }) => {
 				injectRoute({
+					pattern: "/_emdash/api/superboard/operator-context",
+					entrypoint: fileURLToPath(
+						new URL("./src/pages/_superboard/api/operator-context.ts", import.meta.url),
+					),
+				});
+				injectRoute({
 					pattern: "/_emdash/api/superboard/plugins/[pluginId]/enable",
 					entrypoint: fileURLToPath(
 						new URL("./src/pages/_superboard/api/plugins/[pluginId]/enable.ts", import.meta.url),
@@ -41,6 +47,15 @@ export function superboardReleaseOperatorApi() {
 					pattern: "/_emdash/api/superboard/plugins/stores",
 					entrypoint: fileURLToPath(
 						new URL("./src/pages/_superboard/api/plugins/stores.ts", import.meta.url),
+					),
+				});
+				injectRoute({
+					pattern: "/_emdash/api/superboard/plugins/[pluginId]/commands/[commandId]",
+					entrypoint: fileURLToPath(
+						new URL(
+							"./src/pages/_superboard/api/plugins/[pluginId]/commands/[commandId].ts",
+							import.meta.url,
+						),
 					),
 				});
 				injectRoute({

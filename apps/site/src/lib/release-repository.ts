@@ -62,7 +62,7 @@ export function createD1FrontReleaseRepository(db: D1Database): FrontReleaseRepo
 				};
 			}
 			const receipt = command.reauthentication;
-			const [, activationResult] = await db.batch([
+			const [, activationResult] = await db.batch<ActiveRow>([
 				db
 					.prepare(
 						`INSERT INTO superboard_operator_reauthentication_receipts (
@@ -114,7 +114,7 @@ export function createD1FrontReleaseRepository(db: D1Database): FrontReleaseRepo
 					)
 					.bind(receipt.receipt_id, command.activated_at, command.activation_id),
 			]);
-			const row = activationResult.results[0] as ActiveRow | undefined;
+			const row = activationResult.results[0];
 			if (!row) {
 				const current = await this.getActive(command.instance_id);
 				return {
@@ -267,9 +267,7 @@ export async function verifyActivationReceipts(
 			input.activation_id,
 		)
 		.first<{ history_exists: number; outbox_exists: number; reauthentication_exists: number }>();
-	return (
-		row?.history_exists === 1 && row.outbox_exists === 1 && row.reauthentication_exists === 1
-	);
+	return row?.history_exists === 1 && row.outbox_exists === 1 && row.reauthentication_exists === 1;
 }
 
 function candidateFromRow(row: CandidateRow): FrontReleaseCandidateRecord {

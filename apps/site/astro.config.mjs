@@ -9,6 +9,20 @@ import { dashboardViteAliases } from "./dashboard-vite-aliases.mjs";
 import { superboardReleaseOperatorApi } from "./release-operator-api.mjs";
 import { superboardConfiguredPlugins } from "./superboard-emdash-plugins.mjs";
 
+function superboardApplicationApi() {
+	return {
+		name: "superboard-application-plugin-api",
+		hooks: {
+			"astro:config:setup": ({ addMiddleware }) => {
+				addMiddleware({
+					entrypoint: new URL("./src/application-plugin-middleware.ts", import.meta.url),
+					order: "pre",
+				});
+			},
+		},
+	};
+}
+
 function superboardViewsBootstrap() {
 	return {
 		name: "superboard-views-bootstrap",
@@ -31,6 +45,7 @@ export default defineConfig({
 	adapter: cloudflare(),
 	integrations: [
 		react(),
+		superboardApplicationApi(),
 		superboardReleaseOperatorApi(),
 		emdash({
 			database: d1({ binding: "DB", session: "disabled" }),

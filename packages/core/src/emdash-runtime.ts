@@ -197,7 +197,7 @@ import {
 } from "./index.js";
 import { getDb } from "./loader.js";
 import { isRecord } from "./plugin-utils.js";
-import { CronExecutor, type InvokeCronHookFn } from "./plugins/cron.js";
+import { CronExecutor, setCronTasksEnabled, type InvokeCronHookFn } from "./plugins/cron.js";
 import { definePlugin } from "./plugins/define-plugin.js";
 import { DEV_CONSOLE_EMAIL_PLUGIN_ID, devConsoleEmailDeliver } from "./plugins/email-console.js";
 import { EmailPipeline } from "./plugins/email.js";
@@ -791,16 +791,52 @@ export class EmDashRuntime {
 	 * Exclusive hook selections are re-resolved after each rebuild.
 	 */
 	async setPluginStatus(pluginId: string, status: "active" | "inactive"): Promise<void> {
-		this.pluginStates.set(pluginId, status);
-		if (status === "active") {
-			this.enabledPlugins.add(pluginId);
+		const wasEnabled = this.enabledPlugins.has(pluginId);
+		const previousStatus = this.pluginStates.get(pluginId);
+		if (previousStatus === status && wasEnabled === (status === "active")) {
+			await setCronTasksEnabled(this.db, pluginId, status === "active");
+			return;
+		}
+		try {
+			if (status === "active") {
+				this.enabledPlugins.add(pluginId);
+				await this.rebuildHookPipeline();
+				const failed = (await this._hooks.runPluginActivate(pluginId)).find(
+					(result) => !result.success,
+				);
+				if (failed) throw failed.error ?? new Error(`Plugin activation failed: ${pluginId}`);
+			} else {
+				const failed = (await this._hooks.runPluginDeactivate(pluginId)).find(
+					(result) => !result.success,
+				);
+				if (failed) throw failed.error ?? new Error(`Plugin deactivation failed: ${pluginId}`);
+				this.enabledPlugins.delete(pluginId);
+				await this.rebuildHookPipeline();
+			}
+			await setCronTasksEnabled(this.db, pluginId, status === "active");
+			this.pluginStates.set(pluginId, status);
+		} catch (error) {
+			let cleanupError: Error | undefined;
+			if (status === "active" && !wasEnabled) {
+				const failed = (await this._hooks.runPluginDeactivate(pluginId)).find(
+					(result) => !result.success,
+				);
+				cleanupError = failed?.error;
+			}
+			if (wasEnabled) this.enabledPlugins.add(pluginId);
+			else this.enabledPlugins.delete(pluginId);
+			if (previousStatus === undefined) this.pluginStates.delete(pluginId);
+			else this.pluginStates.set(pluginId, previousStatus);
 			await this.rebuildHookPipeline();
-			await this._hooks.runPluginActivate(pluginId);
-		} else {
-			// Fire deactivate on the current pipeline while the plugin is still in it
-			await this._hooks.runPluginDeactivate(pluginId);
-			this.enabledPlugins.delete(pluginId);
-			await this.rebuildHookPipeline();
+			await setCronTasksEnabled(this.db, pluginId, wasEnabled);
+			if (cleanupError)
+				// oxlint-disable-next-line preserve-caught-error -- AggregateError accepts cause in its third argument.
+				throw new AggregateError(
+					[error, cleanupError],
+					`Plugin lifecycle cleanup failed: ${pluginId}`,
+					{ cause: error },
+				);
+			throw error;
 		}
 	}
 
@@ -3741,6 +3777,27 @@ export class EmDashRuntime {
 			};
 		}
 
+		return this.dispatchPluginApiRoute(pluginId, path, request, user);
+	}
+
+	async inspectPluginHealth(pluginId: string, request: Request, user?: RouteCallerInput | null) {
+		return this.dispatchPluginApiRoute(
+			pluginId,
+			"/health",
+			new Request(
+				new URL(`/_emdash/api/plugins/${encodeURIComponent(pluginId)}/health`, request.url),
+				{ method: "GET" },
+			),
+			user,
+		);
+	}
+
+	private async dispatchPluginApiRoute(
+		pluginId: string,
+		path: string,
+		request: Request,
+		user?: RouteCallerInput | null,
+	) {
 		// Authenticated caller for `ctx.user`. Undefined for public routes
 		// (the catch-all only forwards the caller after private-route auth)
 		// and for machine tokens with no bound user.
@@ -3749,7 +3806,7 @@ export class EmDashRuntime {
 		// Check trusted (configured) plugins first — this must match the
 		// resolution order in getPluginRouteMeta to avoid auth/execution mismatches.
 		const trustedPlugin = this.configuredPlugins.find((p) => p.id === pluginId);
-		if (trustedPlugin && this.enabledPlugins.has(trustedPlugin.id)) {
+		if (trustedPlugin) {
 			const routeRegistry = new PluginRouteRegistry({
 				...this.pipelineFactoryOptions,
 				emailPipeline: this.email ?? undefined,

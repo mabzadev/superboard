@@ -17,6 +17,7 @@ const compatibilityPath = join(root, "config/superboard-plugin-compatibility.jso
 const compatibilitySourcePaths = [
 	join(root, "apps/site/migrations/0016_native_front_compatibility.sql"),
 	join(root, "apps/site/migrations/0017_native_front_presentation.sql"),
+	join(root, "apps/site/migrations/0020_revalidated_plugin_manifests.sql"),
 ];
 const MANIFEST_ARTIFACT_PATTERN =
 	/VALUES \('(sha256:[a-f0-9]{64})', '([^']+)', '((?:[^']|'')*)', '[^']+'\)/gu;
@@ -41,12 +42,13 @@ const REQUIRED_FRONT_STATES = [
 const parityFrontTest = "apps/site/tests/front-release-dom-parity.test.tsx";
 const parityInstanceTest = "apps/site/runtime-tests/plugin-parity-instance.runtime.test.ts";
 const frontCatalogPath = join(root, "packages/supbrd-runtime-plugins/dist/front-catalog.js");
+const frontBundleReceipt = buildFrontBundleReceipt();
 const userManifestOverride = existsSync(frontCatalogPath)
-	? (
+	? await (
 			await import(
 				`${pathToFileURL(frontCatalogPath).href}?parity=${statSync(frontCatalogPath).mtimeMs}`
 			)
-		).userPluginManifest
+		).buildUserPluginManifest(frontBundleReceipt)
 	: null;
 
 const fullPlugins = ["user", "settings", "content", "products", "audit"];
@@ -258,6 +260,7 @@ const pluginOperations = {
 			"update_refund",
 			"update_subscription",
 			"reconcile_store",
+			"migrate_products",
 		],
 		dataSources: [
 			"purchases",
@@ -266,6 +269,7 @@ const pluginOperations = {
 			"subscriptions",
 			"financial_customer_entitlements",
 			"billing_ledger",
+			"migration_status",
 		],
 	},
 	"supbrd-plugmod-support": {
@@ -503,8 +507,6 @@ const pluginOperations = {
 	},
 };
 
-const frontBundleReceipt = buildFrontBundleReceipt();
-
 export function buildPluginTopology() {
 	const plugins = [
 		...fullPlugins.map((name) => pluginTopologyEntry(`supbrd-plug-${name}`, "full", null)),
@@ -675,7 +677,10 @@ export function buildReleaseParityRows(parityRelease, topology) {
 	);
 	const pluginForRoute = (route) => {
 		const renderer = renderers.get(route.renderer_ids[0]);
-		if (!renderer || !activePluginIds.includes(renderer.plugin_id)) {
+		if (
+			!renderer ||
+			(renderer.plugin_id !== "supbrd-core" && !activePluginIds.includes(renderer.plugin_id))
+		) {
 			throw new Error(`Parity Release route has no active plugin renderer: ${route.route_id}`);
 		}
 		return renderer.plugin_id;
@@ -1162,6 +1167,7 @@ function buildFrontBundleReceipt() {
 		join(root, "apps/site/dashboard-vite-aliases.mjs"),
 		join(root, "apps/site/src/components/FrontPage.astro"),
 		join(root, "apps/site/src/components/NativeFrontApp.tsx"),
+		join(root, "apps/site/src/components/PluginFrontView.tsx"),
 		join(root, "apps/site/src/lib/core-front-contract.ts"),
 		join(root, "apps/site/src/lib/front-release-composer.ts"),
 		join(root, "apps/site/src/lib/native-front-plugins.ts"),
@@ -1176,12 +1182,9 @@ function buildFrontBundleReceipt() {
 	];
 	const sourceFiles = [
 		...explicit,
-		...walk(join(root, "apps/dashboard/src"), isFrontBundleSource),
-		...walk(join(root, "apps/site/src/dashboard-compat"), isFrontBundleSource),
+		...walk(join(root, "packages/supbrd-front-ui/src"), isFrontBundleSource),
 		...walk(join(root, "apps/site/src/front-plugins"), (path) => path.endsWith(".ts")),
-		...walk(join(root, "packages/supbrd-runtime-plugins/src/front"), (path) =>
-			path.endsWith(".ts"),
-		),
+		...walk(join(root, "packages/supbrd-runtime-plugins/src/front"), isFrontBundleSource),
 	]
 		.filter((path, index, all) => existsSync(path) && all.indexOf(path) === index)
 		.toSorted((left, right) => left.localeCompare(right));

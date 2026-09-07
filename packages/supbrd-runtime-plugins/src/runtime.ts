@@ -1,5 +1,9 @@
 import topology from "../../../config/emdash-plugin-topology.json";
 
+const multilineSettingPattern = /(?:origins|locales|content_types|scopes|json)$/u;
+const pluginPrefixPattern = /^supbrd-(?:plug|plugmod)-/u;
+const labelSeparatorPattern = /[_-]/u;
+
 interface JsonSetting {
 	type?: string;
 	enum?: string[];
@@ -31,12 +35,13 @@ interface RuntimeManifest {
 }
 
 interface RuntimeRouteContext {
-	kv: { get<T>(key: string): Promise<T | null> };
+	kv: { get(key: string): Promise<unknown> };
 }
 
 const topologyManifests = new Map(
 	topology.plugins.map(({ manifest }) => [
 		manifest.plugin_id,
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- generated manifests are validated by the parity gate before these entries are built.
 		manifest as unknown as RuntimeManifest,
 	]),
 );
@@ -60,7 +65,7 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 			admin: { handler: async () => adminBlocks(manifest) },
 			contract: { handler: async () => manifest },
 			health: {
-				handler: async (ctx: RuntimeRouteContext) => ({
+				handler: async (routeContext: unknown, pluginContext?: RuntimeRouteContext) => ({
 					plugin_id: manifest.plugin_id,
 					plugin_version: manifest.plugin_version,
 					artifact_checksum: manifest.artifact_checksum,
@@ -69,12 +74,18 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 					commands: manifest.commands.length,
 					data_sources: manifest.data_sources.length,
 					renderers: manifest.renderers.length,
-					settings: await effectiveSettings(ctx.kv, manifest.settings.schema.properties),
+					settings: await effectiveSettings(
+						routePluginContext(routeContext, pluginContext).kv,
+						manifest.settings.schema.properties,
+					),
 				}),
 			},
 			"settings/effective": {
-				handler: async (ctx: RuntimeRouteContext) =>
-					effectiveSettings(ctx.kv, manifest.settings.schema.properties),
+				handler: async (routeContext: unknown, pluginContext?: RuntimeRouteContext) =>
+					effectiveSettings(
+						routePluginContext(routeContext, pluginContext).kv,
+						manifest.settings.schema.properties,
+					),
 			},
 			"commands/catalog": { handler: async () => ({ items: manifest.commands }) },
 			"data-sources/catalog": { handler: async () => ({ items: manifest.data_sources }) },
@@ -84,6 +95,28 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 			pages: [{ path: "/", label: pluginLabel(manifest.plugin_id), icon: "settings" }],
 		},
 	};
+}
+
+function routePluginContext(
+	routeContext: unknown,
+	pluginContext?: RuntimeRouteContext,
+): RuntimeRouteContext {
+	if (pluginContext) return pluginContext;
+	if (
+		typeof routeContext === "object" &&
+		routeContext !== null &&
+		"kv" in routeContext &&
+		typeof routeContext.kv === "object" &&
+		routeContext.kv !== null &&
+		"get" in routeContext.kv &&
+		typeof routeContext.kv.get === "function"
+	) {
+		const kv = routeContext.kv;
+		const get = kv.get;
+		if (typeof get !== "function") throw new Error("Plugin execution context is unavailable");
+		return { kv: { get: async (key: string): Promise<unknown> => Reflect.apply(get, kv, [key]) } };
+	}
+	throw new Error("Plugin execution context is unavailable");
 }
 
 function adminBlocks(manifest: RuntimeManifest) {
@@ -129,13 +162,13 @@ function adminBlocks(manifest: RuntimeManifest) {
 }
 
 async function effectiveSettings(
-	kv: { get<T>(key: string): Promise<T | null> },
+	kv: { get(key: string): Promise<unknown> },
 	properties: Record<string, JsonSetting>,
 ) {
 	const values: Record<string, unknown> = {};
 	const secrets_set: Record<string, boolean> = {};
 	for (const [key, field] of Object.entries(properties)) {
-		const value = await kv.get<unknown>(`settings:${key}`);
+		const value = await kv.get(`settings:${key}`);
 		if (field.writeOnly === true) secrets_set[key] = value !== null && value !== "";
 		else values[key] = value;
 	}
@@ -167,21 +200,17 @@ function settingField(key: string, field: JsonSetting): RuntimeSettingField {
 	return {
 		type: "string",
 		label,
-		multiline: /(?:origins|locales|content_types|scopes|json)$/u.test(key),
+		multiline: multilineSettingPattern.test(key),
 	};
 }
 
 function pluginLabel(pluginId: string) {
-	return pluginId
-		.replace(/^supbrd-(?:plug|plugmod)-/u, "")
-		.split("-")
-		.map(settingLabel)
-		.join(" ");
+	return pluginId.replace(pluginPrefixPattern, "").split("-").map(settingLabel).join(" ");
 }
 
 function settingLabel(value: string) {
 	return value
-		.split(/[_-]/u)
+		.split(labelSeparatorPattern)
 		.filter(Boolean)
 		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
 		.join(" ");

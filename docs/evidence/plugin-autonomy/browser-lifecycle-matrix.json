@@ -1,0 +1,307 @@
+{
+  "resumed_at": "2026-09-07T06:30:43.952Z",
+  "results": [
+    {
+      "plugin_id": "supbrd-plug-audit",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7B4EBFB0V17SDJ667FPK"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/system/audit",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plug-content",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7B4W8SQZXDD1K1S28KXQ"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/system/content",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plug-products",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6F9SQFJDN38V6RP0R1HD"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/products/offerings",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6F677WDW2XF5ATCEZCAN",
+        "01M1SF6F6KH83ZYGJ9MGRFYPKS",
+        "01M1SF6F6S0G8K44B0W9V9HVKH",
+        "01M1SF6F71QCHQG1XDH2M7H022",
+        "01M1SW7B53TV017MG2Q8ZDBZFN"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/app/android-setup",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6F5C1450EDKRD0YXG2AX",
+        "01M1SF6F5M3VWEFDGH8P8T4RJ2",
+        "01M1SF6F5V3J2TS6B413W3Z0XS",
+        "01M1SF6F61FFB61ZNAAWDGBPG0",
+        "01M1SF6F7BSB55V7S020ZSNCKA",
+        "01M1SF6F7M79566APAKHAAZ2NV",
+        "01M1SF6F7VGHRM67A0FZH24V7P",
+        "01M1SF6F8390QB324ZYSSJHF7S",
+        "01M1SF6F89T3BEGDV4ZJK7BMAE",
+        "01M1SF6F8G2SAHGXNWB1ETJJ50",
+        "01M1SF6F8QEFAE0Y15WEAP05ZJ",
+        "01M1SF6F8W7WPJ009QD4B22HD2",
+        "01M1SF6F93DVG4XNNS9E4SA4G7",
+        "01M1SF6F99P0DMGAFWBZ0GAXCZ",
+        "01M1SW7B58XT3HE8R8KGHAF4Y2",
+        "01M1SW7B5FMEF994XF73PM1A61",
+        "01M1SW7B5NN03YD09Y0K9622PQ",
+        "01M1SW7B5VYS580YT8DNSAHY3Q",
+        "01M1SW7B6174NDD10BKV775Z1D",
+        "01M1SW7B67N3NQN6B3Y9E9T6RK",
+        "01M1SW7B6H76QV33Y1KNJ34E96",
+        "01M1SW7B6XJBVWQ85JNCCNN6E4",
+        "01M1SW7B741SH4CYXZWE318N2Y",
+        "01M1SW7B7ABT1KK3CH7AXX00PE",
+        "01M1SW7B7HPQWBQCF93QSV0PVQ",
+        "01M1SW7B7Q8T4C1H04HXCS3QCQ",
+        "01M1SW7B7WWFJHEZY4WJ2W42MY",
+        "01M1SW7B82HSSSR46YKKW06RSD",
+        "01M1SW7B87ADY9TC0TBHKJH4VR",
+        "01M1SW7B8C41ACEANNWWH3SANF",
+        "01M1SW7B8NW2FA2EF6V9QSN327",
+        "01M1SW7B8VND7AD3VGJCXV30TP",
+        "01M1SW7B90HD8GQQ4CB8SZ83XE",
+        "01M1SW7B95ZXSSPAFZFYVZVN78",
+        "01M1SW7B9BNQ8SXKMEK0XYYSJ5",
+        "01M1SW7B9H695K4NFBKD0QV1J0",
+        "01M1SW7B9R9WCAWQA9S81QNA87",
+        "01M1SW7BA05V738A9V3XPDVRJB",
+        "01M1SW7BA6AVYCCSXP2GHW7KFE",
+        "01M1SW7BABVHP51GVARAN3M9DR",
+        "01M1SW7BAH3FBA2PP51CQZ1XQJ",
+        "01M1SW7BAQV96KMPWX3PM3WKQY",
+        "01M1SW7BAZ87NT9DBZJFV8NRSD"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/account",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6F4Y9WJ083PT8XA8HBNA",
+        "01M1SF6FGD9Q2Z2A6NA5XTFRR6",
+        "01M1SF6FGHRB6W1D2XMTSAVR0F",
+        "01M1SF6FGPG8BRAHPXX583P0R9",
+        "01M1SF6FGX6E3M3A066MCN188R",
+        "01M1SF6FH45JDV3G3W7XW0067R",
+        "01M1SF6FH8H916CMQKHCPB7H57",
+        "01M1SF6FHEFXZQZ9ZQWP8024CA",
+        "01M1SF6FHYQ9VBGKGXZXCXSYC2",
+        "01M1SF6FJ39W6N06WKK4PJ59XF",
+        "01M1SF6FJ9WHVVXAXA9YJB4DKX",
+        "01M1SF6FJFK1JHQJV9PKE485YA",
+        "01M1SF6FJN5DSTQQF8NASXFBKN",
+        "01M1SF6FJVY13665G5APT9HE0A",
+        "01M1SF6FK1N59R9TYCS1VDYQQ2",
+        "01M1SF6FK73RAQTFV3TXV14ENP",
+        "01M1SF6FKB2BTV816ZVPB6S501",
+        "01M1SW7BB49TZ0AZ0QARDH5YTK",
+        "01M1SW7BB9S8ZVEGKNEAF4P5W1"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/analytics",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6F9EKDFTAEGNTY6GAYE4",
+        "01M1SF6F9KYHKFXZG5P0BT9PV7",
+        "01M1SF6F9Y56TTEM5SXTZXH9VM"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/products/customers",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6FBQ8FFWA80BWDQC0A43",
+        "01M1SF6FBXJ8NSWQSR6CX6W1HB",
+        "01M1SF6FC48GE1CAP1AKG3KFFC",
+        "01M1SF6FCB5HY1SQB5MCVFE41D",
+        "01M1SF6FCKY3G98C6HAM0WRPPS",
+        "01M1SF6FCRXM1ZTYX76S00THX2",
+        "01M1SW7BBE7A5GZYED9YG15EFX"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/dynamic-links/campaigns",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-email",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7BBQWYXTNEPWCJYF8E2N"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/system/email",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-files",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7BBWGY8ZFCW7FTZ42PVK"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/system/files",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6FA4QR6FNSA6VK6MJQD9",
+        "01M1SF6FABQD74G65054W68XDH",
+        "01M1SF6FAGD9VKVSKNG3VAPFZP",
+        "01M1SF6FAQ7QK4QEBXHHYMP8QT",
+        "01M1SF6FAW1GD4QF0693VE2KV9",
+        "01M1SF6FB4QBA0KD3JA4QBBWBY",
+        "01M1SF6FBB5Z51NKTZQ09CBNEG",
+        "01M1SF6FBGD75SJFDNYM0FN9Y6",
+        "01M1SW7BC7YN06DYCA3D89ETAN",
+        "01M1SW7BCCCHMY0NX5Z0JYQPQJ"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/flows",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-gateway",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7BCK9S1W914MSG192A9C"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/system/gateway",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6FF333SR8KC9ZDD4N15K",
+        "01M1SF6FFARCP6AG9N10K1Y8WJ",
+        "01M1SF6FFF13A249K3702PJR7Q",
+        "01M1SF6FFN2W8727HVRG070N6S",
+        "01M1SF6FFW38D2DPSJXBC6RP5Q",
+        "01M1SF6FG1MH5JVP9V1F99734H",
+        "01M1SF6FG70R6KD1QR7NTR6V5E",
+        "01M1SW7BCSA7VFAY7DCQMN07EB"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/marketing/campaigns",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7BCY8233XE908AC3T3CE",
+        "01M1T6DPV6PYSZYK3QXVDWNDTM"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/mcp/authorize",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-observability",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7BD77TZNYHV7C4771FNH"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/infrastructure",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7BDF3M3BZFT8BY3W639Y",
+        "01M1SW7BDNE5P714S73KATXDRW"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/onboardings",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "status": "passed",
+      "view_ids": [
+        "01M1SW7BDVQQ4SB2KH478RG7N3",
+        "01M1SW7BE2432M0B8CKQG4T5G5"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/paywalls",
+      "direct_route_status": 404
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "status": "passed",
+      "view_ids": [
+        "01M1SF6FCXG1WXQ0G10V9TBRSJ",
+        "01M1SF6FD5DKKEEW02M1XG90DE",
+        "01M1SF6FDAJDJT0F35B3THT1E5",
+        "01M1SF6FDHFMG2JEG5GE653VKZ",
+        "01M1SF6FDP2KAKX3NJN5CPVT9Y",
+        "01M1SF6FDXVF6MS46M3VB6B6TN",
+        "01M1SF6FE3AX435Y210P0Z9N13",
+        "01M1SF6FE93HF6KD1WPZY8DBTH",
+        "01M1SF6FEFZFTT96528KGZGZ41",
+        "01M1SF6FEM4G0DH4E9NAXED8QF",
+        "01M1SF6FEX65H4TCZ46WDSBMDA",
+        "01M1SW7BE9CWK0XGTMX6CGH2AP",
+        "01M1SW7BEFTX22B0XT0PPZB2WV"
+      ],
+      "hidden_when_disabled": true,
+      "restored_without_duplicates": true,
+      "direct_route": "/support/automations",
+      "direct_route_status": 404
+    }
+  ],
+  "errors": []
+}

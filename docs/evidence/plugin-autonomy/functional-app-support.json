@@ -1,0 +1,13 @@
+[
+  {
+    "route": "/identity/:lang/apps/new",
+    "detail_path": "/identity/en/apps/3",
+    "created": true,
+    "reloaded": true
+  },
+  {
+    "route": "/support/settings",
+    "email_enabled": false,
+    "persisted_after_reload": true
+  }
+]

@@ -76,6 +76,12 @@
 		"resolvePeersFromWorkspaceRoot": false,
 		"dedupePeerDependents": false,
 		"packageExtensions": {
+			"@oslojs/crypto@1.0.1": {
+				"dependencies": {
+					"@oslojs/asn1": "1.0.0",
+					"@oslojs/binary": "1.0.0"
+				}
+			},
 			"@cloudflare/vitest-plugin@1.0.0": {
 				"dependencies": {
 					"@cloudflare/workers-types": "4.20260305.1",

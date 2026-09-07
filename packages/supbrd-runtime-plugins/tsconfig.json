@@ -7,7 +7,9 @@
 		"strict": true,
 		"skipLibCheck": true,
 		"noEmit": true,
-		"verbatimModuleSyntax": true
+		"verbatimModuleSyntax": true,
+		"jsx": "react-jsx",
+		"lib": ["es2024", "dom", "dom.iterable"]
 	},
 	"include": ["src"]
 }

@@ -6,12 +6,14 @@ import { getSiteEnv } from "../../../lib/site-env.js";
 export const prerender = false;
 
 export const ALL = async ({ request, locals }: { request: Request; locals: App.Locals }) => {
-	if (!hasPermission(locals.user, "settings:manage") || !locals.user?.email) {
+	if (!locals.user) {
 		return Response.json({ error: { code: "OPERATOR_SESSION_REQUIRED" } }, { status: 401 });
 	}
+	if (!hasPermission(locals.user, "settings:manage"))
+		return Response.json({ error: { code: "OPERATOR_REQUIRED" } }, { status: 403 });
 	return proxyOperatorApiRequest({
 		request,
-		operator_email: locals.user.email,
+		operator: locals.user,
 		env: getSiteEnv(),
 	});
 };

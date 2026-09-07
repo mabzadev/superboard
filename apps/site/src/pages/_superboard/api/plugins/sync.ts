@@ -1,7 +1,9 @@
 import type { APIRoute } from "astro";
 import { handleError } from "emdash/api/error";
 
+import { requireManagedPluginOperationAccess } from "../../../../lib/managed-plugin-operation.js";
 import { jsonResponse, requireReleaseOperator } from "../../../../lib/operator-guard.js";
+import { verifySuperBoardPluginResources } from "../../../../lib/plugin-readiness.js";
 import { isRecord } from "../../../../lib/request-validation.js";
 import { getSiteEnv } from "../../../../lib/site-env.js";
 import {
@@ -16,6 +18,12 @@ export const POST: APIRoute = async (context) => {
 	const env = getSiteEnv();
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
+	const busy = await requireManagedPluginOperationAccess(
+		context,
+		env.DB,
+		env.SUPERBOARD_INSTANCE_ID,
+	);
+	if (busy) return busy;
 	try {
 		const body: unknown = await context.request.json();
 		if (!isRecord(body)) {
@@ -38,6 +46,14 @@ export const POST: APIRoute = async (context) => {
 		const operatorId = context.locals.user?.id;
 		if (!operatorId) return jsonResponse({ error: { code: "UNAUTHORIZED" } }, 401);
 		const target = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT ?? "local");
+		const targetPluginIds = resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS);
+		const evidence = await verifySuperBoardPluginResources(context, pluginIds ?? targetPluginIds);
+		const staleOperation = await requireManagedPluginOperationAccess(
+			context,
+			env.DB,
+			env.SUPERBOARD_INSTANCE_ID,
+		);
+		if (staleOperation) return staleOperation;
 		const plan = await installSuperBoardPluginCatalog(env.DB, {
 			instance_id: env.SUPERBOARD_INSTANCE_ID,
 			target,
@@ -45,11 +61,25 @@ export const POST: APIRoute = async (context) => {
 				typeof body.plan_id === "string" ? body.plan_id : `plugin-plan-${crypto.randomUUID()}`,
 			approved_by: operatorId,
 			target_artifact_checksum: env.TARGET_ARTIFACT_CHECKSUM,
-			target_plugin_ids: resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS),
+			target_plugin_ids: targetPluginIds,
 			checked_at: checkedAt,
 			expires_at: new Date(Date.parse(checkedAt) + expiresInHours * 60 * 60 * 1_000).toISOString(),
 			...(pluginIds ? { plugin_ids: pluginIds } : {}),
 		});
+		for (const [pluginId, checksum] of evidence) {
+			await env.DB.batch([
+				env.DB.prepare(`UPDATE superboard_plugin_staged_artifacts SET evidence_checksum = ?
+ WHERE instance_id = ? AND target = ? AND plugin_id = ? AND plan_id = ?`)
+					.bind(checksum, env.SUPERBOARD_INSTANCE_ID, target, pluginId, plan.plan_id),
+				env.DB.prepare(`UPDATE superboard_plugin_runtime_health SET evidence_checksum = ?
+ WHERE instance_id = ? AND target = ? AND plugin_id = ?
+ AND NOT EXISTS (SELECT 1 FROM superboard_plugin_staged_artifacts staged
+ WHERE staged.instance_id = superboard_plugin_runtime_health.instance_id
+ AND staged.target = superboard_plugin_runtime_health.target
+ AND staged.plugin_id = superboard_plugin_runtime_health.plugin_id)`)
+					.bind(checksum, env.SUPERBOARD_INSTANCE_ID, target, pluginId),
+			]);
+		}
 		return jsonResponse({ plan }, 201);
 	} catch (error) {
 		return handleError(

@@ -1,0 +1,8 @@
+{
+  "step": "application_signup",
+  "backend_path": "/auth/register",
+  "http_status": 201,
+  "user_id": "f4407f41-dd40-4c47-8ef4-4fec933321d5",
+  "verification_email_accepted": true,
+  "error": null
+}

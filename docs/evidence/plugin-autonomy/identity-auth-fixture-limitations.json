@@ -1,0 +1,19 @@
+{
+  "status": "unverified",
+  "routes": [
+    "/identity/:lang/users/:authId",
+    "/identity/:lang/logs/email/:id",
+    "/identity/:lang/logs/sign-in/:id",
+    "/identity/:lang/logs/sms/:id"
+  ],
+  "observations": [
+    "Real SDK signup POST /auth/register returned201 for application subject f4407f41-dd40-4c47-8ef4-4fec933321d5; verification email accepted by QA capture.",
+    "Real canonical application_sign_in returned an authenticated session for this same application subject.",
+    "The owning application-users API can be checked separately from the historical Melody Identity views.",
+    "The historical Identity users list is still empty; its detail endpoint returns404 No user found for this application subject; historical email/sign-in logs remain empty.",
+    "A temporary authenticated localhost-only signup relay was removed immediately after signup and returns404 after restart.",
+    "No SQL fixture, fabricated token or external SMS/email was used."
+  ],
+  "next_requirement": "Historical Identity user/log views require an identity_subject_bridge mapping produced by a real Melody auth flow. Canonical application signup/sign-in does not populate those historical views. SMS additionally requires verified capture transport.",
+  "correction": "The prior embedded-auth404 observation did not establish unavailability of SDK signup and is superseded by successful real signup."
+}

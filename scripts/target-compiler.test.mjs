@@ -33,6 +33,143 @@ const ROUTE_DRIFT_PATTERN = /configuration drift.*route activation changed/u;
 const QUEUE_DRIFT_PATTERN = /configuration drift.*queue consumers/u;
 const UNDECLARED_SECRET_PATTERN = /unexpected secret contract UNDECLARED_SIGNING_KEY/u;
 
+test("task-producing Workers reach Site authority through a plugin-bound API service", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const compiled = await compileTarget(target, "local");
+	assert.ok(
+		compiled.graph.bindings.some(
+			(binding) =>
+				binding.service === "api" &&
+				binding.binding === "SITE_SERVICE" &&
+				binding.targetService === "site",
+		),
+	);
+	for (const service of [
+		"billing",
+		"email",
+		"support",
+		"analytics",
+		"marketing",
+		"flows",
+		"observability",
+	]) {
+		const binding = compiled.graph.bindings.find(
+			(entry) => entry.service === service && entry.binding === "API_SERVICE",
+		);
+		assert.equal(binding?.targetService, "api", service);
+		assert.equal(binding?.props?.superboard_plugin_id, `supbrd-plugmod-${service}`, service);
+		assert.equal(
+			compiled.graph.bindings.some(
+				(entry) => entry.service === service && entry.resourceKey === "siteD1",
+			),
+			false,
+		);
+	}
+});
+
+test("generated Site authority configuration rejects disabled leases and another instance", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const compiled = await compileTarget(target, "local");
+	const config = compileLocalSiteConfiguration(compiled);
+	assert.equal(
+		assertTargetServiceConfiguration(compiled, "site", config, { routesEnabled: false }),
+		true,
+	);
+	for (const change of [
+		{ SUPERBOARD_PLUGIN_LIFECYCLE: "disabled" },
+		{ SUPERBOARD_INSTANCE_ID: "another-instance" },
+	]) {
+		assert.throws(
+			() =>
+				assertTargetServiceConfiguration(
+					compiled,
+					"site",
+					{ ...config, vars: { ...config.vars, ...change } },
+					{ routesEnabled: false },
+				),
+			/lifecycle|instance/iu,
+		);
+	}
+});
+
+test("generated task bindings preserve the Site instance and reject another plugin claim", async () => {
+	const { target } = await loadTarget("mbza-development");
+	const compiled = await compileTarget(target, "local");
+	const configs = new Map();
+	const generated = [];
+	try {
+		for (const service of [
+			"site",
+			"api",
+			"billing",
+			"email",
+			"support",
+			"analytics",
+			"marketing",
+			"flows",
+			"observability",
+		]) {
+			const result = spawnSync(
+				process.execPath,
+				[
+					"scripts/cloudflare-config.mjs",
+					"--service",
+					service,
+					"--target",
+					"mbza-development",
+					"--environment",
+					"local",
+					"--allow-unprovisioned",
+					"--preflight",
+					"--output-suffix",
+					"task-wiring-proof",
+				],
+				{ cwd: root, encoding: "utf8" },
+			);
+			assert.equal(result.status, 0, result.stderr);
+			const path = resolve(
+				root,
+				"deploy/generated",
+				`mbza-development-${service}-local-task-wiring-proof.jsonc`,
+			);
+			generated.push(path);
+			configs.set(service, JSON.parse(await readFile(path, "utf8")));
+		}
+		const site = configs.get("site");
+		const api = configs.get("api");
+		assert.equal(
+			api.services.find((binding) => binding.binding === "SITE_SERVICE")?.service,
+			site.name,
+		);
+		for (const [service, config] of configs) {
+			assert.equal(config.vars.SUPERBOARD_INSTANCE_ID, site.vars.SUPERBOARD_INSTANCE_ID);
+			assert.equal(config.vars.SUPERBOARD_PLUGIN_LIFECYCLE, "required");
+			if (["api", "site"].includes(service)) continue;
+			const broker = config.services.find((binding) => binding.binding === "API_SERVICE");
+			assert.equal(broker?.service, api.name, service);
+			assert.equal(
+				Boolean(
+					config.d1_databases?.some(
+						(database) => database.database_name === site.d1_databases[0].database_name,
+					),
+				),
+				false,
+			);
+			broker.props.superboard_plugin_id = "supbrd-plugmod-other";
+			assert.throws(
+				() =>
+					assertTargetServiceConfiguration(compiled, service, config, {
+						routesEnabled: false,
+						preflight: true,
+					}),
+				/task identity changed/u,
+			);
+		}
+	} finally {
+		await Promise.all(generated.map((path) => rm(path, { force: true })));
+	}
+});
+
 test("one target compiles to the same closed graph for local and Cloudflare", async () => {
 	const { target } = await loadTarget("mbza-development");
 	const local = await compileTarget(target, "local");

@@ -8,6 +8,7 @@ import topology from "../../../../config/emdash-plugin-topology.json";
 import {
 	userPluginManifest,
 	validateUserPluginManifest,
+	buildUserPluginManifest,
 } from "../../../supbrd-plug-user/src/index.js";
 import { nativeFrontPlugin as user } from "../../../supbrd-plug-user/src/native-front.js";
 import { nativeFrontPlugin as audit } from "../front/plugins/supbrd-plug-audit.js";
@@ -28,7 +29,7 @@ import { nativeFrontPlugin as onboardings } from "../front/plugins/supbrd-plugmo
 import { nativeFrontPlugin as paywalls } from "../front/plugins/supbrd-plugmod-paywalls.js";
 import { nativeFrontPlugin as support } from "../front/plugins/supbrd-plugmod-support.js";
 
-export { userPluginManifest, validateUserPluginManifest };
+export { userPluginManifest, validateUserPluginManifest, buildUserPluginManifest };
 
 export const parityFrontPluginCatalog = Object.freeze([
 	user,

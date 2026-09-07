@@ -15,12 +15,15 @@ interface __BaseEnv_Env {
 	AWS_REGION: string;
 	QUEUE_NAME: string;
 	DLQ_NAME: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	ANALYTICS_ID_HASH_KEY: string;
 	EMAIL_INTERNAL_TOKEN: string;
 	INTERNAL_API_TOKEN: string;
 	SMTP_ENCRYPTION_KEY: string;
 	TRACKING_SIGNING_KEY: string;
 	EMAIL_SERVICE: Fetcher;
+	API_SERVICE: Fetcher;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}
@@ -30,7 +33,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "PUBLIC_API_URL" | "EMAIL_PROVIDER" | "AWS_REGION" | "QUEUE_NAME" | "DLQ_NAME" | "ANALYTICS_ID_HASH_KEY" | "EMAIL_INTERNAL_TOKEN" | "INTERNAL_API_TOKEN" | "SMTP_ENCRYPTION_KEY" | "TRACKING_SIGNING_KEY">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "SERVICE_NAME" | "D1_EXPECTED_MIGRATION" | "AUTH_GATEWAY_ISSUER" | "AUTH_GATEWAY_AUDIENCE" | "AUTH_GATEWAY_JWKS_URL" | "PUBLIC_API_URL" | "EMAIL_PROVIDER" | "AWS_REGION" | "QUEUE_NAME" | "DLQ_NAME" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "ANALYTICS_ID_HASH_KEY" | "EMAIL_INTERNAL_TOKEN" | "INTERNAL_API_TOKEN" | "SMTP_ENCRYPTION_KEY" | "TRACKING_SIGNING_KEY">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

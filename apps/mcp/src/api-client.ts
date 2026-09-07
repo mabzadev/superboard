@@ -18,10 +18,10 @@ export interface ApiClient {
   updateLink(
     token: string,
     projectId: string,
-    linkId: number,
+    linkId: number | string,
     data: UpdateLinkData,
   ): Promise<unknown>;
-  archiveLink(token: string, projectId: string, linkId: number): Promise<unknown>;
+  archiveLink(token: string, projectId: string, linkId: number | string): Promise<unknown>;
   searchLinks(token: string, projectId: string, params: SearchLinksParams): Promise<unknown>;
   getAnalyticsOverview(token: string, projectId: string, params: AnalyticsParams): Promise<unknown>;
   getLinkAnalytics(token: string, projectId: string, params: LinkAnalyticsParams): Promise<unknown>;
@@ -42,7 +42,7 @@ export interface ApiClient {
     projectId: string,
     params: SearchCampaignsParams,
   ): Promise<unknown>;
-  archiveCampaign(token: string, projectId: string, campaignId: number): Promise<unknown>;
+  archiveCampaign(token: string, projectId: string, campaignId: number | string): Promise<unknown>;
 }
 
 export function normalizeApiBaseUrl(value: unknown, variable = "SUPERBOARD_API_URL"): string {
@@ -237,7 +237,7 @@ export interface CreateLinkData {
   tags?: string[];
   data?: Record<string, unknown>;
   custom_redirects?: Record<string, CustomRedirect>;
-  campaign_id?: number;
+  campaign_id?: number | string;
 }
 
 export async function createLink(
@@ -279,13 +279,13 @@ export interface UpdateLinkData {
   tags?: string[];
   data?: Record<string, unknown>;
   custom_redirects?: Record<string, CustomRedirect>;
-  campaign_id?: number;
+  campaign_id?: number | string;
 }
 
 export async function updateLink(
   token: string,
   projectId: string,
-  linkId: number,
+  linkId: number | string,
   data: UpdateLinkData,
   runtime: ApiRuntime = processRuntime(),
 ): Promise<unknown> {
@@ -301,7 +301,7 @@ export async function updateLink(
 export async function archiveLink(
   token: string,
   projectId: string,
-  linkId: number,
+  linkId: number | string,
   runtime: ApiRuntime = processRuntime(),
 ): Promise<unknown> {
   return request(
@@ -481,7 +481,7 @@ export async function searchCampaigns(
 export async function archiveCampaign(
   token: string,
   projectId: string,
-  campaignId: number,
+  campaignId: number | string,
   runtime: ApiRuntime = processRuntime(),
 ): Promise<unknown> {
   return request(

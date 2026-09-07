@@ -433,6 +433,12 @@ export interface EmDashHandlers {
 
 	// Plugin API route handler. `user` is the authenticated caller for
 	// private routes, exposed to plugin handlers as `ctx.user`.
+	inspectPluginHealth: (
+		pluginId: string,
+		request: Request,
+		user?: RouteCallerInput | null,
+	) => Promise<HandlerResponse>;
+
 	handlePluginApiRoute: (
 		pluginId: string,
 		method: string,

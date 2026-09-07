@@ -155,6 +155,7 @@ describe("EmDash plugin Store authority", () => {
 	});
 
 	test("installs the exact compiled user plugin and publishes bounded dependency health", async () => {
+		const committedHealth = await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health WHERE instance_id = ? AND target = 'local' AND plugin_id = ?").bind("vocostar", userPluginManifest.plugin_id).first();
 		const receipt = await installCompiledUserPlugin(env.DB, {
 			...targetProof,
 			instance_id: "vocostar",
@@ -186,7 +187,7 @@ describe("EmDash plugin Store authority", () => {
 		});
 
 		const health = await env.DB.prepare(
-			`SELECT status, evidence_checksum, expires_at FROM superboard_plugin_runtime_health
+			`SELECT status, evidence_checksum, expires_at FROM superboard_plugin_releasable_health
 			 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,
 		)
 			.bind("vocostar", userPluginManifest.plugin_id)
@@ -196,6 +197,7 @@ describe("EmDash plugin Store authority", () => {
 			evidence_checksum: receipt.evidence_checksum,
 			expires_at: receipt.expires_at,
 		});
+		expect(await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health WHERE instance_id = ? AND target = 'local' AND plugin_id = ?").bind("vocostar", userPluginManifest.plugin_id).first()).toEqual(committedHealth);
 	});
 
 	test("writes through the repository with stable aliases, CAS, idempotence and outbox", async () => {
@@ -343,6 +345,9 @@ describe("EmDash plugin Store authority", () => {
 			checked_at: "2026-08-30T09:10:00.000Z",
 			expires_at: "2999-08-31T09:10:00.000Z",
 		});
+		await env.DB.prepare(
+			"UPDATE superboard_plugin_lifecycle SET state = 'active' WHERE instance_id = 'vocostar' AND plugin_id = 'supbrd-plugmod-analytics'",
+		).run();
 		const rawKey = crypto.getRandomValues(new Uint8Array(32));
 		const encodedKey = btoa(String.fromCodePoint(...rawKey));
 		let dispatches = 0;
@@ -363,6 +368,7 @@ describe("EmDash plugin Store authority", () => {
 				method: "POST",
 				headers: {
 					Origin: "https://site.example.test",
+					"X-EmDash-Request": "1",
 					"Content-Type": "application/json",
 					"Idempotency-Key": "operation-gateway-report-1",
 					"X-SuperBoard-Command-Id": "supbrd-plugmod-analytics.command.create_analytics_report",
@@ -378,7 +384,7 @@ describe("EmDash plugin Store authority", () => {
 		};
 		const first = await proxyOperatorApiRequest({
 			request: buildRequest(),
-			operator_email: "operator@example.com",
+			operator: { id: "operator-1", role: 50 },
 			env: proxyEnv,
 		});
 		expect({ status: first.status, payload: await first.clone().json() }).toEqual({
@@ -388,7 +394,7 @@ describe("EmDash plugin Store authority", () => {
 		await expect(first.json()).resolves.toEqual({ id: "report-gateway-1" });
 		const replay = await proxyOperatorApiRequest({
 			request: buildRequest(),
-			operator_email: "operator@example.com",
+			operator: { id: "operator-1", role: 50 },
 			env: proxyEnv,
 		});
 		expect(replay.status).toBe(201);
@@ -563,7 +569,7 @@ describe("EmDash plugin Store authority", () => {
 		]);
 		let storeCount = 0;
 		for (const { manifest } of topology.plugins.filter(
-			({ manifest }) => !manifest.plugin_id.includes("*"),
+			({ manifest: candidateManifest }) => !candidateManifest.plugin_id.includes("*"),
 		)) {
 			for (const store of manifest.stores) {
 				storeCount += 1;

@@ -1,195 +1,222 @@
-import { Env } from '../types';
-import { constantTimeEqual } from '@superboard/contracts/secret';
-import { signToken, verifyToken } from './crypto';
-import { tokenDigest } from './token-storage';
+import {
+	SITE_OPERATOR_HEADERS,
+	verifySiteOperatorRequest,
+	type SiteOperatorIdentity,
+} from "@superboard/contracts/site-operator";
+
+import { Env } from "../types";
+import { signToken, verifyToken } from "./crypto";
+import { resolveSiteOperatorInstance } from "./site-operator-scope";
+import { tokenDigest } from "./token-storage";
 
 export type AuthContext = {
-  token: string;
-  userId: number;
-  instanceId: number | null;
-  applicationId: number | null;
-  scopes: string;
-  source: 'oauth' | 'jwt' | 'site';
-  payload: Record<string, unknown>;
+	token: string;
+	userId: number;
+	instanceId: number | null;
+	applicationId: number | null;
+	scopes: string;
+	source: "oauth" | "jwt" | "site";
+	payload: Record<string, unknown>;
+	siteOperator?: SiteOperatorIdentity;
 };
 
 type StoredOAuthToken = {
-  resource_owner_id: number;
-  application_id: number | null;
-  expires_in: number | null;
-  revoked_at: string | null;
-  scopes: string | null;
-  created_at: string;
+	resource_owner_id: number;
+	application_id: number | null;
+	expires_in: number | null;
+	revoked_at: string | null;
+	scopes: string | null;
+	created_at: string;
 };
 
 export function bearerToken(authHeader: string | undefined | null): string | null {
-  const match = /^Bearer\s+(.+)$/i.exec((authHeader || '').trim());
-  return match?.[1]?.trim() || null;
+	const match = /^Bearer\s+(.+)$/i.exec((authHeader || "").trim());
+	return match?.[1]?.trim() || null;
 }
 
-export function oauthTokenExpired(row: { expires_in?: number | null; created_at?: string | null }): boolean {
-  if (!row.expires_in || row.expires_in <= 0 || !row.created_at) return false;
-  const createdMs = Date.parse(row.created_at);
-  if (!Number.isFinite(createdMs)) return false;
-  return createdMs + row.expires_in * 1000 <= Date.now();
+export function oauthTokenExpired(row: {
+	expires_in?: number | null;
+	created_at?: string | null;
+}): boolean {
+	if (!row.expires_in || row.expires_in <= 0 || !row.created_at) return false;
+	const createdMs = Date.parse(row.created_at);
+	if (!Number.isFinite(createdMs)) return false;
+	return createdMs + row.expires_in * 1000 <= Date.now();
 }
 
 export async function ensureDefaultOAuthApplication(
-  db: D1Database,
-  clientId: string,
+	db: D1Database,
+	clientId: string,
 ): Promise<number> {
-  if (!clientId?.trim()) throw new Error('DASHBOARD_CLIENT_ID is required');
-  const existing = await db.prepare(
-    'SELECT id FROM oauth_applications WHERE uid = ? LIMIT 1'
-  ).bind(clientId).first<{ id: number }>();
-  if (existing) return existing.id;
+	if (!clientId?.trim()) throw new Error("DASHBOARD_CLIENT_ID is required");
+	const existing = await db
+		.prepare("SELECT id FROM oauth_applications WHERE uid = ? LIMIT 1")
+		.bind(clientId)
+		.first<{ id: number }>();
+	if (existing) return existing.id;
 
-  const created = await db.prepare(`
+	const created = await db
+		.prepare(`
     INSERT INTO oauth_applications (name, uid, secret, redirect_uri, scopes)
     VALUES ('SuperBoard Dashboard', ?, ?, 'urn:ietf:wg:oauth:2.0:oob', 'read write')
     RETURNING id
-  `).bind(clientId, await tokenDigest(crypto.randomUUID())).first<{ id: number }>();
-  if (!created) throw new Error('Unable to create OAuth application');
-  return created.id;
+  `)
+		.bind(clientId, await tokenDigest(crypto.randomUUID()))
+		.first<{ id: number }>();
+	if (!created) throw new Error("Unable to create OAuth application");
+	return created.id;
 }
 
 export async function issueDbBackedTokens(
-  env: Env,
-  userId: number,
-  instanceId: number | null | undefined,
-  applicationId: number,
-  scopes = 'read write',
-  previousRefreshToken?: string | null,
+	env: Env,
+	userId: number,
+	instanceId: number | null | undefined,
+	applicationId: number,
+	scopes = "read write",
+	previousRefreshToken?: string | null,
 ) {
-  const accessToken = await signToken({ sub: userId, instanceId: instanceId ?? null, type: 'access' }, env, '2h');
-  const refreshToken = await signToken({ sub: userId, instanceId: instanceId ?? null, type: 'refresh' }, env, '7d');
+	const accessToken = await signToken(
+		{ sub: userId, instanceId: instanceId ?? null, type: "access" },
+		env,
+		"2h",
+	);
+	const refreshToken = await signToken(
+		{ sub: userId, instanceId: instanceId ?? null, type: "refresh" },
+		env,
+		"7d",
+	);
 
-  await env.DB.prepare(`
+	await env.DB.prepare(`
     INSERT INTO oauth_access_tokens (
       resource_owner_id, application_id, token, refresh_token,
       previous_refresh_token, expires_in, scopes
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    userId,
-    applicationId,
-    await tokenDigest(accessToken),
-    await tokenDigest(refreshToken),
-    previousRefreshToken ? await tokenDigest(previousRefreshToken) : '',
-    7200,
-    scopes,
-  ).run();
+  `)
+		.bind(
+			userId,
+			applicationId,
+			await tokenDigest(accessToken),
+			await tokenDigest(refreshToken),
+			previousRefreshToken ? await tokenDigest(previousRefreshToken) : "",
+			7200,
+			scopes,
+		)
+		.run();
 
-  return {
-    access_token: accessToken,
-    token_type: 'Bearer',
-    expires_in: 7200,
-    refresh_token: refreshToken,
-    scope: scopes,
-    created_at: Math.floor(Date.now() / 1000),
-  };
+	return {
+		access_token: accessToken,
+		token_type: "Bearer",
+		expires_in: 7200,
+		refresh_token: refreshToken,
+		scope: scopes,
+		created_at: Math.floor(Date.now() / 1000),
+	};
 }
 
 async function primaryInstanceId(db: D1Database, userId: number): Promise<number | null> {
-  const role = await db.prepare(
-    'SELECT instance_id FROM instance_roles WHERE user_id = ? ORDER BY id ASC LIMIT 1'
-  ).bind(userId).first<{ instance_id: number }>().catch(() => null);
-  return role?.instance_id ?? null;
+	const role = await db
+		.prepare("SELECT instance_id FROM instance_roles WHERE user_id = ? ORDER BY id ASC LIMIT 1")
+		.bind(userId)
+		.first<{ instance_id: number }>()
+		.catch(() => null);
+	return role?.instance_id ?? null;
 }
 
 export async function getAuthContext(
-  env: Env,
-  authHeader: string | undefined | null,
-  options: { allowJwtFallback?: boolean } = {},
+	env: Env,
+	authHeader: string | undefined | null,
+	options: { allowJwtFallback?: boolean } = {},
 ): Promise<AuthContext | null> {
-  const token = bearerToken(authHeader);
-  if (!token) return null;
-  const digest = await tokenDigest(token);
+	const token = bearerToken(authHeader);
+	if (!token) return null;
+	const digest = await tokenDigest(token);
 
-  const stored = await env.DB.prepare(`
+	const stored = await env.DB.prepare(`
     SELECT resource_owner_id, application_id, expires_in, revoked_at, scopes, created_at
     FROM oauth_access_tokens
     WHERE token = ? OR token = ?
     LIMIT 1
-  `).bind(digest, token).first<StoredOAuthToken>().catch(() => null);
+  `)
+		.bind(digest, token)
+		.first<StoredOAuthToken>()
+		.catch(() => null);
 
-  if (stored) {
-    if (stored.revoked_at || oauthTokenExpired(stored)) return null;
-    const payload = await verifyToken(token, env).catch(() => null);
-    if (!payload) return null;
-    const tokenType = typeof payload.type === 'string' ? payload.type : 'access';
-    if (tokenType !== 'access') return null;
-    const userId = Number(stored.resource_owner_id);
-    if (!Number.isFinite(userId) || userId <= 0) return null;
-    const instanceId = Number(payload.instanceId) || await primaryInstanceId(env.DB, userId);
-    return {
-      token,
-      userId,
-      instanceId: instanceId || null,
-      applicationId: stored.application_id ? Number(stored.application_id) : null,
-      scopes: stored.scopes || 'read write',
-      source: 'oauth',
-      payload,
-    };
-  }
+	if (stored) {
+		if (stored.revoked_at || oauthTokenExpired(stored)) return null;
+		const payload = await verifyToken(token, env).catch(() => null);
+		if (!payload) return null;
+		const tokenType = typeof payload.type === "string" ? payload.type : "access";
+		if (tokenType !== "access") return null;
+		const userId = Number(stored.resource_owner_id);
+		if (!Number.isFinite(userId) || userId <= 0) return null;
+		const instanceId = Number(payload.instanceId) || (await primaryInstanceId(env.DB, userId));
+		return {
+			token,
+			userId,
+			instanceId: instanceId || null,
+			applicationId: stored.application_id ? Number(stored.application_id) : null,
+			scopes: stored.scopes || "read write",
+			source: "oauth",
+			payload,
+		};
+	}
 
-  if (!options.allowJwtFallback) return null;
-  const payload = await verifyToken(token, env).catch(() => null);
-  const userId = Number(payload?.sub);
-  if (!payload || !Number.isFinite(userId) || userId <= 0) return null;
-  const instanceId = Number(payload.instanceId) || await primaryInstanceId(env.DB, userId);
-  return {
-    token,
-    userId,
-    instanceId: instanceId || null,
-    applicationId: null,
-    scopes: 'read write',
-    source: 'jwt',
-    payload,
-  };
+	if (!options.allowJwtFallback) return null;
+	const payload = await verifyToken(token, env).catch(() => null);
+	const userId = Number(payload?.sub);
+	if (!payload || !Number.isFinite(userId) || userId <= 0) return null;
+	const instanceId = Number(payload.instanceId) || (await primaryInstanceId(env.DB, userId));
+	return {
+		token,
+		userId,
+		instanceId: instanceId || null,
+		applicationId: null,
+		scopes: "read write",
+		source: "jwt",
+		payload,
+	};
 }
 
 export async function getRequestAuthContext(
-  env: Env,
-  headers: Headers,
-  options: { allowJwtFallback?: boolean } = {},
+	env: Env,
+	headers: Headers,
+	options: { allowJwtFallback?: boolean; request?: Request } = {},
 ): Promise<AuthContext | null> {
-  const siteOperatorEmail = (headers.get('X-SuperBoard-Site-Operator') || '')
-    .trim()
-    .toLowerCase();
-  const siteOperatorToken = (headers.get('X-SuperBoard-Internal-Token') || '').trim();
-  const expectedSiteToken = env.SITE_OPERATOR_BRIDGE_TOKEN?.trim() || '';
-  if (
-    siteOperatorEmail &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(siteOperatorEmail) &&
-    siteOperatorToken &&
-    expectedSiteToken &&
-    await constantTimeEqual(siteOperatorToken, expectedSiteToken)
-  ) {
-    const actor = await env.DB.prepare(
-      'SELECT id FROM users WHERE lower(email) = ? LIMIT 1',
-    ).bind(siteOperatorEmail).first<{ id: number }>();
-    const userId = Number(actor?.id);
-    if (Number.isSafeInteger(userId) && userId > 0) {
-      return {
-        token: '',
-        userId,
-        instanceId: await primaryInstanceId(env.DB, userId),
-        applicationId: null,
-        scopes: 'read write',
-        source: 'site',
-        payload: { operator_email: siteOperatorEmail },
-      };
-    }
-  }
-  return getAuthContext(env, headers.get('Authorization'), options);
+	if (headers.has(SITE_OPERATOR_HEADERS.context)) {
+		if (!options.request) return null;
+		const identity = await verifySiteOperatorRequest(
+			options.request,
+			env.SUPERBOARD_TARGET ?? env.OPENGROW_TARGET ?? "",
+			env.SITE_OPERATOR_BRIDGE_TOKEN ?? "",
+		);
+		if (!identity) return null;
+		return {
+			token: "",
+			userId: 0,
+			instanceId: await resolveSiteOperatorInstance(env.DB, identity.instance_id),
+			applicationId: null,
+			scopes: "read write",
+			source: "site",
+			siteOperator: identity,
+			payload: { operator_id: identity.operator_id, instance_id: identity.instance_id },
+		};
+	}
+	return getAuthContext(env, headers.get("Authorization"), options);
 }
 
-export async function getAuthUserId(env: Env, authHeader: string | undefined | null): Promise<number | null> {
-  const context = await getAuthContext(env, authHeader);
-  return context?.userId ?? null;
+export async function getAuthUserId(
+	env: Env,
+	authHeader: string | undefined | null,
+): Promise<number | null> {
+	const context = await getAuthContext(env, authHeader);
+	return context?.userId ?? null;
 }
 
-export async function getRequestAuthUserId(env: Env, headers: Headers): Promise<number | null> {
-  const context = await getRequestAuthContext(env, headers);
-  return context?.userId ?? null;
+export async function getRequestAuthUserId(
+	env: Env,
+	headers: Headers,
+	request?: Request,
+): Promise<number | null> {
+	const context = await getRequestAuthContext(env, headers, { request });
+	return context?.userId ?? null;
 }

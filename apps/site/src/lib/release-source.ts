@@ -2,10 +2,15 @@ import {
 	type CompiledFrontRelease,
 	type LastVerifiedFrontRelease,
 	parseCompiledFrontReleaseJson,
+	sha256Canonical,
 	verifyFrontRelease,
 } from "@superboard/supbrd-core";
 
+import type { ManagedPluginOperation } from "./managed-plugin-operation.js";
+
 interface ActiveReleaseRow {
+	recovery_snapshot: string | null;
+	recovery_checksum: string | null;
 	active_release_id: string;
 	pointer_revision: number;
 	release_json: string;
@@ -33,9 +38,10 @@ export interface LoadedFrontRelease {
 export async function loadLastVerifiedFrontRelease(
 	env: Cloudflare.Env,
 	instanceId: string,
+	pendingOperation?: Pick<ManagedPluginOperation, "operation_id" | "owner_token">,
 ): Promise<LoadedFrontRelease | null> {
 	try {
-		const fromD1 = await loadFromD1(env.DB, instanceId);
+		const fromD1 = await loadFromD1(env.DB, instanceId, pendingOperation);
 		if (!fromD1) return null;
 		await env.RELEASE_CACHE.put(cacheKey(instanceId), JSON.stringify(fromD1.cache));
 		return fromD1.loaded;
@@ -67,21 +73,42 @@ export async function loadDependencyHealth(
 async function loadFromD1(
 	db: D1Database,
 	instanceId: string,
+	pendingOperation?: Pick<ManagedPluginOperation, "operation_id" | "owner_token">,
 ): Promise<{ loaded: LoadedFrontRelease; cache: LastVerifiedCacheEntry } | null> {
 	const row = await db
 		.prepare(
-			`SELECT active.active_release_id, active.pointer_revision,
-			        candidate.release_json, candidate.signing_kid, key.public_jwk
-			 FROM superboard_front_active_releases AS active
-			 JOIN superboard_front_release_candidates AS candidate
-			   ON candidate.release_id = active.active_release_id
-			 JOIN superboard_release_signing_keys AS key
-			   ON key.kid = candidate.signing_kid
-			 WHERE active.instance_id = ? AND candidate.status = 'activated'`,
+			`SELECT CASE WHEN recovery.operation_id IS NULL THEN active.active_release_id
+              WHEN json_valid(recovery.snapshot_json) THEN json_extract(recovery.snapshot_json, '$.superboard_front_active_releases[0].active_release_id') END AS active_release_id,
+            active.pointer_revision, candidate.release_json, candidate.signing_kid, key.public_jwk,
+            recovery.snapshot_json AS recovery_snapshot, recovery.snapshot_checksum AS recovery_checksum
+     FROM superboard_front_active_releases active
+     LEFT JOIN superboard_managed_plugin_operations recovery
+       ON recovery.instance_id = active.instance_id AND recovery.release_id = active.active_release_id
+      AND recovery.status = 'running'
+      AND (? IS NULL OR recovery.operation_id <> ? OR recovery.owner_token <> ? OR recovery.recovery_error IS NOT NULL)
+     JOIN superboard_front_release_candidates candidate
+       ON candidate.instance_id = active.instance_id AND candidate.release_id = CASE
+        WHEN recovery.operation_id IS NULL THEN active.active_release_id
+        WHEN json_valid(recovery.snapshot_json) THEN json_extract(recovery.snapshot_json, '$.superboard_front_active_releases[0].active_release_id') END
+     JOIN superboard_release_signing_keys key ON key.kid = candidate.signing_kid
+     WHERE active.instance_id = ? AND candidate.status = 'activated'
+      AND (recovery.operation_id IS NULL OR (
+       json_extract(recovery.snapshot_json, '$.superboard_front_active_releases[0].active_release_id') = active.previous_release_id
+       AND json_extract(recovery.snapshot_json, '$.superboard_front_active_releases[0].pointer_revision') + 1 = active.pointer_revision))`,
 		)
-		.bind(instanceId)
+		.bind(
+			pendingOperation?.operation_id ?? null,
+			pendingOperation?.operation_id ?? null,
+			pendingOperation?.owner_token ?? null,
+			instanceId,
+		)
 		.first<ActiveReleaseRow>();
 	if (!row) return null;
+	if (
+		row.recovery_snapshot &&
+		(await sha256Canonical(JSON.parse(row.recovery_snapshot))) !== row.recovery_checksum
+	)
+		return null;
 
 	const release = parseCompiledFrontReleaseJson(row.release_json);
 	const publicJwk = parsePublicReleaseJwk(row.public_jwk);

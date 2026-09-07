@@ -1,3 +1,6 @@
+const multilineSettingPattern = /(?:origins|locales|content_types|scopes|json)$/u;
+const pluginPrefixPattern = /^supbrd-(?:plug|plugmod)-/u;
+const settingLabelSeparators = /[_-]/u;
 import { fileURLToPath } from "node:url";
 
 import topology from "../../config/emdash-plugin-topology.json" with { type: "json" };
@@ -83,7 +86,7 @@ function emdashSettingsSchema(properties) {
 				{
 					...common,
 					type: "string",
-					multiline: /(?:origins|locales|content_types|scopes|json)$/u.test(key),
+					multiline: multilineSettingPattern.test(key),
 				},
 			];
 		}),
@@ -91,16 +94,12 @@ function emdashSettingsSchema(properties) {
 }
 
 function pluginDisplayName(pluginId) {
-	return pluginId
-		.replace(/^supbrd-(?:plug|plugmod)-/u, "")
-		.split("-")
-		.map(settingLabel)
-		.join(" ");
+	return pluginId.replace(pluginPrefixPattern, "").split("-").map(settingLabel).join(" ");
 }
 
 function settingLabel(value) {
 	return String(value)
-		.split(/[_-]/u)
+		.split(settingLabelSeparators)
 		.filter(Boolean)
 		.map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
 		.join(" ");

@@ -8,6 +8,7 @@
  */
 
 import type { Kysely } from "kysely";
+import { ulid } from "ulidx";
 
 import { OptionsRepository } from "../../database/repositories/options.js";
 import { withTransaction } from "../../database/transaction.js";
@@ -202,7 +203,19 @@ export async function handlePluginSettingsUpdate(
 					await txRepo.set(settingsKey(pluginId, key), value);
 				}
 			}
-			return buildSettingsResponse(txRepo, pluginId, schema);
+			const snapshot = await buildSettingsResponse(txRepo, pluginId, schema);
+			await trx
+				.insertInto("_emdash_plugin_setting_versions")
+				.values({
+					id: ulid(),
+					plugin_id: pluginId,
+					values_json: JSON.stringify(snapshot.values),
+					secrets_set_json: JSON.stringify(snapshot.secretsSet),
+					changed_keys_json: JSON.stringify(Object.keys(updates)),
+					created_at: new Date().toISOString(),
+				})
+				.execute();
+			return snapshot;
 		});
 
 		return { success: true, data };
