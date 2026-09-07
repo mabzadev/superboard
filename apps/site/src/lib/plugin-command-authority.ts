@@ -1,3 +1,6 @@
+import { z } from "zod";
+const pathProjectRefPattern = /\/(\d+-(?:test|prod))(?:\/|$)/u;
+import { resolvePluginApiOwner as inferPluginId } from "@superboard/contracts/plugin-api-owner";
 import { canonicalizeReleasePayload } from "@superboard/supbrd-core";
 
 const pluginPattern = /^supbrd-(?:plug|plugmod)-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
@@ -82,7 +85,12 @@ export async function beginRepositoryCommand(db: D1Database, input: RepositoryCo
 			requestChecksum,
 			input.accepted_at,
 		)
-		.first<CommandOperationRow>();
+		.first<CommandOperationRow>()
+		.catch((error: unknown) => {
+			if (error instanceof Error && error.message.includes("plugin manifest not active"))
+				throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
+			throw error;
+		});
 	if (inserted) return { status: "accepted" as const, operation: publicOperation(inserted) };
 
 	const existing = await loadOperation(db, input.operation_id);
@@ -159,7 +167,7 @@ export function resolveRepositoryCommandScope(url: URL): {
 } {
 	const pathname = url.pathname;
 	const projectRef =
-		pathname.match(/\/(\d+-(?:test|prod))(?:\/|$)/u)?.[1] ??
+		pathname.match(pathProjectRefPattern)?.[1] ??
 		url.searchParams.get("project_ref")?.match(projectRefPattern)?.[0] ??
 		"instance-wide";
 	const pluginId = inferPluginId(pathname);
@@ -183,6 +191,7 @@ async function assertActiveCommandContract(
 	pluginId: string,
 	commandId: string | undefined,
 ) {
+	if (pluginId === "supbrd-core" && !commandId) return;
 	if (!pluginPattern.test(pluginId)) throw new Error("PLUGIN_ID_INVALID");
 	const active = await db
 		.prepare(
@@ -197,50 +206,12 @@ async function assertActiveCommandContract(
 		.first<{ manifest_json: string }>();
 	if (!active) throw new Error("PLUGIN_MANIFEST_NOT_ACTIVE");
 	if (!commandId) return;
-	const manifest = JSON.parse(active.manifest_json) as {
-		commands?: Array<{ command_id?: string }>;
-	};
+	const manifest = z
+		.object({ commands: z.array(z.object({ command_id: z.string() })) })
+		.parse(JSON.parse(active.manifest_json));
 	if (!manifest.commands?.some(({ command_id: value }) => value === commandId)) {
 		throw new Error("PLUGIN_COMMAND_NOT_DECLARED");
 	}
-}
-
-function inferPluginId(pathname: string): string {
-	if (/\/analytics(?:\/|$)/u.test(pathname)) return "supbrd-plugmod-analytics";
-	if (/\/flows(?:\/|$)/u.test(pathname)) return "supbrd-plugmod-flows";
-	if (/\/onboardings(?:\/|$)/u.test(pathname)) return "supbrd-plugmod-onboardings";
-	if (/\/paywalls?(?:\/|$)/u.test(pathname)) return "supbrd-plugmod-paywalls";
-	if (/\/(?:products|packages|offerings|entitlements)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plug-products";
-	}
-	if (/\/(?:billing|purchases|refunds|subscriptions)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plugmod-billing";
-	}
-	if (/\/(?:support|inbox|conversations)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plugmod-support";
-	}
-	if (/\/(?:smtp|transactional|delivery-outbox|dead-letters)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plugmod-email";
-	}
-	if (/\/(?:marketing|campaigns|notifications)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plugmod-marketing";
-	}
-	if (/\/(?:links|redirect-rules|redirect_config|domains?)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plugmod-dynamic-links";
-	}
-	if (/\/(?:files|uploads|objects)(?:\/|$)/u.test(pathname)) return "supbrd-plugmod-files";
-	if (/\/mcp(?:\/|$)/u.test(pathname)) return "supbrd-plugmod-mcp";
-	if (/\/(?:events|visitors|dashboard)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plugmod-analytics";
-	}
-	if (/\/(?:users|members|sessions)(?:\/|$)/u.test(pathname)) return "supbrd-plug-user";
-	if (/\/(?:settings|configurations|setup)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plug-settings";
-	}
-	if (/\/(?:status|health|incidents|custom-jobs)(?:\/|$)/u.test(pathname)) {
-		return "supbrd-plugmod-observability";
-	}
-	return "supbrd-plugmod-gateway";
 }
 
 function assertCommandInput(input: RepositoryCommandInput) {
@@ -290,7 +261,9 @@ async function responseFromRow(row: CommandOperationRow, encryptionKey: CryptoKe
 		throw new Error("COMMAND_RESPONSE_INCOMPLETE");
 	}
 	const body = await decryptBytes(encryptionKey, parseEncryptedBytes(row.response_payload_json));
-	const parsedHeaders = JSON.parse(row.response_headers_json) as Record<string, string>;
+	const parsedHeaders = z
+		.record(z.string(), z.string())
+		.parse(JSON.parse(row.response_headers_json));
 	return new Response(body, { status: row.response_status, headers: parsedHeaders });
 }
 
@@ -336,15 +309,9 @@ async function decryptBytes(
 }
 
 function parseEncryptedBytes(value: string): EncryptedBytes {
-	const parsed = JSON.parse(value) as Partial<EncryptedBytes>;
-	if (
-		parsed.algorithm !== "AES-GCM" ||
-		typeof parsed.iv !== "string" ||
-		typeof parsed.ciphertext !== "string"
-	) {
-		throw new Error("COMMAND_PAYLOAD_INVALID");
-	}
-	return { algorithm: parsed.algorithm, iv: parsed.iv, ciphertext: parsed.ciphertext };
+	return z
+		.object({ algorithm: z.literal("AES-GCM"), iv: z.string(), ciphertext: z.string() })
+		.parse(JSON.parse(value));
 }
 
 function bytesToBase64(bytes: Uint8Array): string {

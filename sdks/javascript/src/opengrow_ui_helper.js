@@ -1,12 +1,12 @@
 import OpenGrowAPIService from "./opengrow_api_service.js";
 
 class OpenGrowUIHelper {
-  constructor() {
-    this.service = new OpenGrowAPIService();
-    this.page = 1;
-    this.isLoading = false;
+	constructor() {
+		this.service = new OpenGrowAPIService();
+		this.page = 1;
+		this.isLoading = false;
 
-    this.htmlContent = `
+		this.htmlContent = `
     <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -181,82 +181,81 @@ class OpenGrowUIHelper {
   </body>
 </html>
   `;
-  }
+	}
 
-  showMessagesList() {
-    // Create modal overlay
-    const modalOverlay = document.createElement("div");
-    modalOverlay.id = "OpenGrow-modal";
-    modalOverlay.style.position = "fixed";
-    modalOverlay.style.top = "15%";
-    modalOverlay.style.left = "15%";
-    modalOverlay.style.width = "70%";
-    modalOverlay.style.height = "70%";
-    modalOverlay.style.zIndex = "1000"; // Ensure it sits on top
+	showMessagesList() {
+		// Create modal overlay
+		const modalOverlay = document.createElement("div");
+		modalOverlay.id = "OpenGrow-modal";
+		modalOverlay.style.position = "fixed";
+		modalOverlay.style.top = "15%";
+		modalOverlay.style.left = "15%";
+		modalOverlay.style.width = "70%";
+		modalOverlay.style.height = "70%";
+		modalOverlay.style.zIndex = "1000"; // Ensure it sits on top
 
-    modalOverlay.innerHTML = this.htmlContent;
-    // Append modal overlay to body
-    document.body.appendChild(modalOverlay);
+		modalOverlay.innerHTML = this.htmlContent;
+		// Append modal overlay to body
+		document.body.appendChild(modalOverlay);
 
-    this.#loadMessages();
-    // Add event listener to close the modal
-    document.getElementById("closeModalBtn").addEventListener("click", () => {
-      document.body.removeChild(modalOverlay); // Remove the modal from the DOM
-    });
-    // Close modal when clicking outside of modal content
-    modalOverlay.addEventListener("click", (event) => {
-      if (event.target === modalOverlay) {
-        document.body.removeChild(modalOverlay); // Remove the modal from the DOM
-      }
-    });
-    const itemsListHTML = document.getElementById("itemList");
-    if (itemsListHTML) {
-      // Add scroll event listener to load next page when scrolling past half
-      itemsListHTML.addEventListener("scroll", () => {
-        if (this.isLoading) return; // Prevent multiple concurrent loads
-        const scrollPosition = itemsListHTML.scrollTop;
-        const modalHeight =
-          itemsListHTML.scrollHeight - itemsListHTML.clientHeight;
-        // Load next page if scrolled past halfway
-        if (scrollPosition >= modalHeight / 2) {
-          this.isLoading = true;
-          this.page += 1;
-          this.#loadMessages();
-        }
-      });
-    }
-  }
+		this.#loadMessages();
+		// Add event listener to close the modal
+		document.getElementById("closeModalBtn").addEventListener("click", () => {
+			document.body.removeChild(modalOverlay); // Remove the modal from the DOM
+		});
+		// Close modal when clicking outside of modal content
+		modalOverlay.addEventListener("click", (event) => {
+			if (event.target === modalOverlay) {
+				document.body.removeChild(modalOverlay); // Remove the modal from the DOM
+			}
+		});
+		const itemsListHTML = document.getElementById("itemList");
+		if (itemsListHTML) {
+			// Add scroll event listener to load next page when scrolling past half
+			itemsListHTML.addEventListener("scroll", () => {
+				if (this.isLoading) return; // Prevent multiple concurrent loads
+				const scrollPosition = itemsListHTML.scrollTop;
+				const modalHeight = itemsListHTML.scrollHeight - itemsListHTML.clientHeight;
+				// Load next page if scrolled past halfway
+				if (scrollPosition >= modalHeight / 2) {
+					this.isLoading = true;
+					this.page += 1;
+					this.#loadMessages();
+				}
+			});
+		}
+	}
 
-  openPage(notification) {
-    // Create a full-screen modal for the iframe
-    const iframeModal = document.createElement("div");
-    iframeModal.style.position = "fixed";
-    iframeModal.style.top = "0";
-    iframeModal.style.left = "0";
-    iframeModal.style.width = "100%";
-    iframeModal.style.height = "100%";
-    iframeModal.style.zIndex = "1002"; // Ensure it sits above other content
-    iframeModal.style.backgroundColor = "rgba(0, 0, 0, 0.5)"; // Dark background
-    iframeModal.style.background = "red";
-    // Create header for the iframe modal
-    const modalHeader = document.createElement("div");
-    modalHeader.style.display = "flex";
-    modalHeader.style.justifyContent = "space-between";
-    modalHeader.style.alignItems = "center";
-    modalHeader.style.padding = "10px";
-    modalHeader.style.color = "white";
-    modalHeader.style.height = "20px";
-    const headerTitle = document.createElement("h2");
-    modalHeader.appendChild(headerTitle);
-    const closeButton = document.createElement("div");
-    closeButton.style.cursor = "pointer";
-    closeButton.style.width = "24px";
-    closeButton.style.height = "24px";
-    closeButton.style.marginRight = "20px";
-    closeButton.onclick = () => {
-      document.body.removeChild(iframeModal); // Remove the modal from the DOM
-    };
-    closeButton.innerHTML = `
+	openPage(notification) {
+		// Create a full-screen modal for the iframe
+		const iframeModal = document.createElement("div");
+		iframeModal.style.position = "fixed";
+		iframeModal.style.top = "0";
+		iframeModal.style.left = "0";
+		iframeModal.style.width = "100%";
+		iframeModal.style.height = "100%";
+		iframeModal.style.zIndex = "1002"; // Ensure it sits above other content
+		iframeModal.style.backgroundColor = "rgba(0, 0, 0, 0.5)"; // Dark background
+		iframeModal.style.background = "red";
+		// Create header for the iframe modal
+		const modalHeader = document.createElement("div");
+		modalHeader.style.display = "flex";
+		modalHeader.style.justifyContent = "space-between";
+		modalHeader.style.alignItems = "center";
+		modalHeader.style.padding = "10px";
+		modalHeader.style.color = "white";
+		modalHeader.style.height = "20px";
+		const headerTitle = document.createElement("h2");
+		modalHeader.appendChild(headerTitle);
+		const closeButton = document.createElement("div");
+		closeButton.style.cursor = "pointer";
+		closeButton.style.width = "24px";
+		closeButton.style.height = "24px";
+		closeButton.style.marginRight = "20px";
+		closeButton.onclick = () => {
+			document.body.removeChild(iframeModal); // Remove the modal from the DOM
+		};
+		closeButton.innerHTML = `
           <svg
             width="24"
             height="24"
@@ -270,79 +269,64 @@ class OpenGrowUIHelper {
             />
           </svg>
         `;
-    modalHeader.appendChild(closeButton);
-    iframeModal.appendChild(modalHeader);
-    // Create iframe
-    const iframe = document.createElement("iframe");
-    iframe.src = notification.access_url;
-    iframe.style.width = "100%";
-    iframe.style.height = "calc(100% - 20px)"; // Adjust height to account for header
-    iframe.style.border = "none"; // Remove iframe border
-    // Append header and iframe to modal
-    iframeModal.appendChild(modalHeader);
-    iframeModal.appendChild(iframe);
-    // Append iframe modal to body
-    document.body.appendChild(iframeModal);
-    // // Mark the item as viewd
-    // this.#markItemAsViewed(notification);
-  }
+		modalHeader.appendChild(closeButton);
+		iframeModal.appendChild(modalHeader);
+		// Create iframe
+		const iframe = document.createElement("iframe");
+		iframe.src = notification.access_url;
+		iframe.style.width = "100%";
+		iframe.style.height = "calc(100% - 20px)"; // Adjust height to account for header
+		iframe.style.border = "none"; // Remove iframe border
+		// Append header and iframe to modal
+		iframeModal.appendChild(modalHeader);
+		iframeModal.appendChild(iframe);
+		// Append iframe modal to body
+		document.body.appendChild(iframeModal);
+	}
 
-  //   Private methods
+	//   Private methods
 
-  #markItemAsViewed(notification) {
-    this.service.markMessageAsViewed(
-      notification,
-      (response) => {
-        this.page = 1;
-        this.#loadMessages();
-      },
-      (error) => {
-        console.log("OpenGrow -- could not mark the message as viewed!");
-      }
-    );
-  }
+	#loadMessages() {
+		const spinner = document.getElementById("spinner");
+		spinner.style.display = "flex";
+		this.isLoading = true;
 
-  #loadMessages() {
-    const spinner = document.getElementById("spinner");
-    spinner.style.display = "flex";
-    this.isLoading = true;
+		this.service.messagesForDevice(
+			this.page,
+			(response) => {
+				spinner.style.display = "none";
+				this.isLoading = false; // Reset loading state
 
-    this.service.messagesForDevice(
-      this.page,
-      (response) => {
-        spinner.style.display = "none";
-        this.isLoading = false; // Reset loading state
+				if (this.page == 1) {
+					const itemList = document.getElementById("itemList");
+					itemList.innerHTML = "";
+				}
 
-        if (this.page == 1) {
-          const itemList = document.getElementById("itemList");
-          itemList.innerHTML = "";
-        }
+				this.#refreshItemsList(response.notifications);
+			},
+			(_error) => {
+				this.isLoading = false;
+				spinner.style.display = "none";
+				console.log("OpenGrow -- could not get messages!");
+			},
+		);
+	}
 
-        this.#refreshItemsList(response.notifications);
-      },
-      (error) => {
-        this.isLoading = false;
-        spinner.style.display = "none";
-        console.log("OpenGrow -- could not get messages!");
-      }
-    );
-  }
-
-  #refreshItemsList(items) {
-    items.forEach((item) => {
-      const itemDiv = document.createElement("div");
-      itemDiv.className = "item";
-      itemDiv.style.display = "flex";
-      itemDiv.style.justifyContent = "space-between";
-      itemDiv.style.alignItems = "center";
-      itemDiv.style.padding = "20px";
-      itemDiv.style.borderBottom = "1px solid rgba(255, 255, 255, 0.2)";
-      itemDiv.style.cursor = "pointer";
-      itemDiv.innerHTML = `
+	#refreshItemsList(items) {
+		items.forEach((item) => {
+			const itemDiv = document.createElement("div");
+			itemDiv.className = "item";
+			itemDiv.style.display = "flex";
+			itemDiv.style.justifyContent = "space-between";
+			itemDiv.style.alignItems = "center";
+			itemDiv.style.padding = "20px";
+			itemDiv.style.borderBottom = "1px solid rgba(255, 255, 255, 0.2)";
+			itemDiv.style.cursor = "pointer";
+			itemDiv.innerHTML = `
               <div class="list-item">
                   <div class="indicator" style="width: 10px; height: 10px; border-radius: 50%; margin-right: 10px; display: ${
-                    item.read ? "none" : "block"
-                  }"></div>
+										item.read ? "none" : "block"
+									}"></div>
                   <div class="list-title">
                     <strong class="item-title">${item.title}</strong><br />
                     <span class="item-subtitle">${item.subtitle}</span>
@@ -354,12 +338,12 @@ class OpenGrowUIHelper {
   
   </span>
           `;
-      itemDiv.onclick = () => {
-        this.openPage(item);
-      };
-      itemList.appendChild(itemDiv);
-    });
-  }
+			itemDiv.onclick = () => {
+				this.openPage(item);
+			};
+			itemList.appendChild(itemDiv);
+		});
+	}
 }
 
 export default OpenGrowUIHelper;

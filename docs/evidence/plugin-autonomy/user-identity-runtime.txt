@@ -1,0 +1,10 @@
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/workers/identity
+
+console warning; message = Called .text() on an HTTP body which does not appear to be text. The body's Content-Type is "application/x-www-form-urlencoded". The result will probably be corrupted. Consider checking the Content-Type header before interpreting entities as text.
+console warning; message = Called .text() on an HTTP body which does not appear to be text. The body's Content-Type is "application/x-www-form-urlencoded". The result will probably be corrupted. Consider checking the Content-Type header before interpreting entities as text.
+
+ Test Files  2 passed (2)
+      Tests  16 passed (16)
+   Start at  00:49:12
+   Duration  4.01s (transform 2.39s, setup 6.14s, import 23ms, tests 469ms, environment 0ms)

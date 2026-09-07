@@ -44,6 +44,8 @@ export interface NativeFrontViewConfiguration {
 }
 
 export interface NativeFrontPresentationProjection {
+	operator?: FrontPageModel["operator"];
+	project_scope?: import("@superboard/contracts/site-operator").OperatorProjectScope;
 	instance_id: string;
 	release_id: string | null;
 	path: string;
@@ -255,7 +257,7 @@ function projectEditorialNavigation(
 	const releaseItemByHref = new Map(
 		release.flatMap((group) => group.items.map((item) => [item.href, item] as const)),
 	);
-	return editorial.flatMap((group, groupOrder) => {
+	const groups = editorial.flatMap((group, groupOrder) => {
 		const items = group.items.flatMap((item, itemOrder) => {
 			const listedItem = releaseItemByHref.get(item.href);
 			if (listedItem) return [{ ...listedItem, label: item.label, order: itemOrder }];
@@ -290,6 +292,14 @@ function projectEditorialNavigation(
 			},
 		];
 	});
+	const customized = new Set(groups.flatMap(({ items }) => items.map(({ href }) => href)));
+	return [
+		...groups,
+		...release.flatMap((group) => {
+			const items = group.items.filter(({ href }) => !customized.has(href));
+			return items.length ? [{ ...group, order: groups.length + group.order, items }] : [];
+		}),
+	];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

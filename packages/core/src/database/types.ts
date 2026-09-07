@@ -630,6 +630,14 @@ export interface SectionTable {
 // Database schema
 // Note: ec_* content tables are dynamic and not part of this type
 export interface Database {
+	_emdash_plugin_setting_versions: {
+		id: string;
+		plugin_id: string;
+		values_json: string;
+		secrets_set_json: string;
+		changed_keys_json: string;
+		created_at: string;
+	};
 	revisions: RevisionTable;
 	_emdash_revision_prune_queue: RevisionPruneQueueTable;
 	taxonomies: TaxonomyTable;

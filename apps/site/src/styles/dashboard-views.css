@@ -1,7 +1,8 @@
-@import "../../../dashboard/src/app/openflow-tokens.css";
-@import "../../../dashboard/src/app/globals.css";
+@import "../../../../packages/supbrd-front-ui/src/styles/openflow-tokens.css";
+@import "../../../../packages/supbrd-front-ui/src/styles/globals.css";
 
-@source "../../../dashboard/src";
+@source "../../../../packages/supbrd-front-ui/src";
+@source "../../../../packages/supbrd-runtime-plugins/src/front/client";
 
 .native-front-dashboard-view {
 	width: 100%;

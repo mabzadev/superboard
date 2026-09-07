@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { createPublicPluginApiRouteHandler } from "../../../src/astro/public-plugin-api-routes.js";
 import { EmDashRuntime, type RuntimeDependencies } from "../../../src/emdash-runtime.js";
+import { CronAccessImpl, CronExecutor } from "../../../src/plugins/cron.js";
 import { definePlugin } from "../../../src/plugins/define-plugin.js";
 import { createRequestMetrics, runWithContext } from "../../../src/request-context.js";
 
@@ -19,6 +20,7 @@ function createDeps(onActivate: (hasCron: boolean) => void): RuntimeDependencies
 				version: "1.0.0",
 				capabilities: ["content:write"],
 				routes: {
+					health: { handler: async () => ({ status: "ready", plugin_id: "cron-route" }) },
 					status: { public: true, handler: async (ctx) => ({ hasCron: !!ctx.cron }) },
 					write: {
 						public: true,
@@ -70,6 +72,32 @@ describe("EmDashRuntime.handlePluginApiRoute — cron", () => {
 		}
 	});
 
+	it("inspects disabled plugin health without re-enabling its business routes", async () => {
+		let activations = 0;
+		const runtime = await EmDashRuntime.create(
+			createDeps(() => {
+				activations += 1;
+			}),
+		);
+		try {
+			await runtime.setPluginStatus("cron-route", "inactive");
+			const request = new Request("http://test.local/_emdash/api/plugins/cron-route/health");
+			expect(await runtime.inspectPluginHealth("cron-route", request)).toMatchObject({
+				success: true,
+				data: { status: "ready" },
+			});
+			expect(
+				await runtime.handlePluginApiRoute("cron-route", "GET", "/status", request),
+			).toMatchObject({ success: false, error: { code: "NOT_FOUND" } });
+			await runtime.setPluginStatus("cron-route", "active");
+			const count = activations;
+			await runtime.setPluginStatus("cron-route", "active");
+			expect(activations).toBe(count);
+		} finally {
+			await runtime.stopCron();
+		}
+	});
+
 	it("keeps public plugin reads query-free and fences only actual content writes", async () => {
 		const runtime = await EmDashRuntime.create(createDeps(() => undefined));
 		try {
@@ -103,4 +131,67 @@ describe("EmDashRuntime.handlePluginApiRoute — cron", () => {
 			await runtime.stopCron();
 		}
 	});
+});
+
+it("suspends overdue plugin jobs and resumes them after reactivation", async () => {
+	const runtime = await EmDashRuntime.create(createDeps(() => undefined));
+	try {
+		const access = new CronAccessImpl(runtime.db, "cron-route", () => undefined);
+		await access.schedule("daily-check", { schedule: "@hourly" });
+		await runtime.db
+			.updateTable("_emdash_cron_tasks")
+			.set({ next_run_at: new Date(Date.now() - 1000).toISOString() })
+			.where("plugin_id", "=", "cron-route")
+			.execute();
+		let invoked = 0;
+		const executor = new CronExecutor(runtime.db, async () => {
+			invoked += 1;
+		});
+		await runtime.setPluginStatus("cron-route", "inactive");
+		expect(await executor.tick()).toBe(0);
+		expect(invoked).toBe(0);
+		await runtime.setPluginStatus("cron-route", "active");
+		expect(await executor.tick()).toBe(1);
+		expect(invoked).toBe(1);
+	} finally {
+		await runtime.stopCron();
+	}
+});
+
+it("can deactivate a plugin after its activation hook fails permanently", async () => {
+	let failActivation = false;
+	const runtime = await EmDashRuntime.create(
+		createDeps(() => {
+			if (failActivation) throw new Error("activation hook failed");
+		}),
+	);
+	try {
+		await runtime.setPluginStatus("cron-route", "inactive");
+		failActivation = true;
+		await expect(runtime.setPluginStatus("cron-route", "active")).rejects.toThrow(
+			"activation hook failed",
+		);
+		expect(
+			await runtime.handlePluginApiRoute(
+				"cron-route",
+				"GET",
+				"/status",
+				new Request("https://site.test/status"),
+			),
+		).toMatchObject({ success: false, error: { code: "NOT_FOUND" } });
+		await expect(runtime.setPluginStatus("cron-route", "active")).rejects.toThrow(
+			"activation hook failed",
+		);
+		await runtime.setPluginStatus("cron-route", "inactive");
+		expect(
+			await runtime.handlePluginApiRoute(
+				"cron-route",
+				"GET",
+				"/status",
+				new Request("https://site.test/status"),
+			),
+		).toMatchObject({ success: false, error: { code: "NOT_FOUND" } });
+	} finally {
+		await runtime.stopCron();
+	}
 });

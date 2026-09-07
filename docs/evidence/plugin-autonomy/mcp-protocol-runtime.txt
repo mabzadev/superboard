@@ -1,0 +1,8 @@
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  00:57:37
+   Duration  8.14s (transform 2.81s, setup 5.42s, import 6ms, tests 838ms, environment 0ms)

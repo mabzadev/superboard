@@ -1,0 +1,19 @@
+{
+  "plugin_id": "supbrd-plugmod-marketing",
+  "route_id": "superboard.message_preview_craft",
+  "route_pattern": "/message-preview-craft",
+  "path": "/message-preview-craft",
+  "fixture": "HTML document in localStorage key craft-preview-data; no server message creation claimed",
+  "checks": {
+    "render": "passed",
+    "functional": "passed",
+    "reload": "passed",
+    "navigation": "passed",
+    "french_render": "passed"
+  },
+  "exceptions": [],
+  "network": [],
+  "web_width": 1024,
+  "mobile_width": 390,
+  "status": "passed"
+}

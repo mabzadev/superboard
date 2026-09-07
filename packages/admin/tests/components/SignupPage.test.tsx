@@ -57,6 +57,50 @@ describe("SignupPage", () => {
 		window.history.replaceState({}, "", window.location.pathname);
 	});
 
+	it("opens the passkey prompt for a verified signup after setup is complete", async () => {
+		mockVerifySignupToken.mockResolvedValue({
+			email: "new@example.com",
+			role: 30,
+			roleName: "Author",
+		});
+		window.history.replaceState({}, "", "?token=valid-signup-token");
+		const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const path =
+				typeof input === "string"
+					? input
+					: input instanceof URL
+						? input.pathname
+						: new URL(input.url).pathname;
+			if (path === "/_emdash/api/auth/signup/register-options")
+				return Response.json({
+					data: {
+						options: {
+							challenge: "YQ",
+							rp: { id: "localhost", name: "Test site" },
+							user: { id: "Yg", name: "new@example.com", displayName: "New user" },
+							pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+						},
+					},
+				});
+			return Response.json(
+				{ error: { code: "SETUP_COMPLETE", message: "Setup already complete" } },
+				{ status: 400 },
+			);
+		});
+		const credentialSpy = vi
+			.spyOn(navigator.credentials, "create")
+			.mockRejectedValue(new DOMException("Cancelled by test", "NotAllowedError"));
+		try {
+			const screen = await render(<SignupPage />);
+			await expect.element(screen.getByText("Email verified!")).toBeInTheDocument();
+			await screen.getByRole("button", { name: "Create Account" }).click();
+			await expect.poll(() => credentialSpy.mock.calls.length).toBe(1);
+		} finally {
+			fetchSpy.mockRestore();
+			credentialSpy.mockRestore();
+		}
+	});
+
 	it("shows email input initially", async () => {
 		const screen = await render(<SignupPage />);
 		await expect.element(screen.getByText("Create an account")).toBeInTheDocument();

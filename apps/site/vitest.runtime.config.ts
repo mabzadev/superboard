@@ -7,6 +7,32 @@ import { defineConfig } from "vitest/config";
 import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
 import { buildFreshInstancePlan } from "../../scripts/superboard-fresh-instance-proof.mjs";
 
+const healthWorkers = [
+	"identity",
+	"app",
+	"products",
+	"api",
+	"support",
+	"flows",
+	"analytics",
+	"marketing",
+	"email",
+	"dynamic-links",
+	"files",
+	"paywalls",
+	"onboardings",
+];
+const healthMigrations = Object.fromEntries(
+	await Promise.all(
+		healthWorkers.map(async (name) => [
+			name,
+			await readD1Migrations(
+				fileURLToPath(new URL(`../../workers/${name}/migrations`, import.meta.url)),
+			),
+		]),
+	),
+);
+
 const parityRelease = JSON.parse(
 	readFileSync(new URL("../../config/superboard-parity-release.json", import.meta.url), "utf8"),
 );
@@ -26,7 +52,31 @@ export default defineConfig({
 				},
 				miniflare: {
 					compatibilityDate: "2026-08-08",
+					d1Databases: {
+						DB: "site-runtime",
+						...Object.fromEntries(
+							healthWorkers.map((name) => [
+								`HEALTH_${name.replaceAll("-", "_").toUpperCase()}_DB`,
+								`health-${name}`,
+							]),
+						),
+					},
+					r2Buckets: ["HEALTH_FILES_R2"],
+					serviceBindings: {
+						SITE_SERVICE: { name: "superboard-site-runtime-test" },
+						WORKFLOW_API_SERVICE: {
+							name: "superboard-site-runtime-test",
+							entrypoint: "WorkflowLifecycleApi",
+						},
+						API_SERVICE: { name: "superboard-site-runtime-test", entrypoint: "LifecycleApi" },
+					},
 					bindings: {
+						SITE_OPERATOR_BRIDGE_TOKEN: "runtime-site-operator-health-secret",
+						HEALTH_IDENTITY_KEYSET: JSON.stringify({
+							active_kid: "autonomy-identity",
+							keys: [{ ...privateJwk, kid: "autonomy-identity", alg: "ES256" }],
+						}),
+						HEALTH_MIGRATIONS_JSON: JSON.stringify(healthMigrations),
 						FRESH_INSTANCE_PLAN_JSON: JSON.stringify(
 							await buildFreshInstancePlan("mbza-development"),
 						),
@@ -58,5 +108,8 @@ export default defineConfig({
 		include: ["runtime-tests/**/*.test.ts"],
 		setupFiles: ["./runtime-tests/apply-migrations.ts"],
 		sequence: { concurrent: false },
+		maxWorkers: 3,
+		testTimeout: 30000,
+		hookTimeout: 60000,
 	},
 });

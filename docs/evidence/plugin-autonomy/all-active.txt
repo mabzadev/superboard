@@ -1,0 +1,136 @@
+EmDash Dev Site
+Dashboard
+Content
+Views
+Media
+Manage
+Comments
+Menus
+Redirects
+Widgets
+Sections
+Categories
+Tags
+Bylines
+Admin
+Content Types
+Byline Schema
+Users
+Plugins
+Import
+Settings
+Plugins
+User
+Settings
+Content
+Products
+Audit
+Gateway
+Billing
+Support
+Flows
+Analytics
+Marketing
+Email
+Dynamic Links
+Files
+Paywalls
+Onboardings
+Observability
+Mcp
+
+EmDash Dev Site v0.35.0 (60ab8f5e)
+
+View Site
+Toggle theme (current: System (light))
+D
+Dev Admin
+Plugins
+
+Manage installed plugins. Enable or disable plugins to control their functionality.
+
+19 plugins
+cloudflare-email
+v1.0.0
+Hooks
+1 permission
+Expand details
+supbrd-plug-user
+v1.4.0
+Pages
+Expand details
+supbrd-plug-settings
+v1.0.0
+Pages
+Expand details
+supbrd-plug-content
+v1.0.0
+Pages
+Expand details
+supbrd-plug-products
+v1.0.0
+Pages
+Expand details
+supbrd-plug-audit
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-gateway
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-billing
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-support
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-flows
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-analytics
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-marketing
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-email
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-dynamic-links
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-files
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-paywalls
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-onboardings
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-observability
+v1.0.0
+Pages
+Expand details
+supbrd-plugmod-mcp
+v1.0.0
+Pages
+Expand details
+Plugin enabled
+
+supbrd-plugmod-email is now active
+
+Plugin enabled
+
+supbrd-plug-user is now active

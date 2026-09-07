@@ -57,7 +57,7 @@ describe("Front Release activation", () => {
 		const repository = createInMemoryFrontReleaseRepository([
 			{ release, status: "approved", approval: releaseApproval },
 		]);
-		const activationReauthentication = await createOperatorReauthenticationReceipt({
+		const freshReauthentication = await createOperatorReauthenticationReceipt({
 			receipt_id: "01J00000000000000000000017",
 			operator_id: releaseApproval.operator_id,
 			instance_id: release.payload.instance_id,
@@ -74,7 +74,7 @@ describe("Front Release activation", () => {
 				activation_id: "01J00000000000000000000018",
 				expected_active_release_id: null,
 				approval: releaseApproval,
-				reauthentication: activationReauthentication,
+				reauthentication: freshReauthentication,
 				activated_at: "2026-08-29T19:00:00.000Z",
 			}),
 		).toMatchObject({ status: "activated", active_release_id: release.payload.release_id });

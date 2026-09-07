@@ -553,11 +553,12 @@ function decodeStoreCursor(value: string | undefined): { entity_type: string; en
 		if (
 			!Array.isArray(parsed) ||
 			parsed.length !== 2 ||
-			parsed.some((item) => typeof item !== "string")
+			typeof parsed[0] !== "string" ||
+			typeof parsed[1] !== "string"
 		) {
 			throw new Error("invalid");
 		}
-		return { entity_type: parsed[0] as string, entity_id: parsed[1] as string };
+		return { entity_type: parsed[0], entity_id: parsed[1] };
 	} catch {
 		throw new Error("STORE_CURSOR_INVALID");
 	}

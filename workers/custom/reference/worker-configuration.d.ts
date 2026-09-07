@@ -7,6 +7,8 @@ interface __BaseEnv_Env {
 	CUSTOM_WORKER_CAPABILITIES: string;
 	D1_EXPECTED_MIGRATION: string;
 	REFERENCE_JOB_RETENTION_DAYS: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	CUSTOM_WORKER_TOKEN: string;
 }
 declare namespace Cloudflare {
@@ -17,7 +19,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_KEY" | "ENVIRONMENT" | "CUSTOM_WORKER_CAPABILITIES" | "D1_EXPECTED_MIGRATION" | "REFERENCE_JOB_RETENTION_DAYS" | "CUSTOM_WORKER_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_KEY" | "ENVIRONMENT" | "CUSTOM_WORKER_CAPABILITIES" | "D1_EXPECTED_MIGRATION" | "REFERENCE_JOB_RETENTION_DAYS" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "CUSTOM_WORKER_TOKEN">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

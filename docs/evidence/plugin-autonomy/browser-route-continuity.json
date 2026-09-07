@@ -1,0 +1,4340 @@
+{
+  "captured_at": "2026-09-07T06:58:35.049Z",
+  "baseline_source_commit": "60ab8f5ed2aa04b171967cec3b656bfdd3f0f717",
+  "results": [
+    {
+      "plugin_id": "supbrd-plug-content",
+      "route_id": "superboard.system_content",
+      "route_pattern": "/system/content",
+      "path": "/system/content",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/system/content",
+        "lang": "en",
+        "headings": [
+          "Content"
+        ],
+        "alerts": [],
+        "main_length": 104,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/system/content",
+        "lang": "fr",
+        "headings": [
+          "Contenu"
+        ],
+        "alerts": [],
+        "main_length": 119,
+        "interactive_count": 5
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-audit",
+      "route_id": "superboard.system_audit",
+      "route_pattern": "/system/audit",
+      "path": "/system/audit",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/system/audit",
+        "lang": "en",
+        "headings": [
+          "Audit ledger",
+          "Archives"
+        ],
+        "alerts": [],
+        "main_length": 226,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/system/audit",
+        "lang": "fr",
+        "headings": [
+          "Journal d\u2019audit",
+          "Archives"
+        ],
+        "alerts": [],
+        "main_length": 237,
+        "interactive_count": 5
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-products",
+      "route_id": "superboard.products_offerings",
+      "route_pattern": "/products/offerings",
+      "path": "/products/offerings",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/products/offerings",
+        "lang": "en",
+        "headings": [
+          "Offerings"
+        ],
+        "alerts": [],
+        "main_length": 869,
+        "interactive_count": 24
+      },
+      "french": {
+        "path": "/products/offerings",
+        "lang": "fr",
+        "headings": [
+          "Offerings"
+        ],
+        "alerts": [],
+        "main_length": 869,
+        "interactive_count": 24
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "route_id": "superboard.app_android_setup",
+      "route_pattern": "/app/android-setup",
+      "path": "/app/android-setup",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/android-setup",
+        "lang": "en",
+        "headings": [
+          "Android Setup"
+        ],
+        "alerts": [],
+        "main_length": 683,
+        "interactive_count": 16
+      },
+      "french": {
+        "path": "/app/android-setup",
+        "lang": "fr",
+        "headings": [
+          "Android Setup"
+        ],
+        "alerts": [],
+        "main_length": 683,
+        "interactive_count": 16
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "route_id": "superboard.app_ios_setup",
+      "route_pattern": "/app/ios-setup",
+      "path": "/app/ios-setup",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/ios-setup",
+        "lang": "en",
+        "headings": [
+          "iOS Setup"
+        ],
+        "alerts": [],
+        "main_length": 677,
+        "interactive_count": 16
+      },
+      "french": {
+        "path": "/app/ios-setup",
+        "lang": "fr",
+        "headings": [
+          "iOS Setup"
+        ],
+        "alerts": [],
+        "main_length": 677,
+        "interactive_count": 16
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "route_id": "superboard.app_web_setup",
+      "route_pattern": "/app/web-setup",
+      "path": "/app/web-setup",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/web-setup",
+        "lang": "en",
+        "headings": [
+          "Web Setup"
+        ],
+        "alerts": [],
+        "main_length": 598,
+        "interactive_count": 12
+      },
+      "french": {
+        "path": "/app/web-setup",
+        "lang": "fr",
+        "headings": [
+          "Web Setup"
+        ],
+        "alerts": [],
+        "main_length": 598,
+        "interactive_count": 12
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "route_id": "superboard.project_settings",
+      "route_pattern": "/project-settings",
+      "path": "/project-settings",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/project-settings",
+        "lang": "en",
+        "headings": [],
+        "alerts": [],
+        "main_length": 446,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/project-settings",
+        "lang": "fr",
+        "headings": [],
+        "alerts": [],
+        "main_length": 446,
+        "interactive_count": 4
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.account",
+      "route_pattern": "/account",
+      "path": "/account",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/account",
+        "lang": "en",
+        "headings": [
+          "Account security"
+        ],
+        "alerts": [],
+        "main_length": 111,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/account",
+        "lang": "fr",
+        "headings": [
+          "S\u00e9curit\u00e9 du compte"
+        ],
+        "alerts": [],
+        "main_length": 147,
+        "interactive_count": 4
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.app_access_key",
+      "route_pattern": "/app/access-key",
+      "path": "/app/access-key",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/access-key",
+        "lang": "en",
+        "headings": [
+          "Access Key"
+        ],
+        "alerts": [],
+        "main_length": 437,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/app/access-key",
+        "lang": "fr",
+        "headings": [
+          "Access Key"
+        ],
+        "alerts": [],
+        "main_length": 437,
+        "interactive_count": 4
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.app_customers",
+      "route_pattern": "/app/customers",
+      "path": "/app/customers",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/customers",
+        "lang": "en",
+        "headings": [
+          "Customers"
+        ],
+        "alerts": [],
+        "main_length": 356,
+        "interactive_count": 17
+      },
+      "french": {
+        "path": "/app/customers",
+        "lang": "fr",
+        "headings": [
+          "Customers"
+        ],
+        "alerts": [],
+        "main_length": 356,
+        "interactive_count": 17
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.profile",
+      "route_pattern": "/app/profile",
+      "path": "/app/profile",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/profile",
+        "lang": "en",
+        "headings": [
+          "Operator profile"
+        ],
+        "alerts": [],
+        "main_length": 66,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/app/profile",
+        "lang": "fr",
+        "headings": [
+          "Profil op\u00e9rateur"
+        ],
+        "alerts": [],
+        "main_length": 83,
+        "interactive_count": 5
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.app_members",
+      "route_pattern": "/app/members",
+      "path": "/app/members",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/members",
+        "lang": "en",
+        "headings": [
+          "Application users"
+        ],
+        "alerts": [],
+        "main_length": 576,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/app/members",
+        "lang": "fr",
+        "headings": [
+          "Application users"
+        ],
+        "alerts": [],
+        "main_length": 576,
+        "interactive_count": 5
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.users",
+      "route_pattern": "/app/users",
+      "path": "/app/users",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/users",
+        "lang": "en",
+        "headings": [
+          "Application users"
+        ],
+        "alerts": [],
+        "main_length": 576,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/app/users",
+        "lang": "fr",
+        "headings": [
+          "Application users"
+        ],
+        "alerts": [],
+        "main_length": 576,
+        "interactive_count": 5
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.app_referrals",
+      "route_pattern": "/app/referrals",
+      "path": "/app/referrals",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/referrals",
+        "lang": "en",
+        "headings": [
+          "Referrals"
+        ],
+        "alerts": [],
+        "main_length": 336,
+        "interactive_count": 14
+      },
+      "french": {
+        "path": "/app/referrals",
+        "lang": "fr",
+        "headings": [
+          "Referrals"
+        ],
+        "alerts": [],
+        "main_length": 336,
+        "interactive_count": 14
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity",
+      "route_pattern": "/identity",
+      "path": "/identity",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Dashboard",
+          "System Links",
+          "Information Configs",
+          "Locale Configs",
+          "Suppression Configs",
+          "Auth Configs",
+          "MFA Configs",
+          "Brute-force Configs",
+          "SSO Configs",
+          "Log Configs"
+        ],
+        "alerts": [],
+        "main_length": 2092,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/identity",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Tableau de bord",
+          "Liens syst\u00e8me",
+          "Configurations d'information",
+          "Configurations de langue",
+          "Configurations de suppression",
+          "Configurations d'authentification",
+          "Configurations MFA",
+          "Configurations de force brute",
+          "Configurations SSO",
+          "Configurations des journaux"
+        ],
+        "alerts": [],
+        "main_length": 2186,
+        "interactive_count": 4
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang",
+      "route_pattern": "/identity/:lang",
+      "path": "/identity/en",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Dashboard",
+          "System Links",
+          "Information Configs",
+          "Locale Configs",
+          "Suppression Configs",
+          "Auth Configs",
+          "MFA Configs",
+          "Brute-force Configs",
+          "SSO Configs",
+          "Log Configs"
+        ],
+        "alerts": [],
+        "main_length": 2092,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/identity/fr",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Tableau de bord",
+          "Liens syst\u00e8me",
+          "Configurations d'information",
+          "Configurations de langue",
+          "Configurations de suppression",
+          "Configurations d'authentification",
+          "Configurations MFA",
+          "Configurations de force brute",
+          "Configurations SSO",
+          "Configurations des journaux"
+        ],
+        "alerts": [],
+        "main_length": 2186,
+        "interactive_count": 4
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_account",
+      "route_pattern": "/identity/:lang/account",
+      "path": "/identity/en/account",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/account",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Account"
+        ],
+        "alerts": [],
+        "main_length": 176,
+        "interactive_count": 6
+      },
+      "french": {
+        "path": "/identity/fr/account",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Compte"
+        ],
+        "alerts": [],
+        "main_length": 224,
+        "interactive_count": 6
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_apps",
+      "route_pattern": "/identity/:lang/apps",
+      "path": "/identity/en/apps",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/apps",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Apps",
+          "App Banners"
+        ],
+        "alerts": [],
+        "main_length": 280,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/identity/fr/apps",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Applications",
+          "Banni\u00e8res d'application"
+        ],
+        "alerts": [],
+        "main_length": 318,
+        "interactive_count": 4
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_apps_banners_by_id",
+      "route_pattern": "/identity/:lang/apps/banners/:id",
+      "path": "/identity/en/apps/banners/:id",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_apps_by_id",
+      "route_pattern": "/identity/:lang/apps/:id",
+      "path": "/identity/en/apps/3",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/apps/3",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Autonomy browser app"
+        ],
+        "alerts": [],
+        "main_length": 463,
+        "interactive_count": 13
+      },
+      "french": {
+        "path": "/identity/fr/apps/3",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Autonomy browser app"
+        ],
+        "alerts": [],
+        "main_length": 530,
+        "interactive_count": 13
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_apps_banners_new",
+      "route_pattern": "/identity/:lang/apps/banners/new",
+      "path": "/identity/en/apps/banners/new",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/apps/banners/new",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Create a banner"
+        ],
+        "alerts": [],
+        "main_length": 291,
+        "interactive_count": 6
+      },
+      "french": {
+        "path": "/identity/fr/apps/banners/new",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Cr\u00e9er une banni\u00e8re"
+        ],
+        "alerts": [],
+        "main_length": 340,
+        "interactive_count": 6
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_apps_new",
+      "route_pattern": "/identity/:lang/apps/new",
+      "path": "/identity/en/apps/new",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/apps/new",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Create an app"
+        ],
+        "alerts": [],
+        "main_length": 141,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/identity/fr/apps/new",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Cr\u00e9er une application"
+        ],
+        "alerts": [],
+        "main_length": 165,
+        "interactive_count": 4
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_dashboard",
+      "route_pattern": "/identity/:lang/dashboard",
+      "path": "/identity/en/dashboard",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/dashboard",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Dashboard",
+          "System Links",
+          "Information Configs",
+          "Locale Configs",
+          "Suppression Configs",
+          "Auth Configs",
+          "MFA Configs",
+          "Brute-force Configs",
+          "SSO Configs",
+          "Log Configs"
+        ],
+        "alerts": [],
+        "main_length": 2092,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/identity/fr/dashboard",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Tableau de bord",
+          "Liens syst\u00e8me",
+          "Configurations d'information",
+          "Configurations de langue",
+          "Configurations de suppression",
+          "Configurations d'authentification",
+          "Configurations MFA",
+          "Configurations de force brute",
+          "Configurations SSO",
+          "Configurations des journaux"
+        ],
+        "alerts": [],
+        "main_length": 2186,
+        "interactive_count": 4
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_logs_email_by_id",
+      "route_pattern": "/identity/:lang/logs/email/:id",
+      "path": "/identity/en/logs/email/:id",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_logs_sign_in_by_id",
+      "route_pattern": "/identity/:lang/logs/sign-in/:id",
+      "path": "/identity/en/logs/sign-in/:id",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_logs_sms_by_id",
+      "route_pattern": "/identity/:lang/logs/sms/:id",
+      "path": "/identity/en/logs/sms/:id",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_logs",
+      "route_pattern": "/identity/:lang/logs",
+      "path": "/identity/en/logs",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/logs",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Logs",
+          "Email Logs",
+          "SMS Logs",
+          "Sign-in Logs"
+        ],
+        "alerts": [],
+        "main_length": 196,
+        "interactive_count": 3
+      },
+      "french": {
+        "path": "/identity/fr/logs",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Journaux",
+          "Journaux des emails",
+          "Journaux des SMS",
+          "Journaux de connexion"
+        ],
+        "alerts": [],
+        "main_length": 251,
+        "interactive_count": 3
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_orgs",
+      "route_pattern": "/identity/:lang/orgs",
+      "path": "/identity/en/orgs",
+      "exceptions": [],
+      "network": [],
+      "console": [
+        "IntlError: MISSING_MESSAGE: Could not resolve `orgs.slug` in messages for locale `fr`.\n    at getFallbackFromErrorAndNotify (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=d2c30680:2991:17)\n    at translateBaseFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=d2c30680:3017:17)\n    at translateFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=d2c30680:3042:18"
+      ],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/orgs",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Orgs"
+        ],
+        "alerts": [],
+        "main_length": 139,
+        "interactive_count": 3
+      },
+      "french": {
+        "path": "/identity/fr/orgs",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Organisations"
+        ],
+        "alerts": [],
+        "main_length": 151,
+        "interactive_count": 3
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_orgs_new",
+      "route_pattern": "/identity/:lang/orgs/new",
+      "path": "/identity/en/orgs/new",
+      "exceptions": [],
+      "network": [],
+      "console": [
+        "IntlError: MISSING_MESSAGE: Could not resolve `orgs.slug` in messages for locale `fr`.\n    at getFallbackFromErrorAndNotify (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=d2c30680:2991:17)\n    at translateBaseFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=d2c30680:3017:17)\n    at translateFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=d2c30680:3042:18"
+      ],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/orgs/new",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Create an org"
+        ],
+        "alerts": [],
+        "main_length": 250,
+        "interactive_count": 6
+      },
+      "french": {
+        "path": "/identity/fr/orgs/new",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Cr\u00e9er une organisation"
+        ],
+        "alerts": [],
+        "main_length": 330,
+        "interactive_count": 6
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_roles",
+      "route_pattern": "/identity/:lang/roles",
+      "path": "/identity/en/roles",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/roles",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Roles"
+        ],
+        "alerts": [],
+        "main_length": 188,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/identity/fr/roles",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "R\u00f4les"
+        ],
+        "alerts": [],
+        "main_length": 191,
+        "interactive_count": 5
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_roles_new",
+      "route_pattern": "/identity/:lang/roles/new",
+      "path": "/identity/en/roles/new",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/roles/new",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Create a role"
+        ],
+        "alerts": [],
+        "main_length": 138,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/identity/fr/roles/new",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Cr\u00e9er un r\u00f4le"
+        ],
+        "alerts": [],
+        "main_length": 150,
+        "interactive_count": 4
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_saml_by_id",
+      "route_pattern": "/identity/:lang/saml/:id",
+      "path": "/identity/en/saml/:id",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_saml",
+      "route_pattern": "/identity/:lang/saml",
+      "path": "/identity/en/saml",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/saml",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "SAML"
+        ],
+        "alerts": [],
+        "main_length": 105,
+        "interactive_count": 1
+      },
+      "french": {
+        "path": "/identity/fr/saml",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "SAML"
+        ],
+        "alerts": [],
+        "main_length": 103,
+        "interactive_count": 1
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_saml_new",
+      "route_pattern": "/identity/:lang/saml/new",
+      "path": "/identity/en/saml/new",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/saml/new",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Create a SAML IDP"
+        ],
+        "alerts": [],
+        "main_length": 275,
+        "interactive_count": 8
+      },
+      "french": {
+        "path": "/identity/fr/saml/new",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Cr\u00e9er un IDP SAML"
+        ],
+        "alerts": [],
+        "main_length": 278,
+        "interactive_count": 8
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_scopes",
+      "route_pattern": "/identity/:lang/scopes",
+      "path": "/identity/en/scopes",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/scopes",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Scopes"
+        ],
+        "alerts": [],
+        "main_length": 1277,
+        "interactive_count": 31
+      },
+      "french": {
+        "path": "/identity/fr/scopes",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Port\u00e9es"
+        ],
+        "alerts": [],
+        "main_length": 1297,
+        "interactive_count": 31
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_scopes_new",
+      "route_pattern": "/identity/:lang/scopes/new",
+      "path": "/identity/en/scopes/new",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/scopes/new",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Create a scope"
+        ],
+        "alerts": [],
+        "main_length": 158,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/identity/fr/scopes/new",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Cr\u00e9er une port\u00e9e"
+        ],
+        "alerts": [],
+        "main_length": 176,
+        "interactive_count": 5
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_scopes_by_id",
+      "route_pattern": "/identity/:lang/scopes/:id",
+      "path": "/identity/en/scopes/15",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/scopes/15",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "autonomy.read"
+        ],
+        "alerts": [],
+        "main_length": 310,
+        "interactive_count": 7
+      },
+      "french": {
+        "path": "/identity/fr/scopes/15",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "autonomy.read"
+        ],
+        "alerts": [],
+        "main_length": 352,
+        "interactive_count": 7
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_user_attributes_by_id",
+      "route_pattern": "/identity/:lang/user-attributes/:id",
+      "path": "/identity/en/user-attributes/:id",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_user_attributes_new",
+      "route_pattern": "/identity/:lang/user-attributes/new",
+      "path": "/identity/en/user-attributes/new",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/user-attributes/new",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Create an user attribute"
+        ],
+        "alerts": [],
+        "main_length": 711,
+        "interactive_count": 13
+      },
+      "french": {
+        "path": "/identity/fr/user-attributes/new",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Cr\u00e9er un attribut utilisateur"
+        ],
+        "alerts": [],
+        "main_length": 878,
+        "interactive_count": 13
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_user_attributes",
+      "route_pattern": "/identity/:lang/user-attributes",
+      "path": "/identity/en/user-attributes",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/user-attributes",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "User Attributes"
+        ],
+        "alerts": [],
+        "main_length": 222,
+        "interactive_count": 1
+      },
+      "french": {
+        "path": "/identity/fr/user-attributes",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Attributs utilisateur"
+        ],
+        "alerts": [],
+        "main_length": 278,
+        "interactive_count": 1
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_users_by_authid",
+      "route_pattern": "/identity/:lang/users/:authId",
+      "path": "/identity/en/users/:authId",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.home",
+      "route_pattern": "/",
+      "path": "/",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/",
+        "lang": "en",
+        "headings": [
+          "Analytics",
+          "Dashboard"
+        ],
+        "alerts": [],
+        "main_length": 1467,
+        "interactive_count": 20
+      },
+      "french": {
+        "path": "/",
+        "lang": "fr",
+        "headings": [
+          "Analytics",
+          "Dashboard"
+        ],
+        "alerts": [],
+        "main_length": 1467,
+        "interactive_count": 20
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics",
+      "route_pattern": "/analytics",
+      "path": "/analytics",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics",
+        "lang": "en",
+        "headings": [
+          "Analytics"
+        ],
+        "alerts": [],
+        "main_length": 460,
+        "interactive_count": 1
+      },
+      "french": {
+        "path": "/analytics",
+        "lang": "fr",
+        "headings": [
+          "Analytics"
+        ],
+        "alerts": [],
+        "main_length": 460,
+        "interactive_count": 1
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_alerts",
+      "route_pattern": "/analytics/alerts",
+      "path": "/analytics/alerts",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/alerts",
+        "lang": "en",
+        "headings": [
+          "Alerts"
+        ],
+        "alerts": [],
+        "main_length": 356,
+        "interactive_count": 7
+      },
+      "french": {
+        "path": "/analytics/alerts",
+        "lang": "fr",
+        "headings": [
+          "Alerts"
+        ],
+        "alerts": [],
+        "main_length": 356,
+        "interactive_count": 7
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_cohorts",
+      "route_pattern": "/analytics/cohorts",
+      "path": "/analytics/cohorts",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/cohorts",
+        "lang": "en",
+        "headings": [
+          "Cohorts"
+        ],
+        "alerts": [],
+        "main_length": 294,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/analytics/cohorts",
+        "lang": "fr",
+        "headings": [
+          "Cohorts"
+        ],
+        "alerts": [],
+        "main_length": 294,
+        "interactive_count": 4
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_crashes",
+      "route_pattern": "/analytics/crashes",
+      "path": "/analytics/crashes",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/crashes",
+        "lang": "en",
+        "headings": [
+          "Crashes"
+        ],
+        "alerts": [],
+        "main_length": 313,
+        "interactive_count": 1
+      },
+      "french": {
+        "path": "/analytics/crashes",
+        "lang": "fr",
+        "headings": [
+          "Crashes"
+        ],
+        "alerts": [],
+        "main_length": 313,
+        "interactive_count": 1
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_dashboards",
+      "route_pattern": "/analytics/dashboards",
+      "path": "/analytics/dashboards",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/dashboards",
+        "lang": "en",
+        "headings": [
+          "Dashboards"
+        ],
+        "alerts": [],
+        "main_length": 213,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/analytics/dashboards",
+        "lang": "fr",
+        "headings": [
+          "Dashboards"
+        ],
+        "alerts": [],
+        "main_length": 213,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_events",
+      "route_pattern": "/analytics/events",
+      "path": "/analytics/events",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/events",
+        "lang": "en",
+        "headings": [
+          "Event explorer"
+        ],
+        "alerts": [],
+        "main_length": 246,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/analytics/events",
+        "lang": "fr",
+        "headings": [
+          "Event explorer"
+        ],
+        "alerts": [],
+        "main_length": 246,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_feedback",
+      "route_pattern": "/analytics/feedback",
+      "path": "/analytics/feedback",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/feedback",
+        "lang": "en",
+        "headings": [
+          "Feedback"
+        ],
+        "alerts": [],
+        "main_length": 301,
+        "interactive_count": 0
+      },
+      "french": {
+        "path": "/analytics/feedback",
+        "lang": "fr",
+        "headings": [
+          "Feedback"
+        ],
+        "alerts": [],
+        "main_length": 301,
+        "interactive_count": 0
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_insights",
+      "route_pattern": "/analytics/insights",
+      "path": "/analytics/insights",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/insights",
+        "lang": "en",
+        "headings": [
+          "Funnels & retention"
+        ],
+        "alerts": [],
+        "main_length": 472,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/analytics/insights",
+        "lang": "fr",
+        "headings": [
+          "Funnels & retention"
+        ],
+        "alerts": [],
+        "main_length": 472,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_installations",
+      "route_pattern": "/analytics/installations",
+      "path": "/analytics/installations",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/installations",
+        "lang": "en",
+        "headings": [
+          "Installations"
+        ],
+        "alerts": [],
+        "main_length": 196,
+        "interactive_count": 0
+      },
+      "french": {
+        "path": "/analytics/installations",
+        "lang": "fr",
+        "headings": [
+          "Installations"
+        ],
+        "alerts": [],
+        "main_length": 196,
+        "interactive_count": 0
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_purchases",
+      "route_pattern": "/analytics/purchases",
+      "path": "/analytics/purchases",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/purchases",
+        "lang": "en",
+        "headings": [
+          "Verified purchases"
+        ],
+        "alerts": [],
+        "main_length": 220,
+        "interactive_count": 0
+      },
+      "french": {
+        "path": "/analytics/purchases",
+        "lang": "fr",
+        "headings": [
+          "Verified purchases"
+        ],
+        "alerts": [],
+        "main_length": 220,
+        "interactive_count": 0
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_reports",
+      "route_pattern": "/analytics/reports",
+      "path": "/analytics/reports",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/reports",
+        "lang": "en",
+        "headings": [
+          "Reports & data operations"
+        ],
+        "alerts": [],
+        "main_length": 351,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/analytics/reports",
+        "lang": "fr",
+        "headings": [
+          "Reports & data operations"
+        ],
+        "alerts": [],
+        "main_length": 351,
+        "interactive_count": 4
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_settings",
+      "route_pattern": "/analytics/settings",
+      "path": "/analytics/settings",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/settings",
+        "lang": "en",
+        "headings": [
+          "Analytics settings"
+        ],
+        "alerts": [],
+        "main_length": 272,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/analytics/settings",
+        "lang": "fr",
+        "headings": [
+          "Analytics settings"
+        ],
+        "alerts": [],
+        "main_length": 272,
+        "interactive_count": 4
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_users",
+      "route_pattern": "/analytics/users",
+      "path": "/analytics/users",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/users",
+        "lang": "en",
+        "headings": [
+          "Users & sessions"
+        ],
+        "alerts": [],
+        "main_length": 285,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/analytics/users",
+        "lang": "fr",
+        "headings": [
+          "Users & sessions"
+        ],
+        "alerts": [],
+        "main_length": 285,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_views",
+      "route_pattern": "/analytics/views",
+      "path": "/analytics/views",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/views",
+        "lang": "en",
+        "headings": [
+          "Views"
+        ],
+        "alerts": [],
+        "main_length": 319,
+        "interactive_count": 0
+      },
+      "french": {
+        "path": "/analytics/views",
+        "lang": "fr",
+        "headings": [
+          "Views"
+        ],
+        "alerts": [],
+        "main_length": 319,
+        "interactive_count": 0
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.app_shell",
+      "route_pattern": "/app",
+      "path": "/app",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app",
+        "lang": "en",
+        "headings": [
+          "Analytics",
+          "Dashboard"
+        ],
+        "alerts": [],
+        "main_length": 1467,
+        "interactive_count": 20
+      },
+      "french": {
+        "path": "/app",
+        "lang": "fr",
+        "headings": [
+          "Analytics",
+          "Dashboard"
+        ],
+        "alerts": [],
+        "main_length": 1467,
+        "interactive_count": 20
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.dashboard",
+      "route_pattern": "/dashboard",
+      "path": "/dashboard",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dashboard",
+        "lang": "en",
+        "headings": [
+          "Analytics",
+          "Dashboard"
+        ],
+        "alerts": [],
+        "main_length": 1467,
+        "interactive_count": 20
+      },
+      "french": {
+        "path": "/dashboard",
+        "lang": "fr",
+        "headings": [
+          "Analytics",
+          "Dashboard"
+        ],
+        "alerts": [],
+        "main_length": 1467,
+        "interactive_count": 20
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "route_id": "superboard.products_customers",
+      "route_pattern": "/products/customers",
+      "path": "/products/customers",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/products/customers",
+        "lang": "en",
+        "headings": [
+          "Billing customers"
+        ],
+        "alerts": [],
+        "main_length": 418,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/products/customers",
+        "lang": "fr",
+        "headings": [
+          "Billing customers"
+        ],
+        "alerts": [],
+        "main_length": 418,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "route_id": "superboard.products_entitlements",
+      "route_pattern": "/products/entitlements",
+      "path": "/products/entitlements",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/products/entitlements",
+        "lang": "en",
+        "headings": [
+          "Entitlements"
+        ],
+        "alerts": [],
+        "main_length": 394,
+        "interactive_count": 9
+      },
+      "french": {
+        "path": "/products/entitlements",
+        "lang": "fr",
+        "headings": [
+          "Entitlements"
+        ],
+        "alerts": [],
+        "main_length": 394,
+        "interactive_count": 9
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-billing",
+      "route_id": "superboard.products_purchases",
+      "route_pattern": "/products/purchases",
+      "path": "/products/purchases",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/products/purchases",
+        "lang": "en",
+        "headings": [
+          "Purchases"
+        ],
+        "alerts": [],
+        "main_length": 1380,
+        "interactive_count": 15
+      },
+      "french": {
+        "path": "/products/purchases",
+        "lang": "fr",
+        "headings": [
+          "Purchases"
+        ],
+        "alerts": [],
+        "main_length": 1387,
+        "interactive_count": 15
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "route_id": "superboard.dynamic_links_campaigns",
+      "route_pattern": "/dynamic-links/campaigns",
+      "path": "/dynamic-links/campaigns",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dynamic-links/campaigns",
+        "lang": "en",
+        "headings": [
+          "Campaigns"
+        ],
+        "alerts": [],
+        "main_length": 384,
+        "interactive_count": 21
+      },
+      "french": {
+        "path": "/dynamic-links/campaigns",
+        "lang": "fr",
+        "headings": [
+          "Campaigns"
+        ],
+        "alerts": [],
+        "main_length": 384,
+        "interactive_count": 21
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "route_id": "superboard.dynamic_links_campaigns_by_id",
+      "route_pattern": "/dynamic-links/campaigns/:id",
+      "path": "/dynamic-links/campaigns/485cb869-b3ec-4782-8fb4-c205041a37d7",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dynamic-links/campaigns/485cb869-b3ec-4782-8fb4-c205041a37d7",
+        "lang": "en",
+        "headings": [
+          "Autonomy acquisition campaign"
+        ],
+        "alerts": [],
+        "main_length": 437,
+        "interactive_count": 24
+      },
+      "french": {
+        "path": "/dynamic-links/campaigns/485cb869-b3ec-4782-8fb4-c205041a37d7",
+        "lang": "fr",
+        "headings": [
+          "Autonomy acquisition campaign"
+        ],
+        "alerts": [],
+        "main_length": 437,
+        "interactive_count": 24
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "route_id": "superboard.dynamic_links_domain",
+      "route_pattern": "/dynamic-links/domain",
+      "path": "/dynamic-links/domain",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dynamic-links/domain",
+        "lang": "en",
+        "headings": [
+          "Domain"
+        ],
+        "alerts": [],
+        "main_length": 314,
+        "interactive_count": 3
+      },
+      "french": {
+        "path": "/dynamic-links/domain",
+        "lang": "fr",
+        "headings": [
+          "Domain"
+        ],
+        "alerts": [],
+        "main_length": 314,
+        "interactive_count": 3
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_users_by_id",
+      "route_pattern": "/flows/users/:id",
+      "path": "/flows/users/:id",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {},
+      "status": "unverified",
+      "reason": "No persisted fixture for required route parameter"
+    },
+    {
+      "plugin_id": "supbrd-plug-settings",
+      "route_id": "superboard.app_libraries",
+      "route_pattern": "/app/libraries",
+      "path": "/app/libraries",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/app/libraries",
+        "lang": "en",
+        "headings": [
+          "Libraries",
+          "Required releases",
+          "Widgets",
+          "Event streams",
+          "Git source files",
+          "Reference-only UI adapters"
+        ],
+        "alerts": [
+          "Git is the release authoritySource versions are changed by pull request. Production applications use only immutable release references; this back-office never rewrites package source or creates an unreviewed tag."
+        ],
+        "main_length": 12297,
+        "interactive_count": 76
+      },
+      "french": {
+        "path": "/app/libraries",
+        "lang": "fr",
+        "headings": [
+          "Libraries",
+          "Required releases",
+          "Widgets",
+          "Event streams",
+          "Git source files",
+          "Reference-only UI adapters"
+        ],
+        "alerts": [
+          "Git is the release authoritySource versions are changed by pull request. Production applications use only immutable release references; this back-office never rewrites package source or creates an unreviewed tag."
+        ],
+        "main_length": 12297,
+        "interactive_count": 76
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_orgs_by_id",
+      "route_pattern": "/identity/:lang/orgs/:id",
+      "path": "/identity/en/orgs/1",
+      "exceptions": [],
+      "network": [],
+      "console": [
+        "IntlError: MISSING_MESSAGE: Could not resolve `orgs.slug` in messages for locale `fr`.\n    at getFallbackFromErrorAndNotify (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=28ec655b:2991:17)\n    at translateBaseFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=28ec655b:3017:17)\n    at translateFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=28ec655b:3042:18",
+        "IntlError: MISSING_MESSAGE: Could not resolve `orgs.slug` in messages for locale `fr`.\n    at getFallbackFromErrorAndNotify (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=28ec655b:2991:17)\n    at translateBaseFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=28ec655b:3017:17)\n    at translateFn (http://localhost:9202/@fs/tmp/superboard-browser-autonomy-run/vite-cache/deps/next-intl.js?v=28ec655b:3042:18"
+      ],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/orgs/1",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Autonomy Organization",
+          "Users currently active in this org"
+        ],
+        "alerts": [
+          "No users found"
+        ],
+        "main_length": 773,
+        "interactive_count": 25
+      },
+      "french": {
+        "path": "/identity/fr/orgs/1",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Autonomy Organization",
+          "Utilisateurs actuellement actifs dans cette organisation"
+        ],
+        "alerts": [
+          "Aucun utilisateur trouv\u00e9"
+        ],
+        "main_length": 1086,
+        "interactive_count": 25
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_roles_by_id",
+      "route_pattern": "/identity/:lang/roles/:id",
+      "path": "/identity/en/roles/2",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/roles/2",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "autonomy-role",
+          "Users with this role"
+        ],
+        "alerts": [
+          "No users found"
+        ],
+        "main_length": 252,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/identity/fr/roles/2",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "autonomy-role",
+          "Utilisateurs avec ce r\u00f4le"
+        ],
+        "alerts": [
+          "Aucun utilisateur trouv\u00e9"
+        ],
+        "main_length": 282,
+        "interactive_count": 5
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_users",
+      "route_pattern": "/identity/:lang/users",
+      "path": "/identity/en/users",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/users",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Users"
+        ],
+        "alerts": [
+          "No users found"
+        ],
+        "main_length": 114,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/identity/fr/users",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Utilisateurs"
+        ],
+        "alerts": [
+          "Aucun utilisateur trouv\u00e9"
+        ],
+        "main_length": 142,
+        "interactive_count": 2
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_dimensions",
+      "route_pattern": "/analytics/dimensions",
+      "path": "/analytics/dimensions",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/dimensions",
+        "lang": "en",
+        "headings": [
+          "Technology & location"
+        ],
+        "alerts": [],
+        "main_length": 569,
+        "interactive_count": 14
+      },
+      "french": {
+        "path": "/analytics/dimensions",
+        "lang": "fr",
+        "headings": [
+          "Technology & location"
+        ],
+        "alerts": [],
+        "main_length": 569,
+        "interactive_count": 14
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-analytics",
+      "route_id": "superboard.analytics_remote_config",
+      "route_pattern": "/analytics/remote-config",
+      "path": "/analytics/remote-config",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/analytics/remote-config",
+        "lang": "en",
+        "headings": [
+          "Remote Config"
+        ],
+        "alerts": [
+          "Stable assignmentsRollout buckets are computed from a pseudonymous identity, project and key. The same installation always receives the same result."
+        ],
+        "main_length": 446,
+        "interactive_count": 4
+      },
+      "french": {
+        "path": "/analytics/remote-config",
+        "lang": "fr",
+        "headings": [
+          "Remote Config"
+        ],
+        "alerts": [
+          "Stable assignmentsRollout buckets are computed from a pseudonymous identity, project and key. The same installation always receives the same result."
+        ],
+        "main_length": 446,
+        "interactive_count": 4
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "route_id": "superboard.dynamic_links_links",
+      "route_pattern": "/dynamic-links/links",
+      "path": "/dynamic-links/links",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dynamic-links/links",
+        "lang": "en",
+        "headings": [
+          "Links"
+        ],
+        "alerts": [],
+        "main_length": 420,
+        "interactive_count": 25
+      },
+      "french": {
+        "path": "/dynamic-links/links",
+        "lang": "fr",
+        "headings": [
+          "Links"
+        ],
+        "alerts": [],
+        "main_length": 420,
+        "interactive_count": 25
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "route_id": "superboard.dynamic_links_redirect_rules",
+      "route_pattern": "/dynamic-links/redirect-rules",
+      "path": "/dynamic-links/redirect-rules",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dynamic-links/redirect-rules",
+        "lang": "en",
+        "headings": [
+          "Redirect Rules",
+          "Platform routing"
+        ],
+        "alerts": [],
+        "main_length": 735,
+        "interactive_count": 9
+      },
+      "french": {
+        "path": "/dynamic-links/redirect-rules",
+        "lang": "fr",
+        "headings": [
+          "Redirect Rules",
+          "Platform routing"
+        ],
+        "alerts": [],
+        "main_length": 735,
+        "interactive_count": 9
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "route_id": "superboard.dynamic_links_social_media_preview",
+      "route_pattern": "/dynamic-links/social-media-preview",
+      "path": "/dynamic-links/social-media-preview",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dynamic-links/social-media-preview",
+        "lang": "en",
+        "headings": [
+          "Social Media Preview"
+        ],
+        "alerts": [],
+        "main_length": 528,
+        "interactive_count": 8
+      },
+      "french": {
+        "path": "/dynamic-links/social-media-preview",
+        "lang": "fr",
+        "headings": [
+          "Social Media Preview"
+        ],
+        "alerts": [],
+        "main_length": 528,
+        "interactive_count": 8
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-dynamic-links",
+      "route_id": "superboard.dynamic_links_tracking",
+      "route_pattern": "/dynamic-links/tracking",
+      "path": "/dynamic-links/tracking",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/dynamic-links/tracking",
+        "lang": "en",
+        "headings": [
+          "Tracking"
+        ],
+        "alerts": [
+          "Consent-awareTracking may be disabled per project. Collection changes are audited by the Dynamic Links Worker."
+        ],
+        "main_length": 730,
+        "interactive_count": 6
+      },
+      "french": {
+        "path": "/dynamic-links/tracking",
+        "lang": "fr",
+        "headings": [
+          "Tracking"
+        ],
+        "alerts": [
+          "Consent-awareTracking may be disabled per project. Collection changes are audited by the Dynamic Links Worker."
+        ],
+        "main_length": 730,
+        "interactive_count": 6
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-files",
+      "route_id": "superboard.system_files",
+      "route_pattern": "/system/files",
+      "path": "/system/files",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/system/files",
+        "lang": "en",
+        "headings": [
+          "Files"
+        ],
+        "alerts": [],
+        "main_length": 151,
+        "interactive_count": 6
+      },
+      "french": {
+        "path": "/system/files",
+        "lang": "fr",
+        "headings": [
+          "Fichiers"
+        ],
+        "alerts": [],
+        "main_length": 189,
+        "interactive_count": 6
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-email",
+      "route_id": "superboard.system_email",
+      "route_pattern": "/system/email",
+      "path": "/system/email",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/system/email",
+        "lang": "en",
+        "headings": [
+          "Email",
+          "Transactional email"
+        ],
+        "alerts": [],
+        "main_length": 727,
+        "interactive_count": 19
+      },
+      "french": {
+        "path": "/system/email",
+        "lang": "fr",
+        "headings": [
+          "Email",
+          "E-mail transactionnel"
+        ],
+        "alerts": [],
+        "main_length": 733,
+        "interactive_count": 19
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows",
+      "route_pattern": "/flows",
+      "path": "/flows",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows",
+        "lang": "en",
+        "headings": [
+          "Flows overview"
+        ],
+        "alerts": [],
+        "main_length": 317,
+        "interactive_count": 1
+      },
+      "french": {
+        "path": "/flows",
+        "lang": "fr",
+        "headings": [
+          "Flows overview"
+        ],
+        "alerts": [],
+        "main_length": 317,
+        "interactive_count": 1
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_components",
+      "route_pattern": "/flows/components",
+      "path": "/flows/components",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/components",
+        "lang": "en",
+        "headings": [
+          "Components",
+          "Basics V2"
+        ],
+        "alerts": [],
+        "main_length": 1195,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/flows/components",
+        "lang": "fr",
+        "headings": [
+          "Components",
+          "Basics V2"
+        ],
+        "alerts": [],
+        "main_length": 1195,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_launchpad",
+      "route_pattern": "/flows/launchpad",
+      "path": "/flows/launchpad",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/launchpad",
+        "lang": "en",
+        "headings": [
+          "Launchpad"
+        ],
+        "alerts": [],
+        "main_length": 191,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/flows/launchpad",
+        "lang": "fr",
+        "headings": [
+          "Launchpad"
+        ],
+        "alerts": [],
+        "main_length": 191,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_settings_environments",
+      "route_pattern": "/flows/settings/environments",
+      "path": "/flows/settings/environments",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/settings/environments",
+        "lang": "en",
+        "headings": [
+          "Environments"
+        ],
+        "alerts": [],
+        "main_length": 184,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/flows/settings/environments",
+        "lang": "fr",
+        "headings": [
+          "Environments"
+        ],
+        "alerts": [],
+        "main_length": 184,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_settings_localization",
+      "route_pattern": "/flows/settings/localization",
+      "path": "/flows/settings/localization",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/settings/localization",
+        "lang": "en",
+        "headings": [
+          "Localization"
+        ],
+        "alerts": [],
+        "main_length": 301,
+        "interactive_count": 7
+      },
+      "french": {
+        "path": "/flows/settings/localization",
+        "lang": "fr",
+        "headings": [
+          "Localization"
+        ],
+        "alerts": [],
+        "main_length": 301,
+        "interactive_count": 7
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_settings_sdk",
+      "route_pattern": "/flows/settings/sdk",
+      "path": "/flows/settings/sdk",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/settings/sdk",
+        "lang": "en",
+        "headings": [
+          "SDK setup"
+        ],
+        "alerts": [],
+        "main_length": 1149,
+        "interactive_count": 8
+      },
+      "french": {
+        "path": "/flows/settings/sdk",
+        "lang": "fr",
+        "headings": [
+          "SDK setup"
+        ],
+        "alerts": [],
+        "main_length": 1149,
+        "interactive_count": 8
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_users",
+      "route_pattern": "/flows/users",
+      "path": "/flows/users",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/users",
+        "lang": "en",
+        "headings": [
+          "Users"
+        ],
+        "alerts": [],
+        "main_length": 234,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/flows/users",
+        "lang": "fr",
+        "headings": [
+          "Users"
+        ],
+        "alerts": [],
+        "main_length": 234,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_workflows",
+      "route_pattern": "/flows/workflows",
+      "path": "/flows/workflows",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/workflows",
+        "lang": "en",
+        "headings": [
+          "Workflows"
+        ],
+        "alerts": [],
+        "main_length": 272,
+        "interactive_count": 8
+      },
+      "french": {
+        "path": "/flows/workflows",
+        "lang": "fr",
+        "headings": [
+          "Workflows"
+        ],
+        "alerts": [],
+        "main_length": 272,
+        "interactive_count": 8
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-flows",
+      "route_id": "superboard.flows_workflows_by_id",
+      "route_pattern": "/flows/workflows/:id",
+      "path": "/flows/workflows/3da1bf6c-733d-4beb-987b-1dd28d42c7f5",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/flows/workflows/3da1bf6c-733d-4beb-987b-1dd28d42c7f5",
+        "lang": "en",
+        "headings": [
+          "Autonomy browser workflow",
+          "Inspector"
+        ],
+        "alerts": [],
+        "main_length": 310,
+        "interactive_count": 18
+      },
+      "french": {
+        "path": "/flows/workflows/3da1bf6c-733d-4beb-987b-1dd28d42c7f5",
+        "lang": "fr",
+        "headings": [
+          "Autonomy browser workflow",
+          "Inspector"
+        ],
+        "alerts": [],
+        "main_length": 310,
+        "interactive_count": 18
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-gateway",
+      "route_id": "superboard.system_gateway",
+      "route_pattern": "/system/gateway",
+      "path": "/system/gateway",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/system/gateway",
+        "lang": "en",
+        "headings": [
+          "Gateway"
+        ],
+        "alerts": [],
+        "main_length": 389,
+        "interactive_count": 10
+      },
+      "french": {
+        "path": "/system/gateway",
+        "lang": "fr",
+        "headings": [
+          "Passerelle"
+        ],
+        "alerts": [],
+        "main_length": 477,
+        "interactive_count": 10
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.marketing_campaigns",
+      "route_pattern": "/marketing/campaigns",
+      "path": "/marketing/campaigns",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/marketing/campaigns",
+        "lang": "en",
+        "headings": [
+          "Campaigns"
+        ],
+        "alerts": [],
+        "main_length": 557,
+        "interactive_count": 20
+      },
+      "french": {
+        "path": "/marketing/campaigns",
+        "lang": "fr",
+        "headings": [
+          "Campaigns"
+        ],
+        "alerts": [],
+        "main_length": 557,
+        "interactive_count": 20
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.marketing_channels",
+      "route_pattern": "/marketing/channels",
+      "path": "/marketing/channels",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/marketing/channels",
+        "lang": "en",
+        "headings": [
+          "Marketing channels"
+        ],
+        "alerts": [],
+        "main_length": 429,
+        "interactive_count": 8
+      },
+      "french": {
+        "path": "/marketing/channels",
+        "lang": "fr",
+        "headings": [
+          "Marketing channels"
+        ],
+        "alerts": [],
+        "main_length": 429,
+        "interactive_count": 8
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.marketing_email",
+      "route_pattern": "/marketing/email",
+      "path": "/marketing/email",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/marketing/email",
+        "lang": "en",
+        "headings": [
+          "Email"
+        ],
+        "alerts": [],
+        "main_length": 482,
+        "interactive_count": 18
+      },
+      "french": {
+        "path": "/marketing/email",
+        "lang": "fr",
+        "headings": [
+          "Email"
+        ],
+        "alerts": [],
+        "main_length": 482,
+        "interactive_count": 18
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.marketing_in_app_messages",
+      "route_pattern": "/marketing/in-app-messages",
+      "path": "/marketing/in-app-messages",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/marketing/in-app-messages",
+        "lang": "en",
+        "headings": [],
+        "alerts": [],
+        "main_length": 333,
+        "interactive_count": 19
+      },
+      "french": {
+        "path": "/marketing/in-app-messages",
+        "lang": "fr",
+        "headings": [],
+        "alerts": [],
+        "main_length": 333,
+        "interactive_count": 19
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.marketing_journeys",
+      "route_pattern": "/marketing/journeys",
+      "path": "/marketing/journeys",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/marketing/journeys",
+        "lang": "en",
+        "headings": [
+          "Marketing journeys"
+        ],
+        "alerts": [],
+        "main_length": 755,
+        "interactive_count": 17
+      },
+      "french": {
+        "path": "/marketing/journeys",
+        "lang": "fr",
+        "headings": [
+          "Marketing journeys"
+        ],
+        "alerts": [],
+        "main_length": 755,
+        "interactive_count": 17
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.marketing_settings",
+      "route_pattern": "/marketing/settings",
+      "path": "/marketing/settings",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/marketing/settings",
+        "lang": "en",
+        "headings": [
+          "Marketing settings"
+        ],
+        "alerts": [],
+        "main_length": 683,
+        "interactive_count": 15
+      },
+      "french": {
+        "path": "/marketing/settings",
+        "lang": "fr",
+        "headings": [
+          "Marketing settings"
+        ],
+        "alerts": [],
+        "main_length": 683,
+        "interactive_count": 15
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.marketing_statistics",
+      "route_pattern": "/marketing/statistics",
+      "path": "/marketing/statistics",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/marketing/statistics",
+        "lang": "en",
+        "headings": [
+          "Marketing statistics"
+        ],
+        "alerts": [],
+        "main_length": 337,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/marketing/statistics",
+        "lang": "fr",
+        "headings": [
+          "Marketing statistics"
+        ],
+        "alerts": [],
+        "main_length": 337,
+        "interactive_count": 5
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-observability",
+      "route_id": "superboard.infrastructure",
+      "route_pattern": "/infrastructure",
+      "path": "/infrastructure",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/infrastructure",
+        "lang": "en",
+        "headings": [
+          "Infrastructure",
+          "Observed incidents"
+        ],
+        "alerts": [
+          "Worker catalog misconfiguredWorker catalog does not match this target and environment",
+          "Runtime metrics unavailableCloudflare analytics read credentials are not configured"
+        ],
+        "main_length": 19295,
+        "interactive_count": 17
+      },
+      "french": {
+        "path": "/infrastructure",
+        "lang": "fr",
+        "headings": [
+          "Infrastructure",
+          "Incidents observ\u00e9s"
+        ],
+        "alerts": [
+          "Worker catalog misconfiguredWorker catalog does not match this target and environment",
+          "Runtime metrics unavailableCloudflare analytics read credentials are not configured"
+        ],
+        "main_length": 19317,
+        "interactive_count": 17
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "route_id": "superboard.onboardings",
+      "route_pattern": "/onboardings",
+      "path": "/onboardings",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/onboardings",
+        "lang": "en",
+        "headings": [
+          "Onboardings"
+        ],
+        "alerts": [],
+        "main_length": 745,
+        "interactive_count": 41
+      },
+      "french": {
+        "path": "/onboardings",
+        "lang": "fr",
+        "headings": [
+          "Onboardings"
+        ],
+        "alerts": [],
+        "main_length": 745,
+        "interactive_count": 41
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-onboardings",
+      "route_id": "superboard.onboardings_statistics",
+      "route_pattern": "/onboardings/statistics",
+      "path": "/onboardings/statistics",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/onboardings/statistics",
+        "lang": "en",
+        "headings": [
+          "Onboarding statistics"
+        ],
+        "alerts": [],
+        "main_length": 441,
+        "interactive_count": 9
+      },
+      "french": {
+        "path": "/onboardings/statistics",
+        "lang": "fr",
+        "headings": [
+          "Onboarding statistics"
+        ],
+        "alerts": [],
+        "main_length": 441,
+        "interactive_count": 9
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "route_id": "superboard.paywalls",
+      "route_pattern": "/paywalls",
+      "path": "/paywalls",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/paywalls",
+        "lang": "en",
+        "headings": [
+          "Paywalls"
+        ],
+        "alerts": [],
+        "main_length": 674,
+        "interactive_count": 32
+      },
+      "french": {
+        "path": "/paywalls",
+        "lang": "fr",
+        "headings": [
+          "Paywalls"
+        ],
+        "alerts": [],
+        "main_length": 674,
+        "interactive_count": 32
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-paywalls",
+      "route_id": "superboard.paywalls_statistics",
+      "route_pattern": "/paywalls/statistics",
+      "path": "/paywalls/statistics",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/paywalls/statistics",
+        "lang": "en",
+        "headings": [
+          "Paywall statistics"
+        ],
+        "alerts": [],
+        "main_length": 422,
+        "interactive_count": 9
+      },
+      "french": {
+        "path": "/paywalls/statistics",
+        "lang": "fr",
+        "headings": [
+          "Paywall statistics"
+        ],
+        "alerts": [],
+        "main_length": 422,
+        "interactive_count": 9
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_automations",
+      "route_pattern": "/support/automations",
+      "path": "/support/automations",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/automations",
+        "lang": "en",
+        "headings": [
+          "Automations"
+        ],
+        "alerts": [],
+        "main_length": 755,
+        "interactive_count": 18
+      },
+      "french": {
+        "path": "/support/automations",
+        "lang": "fr",
+        "headings": [
+          "Automations"
+        ],
+        "alerts": [],
+        "main_length": 755,
+        "interactive_count": 18
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_captain",
+      "route_pattern": "/support/captain",
+      "path": "/support/captain",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/captain",
+        "lang": "en",
+        "headings": [
+          "Captain"
+        ],
+        "alerts": [],
+        "main_length": 308,
+        "interactive_count": 13
+      },
+      "french": {
+        "path": "/support/captain",
+        "lang": "fr",
+        "headings": [
+          "Captain"
+        ],
+        "alerts": [],
+        "main_length": 308,
+        "interactive_count": 13
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_channels",
+      "route_pattern": "/support/channels",
+      "path": "/support/channels",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/channels",
+        "lang": "en",
+        "headings": [
+          "Channels"
+        ],
+        "alerts": [],
+        "main_length": 175,
+        "interactive_count": 2
+      },
+      "french": {
+        "path": "/support/channels",
+        "lang": "fr",
+        "headings": [
+          "Channels"
+        ],
+        "alerts": [],
+        "main_length": 175,
+        "interactive_count": 2
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_configuration",
+      "route_pattern": "/support/configuration",
+      "path": "/support/configuration",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/configuration",
+        "lang": "en",
+        "headings": [
+          "Support configuration",
+          "Project defaults",
+          "Configuration areas",
+          "Inbox",
+          "New Inbox"
+        ],
+        "alerts": [
+          "One dashboard, isolated runtimeSupport configuration is stored in the dedicated Support database. Agent identities reference the existing authentication gateway, and no setting can modify purchase entitlements."
+        ],
+        "main_length": 1859,
+        "interactive_count": 55
+      },
+      "french": {
+        "path": "/support/configuration",
+        "lang": "fr",
+        "headings": [
+          "Support configuration",
+          "Project defaults",
+          "Configuration areas",
+          "Inbox",
+          "New Inbox"
+        ],
+        "alerts": [
+          "One dashboard, isolated runtimeSupport configuration is stored in the dedicated Support database. Agent identities reference the existing authentication gateway, and no setting can modify purchase entitlements."
+        ],
+        "main_length": 1859,
+        "interactive_count": 55
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_contacts",
+      "route_pattern": "/support/contacts",
+      "path": "/support/contacts",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/contacts",
+        "lang": "en",
+        "headings": [
+          "Contacts",
+          "New contact",
+          "Companies"
+        ],
+        "alerts": [],
+        "main_length": 477,
+        "interactive_count": 14
+      },
+      "french": {
+        "path": "/support/contacts",
+        "lang": "fr",
+        "headings": [
+          "Contacts",
+          "New contact",
+          "Companies"
+        ],
+        "alerts": [],
+        "main_length": 477,
+        "interactive_count": 14
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_help_center",
+      "route_pattern": "/support/help-center",
+      "path": "/support/help-center",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/help-center",
+        "lang": "en",
+        "headings": [
+          "Help Center"
+        ],
+        "alerts": [],
+        "main_length": 329,
+        "interactive_count": 15
+      },
+      "french": {
+        "path": "/support/help-center",
+        "lang": "fr",
+        "headings": [
+          "Help Center"
+        ],
+        "alerts": [],
+        "main_length": 329,
+        "interactive_count": 15
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_inbox",
+      "route_pattern": "/support/inbox",
+      "path": "/support/inbox",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/inbox",
+        "lang": "en",
+        "headings": [
+          "Support Inbox"
+        ],
+        "alerts": [
+          "Isolated Support runtimeConversations, attachments and real-time events are handled by the dedicated Support Worker and database."
+        ],
+        "main_length": 357,
+        "interactive_count": 3
+      },
+      "french": {
+        "path": "/support/inbox",
+        "lang": "fr",
+        "headings": [
+          "Support Inbox"
+        ],
+        "alerts": [
+          "Isolated Support runtimeConversations, attachments and real-time events are handled by the dedicated Support Worker and database."
+        ],
+        "main_length": 357,
+        "interactive_count": 3
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_integrations",
+      "route_pattern": "/support/integrations",
+      "path": "/support/integrations",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/integrations",
+        "lang": "en",
+        "headings": [
+          "Integrations"
+        ],
+        "alerts": [],
+        "main_length": 556,
+        "interactive_count": 12
+      },
+      "french": {
+        "path": "/support/integrations",
+        "lang": "fr",
+        "headings": [
+          "Integrations"
+        ],
+        "alerts": [],
+        "main_length": 556,
+        "interactive_count": 12
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_proactive_support",
+      "route_pattern": "/support/proactive-support",
+      "path": "/support/proactive-support",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/proactive-support",
+        "lang": "en",
+        "headings": [
+          "Proactive Support"
+        ],
+        "alerts": [],
+        "main_length": 409,
+        "interactive_count": 11
+      },
+      "french": {
+        "path": "/support/proactive-support",
+        "lang": "fr",
+        "headings": [
+          "Proactive Support"
+        ],
+        "alerts": [],
+        "main_length": 409,
+        "interactive_count": 11
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_quality",
+      "route_pattern": "/support/quality",
+      "path": "/support/quality",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/quality",
+        "lang": "en",
+        "headings": [
+          "Quality"
+        ],
+        "alerts": [],
+        "main_length": 408,
+        "interactive_count": 1
+      },
+      "french": {
+        "path": "/support/quality",
+        "lang": "fr",
+        "headings": [
+          "Quality"
+        ],
+        "alerts": [],
+        "main_length": 408,
+        "interactive_count": 1
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_reports",
+      "route_pattern": "/support/reports",
+      "path": "/support/reports",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/reports",
+        "lang": "en",
+        "headings": [
+          "Reports"
+        ],
+        "alerts": [],
+        "main_length": 493,
+        "interactive_count": 11
+      },
+      "french": {
+        "path": "/support/reports",
+        "lang": "fr",
+        "headings": [
+          "Reports"
+        ],
+        "alerts": [],
+        "main_length": 493,
+        "interactive_count": 11
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_settings",
+      "route_pattern": "/support/settings",
+      "path": "/support/settings",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/settings",
+        "lang": "en",
+        "headings": [
+          "Settings"
+        ],
+        "alerts": [],
+        "main_length": 446,
+        "interactive_count": 20
+      },
+      "french": {
+        "path": "/support/settings",
+        "lang": "fr",
+        "headings": [
+          "Settings"
+        ],
+        "alerts": [],
+        "main_length": 446,
+        "interactive_count": 20
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-support",
+      "route_id": "superboard.support_workforce",
+      "route_pattern": "/support/workforce",
+      "path": "/support/workforce",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/support/workforce",
+        "lang": "en",
+        "headings": [
+          "Workforce"
+        ],
+        "alerts": [],
+        "main_length": 420,
+        "interactive_count": 15
+      },
+      "french": {
+        "path": "/support/workforce",
+        "lang": "fr",
+        "headings": [
+          "Workforce"
+        ],
+        "alerts": [],
+        "main_length": 420,
+        "interactive_count": 15
+      },
+      "translation_status": "not_proven",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "route_id": "superboard.mcp",
+      "route_pattern": "/mcp",
+      "path": "/mcp",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/mcp",
+        "lang": "en",
+        "headings": [
+          "MCP tools",
+          "Invocation sessions",
+          "Invocation receipts",
+          "Authorized applications"
+        ],
+        "alerts": [],
+        "main_length": 925,
+        "interactive_count": 5
+      },
+      "french": {
+        "path": "/mcp",
+        "lang": "fr",
+        "headings": [
+          "Outils MCP",
+          "Sessions d\u2019invocation",
+          "Re\u00e7us d\u2019invocation",
+          "Applications autoris\u00e9es"
+        ],
+        "alerts": [],
+        "main_length": 950,
+        "interactive_count": 5
+      },
+      "translation_status": "headings_changed",
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-marketing",
+      "route_id": "superboard.message_preview_craft",
+      "route_pattern": "/message-preview-craft",
+      "path": "/message-preview-craft",
+      "fixture": "HTML document in localStorage key craft-preview-data; no server message creation claimed",
+      "checks": {
+        "render": "passed",
+        "functional": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "exceptions": [],
+      "network": [],
+      "web_width": 1024,
+      "mobile_width": 390,
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plugmod-mcp",
+      "route_id": "superboard.mcp_authorize",
+      "path": "/mcp/authorize",
+      "fixture": "Persisted registered OAuth client; real EmDash operator session and browser PKCE consent",
+      "client_id": "6319c28a-1dd1-4b84-8709-0286a056fc5b",
+      "client_row_id": "29527e34eb4e6d8fb1dd0e0cc5ecaedf",
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed",
+        "functional": "passed"
+      },
+      "exceptions": [],
+      "network": [],
+      "denial_returns_access_denied": true,
+      "persisted_id": "62cf973ec1bc31f7476b3d7dfba18f8b",
+      "operator_id": "01M1SF6FSJHWGAQ57X4XHT5JJZ",
+      "operator_role": 50,
+      "instance_slug": "autonomy-qa",
+      "real_operator_grant_persisted": true,
+      "status": "passed"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.new_password",
+      "route_pattern": "/new_password",
+      "path": "/new_password",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "status": "passed",
+      "english_heading": "Restore a sign-in method",
+      "french_heading": "R\u00e9tablir un moyen de connexion"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.register",
+      "route_pattern": "/register",
+      "path": "/register",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "status": "passed",
+      "english_heading": "Create an operator account",
+      "french_heading": "Cr\u00e9er un compte op\u00e9rateur"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.register_with_email",
+      "route_pattern": "/register/with_email",
+      "path": "/register/with_email",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "status": "passed",
+      "english_heading": "Create an operator account",
+      "french_heading": "Cr\u00e9er un compte op\u00e9rateur"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.reset_password",
+      "route_pattern": "/reset_password",
+      "path": "/reset_password",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "status": "passed",
+      "english_heading": "Recover operator access",
+      "french_heading": "R\u00e9cup\u00e9rer l\u2019acc\u00e8s op\u00e9rateur"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.accept_invite",
+      "route_pattern": "/accept-invite",
+      "path": "/accept-invite",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed",
+        "functional": "passed"
+      },
+      "status": "passed",
+      "persisted_id": "01M1XB9CH1AP1Y8PS257V9G225",
+      "role": 30,
+      "virtual_authenticator": true,
+      "created_by": "real EmDash invitation and WebAuthn completion"
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.login",
+      "route_pattern": "/login",
+      "path": "/login",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed",
+        "functional": "passed"
+      },
+      "status": "passed",
+      "english_heading": "Operator sign in",
+      "french_heading": "Connexion op\u00e9rateur",
+      "operation": "operator_passkey_signin",
+      "persisted_id": "01M1XB9CH1AP1Y8PS257V9G225",
+      "virtual_authenticator": true
+    }
+  ]
+}

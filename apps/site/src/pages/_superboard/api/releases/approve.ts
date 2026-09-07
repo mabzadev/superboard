@@ -6,6 +6,7 @@ import {
 	getFrontReleaseCandidate,
 	persistReauthenticationReceipt,
 } from "../../../../lib/front-workflow-repository.js";
+import { requireManagedPluginOperationAccess } from "../../../../lib/managed-plugin-operation.js";
 import {
 	jsonResponse,
 	recentOperatorReauthentication,
@@ -21,6 +22,12 @@ export const POST: APIRoute = async (context) => {
 	const env = getSiteEnv();
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
+	const busy = await requireManagedPluginOperationAccess(
+		context,
+		env.DB,
+		env.SUPERBOARD_INSTANCE_ID,
+	);
+	if (busy) return busy;
 	const body: unknown = await context.request.json();
 	if (!isRecord(body) || typeof body.candidate_id !== "string") {
 		return jsonResponse({ error: { code: "INVALID_APPROVAL_REQUEST" } }, 422);

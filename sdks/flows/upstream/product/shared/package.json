@@ -11,7 +11,7 @@
     "dayjs": "^1.11.21"
   },
   "devDependencies": {
-    "@superboard/flows-product-types": "*",
+    "@superboard/flows-product-types": "workspace:*",
     "tsconfig": "*",
     "typescript": "6.0.3"
   },

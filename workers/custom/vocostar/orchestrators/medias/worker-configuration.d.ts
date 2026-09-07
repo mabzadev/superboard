@@ -18,6 +18,8 @@ interface __BaseEnv_Env {
 	MODAL_ATS_URL: string;
 	MODAL_TTS_URL: string;
 	R2_READY_MAX_ATTEMPTS: string;
+	SUPERBOARD_INSTANCE_ID: string;
+	SUPERBOARD_PLUGIN_LIFECYCLE: string;
 	GATEWAY_INTERNAL_TOKEN: string;
 	MODAL_API_KEY: string;
 	R2_ACCESS_KEY_ID: string;
@@ -39,7 +41,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPERBOARD_TARGET" | "OPENGROW_TARGET" | "ENVIRONMENT" | "GATEWAY_URL" | "FILES_INPUT_ORIGIN" | "FILES_INPUT_MAX_BYTES" | "OUTPUT_FILE_ORIGIN" | "R2_ENDPOINT_URL" | "R2_BUCKET_NAME" | "STANDARD_MAX_INSTANCES" | "PREMIUM_MAX_INSTANCES" | "WATERMARK_URL" | "DISPATCH_LEASE_MS" | "MODAL_ATS_URL" | "MODAL_TTS_URL" | "R2_READY_MAX_ATTEMPTS" | "GATEWAY_INTERNAL_TOKEN" | "MODAL_API_KEY" | "R2_ACCESS_KEY_ID" | "R2_SECRET_ACCESS_KEY">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SUPERBOARD_TARGET" | "OPENGROW_TARGET" | "ENVIRONMENT" | "GATEWAY_URL" | "FILES_INPUT_ORIGIN" | "FILES_INPUT_MAX_BYTES" | "OUTPUT_FILE_ORIGIN" | "R2_ENDPOINT_URL" | "R2_BUCKET_NAME" | "STANDARD_MAX_INSTANCES" | "PREMIUM_MAX_INSTANCES" | "WATERMARK_URL" | "DISPATCH_LEASE_MS" | "MODAL_ATS_URL" | "MODAL_TTS_URL" | "R2_READY_MAX_ATTEMPTS" | "SUPERBOARD_INSTANCE_ID" | "SUPERBOARD_PLUGIN_LIFECYCLE" | "GATEWAY_INTERNAL_TOKEN" | "MODAL_API_KEY" | "R2_ACCESS_KEY_ID" | "R2_SECRET_ACCESS_KEY">> {}
 }
 
 // Secret bindings are generated from the declarative service or target registry.

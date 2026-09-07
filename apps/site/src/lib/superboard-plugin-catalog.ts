@@ -5,6 +5,7 @@ import {
 	type SuperBoardPluginManifest,
 } from "@superboard/supbrd-core";
 import { userPluginManifest, validateUserPluginManifest } from "@superboard/supbrd-plug-user";
+import { z } from "zod";
 
 import topologyJson from "../../../../config/emdash-plugin-topology.json";
 import compatibilityJson from "../../../../config/superboard-plugin-compatibility.json";
@@ -68,6 +69,40 @@ interface PluginLockEntry {
 	native: boolean;
 }
 
+const pluginLockSchema = z.looseObject({
+	plugin_id: z.string(),
+	version: z.string(),
+	artifact_checksum: z.string(),
+	native: z.boolean(),
+});
+const derivedContractSchema = z.looseObject({
+	stores: z.array(
+		z.looseObject({
+			store_id: z.string(),
+			schema_version: z.string(),
+			migrations_checksum: z.string(),
+		}),
+	),
+	capabilities: z.array(z.string()),
+	capability_approval_checksum: z.string(),
+	settings_checksum: z.string(),
+	contributions_checksum: z.string(),
+	migrations_checksum: z.string(),
+	worker_descriptor_checksum: z.string().nullable(),
+	worker_status: z.enum(["ready", "unavailable"]),
+	step_receipts: z.looseObject({
+		artifact_verified: z.string(),
+		publisher_verified: z.string(),
+		capabilities_approved: z.string(),
+		stores_provisioned: z.string(),
+		migration_graph_verified: z.string(),
+		worker_deployed_inactive: z.string(),
+		health_verified: z.string(),
+		release_contract_ready: z.string(),
+	}),
+	plugin_lock: pluginLockSchema,
+});
+
 type PluginInstallationStep =
 	| "artifact_verified"
 	| "publisher_verified"
@@ -86,6 +121,7 @@ interface PlannedPlugin {
 	health_evidence_checksum: string;
 }
 
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- generated topology is verified by the parity gate and again before installation.
 const topology = topologyJson as unknown as { plugins: TopologyPlugin[] };
 const compatibility = compatibilityJson as {
 	artifacts: Record<string, { plugin_id: string; manifest_checksum: string }>;
@@ -108,8 +144,8 @@ const LIFECYCLE_TRANSITIONS: Record<
 };
 
 export function resolveSuperBoardPluginTarget(value: unknown): SuperBoardPluginTarget {
-	if (typeof value === "string" && TARGETS.has(value as SuperBoardPluginTarget)) {
-		return value as SuperBoardPluginTarget;
+	if (value === "local" || value === "development" || value === "production") {
+		return value;
 	}
 	throw new TypeError("Plugin lifecycle requires a valid target");
 }
@@ -135,8 +171,17 @@ export function resolveSuperBoardTargetPluginIds(value: unknown): string[] {
 export function resolveSuperBoardPluginLifecycleState(
 	value: unknown,
 ): SuperBoardPluginLifecycleState {
-	if (typeof value === "string" && value in LIFECYCLE_TRANSITIONS) {
-		return value as SuperBoardPluginLifecycleState;
+	if (
+		value === "available" ||
+		value === "staged" ||
+		value === "installed" ||
+		value === "active" ||
+		value === "draining" ||
+		value === "disabled" ||
+		value === "quarantined" ||
+		value === "purged"
+	) {
+		return value;
 	}
 	throw new TypeError("Plugin lifecycle requires a valid state");
 }
@@ -345,7 +390,13 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 			installationStepsStatement(db, input, plugin),
 			db
 				.prepare(
-					`INSERT INTO superboard_plugin_runtime_health
+					currentState === "active"
+						? `INSERT INTO superboard_plugin_staged_artifacts
+					 (instance_id,target,plugin_id,artifact_checksum,status,evidence_checksum,checked_at,expires_at,plan_id)
+					 VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(instance_id,target,plugin_id) DO UPDATE SET
+					 artifact_checksum=excluded.artifact_checksum,status=excluded.status,evidence_checksum=excluded.evidence_checksum,
+					 checked_at=excluded.checked_at,expires_at=excluded.expires_at,plan_id=excluded.plan_id`
+						: `INSERT INTO superboard_plugin_runtime_health
 					 (instance_id, target, plugin_id, artifact_checksum, status,
 					  evidence_checksum, checked_at, expires_at)
 					 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -365,26 +416,10 @@ export async function installSuperBoardPluginCatalog(db: D1Database, input: Plan
 					plugin.health_evidence_checksum,
 					input.checked_at,
 					input.expires_at,
+					...(currentState === "active" ? [input.plan_id] : []),
 				),
 		);
 
-		if (!failed && currentState === "active") {
-			statements.push(
-				db
-					.prepare(
-						`UPDATE superboard_plugin_lifecycle SET plan_id = ?
-					 WHERE instance_id = ? AND target = ? AND plugin_id = ?
-					   AND state = 'active' AND artifact_checksum = ?`,
-					)
-					.bind(
-						input.plan_id,
-						input.instance_id,
-						input.target,
-						manifest.plugin_id,
-						manifest.artifact_checksum,
-					),
-			);
-		}
 		const nextState: SuperBoardPluginLifecycleState = failed ? "staged" : "installed";
 		statements.push(
 			db
@@ -655,9 +690,7 @@ export async function finalizeSuperBoardPluginLifecycleForRelease(
 	const disabled = rows.results.filter(({ state }) => state === "disabled");
 	let preparedLock: PluginLockEntry[];
 	try {
-		const parsed: unknown = JSON.parse(reconciliation.plugin_lock_json);
-		if (!Array.isArray(parsed)) throw new TypeError("Plugin Lock is not an array");
-		preparedLock = parsed as PluginLockEntry[];
+		preparedLock = z.array(pluginLockSchema).parse(JSON.parse(reconciliation.plugin_lock_json));
 	} catch {
 		throw new Error("PLUGIN_RELEASE_LOCK_INVALID");
 	}
@@ -849,20 +882,28 @@ export async function loadActiveSuperBoardPluginIdsRequiringValidation(
 	assertScope(input);
 	const result = await db
 		.prepare(
-			`SELECT lifecycle.plugin_id FROM superboard_plugin_lifecycle lifecycle
-			 JOIN superboard_plugin_runtime_health health
+			`SELECT lifecycle.plugin_id,lifecycle.artifact_checksum,
+             CASE WHEN (health.status IS NULL OR health.status <> 'ready' OR health.expires_at <= ? OR plan.target_artifact_checksum IS NULL OR plan.target_artifact_checksum <> ?) THEN 1 ELSE 0 END AS stale
+             FROM superboard_plugin_lifecycle lifecycle
+			 LEFT JOIN superboard_plugin_runtime_health health
 			   ON health.instance_id = lifecycle.instance_id AND health.target = lifecycle.target
 			  AND health.plugin_id = lifecycle.plugin_id
 			  AND health.artifact_checksum = lifecycle.artifact_checksum
-			 JOIN superboard_plugin_installation_plans plan ON plan.plan_id = lifecycle.plan_id
+			 LEFT JOIN superboard_plugin_installation_plans plan ON plan.plan_id = lifecycle.plan_id
 			 WHERE lifecycle.instance_id = ? AND lifecycle.target = ? AND lifecycle.state = 'active'
-			   AND health.status = 'ready'
-			   AND (health.expires_at <= ? OR plan.target_artifact_checksum <> ?)
 			 ORDER BY lifecycle.plugin_id`,
 		)
-		.bind(input.instance_id, input.target, input.checked_at, input.target_artifact_checksum)
-		.all<{ plugin_id: string }>();
-	return result.results.map(({ plugin_id: pluginId }) => pluginId);
+		.bind(input.checked_at, input.target_artifact_checksum, input.instance_id, input.target)
+		.all<{ plugin_id: string; artifact_checksum: string; stale: number }>();
+	const current = new Map(
+		superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => [
+			manifest.plugin_id,
+			manifest.artifact_checksum,
+		]),
+	);
+	return result.results
+		.filter((row) => row.stale === 1 || current.get(row.plugin_id) !== row.artifact_checksum)
+		.map(({ plugin_id: pluginId }) => pluginId);
 }
 
 export async function stageSuperBoardPluginDependencyHealth(
@@ -873,7 +914,7 @@ export async function stageSuperBoardPluginDependencyHealth(
 	const health = await db
 		.prepare(
 			`SELECT status, evidence_checksum, expires_at
-			 FROM superboard_plugin_runtime_health
+			 FROM superboard_plugin_releasable_health
 			 WHERE instance_id = ? AND target = ? AND plugin_id = ?`,
 		)
 		.bind(input.instance_id, input.target, input.plugin_id)
@@ -960,14 +1001,7 @@ export async function loadActiveSuperBoardPluginLockExcluding(
 	) {
 		throw new TypeError("Active plugin lock exclusion requires unique plugin identifiers");
 	}
-	const locks = await loadSuperBoardPluginLock(db, scope, false);
-	const excluded = new Set(excludedPluginIds);
-	if (excludedPluginIds.some((pluginId) => !locks.some((lock) => lock.plugin_id === pluginId))) {
-		throw new Error("PLUGIN_CATALOG_ACTIVE_EXCLUSION_INCOMPLETE");
-	}
-	const selected = locks.filter(({ plugin_id: pluginId }) => !excluded.has(pluginId));
-	if (selected.length === 0) throw new Error("PLUGIN_CATALOG_ACTIVE_SET_EMPTY");
-	return selected;
+	return loadSuperBoardPluginLock(db, scope, false, excludedPluginIds);
 }
 
 export function loadReleasableSuperBoardPluginLock(db: D1Database, scope: PluginScope) {
@@ -979,10 +1013,7 @@ export function loadSelectedSuperBoardPluginLock(
 	scope: PluginScope,
 	installedPluginIds: readonly string[],
 ) {
-	if (
-		installedPluginIds.length === 0 ||
-		new Set(installedPluginIds).size !== installedPluginIds.length
-	) {
+	if (new Set(installedPluginIds).size !== installedPluginIds.length) {
 		throw new TypeError("Selected plugin lock requires unique plugin identifiers");
 	}
 	return loadSuperBoardPluginLock(db, scope, new Set(installedPluginIds));
@@ -992,6 +1023,7 @@ async function loadSuperBoardPluginLock(
 	db: D1Database,
 	scope: PluginScope,
 	includeInstalled: boolean | ReadonlySet<string>,
+	excludedPluginIds: readonly string[] = [],
 ) {
 	assertScope(scope);
 	const result = await db
@@ -1001,10 +1033,10 @@ async function loadSuperBoardPluginLock(
 			        item.derived_contract_json, item.derived_contract_checksum,
 			        steps.step_count, steps.completed_count,
 			        target_artifact.artifact_checksum AS target_artifact_checksum
-			 FROM superboard_plugin_lifecycle lifecycle
+			 FROM superboard_plugin_releasable_state lifecycle
 			 JOIN superboard_plugin_manifest_artifacts artifact
 			   ON artifact.artifact_checksum = lifecycle.artifact_checksum
-			 JOIN superboard_plugin_runtime_health health
+			 LEFT JOIN superboard_plugin_releasable_health health
 			   ON health.instance_id = lifecycle.instance_id
 			  AND health.target = lifecycle.target
 			  AND health.plugin_id = lifecycle.plugin_id
@@ -1040,7 +1072,7 @@ async function loadSuperBoardPluginLock(
 			completed_count: number | null;
 			target_artifact_checksum: string | null;
 		}>();
-	const rows =
+	let rows =
 		typeof includeInstalled === "boolean"
 			? includeInstalled
 				? result.results
@@ -1056,7 +1088,16 @@ async function loadSuperBoardPluginLock(
 	) {
 		throw new Error("PLUGIN_CATALOG_SELECTED_SET_INCOMPLETE");
 	}
+	if (
+		excludedPluginIds.some(
+			(pluginId) => !rows.some((row) => row.plugin_id === pluginId && row.state === "active"),
+		)
+	)
+		throw new Error("PLUGIN_CATALOG_ACTIVE_EXCLUSION_INCOMPLETE");
+	rows = rows.filter(({ plugin_id: pluginId }) => !excludedPluginIds.includes(pluginId));
 	if (rows.length === 0) {
+		if (excludedPluginIds.length > 0) return [];
+		if (typeof includeInstalled !== "boolean" && includeInstalled.size === 0) return [];
 		throw new Error(
 			includeInstalled === true
 				? "PLUGIN_CATALOG_RELEASABLE_SET_EMPTY"
@@ -1082,7 +1123,7 @@ async function loadSuperBoardPluginLock(
 			}
 			let derived: DerivedPluginContract;
 			try {
-				derived = JSON.parse(row.derived_contract_json) as DerivedPluginContract;
+				derived = derivedContractSchema.parse(JSON.parse(row.derived_contract_json));
 			} catch {
 				throw new Error(`PLUGIN_INSTALLATION_PLAN_CONTRACT_INVALID:${row.plugin_id}`);
 			}
@@ -1120,7 +1161,14 @@ async function loadSuperBoardPluginLock(
 					`PLUGIN_CATALOG_STORED_MANIFEST_INVALID:${row.plugin_id}:${verification.errors.join(",")}`,
 				);
 			}
-			const storedManifest = stored as SuperBoardPluginManifest;
+			const storedManifest = z
+				.object({
+					plugin_id: z.string(),
+					plugin_version: z.string(),
+					artifact_checksum: z.string(),
+					execution: z.object({ backend: z.string() }),
+				})
+				.parse(stored);
 			return {
 				plugin_id: storedManifest.plugin_id,
 				version: storedManifest.plugin_version,
@@ -1289,7 +1337,7 @@ async function loadInstallationPlanReceipt(db: D1Database, planId: string) {
 			        item.derived_contract_checksum, health.evidence_checksum
 			 FROM superboard_plugin_installation_plans plan
 			 LEFT JOIN superboard_plugin_installation_items item ON item.plan_id = plan.plan_id
-			 LEFT JOIN superboard_plugin_runtime_health health
+			 LEFT JOIN superboard_plugin_releasable_health health
 			   ON health.instance_id = plan.instance_id AND health.target = plan.target
 			  AND health.plugin_id = item.plugin_id
 			  AND health.artifact_checksum = item.artifact_checksum
@@ -1335,7 +1383,7 @@ async function loadInstallationPlanReceipt(db: D1Database, planId: string) {
 			.map(async (item) => {
 				let derived: DerivedPluginContract;
 				try {
-					derived = JSON.parse(item.derived_contract_json) as DerivedPluginContract;
+					derived = derivedContractSchema.parse(JSON.parse(item.derived_contract_json));
 				} catch {
 					throw new Error(`PLUGIN_INSTALLATION_PLAN_CONTRACT_INVALID:${item.plugin_id}`);
 				}
@@ -1466,6 +1514,24 @@ function lifecycleInstallationEvents(
 	return statements;
 }
 
+export async function reconcileSuperBoardPluginStatus(
+	db: D1Database,
+	pluginId: string,
+	status: "active" | "inactive",
+	changedAt: string,
+) {
+	const plugin = superBoardRuntimePluginCatalog().plugins.find(
+		({ manifest }) => manifest.plugin_id === pluginId,
+	);
+	if (!plugin) throw new Error("PLUGIN_NOT_FOUND");
+	await writeEmDashPluginStates(
+		db,
+		[{ plugin_id: pluginId, version: plugin.manifest.plugin_version }],
+		status,
+		changedAt,
+	);
+}
+
 async function writeEmDashPluginStates(
 	db: D1Database,
 	plugins: readonly { plugin_id: string; version: string }[],
@@ -1486,7 +1552,8 @@ async function writeEmDashPluginStates(
 						   status = excluded.status,
 						   activated_at = excluded.activated_at,
 						   deactivated_at = excluded.deactivated_at,
-						   source = 'config'`,
+						   source = 'config'
+         WHERE _plugin_state.status <> excluded.status OR _plugin_state.version <> excluded.version`,
 					)
 					.bind(
 						pluginId,

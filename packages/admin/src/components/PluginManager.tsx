@@ -103,6 +103,8 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 		onSuccess: (plugin) => {
 			void queryClient.invalidateQueries({ queryKey: ["plugins"] });
 			void queryClient.invalidateQueries({ queryKey: ["manifest"] });
+			void queryClient.invalidateQueries({ queryKey: ["content"] });
+			void queryClient.invalidateQueries({ queryKey: ["content-picker"] });
 			toastManager.add({
 				title: t`Plugin enabled`,
 				description: t`${plugin.name} is now active`,
@@ -122,6 +124,8 @@ export function PluginManager({ manifest }: PluginManagerProps) {
 		onSuccess: (plugin) => {
 			void queryClient.invalidateQueries({ queryKey: ["plugins"] });
 			void queryClient.invalidateQueries({ queryKey: ["manifest"] });
+			void queryClient.invalidateQueries({ queryKey: ["content"] });
+			void queryClient.invalidateQueries({ queryKey: ["content-picker"] });
 			toastManager.add({
 				title: t`Plugin disabled`,
 				description: t`${plugin.name} has been deactivated`,

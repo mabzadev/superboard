@@ -268,6 +268,7 @@
 			"sdks/flows/upstream/packages/react",
 			"sdks/flows/upstream/packages/js-components",
 			"sdks/flows/upstream/packages/react-components",
+			"sdks/flows/upstream/tests/e2e",
 			"sdks/identity/web",
 			"sdks/identity/react",
 			"sdks/identity/vue",

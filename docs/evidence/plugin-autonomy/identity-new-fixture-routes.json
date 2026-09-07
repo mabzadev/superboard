@@ -1,0 +1,132 @@
+{
+  "captured_at": "2026-09-07T07:06:36.265Z",
+  "baseline_source_commit": "60ab8f5ed2aa04b171967cec3b656bfdd3f0f717",
+  "results": [
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_saml_by_id",
+      "route_pattern": "/identity/:lang/saml/:id",
+      "path": "/identity/en/saml/1",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/saml/1",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "qa-local-idp"
+        ],
+        "alerts": [],
+        "main_length": 371,
+        "interactive_count": 9
+      },
+      "french": {
+        "path": "/identity/fr/saml/1",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "qa-local-idp"
+        ],
+        "alerts": [],
+        "main_length": 373,
+        "interactive_count": 9
+      },
+      "translation_status": "not_proven",
+      "status": "passed",
+      "data_ids": [
+        "1"
+      ]
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_apps_banners_by_id",
+      "route_pattern": "/identity/:lang/apps/banners/:id",
+      "path": "/identity/en/apps/banners/1",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/apps/banners/1",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "Autonomy QA banner"
+        ],
+        "alerts": [],
+        "main_length": 441,
+        "interactive_count": 9
+      },
+      "french": {
+        "path": "/identity/fr/apps/banners/1",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "Autonomy QA banner"
+        ],
+        "alerts": [],
+        "main_length": 525,
+        "interactive_count": 9
+      },
+      "translation_status": "not_proven",
+      "status": "passed",
+      "data_ids": [
+        "1"
+      ]
+    },
+    {
+      "plugin_id": "supbrd-plug-user",
+      "route_id": "superboard.identity_by_lang_user_attributes_by_id",
+      "route_pattern": "/identity/:lang/user-attributes/:id",
+      "path": "/identity/en/user-attributes/1",
+      "exceptions": [],
+      "network": [],
+      "console": [],
+      "checks": {
+        "render": "passed",
+        "reload": "passed",
+        "navigation": "passed",
+        "french_render": "passed"
+      },
+      "english": {
+        "path": "/identity/en/user-attributes/1",
+        "lang": "en",
+        "headings": [
+          "Identity",
+          "qa_department"
+        ],
+        "alerts": [],
+        "main_length": 778,
+        "interactive_count": 14
+      },
+      "french": {
+        "path": "/identity/fr/user-attributes/1",
+        "lang": "fr",
+        "headings": [
+          "Identity",
+          "qa_department"
+        ],
+        "alerts": [],
+        "main_length": 943,
+        "interactive_count": 14
+      },
+      "translation_status": "not_proven",
+      "status": "passed",
+      "data_ids": [
+        "1"
+      ]
+    }
+  ]
+}

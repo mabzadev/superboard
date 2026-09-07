@@ -329,7 +329,12 @@ test("keeps an active multi-plugin Release renderable across renderer upgrades",
 			),
 		),
 	].filter((build): build is string => typeof build === "string");
-	expect(legacyAnalyticsBuilds).toHaveLength(2);
+	expect(legacyAnalyticsBuilds).toEqual(
+		expect.arrayContaining([
+			"sha256:99b7ee711489945b5409b3670db832194d290006e638cfbc3bb13c47c7997239",
+			"sha256:3bf9db214c1eac65d52aa67374d81b55f80ab92c0dab30c6af554ffe78344d93",
+		]),
+	);
 	const analyticsRenderer = release.payload.renderers.find(
 		({ renderer_id: rendererId }) =>
 			rendererId === "supbrd-plugmod-analytics.renderer.admin_surface",

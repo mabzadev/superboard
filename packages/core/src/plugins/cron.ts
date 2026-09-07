@@ -13,6 +13,7 @@ import { sql } from "kysely";
 import { ulid } from "ulidx";
 
 import type { Database } from "../database/types.js";
+import { isMissingTableError } from "../utils/db-errors.js";
 import type { CronAccess, CronEvent, CronTaskInfo } from "./types.js";
 
 /** Stale lock threshold in minutes */
@@ -311,8 +312,8 @@ export async function setCronTasksEnabled(
 			SET enabled = ${enabled ? 1 : 0}
 			WHERE plugin_id = ${pluginId}
 		`.execute(db);
-	} catch {
-		// Cron table may not exist yet (pre-migration). Non-fatal.
+	} catch (error) {
+		if (!isMissingTableError(error)) throw error;
 	}
 }
 

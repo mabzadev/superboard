@@ -273,7 +273,12 @@ export async function loadFrontPreview(
 			 WHERE preview.preview_id = ?
 			   AND preview.audience = 'front_preview'
 			   AND preview.mutation_mode = 'dry_run'
-			   AND preview.expires_at >= ?`,
+			   AND preview.expires_at >= ?
+       AND NOT EXISTS (SELECT 1 FROM superboard_managed_plugin_operations operation
+        WHERE operation.instance_id = candidate.instance_id AND operation.release_id = candidate.release_id
+         AND (operation.status = 'running' OR operation.recovery_error IS NOT NULL OR EXISTS (
+          SELECT 1 FROM superboard_plugin_compensations compensation WHERE compensation.operation_id = operation.operation_id
+         )))`,
 		)
 		.bind(previewId, now)
 		.first<PreviewReleaseRow>();

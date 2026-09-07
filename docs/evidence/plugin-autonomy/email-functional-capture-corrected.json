@@ -1,0 +1,14 @@
+{
+  "plugin_id": "supbrd-plugmod-email",
+  "path": "/system/email",
+  "operation": "transactional_email_capture",
+  "http_status": 202,
+  "persisted_id": "7f5a2bd3-ea50-47bd-b270-2713856fa58e",
+  "response_keys": [
+    "id",
+    "status",
+    "transport"
+  ],
+  "status": "passed",
+  "note": "Accepted by QA capture transport; external delivery not claimed"
+}

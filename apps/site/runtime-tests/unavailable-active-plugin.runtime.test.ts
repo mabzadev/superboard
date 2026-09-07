@@ -20,12 +20,17 @@ test("receipt renewal does not clear an unavailable active plugin", async () => 
 		.bind("vocostar", "supbrd-plug-user")
 		.run();
 
+	const identityDb = (env as unknown as { HEALTH_IDENTITY_DB: D1Database }).HEALTH_IDENTITY_DB;
+	await identityDb
+		.prepare("DELETE FROM d1_migrations WHERE name='0150_application_user_administration.sql'")
+		.run();
+
 	const rejected = await SELF.fetch(
 		"https://site.example/_emdash/api/superboard/plugins/supbrd-plug-settings/enable",
 		{ method: "POST", headers },
 	);
 	expect(rejected.status).toBe(500);
-	expect(await rejected.json()).toMatchObject({ error: { code: "USER_SLICE_CREATE_FAILED" } });
+	expect(await rejected.json()).toMatchObject({ error: { code: "PLUGIN_CATALOG_SYNC_FAILED" } });
 	const health = await env.DB.prepare(
 		`SELECT status FROM superboard_plugin_runtime_health
 		 WHERE instance_id = ? AND target = 'local' AND plugin_id = ?`,

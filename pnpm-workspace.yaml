@@ -15,6 +15,10 @@ hoistPattern:
   - "*"
   - "!@cloudflare/workers-types"
 packageExtensions:
+  "@oslojs/crypto@1.0.1":
+    "dependencies":
+      "@oslojs/asn1": "1.0.0"
+      "@oslojs/binary": "1.0.0"
   "@cloudflare/vitest-plugin@1.0.0":
     "dependencies":
       "@cloudflare/workers-types": "4.20260305.1"
@@ -156,6 +160,7 @@ packages:
   - sdks/flows/upstream/packages/react
   - sdks/flows/upstream/packages/js-components
   - sdks/flows/upstream/packages/react-components
+  - sdks/flows/upstream/tests/e2e
   - sdks/identity/web
   - sdks/identity/react
   - sdks/identity/vue
