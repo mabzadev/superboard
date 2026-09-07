@@ -17,6 +17,16 @@ import {
 import { USER_FRONT_CATALOGS } from "./user-front-catalogs.js";
 
 const ADMIN_LAYOUT_ID = "layout.superboard_admin";
+const CORE_OPERATOR_ALIASES = new Set([
+	"superboard.login",
+	"superboard.register",
+	"superboard.register_with_email",
+	"superboard.new_password",
+	"superboard.reset_password",
+	"superboard.accept_invite",
+	"superboard.account",
+	"superboard.profile",
+]);
 const ROUTE_PARAMETER_PATTERN = /(?:^|\/)(?::|\*)([A-Za-z][A-Za-z0-9_]*)/gu;
 
 export interface FrontReleaseCompositionInput {
@@ -85,13 +95,14 @@ export function composeFrontReleaseInput(
 			layout_ids: surface.auth_policy === "anonymous_only" ? [] : [ADMIN_LAYOUT_ID],
 			renderer_ids: [surface.renderer_id],
 			state_policies: statePolicies,
-			dependencies: CORE_OPERATOR_SURFACES.some(
-				({ renderer_id }) => renderer_id === surface.renderer_id,
-			)
-				? []
-				: [
-						`dependency.${pluginIdForRenderer(surface.renderer_id, activePlugins).replaceAll("-", "_")}`,
-					],
+			dependencies:
+				CORE_OPERATOR_SURFACES.some(({ renderer_id }) => renderer_id === surface.renderer_id) ||
+				(CORE_OPERATOR_ALIASES.has(surface.route_id) &&
+					pluginIdForRenderer(surface.renderer_id, activePlugins) === "supbrd-plug-user")
+					? []
+					: [
+							`dependency.${pluginIdForRenderer(surface.renderer_id, activePlugins).replaceAll("-", "_")}`,
+						],
 			redirect: null,
 		}));
 	const navigation = composeNavigation(surfaces);

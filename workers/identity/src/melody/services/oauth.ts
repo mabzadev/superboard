@@ -1,3 +1,4 @@
+import { requestGeolocation } from "../../request-geolocation.js";
 import { Context } from 'hono'
 import { env } from 'hono/adapter'
 import {
@@ -192,27 +193,7 @@ export const handleAuthCodeTokenExchange = async (
 
   if (enableSignInLog) {
     const ip = requestUtil.getRequestIP(c)
-    let detail = null
-    if ('cf' in c.req.raw) {
-      const cf = c.req.raw.cf as {
-        longitude: string;
-        continent: string;
-        country: string;
-        timezone: string;
-        region: string;
-        regionCode: string;
-        latitude: string;
-      }
-      detail = JSON.stringify({
-        longitude: cf.longitude,
-        continent: cf.continent,
-        country: cf.country,
-        timezone: cf.timezone,
-        region: cf.region,
-        regionCode: cf.regionCode,
-        latitude: cf.latitude,
-      })
-    }
+    const detail = requestGeolocation(c.req.raw)
     await signInLogModel.create(
       c.env.DB,
       {

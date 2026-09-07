@@ -687,7 +687,7 @@ export function MarketingChannelsPage() {
 									<Switch id="connector-enabled" checked={enabled} onCheckedChange={setEnabled} />
 								</div>
 								<div className="flex gap-2">
-									<Button disabled={busy || !name.trim() || !endpoint.trim()}>
+									<Button type="submit" disabled={busy || !name.trim() || !endpoint.trim()}>
 										<Plus className="size-4" /> {editingId ? "Save" : "Add channel"}
 									</Button>
 									{editingId && (

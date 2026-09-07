@@ -1,0 +1,248 @@
+Canonical Site API integration validation, 7 September 2026
+
+apps/site/runtime-tests/retirement-api-products.runtime.test.ts
+SHA-256: 8ca8f5cb19fac541340da414260c64bc1add3511bc413f8d15713c65f7150804
+
+Grouped run: Products, Billing and Email (3 files, 3 tests passed).
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  3 passed (3)
+      Tests  3 passed (3)
+   Start at  12:27:46
+   Duration  14.28s (transform 11.74s, setup 26.63s, import 173ms, tests 3.61s, environment 0ms)
+
+
+Recorded successful operations:
+[
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.create_product",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "d20a04bb-c585-49db-907b-f2e9aacee0b5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.data_source.products",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "d20a04bb-c585-49db-907b-f2e9aacee0b5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.update_product",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "d20a04bb-c585-49db-907b-f2e9aacee0b5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.create_package",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.data_source.packages",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.update_package",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.create_offering",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "edfeba82-5569-4ad9-a5bf-900294f07aff"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.data_source.offerings",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "edfeba82-5569-4ad9-a5bf-900294f07aff"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.update_offering",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "edfeba82-5569-4ad9-a5bf-900294f07aff"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.create_entitlement",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.data_source.entitlements",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.update_entitlement",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.sync_store_catalog",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "55a3968f-8396-4daf-ba8d-3303866be022"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.data_source.store_sync_runs",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "55a3968f-8396-4daf-ba8d-3303866be022"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.data_source.product_statistics",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "d20a04bb-c585-49db-907b-f2e9aacee0b5"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.archive_entitlement",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "f5a483c2-b679-4654-83f1-c8c13e09cc1f"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.archive_offering",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "edfeba82-5569-4ad9-a5bf-900294f07aff"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.archive_package",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "4846ab8a-e146-4b71-ad34-c6ab425bf9ef"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-products",
+    "route_id": "gateway.supbrd-plug-products.command.archive_product",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-products.txt",
+    "test": "apps/site/runtime-tests/retirement-api-products.runtime.test.ts",
+    "data_ids": [
+      "d20a04bb-c585-49db-907b-f2e9aacee0b5"
+    ]
+  }
+]

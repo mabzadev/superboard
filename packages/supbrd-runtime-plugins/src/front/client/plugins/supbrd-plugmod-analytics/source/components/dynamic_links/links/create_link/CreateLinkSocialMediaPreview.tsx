@@ -291,7 +291,6 @@ const CreateLinkSocialMediaPreview = React.memo(function CreateLinkSocialMediaPr
 								>
 									{imagePreview && imageType === FILE ? (
 										<>
-											{/* eslint-disable-next-line @next/next/no-img-element */}
 											<img
 												src={imagePreview}
 												alt="Upload preview"

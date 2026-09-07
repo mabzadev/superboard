@@ -1,0 +1,93 @@
+Canonical Site API integration evidence
+
+Test: apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts
+Runner exit code: 0
+All 10 files and 27 tests in this run passed.
+
+Recorded observations (emitted after semantic and persistence assertions):
+[
+  {
+    "plugin_id": "supbrd-plugmod-mcp",
+    "route_id": "gateway.supbrd-plugmod-mcp.command.approve_consent",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
+    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "data_ids": [
+      "mcp_authorization_codes:4824fbcd353b47fa101b5a48255d8aa8"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-mcp",
+    "route_id": "gateway.supbrd-plugmod-mcp.data_source.tokens",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
+    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "data_ids": [
+      "8f7d19bd2211054153c52a213c6044a1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-mcp",
+    "route_id": "gateway.supbrd-plugmod-mcp.command.revoke_token",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
+    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "data_ids": [
+      "8f7d19bd2211054153c52a213c6044a1"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-mcp",
+    "route_id": "gateway.supbrd-plugmod-mcp.command.invoke_tool",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
+    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "data_ids": [
+      "55e4c0dc-3e28-49bb-8cc2-0381dd24d000",
+      "ccb2aab7-5b25-4c37-9f49-25382a296380"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-mcp",
+    "route_id": "gateway.supbrd-plugmod-mcp.data_source.sessions",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
+    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "data_ids": [
+      "ccb2aab7-5b25-4c37-9f49-25382a296380"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-mcp",
+    "route_id": "gateway.supbrd-plugmod-mcp.data_source.tool_receipts",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-mcp.txt",
+    "test": "apps/site/runtime-tests/retirement-api-mcp.runtime.test.ts",
+    "data_ids": [
+      "55e4c0dc-3e28-49bb-8cc2-0381dd24d000"
+    ]
+  }
+]
+
+Runner output:
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id packages/supbrd-front-ui
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  10 passed (10)
+      Tests  27 passed (27)
+   Start at  12:25:01
+   Duration  40.76s (transform 14.93s, setup 62.67s, import 3.78s, tests 16.91s, environment 1ms)

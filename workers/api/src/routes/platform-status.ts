@@ -46,13 +46,13 @@ const WORKERS = [
 		["platformDeadLetters", "pushDeliveries", "accountErasures"],
 	),
 	worker(
-		"dashboard",
-		"backoffice",
-		null,
-		"public",
-		"/",
-		"SuperBoard operator back office",
-		["dashboard-cache"],
+		"site",
+		"front",
+		"SITE_SERVICE",
+		"binding",
+		"/superboard-system/health",
+		"EmDash operator Front and content runtime",
+		["site", "site-media", "site-sessions", "site-release-cache"],
 		[],
 		[],
 	),
@@ -587,6 +587,7 @@ export async function buildPlatformStatus(env: Env, managed?: { instanceId: numb
 			api: `https://${env.API_DOMAIN}`,
 			sdk: `https://${env.SDK_DOMAIN}`,
 			shortLinks: `https://${env.SHORTLINK_DOMAIN}`,
+			site: publicSurfaces.find((surface) => surface.id === "site")?.url ?? null,
 			dashboard: env.APP_URL,
 			files: env.FILES_DOMAIN ? `https://${env.FILES_DOMAIN}` : null,
 			mcp: env.MCP_DOMAIN ? `https://${env.MCP_DOMAIN}` : null,
@@ -1105,7 +1106,7 @@ function workerCapabilityIds(id: string): string[] {
 		onboardings: ["modules"],
 		flows: ["modules"],
 		custom: ["custom-jobs"],
-		dashboard: ["platform", "libraries"],
+		site: ["platform", "libraries"],
 		observability: ["platform"],
 		messaging: ["support"],
 		email: ["notifications", "marketing-consent"],
@@ -1114,7 +1115,7 @@ function workerCapabilityIds(id: string): string[] {
 }
 
 function directWorkerRoutes(id: string, healthPath: string) {
-	return id === "dashboard" ? ["/infrastructure"] : [healthPath];
+	return id === "site" ? ["/superboard-system/home", "/infrastructure", healthPath] : [healthPath];
 }
 
 function workerServiceDependencies(id: string): string[] {
@@ -1135,7 +1136,7 @@ function workerServiceDependencies(id: string): string[] {
 			"flows",
 			"custom",
 		],
-		dashboard: ["api"],
+		site: ["api"],
 		identity: ["email", "files"],
 		mcp: ["api"],
 		custom: ["files"],
@@ -1164,7 +1165,7 @@ function workerJobs(
 	if (id === "billing") return flatten(["billingExports", "failedPurchases"]);
 	if (id === "email" || id === "marketing" || id === "support") return serviceJobs[id];
 	if (id === "custom") return custom.stats?.jobs ?? (custom.status === "disabled" ? {} : null);
-	if (id === "messaging") return null;
+	if (id === "messaging" || id === "site") return null;
 	return {};
 }
 
@@ -1403,6 +1404,7 @@ function dataStoreInventory(
 		description,
 		...(kind === "D1" ? { schema: schema ?? null } : {}),
 	});
+	const siteStorageStatus = serviceStatus("site") === "ok" ? "unavailable" : serviceStatus("site");
 	const d1Store = (id: string, owner: string, description: string) =>
 		store(id, "D1", owner, d1Status(owner), description, serviceSchema(owner));
 	return [
@@ -1507,11 +1509,32 @@ function dataStoreInventory(
 			"Application-specific durable jobs, receipts and integration state",
 		),
 		store(
-			"dashboard-cache",
+			"site",
+			"D1",
+			"site",
+			siteStorageStatus,
+			"EmDash content, schema and operator configuration; storage health is not reported by Site liveness",
+		),
+		store(
+			"site-media",
 			"R2",
-			"dashboard",
-			"declared",
-			"OpenNext incremental cache; verified by the Dashboard Worker deployment",
+			"site",
+			siteStorageStatus,
+			"EmDash media objects; storage health is not reported by Site liveness",
+		),
+		store(
+			"site-sessions",
+			"KV",
+			"site",
+			siteStorageStatus,
+			"EmDash operator sessions; storage health is not reported by Site liveness",
+		),
+		store(
+			"site-release-cache",
+			"KV",
+			"site",
+			siteStorageStatus,
+			"EmDash active release metadata; storage health is not reported by Site liveness",
 		),
 	];
 }

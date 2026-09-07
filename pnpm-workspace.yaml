@@ -123,6 +123,7 @@ packages:
   - packages/*
   - packages/plugins/*
   - apps/*
+  - "!apps/dashboard"
   - demos/*
   - templates/*
   - packages/blocks/playground

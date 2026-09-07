@@ -37,7 +37,7 @@ import { Input } from "../../../../../../../../../supbrd-front-ui/src/shared/com
 import { Label } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/label.js";
 import { Switch } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/switch.js";
 import { useProjectSelection } from "../../../../../../../../../supbrd-front-ui/src/shared/context/useProjectSelection.js";
-import { config } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
+import { usePublicConfig } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
 import {
 	showErrorNotification,
 	showSuccessNotification,
@@ -224,6 +224,7 @@ function stepCode(
 	step: number,
 	accessKey: string,
 	form: SetupForm,
+	config: ReturnType<typeof usePublicConfig>,
 ): CodeBlockData[] | null {
 	if (platform === "ios") {
 		if (step === 1)
@@ -249,11 +250,12 @@ function stepCode(
 			);
 	}
 	if (platform === "android") {
+		if (step === 1 && !config.shortlinkUrl) return null;
 		if (step === 1)
 			return code(
 				"xml",
 				"AndroidManifest.xml",
-				`<intent-filter android:autoVerify="true">\n  <action android:name="android.intent.action.VIEW" />\n  <category android:name="android.intent.category.BROWSABLE" />\n  <data android:scheme="https" android:host="${new URL(config.shortlinkUrl).hostname}" />\n</intent-filter>`,
+				`<intent-filter android:autoVerify="true">\n  <action android:name="android.intent.action.VIEW" />\n  <category android:name="android.intent.category.BROWSABLE" />\n  <data android:scheme="https" android:host="${new URL(config.shortlinkUrl!).hostname}" />\n</intent-filter>`,
 			);
 		if (step === 2) return sdkInstallCode("android");
 		if (step === 3)
@@ -267,6 +269,7 @@ function stepCode(
 			);
 	}
 	if (platform === "web") {
+		if (step === 2 && !config.sdkUrl) return null;
 		const javascriptLibrary = library("javascript");
 		if (step === 1) return sdkInstallCode("web");
 		if (step === 2)
@@ -488,9 +491,17 @@ function SetupStep({
 	setForm: React.Dispatch<React.SetStateAction<SetupForm>>;
 	accessKey: string;
 }) {
-	const codeBlock = stepCode(platform, step, accessKey, form);
+	const config = usePublicConfig();
+	const missingEndpoint =
+		platform === "android" && step === 1 && !config.shortlinkUrl
+			? "Short-link"
+			: platform === "web" && step === 2 && !config.sdkUrl
+				? "SDK"
+				: null;
+	const codeBlock = stepCode(platform, step, accessKey, form, config);
 	return (
 		<div className="mx-auto max-w-3xl space-y-6">
+			{missingEndpoint && <p role="alert">{config.endpointError(missingEndpoint)}</p>}
 			<SectionHeader
 				icon={definition.icon}
 				title={definition.name}

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "target": "mbza-development",
   "environment": "local",
-  "target_artifact_checksum": "sha256:236887d11e2c6a6203d7f9efe48992451cc07725c155673c298c827bb2adc7b2",
-  "target_graph_checksum": "sha256:90d731094bf2149053e4bce3f8624d3470a75d22c112dee20ddbdbf9cd324c82",
+  "target_artifact_checksum": "sha256:862dfa5e75e81e118712f236d4c8968d7fe2d16160970de63021729fb50baf57",
+  "target_graph_checksum": "sha256:24daf067d993bfe3ed87761e90124935e57713d483ae1ed266fad889d8fb583f",
   "active_plugin_ids": [
     "supbrd-plug-audit",
     "supbrd-plug-content",
@@ -25,24 +25,24 @@
     "supbrd-plugmod-support"
   ],
   "manifest_artifact_checksums": {
-    "supbrd-plug-audit": "sha256:7930eb1880ba345a78e11d5c5bde14c40ebf930b31872d373684162cb0b3af1d",
-    "supbrd-plug-content": "sha256:98b7f9515c57a30cdcfe4ef04c618e144383bd2d6fc98ee6dc63785424edfded",
-    "supbrd-plug-products": "sha256:36e0df6ea32e237f55cd3f2ab7def6060b14bd7667c95c8f382ddde86e803bce",
-    "supbrd-plug-settings": "sha256:7ec969cac29207afed50a7da5d2f4ced8c92720267dcac7a90c2fd2b403dc341",
-    "supbrd-plug-user": "sha256:b0960dce173f5af02849884b635a2a2ff38bf5d3f63eb0bc73a46d935412257e",
-    "supbrd-plugmod-analytics": "sha256:0a1aee7d1818298c35a43d0cceb23db1c2b422339efe0c49205ce42014f79e29",
-    "supbrd-plugmod-billing": "sha256:7d3d4cbf40ab4366e7f3a0f84f0bf9cf1ea4d880c512d8f2818a6897292e0450",
-    "supbrd-plugmod-dynamic-links": "sha256:9d6e7c182010711eaeba566e17d0c9792317d3afe1d6b7988bb9623fcfd75274",
-    "supbrd-plugmod-email": "sha256:8413c5b709d4deabeba1e22d7f642f6ee43acd000fa58bdea6081cefcfc3bed7",
-    "supbrd-plugmod-files": "sha256:cf72145233b3f658551cc2411ad0e4b904641b252b760720dcf60d99d2d570ae",
-    "supbrd-plugmod-flows": "sha256:8be44fe43cbbfa9908bd3a090794a64509916f696b0f6e07b1760b42436ea27a",
-    "supbrd-plugmod-gateway": "sha256:ac75255552aafbdcbd09eff1affc47890b5b2446d33f13b8b6aeb122fbf02ad7",
-    "supbrd-plugmod-marketing": "sha256:0959e0062cfb65027a569f380e1b28fe4d59ab869e426a77ca4be113e1970f4a",
-    "supbrd-plugmod-mcp": "sha256:fbc5219ba3c02d3ec09eff32942e4d8ef43a2a4b6e284c71c7b3c73521d1821d",
-    "supbrd-plugmod-observability": "sha256:ce8f12c416bd6646214ea667964e5bead7c7dce0ea6cd9b14188e36d59831303",
-    "supbrd-plugmod-onboardings": "sha256:858e81ac37871d27a7fb26f3733c4b3fed79608dbf929d05f3e9525d2d3216ab",
-    "supbrd-plugmod-paywalls": "sha256:1f7d9ea1bd3a59bafcb74f56621222f7c7ec56725481bdf2c774f80f6477417d",
-    "supbrd-plugmod-support": "sha256:fabf1832fe481c98ebafef1b78e4bd63837bf0996489c87d9957e7765d5487ab"
+    "supbrd-plug-audit": "sha256:4d1b050d3fe4cd68073ece02fbfd40c4a08e17fbcdfdebce6a98ad0ffe172d66",
+    "supbrd-plug-content": "sha256:edbd2a25082957e7751bfc86474a28ba5e57c4720d2b3f24c72d4616120d6f34",
+    "supbrd-plug-products": "sha256:05a2bd04edfaf3eff329090e5300afc1639847317e25bca6122377d8cf3396b5",
+    "supbrd-plug-settings": "sha256:1b7aa454f1da8b0937cfd02224a28e6e160ed63dc6821467e6263d3a79bb5268",
+    "supbrd-plug-user": "sha256:9027f6de744067ed243f77c5de761970edfbcc19713940a6b52cf46d62b8177b",
+    "supbrd-plugmod-analytics": "sha256:9c1f946741b7e5ef2b6fdf0841131602f93fea798564c2e36bad371ed8e15a58",
+    "supbrd-plugmod-billing": "sha256:e885d432117d8c3911c0da8c39f509119f0895d18a846afd17c38fe506cb6247",
+    "supbrd-plugmod-dynamic-links": "sha256:60a7af0f48c2a358cff65895537399a9ee86467529211d16115ea73c8953f6ee",
+    "supbrd-plugmod-email": "sha256:58c021288132d22ae452690cfde1fcf8149fa43b1faf8842bf07348e3b2fd9b2",
+    "supbrd-plugmod-files": "sha256:58674c810cac2679d9129ecac30be86c1400b69026311d7e3c9ba1df6026f137",
+    "supbrd-plugmod-flows": "sha256:39c2b84b5d0d525abf1ef75a1c87d18b0f4e307b1aeddcccfaf2a6aba43dc0a1",
+    "supbrd-plugmod-gateway": "sha256:f1bfa61b15e01a72a17170adc5075717e6bbbee1dce615f1822e89e9780cd614",
+    "supbrd-plugmod-marketing": "sha256:c2fe1f6c7ddee2bec51066cd83847753b4ada11508632b4aa5e2aedaa9f95576",
+    "supbrd-plugmod-mcp": "sha256:2e7840093d1d88c8de5e809843e1fc2a92e7b4b3d2dd3039b58e868eb5b5a7c5",
+    "supbrd-plugmod-observability": "sha256:c8fa11430708384b072ab53b08c759113ed234f9ec72c2d9ea6b3826f1ecb7a4",
+    "supbrd-plugmod-onboardings": "sha256:105154acb3d2f38b5589bf67e0a5617a51d245428782ef6804ae84cd01ce5683",
+    "supbrd-plugmod-paywalls": "sha256:3db67468feb3e017733f29fda1ed70ce12c56fad99fc3bedbfd7bf0b3dcef778",
+    "supbrd-plugmod-support": "sha256:3772abc9d5941cd0bc9d634be0a846bb63fc17752650f49a26a39caa87d98635"
   },
   "verification_key": {
     "key_ops": [
@@ -50,8 +50,8 @@
     ],
     "ext": true,
     "kty": "EC",
-    "x": "UAswn6PcDc4HGQ8UYJmD-7ohFeYWXZ0_GF5nlGv8C7U",
-    "y": "dLf7YeX6JRwKqN3cARoZZcNFmHu6rUhYd42Xm2tUjVY",
+    "x": "1CK5zvNc9JNUZwHGS6x1L0yLfQ2IpiazH7FdZro79UI",
+    "y": "99VjBLOiFSJx6ekByzvpyk54VsgtYk0SRPwcH1pWEiY",
     "crv": "P-256",
     "kid": "issue-70-parity"
   },
@@ -284,9 +284,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "anonymous_only",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [],
             "page_id": "page.superboard_accept_invite",
             "parameters": {},
@@ -313,9 +311,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "authenticated",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [
               "layout.superboard_admin"
             ],
@@ -1057,9 +1053,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "authenticated",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [
               "layout.superboard_admin"
             ],
@@ -2904,9 +2898,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "anonymous_only",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [],
             "page_id": "page.superboard_login",
             "parameters": {},
@@ -3243,9 +3235,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "anonymous_only",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [],
             "page_id": "page.superboard_new_password",
             "parameters": {},
@@ -3551,9 +3541,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "anonymous_only",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [],
             "page_id": "page.superboard_register",
             "parameters": {},
@@ -3580,9 +3568,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "anonymous_only",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [],
             "page_id": "page.superboard_register_with_email",
             "parameters": {},
@@ -3609,9 +3595,7 @@
           {
             "audience": "superboard_front",
             "auth_policy": "anonymous_only",
-            "dependencies": [
-              "dependency.supbrd_plug_user"
-            ],
+            "dependencies": [],
             "layout_ids": [],
             "page_id": "page.superboard_reset_password",
             "parameters": {},
@@ -4225,7 +4209,7 @@
         ],
         "schema_version": "1.0.0",
         "system_routes": [],
-        "route_manifest_checksum": "sha256:21b987527399fcb4ba7cae9d860a10febcf17d82f977608c17c689c27ac49cf4"
+        "route_manifest_checksum": "sha256:e46debfe4bb648700551507b43360be2cde6904d7801206affb370069082148c"
       },
       "gateway_manifest": {
         "gateway_manifest_id": "01J00000000000000000000221",
@@ -7409,109 +7393,109 @@
           "version": "0.1.0"
         },
         {
-          "artifact_checksum": "sha256:7930eb1880ba345a78e11d5c5bde14c40ebf930b31872d373684162cb0b3af1d",
+          "artifact_checksum": "sha256:4d1b050d3fe4cd68073ece02fbfd40c4a08e17fbcdfdebce6a98ad0ffe172d66",
           "native": false,
           "plugin_id": "supbrd-plug-audit",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:98b7f9515c57a30cdcfe4ef04c618e144383bd2d6fc98ee6dc63785424edfded",
+          "artifact_checksum": "sha256:edbd2a25082957e7751bfc86474a28ba5e57c4720d2b3f24c72d4616120d6f34",
           "native": false,
           "plugin_id": "supbrd-plug-content",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:36e0df6ea32e237f55cd3f2ab7def6060b14bd7667c95c8f382ddde86e803bce",
+          "artifact_checksum": "sha256:05a2bd04edfaf3eff329090e5300afc1639847317e25bca6122377d8cf3396b5",
           "native": false,
           "plugin_id": "supbrd-plug-products",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:7ec969cac29207afed50a7da5d2f4ced8c92720267dcac7a90c2fd2b403dc341",
+          "artifact_checksum": "sha256:1b7aa454f1da8b0937cfd02224a28e6e160ed63dc6821467e6263d3a79bb5268",
           "native": false,
           "plugin_id": "supbrd-plug-settings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:b0960dce173f5af02849884b635a2a2ff38bf5d3f63eb0bc73a46d935412257e",
+          "artifact_checksum": "sha256:9027f6de744067ed243f77c5de761970edfbcc19713940a6b52cf46d62b8177b",
           "native": false,
           "plugin_id": "supbrd-plug-user",
           "version": "1.4.0"
         },
         {
-          "artifact_checksum": "sha256:0a1aee7d1818298c35a43d0cceb23db1c2b422339efe0c49205ce42014f79e29",
+          "artifact_checksum": "sha256:9c1f946741b7e5ef2b6fdf0841131602f93fea798564c2e36bad371ed8e15a58",
           "native": false,
           "plugin_id": "supbrd-plugmod-analytics",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:7d3d4cbf40ab4366e7f3a0f84f0bf9cf1ea4d880c512d8f2818a6897292e0450",
+          "artifact_checksum": "sha256:e885d432117d8c3911c0da8c39f509119f0895d18a846afd17c38fe506cb6247",
           "native": false,
           "plugin_id": "supbrd-plugmod-billing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:9d6e7c182010711eaeba566e17d0c9792317d3afe1d6b7988bb9623fcfd75274",
+          "artifact_checksum": "sha256:60a7af0f48c2a358cff65895537399a9ee86467529211d16115ea73c8953f6ee",
           "native": false,
           "plugin_id": "supbrd-plugmod-dynamic-links",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:8413c5b709d4deabeba1e22d7f642f6ee43acd000fa58bdea6081cefcfc3bed7",
+          "artifact_checksum": "sha256:58c021288132d22ae452690cfde1fcf8149fa43b1faf8842bf07348e3b2fd9b2",
           "native": false,
           "plugin_id": "supbrd-plugmod-email",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:cf72145233b3f658551cc2411ad0e4b904641b252b760720dcf60d99d2d570ae",
+          "artifact_checksum": "sha256:58674c810cac2679d9129ecac30be86c1400b69026311d7e3c9ba1df6026f137",
           "native": false,
           "plugin_id": "supbrd-plugmod-files",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:8be44fe43cbbfa9908bd3a090794a64509916f696b0f6e07b1760b42436ea27a",
+          "artifact_checksum": "sha256:39c2b84b5d0d525abf1ef75a1c87d18b0f4e307b1aeddcccfaf2a6aba43dc0a1",
           "native": false,
           "plugin_id": "supbrd-plugmod-flows",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:ac75255552aafbdcbd09eff1affc47890b5b2446d33f13b8b6aeb122fbf02ad7",
+          "artifact_checksum": "sha256:f1bfa61b15e01a72a17170adc5075717e6bbbee1dce615f1822e89e9780cd614",
           "native": false,
           "plugin_id": "supbrd-plugmod-gateway",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:0959e0062cfb65027a569f380e1b28fe4d59ab869e426a77ca4be113e1970f4a",
+          "artifact_checksum": "sha256:c2fe1f6c7ddee2bec51066cd83847753b4ada11508632b4aa5e2aedaa9f95576",
           "native": false,
           "plugin_id": "supbrd-plugmod-marketing",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:fbc5219ba3c02d3ec09eff32942e4d8ef43a2a4b6e284c71c7b3c73521d1821d",
+          "artifact_checksum": "sha256:2e7840093d1d88c8de5e809843e1fc2a92e7b4b3d2dd3039b58e868eb5b5a7c5",
           "native": false,
           "plugin_id": "supbrd-plugmod-mcp",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:ce8f12c416bd6646214ea667964e5bead7c7dce0ea6cd9b14188e36d59831303",
+          "artifact_checksum": "sha256:c8fa11430708384b072ab53b08c759113ed234f9ec72c2d9ea6b3826f1ecb7a4",
           "native": false,
           "plugin_id": "supbrd-plugmod-observability",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:858e81ac37871d27a7fb26f3733c4b3fed79608dbf929d05f3e9525d2d3216ab",
+          "artifact_checksum": "sha256:105154acb3d2f38b5589bf67e0a5617a51d245428782ef6804ae84cd01ce5683",
           "native": false,
           "plugin_id": "supbrd-plugmod-onboardings",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:1f7d9ea1bd3a59bafcb74f56621222f7c7ec56725481bdf2c774f80f6477417d",
+          "artifact_checksum": "sha256:3db67468feb3e017733f29fda1ed70ce12c56fad99fc3bedbfd7bf0b3dcef778",
           "native": false,
           "plugin_id": "supbrd-plugmod-paywalls",
           "version": "1.0.0"
         },
         {
-          "artifact_checksum": "sha256:fabf1832fe481c98ebafef1b78e4bd63837bf0996489c87d9957e7765d5487ab",
+          "artifact_checksum": "sha256:3772abc9d5941cd0bc9d634be0a846bb63fc17752650f49a26a39caa87d98635",
           "native": false,
           "plugin_id": "supbrd-plugmod-support",
           "version": "1.0.0"
@@ -8858,23 +8842,39 @@
             "locale": "en",
             "messages": {
               "site.admin.open": "Open EmDash Admin",
+              "site.front.account": "Account",
+              "site.front.account_menu": "Account menu",
+              "site.front.close_navigation": "Close navigation",
+              "site.front.collapse_sidebar": "Collapse sidebar",
+              "site.front.dark_mode": "Dark mode",
               "site.front.dependency_unavailable": "Dependency unavailable",
               "site.front.dependency_unavailable_description": "A required plugin dependency is unavailable.",
               "site.front.description": "This View comes from the published SuperBoard configuration and is rendered by its plugin.",
               "site.front.empty": "Nothing here yet",
               "site.front.empty_description": "The selected View has no data to display.",
+              "site.front.environment": "Environment",
               "site.front.error": "View error",
               "site.front.error_description": "The selected plugin renderer could not complete.",
+              "site.front.expand_sidebar": "Expand sidebar",
               "site.front.fail_closed": "Fail-closed runtime state",
               "site.front.fail_closed_description": "No unverified or partial configuration is rendered. EmDash Admin remains available to repair and publish a complete configuration.",
               "site.front.forbidden": "Access denied",
               "site.front.forbidden_description": "Your grants do not allow this View.",
+              "site.front.light_mode": "Light mode",
               "site.front.loading": "Loading",
               "site.front.loading_description": "The selected View is loading.",
+              "site.front.logout": "Log out",
+              "site.front.logout_failed": "Sign out failed. Try again.",
               "site.front.navigation": "SuperBoard navigation",
               "site.front.not_found": "Page not found",
               "site.front.not_found_description": "The published SuperBoard configuration does not expose this URL.",
+              "site.front.open_account": "Open {name} account menu",
+              "site.front.open_navigation": "Open navigation",
+              "site.front.production": "Production",
+              "site.front.project_settings": "Project Settings",
               "site.front.route_manifest": "Front Route Manifest",
+              "site.front.section_navigation": "{section} pages",
+              "site.front.test": "Test",
               "site.front.title": "SuperBoard",
               "site.front.unavailable": "SuperBoard unavailable",
               "site.front.unavailable_description": "No verified SuperBoard configuration can be rendered.",
@@ -8934,23 +8934,39 @@
             "locale": "fr",
             "messages": {
               "site.admin.open": "Ouvrir l’administration EmDash",
+              "site.front.account": "Compte",
+              "site.front.account_menu": "Menu du compte",
+              "site.front.close_navigation": "Fermer la navigation",
+              "site.front.collapse_sidebar": "Réduire la navigation",
+              "site.front.dark_mode": "Mode sombre",
               "site.front.dependency_unavailable": "Dépendance indisponible",
               "site.front.dependency_unavailable_description": "Une dépendance obligatoire du plugin est indisponible.",
               "site.front.description": "Cette View provient de la configuration SuperBoard publiée et est rendue par son plugin.",
               "site.front.empty": "Aucun contenu pour le moment",
               "site.front.empty_description": "La View sélectionnée n’a aucune donnée à afficher.",
+              "site.front.environment": "Environnement",
               "site.front.error": "Erreur de View",
               "site.front.error_description": "Le renderer du plugin sélectionné n’a pas pu aboutir.",
+              "site.front.expand_sidebar": "Développer la navigation",
               "site.front.fail_closed": "État runtime fermé par défaut",
               "site.front.fail_closed_description": "Aucune configuration non vérifiée ou partielle n’est rendue. L’administration EmDash reste disponible pour réparer et publier une configuration complète.",
               "site.front.forbidden": "Accès refusé",
               "site.front.forbidden_description": "Vos permissions n’autorisent pas cette View.",
+              "site.front.light_mode": "Mode clair",
               "site.front.loading": "Chargement",
               "site.front.loading_description": "La View sélectionnée est en cours de chargement.",
+              "site.front.logout": "Se déconnecter",
+              "site.front.logout_failed": "La déconnexion a échoué. Réessayez.",
               "site.front.navigation": "Navigation SuperBoard",
               "site.front.not_found": "Page introuvable",
               "site.front.not_found_description": "La configuration SuperBoard publiée n’expose pas cette URL.",
+              "site.front.open_account": "Ouvrir le menu du compte de {name}",
+              "site.front.open_navigation": "Ouvrir la navigation",
+              "site.front.production": "Production",
+              "site.front.project_settings": "Paramètres du projet",
               "site.front.route_manifest": "Manifeste des routes Front",
+              "site.front.section_navigation": "Pages {section}",
+              "site.front.test": "Test",
               "site.front.title": "SuperBoard",
               "site.front.unavailable": "SuperBoard indisponible",
               "site.front.unavailable_description": "Aucune configuration SuperBoard vérifiée ne peut être rendue.",
@@ -9286,8 +9302,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9315,8 +9331,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9344,8 +9360,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9373,8 +9389,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9402,8 +9418,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9429,8 +9445,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9456,8 +9472,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9483,8 +9499,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount"
           ],
@@ -9510,8 +9526,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9539,8 +9555,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9568,8 +9584,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9597,8 +9613,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9626,8 +9642,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9655,8 +9671,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9684,8 +9700,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9713,8 +9729,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9742,8 +9758,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9771,8 +9787,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9800,8 +9816,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9829,8 +9845,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9858,8 +9874,8 @@
         },
         {
           "abi_version": "1.0.0",
-          "build_checksum": "sha256:54cc0b2010fdea435304015b90fc854c3453215f02b73e03ae266f9c7ef83eaa",
-          "build_id": "5DHRD5KJDNN3Q9WK2R6RHM2XRP",
+          "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+          "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
           "capabilities": [
             "renderer.mount",
             "data_source.bind",
@@ -9893,11 +9909,11 @@
       },
       "schema_version": "1.0.0"
     },
-    "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+    "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
     "signature": {
       "algorithm": "ES256",
       "kid": "issue-70-parity",
-      "value": "ogBwLQHEpw7zQWiTs9NTkIHr677_eEzDt4J3TUtDy3ZKp2zYkNkKwzEUqYMexpNUF_Rbd6TKI5nnu6Auyl8_cA"
+      "value": "xZqukweapmID3284YR3ZjAyaxlNwtH-CdZQ18IYos0hYgiJHtZUUc6itCMD3E5dJdsnTHF11PydHfhA5CZJrCQ"
     },
     "validation_receipts": [
       {
@@ -9907,9 +9923,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "schema validation passed",
-        "receipt_checksum": "sha256:3134d9881d834595f4ae3c1c1030de7f484096e70530212a36b1de9f18266169"
+        "receipt_checksum": "sha256:bf6236fb958643783d07353d968efc27a69d387e8c9f8cfb3055cb5fa5ac1839"
       },
       {
         "receipt_id": "01J00000000000000000007004:normalization",
@@ -9918,9 +9934,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "normalization validation passed",
-        "receipt_checksum": "sha256:2694d90aecfcaef30ae73b96fee74b14f8eaa5cac07624399a983f5a7dabe780"
+        "receipt_checksum": "sha256:533230e712fed7ed4ab353bf1e065b1f7ed612c5d54057943ba811442b2849dc"
       },
       {
         "receipt_id": "01J00000000000000000007004:identity",
@@ -9929,9 +9945,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "identity validation passed",
-        "receipt_checksum": "sha256:2cc443f45fa2fb368fdb8f38c62734857d14163a7e48d45420d1015f3b6b4be0"
+        "receipt_checksum": "sha256:a6130a6e3382c58e6e8a5f0b6fba152b0e962ff5826cf3d59843b2e17b28c774"
       },
       {
         "receipt_id": "01J00000000000000000007004:reference_graph",
@@ -9940,9 +9956,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "reference_graph validation passed",
-        "receipt_checksum": "sha256:580c0a42ec652630ba7290d7542858270cf6587b32de00aa1b9479adb294d26d"
+        "receipt_checksum": "sha256:2e2d45c092a8e44da71a4c8191628ff516fddd49a75f2b6d8ec7601efa5d9a75"
       },
       {
         "receipt_id": "01J00000000000000000007004:routing",
@@ -9951,9 +9967,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "routing validation passed",
-        "receipt_checksum": "sha256:65567d2599ca2a2ab7dcdc147bfe51458cd195c48c83a7a51c1b6be2f6529362"
+        "receipt_checksum": "sha256:21b08263ae7d636fc4a3d35d120f5f0c250d6998373ba3b879c6d742c98abb2d"
       },
       {
         "receipt_id": "01J00000000000000000007004:renderer_compatibility",
@@ -9962,9 +9978,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "renderer_compatibility validation passed",
-        "receipt_checksum": "sha256:3f6f525aaf3e9e4ba6ddd378dbebf65a1e55970f88ae58caf52afd0a49dfd0f5"
+        "receipt_checksum": "sha256:f357dc856a8cc3eddb20e623acf414bde2c25d423d3ff5dd4848af701692f92e"
       },
       {
         "receipt_id": "01J00000000000000000007004:actions_data_sources",
@@ -9973,9 +9989,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "actions_data_sources validation passed",
-        "receipt_checksum": "sha256:6419f8038fb8905ce7c282f21dc3a72925703cc36793756891827d919920851f"
+        "receipt_checksum": "sha256:7ad0bf019fc4dbad0f95cfbec8bc8ab5e5969ba720b6be855a24706498f1b354"
       },
       {
         "receipt_id": "01J00000000000000000007004:permissions_security",
@@ -9984,9 +10000,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "permissions_security validation passed",
-        "receipt_checksum": "sha256:77a5239f37d47d5bb98b4bb396dba338cb51901ff446094cb797b480454b6642"
+        "receipt_checksum": "sha256:c7c8d522ef2deadcc0690a192940b0e9f8c17c34de0c53e9de77cc1e9bbbec60"
       },
       {
         "receipt_id": "01J00000000000000000007004:translations_media",
@@ -9995,9 +10011,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "translations_media validation passed",
-        "receipt_checksum": "sha256:e5891a83deb901f82e92eab5754ca697a1ff5cb286292511f66e171ba6d29523"
+        "receipt_checksum": "sha256:bbe5c7b5f9cd989ea9f680865bb14b325df7a3316bc56728b735f9e486789b6c"
       },
       {
         "receipt_id": "01J00000000000000000007004:plugins_stores_workers",
@@ -10006,9 +10022,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "plugins_stores_workers validation passed",
-        "receipt_checksum": "sha256:7ff7ed1ae37fe9240f61b3b3f8607d2f0dbfe273137d51c00496c475a735e4eb"
+        "receipt_checksum": "sha256:f5b7453b19d8b3a1f0b9acb41598c9988c02826324647eba64f8ff047d739559"
       },
       {
         "receipt_id": "01J00000000000000000007004:migrations",
@@ -10017,9 +10033,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "migrations validation passed",
-        "receipt_checksum": "sha256:1cf94fc2e99d7ec5fdba443af6f197bcee5989fb8aae75c3f231bc38d034d7bf"
+        "receipt_checksum": "sha256:5448810ca2e790a35fa10a793d3ed713273dff52199b3097d584a0ae51eaa418"
       },
       {
         "receipt_id": "01J00000000000000000007004:rollback_readiness",
@@ -10028,9 +10044,9 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "rollback_readiness validation passed",
-        "receipt_checksum": "sha256:5e632045edfa035da81528099bd3b57240d1da7c892c8fd56753406803b1ec80"
+        "receipt_checksum": "sha256:2a46ba363c3b233310757abc486e4db2374e8696204a5b5e77059c11b82b0419"
       },
       {
         "receipt_id": "01J00000000000000000007004:integrity",
@@ -10039,12 +10055,12 @@
         "status": "passed",
         "candidate_id": "01J00000000000000000007004",
         "release_id": "01J00000000000000000007005",
-        "content_checksum": "sha256:47db1f8775cddaed85c0ad02dbf547da35d011451e07148f25caf3c16d0fbcd7",
+        "content_checksum": "sha256:5bbfccb546aac7ed131fad2107760b0add4592569ef9450a6f119a5353ca471c",
         "message": "integrity validation passed",
-        "receipt_checksum": "sha256:d73e12a64d09fb95f688a7e3e0b7834d22454440f89268069df649aa74dcacb5"
+        "receipt_checksum": "sha256:f9f3259e246244f3b3d257e018ded718bc327d3a143260f5839c6321629c6c55"
       }
     ],
-    "validation_set_checksum": "sha256:2607089c630019e3ace16bf56ad01a5a192f6d7d81b23abbf31e18a102cb12b2",
+    "validation_set_checksum": "sha256:e1a4ac8fb982cf6302ff7db8a55596a9ee88738b29b4f729a65ac14f661f8daa",
     "verification_status": "verified"
   }
 }

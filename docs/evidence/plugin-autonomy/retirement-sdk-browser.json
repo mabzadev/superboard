@@ -1,0 +1,38 @@
+[
+  {
+    "plugin_id": "supbrd-plug-settings",
+    "route_id": "superboard.app_android_setup",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "1-test:android"
+    ],
+    "description": "Saved registration through the wizard, verified persisted configuration, reloaded its values, checked target-specific SDK instructions and removed the Test configuration.",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-sdk-browser.json"
+  },
+  {
+    "plugin_id": "supbrd-plug-settings",
+    "route_id": "superboard.app_ios_setup",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "1-test:ios"
+    ],
+    "description": "Saved registration through the wizard, verified persisted configuration, reloaded its values, checked target-specific SDK instructions and removed the Test configuration.",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-sdk-browser.json"
+  },
+  {
+    "plugin_id": "supbrd-plug-settings",
+    "route_id": "superboard.app_web_setup",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "1-test:web"
+    ],
+    "description": "Saved registration through the wizard, verified persisted configuration, reloaded its values, checked target-specific SDK instructions and removed the Test configuration.",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-sdk-browser.json"
+  }
+]

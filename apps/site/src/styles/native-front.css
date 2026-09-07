@@ -1,5 +1,5 @@
 :root {
-	color-scheme: light;
+	color-scheme: light dark;
 	font-family:
 		Inter,
 		ui-sans-serif,
@@ -52,7 +52,7 @@ textarea {
 .native-front-layout {
 	display: grid;
 	height: 100svh;
-	grid-template-columns: 224px minmax(0, 1fr);
+	grid-template-columns: var(--front-sidebar-width, 224px) minmax(0, 1fr);
 	overflow: hidden;
 }
 
@@ -90,7 +90,7 @@ textarea {
 	box-shadow: inset 0 0 0 1px rgb(15 23 42 / 15%);
 }
 
-.native-front-sidebar nav {
+.native-front-sidebar > nav {
 	overflow-y: auto;
 	padding: 10px 8px 24px;
 }
@@ -120,7 +120,7 @@ textarea {
 	color: var(--front-foreground);
 }
 
-.native-front-sidebar details > div {
+.native-front-sidebar details > nav {
 	display: grid;
 	gap: 2px;
 	margin-block-start: 2px;
@@ -131,7 +131,7 @@ textarea {
 	overflow: hidden;
 	border-radius: 6px;
 	padding: 7px 10px;
-	color: #334155;
+	color: var(--front-foreground);
 	font-size: 13px;
 	text-decoration: none;
 	text-overflow: ellipsis;
@@ -144,7 +144,7 @@ textarea {
 
 .native-front-sidebar details a[aria-current="page"] {
 	background: var(--front-sidebar-active);
-	color: #0f172a;
+	color: var(--front-foreground);
 	font-weight: 600;
 }
 
@@ -163,7 +163,7 @@ textarea {
 	justify-content: space-between;
 	gap: 16px;
 	border-block-end: 1px solid var(--front-border);
-	background: #fafafa;
+	background: var(--front-card);
 	padding-inline: 20px 12px;
 }
 
@@ -316,7 +316,7 @@ textarea {
 	border: 1px solid #cbd5e1;
 	border-radius: 6px;
 	background: #fff;
-	color: #0f172a;
+	color: var(--front-foreground);
 	padding: 9px 10px;
 	outline: none;
 }
@@ -336,7 +336,7 @@ textarea {
 
 .native-front-field input[type="range"] {
 	width: 100%;
-	accent-color: #0f172a;
+	accent-color: var(--front-foreground);
 }
 
 .native-front-primary-action {
@@ -384,7 +384,7 @@ textarea {
 	border: 1px solid var(--front-border);
 	border-radius: 6px;
 	background: var(--front-card);
-	color: #334155;
+	color: var(--front-foreground);
 	padding: 7px 10px;
 	font-size: 12px;
 	font-weight: 600;
@@ -411,36 +411,169 @@ textarea {
 	box-shadow: 0 12px 32px rgb(15 23 42 / 8%);
 }
 
+.native-front-brand-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 48px;
+	padding: 7px 10px;
+}
+.native-front-controls,
+.native-front-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+.native-front-controls select {
+	max-width: 130px;
+	border: 1px solid var(--front-border);
+	border-radius: 6px;
+	padding: 5px;
+	background: var(--front-card);
+	color: inherit;
+}
+.native-front-instance-name {
+	overflow: hidden;
+	max-width: 180px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.native-front-layout[data-collapsed="true"] {
+	--front-sidebar-width: 64px;
+}
+.native-front-group-icon {
+	display: none;
+}
+.native-front-layout[data-collapsed="true"] .native-front-brand-name,
+.native-front-layout[data-collapsed="true"] .native-front-nav-label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+.native-front-layout[data-collapsed="true"] .native-front-group-icon {
+	display: inline;
+}
+.native-front-layout[data-collapsed="true"] .native-front-brand-mark {
+	display: none;
+}
+.native-front-mobile-open,
+.native-front-mobile-close {
+	display: none;
+}
+.native-front-nav-backdrop {
+	display: none;
+}
+.native-front-account-menu {
+	width: 240px;
+	display: grid;
+	gap: 4px;
+	box-shadow: none;
+	background: var(--popover, white);
+	color: var(--popover-foreground, #020617);
+}
+.native-front-account-menu [role="menuitem"] {
+	display: flex;
+	justify-content: flex-start;
+	width: 100%;
+	border-radius: 6px;
+	padding: 8px;
+	color: inherit;
+	text-decoration: none;
+}
+.native-front-account-menu [role="menuitem"]:hover,
+.native-front-account-menu [role="menuitem"]:focus {
+	background: var(--muted, #f1f5f9);
+	outline-offset: 2px;
+}
+.dark .native-front {
+	--front-background: #020617;
+	--front-foreground: #f8fafc;
+	--front-card: #0f172a;
+	--front-muted: #1e293b;
+	--front-muted-foreground: #94a3b8;
+	--front-border: #334155;
+	--front-sidebar: #0f172a;
+	--front-sidebar-hover: #1e293b;
+	--front-sidebar-active: #334155;
+}
+.dark .native-front-sidebar details a[aria-current="page"] {
+	color: var(--front-foreground);
+}
 @media (max-width: 900px) {
-	.native-front-layout {
-		grid-template-columns: 184px minmax(0, 1fr);
-	}
-
 	.native-front-columns {
 		grid-template-columns: 1fr;
 	}
 }
-
-@media (max-width: 640px) {
-	.native-front-layout {
-		height: auto;
-		min-height: 100svh;
-		grid-template-columns: 1fr;
-		overflow: visible;
+@media (max-width: 767px) {
+	.native-front-layout,
+	.native-front-layout[data-collapsed="true"] {
+		grid-template-columns: minmax(0, 1fr);
 	}
-
 	.native-front-sidebar {
-		max-height: 46svh;
-		border-inline-end: 0;
-		border-block-end: 1px solid var(--front-border);
+		position: fixed;
+		inset-block: 0;
+		inset-inline-start: 0;
+		width: 224px;
+		z-index: 50;
+		visibility: hidden;
+		transform: translateX(-100%);
 	}
-
-	.native-front-content {
+	[dir="rtl"] .native-front-sidebar {
+		transform: translateX(100%);
+	}
+	.native-front-layout[data-mobile-open="true"] .native-front-sidebar {
+		visibility: visible;
+		transform: none;
+	}
+	.native-front-nav-backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 40;
+		width: 100%;
+		height: 100%;
+		border: 0;
+		background: rgb(0 0 0 / 40%);
+	}
+	.native-front-mobile-open,
+	.native-front-mobile-close {
+		display: inline-flex;
+	}
+	.native-front-collapse,
+	.native-front-header-copy,
+	.native-front-instance-name {
+		display: none;
+	}
+	.native-front-layout[data-collapsed="true"] .native-front-brand-name,
+	.native-front-layout[data-collapsed="true"] .native-front-nav-label {
+		position: static;
+		width: auto;
+		height: auto;
 		overflow: visible;
+		clip-path: none;
 	}
-
+	.native-front-layout[data-collapsed="true"] .native-front-group-icon {
+		display: none;
+	}
+	.native-front-layout[data-collapsed="true"] .native-front-brand-mark {
+		display: block;
+	}
+	.native-front-content > header {
+		padding-inline: 8px;
+		gap: 8px;
+	}
+	.native-front-header-actions {
+		flex: 1;
+		justify-content: space-between;
+		gap: 6px;
+	}
+	.native-front-controls {
+		gap: 6px;
+	}
 	.native-front-content > main {
-		overflow: visible;
 		padding: 16px;
 	}
 }

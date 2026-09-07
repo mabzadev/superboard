@@ -25,7 +25,7 @@ import {
 	TabsTrigger,
 } from "../../../../../../../../../../supbrd-front-ui/src/shared/components/ui/tabs.js";
 import { useProjectSelection } from "../../../../../../../../../../supbrd-front-ui/src/shared/context/useProjectSelection.js";
-import { config } from "../../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
+import { usePublicConfig } from "../../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
 import {
 	showErrorNotification,
 	showSuccessNotification,
@@ -51,6 +51,7 @@ const emptyForm: PreviewForm = {
 };
 
 export default function SocialPreviewPageContent() {
+	const config = usePublicConfig();
 	const { selectedProject } = useProjectSelection();
 	const [form, setForm] = useState<PreviewForm>(emptyForm);
 	const [initial, setInitial] = useState<PreviewForm>(emptyForm);
@@ -98,13 +99,14 @@ export default function SocialPreviewPageContent() {
 		}
 	};
 
-	const domain = form.site_name || new URL(config.shortlinkUrl).hostname;
+	const domain =
+		form.site_name || (config.shortlinkUrl ? new URL(config.shortlinkUrl).hostname : "");
 
 	return (
 		<ModulePage
 			title="Social Media Preview"
 			description="Design the default Open Graph card shown when a dynamic link is shared."
-			error={error}
+			error={error ?? (!config.shortlinkUrl ? config.endpointError("Short-link") : null)}
 		>
 			{!selectedProject ? (
 				<EmptyProject />
@@ -150,12 +152,10 @@ export default function SocialPreviewPageContent() {
 										rows={4}
 										className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
 										value={form.description}
-										onChange={(event) =>
-											setForm((value) => ({
-												...value,
-												description: event.currentTarget.value,
-											}))
-										}
+										onChange={(event) => {
+											const description = event.currentTarget.value;
+											setForm((value) => ({ ...value, description }));
+										}}
 									/>
 								</div>
 								<Field

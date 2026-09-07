@@ -9,6 +9,10 @@ type CsvExportOptions = {
 };
 
 function requestOrigin(c: any) {
+  if (c.env.API_DOMAIN) {
+    const configured = String(c.env.API_DOMAIN);
+    return new URL(configured.includes('://') ? configured : `https://${configured}`).origin;
+  }
   const host = c.req.header('host') || new URL(c.req.url).host;
   const proto = host.includes('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https';
   return `${proto}://${host}`;
@@ -18,7 +22,7 @@ function csvFileName(prefix: string): string {
   return `${prefix}_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}_${crypto.randomUUID()}.csv`;
 }
 
-export async function storeCsvDownload(c: any, options: CsvExportOptions): Promise<{ name: string; key: string; url: string }> {
+export async function storeCsvDownload(c: any, options: CsvExportOptions): Promise<{ name: string; key: string; url: string; downloadPath: string }> {
   const env = c.env as Env;
   if (!env.R2) {
     throw new Error('R2 bucket is not configured');
@@ -56,6 +60,7 @@ export async function storeCsvDownload(c: any, options: CsvExportOptions): Promi
     name,
     key,
     url: `${requestOrigin(c)}/api/v1/projects/exports/${encodeURIComponent(key)}`,
+    downloadPath: `/api/v1/projects/exports/${encodeURIComponent(key)}`,
   };
 }
 

@@ -1,0 +1,200 @@
+Canonical Site API integration evidence
+
+Test: apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts
+Runner exit code: 0
+All 10 files and 27 tests in this run passed.
+
+Recorded observations (emitted after semantic and persistence assertions):
+[
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.create_onboarding",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "0f835715-b032-4817-a735-a910142d4c3a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.data_source.onboardings",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "0f835715-b032-4817-a735-a910142d4c3a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.update_onboarding",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "0f835715-b032-4817-a735-a910142d4c3a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.create_onboarding_version",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "783ac2b8-ceeb-466a-8464-2673eb0a2219"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.publish_onboarding",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "783ac2b8-ceeb-466a-8464-2673eb0a2219"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.data_source.onboarding_versions",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "783ac2b8-ceeb-466a-8464-2673eb0a2219"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.save_onboarding_placement",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "979bc81f-b47a-497b-abf9-7f46972abaee"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.data_source.onboarding_placements",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "979bc81f-b47a-497b-abf9-7f46972abaee"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.create_onboarding_targeting_rule",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "55f6224c-c3a8-4f7f-b07f-95816baf7255"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.data_source.onboarding_targeting_rules",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "55f6224c-c3a8-4f7f-b07f-95816baf7255"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.create_onboarding_experience",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "1f79294a-93c9-4347-93ff-b9db7451ef80"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.set_onboarding_experience_status",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "1f79294a-93c9-4347-93ff-b9db7451ef80"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.data_source.onboarding_experiences",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "1f79294a-93c9-4347-93ff-b9db7451ef80"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.data_source.onboarding_statistics",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "0f835715-b032-4817-a735-a910142d4c3a"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-onboardings",
+    "route_id": "gateway.supbrd-plugmod-onboardings.command.delete_onboarding",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-onboardings.txt",
+    "test": "apps/site/runtime-tests/retirement-api-onboardings.runtime.test.ts",
+    "data_ids": [
+      "0f835715-b032-4817-a735-a910142d4c3a"
+    ]
+  }
+]
+
+Runner output:
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id packages/supbrd-front-ui
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  10 passed (10)
+      Tests  27 passed (27)
+   Start at  12:25:01
+   Duration  40.76s (transform 14.93s, setup 62.67s, import 3.78s, tests 16.91s, environment 1ms)

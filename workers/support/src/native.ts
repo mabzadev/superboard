@@ -478,6 +478,8 @@ for (const resource of resources) {
 		const body = await readJsonObject(c.req.raw);
 		validateNativeResourceBody(resource.path, body, true);
 		const fields = mutationFields(resource, body, true);
+		if (resource.path === "help-center/articles" && !fields.get("author_id"))
+			fields.set("author_id", actorId(c.req.raw));
 		if (resource.path === "providers") {
 			await validateProviderInbox(c.env.DB, projectId, body.inbox_id, body.provider);
 		}

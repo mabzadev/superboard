@@ -1,0 +1,126 @@
+The external Google JWKS response is a local integration-test fixture. Signature, issuer, audience and expiry validation execute in the product verifier. This does not claim a live Google account connection.
+
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  12:59:21
+   Duration  10.93s (transform 3.47s, setup 7.32s, import 44ms, tests 2.08s, environment 0ms)
+
+
+[
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.command.application_sign_in",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "0f947c1c-2fa5-4c7a-84dd-16395d4affce",
+      "e9646e88-7c03-453c-9163-bb0236673c75"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.data_source.active_sessions",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "e9646e88-7c03-453c-9163-bb0236673c75",
+      "91faa374-567d-46d7-b8cb-b28ca7b02dd0"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.command.update_profile",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.data_source.current_profile",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.data_source.members",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.command.link_provider",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "0f947c1c-2fa5-4c7a-84dd-16395d4affce",
+      "5c5b059c-5dcc-456a-939f-1f24fe1cd9f9"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.data_source.linked_providers",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.command.revoke_application_session",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "91faa374-567d-46d7-b8cb-b28ca7b02dd0"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "gateway.supbrd-plug-user.command.suspend_member",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-user.txt",
+    "test": "apps/site/runtime-tests/retirement-api-user.runtime.test.ts",
+    "data_ids": [
+      "0f947c1c-2fa5-4c7a-84dd-16395d4affce"
+    ]
+  }
+]

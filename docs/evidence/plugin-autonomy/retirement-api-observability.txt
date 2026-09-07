@@ -1,0 +1,111 @@
+Canonical APIs, real Worker/DO/D1/Queue; persisted identifiers and rereads.
+Custom job retry exercises the real VocoStar external adapter with an unavailable downstream orchestrator. It verifies attempts 1→2, preserved queued state/error and no duplicate credit charge; it does not claim successful media processing.
+[
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.data_source.runtime_metrics",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "a0d2128b-521c-46a0-9c39-c28b543b3b1b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.data_source.service_health",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "a0d2128b-521c-46a0-9c39-c28b543b3b1b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.data_source.incidents",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.command.acknowledge_incident",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.command.resolve_incident",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "ecbb95687102473686fe8f0b9c8e420505d3b83e63ffba485341fc61deb215b2"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_status",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "1-prod",
+      "1-test"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.data_source.platform_custom_jobs",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "28c10cf3-d229-4c94-aace-a93ef6abe8bb"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-observability",
+    "route_id": "gateway.supbrd-plugmod-observability.command.retry_custom_job",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-observability.txt",
+    "test": "apps/site/runtime-tests/retirement-api-observability.runtime.test.ts",
+    "data_ids": [
+      "28c10cf3-d229-4c94-aace-a93ef6abe8bb"
+    ]
+  }
+]
+
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  13:02:45
+   Duration  12.33s (transform 7.60s, setup 16.44s, import 96ms, tests 2.36s, environment 0ms)

@@ -1,0 +1,178 @@
+Canonical Site API integration validation, 7 September 2026
+
+apps/site/runtime-tests/retirement-api-billing.runtime.test.ts
+SHA-256: b8c193fa4f38c0efc78dddd8f567968a467a0a592267c7823ae62f74c39f9a64
+
+Grouped run: Products, Billing and Email (3 files, 3 tests passed).
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  3 passed (3)
+      Tests  3 passed (3)
+   Start at  12:27:46
+   Duration  14.28s (transform 11.74s, setup 26.63s, import 173ms, tests 3.61s, environment 0ms)
+
+
+Recorded successful operations:
+[
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.command.migrate_products",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "39099d04-e6d5-4029-aeb3-c60bfa3fd462",
+      "070a287a-2fad-4ed2-b02f-5b015869c834"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.data_source.migration_status",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "39099d04-e6d5-4029-aeb3-c60bfa3fd462"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.command.create_purchase",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.data_source.purchases",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.data_source.purchase",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "23e51f5a-95a6-4826-8496-9aa3a5e7612d"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.data_source.financial_customer_entitlements",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "070a287a-2fad-4ed2-b02f-5b015869c834"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.data_source.subscriptions",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "c74275e4-030b-4abf-bef6-a9bfe57595f6"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.command.update_subscription",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "c74275e4-030b-4abf-bef6-a9bfe57595f6"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.command.create_refund",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.data_source.refunds",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.command.update_refund",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "1e7b2a19-9ae6-40e6-acc6-c4a6a81743b7"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.command.reconcile_store",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "ffda907c-ecd7-4d33-aa61-4663c661f7de"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-billing",
+    "route_id": "gateway.supbrd-plugmod-billing.data_source.billing_ledger",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-billing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-billing.runtime.test.ts",
+    "data_ids": [
+      "23e51f5a-95a6-4826-8496-9aa3a5e7612d",
+      "ffda907c-ecd7-4d33-aa61-4663c661f7de"
+    ]
+  }
+]

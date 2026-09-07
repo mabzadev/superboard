@@ -38,7 +38,7 @@ const LOCAL_SERVICE_PORT_ORDER = [
 	"api",
 	"mcp",
 	"site",
-	"dashboard",
+	null,
 	"paywalls",
 	"onboardings",
 	"messaging",
@@ -339,6 +339,15 @@ export function compileLocalSiteConfiguration(compiledTarget) {
 			SUPERBOARD_INSTANCE_ID: compiledTarget.target,
 			SUPERBOARD_PLUGIN_LIFECYCLE: "required",
 			SUPERBOARD_ENVIRONMENT: compiledTarget.environment,
+			SUPERBOARD_PUBLIC_ENDPOINTS_JSON: JSON.stringify(
+				Object.fromEntries(
+					compiledTarget.materialization.routes
+						.filter((route) =>
+							["api", "auth", "sdk", "shortlinks", "files", "mcp", "site"].includes(route.id),
+						)
+						.map((route) => [route.id, `https://${route.hostname}`]),
+				),
+			),
 			SUPERBOARD_PLUGIN_IDS: JSON.stringify(
 				compiledTarget.graph.plugins
 					.filter(({ targetState }) => targetState === "active")
@@ -543,7 +552,6 @@ function compileBindings(target, environment, physicalResources) {
 	addService("api", "IDENTITY_SERVICE", "identity");
 	addService("api", "FILES_SERVICE", "files");
 	addService("api", "OBSERVABILITY", "observability");
-	addService("dashboard", "WORKER_SELF_REFERENCE", "dashboard");
 	if (target.features.billing) addService("api", "BILLING", "billing");
 	if (target.features.billing) {
 		const billingTaskBinding = taskApiServiceBinding("billing");
@@ -638,7 +646,6 @@ function compileBindings(target, environment, physicalResources) {
 			: []),
 		["email", "EMAIL_QUEUE", "queues.email"],
 		["files", "FILES", "r2"],
-		["dashboard", "NEXT_INC_CACHE_R2_BUCKET", "dashboardCache"],
 	]) {
 		addResource(service, binding, resourceKey);
 	}
@@ -647,8 +654,6 @@ function compileBindings(target, environment, physicalResources) {
 	}
 	addRuntime("identity", "ASSETS");
 	addRuntime("observability", "ANALYTICS");
-	addRuntime("dashboard", "ASSETS");
-	addRuntime("dashboard", "IMAGES");
 	if (target.features.messaging) addRuntime("messaging", "CONVERSATIONS");
 	return bindings.toSorted(compareBy("service", "kind", "binding"));
 }
@@ -729,7 +734,9 @@ function compileLogicalRoutes(target) {
 		{ id: "sdk", service: "api", surface: "sdk" },
 		{ id: "files", service: "api", surface: "files" },
 		{ id: "site", service: "site", surface: "front" },
-		{ id: "dashboard", service: "dashboard", surface: "legacy-dashboard" },
+		...(target.domains.dashboard && target.domains.dashboard !== target.domains.site
+			? [{ id: "dashboard", service: "site", surface: "front-alias" }]
+			: []),
 		{ id: "mcp", service: "mcp", surface: "mcp" },
 		...(target.mail.transport === "capture" && target.domains.mailPreview
 			? [{ id: "mail-preview", service: "email", surface: "mail-preview" }]
@@ -766,7 +773,16 @@ function compileLogicalHealthChecks(target) {
 		{ id: "shortlinks", kind: "public_surface", service: "api", path: "/health" },
 		{ id: "files", kind: "public_surface", service: "api", path: "/health" },
 		{ id: "mcp", kind: "public_surface", service: "mcp", path: "/health" },
-		{ id: "dashboard", kind: "public_surface", service: "dashboard", path: "/" },
+		...(target.domains.dashboard && target.domains.dashboard !== target.domains.site
+			? [
+					{
+						id: "dashboard",
+						kind: "public_surface",
+						service: "site",
+						path: "/superboard-system/health",
+					},
+				]
+			: []),
 		...(target.domains.mailPreview
 			? [{ id: "mail-preview", kind: "public_surface", service: "email", path: "/" }]
 			: []),
@@ -1049,10 +1065,9 @@ function expectedRoutePatterns(compiledTarget, service, { routesEnabled, sitePre
 	if (service === "site") {
 		return sitePreviewRoute
 			? routes.filter(({ id }) => id === "site").map(({ pattern }) => pattern)
-			: [];
+			: routes.filter((route) => route.service === "site").map(({ pattern }) => pattern);
 	}
 	const routeIds = {
-		dashboard: "dashboard",
 		email: "mail-preview",
 		mcp: "mcp",
 		messaging: "messaging",
@@ -1081,7 +1096,7 @@ function assertHealthChecks(compiledTarget, configuration) {
 	}
 	const actual = configured.map(({ id, healthUrl }) => `${id}:${healthUrl}`).toSorted();
 	const expected = compiledTarget.materialization.healthChecks
-		.filter(({ id, kind }) => kind === "public_surface" && id !== "site")
+		.filter(({ kind }) => kind === "public_surface")
 		.map(({ id, url }) => `${id}:${url}`)
 		.toSorted();
 	if (!sameStrings(expected, actual)) {

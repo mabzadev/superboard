@@ -75,7 +75,7 @@ async function redirectToIdentityPolicy(options: RedirectOptions): Promise<void>
 		authorize.searchParams.set("state", state);
 		authorize.searchParams.set("code_challenge", challenge);
 		authorize.searchParams.set("code_challenge_method", "S256");
-		authorize.searchParams.set("scope", "openid profile offline_access");
+		authorize.searchParams.set("scope", "openid");
 		authorize.searchParams.set("locale", options.locale ?? "en");
 		if (options.policy) authorize.searchParams.set("policy", options.policy);
 		if (options.org) authorize.searchParams.set("org", options.org);

@@ -1239,8 +1239,8 @@ export const enrollUserMfa = async (
     SMS_MFA_IS_REQUIRED: smsMfaRequired,
   } = env(c)
 
-  const user = await userModel.getByAuthId(
-    c.env.DB,
+  const user = await identityBridgeService.resolveUserBySubject(
+    c,
     authId,
   )
   if (!user) {
@@ -1294,8 +1294,8 @@ export const resetUserMfa = async (
   authId: string,
   mfaType?: userModel.MfaType,
 ): Promise<true> => {
-  const user = await userModel.getByAuthId(
-    c.env.DB,
+  const user = await identityBridgeService.resolveUserBySubject(
+    c,
     authId,
   )
   if (!user) {

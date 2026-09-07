@@ -3,6 +3,7 @@ import {
 	verifyInternalProjectContextRequest,
 	type ProjectContext,
 } from "@superboard/contracts/project-context";
+import { readJsonObjectLimited, RequestBodyError } from "@superboard/contracts/request-body";
 import type { Context, Next } from "hono";
 
 import type { Env } from "../types.js";
@@ -89,7 +90,9 @@ export async function migrateProductsLedger(c: GatewayContext): Promise<Response
 			"GET",
 		);
 		if (!statusResponse.ok) return statusResponse;
-		const state = (await statusResponse.json()) as {
+		const statusBody = await readLedgerResponse(statusResponse);
+		if (statusBody instanceof Response) return statusBody;
+		const state = statusBody as {
 			data: {
 				complete: boolean;
 				table?: string;
@@ -118,7 +121,9 @@ export async function migrateProductsLedger(c: GatewayContext): Promise<Response
 			{ table: state.data.table, cursor: state.data.cursor },
 		);
 		if (!exported.ok) return exported;
-		const envelope = (await exported.json()) as { data: unknown };
+		const exportedBody = await readLedgerResponse(exported, 4 * 1024 * 1024);
+		if (exportedBody instanceof Response) return exportedBody;
+		const envelope = exportedBody as { data: unknown };
 		const imported = await callLedgerService(
 			c,
 			authorized,
@@ -137,7 +142,9 @@ export async function migrateProductsLedger(c: GatewayContext): Promise<Response
 		"GET",
 	);
 	if (!progress.ok) return progress;
-	const state = (await progress.json()) as {
+	const progressBody = await readLedgerResponse(progress);
+	if (progressBody instanceof Response) return progressBody;
+	const state = progressBody as {
 		data: { complete: boolean; receipt?: unknown; signature?: string };
 	};
 	if (state.data.complete) {
@@ -169,7 +176,9 @@ export async function proxyTransferredProductsLedger(
 		"GET",
 	);
 	if (!response.ok) return next();
-	const state = (await response.json()) as { data?: { complete?: boolean } };
+	const responseBody = await readLedgerResponse(response);
+	if (responseBody instanceof Response) return responseBody;
+	const state = responseBody as { data?: { complete?: boolean } };
 	if (!state.data?.complete) return next();
 	const source = new URL(c.req.url);
 	const prefix = `/api/v1/products/projects/${encodeURIComponent(c.req.param("projectRef") ?? "")}`;
@@ -275,5 +284,20 @@ async function callLedgerService(
 			"module_unavailable",
 			`${module} service is unavailable`,
 		);
+	}
+}
+
+async function readLedgerResponse(response: Response, maximum = 32768) {
+	try {
+		return await readJsonObjectLimited(response, maximum);
+	} catch (error) {
+		if (error instanceof RequestBodyError)
+			return domainError(
+				crypto.randomUUID(),
+				503,
+				"module_response_invalid",
+				"Ledger service returned an invalid response",
+			);
+		throw error;
 	}
 }

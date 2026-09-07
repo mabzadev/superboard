@@ -5,12 +5,6 @@ import {
   environmentFromArgs,
   loadTarget,
   parseArgs,
-  publicApiUrl,
-  publicAuthUrl,
-  publicDashboardUrl,
-  publicMcpUrl,
-  publicSdkUrl,
-  publicShortlinkUrl,
   root,
   targetNameFromArgs,
 } from "./cloudflare-target.mjs";
@@ -155,35 +149,6 @@ if (service === "site") {
   );
 }
 
-if (service === "dashboard") {
-  const apiUrl = publicApiUrl(target);
-  const appUrl = publicDashboardUrl(target);
-  const publicEnvironment = {
-    ...targetCloudflareEnv,
-    NEXT_PUBLIC_API_URL: apiUrl,
-    NEXT_PUBLIC_AUTH_URL: publicAuthUrl(target),
-    NEXT_PUBLIC_API_PATH: "/api/v1",
-    NEXT_PUBLIC_CLIENT_ID: target.oauth.dashboardClientId,
-    NEXT_PUBLIC_APP_URL: appUrl,
-    NEXT_PUBLIC_SDK_URL: publicSdkUrl(target),
-    NEXT_PUBLIC_SHORTLINK_URL: publicShortlinkUrl(target),
-    NEXT_PUBLIC_MCP_URL: publicMcpUrl(target),
-    NEXT_PUBLIC_DOCS_URL: target.operator.docsUrl,
-    ...(target.operator.supportEmail
-      ? { NEXT_PUBLIC_SUPPORT_EMAIL: target.operator.supportEmail }
-      : {}),
-    NEXT_PUBLIC_ENV: environment,
-    NEXT_PUBLIC_REGISTRATION_MODE: target.registrationMode,
-    NEXT_PUBLIC_SSO_ENABLED: String(target.ssoEnabled),
-  };
-  run(
-    "npx",
-    ["opennextjs-cloudflare", "build", "--config", configPath],
-    publicEnvironment,
-    resolve(root, "apps", "dashboard"),
-  );
-}
-
 if (service === "identity") {
   run(
     "npm",
@@ -267,19 +232,7 @@ if (service === "identity" && !uploadOnly) {
 // so an active deploy can never detach a public route or queue consumer.
 generateServiceConfig();
 
-if (service === "dashboard") {
-  run(
-    "npx",
-    [
-      "opennextjs-cloudflare",
-      uploadOnly ? "upload" : "deploy",
-      "--config",
-      configPath,
-    ],
-    targetCloudflareEnv,
-    resolve(root, "apps", "dashboard"),
-  );
-} else if (service === "site") {
+if (service === "site") {
   run(
     "npx",
     [

@@ -5,19 +5,71 @@ import type {
 	NativeRendererCard,
 	NativeRendererDocument,
 } from "@superboard/supbrd-core";
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
+import { Button } from "../../../../packages/supbrd-front-ui/src/shared/components/ui/button.js";
 import { mountNativeFrontRenderer } from "../lib/native-front-plugins.js";
 import type { NativeFrontPresentationProjection } from "../lib/native-front-presentation.js";
+import { FrontRuntimeProviders } from "./FrontRuntimeProviders.js";
+import { NativeFrontControls } from "./NativeFrontControls.js";
 import { PluginFrontView } from "./PluginFrontView.js";
 
 export function NativeFrontApp({ projection }: { projection: NativeFrontPresentationProjection }) {
+	return (
+		<FrontRuntimeProviders projection={projection}>
+			<NativeFrontShell projection={projection} />
+		</FrontRuntimeProviders>
+	);
+}
+
+function NativeFrontShell({ projection }: { projection: NativeFrontPresentationProjection }) {
 	useEffect(watchPluginLifecycle, []);
+	const [collapsed, setCollapsed] = useState(false);
+	const [mobileOpen, setMobileOpen] = useState(false);
+	const navigationButton = useRef<HTMLButtonElement>(null);
+	const sidebar = useRef<HTMLElement>(null);
+	useEffect(() => {
+		try {
+			setCollapsed(
+				localStorage.getItem(`superboard:${projection.instance_id}:sidebar`) === "collapsed",
+			);
+		} catch {
+			setCollapsed(false);
+		}
+	}, [projection.instance_id]);
+	useEffect(() => {
+		if (!mobileOpen) return;
+		const first = sidebar.current?.querySelector<HTMLElement>("a, button, summary");
+		first?.focus();
+		const close = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setMobileOpen(false);
+				navigationButton.current?.focus();
+			}
+			if (event.key === "Tab" && sidebar.current) {
+				const items = [
+					...sidebar.current.querySelectorAll<HTMLElement>("a, button, summary"),
+				].filter((item) => item.getClientRects().length > 0);
+				const end = items.at(-1);
+				const start = items[0];
+				if (event.shiftKey && document.activeElement === start) {
+					event.preventDefault();
+					end?.focus();
+				} else if (!event.shiftKey && document.activeElement === end) {
+					event.preventDefault();
+					start?.focus();
+				}
+			}
+		};
+		document.addEventListener("keydown", close);
+		return () => document.removeEventListener("keydown", close);
+	}, [mobileOpen]);
 	const i18n = setupI18n({
 		locale: projection.locale,
 		messages: { [projection.locale]: projection.messages },
 	});
-	const message = (id: string) => (Object.hasOwn(projection.messages, id) ? i18n._(id) : id);
+	const message = (id: string, values?: Record<string, string>) =>
+		Object.hasOwn(projection.messages, id) ? i18n._(id, values) : id;
 	const mount = (input: NativeFrontPresentationProjection["content_mounts"][number]) =>
 		mountNativeFrontRenderer({ mount: input, plugin_lock: projection.plugin_lock });
 	const layouts = projection.layout_mounts.map(mount);
@@ -63,13 +115,66 @@ export function NativeFrontApp({ projection }: { projection: NativeFrontPresenta
 		);
 	}
 	return (
-		<div className="native-front native-front-layout" style={style}>
-			<aside className="native-front-sidebar">
+		<div
+			className="native-front native-front-layout"
+			style={style}
+			data-collapsed={collapsed}
+			data-mobile-open={mobileOpen}
+		>
+			{mobileOpen && (
+				<button
+					type="button"
+					tabIndex={-1}
+					aria-hidden="true"
+					className="native-front-nav-backdrop"
+					aria-label={message("site.front.close_navigation")}
+					onClick={() => setMobileOpen(false)}
+				/>
+			)}
+			<aside
+				ref={sidebar}
+				className="native-front-sidebar"
+				data-slot="sidebar-container"
+				role={mobileOpen ? "dialog" : undefined}
+				aria-modal={mobileOpen || undefined}
+				aria-label={message(layout.navigation_label)}
+			>
 				<div className="native-front-brand-wrap">
 					<a className="native-front-brand" href={layout.home_href}>
 						<span className="native-front-brand-mark" aria-hidden="true" />
-						{message(layout.title)}
+						<span className="native-front-brand-name">{message(layout.title)}</span>
 					</a>
+					<Button
+						className="native-front-collapse"
+						variant="ghost"
+						size="icon"
+						aria-label={message(
+							collapsed ? "site.front.expand_sidebar" : "site.front.collapse_sidebar",
+						)}
+						aria-expanded={!collapsed}
+						onClick={() => {
+							setCollapsed(!collapsed);
+							try {
+								localStorage.setItem(
+									`superboard:${projection.instance_id}:sidebar`,
+									!collapsed ? "collapsed" : "expanded",
+								);
+							} catch {
+								return;
+							}
+						}}
+					>
+						{collapsed ? "›" : "‹"}
+					</Button>
+					<Button
+						className="native-front-mobile-close"
+						variant="ghost"
+						size="icon"
+						aria-label={message("site.front.close_navigation")}
+						onClick={() => setMobileOpen(false)}
+					>
+						×
+					</Button>
 				</div>
 				<nav aria-label={message(layout.navigation_label)}>
 					{projection.navigation.map((group) => (
@@ -83,12 +188,23 @@ export function NativeFrontApp({ projection }: { projection: NativeFrontPresenta
 								),
 							)}
 						>
-							<summary>{message(group.label)}</summary>
-							<div>
+							<summary title={collapsed ? message(group.label) : undefined}>
+								<span className="native-front-group-icon" aria-hidden="true">
+									{message(group.label).slice(0, 1)}
+								</span>
+								<span className="native-front-nav-label">{message(group.label)}</span>
+							</summary>
+							<nav
+								aria-label={message("site.front.section_navigation", {
+									section: message(group.label),
+								})}
+							>
 								{group.items.map((item) => (
 									<a
 										key={item.route_id}
 										href={item.href}
+										title={collapsed ? message(item.label) : undefined}
+										onClick={() => setMobileOpen(false)}
 										aria-current={
 											navigationItemActive(
 												projection.path,
@@ -99,21 +215,38 @@ export function NativeFrontApp({ projection }: { projection: NativeFrontPresenta
 												: undefined
 										}
 									>
-										{message(item.label)}
+										<span className="native-front-group-icon" aria-hidden="true">
+											{message(item.label).slice(0, 1)}
+										</span>
+										<span className="native-front-nav-label">{message(item.label)}</span>
 									</a>
 								))}
-							</div>
+							</nav>
 						</details>
 					))}
 				</nav>
 			</aside>
 			<div className="native-front-content">
 				<header>
+					<Button
+						ref={navigationButton}
+						className="native-front-mobile-open"
+						variant="ghost"
+						size="icon"
+						aria-label={message("site.front.open_navigation")}
+						aria-expanded={mobileOpen}
+						onClick={() => setMobileOpen(!mobileOpen)}
+					>
+						☰
+					</Button>
 					<div className="native-front-header-copy">
 						<span>{message("site.front.title")}</span>
 						<strong>{currentSurface ? message(currentSurface.title) : projection.path}</strong>
 					</div>
-					<ActionList actions={layout.actions} message={message} />
+					<div className="native-front-header-actions">
+						<NativeFrontControls message={message} />
+						<ActionList actions={layout.actions} message={message} />
+					</div>
 				</header>
 				<main className={dashboardView ? "native-front-dashboard-main" : undefined}>{body}</main>
 			</div>

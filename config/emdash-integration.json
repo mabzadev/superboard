@@ -7,13 +7,7 @@
 	},
 	"overlay": {
 		"root": "config/emdash-root.overlay.json",
-		"generatedFiles": [
-			"package.json",
-			"pnpm-workspace.yaml",
-			".gitignore",
-			"README.md",
-			".github/workflows/superboard-ci.yml"
-		],
+		"generatedFiles": ["package.json", "pnpm-workspace.yaml", ".gitignore", "README.md"],
 		"excludedWorktreePaths": [
 			".github/dependabot.yml",
 			".github/workflows/ci.yml",

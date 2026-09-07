@@ -4,6 +4,7 @@ import analytics from "../../../workers/analytics/src/index.js";
 import api from "../../../workers/api/src/index.js";
 import app from "../../../workers/app/src/index.js";
 import billing from "../../../workers/billing/src/index.js";
+import customVocostar from "../../../workers/custom/vocostar/src/index.js";
 import dynamicLinks from "../../../workers/dynamic-links/src/index.js";
 import email from "../../../workers/email/src/index.js";
 import files from "../../../workers/files/src/index.js";
@@ -18,6 +19,7 @@ import products from "../../../workers/products/src/index.js";
 import support from "../../../workers/support/src/index.js";
 
 const workers = {
+	CUSTOM_WORKER: ["custom-vocostar", customVocostar],
 	IDENTITY_SERVICE: ["identity", identity],
 	APP_MODULE: ["app", app],
 	PRODUCTS_MODULE: ["products", products],
@@ -60,7 +62,7 @@ export async function dispatchLifecycleApi(
 		SHORTLINK_DOMAIN: "links.site.test",
 		OBSERVABILITY_INTERNAL_TOKEN: "runtime-observability-secret",
 		ANALYTICS_DATASET: "runtime",
-		MAIL_TRANSPORT: "capture",
+		MAIL_TRANSPORT: request.headers.get("X-Test-Email-Transport") === "smtp" ? "smtp" : "capture",
 		IDENTITY_KEYSET: env.HEALTH_IDENTITY_KEYSET,
 		REGISTRATION_MODE: "open",
 		APPLICATION_AUDIENCE: "autonomy.application",
@@ -69,12 +71,18 @@ export async function dispatchLifecycleApi(
 		OPENGROW_IDENTITY_TOKEN_TTL: "300",
 		ACCESS_TOKEN_TTL: "900",
 		REFRESH_TOKEN_TTL: "2592000",
-		GOOGLE_AUDIENCES_JSON: "[]",
+		GOOGLE_AUDIENCES_JSON:
+			request.headers.get("IDENTIFIER") === "retirement-user.example.test"
+				? '["retirement-provider-client"]'
+				: "[]",
 		APPLE_AUDIENCES_JSON: "[]",
 		MAIL_FROM_NAME: "Runtime",
 		MAIL_FROM_ADDRESS: "noreply@example.test",
 		MAIL_PREVIEW_TOKEN: "runtime-preview-secret",
 		EMAIL_INTERNAL_TOKEN: "runtime-email-secret",
+		EMAIL_SMTP_ENCRYPTION_KEY: "runtime-email-encryption-key",
+		CUSTOM_WORKER_TOKEN: "retirement-custom-secret",
+		APP_KEY: "vocostar",
 		MODULE_INTERNAL_TOKEN: "runtime-module-secret",
 		FLOWS_INTERNAL_TOKEN: "runtime-flows-secret",
 		FILES_INTERNAL_TOKEN: "runtime-files-secret",
@@ -91,6 +99,7 @@ export async function dispatchLifecycleApi(
 					const moduleEnv = {
 						...base,
 						SITE_SERVICE: undefined,
+						EMAIL_SERVICE: services.EMAIL_SERVICE,
 						SITE_OPERATOR_BRIDGE_TOKEN: undefined,
 						API_SERVICE: {
 							fetch: (apiInput: Request | string | URL, apiInit?: RequestInit) =>
@@ -112,6 +121,7 @@ export async function dispatchLifecycleApi(
 						INTERNAL_API_TOKEN:
 							name === "flows" ? base.FLOWS_INTERNAL_TOKEN : base.MODULE_INTERNAL_TOKEN,
 						DB: env[`HEALTH_${name.replaceAll("-", "_").toUpperCase()}_DB`],
+						VOCOSTAR_DB: env.HEALTH_CUSTOM_VOCOSTAR_DB,
 						D1_EXPECTED_MIGRATION: migrations[name]?.at(-1)?.name,
 					};
 					// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- each imported real Worker receives its isolated migrated test database

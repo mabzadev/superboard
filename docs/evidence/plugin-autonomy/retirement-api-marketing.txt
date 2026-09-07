@@ -1,0 +1,254 @@
+Canonical operator API and real Workers with persisted and reread identifiers.
+[
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_subscribers",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "e0dd7bcd-cdb4-45a0-bdda-1e100c48f5ee"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.subscriber_lists",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "024550d3-d82e-4f93-a957-ccde7f92f69e"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.subscriber_segments",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "14d4cebd-d555-499e-8bfa-47d8af8e731b"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_templates",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "4357d0de-4f64-4dd4-be73-9f2b5cf1dc99"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.create_email_campaign",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.update_email_campaign",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.email_campaigns",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.schedule_email_campaign",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.transition_email_campaign",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_statistics",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "e0dd7bcd-cdb4-45a0-bdda-1e100c48f5ee",
+      "7be5656f-d980-4cf7-99f7-eebdbe1a5c77"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.create_marketing_journey",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.update_marketing_journey",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.transition_marketing_journey",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_journeys",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.journey_enrollments",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "6ab1e988-f3c7-406b-be0d-b2a96a84d07e"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.journey_statistics",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "7b34fff9-f3cb-4b35-a718-f8124d6f2544"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.create_marketing_channel_connector",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "1f284dc3-8fba-41cf-a64e-9138c88a2596"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.update_marketing_channel_connector",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "1f284dc3-8fba-41cf-a64e-9138c88a2596"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.data_source.marketing_channel_connectors",
+    "scenario": "read",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "1f284dc3-8fba-41cf-a64e-9138c88a2596"
+    ]
+  },
+  {
+    "plugin_id": "supbrd-plugmod-marketing",
+    "route_id": "gateway.supbrd-plugmod-marketing.command.delete_marketing_channel_connector",
+    "scenario": "mutation",
+    "status": "passed",
+    "type": "integration",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-api-marketing.txt",
+    "test": "apps/site/runtime-tests/retirement-api-marketing.runtime.test.ts",
+    "data_ids": [
+      "1f284dc3-8fba-41cf-a64e-9138c88a2596"
+    ]
+  }
+]
+
+[WARN] Your node_modules are out of sync with your lockfile. The lockfile in /Users/appmonster/Workspace/superboard-autonomous does not satisfy project of id .
+
+ RUN  v4.1.5 /Users/appmonster/Workspace/superboard-autonomous/apps/site
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  12:53:37
+   Duration  13.09s (transform 7.93s, setup 17.09s, import 111ms, tests 3.09s, environment 0ms)

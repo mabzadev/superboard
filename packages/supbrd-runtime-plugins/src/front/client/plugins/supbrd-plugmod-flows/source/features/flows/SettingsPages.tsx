@@ -36,7 +36,10 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/tabs.js";
-import { config } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
+import {
+	config,
+	usePublicConfig,
+} from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
 import {
 	showErrorNotification,
 	showSuccessNotification,
@@ -232,34 +235,37 @@ export function LocalizationSettingsPage() {
 	const [defaultLocale, setDefaultLocale] = useState("en");
 	const [locales, setLocales] = useState("en, fr");
 	const [fallbacks, setFallbacks] = useState("fr:en");
-	const load = useCallback(async () => {
-		if (!projectRef) return;
-		try {
-			const result = await flowsApi.listLocalization(projectRef);
-			setGroups(result);
-			const selected = result.find((item) => item.id === selectedId) ?? result[0];
-			if (selected) {
-				setSelectedId(selected.id);
-				setName(selected.name);
-				setDefaultLocale(selected.default_locale);
-				setLocales(selected.locales.join(", "));
-				setFallbacks(
-					Object.entries(selected.fallbacks)
-						.map(([from, to]) => `${from}:${to}`)
-						.join(", "),
-				);
+	const load = useCallback(
+		async (preferredId?: string) => {
+			if (!projectRef) return;
+			try {
+				const result = await flowsApi.listLocalization(projectRef);
+				setGroups(result);
+				const selected = result.find((item) => item.id === preferredId) ?? result[0];
+				if (selected) {
+					setSelectedId(selected.id);
+					setName(selected.name);
+					setDefaultLocale(selected.default_locale);
+					setLocales(selected.locales.join(", "));
+					setFallbacks(
+						Object.entries(selected.fallbacks)
+							.map(([from, to]) => `${from}:${to}`)
+							.join(", "),
+					);
+				}
+			} catch (cause) {
+				showErrorNotification(message(cause, t("apiFailure")));
 			}
-		} catch (cause) {
-			showErrorNotification(message(cause, t("apiFailure")));
-		}
-	}, [projectRef, selectedId, t]);
+		},
+		[projectRef, t],
+	);
 	useEffect(() => {
 		void load();
 	}, [load]);
 	const save = async () => {
 		if (!projectRef) return;
 		try {
-			await flowsApi.saveLocalization(projectRef, {
+			const saved = await flowsApi.saveLocalization(projectRef, {
 				id: selectedId ?? undefined,
 				name,
 				default_locale: defaultLocale,
@@ -267,7 +273,7 @@ export function LocalizationSettingsPage() {
 				fallbacks: parseFallbacks(fallbacks),
 			});
 			showSuccessNotification(tr("Localization saved"));
-			await load();
+			await load(saved.id);
 		} catch (cause) {
 			showErrorNotification(message(cause, t("apiFailure")));
 		}
@@ -383,6 +389,7 @@ const SDK_SNIPPETS = {
 export type FlowSdkSnippetPlatform = keyof typeof SDK_SNIPPETS;
 
 export function flowsSdkApiUrl(apiUrl: string): string {
+	if (!apiUrl.trim()) throw new Error("Public API endpoint is not configured");
 	return `${apiUrl.trim().replace(/\/+$/u, "")}/api/v1/flows`;
 }
 
@@ -390,12 +397,13 @@ export function flowSdkSnippet(
 	platform: FlowSdkSnippetPlatform,
 	projectId: string,
 	environmentKey: string,
-	apiUrl = config.apiUrl,
+	apiUrl: string = config.apiUrl,
 ): string {
 	return SDK_SNIPPETS[platform](projectId, environmentKey, flowsSdkApiUrl(apiUrl));
 }
 
 export function SdkSettingsPage() {
+	const publicConfig = usePublicConfig();
 	const { t, tr } = useFlowI18n();
 	const { projectRef } = useFlows();
 	const [environments, setEnvironments] = useState<FlowEnvironment[]>([]);
@@ -479,11 +487,15 @@ export function SdkSettingsPage() {
 				</TabsList>
 				{tabs.map((tab) => (
 					<TabsContent value={tab.id} key={tab.id}>
-						<SdkCodePanel
-							title={tab.label}
-							install={tr(tab.install)}
-							code={flowSdkSnippet(tab.id, projectRef ?? "", environmentKey)}
-						/>
+						{publicConfig.apiUrl ? (
+							<SdkCodePanel
+								title={tab.label}
+								install={tr(tab.install)}
+								code={flowSdkSnippet(tab.id, projectRef ?? "", environmentKey, publicConfig.apiUrl)}
+							/>
+						) : (
+							<p role="alert">{publicConfig.endpointError("API")}</p>
+						)}
 					</TabsContent>
 				))}
 			</Tabs>

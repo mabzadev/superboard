@@ -24,7 +24,10 @@ import {
 	TabsTrigger,
 } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/tabs.js";
 import { useProjectSelection } from "../../../../../../../../../supbrd-front-ui/src/shared/context/useProjectSelection.js";
-import { config } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
+import {
+	config,
+	usePublicConfig,
+} from "../../../../../../../../../supbrd-front-ui/src/shared/lib/config.js";
 import {
 	showErrorNotification,
 	showSuccessNotification,
@@ -96,6 +99,7 @@ const oauthProviders = new Set([
 ]);
 
 export default function SupportChannelsPage() {
+	const publicConfig = usePublicConfig();
 	const { selectedProject, selectedInstance } = useProjectSelection();
 	const projectRef = selectedProject?.id;
 	const canManageCredentials = new Set(["owner", "admin"]).has(selectedInstance?.role || "member");
@@ -181,7 +185,8 @@ export default function SupportChannelsPage() {
 		if (!projectRef || !selectedEndpoint || !oauthProviders.has(selectedEndpoint.provider)) return;
 		setSaving(true);
 		try {
-			const apiOrigin = config.apiUrl.replace(/\/+$/u, "");
+			if (!publicConfig.apiUrl) throw new Error(publicConfig.endpointError("Support API"));
+			const apiOrigin = publicConfig.apiUrl;
 			const callback = `${apiOrigin}${config.apiPath}/support/providers/${encodeURIComponent(selectedEndpoint.provider)}/oauth/callback`;
 			const returnUrl = new URL("/support/channels", window.location.origin);
 			returnUrl.searchParams.set("connection", selectedEndpoint.id);

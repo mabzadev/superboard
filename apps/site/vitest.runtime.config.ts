@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
@@ -6,8 +6,10 @@ import { defineConfig } from "vitest/config";
 
 import { d1RuntimeBindings } from "../../scripts/cloudflare-vitest-d1.mjs";
 import { buildFreshInstancePlan } from "../../scripts/superboard-fresh-instance-proof.mjs";
+import { createSmtpCaptureFixture } from "./runtime-tests/retirement-smtp-fixture.js";
 
 const healthWorkers = [
+	"custom-vocostar",
 	"identity",
 	"app",
 	"products",
@@ -26,9 +28,20 @@ const healthMigrations = Object.fromEntries(
 	await Promise.all(
 		healthWorkers.map(async (name) => [
 			name,
-			await readD1Migrations(
-				fileURLToPath(new URL(`../../workers/${name}/migrations`, import.meta.url)),
-			),
+			name === "custom-vocostar"
+				? [
+						...(await readD1Migrations(
+							fileURLToPath(
+								new URL("../../workers/custom/vocostar/runtime-tests/migrations", import.meta.url),
+							),
+						)),
+						...(await readD1Migrations(
+							fileURLToPath(new URL("../../workers/custom/vocostar/migrations", import.meta.url)),
+						)),
+					]
+				: await readD1Migrations(
+						fileURLToPath(new URL(`../../workers/${name}/migrations`, import.meta.url)),
+					),
 		]),
 	),
 );
@@ -61,8 +74,32 @@ export default defineConfig({
 							]),
 						),
 					},
-					r2Buckets: ["HEALTH_FILES_R2"],
+					r2Buckets: ["HEALTH_FILES_R2", "EVENT_ARCHIVE"],
+					durableObjects: {
+						CONVERSATIONS: { className: "RetirementSupportConversationRoom", useSQLite: true },
+						FLOW_USER_RUNTIME: { className: "RetirementFlowUserRuntime", useSQLite: true },
+						FLOW_REALTIME_HUB: { className: "RetirementFlowRealtimeHub", useSQLite: true },
+					},
+					queueProducers: {
+						SUPPORT_QUEUE: "retirement-support-messages",
+						SUPPORT_AI_QUEUE: "retirement-support-ai",
+						SUPPORT_OUTBOUND_QUEUE: "retirement-support-outbound",
+						MARKETING_QUEUE: "retirement-marketing-queue",
+						FLOW_EVENTS: "retirement-flows-events",
+						ANALYTICS_INGEST_QUEUE: "retirement-analytics-ingest",
+						EMAIL_QUEUE: "retirement-email-delivery",
+					},
 					serviceBindings: {
+						TEST_SMTP_CAPTURE: createSmtpCaptureFixture(),
+						TEST_API_EVIDENCE_RECORDER: async (request: Request) => {
+							const path = process.env.SUPERBOARD_API_EVIDENCE_PATH;
+							if (path) {
+								if (!path.startsWith("/tmp/superboard-"))
+									throw new Error("Invalid API evidence output path");
+								appendFileSync(path, JSON.stringify(await request.json()) + "\n");
+							}
+							return Response.json({ recorded: Boolean(path) });
+						},
 						SITE_SERVICE: { name: "superboard-site-runtime-test" },
 						WORKFLOW_API_SERVICE: {
 							name: "superboard-site-runtime-test",
@@ -71,6 +108,11 @@ export default defineConfig({
 						API_SERVICE: { name: "superboard-site-runtime-test", entrypoint: "LifecycleApi" },
 					},
 					bindings: {
+						SUPPORT_WEBHOOK_ENCRYPTION_KEY: "retirement-support-webhook-encryption-key",
+						FLOW_USER_HASH_KEY: "retirement-flows-user-hash-key",
+						FLOW_USER_ENCRYPTION_KEY: "retirement-flows-user-encryption-key",
+						ANALYTICS_ID_HASH_KEY: "retirement-analytics-hash-key",
+						ANALYTICS_CONFIG_ENCRYPTION_KEY: "retirement-analytics-configuration-key",
 						SITE_OPERATOR_BRIDGE_TOKEN: "runtime-site-operator-health-secret",
 						HEALTH_IDENTITY_KEYSET: JSON.stringify({
 							active_kid: "autonomy-identity",

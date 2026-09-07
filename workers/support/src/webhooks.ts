@@ -2565,17 +2565,23 @@ async function processExport(
 	const request = await env.DB.prepare(`
     UPDATE support_export_jobs SET status = 'processing', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     WHERE id = ? AND project_id = ? AND status IN ('queued', 'processing')
-    RETURNING id, resource_type
+    RETURNING id, resource_type, filters_json
   `)
 		.bind(job.exportId, job.projectId)
-		.first<{ id: string; resource_type: string }>();
+		.first<{ id: string; resource_type: string; filters_json: string }>();
 	if (!request) return;
+	const filters = JSON.parse(request.filters_json) as Record<string, unknown>;
+	const from = request.resource_type === "reports" ? reportExportBoundary(filters.from, false) : null;
+	const to = request.resource_type === "reports" ? reportExportBoundary(filters.to, true) : null;
 	const rows =
 		request.resource_type === "reports"
 			? await env.DB.prepare(
-					"SELECT event_type, occurred_at, dimensions_json, metrics_json FROM support_report_events WHERE project_id = ? ORDER BY occurred_at DESC LIMIT 10000",
+					`SELECT event_type, occurred_at, dimensions_json, metrics_json FROM support_report_events
+ WHERE project_id = ? AND (? IS NULL OR julianday(occurred_at) >= julianday(?))
+ AND (? IS NULL OR julianday(occurred_at) < julianday(?))
+ ORDER BY occurred_at DESC LIMIT 10000`,
 				)
-					.bind(job.projectId)
+					.bind(job.projectId, from, from, to, to)
 					.all()
 			: await env.DB.prepare(
 					"SELECT id, external_user_id, name, email, phone, created_at FROM support_contacts WHERE project_id = ? ORDER BY created_at DESC LIMIT 10000",
@@ -2593,6 +2599,18 @@ async function processExport(
 		.bind(key, JSON.stringify({ count: rows.results.length }), request.id, job.projectId)
 		.run();
 }
+
+
+const reportDateOnly = /^\d{4}-\d{2}-\d{2}$/u;
+function reportExportBoundary(value: unknown, includeDate: boolean): string | null {
+ if (value == null || value === "") return null;
+ if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+  throw new Error("Invalid report export period");
+ }
+ const timestamp = Date.parse(value) + (includeDate && reportDateOnly.test(value) ? 86400000 : 0);
+ return new Date(timestamp).toISOString();
+}
+
 
 async function processImport(
 	env: Env,

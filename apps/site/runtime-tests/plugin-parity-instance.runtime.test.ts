@@ -323,9 +323,10 @@ test("exercises every required contribution and records parity blockers", async 
 		}).result,
 	).toBe("not_found");
 	const protectedRoute = release.front_route_manifest.routes.find(
-		({ auth_policy: authPolicy }) => authPolicy === "authenticated",
+		({ auth_policy: authPolicy, dependencies }) =>
+			authPolicy === "authenticated" && dependencies.length > 0,
 	);
-	if (!protectedRoute) throw new Error("Protected parity route is missing");
+	if (!protectedRoute) throw new Error("Protected parity route with a dependency is missing");
 	expect(
 		resolveFrontRequest({
 			last_verified_release: {

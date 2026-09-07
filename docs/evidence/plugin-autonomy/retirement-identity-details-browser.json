@@ -1,0 +1,58 @@
+[
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "superboard.identity_by_lang_users_by_authid",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "6c35b649-c1c1-525b-98f2-9a600d1f4c0b"
+    ],
+    "description": "Compared the native user to the owning API, rendered French passkey controls without translation errors, cancelled deletion, reloaded and returned through browser history.",
+    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "captured_at": "2026-09-07T10:44:36.588Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "superboard.identity_by_lang_logs_email_by_id",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "1"
+    ],
+    "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
+    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "captured_at": "2026-09-07T10:44:41.843Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "superboard.identity_by_lang_logs_sms_by_id",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "1"
+    ],
+    "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
+    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "captured_at": "2026-09-07T10:44:47.004Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
+  },
+  {
+    "plugin_id": "supbrd-plug-user",
+    "route_id": "superboard.identity_by_lang_logs_sign_in_by_id",
+    "scenario": "functional",
+    "status": "passed",
+    "type": "browser",
+    "data_ids": [
+      "1"
+    ],
+    "description": "Compared persisted native log fields to the owning API in English and French, reloaded, returned to logs and reopened through browser history.",
+    "source_test": "apps/site/e2e/tests/identity/identity-details.spec.ts",
+    "captured_at": "2026-09-07T10:44:52.342Z",
+    "evidence_path": "docs/evidence/plugin-autonomy/retirement-identity-details-browser.json"
+  }
+]

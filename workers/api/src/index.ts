@@ -678,7 +678,7 @@ async function proxyIdentityAuth(request: Request, env: Env, path: string): Prom
 			{ status: 503 },
 		);
 	}
-	const resolved = await resolveSdkProjectContext(env.DB, request);
+	const resolved = await resolveSdkProjectContext(env.DB, request, env);
 	if (!resolved.ok) {
 		return Response.json(
 			{

@@ -14,7 +14,7 @@ import { createKyselyAdapter } from "@emdash-cms/auth/adapters/kysely";
 
 import { apiError, apiSuccess, handleError } from "#api/error.js";
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
 	const { emdash } = locals;
 
 	if (!emdash?.db) {
@@ -30,6 +30,12 @@ export const GET: APIRoute = async ({ url, locals }) => {
 	try {
 		const adapter = createKyselyAdapter(emdash.db);
 		const result = await validateSignupToken(adapter, token);
+
+		if (request.headers.get("Accept")?.includes("text/html")) {
+			const target = new URL("/_emdash/admin/signup", url);
+			target.searchParams.set("token", token);
+			return Response.redirect(target, 302);
+		}
 
 		return apiSuccess({
 			success: true,

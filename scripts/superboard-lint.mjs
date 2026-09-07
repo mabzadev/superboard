@@ -51,8 +51,6 @@ export function classifyLintSources(paths, upstreamPaths) {
 			path.startsWith("packages/supbrd-runtime-plugins/src/front/client/")
 		) {
 			group = "frontend";
-		} else if (path.startsWith("apps/dashboard/") && !path.startsWith("apps/dashboard/e2e/")) {
-			group = "eslint:apps/dashboard";
 		} else if (path.startsWith("apps/mcp/src/")) {
 			group = "eslint:apps/mcp";
 		} else if (workerRoot) {
@@ -111,11 +109,7 @@ function inspectCoverage() {
 
 function runGroup(group, paths, { quick, fix }) {
 	const eslintRoot =
-		group === "frontend"
-			? "apps/dashboard"
-			: group.startsWith("eslint:")
-				? group.slice("eslint:".length)
-				: null;
+		group === "frontend" ? "." : group.startsWith("eslint:") ? group.slice("eslint:".length) : null;
 	const cwd =
 		eslintRoot && group !== "frontend" ? resolve(repositoryRoot, eslintRoot) : repositoryRoot;
 	const executable = resolve(

@@ -14,7 +14,16 @@ import {
   type DeliveryLogScope,
 } from './logScope'
 
+const capturesSms = (c: Context<typeConfig.Context>) => {
+  const { SMS_TRANSPORT: transport, ENVIRONMENT: environment } = env(c)
+  if (transport !== 'capture') return false
+  if (environment !== variableConfig.DefaultEnvironment.Development)
+    throw new errorConfig.Forbidden('sms_capture_requires_development')
+  return true
+}
+
 const checkSmsSetup = (c: Context<typeConfig.Context>) => {
+  if (capturesSms(c)) return
   const {
     TWILIO_ACCOUNT_ID: twilioAccountId,
     TWILIO_AUTH_TOKEN: twilioAuthToken,
@@ -47,7 +56,8 @@ export const sendSms = async (
     ENABLE_SMS_LOG: enableSmsLog,
   } = env(c)
 
-  const receiver = (
+  const capture = capturesSms(c)
+  const receiver = capture ? receiverPhoneNumber : (
     environment === variableConfig.DefaultEnvironment.Production || systemConfig.sendSmsToRealReceiverOnDev
   )
     ? receiverPhoneNumber
@@ -56,7 +66,18 @@ export const sendSms = async (
   let success = false
   let response = null
 
-  if (twilioAccountId && twilioAuthToken && twilioSenderNumber) {
+  const projectId = capture || enableSmsLog ? await resolveProjectId(c, logScope) : undefined
+  if (capture) {
+    const captureId = crypto.randomUUID()
+    await c.env.KV.put(`sms-capture:${captureId}`, JSON.stringify({
+      receiver,
+      body: smsBody,
+      projectId,
+      capturedAt: new Date().toISOString(),
+    }), { expirationTtl: 3600 })
+    success = true
+    response = JSON.stringify({ transport: 'capture', captureId, externalDelivery: false })
+  } else if (twilioAccountId && twilioAuthToken && twilioSenderNumber) {
     const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountId}/Messages.json`
     const params = new URLSearchParams()
     params.append(
@@ -95,12 +116,9 @@ export const sendSms = async (
       {
         success: success ? 1 : 0,
         receiver,
-        response: cryptoUtil.redactMessageBody(response ?? ''),
+        response: capture ? response ?? '' : cryptoUtil.redactMessageBody(response ?? ''),
         content: cryptoUtil.redactMessageBody(smsBody),
-        projectId: await resolveProjectId(
-          c,
-          logScope,
-        ),
+        projectId,
       },
     )
   }

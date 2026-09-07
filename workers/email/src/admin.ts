@@ -260,7 +260,13 @@ export async function handleEmailAdmin(
 						.run();
 					return response;
 				}
-				const receipt: unknown = await response.json();
+				let receipt: unknown;
+				try {
+					receipt = await readJsonObjectLimited(response, 32768);
+				} catch (cause) {
+					if (cause instanceof RequestBodyError) return error(503, "smtp_response_invalid");
+					throw cause;
+				}
 				return commit({
 					action: "smtp_profile.tested",
 					resourceId: sender.id,
