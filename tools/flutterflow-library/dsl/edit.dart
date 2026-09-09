@@ -2737,6 +2737,15 @@ class SuperBoardCustomerCenter extends StatelessWidget {
               'sdkBaseUrl': sdkBaseUrlId,
             }.entries) {
               final parameter = canonicalParameters[binding.key]!;
+              final previous = remapped[parameter.identifier.key];
+              if (previous != null &&
+                  previous.variable.source == FFVariableSource.LIBRARY_VALUE &&
+                  previous.variable.baseVariable.libraryValue.identifier.name ==
+                      binding.key) {
+                previous.variable.baseVariable.libraryValue.identifier = binding
+                    .value
+                    .deepCopy();
+              }
               remapped.putIfAbsent(
                 parameter.identifier.key,
                 () => FFParameterPass(

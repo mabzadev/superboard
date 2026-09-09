@@ -1,59 +1,122 @@
 import 'package:flutterflow_ai/flutterflow_ai.dart';
 import 'package:flutterflow_ai/src/helpers/action_block_helpers.dart';
 import 'package:flutterflow_ai/src/helpers/library_value_helpers.dart';
+import 'package:flutterflow_ai/src/helpers/custom_code_helpers.dart'
+    as customCode;
 import 'package:test/test.dart';
 
 import '../dsl/edit.dart' as superboard;
 
 void main() {
-  test('migrated bootstrap instances bind their required library values', () {
-    final app = buildApp((app) {
-      final dynamic legacy = app.customWidget(
-        'OGBootstrapBridge',
-        code: r'''
+  for (final hasLegacyBindings in [false, true]) {
+    test(
+      'bootstrap migration repairs ${hasLegacyBindings ? "legacy" : "missing"} library bindings',
+      () {
+        Iterable<FFNode> nodes(FFNode node) sync* {
+          yield node;
+          for (final child in node.children) {
+            yield* nodes(child);
+          }
+        }
+
+        final app = buildApp((app) {
+          final dynamic legacy = app.customWidget(
+            'OGBootstrapBridge',
+            parameters: hasLegacyBindings
+                ? {'projectKey': string, 'sdkBaseUrl': string}
+                : {},
+            code: r'''
 import 'package:flutter/material.dart';
 class OGBootstrapBridge extends StatelessWidget {
-  const OGBootstrapBridge({super.key, this.width, this.height});
+  const OGBootstrapBridge({super.key, this.width, this.height, this.projectKey, this.sdkBaseUrl});
   final double? width;
   final double? height;
+  final String? projectKey;
+  final String? sdkBaseUrl;
   @override
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
 ''',
-      );
-      app.ensurePage(
-        'ExistingBootstrap',
-        route: '/existing-bootstrap',
-        body: Scaffold(body: legacy()),
-      );
-      superboard.buildStarterEditFlow(app);
-    });
-    final project = compileApp(app).project;
-    Iterable<FFNode> nodes(FFNode node) sync* {
-      yield node;
-      for (final child in node.children) {
-        yield* nodes(child);
-      }
-    }
-
-    final bootstrap = project.widgetClasses.values
-        .expand((widget) => nodes(widget.node))
-        .where(
-          (node) => node.customWidgetIdentifier.name == 'SuperBoardBootstrap',
-        )
-        .single;
-    final bindings = {
-      for (final pass in bootstrap.parameterValues.parameterPasses.values)
-        pass.paramIdentifier.name: pass.variable,
-    };
-    for (final name in ['projectKey', 'sdkBaseUrl']) {
-      expect(bindings[name]?.source, FFVariableSource.LIBRARY_VALUE);
-      expect(
-        bindings[name]?.baseVariable.libraryValue.identifier,
-        findLibraryParameter(project, name: name)!.identifier,
-      );
-    }
-  });
+          );
+          app.ensurePage(
+            'ExistingBootstrap',
+            route: '/existing-bootstrap',
+            body: Scaffold(
+              body: hasLegacyBindings
+                  ? legacy(projectKey: '', sdkBaseUrl: '')
+                  : legacy(),
+            ),
+          );
+          if (hasLegacyBindings) {
+            app.raw((project) {
+              final widget = customCode.findCustomWidget(
+                project,
+                name: 'OGBootstrapBridge',
+              )!;
+              final node = project.widgetClasses.values
+                  .expand((w) => nodes(w.node))
+                  .where(
+                    (node) =>
+                        node.customWidgetIdentifier.name == 'OGBootstrapBridge',
+                  )
+                  .single;
+              for (final entry in {
+                'projectKey': 'opengrow_project_key',
+                'sdkBaseUrl': 'opengrow_sdk_base_url',
+              }.entries) {
+                addLibraryParameter(
+                  project,
+                  name: entry.key,
+                  dataType: FFDataTypeV2(scalarType: FFBaseDataType.String),
+                );
+                final parameter = findLibraryParameter(
+                  project,
+                  name: entry.key,
+                )!;
+                parameter.identifier.key = entry.value;
+                final target = widget.parameters.firstWhere(
+                  (p) => p.identifier.name == entry.key,
+                );
+                node
+                    .ensureParameterValues()
+                    .parameterPasses[target.identifier.key] = FFParameterPass(
+                  paramIdentifier: target.identifier.deepCopy(),
+                  variable: FFVariable(
+                    source: FFVariableSource.LIBRARY_VALUE,
+                    baseVariable: FFBaseVariable(
+                      libraryValue: FFLibraryValueVariable(
+                        identifier: parameter.identifier.deepCopy(),
+                      ),
+                    ),
+                  ),
+                );
+              }
+            });
+          }
+          superboard.buildStarterEditFlow(app);
+        });
+        final project = compileApp(app).project;
+        final bootstrap = project.widgetClasses.values
+            .expand((widget) => nodes(widget.node))
+            .where(
+              (node) =>
+                  node.customWidgetIdentifier.name == 'SuperBoardBootstrap',
+            )
+            .single;
+        final bindings = {
+          for (final pass in bootstrap.parameterValues.parameterPasses.values)
+            pass.paramIdentifier.name: pass.variable,
+        };
+        for (final name in ['projectKey', 'sdkBaseUrl']) {
+          expect(bindings[name]?.source, FFVariableSource.LIBRARY_VALUE);
+          expect(
+            bindings[name]?.baseVariable.libraryValue.identifier,
+            findLibraryParameter(project, name: name)!.identifier,
+          );
+        }
+      },
+    );
+  }
 
   test('SuperBoard private library DSL compiles', () {
     final app = buildApp(superboard.buildStarterEditFlow);
