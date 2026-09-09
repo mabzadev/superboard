@@ -184,6 +184,131 @@ void buildManagedLibrary(App app) {
   });
 }
 
+void migrateLibraryBranding(FFProject project) {
+  const widgetNames = {
+    'OpenGrowBootstrap': 'SuperBoardBootstrapComponent',
+    'OpenGrowRestoreButton': 'SuperBoardRestoreButton',
+    'OGBootstrapBridge': 'SuperBoardBootstrap',
+    'OGPaywallBridge': 'SuperBoardPaywall',
+    'OGRestoreBridge': 'SuperBoardRestorePurchasesButton',
+  };
+  String rename(String name) =>
+      widgetNames[name] ??
+      name
+          .replaceFirst(RegExp(r'^opengrow(?=[A-Z])'), 'superboardLibrary')
+          .replaceFirst(RegExp(r'^OpenGrow(?=[A-Z])'), 'SuperBoardLibrary');
+  String prose(String value) => value.replaceAll('OpenGrow', 'SuperBoard');
+  String route(String value) =>
+      value.replaceAll('opengrow-paywall', 'superboard-library-paywall');
+  final identifiers = allProtosOfType<FFIdentifier>(project);
+  final names = {
+    for (final identifier in identifiers)
+      if (rename(identifier.name) != identifier.name)
+        identifier.name: rename(identifier.name),
+    for (final widget in project.widgetClasses.values)
+      if (rename(widget.name) != widget.name) widget.name: rename(widget.name),
+  };
+  void checkCollisions(Iterable<String> existing) {
+    final seen = <String>{};
+    for (final name in existing) {
+      if (!seen.add(rename(name))) {
+        throw StateError(
+          'SuperBoard migration would duplicate ${rename(name)}.',
+        );
+      }
+    }
+  }
+
+  checkCollisions(
+    project.customCode.customActions.map((a) => a.identifier.name),
+  );
+  checkCollisions(project.widgetClasses.values.map((w) => w.name));
+  checkCollisions(
+    project.appState.fields.map((f) => f.parameter.identifier.name),
+  );
+  checkCollisions(
+    project.appState.actionComponentsConfig.actionComponents.map(
+      (b) => b.identifier.name,
+    ),
+  );
+
+  String code(String value) {
+    for (final entry in names.entries) {
+      value = value.replaceAll(
+        RegExp('\\b${RegExp.escape(entry.key)}\\b'),
+        entry.value,
+      );
+    }
+    return route(
+      prose(value),
+    ).replaceAll(RegExp(r'\bopengrow\b'), 'superboard');
+  }
+
+  for (final identifier in identifiers) {
+    if (names.containsKey(identifier.name))
+      identifier.name = names[identifier.name]!;
+  }
+  for (final node in allProtosOfType<FFNode>(project)) {
+    if (rename(node.name) != node.name) node.name = rename(node.name);
+  }
+  for (final widget in project.widgetClasses.values) {
+    if (rename(widget.name) != widget.name) widget.name = rename(widget.name);
+    if (widget.hasDescription()) widget.description = code(widget.description);
+    if (widget.hasPageTitle()) widget.pageTitle = prose(widget.pageTitle);
+    if (widget.hasPageRouteSettings()) {
+      widget.pageRouteSettings.routePath = route(
+        widget.pageRouteSettings.routePath,
+      );
+    }
+  }
+  for (final value in allProtosOfType<FFStringValue>(project)) {
+    if (value.hasInputValue())
+      value.inputValue = route(prose(value.inputValue));
+    if (value.hasMostRecentInputValue()) {
+      value.mostRecentInputValue = route(prose(value.mostRecentInputValue));
+    }
+  }
+  for (final parameter in allProtosOfType<FFParameter>(project)) {
+    if (parameter.hasDescription())
+      parameter.description = code(parameter.description);
+  }
+  for (final action in project.customCode.customActions) {
+    action.code = code(action.code);
+    if (action.hasDescription()) action.description = code(action.description);
+  }
+  for (final widget in project.customCode.customWidgets) {
+    widget.code = code(widget.code);
+    if (widget.hasDescription()) widget.description = code(widget.description);
+  }
+  for (final function in allProtosOfType<FFCustomFunction>(project)) {
+    if (function.hasCode()) function.code = code(function.code);
+    if (function.hasDescription())
+      function.description = code(function.description);
+  }
+  for (final file in allProtosOfType<FFCustomCodeFile>(project)) {
+    if (file.hasCode()) file.code = code(file.code);
+  }
+  for (final block in allProtosOfType<FFActionComponent>(project)) {
+    if (block.hasDescription()) block.description = code(block.description);
+  }
+  for (final file in project.customCode.customFiles.files) {
+    final canonicalHooks = file.hooks.map((h) => h.identifier.name).toSet();
+    file.hooks.removeWhere(
+      (hook) =>
+          hook.identifier.name.startsWith('OpenGrow ') &&
+          canonicalHooks.contains(prose(hook.identifier.name)),
+    );
+    for (final hook in file.hooks) {
+      if (hook.identifier.name.startsWith('OpenGrow ')) {
+        hook.identifier.name = prose(hook.identifier.name);
+        hook.content = prose(
+          hook.content,
+        ).replaceAll('opengrow_', 'superboard_');
+      }
+    }
+  }
+}
+
 void buildStarterEditFlow(
   App app, {
   Set<String> existingActionBlocks = const {},
@@ -2842,6 +2967,7 @@ class SuperBoardCustomerCenter extends StatelessWidget {
       }
       custom_code_helpers.removeCustomWidget(project, name: entry.key);
     }
+    migrateLibraryBranding(project);
   });
 
   if (!existingActionBlocks.contains('SuperBoardBuyPackage'))
