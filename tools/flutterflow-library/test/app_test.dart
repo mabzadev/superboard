@@ -66,7 +66,7 @@ void main() {
     },
   );
 
-  test('legacy actions retain their identity and use the canonical SDK', () {
+  test('legacy actions retain their identity under the SuperBoard brand', () {
     String? previousKey;
     final app = buildApp((app) {
       app.customAction(
@@ -88,7 +88,7 @@ Future<String> opengrowGetCustomerInfoJson() => legacy.opengrowGetCustomerInfoJs
     final project = compileApp(app).project;
     final action = customCode.findCustomAction(
       project,
-      name: 'opengrowGetCustomerInfoJson',
+      name: 'superboardLibraryGetCustomerInfoJson',
     )!;
     expect(action.identifier.key, previousKey);
     expect(
@@ -97,6 +97,132 @@ Future<String> opengrowGetCustomerInfoJson() => legacy.opengrowGetCustomerInfoJs
     );
     expect(action.code, contains('legacy.superboardGetCustomerInfoJson()'));
     expect(action.code, isNot(contains('package:opengrow_flutterflow/')));
+    expect(action.code, contains('superboardLibraryGetCustomerInfoJson()'));
+    expect(
+      customCode.findCustomAction(project, name: 'opengrowGetCustomerInfoJson'),
+      isNull,
+    );
+  });
+
+  test(
+    'branding migration preserves state, action and navigation bindings',
+    () {
+      final project = compileApp(
+        buildApp((app) {
+          app.state('opengrowPackageIdentifier', string.withDefault('annual'));
+          final action = app.customAction(
+            'opengrowReadPackage',
+            returns: string,
+            code: r'''
+import '/flutter_flow/flutter_flow_util.dart';
+Future<String> opengrowReadPackage() async => FFAppState().opengrowPackageIdentifier;
+''',
+          );
+          app.ensurePage(
+            'OpenGrowPaywallPage',
+            route: '/opengrow-paywall',
+            body: Scaffold(
+              body: Column(
+                children: [
+                  Text('OpenGrow Premium', name: 'OGPaywallBridge'),
+                  Button(
+                    'Read',
+                    onTap: [CallCustomAction(action, outputAs: 'package')],
+                  ),
+                ],
+              ),
+            ),
+          );
+          app.ensurePage(
+            'Entry',
+            route: '/entry',
+            body: Scaffold(
+              body: Button('Open', onTap: [Navigate('OpenGrowPaywallPage')]),
+            ),
+          );
+        }),
+      ).project;
+      final pageKey = findPage(project, name: 'OpenGrowPaywallPage')!.node.key;
+      final identifiers = allProtosOfType<FFIdentifier>(
+        project,
+      ).map((identifier) => identifier.key).toList();
+      final nodeKeys = allProtosOfType<FFNode>(
+        project,
+      ).map((node) => node.key).toList();
+
+      superboard.migrateLibraryBranding(project);
+
+      expect(
+        findPage(project, name: 'SuperBoardLibraryPaywallPage')!.node.key,
+        pageKey,
+      );
+      expect(
+        allProtosOfType<FFIdentifier>(project).map((id) => id.key),
+        identifiers,
+      );
+      expect(
+        allProtosOfType<FFNode>(project).map((node) => node.key),
+        nodeKeys,
+      );
+      expect(
+        project.writeToJson(),
+        isNot(matches(r'OpenGrow|opengrow|OGPaywall')),
+      );
+      final code = customCode
+          .findCustomAction(project, name: 'superboardLibraryReadPackage')!
+          .code;
+      expect(code, contains('FFAppState().superboardLibraryPackageIdentifier'));
+      final migrated = project.writeToBuffer();
+      superboard.migrateLibraryBranding(project);
+      expect(project.writeToBuffer(), migrated);
+    },
+  );
+
+  test(
+    'native configuration removes replaced hooks and preserves other hooks',
+    () {
+      final project = compileApp(
+        buildApp(superboard.buildStarterEditFlow),
+      ).project;
+      final file = project.customCode.customFiles.files.first;
+      final canonical = file.hooks.first;
+      final old = canonical.deepCopy();
+      old.identifier.name = old.identifier.name.replaceFirst(
+        'SuperBoard',
+        'OpenGrow',
+      );
+      old.identifier.key = 'old-hook';
+      old.content = old.content.replaceAll('superboard_', 'opengrow_');
+      final unrelated = FFCustomFile_Hook(
+        identifier: FFIdentifier(
+          name: 'Application configuration',
+          key: 'application-hook',
+        ),
+        content: '<application-setting/>',
+        type: canonical.type,
+      );
+      file.hooks.addAll([old, unrelated]);
+      final canonicalBytes = canonical.writeToBuffer();
+      superboard.migrateLibraryBranding(project);
+      expect(
+        file.hooks.where((hook) => hook.identifier.key == 'old-hook'),
+        isEmpty,
+      );
+      expect(canonical.writeToBuffer(), canonicalBytes);
+      expect(file.hooks, contains(unrelated));
+    },
+  );
+
+  test('branding collisions fail before changing the project', () {
+    final project = compileApp(
+      buildApp((app) {
+        app.state('opengrowPackageIdentifier', string);
+        app.state('superboardLibraryPackageIdentifier', string);
+      }),
+    ).project;
+    final before = project.writeToBuffer();
+    expect(() => superboard.migrateLibraryBranding(project), throwsStateError);
+    expect(project.writeToBuffer(), before);
   });
 
   test('nullable FlutterFlow inputs have optional nullable Dart fields', () {
