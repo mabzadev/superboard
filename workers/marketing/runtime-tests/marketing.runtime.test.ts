@@ -13,6 +13,8 @@ import { describe, expect, it } from "vitest";
 import { dispatchCampaign, handleMarketingQueue } from "../src/queue";
 import { trackingToken } from "../src/tracking";
 import { decryptJson } from "../src/secrets";
+import { createEmailDesign } from "@superboard/contracts/email-studio";
+import { resolveStoredEmail, claimEmailFrequency } from "../src/email-studio.js";
 
 const secret = "marketing-runtime-secret";
 
@@ -68,6 +70,79 @@ async function signedRequest(
 }
 
 describe("Marketing in the Workers runtime", () => {
+  it("keeps the published email available while its next revision is a draft",async()=>{
+    const document=createEmailDesign("en","notification");
+    document.locales.en!.subject="Ready";
+    document.locales.en!.blocks=[{id:"text",type:"text",text:"Published message"}];
+    document.locales.en!.status="approved";
+    const created=await SELF.fetch(await signedRequest("/internal/v1/templates",97,"POST",{name:"Stable live email",studio_document:document,expected_revision:0},crypto.randomUUID()));
+    const template=(await created.json<{data:{id:string}}>()).data;
+    const publish=await SELF.fetch(await signedRequest("/internal/v1/studio/templates/"+template.id+"/publish",97,"POST",{expected_revision:1},crypto.randomUUID()));
+    expect(publish.status).toBe(200);
+    document.locales.en!.subject="Work in progress";
+    document.locales.en!.status="draft";
+    await SELF.fetch(await signedRequest("/internal/v1/templates/"+template.id,97,"PATCH",{studio_document:document,expected_revision:1},crypto.randomUUID()));
+    expect(await resolveStoredEmail(env.DB,97,template.id,crypto.randomUUID(),{profile:{locale:"en"}},"template")).toMatchObject({status:"ready",subject:"Ready"});
+  });
+  it("admits only one concurrent marketing message while allowing access emails and retries", async () => {
+    const design=createEmailDesign("en","campaign");
+    design.locales.en!.blocks=[{id:"text",type:"text",text:"Hello"}];
+    design.locales.en!.status="approved";
+    const create=async(name:string)=>{
+      const response=await SELF.fetch(await signedRequest("/internal/v1/templates",94,"POST",{name,template_type:"campaign",studio_document:design,expected_revision:0},crypto.randomUUID()));
+      const id=(await response.json<{data:{id:string}}>()).data.id;
+      await SELF.fetch(await signedRequest("/internal/v1/studio/templates/"+id+"/publish",94,"POST",{expected_revision:1},crypto.randomUUID()));
+      return id;
+    };
+    const template=await create("Frequency campaign");
+    const first=crypto.randomUUID(); const second=crypto.randomUUID();
+    for(const id of [first,second]) await resolveStoredEmail(env.DB,94,template,id,{profile:{locale:"en"}},"template");
+    const claims=await Promise.all([claimEmailFrequency(env.DB,94,first,"same@example.test"),claimEmailFrequency(env.DB,94,second,"same@example.test")]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+    expect(await claimEmailFrequency(env.DB,94,claims[0]?first:second,"same@example.test")).toBe(true);
+    design.purpose="authentication";
+    const access=await create("Access email");
+    const accessDelivery=crypto.randomUUID();
+    await resolveStoredEmail(env.DB,94,access,accessDelivery,{profile:{locale:"en"}},"template");
+    expect(await claimEmailFrequency(env.DB,94,accessDelivery,"same@example.test")).toBe(true);
+  });
+  it("resolves and freezes a transactional translation before a template is edited", async () => {
+    const design=createEmailDesign("en","billing");
+    design.locales.en!.blocks=[{id:"receipt",type:"text",text:"Receipt for {{name}}"}];
+    design.locales.en!.status="approved";
+    design.locales.fr={...structuredClone(design.locales.en!),subject:"Votre reçu",blocks:[{id:"receipt",type:"text",text:"Reçu pour {{name}}"}]};
+    const response=await SELF.fetch(await signedRequest("/internal/v1/templates",93,"POST",{name:"Frozen receipt",template_type:"transactional",studio_document:design,expected_revision:0},crypto.randomUUID()));
+    const template=await response.json<{data:{id:string}}>();
+    await SELF.fetch(await signedRequest("/internal/v1/studio/templates/"+template.data.id+"/publish",93,"POST",{expected_revision:1},crypto.randomUUID()));
+    const sent=await SELF.fetch(await signedRequest("/internal/v1/transactional",93,"POST",{template_id:template.data.id,recipient:"receipt@example.test",name:"Alex",attributes:{locale:"en",billing_locale:"fr-CH"}},crypto.randomUUID()));
+    expect(sent.status).toBe(202);
+    const delivery=await sent.json<{data:{campaign_id:string;delivery_id:string}}>();
+    const contacts=await SELF.fetch(await signedRequest("/internal/v1/email/subscribers",93));
+    const contact=(await contacts.json<{data:Array<{email:string;consent_status:string}>}>()).data.find(item=>item.email==="receipt@example.test");
+    expect(contact?.consent_status).toBe("pending");
+    const rendered=await resolveStoredEmail(env.DB,93,delivery.data.campaign_id,delivery.data.delivery_id,{profile:{name:"Alex",locale:"en",billing_locale:"fr-CH"}});
+    expect(rendered).toMatchObject({status:"ready",locale:"fr",subject:"Votre reçu"});
+    design.locales.fr.subject="Modifié ensuite";
+    await SELF.fetch(await signedRequest("/internal/v1/templates/"+template.data.id,93,"PATCH",{studio_document:design,expected_revision:1},crypto.randomUUID()));
+    expect(await resolveStoredEmail(env.DB,93,delivery.data.campaign_id,delivery.data.delivery_id,{profile:{name:"Other",locale:"en"}})).toMatchObject({status:"ready",locale:"fr",subject:"Votre reçu"});
+  });
+  it("stores multilingual template revisions, rejects stale saves and isolates project history", async () => {
+    const document = createEmailDesign("fr", "billing");
+    document.locales.fr!.status = "approved";
+    const created = await SELF.fetch(await signedRequest("/internal/v1/templates", 91, "POST", { name: "Multilingual receipt", template_type: "transactional", studio_document: document, expected_revision: 0 }, crypto.randomUUID()));
+    expect(created.status).toBe(201);
+    const first = await created.json<{ data: { id: string; studio_revision: number; studio_document: unknown } }>();
+    expect(first.data.studio_revision).toBe(1);
+    expect(first.data.studio_document).toMatchObject({ purpose: "billing", source_locale: "fr" });
+    const updated = await SELF.fetch(await signedRequest(`/internal/v1/templates/${first.data.id}`, 91, "PATCH", { studio_document: document, expected_revision: 1 }, crypto.randomUUID()));
+    expect(updated.status).toBe(200);
+    const stale = await SELF.fetch(await signedRequest(`/internal/v1/templates/${first.data.id}`, 91, "PATCH", { studio_document: document, expected_revision: 1 }, crypto.randomUUID()));
+    expect(stale.status).toBe(409);
+    const history = await SELF.fetch(await signedRequest(`/internal/v1/studio/templates/${first.data.id}/history`, 91));
+    expect((await history.json<{ data: unknown[] }>()).data).toHaveLength(2);
+    const other = await SELF.fetch(await signedRequest(`/internal/v1/studio/templates/${first.data.id}/history`, 92));
+    expect((await other.json<{ data: unknown[] }>()).data).toEqual([]);
+  });
   it("persists authenticated application consent without exposing private lists or weakening suppressions", async () => {
     const projectId = 13;
     const publicListResponse = await SELF.fetch(

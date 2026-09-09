@@ -44,9 +44,9 @@ test("locks Core plus every concrete runtime plugin with explicit dependency pol
 			native: manifest.execution.backend === "native",
 		})),
 	});
-	expect(input.plugin_lock).toHaveLength(19);
-	expect(new Set(input.plugin_lock.map(({ plugin_id }) => plugin_id)).size).toBe(19);
-	expect(input.dependency_policies).toHaveLength(18);
+	expect(input.plugin_lock).toHaveLength(20);
+	expect(new Set(input.plugin_lock.map(({ plugin_id }) => plugin_id)).size).toBe(20);
+	expect(input.dependency_policies).toHaveLength(19);
 	expect(input.dependency_policies.every(({ kind }) => kind === "required")).toBe(true);
 	expect(input.plugin_lock.some(({ plugin_id }) => plugin_id.includes("*"))).toBe(false);
 });

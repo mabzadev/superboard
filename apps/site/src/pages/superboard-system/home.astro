@@ -1,37 +1,98 @@
 ---
 import FrontPage from "../../components/FrontPage.astro";
 import { resolveSiteFrontPage } from "../../lib/front-page.js";
+import { canAccessOperatorConsole } from "../../lib/operator-access.js";
 import { getSiteEnv } from "../../lib/site-env.js";
-import { createUserFrontI18n, resolveUserFrontLocale } from "../../lib/user-front-i18n.js";
+import {
+	createUserFrontI18n,
+	resolveUserFrontRequestLocale,
+} from "../../lib/user-front-i18n.js";
 
 export const prerender = false;
 
-if (!Astro.locals.user) {
-	return Astro.redirect("/_emdash/admin/login?redirect=%2Fsuperboard-system%2Fhome", 302);
+Astro.response.headers.set("Cache-Control", "private, no-store");
+const user = Astro.locals.user;
+if (!user) {
+	return Astro.redirect(
+		"/_emdash/admin/login?redirect=%2Fsuperboard-system%2Fhome",
+		302,
+	);
 }
-const locale = resolveUserFrontLocale(Astro.url.searchParams.get("lang") ?? Astro.request.headers.get("accept-language"));
+const locale = resolveUserFrontRequestLocale(Astro.request);
 const i18n = createUserFrontI18n(locale);
-const model = await resolveSiteFrontPage(getSiteEnv(), Astro.url.pathname, Astro.locals.user);
+if (!canAccessOperatorConsole(user)) {
+	return new Response(i18n._("site.front.forbidden"), {
+		status: 403,
+		headers: {
+			"Cache-Control": "private, no-store",
+			"Content-Language": locale,
+		},
+	});
+}
+const model = await resolveSiteFrontPage(
+	getSiteEnv(),
+	Astro.url.pathname,
+	user,
+);
+if (model.resolution.result === "redirect")
+	return Astro.redirect(model.resolution.location, 302);
+if (model.resolution.result === "not_found") Astro.response.status = 404;
+if (model.resolution.result === "forbidden") Astro.response.status = 403;
+if (
+	model.release &&
+	(model.resolution.result === "maintenance" ||
+		model.resolution.result === "unavailable")
+) {
+	Astro.response.status = 503;
+}
 ---
 
-{model.release ? <FrontPage model={model} /> : (
-	<html lang={locale}>
-		<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="robots" content="noindex, nofollow" /><title>{i18n._("site.operator.home")}</title></head>
-		<body class="core-operator-home">
-			<main>
-				<h1>{i18n._("site.operator.home")}</h1>
-				<p>{Astro.locals.user.name ?? Astro.locals.user.email}</p>
-				<p>{i18n._("site.operator.home_description")}</p>
-				<a href="/_emdash/admin">{i18n._("site.admin.open")}</a>
-			</main>
-		</body>
-	</html>
-)}
+{
+	model.release ? (
+		<FrontPage model={model} />
+	) : (
+		<html lang={locale}>
+			<head>
+				<>
+					<meta charset="UTF-8" />
+					<meta name="viewport" content="width=device-width" />
+					<meta name="robots" content="noindex, nofollow" />
+					<title>{i18n._("site.operator.home")}</title>
+				</>
+			</head>
+			<body class="core-operator-home">
+				<main>
+					<h1>{i18n._("site.operator.home")}</h1>
+					<p>{user.name ?? user.email}</p>
+					<p>{i18n._("site.operator.home_description")}</p>
+					<a href="/_emdash/admin">{i18n._("site.admin.open")}</a>
+				</main>
+			</body>
+		</html>
+	)
+}
 
 <style>
-	:global(body.core-operator-home) { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif; background: light-dark(#f8fafc, #111827); color: light-dark(#111827, #f8fafc); color-scheme: light dark; }
-	main { width: min(36rem, calc(100% - 3rem)); margin-inline: auto; padding-block: 3rem; }
-	a { display: inline-block; margin-block-start: 1rem; color: inherit; }
+	:global(body.core-operator-home) {
+		margin: 0;
+		min-height: 100vh;
+		display: grid;
+		place-items: center;
+		font-family: system-ui, sans-serif;
+		background: light-dark(#f8fafc, #111827);
+		color: light-dark(#111827, #f8fafc);
+		color-scheme: light dark;
+	}
+	main {
+		width: min(36rem, calc(100% - 3rem));
+		margin-inline: auto;
+		padding-block: 3rem;
+	}
+	a {
+		display: inline-block;
+		margin-block-start: 1rem;
+		color: inherit;
+	}
 </style>
 
 <script>

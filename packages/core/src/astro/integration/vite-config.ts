@@ -96,7 +96,8 @@ function linguiMacroPlugin(adminSourcePath: string, adminDistPath: string): Plug
 		},
 		async transform(code, id) {
 			if (!id.startsWith(adminSourcePath) || !code.includes("@lingui")) return;
-			const { transformAsync } = (await import(babelCorePath)) as typeof import("@babel/core");
+			const babelCore: typeof import("@babel/core") = await import(babelCorePath);
+			const { transformAsync } = babelCore;
 			const result = await transformAsync(code, {
 				filename: id,
 				plugins: ["@lingui/babel-plugin-lingui-macro"],

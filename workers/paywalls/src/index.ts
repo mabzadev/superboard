@@ -1,3 +1,4 @@
+import { localizeExperienceDefinition } from "@superboard/contracts/experience-localization";
 import { Hono } from "hono";
 import { inspectSqlDatabaseAndSchemaHealth } from "@superboard/contracts/health";
 import {
@@ -509,8 +510,10 @@ app.notFound((c) =>
 );
 
 async function createPaywall(c: WorkerContext): Promise<Response> {
-  const body = await readJson(c.req.raw);
+  const body = await readJson(c.req.raw, 2_359_296);
   const input = parsePaywall(body);
+  const configuration = body && typeof body === "object" && "configuration" in body ? body.configuration : undefined;
+  const draft = configuration === undefined ? null : parseVersion({definition:configuration});
   const timestamp = now();
   const row = {
     id: crypto.randomUUID(),
@@ -537,6 +540,9 @@ async function createPaywall(c: WorkerContext): Promise<Response> {
         timestamp,
         timestamp,
       ),
+      ...(draft ? [c.env.DB.prepare(
+        "INSERT INTO paywall_versions (id,paywall_id,version,status,definition_json,created_at,project_id,schema_version,changelog,created_by) VALUES (?,?,1,'draft',?,?,?,1,?,?)"
+      ).bind(crypto.randomUUID(),row.id,JSON.stringify(draft.definition),timestamp,project(c),draft.changelog,c.get("project").actorId)] : []),
     ],
   });
 }
@@ -578,6 +584,7 @@ async function resolvePlacement(c: WorkerContext): Promise<Response> {
           placement: placement.key,
           paywall_id: placement.paywall_id,
           ...resolved,
+          definition: localizeExperienceDefinition(resolved.definition as Record<string, unknown>, input.locale),
         },
         meta: { resolved_at: now() },
       });

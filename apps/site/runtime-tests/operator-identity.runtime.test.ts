@@ -58,6 +58,8 @@ test("accepts an EmDash operator without an account in the historical users tabl
 });
 
 beforeAll(async () => {
+	expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first()).toEqual({ count: 0 });
+	await env.DB.exec("DROP TABLE users");
 	await env.DB.batch(
 		[paywallsInitial, paywallsDomain, paywallsAudit].flatMap((sql) =>
 			sql

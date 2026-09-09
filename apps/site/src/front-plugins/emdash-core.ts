@@ -76,7 +76,7 @@ export const nativeFrontPlugin: NativeFrontPluginModule = {
 				kind: "layout",
 				title: "site.front.title",
 				description: "site.front.description",
-				home_href: "/",
+				home_href: "/superboard-system/home",
 				navigation_label: "site.front.navigation",
 				actions: [{ label: "site.admin.open", href: "/_emdash/admin" }],
 			};

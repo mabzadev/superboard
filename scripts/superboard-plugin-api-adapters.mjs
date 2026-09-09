@@ -21,6 +21,33 @@ export function validatePluginApiAdapters(registry, baseline, root = repositoryR
 		),
 	);
 	const pluginIds = new Set(baseline.plugins.map(({ plugin_id }) => plugin_id));
+	for (const application of registry.application_plugins ?? []) {
+		if (
+			typeof application.manifest !== "string" ||
+			!application.manifest.startsWith("plugins/") ||
+			application.manifest.split("/").includes("..")
+		) {
+			issue("APPLICATION_PLUGIN_MANIFEST_INVALID", application.plugin_id);
+			continue;
+		}
+		const path = resolve(root, application.manifest);
+		if (!existsSync(path)) {
+			issue("APPLICATION_PLUGIN_MANIFEST_MISSING", application.plugin_id);
+			continue;
+		}
+		const manifest = JSON.parse(readFileSync(path, "utf8"));
+		if (manifest.id !== application.plugin_id || pluginIds.has(manifest.id)) {
+			issue("APPLICATION_PLUGIN_ID_INVALID", application.plugin_id);
+			continue;
+		}
+		pluginIds.add(manifest.id);
+		for (const [kind, names] of [
+			["command", manifest.commands],
+			["data_source", manifest.dataSources],
+		]) {
+			for (const name of names ?? []) expected.set(`${manifest.id}.${kind}.${name}`, manifest.id);
+		}
+	}
 	for (const contribution of registry.additional_contributions ?? []) {
 		const { id, plugin_id: pluginId } = contribution;
 		if (

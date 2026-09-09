@@ -133,7 +133,7 @@ widget.mount(document.querySelector("#support"));
 Network failures are surfaced as `SuperBoardSupportException` with `code`,
 `message`, `retryable`, `requestId`, `statusCode`, and optional `details`.
 
-<!-- opengrow-sdk-documentation:javascript:start -->
+<!-- superboard-sdk-documentation:javascript:start -->
 
 > **Lifecycle: archived.** This package is frozen for existing clients.
 > Its historical release remains available, but no new version may be
@@ -172,10 +172,10 @@ test -n "${OPENGROW_GITHUB_PACKAGES_TOKEN:-}" \
 Then import the package by its catalogue-owned name:
 
 ```javascript
-import OpenGrow from "@mbzadev/opengrow-js-sdk";
+import SuperBoard from "@mbzadev/opengrow-js-sdk";
 ```
 
-<!-- opengrow-sdk-documentation:javascript:end -->
+<!-- superboard-sdk-documentation:javascript:end -->
 
 ## Documentation
 
@@ -189,7 +189,7 @@ Creates a new instance of the opengrow SDK.
 
 - **APIKey** (string): Your API key provided by opengrow for authentication.
 - **testEnvironment** (boolean): Enables the application's test data namespace.
-- **linkHandlingCallback** (Function): A callback function that handles the data received from opengrow.
+- **linkHandlingCallback** (Function): A callback function that handles the data received from SuperBoard.
 - **baseURL** (string): The SDK origin configured for the application, without a hard-coded global fallback.
 
 #### Example
@@ -200,7 +200,7 @@ const handleLinkData = (data) => {
   console.log("Link data received:", data);
 };
 
-const opengrow = new OpenGrow(
+const superBoard = new SuperBoard(
   runtimeConfig.projectKey,
   runtimeConfig.testEnvironment,
   handleLinkData,
@@ -212,7 +212,7 @@ const opengrow = new OpenGrow(
 
 ### start(success, error)
 
-Initializes and starts the OpenGrow SDK by authenticating with the provided API key.
+Initializes and starts the SuperBoard SDK by authenticating with the provided API key.
 
 - **success** (Function, optional): Called only after authentication succeeds.
 - **error** (Function, optional): Called when authentication fails. Network-backed SDK methods remain disabled until a later `start()` succeeds.
@@ -220,19 +220,19 @@ Initializes and starts the OpenGrow SDK by authenticating with the provided API 
 #### Example
 
 ```javascript
-opengrow.start(
+superBoard.start(
   () => {
-    console.log("OpenGrow authenticated");
+    console.log("SuperBoard authenticated");
   },
   (error) => {
-    console.error("OpenGrow authentication failed:", error);
+    console.error("SuperBoard authentication failed:", error);
   },
 );
 ```
 
 ### createLink(title, subtitle, imageURL, data, success, error)
 
-Creates a new link using the OpenGrow API.
+Creates a new link using the SuperBoard API.
 
 - **title** (string): The title of the link.
 - **subtitle** (Function): The subtitle of the link.
@@ -249,7 +249,7 @@ const linkData = {
   category: "Demo",
 };
 
-opengrow.createLink(
+superBoard.createLink(
   "Sample Link",
   "This is a subtitle",
   "https://example.com/image.jpg",
@@ -272,7 +272,7 @@ Retrieves the current user identifier.
 #### Example
 
 ```javascript
-const userId = opengrow.userIdentifier();
+const userId = superBoard.userIdentifier();
 console.log("Current user ID:", userId);
 ```
 
@@ -285,7 +285,7 @@ Retrieves the current user attributes.
 #### Example
 
 ```javascript
-const userAttributes = opengrow.userAttributes();
+const userAttributes = superBoard.userAttributes();
 console.log("User attributes:", userAttributes);
 ```
 
@@ -298,7 +298,7 @@ Sets the user identifier.
 #### Example
 
 ```javascript
-opengrow.setUserIdentifier("user-12345");
+superBoard.setUserIdentifier("user-12345");
 ```
 
 ### setUserAttributes(attributes)
@@ -315,7 +315,7 @@ const attributes = {
   email: "john.doe@example.com",
 };
 
-opengrow.setUserAttributes(attributes);
+superBoard.setUserAttributes(attributes);
 ```
 
 ### authenticated()
@@ -327,7 +327,7 @@ Checks if the SDK is currently authenticated.
 #### Example
 
 ```javascript
-const isAuthenticated = opengrow.authenticated();
+const isAuthenticated = superBoard.authenticated();
 console.log("Is authenticated:", isAuthenticated);
 ```
 
@@ -340,7 +340,7 @@ Displays the messages list using the manager.
 #### Example
 
 ```javascript
-opengrow.showMessagesList((error) => console.error(error));
+superBoard.showMessagesList((error) => console.error(error));
 ```
 
 ### getMessages(page, response, error)
@@ -354,7 +354,7 @@ Retrieves messages for a specific page using the manager.
 #### Example
 
 ```javascript
-opengrow.getMessages(
+superBoard.getMessages(
   1,
   (messages) => {
     console.log("Retrieved messages:", messages);
@@ -375,7 +375,7 @@ Retrieves the number of unread messages using the manager.
 #### Example
 
 ```javascript
-opengrow.getNumberOfUnreadMessages(
+superBoard.getNumberOfUnreadMessages(
   (count) => {
     console.log("Number of unread messages:", count);
   },
@@ -388,10 +388,10 @@ opengrow.getNumberOfUnreadMessages(
 ## Usage Example
 
 ```javascript
-import OpenGrow from "@mbzadev/opengrow-js-sdk";
+import SuperBoard from "@mbzadev/opengrow-js-sdk";
 
 const runtimeConfig = window.__OPENGROW_CONFIG__;
-const opengrow = new OpenGrow(
+const superBoard = new SuperBoard(
   runtimeConfig.projectKey,
   runtimeConfig.testEnvironment,
   (data) => {
@@ -400,12 +400,12 @@ const opengrow = new OpenGrow(
   runtimeConfig.sdkOrigin,
 );
 
-opengrow.setUserIdentifier("user-123");
-opengrow.setUserAttributes({ name: "John Doe", age: 30 });
+superBoard.setUserIdentifier("user-123");
+superBoard.setUserAttributes({ name: "John Doe", age: 30 });
 
-opengrow.start(
+superBoard.start(
   () => {
-    opengrow.createLink(
+    superBoard.createLink(
       "Sample Link",
       "Subtitle",
       "https://example.com/image.jpg",
@@ -417,8 +417,8 @@ opengrow.start(
   (error) => console.error("Authentication failed:", error),
 );
 
-console.log("User ID:", opengrow.userIdentifier());
-console.log("User Attributes:", opengrow.userAttributes());
+console.log("User ID:", superBoard.userIdentifier());
+console.log("User Attributes:", superBoard.userAttributes());
 ```
 
 ## Development checks

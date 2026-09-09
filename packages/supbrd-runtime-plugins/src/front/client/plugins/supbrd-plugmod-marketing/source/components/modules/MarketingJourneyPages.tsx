@@ -1,5 +1,4 @@
 "use client";
-
 import {
 	Archive,
 	CirclePause,
@@ -36,6 +35,7 @@ import {
 	showErrorNotification,
 	showSuccessNotification,
 } from "../../../../../../../../../supbrd-front-ui/src/shared/lib/Notifications.js";
+import { useStudioI18n } from "../../../studio/i18n.js";
 import {
 	createMarketingChannelConnector,
 	createMarketingJourney,
@@ -67,6 +67,7 @@ const emptyDefinition: JourneyDefinition = {
 };
 
 export function MarketingJourneysPage() {
+	const { t } = useStudioI18n();
 	const { selectedProject } = useProjectSelection();
 	const [journeys, setJourneys] = useState<MarketingJourney[]>([]);
 	const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -157,10 +158,10 @@ export function MarketingJourneysPage() {
 		try {
 			if (editingId) {
 				await updateMarketingJourney(selectedProject.id, editingId, payload);
-				showSuccessNotification("Journey version saved");
+				showSuccessNotification(t("Journey version saved"));
 			} else {
 				await createMarketingJourney(selectedProject.id, payload);
-				showSuccessNotification("Journey created");
+				showSuccessNotification(t("Journey created"));
 			}
 			resetForm();
 			await load();
@@ -225,8 +226,10 @@ export function MarketingJourneysPage() {
 
 	return (
 		<ModulePage
-			title="Marketing journeys"
-			description="Turn product events into versioned, resumable email and omnichannel customer journeys."
+			title={t("Marketing journeys")}
+			description={t(
+				"Turn product events into versioned, resumable email and omnichannel customer journeys.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -235,40 +238,41 @@ export function MarketingJourneysPage() {
 				<div className="space-y-6">
 					<Card>
 						<CardHeader>
-							<CardTitle>{editingId ? "Edit journey" : "Create journey"}</CardTitle>
+							<CardTitle>{editingId ? t("Edit journey") : t("Create journey")}</CardTitle>
 							<CardDescription>
-								Each save creates an immutable version. Active enrollments keep the version they
-								entered with.
+								{t(
+									"Each save creates an immutable version. Active enrollments keep the version they entered with.",
+								)}
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<form className="space-y-5" onSubmit={save}>
 								<div className="grid gap-4 md:grid-cols-2">
-									<Field label="Name">
+									<Field label={t("Name")}>
 										<Input
 											required
 											value={name}
 											onChange={(event) => setName(event.target.value)}
-											placeholder="New customer activation"
+											placeholder={t("New customer activation")}
 										/>
 									</Field>
-									<Field label="Event that starts the journey">
+									<Field label={t("Event that starts the journey")}>
 										<Input
 											required
 											disabled={advanced}
 											value={eventName}
 											onChange={(event) => setEventName(event.target.value)}
-											placeholder="account.created"
+											placeholder={t("account.created")}
 										/>
 									</Field>
-									<Field label="Description">
+									<Field label={t("Description")}>
 										<Input
 											value={description}
 											onChange={(event) => setDescription(event.target.value)}
-											placeholder="Welcome and activate a new account"
+											placeholder={t("Welcome and activate a new account")}
 										/>
 									</Field>
-									<Field label="Repeat entry">
+									<Field label={t("Repeat entry")}>
 										<select
 											className={selectClass}
 											value={reentry}
@@ -276,16 +280,16 @@ export function MarketingJourneysPage() {
 												setReentry(event.target.value as MarketingJourney["reentry_policy"])
 											}
 										>
-											<option value="once">Only once</option>
-											<option value="after_completion">After completion</option>
-											<option value="every_event">For every matching event</option>
+											<option value="once">{t("Only once")}</option>
+											<option value="after_completion">{t("After completion")}</option>
+											<option value="every_event">{t("For every matching event")}</option>
 										</select>
 									</Field>
 								</div>
 
 								{!advanced && (
 									<JourneyCanvasEditor
-										value={builderDefinition}
+										project={selectedProject.id}										value={builderDefinition}
 										onChange={setBuilderDefinition}
 										templates={templates}
 										connectors={connectors}
@@ -312,14 +316,15 @@ export function MarketingJourneysPage() {
 									className="rounded-xl border p-4"
 								>
 									<summary className="cursor-pointer font-medium">
-										Raw graph JSON (advanced)
+										{t("Raw graph JSON (advanced)")}
 									</summary>
 									<p className="mt-2 text-sm text-muted-foreground">
-										Configure conditions, branches, delays, messages and attribute updates using the
-										full versioned graph format.
+										{t(
+											"Configure conditions, branches, delays, messages and attribute updates using the full versioned graph format.",
+										)}
 									</p>
 									<div className="mt-4 grid gap-4 xl:grid-cols-2">
-										<Field label="Trigger and conditions">
+										<Field label={t("Trigger and conditions")}>
 											<textarea
 												className={textareaClass}
 												rows={12}
@@ -327,7 +332,7 @@ export function MarketingJourneysPage() {
 												onChange={(event) => setTriggerText(event.target.value)}
 											/>
 										</Field>
-										<Field label="Journey graph">
+										<Field label={t("Journey graph")}>
 											<textarea
 												className={textareaClass}
 												rows={12}
@@ -341,11 +346,11 @@ export function MarketingJourneysPage() {
 								<div className="flex flex-wrap gap-2">
 									<Button disabled={busy || !name.trim()} type="submit">
 										<GitBranch className="size-4" />
-										{editingId ? "Save new version" : "Create draft"}
+										{editingId ? t("Save new version") : t("Create draft")}
 									</Button>
 									{editingId && (
 										<Button type="button" variant="outline" onClick={resetForm}>
-											Cancel edit
+											{t("Cancel edit")}
 										</Button>
 									)}
 								</div>
@@ -356,13 +361,13 @@ export function MarketingJourneysPage() {
 					<Card>
 						<CardHeader className="flex-row items-start justify-between gap-4">
 							<div>
-								<CardTitle>Journeys</CardTitle>
+								<CardTitle>{t("Journeys")}</CardTitle>
 								<CardDescription>
-									Event-triggered automation with deduplicated entry and step execution.
+									{t("Event-triggered automation with deduplicated entry and step execution.")}
 								</CardDescription>
 							</div>
 							<Button variant="outline" size="sm" onClick={() => void load()}>
-								<RefreshCw className="size-4" /> Refresh
+								<RefreshCw className="size-4" /> {t("Refresh")}
 							</Button>
 						</CardHeader>
 						<CardContent className="space-y-3">
@@ -377,17 +382,21 @@ export function MarketingJourneysPage() {
 											<div className="flex flex-wrap items-center gap-2">
 												<span className="font-semibold">{journey.name}</span>
 												<StatusBadge status={journey.status} />
-												<Badge variant="outline">v{journey.current_version}</Badge>
+												<Badge variant="outline">
+													{t("v")}
+													{journey.current_version}
+												</Badge>
 											</div>
 											<p className="mt-1 text-sm text-muted-foreground">
-												Starts on {journey.trigger_event_name} · {journey.enrollments_total ?? 0}{" "}
-												entries
+												{t("Starts on")}
+												{journey.trigger_event_name} {t("·")} {journey.enrollments_total ?? 0}{" "}
+												{t("entries")}
 											</p>
 										</button>
 										<div className="flex flex-wrap gap-2">
 											{journey.status !== "archived" && (
 												<Button variant="outline" size="sm" onClick={() => edit(journey)}>
-													<Pencil className="size-4" /> Edit
+													<Pencil className="size-4" /> {t("Edit")}
 												</Button>
 											)}
 											{journey.status === "draft" && (
@@ -396,7 +405,7 @@ export function MarketingJourneysPage() {
 													disabled={busy}
 													onClick={() => void transition(journey, "activate")}
 												>
-													<CirclePlay className="size-4" /> Activate
+													<CirclePlay className="size-4" /> {t("Activate")}
 												</Button>
 											)}
 											{journey.status === "active" && (
@@ -406,7 +415,7 @@ export function MarketingJourneysPage() {
 													disabled={busy}
 													onClick={() => void transition(journey, "pause")}
 												>
-													<CirclePause className="size-4" /> Pause
+													<CirclePause className="size-4" /> {t("Pause")}
 												</Button>
 											)}
 											{journey.status === "paused" && (
@@ -415,7 +424,7 @@ export function MarketingJourneysPage() {
 													disabled={busy}
 													onClick={() => void transition(journey, "resume")}
 												>
-													<CirclePlay className="size-4" /> Resume
+													<CirclePlay className="size-4" /> {t("Resume")}
 												</Button>
 											)}
 											{journey.status !== "archived" && (
@@ -425,7 +434,7 @@ export function MarketingJourneysPage() {
 													disabled={busy}
 													onClick={() => void transition(journey, "archive")}
 												>
-													<Archive className="size-4" /> Archive
+													<Archive className="size-4" /> {t("Archive")}
 												</Button>
 											)}
 										</div>
@@ -434,7 +443,7 @@ export function MarketingJourneysPage() {
 							))}
 							{!journeys.length && (
 								<p className="py-8 text-center text-sm text-muted-foreground">
-									No journeys yet. Create the first draft above.
+									{t("No journeys yet. Create the first draft above.")}
 								</p>
 							)}
 						</CardContent>
@@ -443,9 +452,11 @@ export function MarketingJourneysPage() {
 					{selected && statistics && (
 						<Card>
 							<CardHeader>
-								<CardTitle>{selected.name} activity</CardTitle>
+								<CardTitle>
+									{selected.name} {t("activity")}
+								</CardTitle>
 								<CardDescription>
-									Latest entries remain pinned to journey version and execution receipts.
+									{t("Latest entries remain pinned to journey version and execution receipts.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-5">
@@ -462,13 +473,13 @@ export function MarketingJourneysPage() {
 										<Input
 											value={subscriberIds}
 											onChange={(event) => setSubscriberIds(event.target.value)}
-											placeholder="Subscriber IDs, separated by commas"
+											placeholder={t("Subscriber IDs, separated by commas")}
 										/>
 										<Button
 											disabled={busy || !subscriberIds.trim()}
 											onClick={() => void manualEnrollment()}
 										>
-											<Send className="size-4" /> Enroll
+											<Send className="size-4" /> {t("Enroll")}
 										</Button>
 									</div>
 								)}
@@ -491,7 +502,10 @@ export function MarketingJourneysPage() {
 													<td className="px-4 py-3">
 														{enrollment.email || enrollment.subscriber_id}
 													</td>
-													<td className="px-4 py-3">v{enrollment.journey_version}</td>
+													<td className="px-4 py-3">
+														{t("v")}
+														{enrollment.journey_version}
+													</td>
 													<td className="px-4 py-3">{enrollment.current_node_id}</td>
 													<td className="px-4 py-3">
 														<Badge variant="outline">{enrollment.status}</Badge>
@@ -502,7 +516,7 @@ export function MarketingJourneysPage() {
 											{!enrollments.length && (
 												<tr>
 													<td className="px-4 py-8 text-center text-muted-foreground" colSpan={5}>
-														No subscribers have entered this journey.
+														{t("No subscribers have entered this journey.")}
 													</td>
 												</tr>
 											)}
@@ -519,6 +533,7 @@ export function MarketingJourneysPage() {
 }
 
 export function MarketingChannelsPage() {
+	const { t } = useStudioI18n();
 	const { selectedProject } = useProjectSelection();
 	const [connectors, setConnectors] = useState<MarketingChannelConnector[]>([]);
 	const [editingId, setEditingId] = useState<string | null>(null);
@@ -587,10 +602,10 @@ export function MarketingChannelsPage() {
 		try {
 			if (editingId) {
 				await updateMarketingChannelConnector(selectedProject.id, editingId, payload);
-				showSuccessNotification("Channel updated");
+				showSuccessNotification(t("Channel updated"));
 			} else {
 				await createMarketingChannelConnector(selectedProject.id, payload);
-				showSuccessNotification("Channel created");
+				showSuccessNotification(t("Channel created"));
 			}
 			reset();
 			await load();
@@ -606,7 +621,7 @@ export function MarketingChannelsPage() {
 		setBusy(true);
 		try {
 			await deleteMarketingChannelConnector(selectedProject.id, connector.id);
-			showSuccessNotification("Channel deleted");
+			showSuccessNotification(t("Channel deleted"));
 			await load();
 		} catch (cause) {
 			showErrorNotification(moduleErrorMessage(cause));
@@ -617,8 +632,10 @@ export function MarketingChannelsPage() {
 
 	return (
 		<ModulePage
-			title="Marketing channels"
-			description="Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks."
+			title={t("Marketing channels")}
+			description={t(
+				"Connect secure HTTPS destinations for SMS, push, WhatsApp, Slack and custom webhooks.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -627,22 +644,22 @@ export function MarketingChannelsPage() {
 				<div className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
 					<Card>
 						<CardHeader>
-							<CardTitle>{editingId ? "Edit channel" : "Add a channel"}</CardTitle>
+							<CardTitle>{editingId ? t("Edit channel") : t("Add a channel")}</CardTitle>
 							<CardDescription>
-								Secrets are encrypted at rest and never returned by the API.
+								{t("Secrets are encrypted at rest and never returned by the API.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<form className="space-y-4" onSubmit={save}>
-								<Field label="Name">
+								<Field label={t("Name")}>
 									<Input
 										required
 										value={name}
 										onChange={(event) => setName(event.target.value)}
-										placeholder="Customer notifications"
+										placeholder={t("Customer notifications")}
 									/>
 								</Field>
-								<Field label="Channel">
+								<Field label={t("Channel")}>
 									<select
 										className={selectClass}
 										value={channel}
@@ -650,23 +667,23 @@ export function MarketingChannelsPage() {
 											setChannel(event.target.value as MarketingChannelConnector["channel"])
 										}
 									>
-										<option value="webhook">Webhook</option>
-										<option value="sms">SMS</option>
-										<option value="push">Push</option>
-										<option value="whatsapp">WhatsApp</option>
-										<option value="slack">Slack</option>
+										<option value="webhook">{t("Webhook")}</option>
+										<option value="sms">{t("SMS")}</option>
+										<option value="push">{t("Push")}</option>
+										<option value="whatsapp">{t("WhatsApp")}</option>
+										<option value="slack">{t("Slack")}</option>
 									</select>
 								</Field>
-								<Field label="HTTPS destination">
+								<Field label={t("HTTPS destination")}>
 									<Input
 										required
 										type="url"
 										value={endpoint}
 										onChange={(event) => setEndpoint(event.target.value)}
-										placeholder="https://provider.example/messages"
+										placeholder={t("https://provider.example/messages")}
 									/>
 								</Field>
-								<Field label={editingId ? "New signing secret (optional)" : "Signing secret"}>
+								<Field label={editingId ? t("New signing secret (optional)") : t("Signing secret")}>
 									<Input
 										type="password"
 										value={secret}
@@ -674,7 +691,7 @@ export function MarketingChannelsPage() {
 										autoComplete="new-password"
 									/>
 								</Field>
-								<Field label="Additional request headers">
+								<Field label={t("Additional request headers")}>
 									<textarea
 										className={textareaClass}
 										rows={5}
@@ -683,16 +700,16 @@ export function MarketingChannelsPage() {
 									/>
 								</Field>
 								<div className="flex items-center justify-between rounded-lg border p-3">
-									<Label htmlFor="connector-enabled">Enabled</Label>
+									<Label htmlFor="connector-enabled">{t("Enabled")}</Label>
 									<Switch id="connector-enabled" checked={enabled} onCheckedChange={setEnabled} />
 								</div>
 								<div className="flex gap-2">
 									<Button type="submit" disabled={busy || !name.trim() || !endpoint.trim()}>
-										<Plus className="size-4" /> {editingId ? "Save" : "Add channel"}
+										<Plus className="size-4" /> {editingId ? t("Save") : t("Add channel")}
 									</Button>
 									{editingId && (
 										<Button type="button" variant="outline" onClick={reset}>
-											Cancel
+											{t("Cancel")}
 										</Button>
 									)}
 								</div>
@@ -701,9 +718,9 @@ export function MarketingChannelsPage() {
 					</Card>
 					<Card>
 						<CardHeader>
-							<CardTitle>Connected channels</CardTitle>
+							<CardTitle>{t("Connected channels")}</CardTitle>
 							<CardDescription>
-								Journey deliveries carry an idempotency key and an HMAC signature.
+								{t("Journey deliveries carry an idempotency key and an HMAC signature.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
@@ -721,7 +738,7 @@ export function MarketingChannelsPage() {
 											</Badge>
 										</div>
 										<p className="mt-1 truncate text-sm text-muted-foreground">
-											{labelize(connector.channel)} · {connector.endpoint_url}
+											{labelize(connector.channel)} {t("·")} {connector.endpoint_url}
 										</p>
 										<p className="mt-1 text-xs text-muted-foreground">
 											{connector.secret_configured ? "Signed requests" : "Unsigned requests"}
@@ -729,7 +746,7 @@ export function MarketingChannelsPage() {
 									</div>
 									<div className="flex gap-2">
 										<Button variant="outline" size="sm" onClick={() => edit(connector)}>
-											<Pencil className="size-4" /> Edit
+											<Pencil className="size-4" /> {t("Edit")}
 										</Button>
 										<Button
 											variant="ghost"
@@ -745,7 +762,7 @@ export function MarketingChannelsPage() {
 							))}
 							{!connectors.length && (
 								<p className="py-8 text-center text-sm text-muted-foreground">
-									No external channels connected yet.
+									{t("No external channels connected yet.")}
 								</p>
 							)}
 						</CardContent>

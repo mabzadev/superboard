@@ -2,6 +2,33 @@ import type { PluginApiAdapter } from "@superboard/front-ui/api";
 
 export const adapters = [
 	{
+		id: "supbrd-plugmod-marketing.command.create_notification",
+		kind: "command",
+		operations: [
+			{
+				method: "POST",
+				path: "/api/v1/projects/:projectRef/notifications",
+				query: "none",
+				body: "passthrough",
+			},
+		],
+	},
+
+	{
+		id: "supbrd-plugmod-marketing.data_source.notifications",
+		kind: "data_source",
+		operations: [
+			{
+				method: "POST",
+				path: "/api/v1/projects/:projectRef/notifications/search",
+				query: "none",
+				body: "passthrough",
+				read_only: true,
+			},
+		],
+	},
+
+	{
 		id: "supbrd-plugmod-marketing.command.create_email_campaign",
 		kind: "command",
 		operations: [

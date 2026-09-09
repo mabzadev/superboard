@@ -19,6 +19,7 @@ export type MarketingEmailCommand = {
   projectId: number;
   referenceId: string;
   profileId: string;
+  managed?: boolean;
   publicConfig: EmailSmtpPublicConfig;
   secret: EmailSmtpSecretConfig;
   message: EmailSmtpTransportMessage;
@@ -51,6 +52,7 @@ export async function sendSmtpMessage(
           projectId: command.projectId,
           referenceId: command.referenceId,
           profileId: command.profileId,
+          ...(command.managed ? { senderAuthority: "email" } : {}),
           publicConfig: command.publicConfig,
           // AWS SES credentials are owned exclusively by the Email Worker.
           // Existing project profiles may still contain legacy SMTP material,

@@ -1,3 +1,4 @@
+import { pluginPackageOwner } from "@superboard/contracts/plugin-packages";
 import type { APIRoute } from "astro";
 
 import { jsonResponse, requirePluginOperator } from "../../../../lib/operator-guard.js";
@@ -27,6 +28,7 @@ export const GET: APIRoute = async (context) => {
 		const items = superBoardRuntimePluginCatalog().plugins.flatMap(({ manifest }) =>
 			manifest.stores.map((store) => ({
 				plugin_id: manifest.plugin_id,
+				package_id: pluginPackageOwner(manifest.plugin_id),
 				store_id: store.store_id,
 				authority: store.authority,
 				schema_version: store.schema_version,

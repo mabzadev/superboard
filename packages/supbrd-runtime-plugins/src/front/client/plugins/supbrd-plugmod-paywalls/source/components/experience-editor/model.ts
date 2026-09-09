@@ -16,6 +16,8 @@ export const DEFAULT_THEME: ExperienceTheme = {
 };
 
 const blockDefaults: Record<EditorBlockType, Record<string, unknown>> = {
+	question: {text:"Your goal",attribute:"goal",required:false,options:[{value:"beginner",label:"Beginner"},{value:"advanced",label:"Advanced"}]},
+	marketing_consent: {title:"Receive product news",body:"",default:false,required:false,list_ids:[]},
 	heading: { text: "Unlock everything", align: "center" },
 	text: { text: "A better experience starts here.", align: "center" },
 	image: { url: "", alt: "", aspect_ratio: "16/9" },
@@ -153,8 +155,8 @@ export function toPaywallDefinition(document: ExperienceDocument) {
 			(
 				block,
 			): block is ExperienceBlock & {
-				type: Exclude<EditorBlockType, "benefits">;
-			} => block.type !== "benefits",
+				type: Exclude<EditorBlockType, "benefits" | "question" | "marketing_consent">;
+			} => !["benefits","question","marketing_consent"].includes(block.type),
 		) ?? [];
 	return {
 		schema_version: 1 as const,

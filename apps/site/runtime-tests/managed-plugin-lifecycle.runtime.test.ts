@@ -1,3 +1,8 @@
+import {
+	pluginPackage,
+	pluginPackageOwner,
+	pluginPackages,
+} from "@superboard/contracts/plugin-packages";
 import { SELF, env } from "cloudflare:test";
 import { afterEach, beforeEach, expect, test } from "vitest";
 
@@ -23,7 +28,7 @@ const headers = {
 	"X-EmDash-Request": "1",
 	"X-Parity-Operator": "1",
 };
-const plugin = "supbrd-plug-settings";
+const plugin = "supbrd-plug-user";
 
 function action(pluginId: string, name: string) {
 	return SELF.fetch(`https://site.example/_emdash/api/superboard/plugins/${pluginId}/${name}`, {
@@ -36,10 +41,69 @@ beforeEach(async () => {
 	const active = await env.DB.prepare(
 		"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE state = 'active'",
 	).all<{ plugin_id: string }>();
-	for (const row of active.results) expect((await action(row.plugin_id, "disable")).ok).toBe(true);
+	for (const id of new Set(active.results.map((row) => pluginPackageOwner(row.plugin_id)))) {
+		if (id === "supbrd-core") continue;
+		const response = await action(id, "disable");
+		expect(response.ok, await response.clone().text()).toBe(true);
+	}
 });
 afterEach(async () => {
 	await env.DB.exec("DROP TRIGGER IF EXISTS reject_test_activation;");
+});
+
+test("native package controls retain the Arabic admin locale", async () => {
+	const response = await SELF.fetch(
+		"https://site.example/_emdash/api/plugins/supbrd-plug-journeys/admin",
+		{
+			method: "POST",
+			headers: { ...headers, "Content-Type": "application/json", "Accept-Language": "ar" },
+			body: JSON.stringify({ type: "page_load", page: "/" }),
+		},
+	);
+	expect(response.status, await response.clone().text()).toBe(200);
+	const body = await response.json<{
+		data: { blocks: Array<{ type: string; elements?: Array<{ label: string }> }> };
+	}>();
+	expect(
+		body.data.blocks
+			.filter((block) => block.type === "actions")
+			.flatMap((block) => block.elements?.map((element) => element.label) ?? []),
+	).toEqual(["تفعيل", "تفعيل"]);
+});
+
+test("a function disabled through the native package page stays disabled after re-enabling its package", async () => {
+	const owner = "supbrd-plug-journeys";
+	const flows = "supbrd-plugmod-flows";
+	const enabled = await action(owner, "enable");
+	expect(enabled.status, await enabled.clone().text()).toBe(201);
+	const previousPreference = await env.DB.prepare(
+		"SELECT enabled FROM superboard_plugin_feature_preferences WHERE instance_id='vocostar' AND target='local' AND component_id=?",
+	)
+		.bind(flows)
+		.first<{ enabled: number }>();
+	try {
+		const changed = await SELF.fetch(`https://site.example/_emdash/api/plugins/${owner}/admin`, {
+			method: "POST",
+			headers: { ...headers, "Content-Type": "application/json" },
+			body: JSON.stringify({ type: "block_action", action_id: `package-feature:${flows}:disable` }),
+		});
+		expect(changed.status, await changed.clone().text()).toBe(200);
+		expect((await action(owner, "disable")).status).toBe(201);
+		expect((await action(owner, "enable")).status).toBe(201);
+		const states = await env.DB.prepare(
+			"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id='vocostar' AND target='local' AND plugin_id IN ('supbrd-plugmod-flows','supbrd-plugmod-onboardings') ORDER BY plugin_id",
+		).all();
+		expect(states.results).toEqual([
+			{ plugin_id: flows, state: "disabled" },
+			{ plugin_id: "supbrd-plugmod-onboardings", state: "active" },
+		]);
+	} finally {
+		await env.DB.prepare(
+			"UPDATE superboard_plugin_feature_preferences SET enabled=? WHERE instance_id='vocostar' AND target='local' AND component_id=?",
+		)
+			.bind(previousPreference?.enabled ?? 1, flows)
+			.run();
+	}
 });
 
 async function lifecycle() {
@@ -63,8 +127,8 @@ test("repeated activation and disable keep the same Release", async () => {
 test("failed activation restores lifecycle and health exactly", async () => {
 	expect((await action(plugin, "enable")).status).toBe(201);
 	const before = await lifecycle();
-	const health = await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health").all();
-	const dependency = await env.DB.prepare("SELECT * FROM superboard_dependency_health").all();
+	const health = await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health ORDER BY plugin_id").all();
+	const dependency = await env.DB.prepare("SELECT * FROM superboard_dependency_health ORDER BY dependency_id").all();
 	const pointer = await env.DB.prepare("SELECT * FROM superboard_front_active_releases").all();
 	await env.DB.exec(
 		"CREATE TRIGGER reject_test_activation BEFORE UPDATE ON superboard_front_active_releases BEGIN SELECT RAISE(ABORT, 'injected activation failure'); END;",
@@ -73,9 +137,9 @@ test("failed activation restores lifecycle and health exactly", async () => {
 	expect(result.status).toBeGreaterThanOrEqual(400);
 	expect(await lifecycle()).toMatchObject({ results: before.results });
 	expect(
-		await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health").all(),
+		await env.DB.prepare("SELECT * FROM superboard_plugin_runtime_health ORDER BY plugin_id").all(),
 	).toMatchObject({ results: health.results });
-	expect(await env.DB.prepare("SELECT * FROM superboard_dependency_health").all()).toMatchObject({
+	expect(await env.DB.prepare("SELECT * FROM superboard_dependency_health ORDER BY dependency_id").all()).toMatchObject({
 		results: dependency.results,
 	});
 	expect(
@@ -100,7 +164,16 @@ test("concurrent plugin changes cannot overwrite another completed activation", 
 	const active = await env.DB.prepare(
 		"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE state = 'active' ORDER BY plugin_id",
 	).all();
-	expect(active.results).toEqual([{ plugin_id: "supbrd-plug-products" }, { plugin_id: plugin }]);
+	expect(active.results).toEqual(
+		[
+			"supbrd-plug-products",
+			"supbrd-plug-user",
+			"supbrd-plugmod-billing",
+			"supbrd-plugmod-paywalls",
+		]
+			.toSorted()
+			.map((plugin_id) => ({ plugin_id })),
+	);
 });
 
 test.each([
@@ -124,7 +197,7 @@ test.each([
 			instance_id: "vocostar",
 			target: "local",
 			plugin_id: plugin,
-			store_id: `${plugin}.store.settings`,
+			store_id: `${plugin}.store.user_directory`,
 			project_ref: "1-prod",
 			entity_type: "settings",
 			entity_id: `failure-customization-${_stage}`,
@@ -136,7 +209,7 @@ test.each([
 			),
 			payload: { name: "Operator customization" },
 		});
-		const url = `https://site.example/_emdash/api/superboard/plugins/${plugin}/data-sources/effective_settings?project_ref=1-prod`;
+		const url = `https://site.example/_emdash/api/superboard/plugins/${plugin}/data-sources/current_profile?project_ref=1-prod`;
 		const data = await SELF.fetch(url, { headers });
 		expect(data.status).toBe(200);
 		const saved = await data.json();
@@ -172,7 +245,7 @@ test("inactive plugin data is unavailable with 404 and restored on reactivation"
 	expect((await action(plugin, "enable")).status).toBe(201);
 	await putPluginStoreRecord(env.DB, {
 		plugin_id: plugin,
-		store_id: `${plugin}.store.settings`,
+		store_id: `${plugin}.store.user_directory`,
 		instance_id: "vocostar",
 		target: "local",
 		project_ref: "1-prod",
@@ -186,7 +259,7 @@ test("inactive plugin data is unavailable with 404 and restored on reactivation"
 			env.SUPERBOARD_PLUGIN_STORE_ENCRYPTION_KEY,
 		),
 	});
-	const url = `https://site.example/_emdash/api/superboard/plugins/${plugin}/data-sources/effective_settings?project_ref=1-prod`;
+	const url = `https://site.example/_emdash/api/superboard/plugins/${plugin}/data-sources/current_profile?project_ref=1-prod`;
 	const before = await SELF.fetch(url, { headers });
 	expect(before.status).toBe(200);
 	const saved = await before.json();
@@ -243,18 +316,18 @@ test("replays an idempotency key and rejects reuse for another plugin", async ()
 	expect(conflict.status).toBe(409);
 });
 
-test("every business plugin activates alone and disables without User", async () => {
-	const { superBoardRuntimePluginCatalog } =
-		await import("../src/lib/superboard-plugin-catalog.js");
-	for (const { manifest } of superBoardRuntimePluginCatalog().plugins) {
-		const enabled = await action(manifest.plugin_id, "enable");
-		expect(enabled.status, `${manifest.plugin_id}: ${await enabled.clone().text()}`).toBe(201);
+test("every business package activates and disables all its declared functions together", async () => {
+	for (const owner of pluginPackages.filter((item) => item.kind === "business")) {
+		const enabled = await action(owner.id, "enable");
+		expect(enabled.status, `${owner.id}: ${await enabled.clone().text()}`).toBe(201);
 		const active = await env.DB.prepare(
 			"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE state = 'active' ORDER BY plugin_id",
 		).all();
-		expect(active.results).toEqual([{ plugin_id: manifest.plugin_id }]);
-		const disabled = await action(manifest.plugin_id, "disable");
-		expect(disabled.status, `${manifest.plugin_id}: ${await disabled.clone().text()}`).toBe(201);
+		expect(
+			active.results.filter((row) => pluginPackageOwner(row.plugin_id) !== "supbrd-core"),
+		).toEqual(owner.components.toSorted().map((plugin_id) => ({ plugin_id })));
+		const disabled = await action(owner.id, "disable");
+		expect(disabled.status, `${owner.id}: ${await disabled.clone().text()}`).toBe(201);
 	}
 }, 30000);
 
@@ -300,18 +373,23 @@ test("rejects a stale module database and permits disabling an unhealthy plugin"
 	}
 });
 
-test("preserves every other plugin when each plugin is disabled from the complete catalogue", async () => {
-	const { superBoardRuntimePluginCatalog } =
-		await import("../src/lib/superboard-plugin-catalog.js");
-	const ids = superBoardRuntimePluginCatalog().plugins.map(({ manifest }) => manifest.plugin_id);
+test("preserves the other packages when one package is disabled from the complete catalogue", async () => {
+	const ids = pluginPackages.filter((item) => item.kind === "business").map((item) => item.id);
 	for (const id of ids) expect((await action(id, "enable")).status).toBe(201);
 	for (const id of ids) {
 		expect((await action(id, "disable")).status).toBe(201);
 		const active = await env.DB.prepare(
 			"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE state = 'active' ORDER BY plugin_id",
 		).all<{ plugin_id: string }>();
-		expect(active.results.map((row) => row.plugin_id)).toEqual(
-			ids.filter((pluginId) => pluginId !== id),
+		expect(
+			active.results
+				.map((row) => row.plugin_id)
+				.filter((component) => pluginPackageOwner(component) !== "supbrd-core"),
+		).toEqual(
+			ids
+				.filter((pluginId) => pluginId !== id)
+				.flatMap((ownerId) => pluginPackage(ownerId)?.components ?? [])
+				.toSorted(),
 		);
 		expect((await action(id, "enable")).status).toBe(201);
 	}
@@ -329,10 +407,10 @@ test("waits for accepted operations before disabling their plugin", async () => 
 		target: "local",
 		project_ref: "1-prod",
 		plugin_id: plugin,
-		command_id: `${plugin}.command.update_effective_settings`,
-		adapter_operation: "settings.update",
+		command_id: `${plugin}.command.update_profile`,
+		adapter_operation: "profile.update",
 		method: "POST",
-		request_path: "/api/v1/settings",
+		request_path: "/api/v1/users",
 		request_body: new TextEncoder().encode("{}"),
 		accepted_at: new Date().toISOString(),
 		encryption_key: encryptionKey,

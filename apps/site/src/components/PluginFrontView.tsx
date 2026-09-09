@@ -30,7 +30,7 @@ export function PluginFrontView({
 	const routeId = mount?.route_id ?? "";
 	const { projectScope: scope } = useFrontContext();
 	const { scopeError, requiresScope } = useFrontRuntimeState();
-	const { ready } = useProjectSelection();
+	const { ready, selectedProject } = useProjectSelection();
 	const View = useMemo(
 		() =>
 			lazy(async () => {
@@ -67,10 +67,14 @@ export function PluginFrontView({
 		);
 	if (requiresScope && (!scope || ready === false))
 		return <p role="status">{message("site.front.loading")}</p>;
-	const parameters = { lang: projection.locale, ...mount.parameters };
-	const props = { path: projection.path, parameters, locale: projection.locale };
+	const locale = projection.locale;
+	const parameters = { ...mount.parameters, lang: locale };
+	const props = { path: projection.path, parameters, locale };
 	return (
-		<ViewBoundary key={`${pluginId}:${routeId}`} message={message}>
+		<ViewBoundary
+			key={`${pluginId}:${routeId}:${selectedProject?.id ?? "instance"}`}
+			message={message}
+		>
 			<Suspense fallback={<p role="status">{message("site.front.loading")}</p>}>
 				<View {...props} />
 			</Suspense>

@@ -1,0 +1,92 @@
+{
+	"schema_version": 1,
+	"packages": [
+		{
+			"id": "supbrd-core",
+			"kind": "core",
+			"label": "SuperBoard",
+			"label_fr": "SuperBoard",
+			"components": [
+				"supbrd-plug-settings",
+				"supbrd-plug-audit",
+				"supbrd-plugmod-gateway",
+				"supbrd-plugmod-observability",
+				"supbrd-plugmod-mcp"
+			],
+			"required_components": [
+				"supbrd-plug-settings",
+				"supbrd-plug-audit",
+				"supbrd-plugmod-gateway",
+				"supbrd-plugmod-observability"
+			]
+		},
+		{
+			"id": "supbrd-plug-identity",
+			"kind": "business",
+			"label": "Identity",
+			"label_fr": "Identité",
+			"components": ["supbrd-plug-user"],
+			"required_components": []
+		},
+		{
+			"id": "supbrd-plug-data",
+			"kind": "business",
+			"label": "Data and files",
+			"label_fr": "Données et fichiers",
+			"components": ["supbrd-plug-content", "supbrd-plugmod-files"],
+			"required_components": []
+		},
+		{
+			"id": "supbrd-plug-commerce",
+			"kind": "business",
+			"label": "Commerce",
+			"label_fr": "Commerce",
+			"components": ["supbrd-plug-products", "supbrd-plugmod-billing", "supbrd-plugmod-paywalls"],
+			"required_components": []
+		},
+		{
+			"id": "supbrd-plug-communication",
+			"kind": "business",
+			"label": "Communication",
+			"label_fr": "Communication",
+			"components": [
+				"supbrd-plugmod-marketing",
+				"supbrd-plugmod-email",
+				"supbrd-plugmod-dynamic-links"
+			],
+			"required_components": []
+		},
+		{
+			"id": "supbrd-plug-journeys",
+			"kind": "business",
+			"label": "Journeys",
+			"label_fr": "Parcours",
+			"components": ["supbrd-plugmod-onboardings", "supbrd-plugmod-flows"],
+			"required_components": []
+		},
+		{
+			"id": "supbrd-plug-support",
+			"kind": "business",
+			"label": "Support",
+			"label_fr": "Support",
+			"components": ["supbrd-plugmod-support"],
+			"required_components": []
+		},
+		{
+			"id": "supbrd-plug-analytics",
+			"kind": "business",
+			"label": "Statistics",
+			"label_fr": "Statistiques",
+			"components": ["supbrd-plugmod-analytics"],
+			"required_components": []
+		},
+		{
+			"id": "supbrd-plugmod-vocostar",
+			"kind": "application",
+			"label": "Vocostar",
+			"label_fr": "Vocostar",
+			"components": ["supbrd-plugmod-vocostar"],
+			"required_components": []
+		}
+	]
+}

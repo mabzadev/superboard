@@ -1,5 +1,7 @@
 "use client";
-
+import { createStudioDocument, useExperienceI18n } from "@superboard/front-ui/experience-studio";
+import { Button } from "@superboard/front-ui/kumo";
+import { useDraftAutosave } from "@superboard/front-ui/use-draft-autosave";
 import { FlaskConical, MapPin, Pencil, Plus, Rocket, Target, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -8,7 +10,6 @@ import {
 	ModulePage,
 	moduleErrorMessage,
 } from "../../../../../../../../../supbrd-front-ui/src/shared/components/modules/ModulePage.js";
-import { Button } from "../../../../../../../../../supbrd-front-ui/src/shared/components/ui/button.js";
 import {
 	Card,
 	CardContent,
@@ -60,7 +61,6 @@ import {
 import {
 	ExperienceEditor,
 	ExperienceStatisticsFilters,
-	createExperienceDocument,
 	fromOnboardingDefinition,
 	toOnboardingDefinition,
 	type ExperienceDocument,
@@ -70,6 +70,9 @@ const errorMessage = (error: unknown) =>
 	error instanceof ApiError ? error.message : moduleErrorMessage(error);
 
 export function OnboardingsPage() {
+	const { t, locale } = useExperienceI18n();
+	const [studioTab, setStudioTab] = useState("Design");
+	const [compared, setCompared] = useState<string[]>([]);
 	const { selectedProject } = useProjectSelection();
 	const [items, setItems] = useState<Onboarding[]>([]);
 	const [selected, setSelected] = useState<Onboarding>();
@@ -83,13 +86,24 @@ export function OnboardingsPage() {
 		display_name: "",
 		description: "",
 	});
-	const [document, setDocument] = useState<ExperienceDocument>(createExperienceDocument);
+	const [document, setDocument] = useState<ExperienceDocument>(() =>
+		createStudioDocument("onboarding", locale),
+	);
 	const [documentValid, setDocumentValid] = useState(true);
 	const [editorKey, setEditorKey] = useState("new");
 	const [editorLoading, setEditorLoading] = useState(false);
 	const editorRequest = useRef(0);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+
+	const draftStatus = useDraftAutosave({
+		resourceKey: (selectedProject?.id ?? "") + ":" + (selected?.id ?? "") + ":" + editorKey,
+		value: toOnboardingDefinition(document),
+		enabled: Boolean(selectedProject && selected && documentValid && !busy && !editorLoading),
+		save: async (value) =>
+			createOnboardingVersion(selectedProject!.id, selected!.id, { configuration: value }),
+		onSaved: (version) => setVersions((values) => [version, ...values]),
+	});
 
 	const load = useCallback(async () => {
 		if (!selectedProject) return;
@@ -143,7 +157,7 @@ export function OnboardingsPage() {
 				description: metadata.description || null,
 			});
 			setSelected((current) => (current ? { ...current, ...metadata } : current));
-			showSuccessNotification("Onboarding details updated");
+			showSuccessNotification(t("Onboarding details updated"));
 			await load();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -159,9 +173,9 @@ export function OnboardingsPage() {
 			await deleteOnboarding(selectedProject.id, selected.id);
 			setSelected(undefined);
 			setVersions([]);
-			setDocument(createExperienceDocument());
+			setDocument(createStudioDocument("onboarding", locale));
 			setEditorKey("new");
-			showSuccessNotification("Onboarding deleted");
+			showSuccessNotification(t("Onboarding deleted"));
 			await load();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -181,7 +195,7 @@ export function OnboardingsPage() {
 			});
 			setIdentifier("");
 			setName("");
-			showSuccessNotification("Onboarding and first draft created");
+			showSuccessNotification(t("Onboarding and first draft created"));
 			await load();
 			await open(result);
 		} catch (cause) {
@@ -212,7 +226,7 @@ export function OnboardingsPage() {
 		setBusy(true);
 		try {
 			await publishOnboarding(selectedProject.id, selected.id, id);
-			showSuccessNotification("Onboarding version published");
+			showSuccessNotification(t("Onboarding version published"));
 			await Promise.all([load(), open(selected)]);
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -223,68 +237,102 @@ export function OnboardingsPage() {
 
 	return (
 		<ModulePage
-			title="Onboardings"
-			description="Design multi-screen flows, target audiences and publish experiments."
+			title={t("Onboardings")}
+			description={t("Design multi-screen flows, target audiences and publish experiments.")}
 			error={error}
 		>
 			{!selectedProject ? (
 				<EmptyProject />
 			) : (
-				<div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-					<Card>
-						<CardHeader>
-							<CardTitle>Onboardings</CardTitle>
-							<CardDescription>Create a flow with its first visual draft.</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-3">
-							<Input
-								placeholder="Identifier"
-								value={identifier}
-								onChange={(event) =>
-									setIdentifier(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"))
-								}
-							/>
-							<Input
-								placeholder="Display name"
-								value={name}
-								onChange={(event) => setName(event.target.value)}
-							/>
-							<Button
-								className="w-full"
-								disabled={busy || !identifier || !name || !documentValid}
-								onClick={() => void create()}
-							>
-								<Plus />
-								Create onboarding
-							</Button>
-							<div className="space-y-2 border-t pt-4">
-								{items.map((item) => (
-									<button
-										key={item.id}
-										className={`w-full rounded-lg border p-3 text-left ${selected?.id === item.id ? "border-primary bg-primary/5" : ""}`}
-										onClick={() => void open(item)}
+				<div className="grid gap-6">
+					<details open={!selected}>
+						<summary className="cursor-pointer rounded-lg border border-kumo-line bg-kumo-base p-3 font-medium">
+							{t("Library")}
+						</summary>
+						<Card className="border-kumo-line bg-kumo-base">
+							<CardContent className="space-y-3">
+								<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+									<Input
+										placeholder={t("Identifier")}
+										value={identifier}
+										onChange={(event) =>
+											setIdentifier(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"))
+										}
+									/>
+									<Input
+										placeholder={t("Display name")}
+										value={name}
+										onChange={(event) => {
+											const next = event.target.value;
+											const slug = (text: string) =>
+												text
+													.normalize("NFKD")
+													.replace(/[\u0300-\u036f]/g, "")
+													.toLowerCase()
+													.replace(/[^a-z0-9]+/g, "_")
+													.replace(/^_+|_+$/g, "");
+											if (!identifier || identifier === slug(name)) setIdentifier(slug(next));
+											setName(next);
+										}}
+									/>
+									<Button
+										className="w-full"
+										disabled={busy || !identifier || !name || !documentValid}
+										onClick={() => void create()}
 									>
-										<b>{item.display_name}</b>
-										<p className="text-xs text-muted-foreground">
-											{item.identifier} ·{" "}
-											{item.active_version ? `v${item.active_version} published` : "not published"}
-										</p>
-									</button>
-								))}
-								{!items.length && (
-									<p className="text-sm text-muted-foreground">No onboardings yet.</p>
-								)}
-							</div>
-						</CardContent>
-					</Card>
+										<Plus />
+										{t("Create onboarding")}
+									</Button>
+								</div>
+								<div className="space-y-2 border-t pt-4">
+									{items.map((item) => (
+										<button
+											key={item.id}
+											className={`w-full rounded-lg border p-3 text-start ${selected?.id === item.id ? "border-primary bg-primary/5" : ""}`}
+											onClick={() => void open(item)}
+										>
+											<b>{item.display_name}</b>
+											<p className="text-xs text-muted-foreground">
+												{item.identifier} {t("·")}{" "}
+												{item.active_version
+													? `v${item.active_version} published`
+													: "not published"}
+											</p>
+										</button>
+									))}
+									{!items.length && (
+										<p className="text-sm text-muted-foreground">{t("No onboardings yet.")}</p>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+					</details>
 					<div className="space-y-6">
-						<Card>
+						<nav className="flex gap-2">
+							{["Design", "Delivery", "Versions", "Results"].map((tab) => (
+								<Button
+									key={tab}
+									variant={studioTab === tab ? "secondary" : "ghost"}
+									onClick={() => setStudioTab(tab)}
+								>
+									{t(tab)}
+								</Button>
+							))}
+						</nav>
+						<Card
+							className="border-kumo-line bg-kumo-base"
+							hidden={!["Design", "Versions"].includes(studioTab)}
+						>
 							<CardHeader>
 								<CardTitle>
-									{selected ? `Edit ${selected.display_name}` : "Visual onboarding editor"}
+									{selected
+										? `${t("Edit")} ${selected.display_name}`
+										: t("Visual onboarding editor")}
 								</CardTitle>
 								<CardDescription>
-									Reorder screens and blocks, configure transitions, theme and mobile preview.
+									{t(
+										"Reorder screens and blocks, configure transitions, theme and mobile preview.",
+									)}
 								</CardDescription>
 							</CardHeader>
 							<CardContent
@@ -293,96 +341,143 @@ export function OnboardingsPage() {
 								aria-busy={busy || editorLoading}
 							>
 								{selected && (
-									<div className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_2fr_auto_auto]">
-										<label className="space-y-1 text-xs">
-											Display name
-											<Input
-												value={metadata.display_name}
-												onChange={(event) =>
-													setMetadata((value) => ({
-														...value,
-														display_name: event.target.value,
-													}))
-												}
-											/>
-										</label>
-										<label className="space-y-1 text-xs">
-											Description
-											<Input
-												value={metadata.description}
-												onChange={(event) =>
-													setMetadata((value) => ({
-														...value,
-														description: event.target.value,
-													}))
-												}
-											/>
-										</label>
-										<Button
-											className="self-end"
-											disabled={busy || !metadata.display_name}
-											onClick={() => void saveMetadata()}
-										>
-											Save details
-										</Button>
-										<Button
-											className="self-end"
-											variant="outline"
-											disabled={busy}
-											onClick={() => void removeOnboarding()}
-										>
-											<Trash2 />
-											Delete
-										</Button>
-									</div>
+									<details>
+										<summary className="cursor-pointer py-2 text-sm text-kumo-subtle">
+											{t("Details")}
+										</summary>
+										<div className="grid gap-3 rounded-lg border border-kumo-line p-4 md:grid-cols-[1fr_2fr_auto_auto]">
+											<label className="space-y-1 text-xs">
+												{t("Display name")}
+												<Input
+													value={metadata.display_name}
+													onChange={(event) =>
+														setMetadata((value) => ({
+															...value,
+															display_name: event.target.value,
+														}))
+													}
+												/>
+											</label>
+											<label className="space-y-1 text-xs">
+												{t("Description")}
+												<Input
+													value={metadata.description}
+													onChange={(event) =>
+														setMetadata((value) => ({
+															...value,
+															description: event.target.value,
+														}))
+													}
+												/>
+											</label>
+											<Button
+												className="self-end"
+												disabled={busy || !metadata.display_name}
+												onClick={() => void saveMetadata()}
+											>
+												{t("Save details")}
+											</Button>
+											<Button
+												className="self-end"
+												variant="outline"
+												disabled={busy}
+												onClick={() => void removeOnboarding()}
+											>
+												<Trash2 />
+												{t("Delete")}
+											</Button>
+										</div>
+									</details>
 								)}
-								<ExperienceEditor
-									key={editorKey}
-									kind="onboarding"
-									initialDocument={document}
-									onChange={(value, valid) => {
-										setDocument(value);
-										setDocumentValid(valid);
-									}}
-								/>
+								<p role="status" className="text-xs text-kumo-subtle">
+									{t(selected ? draftStatus : "Create to save")}
+								</p>
+								<div hidden={studioTab !== "Design"}>
+									<ExperienceEditor
+										key={editorKey}
+										kind="onboarding"
+										initialDocument={document}
+										onChange={(value, valid) => {
+											setDocument(value);
+											setDocumentValid(valid);
+										}}
+									/>
+								</div>
 								<Button
 									disabled={!selected || busy || editorLoading || !documentValid}
 									onClick={() => void save()}
 								>
 									<Plus />
-									Save immutable draft
+									{t("Save immutable draft")}
 								</Button>
-								<div className="space-y-2 border-t pt-4">
-									<p className="text-sm font-medium">Version history</p>
+								<div hidden={studioTab !== "Versions"} className="space-y-2 border-t pt-4">
+									<p className="text-sm font-medium">{t("Version history")}</p>
 									{versions.map((version) => (
 										<div
 											key={version.id}
 											className="flex items-center justify-between rounded-lg border p-3"
 										>
 											<button
-												className="text-left"
+												className="text-start"
 												onClick={() => {
 													setDocument(fromOnboardingDefinition(version.configuration));
 													setEditorKey(`${selected?.id}:${version.id}:load`);
 												}}
 											>
-												<b>Version {version.version}</b>
-												<p className="text-xs capitalize text-muted-foreground">{version.state}</p>
+												<b>
+													{t("Version")} {version.version}
+												</b>
+												<p className="text-xs capitalize text-muted-foreground">
+													{t(version.state)}
+												</p>
 											</button>
+											<Button
+												size="sm"
+												variant={compared.includes(version.id) ? "secondary" : "ghost"}
+												onClick={() =>
+													setCompared((value) =>
+														value.includes(version.id)
+															? value.filter((id) => id !== version.id)
+															: [...value.slice(-1), version.id],
+													)
+												}
+											>
+												{t("Compare")}
+											</Button>
 											<Button
 												variant="outline"
 												disabled={busy || version.state === "published"}
 												onClick={() => void publish(version.id)}
 											>
 												<Rocket />
-												Publish
+												{t("Publish")}
 											</Button>
 										</div>
 									))}
 								</div>
+								{studioTab === "Versions" && compared.length === 2 && (
+									<section>
+										<h3 className="mb-4 font-semibold">{t("Compare versions")}</h3>
+										<div className="grid gap-4 xl:grid-cols-2">
+											{versions
+												.filter((version) => compared.includes(version.id))
+												.map((version) => (
+													<div key={version.id}>
+														<p className="mb-2">v{version.version}</p>
+														<ExperienceEditor
+															previewOnly
+															kind="onboarding"
+															initialDocument={fromOnboardingDefinition(version.configuration)}
+														/>
+													</div>
+												))}
+										</div>
+									</section>
+								)}
 							</CardContent>
 						</Card>
-						{selected && (
+						{studioTab === "Results" && <OnboardingStatisticsPage />}
+						{selected && studioTab === "Delivery" && (
 							<OnboardingDeliveryControls
 								projectRef={selectedProject.id}
 								onboarding={selected}
@@ -417,6 +512,7 @@ function OnboardingDeliveryControls({
 	experiences: OnboardingExperience[];
 	onChanged: () => Promise<void>;
 }) {
+	const { t } = useExperienceI18n();
 	const published = versions.filter(({ state }) => state === "published");
 	const [placementKey, setPlacementKey] = useState("app_launch");
 	const [placementName, setPlacementName] = useState("App launch");
@@ -467,7 +563,7 @@ function OnboardingDeliveryControls({
 		try {
 			await deleteOnboardingPlacement(projectRef, id);
 			if (editingPlacementId === id) setEditingPlacementId(undefined);
-			showSuccessNotification("Placement deleted");
+			showSuccessNotification(t("Placement deleted"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -490,7 +586,7 @@ function OnboardingDeliveryControls({
 				},
 				active: true,
 			});
-			showSuccessNotification("Targeting rule created");
+			showSuccessNotification(t("Targeting rule created"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -502,7 +598,7 @@ function OnboardingDeliveryControls({
 		setBusy(true);
 		try {
 			await deleteOnboardingTargetingRule(projectRef, id);
-			showSuccessNotification("Targeting rule deleted");
+			showSuccessNotification(t("Targeting rule deleted"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -527,7 +623,7 @@ function OnboardingDeliveryControls({
 					version_id: version.id,
 				})),
 			});
-			showSuccessNotification("A/B experience created as draft");
+			showSuccessNotification(t("A/B experience created as draft"));
 			await onChanged();
 		} catch (cause) {
 			showErrorNotification(errorMessage(cause));
@@ -556,16 +652,18 @@ function OnboardingDeliveryControls({
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<MapPin />
-					Delivery, targeting and A/B
+					{t("Delivery, targeting and A/B")}
 				</CardTitle>
 				<CardDescription>
-					Resolve one published flow using placement priority, audience rules and stable variants.
+					{t(
+						"Resolve one published flow using placement priority, audience rules and stable variants.",
+					)}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-5">
 				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 					<label className="space-y-1 text-xs">
-						Placement key
+						{t("Placement key")}
 						<Input
 							value={placementKey}
 							onChange={(event) =>
@@ -574,29 +672,30 @@ function OnboardingDeliveryControls({
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Name
+						{t("Name")}
 						<Input
 							value={placementName}
 							onChange={(event) => setPlacementName(event.target.value)}
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Published version
+						{t("Published version")}
 						<select
 							className="block h-9 w-full rounded-md border bg-background px-3 text-sm"
 							value={versionId}
 							onChange={(event) => setVersionId(event.target.value)}
 						>
-							<option value="">Use onboarding active version</option>
+							<option value="">{t("Use onboarding active version")}</option>
 							{published.map((version) => (
 								<option key={version.id} value={version.id}>
-									Version {version.version}
+									{t("Version")}
+									{version.version}
 								</option>
 							))}
 						</select>
 					</label>
 					<label className="space-y-1 text-xs">
-						Priority
+						{t("Priority")}
 						<Input
 							type="number"
 							value={priority}
@@ -607,13 +706,13 @@ function OnboardingDeliveryControls({
 				<div className="flex items-center justify-between">
 					<label className="flex items-center gap-2 text-sm">
 						<Switch checked={active} onCheckedChange={setActive} />
-						Active
+						{t("Active")}
 					</label>
 					<Button
 						disabled={busy || !placementKey || !placementName}
 						onClick={() => void savePlacement()}
 					>
-						Save placement
+						{t("Save placement")}
 					</Button>
 				</div>
 				{placements.map((placement) => (
@@ -624,13 +723,13 @@ function OnboardingDeliveryControls({
 						<span>
 							<b>{placement.name}</b>
 							<span className="ml-2 text-muted-foreground">
-								{placement.key} · priority {placement.priority} ·{" "}
+								{placement.key} {t("· priority")} {placement.priority} {t("·")}{" "}
 								{placement.active ? "active" : "inactive"}
 							</span>
 						</span>
 						<span className="flex gap-1">
 							<Button
-								size="icon"
+								shape="square"
 								variant="ghost"
 								aria-label={`Edit placement ${placement.name}`}
 								onClick={() => editPlacement(placement)}
@@ -638,7 +737,7 @@ function OnboardingDeliveryControls({
 								<Pencil />
 							</Button>
 							<Button
-								size="icon"
+								shape="square"
 								variant="ghost"
 								aria-label={`Delete placement ${placement.name}`}
 								disabled={busy}
@@ -651,13 +750,13 @@ function OnboardingDeliveryControls({
 				))}
 				<div className="grid gap-3 border-t pt-4 md:grid-cols-4">
 					<label className="space-y-1 text-xs">
-						Placement
+						{t("Placement")}
 						<select
 							className="block h-9 w-full rounded-md border bg-background px-3 text-sm"
 							value={rulePlacementId}
 							onChange={(event) => setRulePlacementId(event.target.value)}
 						>
-							<option value="">Select…</option>
+							<option value="">{t("Select…")}</option>
 							{placements.map((placement) => (
 								<option key={placement.id} value={placement.id}>
 									{placement.name}
@@ -666,23 +765,23 @@ function OnboardingDeliveryControls({
 						</select>
 					</label>
 					<label className="space-y-1 text-xs">
-						Platform
+						{t("Platform")}
 						<select
 							className="block h-9 w-full rounded-md border bg-background px-3 text-sm"
 							value={rulePlatform}
 							onChange={(event) => setRulePlatform(event.target.value)}
 						>
-							<option value="ios">iOS</option>
-							<option value="android">Android</option>
-							<option value="web">Web</option>
+							<option value="ios">{t("iOS")}</option>
+							<option value="android">{t("Android")}</option>
+							<option value="web">{t("Web")}</option>
 						</select>
 					</label>
 					<label className="space-y-1 text-xs">
-						Locale (optional)
+						{t("Locale (optional)")}
 						<Input
 							value={ruleLocale}
 							onChange={(event) => setRuleLocale(event.target.value)}
-							placeholder="fr-FR"
+							placeholder={t("fr-FR")}
 						/>
 					</label>
 					<Button
@@ -692,7 +791,7 @@ function OnboardingDeliveryControls({
 						onClick={() => void createRule()}
 					>
 						<Target />
-						Add audience rule
+						{t("Add audience rule")}
 					</Button>
 				</div>
 				{rules
@@ -704,10 +803,12 @@ function OnboardingDeliveryControls({
 						>
 							<span>
 								<b>{rule.name}</b>
-								<span className="ml-2 text-muted-foreground">priority {rule.priority}</span>
+								<span className="ml-2 text-muted-foreground">
+									{t("priority")} {rule.priority}
+								</span>
 							</span>
 							<Button
-								size="icon"
+								shape="square"
 								variant="ghost"
 								aria-label={`Delete rule ${rule.name}`}
 								disabled={busy}
@@ -719,20 +820,20 @@ function OnboardingDeliveryControls({
 					))}
 				<div className="grid gap-3 border-t pt-4 md:grid-cols-[1fr_1fr_auto]">
 					<label className="space-y-1 text-xs">
-						Experiment name
+						{t("Experiment name")}
 						<Input
 							value={experimentName}
 							onChange={(event) => setExperimentName(event.target.value)}
 						/>
 					</label>
 					<label className="space-y-1 text-xs">
-						Placement
+						{t("Placement")}
 						<select
 							className="block h-9 w-full rounded-md border bg-background px-3 text-sm"
 							value={experimentPlacementId}
 							onChange={(event) => setExperimentPlacementId(event.target.value)}
 						>
-							<option value="">Select…</option>
+							<option value="">{t("Select…")}</option>
 							{placements.map((placement) => (
 								<option key={placement.id} value={placement.id}>
 									{placement.name}
@@ -747,12 +848,12 @@ function OnboardingDeliveryControls({
 						onClick={() => void createExperiment()}
 					>
 						<FlaskConical />
-						Create 50/50 test
+						{t("Create 50/50 test")}
 					</Button>
 				</div>
 				{published.length < 2 && (
 					<p className="text-xs text-muted-foreground">
-						Publish two versions to create an A/B experiment.
+						{t("Publish two versions to create an A/B experiment.")}
 					</p>
 				)}
 				{experiences
@@ -765,7 +866,7 @@ function OnboardingDeliveryControls({
 							<span>
 								<b>{experience.name}</b>
 								<span className="ml-2 capitalize text-muted-foreground">
-									{experience.status} · {experience.variants.length} variants
+									{experience.status} {t("·")} {experience.variants.length} {t("variants")}
 								</span>
 							</span>
 							<span className="flex gap-1">
@@ -788,7 +889,7 @@ function OnboardingDeliveryControls({
 									disabled={busy || experience.status === "completed"}
 									onClick={() => void setExperimentStatus(experience, "completed")}
 								>
-									Complete
+									{t("Complete")}
 								</Button>
 							</span>
 						</div>
@@ -799,6 +900,7 @@ function OnboardingDeliveryControls({
 }
 
 export function OnboardingStatisticsPage() {
+	const { t } = useExperienceI18n();
 	const { selectedProject } = useProjectSelection();
 	const [data, setData] = useState<OnboardingStatistics>();
 	const [error, setError] = useState<string | null>(null);
@@ -827,8 +929,8 @@ export function OnboardingStatisticsPage() {
 	}, [selectedProject, filters]);
 	return (
 		<ModulePage
-			title="Onboarding statistics"
-			description="Completion and drop-off across published onboarding flows."
+			title={t("Onboarding statistics")}
+			description={t("Completion and drop-off across published onboarding flows.")}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -847,24 +949,26 @@ export function OnboardingStatisticsPage() {
 						))}
 						<Card>
 							<CardHeader>
-								<CardDescription>completion rate</CardDescription>
+								<CardDescription>{t("completion rate")}</CardDescription>
 								<CardTitle className="text-3xl">
-									{((data?.completion_rate ?? 0) * 100).toFixed(1)}%
+									{((data?.completion_rate ?? 0) * 100).toFixed(1)}
+									{t("%")}
 								</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardDescription>drop-off rate</CardDescription>
+								<CardDescription>{t("drop-off rate")}</CardDescription>
 								<CardTitle className="text-3xl">
-									{((data?.drop_off_rate ?? 0) * 100).toFixed(1)}%
+									{((data?.drop_off_rate ?? 0) * 100).toFixed(1)}
+									{t("%")}
 								</CardTitle>
 							</CardHeader>
 						</Card>
 					</div>
 					<Card>
 						<CardHeader>
-							<CardTitle>Step funnel</CardTitle>
+							<CardTitle>{t("Step funnel")}</CardTitle>
 						</CardHeader>
 						<CardContent>
 							{data?.funnel.map((row) => (
@@ -874,27 +978,29 @@ export function OnboardingStatisticsPage() {
 								</div>
 							))}
 							{!data?.funnel.length && (
-								<p className="text-sm text-muted-foreground">No step events match this period.</p>
+								<p className="text-sm text-muted-foreground">
+									{t("No step events match this period.")}
+								</p>
 							)}
 						</CardContent>
 					</Card>
 					<Card>
 						<CardHeader>
-							<CardTitle>Event timeline</CardTitle>
+							<CardTitle>{t("Event timeline")}</CardTitle>
 							<CardDescription>
-								Detailed events for the active statistical dimensions.
+								{t("Detailed events for the active statistical dimensions.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="overflow-x-auto">
 							<Table>
 								<TableHeader>
 									<TableRow>
-										<TableHead>Date</TableHead>
-										<TableHead>Event</TableHead>
-										<TableHead>Step</TableHead>
-										<TableHead>Platform</TableHead>
-										<TableHead>Placement</TableHead>
-										<TableHead>Count</TableHead>
+										<TableHead>{t("Date")}</TableHead>
+										<TableHead>{t("Event")}</TableHead>
+										<TableHead>{t("Step")}</TableHead>
+										<TableHead>{t("Platform")}</TableHead>
+										<TableHead>{t("Placement")}</TableHead>
+										<TableHead>{t("Count")}</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -913,7 +1019,7 @@ export function OnboardingStatisticsPage() {
 									{!data?.series.length && (
 										<TableRow>
 											<TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-												No events match this period.
+												{t("No events match this period.")}
 											</TableCell>
 										</TableRow>
 									)}

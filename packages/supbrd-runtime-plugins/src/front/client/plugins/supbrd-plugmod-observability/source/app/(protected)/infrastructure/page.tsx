@@ -1,5 +1,7 @@
 "use client";
 
+import { WorkerDeploymentGroups } from "../../../../WorkerDeploymentGroups.js";
+
 import { Activity, Database, ExternalLink, Gauge, RefreshCw, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -326,63 +328,66 @@ export default function InfrastructurePage() {
 								persisted job state.
 							</CardDescription>
 						</CardHeader>
-						<CardContent className="grid gap-3 lg:grid-cols-2">
-							{status.services.map((service) => (
-								<div key={service.id} className="rounded-md border p-4">
-									<div className="mb-2 flex items-start justify-between gap-3">
-										<div>
-											<strong>{service.id}</strong>
-											<p className="font-mono text-xs text-muted-foreground">
-												{service.workerName ?? "No deployment name"} · {service.kind ?? "legacy"}
-											</p>
+						<CardContent>
+							<WorkerDeploymentGroups services={status.services}>
+								{(service) => (
+									<div key={service.id} className="rounded-md border p-4">
+										<div className="mb-2 flex items-start justify-between gap-3">
+											<div>
+												<strong>{service.id}</strong>
+												<p className="font-mono text-xs text-muted-foreground">
+													{service.workerName ?? "No deployment name"} · {service.kind ?? "legacy"}
+												</p>
+											</div>
+											<StatusBadge value={service.status} />
 										</div>
-										<StatusBadge value={service.status} />
+										<p className="text-sm text-muted-foreground">{service.description}</p>
+										<p className="mt-2 text-xs text-muted-foreground">
+											Health: {service.health?.mode ?? "legacy"} {service.health?.path ?? "unknown"}{" "}
+											·{" "}
+											{service.responseTimeMs == null
+												? "no response"
+												: `${service.responseTimeMs} ms`}
+										</p>
+										<WorkerValues label="Capabilities" values={service.capabilities ?? []} />
+										<WorkerValues label="Routes" values={service.routes ?? []} code />
+										<WorkerValues label="Services" values={service.dependencies?.services ?? []} />
+										<WorkerValues label="Stores" values={service.dependencies?.stores ?? []} />
+										<WorkerValues label="Queues" values={service.dependencies?.queues ?? []} />
+										{(service.dependencies?.externalWorkers ?? []).map((dependency) => (
+											<p key={dependency.binding} className="mt-1 text-xs text-muted-foreground">
+												External: {dependency.binding} → {dependency.workerName}
+											</p>
+										))}
+										<p className="mt-2 text-xs text-muted-foreground">
+											Jobs:{" "}
+											{service.jobs == null
+												? "unavailable"
+												: Object.entries(service.jobs)
+														.map(([name, value]) => `${name}: ${value}`)
+														.join(" · ") || "none"}
+										</p>
+										{service.error && (
+											<p className="mt-2 text-xs text-destructive">{service.error}</p>
+										)}
+										{runtimeFor(status.runtime?.rows, service.id) && (
+											<p className="mt-1 text-xs text-muted-foreground">
+												{runtimeFor(status.runtime?.rows, service.id)}
+											</p>
+										)}
+										{service.detail != null && (
+											<details className="mt-3 text-xs">
+												<summary className="cursor-pointer text-muted-foreground">
+													Runtime detail
+												</summary>
+												<pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2">
+													{JSON.stringify(service.detail, null, 2)}
+												</pre>
+											</details>
+										)}
 									</div>
-									<p className="text-sm text-muted-foreground">{service.description}</p>
-									<p className="mt-2 text-xs text-muted-foreground">
-										Health: {service.health?.mode ?? "legacy"} {service.health?.path ?? "unknown"} ·{" "}
-										{service.responseTimeMs == null
-											? "no response"
-											: `${service.responseTimeMs} ms`}
-									</p>
-									<WorkerValues label="Capabilities" values={service.capabilities ?? []} />
-									<WorkerValues label="Routes" values={service.routes ?? []} code />
-									<WorkerValues label="Services" values={service.dependencies?.services ?? []} />
-									<WorkerValues label="Stores" values={service.dependencies?.stores ?? []} />
-									<WorkerValues label="Queues" values={service.dependencies?.queues ?? []} />
-									{(service.dependencies?.externalWorkers ?? []).map((dependency) => (
-										<p key={dependency.binding} className="mt-1 text-xs text-muted-foreground">
-											External: {dependency.binding} → {dependency.workerName}
-										</p>
-									))}
-									<p className="mt-2 text-xs text-muted-foreground">
-										Jobs:{" "}
-										{service.jobs == null
-											? "unavailable"
-											: Object.entries(service.jobs)
-													.map(([name, value]) => `${name}: ${value}`)
-													.join(" · ") || "none"}
-									</p>
-									{service.error && (
-										<p className="mt-2 text-xs text-destructive">{service.error}</p>
-									)}
-									{runtimeFor(status.runtime?.rows, service.id) && (
-										<p className="mt-1 text-xs text-muted-foreground">
-											{runtimeFor(status.runtime?.rows, service.id)}
-										</p>
-									)}
-									{service.detail != null && (
-										<details className="mt-3 text-xs">
-											<summary className="cursor-pointer text-muted-foreground">
-												Runtime detail
-											</summary>
-											<pre className="mt-2 max-h-48 overflow-auto rounded bg-muted p-2">
-												{JSON.stringify(service.detail, null, 2)}
-											</pre>
-										</details>
-									)}
-								</div>
-							))}
+								)}
+							</WorkerDeploymentGroups>
 						</CardContent>
 					</Card>
 

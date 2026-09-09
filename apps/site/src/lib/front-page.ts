@@ -1,5 +1,5 @@
 import type { RoleLevel } from "@emdash-cms/auth";
-import type { PublicEndpoints } from "@superboard/front-ui/context";
+import type { PublicEndpoints, ConsoleEnvironment } from "@superboard/front-ui/context";
 import {
 	assertRendererCompatibility,
 	parseFrontNavigation,
@@ -11,8 +11,10 @@ import {
 	type NativeFrontOperator,
 } from "@superboard/supbrd-core";
 
-import { CORE_FRONT_RENDERER_DESCRIPTORS } from "./core-front-contract.js";
+import { CORE_FRONT_RENDERER_DESCRIPTORS, CORE_STATE_RENDERER_IDS } from "./core-front-contract.js";
+import { resolveConsoleDeployment } from "./deployment-context.js";
 import { assertNativeFrontRenderer } from "./native-front-plugins.js";
+import { canAccessOperatorConsole } from "./operator-access.js";
 import { requireActiveSuperBoardPlugin } from "./plugin-availability.js";
 import { probeSuperBoardPluginWorker } from "./plugin-readiness.js";
 import { parsePublicEndpoints } from "./public-endpoints.js";
@@ -33,6 +35,8 @@ interface EmDashUser {
 }
 
 export interface FrontPageModel {
+	deployment?: ConsoleEnvironment | null;
+	environments?: ConsoleEnvironment[];
 	public_endpoints?: PublicEndpoints;
 	instance_id: string;
 	requested_path: string;
@@ -46,7 +50,7 @@ export interface FrontPageModel {
 export async function resolveSiteFrontPage(
 	env: SuperBoardSiteEnv,
 	requestedPath: string,
-	user: EmDashUser | undefined,
+	user?: EmDashUser,
 ): Promise<FrontPageModel> {
 	const instanceId = env.SUPERBOARD_INSTANCE_ID;
 	const release = await loadLastVerifiedFrontRelease(env, instanceId);
@@ -77,8 +81,33 @@ async function resolveFrontPageFromRelease(
 	requestedPath: string,
 	user: EmDashUser | undefined,
 ): Promise<FrontPageModel> {
+	const authorizedUser = canAccessOperatorConsole(user) ? user : undefined;
+	const matchedRoute = release
+		? resolveFrontRoute(release.runtime_release.front_route_manifest, requestedPath)
+		: null;
+	const requiresOperator =
+		(requestedPath === "/" && matchedRoute?.result !== "matched") ||
+		requestedPath === "/superboard-system/home" ||
+		(matchedRoute?.result === "matched" && matchedRoute.route.auth_policy === "authenticated");
+	const denied: FrontRequestResolution | null =
+		requiresOperator && !authorizedUser
+			? user
+				? {
+						result: "forbidden",
+						route_id:
+							matchedRoute?.result === "matched"
+								? matchedRoute.route_id
+								: "emdash.core.operator_home",
+						state_renderer_id: CORE_STATE_RENDERER_IDS.forbidden,
+					}
+				: {
+						result: "redirect",
+						route_id: "emdash.core.operator_login",
+						location: `/_emdash/admin/login?redirect=${encodeURIComponent(requestedPath)}`,
+					}
+			: null;
 	let dependencyHealth: Record<string, "ready" | "unavailable"> = {};
-	if (release) {
+	if (release && !denied) {
 		try {
 			dependencyHealth = await loadDependencyHealth(
 				env.DB,
@@ -93,16 +122,18 @@ async function resolveFrontPageFromRelease(
 		env.DB,
 		env.SUPERBOARD_INSTANCE_ID,
 		release,
-		user,
+		authorizedUser,
 	);
-	let resolution = resolveFrontRequest({
-		last_verified_release: release?.runtime_release ?? null,
-		requested_path: requestedPath,
-		admin_session: user ? "valid" : "absent",
-		permissions,
-		dependency_health: dependencyHealth,
-	});
-	if (resolution.result === "unavailable" && release && user) {
+	let resolution =
+		denied ??
+		resolveFrontRequest({
+			last_verified_release: release?.runtime_release ?? null,
+			requested_path: requestedPath,
+			admin_session: authorizedUser ? "valid" : "absent",
+			permissions,
+			dependency_health: dependencyHealth,
+		});
+	if (resolution.result === "unavailable" && release && authorizedUser) {
 		const matched = resolveFrontRoute(release.runtime_release.front_route_manifest, requestedPath);
 		if (matched.result === "matched") {
 			try {
@@ -122,9 +153,9 @@ async function resolveFrontPageFromRelease(
 						break;
 					}
 					await probeSuperBoardPluginWorker(env, plugin.plugin_id, {
-						operator_id: user.id,
+						operator_id: authorizedUser.id,
 						instance_id: env.SUPERBOARD_INSTANCE_ID,
-						role: user.role,
+						role: authorizedUser.role,
 					});
 					dependencyHealth[dependencyId] = "ready";
 				}
@@ -141,7 +172,7 @@ async function resolveFrontPageFromRelease(
 			}
 		}
 	}
-	if (release) {
+	if (release && !denied) {
 		try {
 			assertReleasePresentation(release.release.payload);
 		} catch {
@@ -166,11 +197,24 @@ async function resolveFrontPageFromRelease(
 					(page) => page.page_id === resolution.page_id,
 				)?.title ?? null)
 			: null;
-	const operator = user
-		? { id: user.id, email: user.email, name: user.name, role: user.role, disabled: user.disabled }
+	const operator = authorizedUser
+		? {
+				id: authorizedUser.id,
+				email: authorizedUser.email,
+				name: authorizedUser.name,
+				role: authorizedUser.role,
+				disabled: authorizedUser.disabled,
+			}
 		: null;
 	return {
 		public_endpoints: parsePublicEndpoints(env.SUPERBOARD_PUBLIC_ENDPOINTS_JSON),
+		...resolveConsoleDeployment({
+			catalog: env.SUPERBOARD_CONSOLE_ENVIRONMENTS_JSON,
+			instanceId: env.SUPERBOARD_INSTANCE_ID,
+			environment: env.SUPERBOARD_ENVIRONMENT,
+			apiUrl: parsePublicEndpoints(env.SUPERBOARD_PUBLIC_ENDPOINTS_JSON).api,
+			consoleUrl: parsePublicEndpoints(env.SUPERBOARD_PUBLIC_ENDPOINTS_JSON).site,
+		}),
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		requested_path: requestedPath,
 		release,

@@ -1,6 +1,8 @@
 import type { Env } from "../types";
 import { decryptCredential, encryptCredential } from "./secrets";
 
+export type PushDeliveryEnv = Pick<Env, "DB" | "STORE_CREDENTIALS_ENCRYPTION_KEY" | "STORE_CREDENTIALS_ENCRYPTION_KEYS" | "STORE_CREDENTIALS_ACTIVE_KEY_VERSION" | "CREDENTIAL_KEY_SCOPE">;
+
 type LegacyCredentialRow = {
   id: string | number;
   cleartext: string | null;
@@ -27,7 +29,7 @@ function changes(result: D1Result): number {
 }
 
 async function migrateSingleCredential(
-  env: Env,
+  env: PushDeliveryEnv,
   selectSql: string,
   updateSql: string,
   limit: number,
@@ -52,7 +54,7 @@ async function migrateSingleCredential(
  * migration 0054. It is safe to call from both maintenance and queue consumers.
  */
 export async function migrateLegacyPushCredentials(
-  env: Env,
+  env: PushDeliveryEnv,
   limit = 100,
 ): Promise<PushCredentialMigrationSummary> {
   const boundedLimit = Math.max(1, Math.min(100, Number(limit || 100)));
@@ -144,7 +146,7 @@ export async function migrateLegacyPushCredentials(
 }
 
 export async function requirePushCredential(
-  env: Env,
+  env: PushDeliveryEnv,
   ciphertext: unknown,
   provider: "APNs" | "FCM",
 ): Promise<string> {

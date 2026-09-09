@@ -1,3 +1,4 @@
+import { useStudioI18n } from "../../../../supbrd-plugmod-marketing/studio/i18n.js";
 import { Cloud, Mail, Plus, RefreshCw, RotateCcw, Send, Settings, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -45,6 +46,7 @@ import {
 const selectClass = "w-full rounded-md border bg-background px-3 py-2 text-sm";
 
 export function EmailAdministration() {
+	const {t}=useStudioI18n();
 	const { selectedProject } = useProjectSelection();
 	const [profiles, setProfiles] = useState<SmtpSettings[]>([]);
 	const [deliveryProvider, setDeliveryProvider] = useState<"smtp" | "aws-ses">("smtp");
@@ -134,8 +136,8 @@ export function EmailAdministration() {
 	};
 	return (
 		<ModulePage
-			title="Email"
-			description="Sender identities, AWS SES delivery, quotas, domain authentication, provider events and retries."
+			title={t("Email")}
+			description={t("Sender identities, AWS SES delivery, quotas, domain authentication, provider events and retries.")}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -143,7 +145,7 @@ export function EmailAdministration() {
 			) : (
 				<div className="space-y-6">
 					<div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-						<FormCard title="Sender identity">
+						<FormCard title={t("Sender identity")}>
 							{deliveryProvider === "aws-ses" ? (
 								<div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
 									<div className="flex items-center gap-3">
@@ -151,20 +153,17 @@ export function EmailAdministration() {
 											<Cloud className="size-5" />
 										</div>
 										<div>
-											<p className="font-medium">Amazon SES managed delivery</p>
+											<p className="font-medium">{t("Amazon SES managed delivery")}</p>
 											<p className="text-xs text-muted-foreground">
-												{awsRegion || "AWS region"} · STARTTLS · port 587
-											</p>
+												{awsRegion || "AWS region"} {t("· STARTTLS · port 587")}</p>
 										</div>
 									</div>
 									<p className="mt-3 text-xs text-muted-foreground">
-										Credentials are owned by the central Email Worker. They are never stored in a
-										project or exposed in this interface.
-									</p>
+										{t("Credentials are owned by the central Email Worker. They are never stored in a project or exposed in this interface.")}</p>
 								</div>
 							) : null}
 							<Input
-								placeholder="Profile name"
+								placeholder={t("Profile name")}
 								value={smtp.name || ""}
 								onChange={(event) => setSmtp((value) => ({ ...value, name: event.target.value }))}
 							/>
@@ -172,7 +171,7 @@ export function EmailAdministration() {
 								<>
 									<div className="grid grid-cols-[1fr_100px] gap-2">
 										<Input
-											placeholder="SMTP host"
+											placeholder={t("SMTP host")}
 											value={smtp.host || ""}
 											onChange={(event) =>
 												setSmtp((value) => ({
@@ -182,7 +181,7 @@ export function EmailAdministration() {
 											}
 										/>
 										<Input
-											aria-label="SMTP port"
+											aria-label={t("SMTP port")}
 											type="number"
 											value={smtp.port || 587}
 											onChange={(event) =>
@@ -194,7 +193,7 @@ export function EmailAdministration() {
 										/>
 									</div>
 									<select
-										aria-label="SMTP security"
+										aria-label={t("SMTP security")}
 										className={selectClass}
 										value={smtp.security || "starttls"}
 										onChange={(event) =>
@@ -204,12 +203,12 @@ export function EmailAdministration() {
 											}))
 										}
 									>
-										<option value="tls">TLS</option>
-										<option value="starttls">STARTTLS</option>
-										<option value="plain">Plain</option>
+										<option value="tls">{t("TLS")}</option>
+										<option value="starttls">{t("STARTTLS")}</option>
+										<option value="plain">{t("Plain")}</option>
 									</select>
 									<Input
-										placeholder="Username"
+										placeholder={t("Username")}
 										value={smtp.username || ""}
 										onChange={(event) =>
 											setSmtp((value) => ({
@@ -231,7 +230,7 @@ export function EmailAdministration() {
 							) : null}
 							<Input
 								type="email"
-								placeholder="From email"
+								placeholder={t("From email")}
 								value={smtp.from_email || ""}
 								onChange={(event) =>
 									setSmtp((value) => ({
@@ -241,7 +240,7 @@ export function EmailAdministration() {
 								}
 							/>
 							<Input
-								placeholder="DKIM selector (for example: mail)"
+								placeholder={t("DKIM selector (for example: mail)")}
 								value={smtp.dkim_selector || ""}
 								onChange={(event) =>
 									setSmtp((value) => ({
@@ -251,7 +250,7 @@ export function EmailAdministration() {
 								}
 							/>
 							<Input
-								placeholder="From name"
+								placeholder={t("From name")}
 								value={smtp.from_name || ""}
 								onChange={(event) =>
 									setSmtp((value) => ({
@@ -262,7 +261,7 @@ export function EmailAdministration() {
 							/>
 							<Input
 								type="email"
-								placeholder="Reply-to email (optional)"
+								placeholder={t("Reply-to email (optional)")}
 								value={smtp.reply_to || ""}
 								onChange={(event) =>
 									setSmtp((value) => ({
@@ -273,9 +272,9 @@ export function EmailAdministration() {
 							/>
 							<div className="grid grid-cols-3 gap-2">
 								<Input
-									aria-label="SMTP priority"
+									aria-label={t("SMTP priority")}
 									type="number"
-									placeholder="Priority"
+									placeholder={t("Priority")}
 									value={smtp.priority || 100}
 									onChange={(event) =>
 										setSmtp((value) => ({
@@ -286,7 +285,7 @@ export function EmailAdministration() {
 								/>
 								<Input
 									type="number"
-									placeholder="Hourly quota"
+									placeholder={t("Hourly quota")}
 									value={smtp.hourly_quota || ""}
 									onChange={(event) =>
 										setSmtp((value) => ({
@@ -297,7 +296,7 @@ export function EmailAdministration() {
 								/>
 								<Input
 									type="number"
-									placeholder="Daily quota"
+									placeholder={t("Daily quota")}
 									value={smtp.daily_quota || ""}
 									onChange={(event) =>
 										setSmtp((value) => ({
@@ -312,13 +311,11 @@ export function EmailAdministration() {
 									checked={smtp.enabled ?? true}
 									onCheckedChange={(enabled) => setSmtp((value) => ({ ...value, enabled }))}
 								/>
-								Enabled for failover pool
-							</label>
+								{t("Enabled for failover pool")}</label>
 							<div className="flex gap-2">
 								<Button variant="outline" onClick={reset}>
 									<Plus />
-									New profile
-								</Button>
+									{t("New profile")}</Button>
 								<Button
 									disabled={
 										!smtp.from_email ||
@@ -327,23 +324,20 @@ export function EmailAdministration() {
 									onClick={() => void save()}
 								>
 									<Mail />
-									Save profile
-								</Button>
+									{t("Save profile")}</Button>
 							</div>
 						</FormCard>
 						<Card>
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
 									<Settings />
-									Sender identities
-								</CardTitle>
+									{t("Sender identities")}</CardTitle>
 								<CardDescription>
-									{profiles.length} profiles · {eventCount} provider events
-								</CardDescription>
+									{profiles.length} {t("profiles ·")}{" "}{eventCount} {t("provider events")}</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-3">
 								{profiles.length === 0 ? (
-									<Empty text="No sender identities configured." />
+									<Empty text={t("No sender identities configured.")} />
 								) : (
 									profiles.map((item) => (
 										<div key={item.id} className="rounded-md border p-3">
@@ -361,12 +355,12 @@ export function EmailAdministration() {
 														{deliveryProvider === "aws-ses"
 															? `Amazon SES · ${awsRegion || "managed region"}`
 															: `${item.host}:${item.port}`}{" "}
-														· priority {item.priority} · {item.last_test_status || "untested"}
+														{t("· priority")}{item.priority} {t("·")}{" "}{item.last_test_status || "untested"}
 													</p>
 													<p className="text-xs text-muted-foreground">
-														Sender DNS: {item.authentication_status || "unverified"} · SPF{" "}
-														{item.spf_status || "unchecked"} · DKIM{" "}
-														{item.dkim_status || "unchecked"} · DMARC{" "}
+														{t("Sender DNS:")}{item.authentication_status || "unverified"} {t("· SPF")}{" "}
+														{item.spf_status || "unchecked"} {t("· DKIM")}{" "}
+														{item.dkim_status || "unchecked"} {t("· DMARC")}{" "}
 														{item.dmarc_status || "unchecked"}
 													</p>
 												</button>
@@ -425,7 +419,7 @@ export function EmailAdministration() {
 								)}
 								<Input
 									type="email"
-									placeholder="Delivery test recipient (optional)"
+									placeholder={t("Delivery test recipient (optional)")}
 									value={testRecipient}
 									onChange={(event) => setTestRecipient(event.target.value)}
 								/>
@@ -433,9 +427,9 @@ export function EmailAdministration() {
 						</Card>
 					</div>
 					<div className="grid gap-6 xl:grid-cols-3">
-						<FormCard title="Provider webhook">
+						<FormCard title={t("Provider webhook")}>
 							<Input
-								placeholder="Provider identifier"
+								placeholder={t("Provider identifier")}
 								value={webhookProvider}
 								onChange={(event) =>
 									setWebhookProvider(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "_"))
@@ -444,7 +438,7 @@ export function EmailAdministration() {
 							<Input
 								type="password"
 								autoComplete="new-password"
-								placeholder="Shared secret (minimum 16 characters)"
+								placeholder={t("Shared secret (minimum 16 characters)")}
 								value={webhookSecret}
 								onChange={(event) => setWebhookSecret(event.target.value)}
 							/>
@@ -470,8 +464,7 @@ export function EmailAdministration() {
 								}
 							>
 								<Plus />
-								Create endpoint
-							</Button>
+								{t("Create endpoint")}</Button>
 							{webhooks.map((item) => (
 								<div
 									key={item.id}
@@ -479,7 +472,7 @@ export function EmailAdministration() {
 								>
 									<div>
 										<p className="font-medium">{item.provider}</p>
-										<code className="text-xs">/api/v1/marketing/provider-webhooks/{item.id}</code>
+										<code className="text-xs">{t("/api/v1/marketing/provider-webhooks/")}{item.id}</code>
 									</div>
 									<Button
 										size="icon"
@@ -499,14 +492,13 @@ export function EmailAdministration() {
 						</FormCard>
 						<Card>
 							<CardHeader>
-								<CardTitle>Delivery outbox</CardTitle>
+								<CardTitle>{t("Delivery outbox")}</CardTitle>
 								<CardDescription>
-									Pending and dead-lettered double opt-in deliveries
-								</CardDescription>
+									{t("Pending and dead-lettered double opt-in deliveries")}</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-2">
 								{outbox.length === 0 ? (
-									<Empty text="Delivery outbox is empty." />
+									<Empty text={t("Delivery outbox is empty.")} />
 								) : (
 									outbox.map((item) => (
 										<div
@@ -516,7 +508,7 @@ export function EmailAdministration() {
 											<div>
 												<p className="font-medium">{item.job_type}</p>
 												<p className="text-xs text-muted-foreground">
-													{item.status} · {item.attempt_count} attempts{" "}
+													{item.status} {t("·")}{" "}{item.attempt_count} {t("attempts")}{" "}
 													{item.last_error ? `· ${item.last_error}` : ""}
 												</p>
 											</div>
@@ -532,8 +524,7 @@ export function EmailAdministration() {
 													}
 												>
 													<RotateCcw />
-													Retry
-												</Button>
+													{t("Retry")}</Button>
 											)}
 										</div>
 									))
@@ -542,14 +533,13 @@ export function EmailAdministration() {
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardTitle>Marketing dead letters</CardTitle>
+								<CardTitle>{t("Marketing dead letters")}</CardTitle>
 								<CardDescription>
-									Inspect and resolve individual terminal Queue jobs
-								</CardDescription>
+									{t("Inspect and resolve individual terminal Queue jobs")}</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-2">
 								{deadLetters.length === 0 ? (
-									<Empty text="No marketing dead letters." />
+									<Empty text={t("No marketing dead letters.")} />
 								) : (
 									deadLetters.map((item) => (
 										<div key={item.id} className="rounded-md border p-3">
@@ -560,9 +550,8 @@ export function EmailAdministration() {
 													</p>
 													<p className="text-xs text-muted-foreground">
 														{item.status}
-														{item.resolution ? ` · ${item.resolution}` : ""} · {item.attempts}{" "}
-														attempts
-													</p>
+														{item.resolution ? ` · ${item.resolution}` : ""} {t("·")}{" "}{item.attempts}{" "}
+														{t("attempts")}</p>
 													<p className="truncate font-mono text-xs text-muted-foreground">
 														{item.resource_id || item.queue_message_id}
 													</p>

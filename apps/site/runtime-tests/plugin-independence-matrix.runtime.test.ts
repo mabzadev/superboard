@@ -17,6 +17,13 @@ const user = {
 	role: 50 as const,
 	disabled: false,
 };
+const businessPackages = pluginPackages
+	.filter((owner) => owner.kind === "business")
+	.map((owner) => ({
+		...owner,
+		contributions: baseline.plugins.filter((plugin) => owner.components.includes(plugin.plugin_id)),
+	}));
+const core = pluginPackages.find((owner) => owner.kind === "core")!;
 async function toggle(pluginId: string, action: string) {
 	const result = await SELF.fetch(
 		`https://site.example/_emdash/api/superboard/plugins/${pluginId}/${action}`,
@@ -38,36 +45,43 @@ async function assertContribution(plugin: (typeof baseline.plugins)[number], pre
 	}
 }
 
-test("every catalog plugin activates alone, removes its routes and rejects direct API calls when disabled", async () => {
-	for (const plugin of baseline.plugins) {
-		await toggle(plugin.plugin_id, "enable");
-		await assertContribution(plugin, true);
+test("each business package activates independently of the others and removes every component route when disabled", async () => {
+	await toggle(core.id, "enable");
+	for (const owner of businessPackages) {
+		await toggle(owner.id, "enable");
+		for (const plugin of owner.contributions) await assertContribution(plugin, true);
 		const active = await env.DB.prepare(
 			"SELECT plugin_id FROM superboard_plugin_lifecycle WHERE state='active'",
-		).all();
-		expect(active.results).toEqual([{ plugin_id: plugin.plugin_id }]);
-		await toggle(plugin.plugin_id, "disable");
-		await assertContribution(plugin, false);
-		const api = plugin.api.find(
-			(route) =>
-				route.path_pattern.includes("/data-sources/") && route.auth_policy !== "application",
+		).all<{ plugin_id: string }>();
+		expect(active.results.map(({ plugin_id }) => plugin_id).toSorted()).toEqual(
+			[...core.components, ...owner.components].toSorted(),
 		);
-		if (api) {
-			const response = await SELF.fetch("https://site.example" + api.path_pattern, { headers });
-			expect(response.status, plugin.plugin_id).toBe(404);
+		await toggle(owner.id, "disable");
+		for (const plugin of owner.contributions) {
+			await assertContribution(plugin, false);
+			const api = plugin.api.find(
+				(route) =>
+					route.path_pattern.includes("/data-sources/") && route.auth_policy !== "application",
+			);
+			if (api) {
+				const response = await SELF.fetch("https://site.example" + api.path_pattern, { headers });
+				expect(response.status, plugin.plugin_id).toBe(404);
+			}
 		}
-		const core = await resolveSiteFrontPage(env, "/superboard-system/home", user);
-		expect(core.resolution.result).toBe("rendered");
+		const page = await resolveSiteFrontPage(env, "/superboard-system/home", user);
+		expect(page.resolution.result).toBe("rendered");
 	}
 }, 120000);
 
-test("all plugins coexist and removing each one preserves the other catalog routes", async () => {
-	for (const plugin of baseline.plugins) await toggle(plugin.plugin_id, "enable");
-	for (const selected of baseline.plugins) {
-		await toggle(selected.plugin_id, "disable");
+test("all business packages coexist and removing one preserves the other packages and required core", async () => {
+	await toggle(core.id, "enable");
+	for (const owner of businessPackages) await toggle(owner.id, "enable");
+	for (const selected of businessPackages) {
+		await toggle(selected.id, "disable");
 		for (const plugin of baseline.plugins)
-			await assertContribution(plugin, plugin.plugin_id !== selected.plugin_id);
-		await toggle(selected.plugin_id, "enable");
-		await assertContribution(selected, true);
+			await assertContribution(plugin, !selected.components.includes(plugin.plugin_id));
+		await toggle(selected.id, "enable");
+		for (const plugin of selected.contributions) await assertContribution(plugin, true);
 	}
 }, 180000);
+import { pluginPackages } from "@superboard/contracts/plugin-packages";

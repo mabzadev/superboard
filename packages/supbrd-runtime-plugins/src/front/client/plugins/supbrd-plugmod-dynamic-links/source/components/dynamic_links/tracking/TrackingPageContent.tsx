@@ -3,6 +3,7 @@
 import { BarChart3, Save, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import brand from "../../../../../../../../../../../config/superboard-brand.json";
 import AdsPlatformSelect from "../../../../../../../../../../supbrd-front-ui/src/shared/components/common/ads-platform.js";
 import { DateRangePicker } from "../../../../../../../../../../supbrd-front-ui/src/shared/components/dateRangePicker/DateRangePicker.js";
 import {
@@ -56,6 +57,8 @@ import {
 	type LinkStatistics,
 	type TrackingSettings,
 } from "../../../api/dynamic-links/dynamicLinksService.js";
+
+const internalTrackingProvider = brand.brand.compatibilityNamespace;
 
 const metricKeys = [
 	["views", "Views"],
@@ -111,7 +114,7 @@ export default function TrackingPageContent() {
 	const { dateRange, setDateRange, platform, setPlatform } = useTableParams();
 	const [settings, setSettings] = useState<TrackingSettings>({
 		enabled: true,
-		provider: "opengrow",
+		provider: internalTrackingProvider,
 		configuration: {},
 	});
 	const [statistics, setStatistics] = useState<LinkStatistics>({ totals: {}, series: [] });
@@ -285,14 +288,14 @@ export default function TrackingPageContent() {
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="opengrow">SuperBoard</SelectItem>
+											<SelectItem value={internalTrackingProvider}>SuperBoard</SelectItem>
 											<SelectItem value="google">Google Analytics</SelectItem>
 											<SelectItem value="segment">Segment</SelectItem>
 											<SelectItem value="none">No external provider</SelectItem>
 										</SelectContent>
 									</Select>
 								</label>
-								{settings.provider !== "opengrow" && settings.provider !== "none" ? (
+								{settings.provider !== internalTrackingProvider && settings.provider !== "none" ? (
 									<div className="space-y-2">
 										<Label>
 											{settings.provider === "google" ? "Measurement ID" : "Write key reference"}

@@ -136,9 +136,15 @@ test("VocoStar runtime bridge keeps Files input and legacy output stores distinc
       "/ws/vocals/notify",
       "/ws/vocals/progress",
       "/ws/medias/progress",
+      "/ws/medias/notify",
     ],
     deploymentStatus: "blocked",
     blockedReason: target.customWorker.runtimeBridge.blockedReason,
+    legacyGateway: {
+      worker: "api-auth-gateway",
+      notificationWorker: "intern-pipeline-dispatcher",
+      jwtSecretBinding: "JWT_SECRET",
+    },
   });
   assert.equal(target.environments.production.r2.name, "opengrow");
   assert.equal(target.environments.production.customR2.name, "app-vocostar");

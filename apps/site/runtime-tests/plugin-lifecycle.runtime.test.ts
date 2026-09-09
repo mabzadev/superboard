@@ -99,14 +99,14 @@ describe("SuperBoard plugin lifecycle", () => {
 			expires_at: "2999-09-03T08:00:00.000Z",
 		});
 
-		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(18);
+		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(19);
 		expect(plan).toMatchObject({
 			status: "installed",
-			plugin_count: 18,
+			plugin_count: 19,
 			target: "development",
 			target_artifact_checksum: targetProof.target_artifact_checksum,
 		});
-		expect(plan.plugins).toHaveLength(18);
+		expect(plan.plugins).toHaveLength(19);
 		expect(plan.plugins).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
@@ -128,17 +128,17 @@ describe("SuperBoard plugin lifecycle", () => {
 		)
 			.bind(plan.plan_id)
 			.first<{ count: number }>();
-		expect(steps?.count).toBe(18 * 8);
+		expect(steps?.count).toBe(19 * 8);
 		await expect(loadActiveSuperBoardPluginLock(env.DB, scope)).rejects.toThrow(
 			"PLUGIN_CATALOG_ACTIVE_SET_EMPTY",
 		);
 		const installedStates = await env.DB.prepare(
 			"SELECT COUNT(*) count FROM _plugin_state WHERE status = 'inactive'",
 		).first<{ count: number }>();
-		expect(installedStates?.count).toBe(18);
+		expect(installedStates?.count).toBe(19);
 
 		const candidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
-		expect(candidateLock).toHaveLength(18);
+		expect(candidateLock).toHaveLength(19);
 		const activation = await activatePluginRelease(
 			env.DB,
 			scope,
@@ -146,14 +146,14 @@ describe("SuperBoard plugin lifecycle", () => {
 			candidateLock,
 			"2026-09-02T08:05:00.000Z",
 		);
-		expect(activation).toMatchObject({ status: "reconciled", plugin_count: 18 });
+		expect(activation).toMatchObject({ status: "reconciled", plugin_count: 19 });
 		const activeStates = await env.DB.prepare(
 			"SELECT COUNT(*) count FROM _plugin_state WHERE status = 'active'",
 		).first<{ count: number }>();
-		expect(activeStates?.count).toBe(18);
+		expect(activeStates?.count).toBe(19);
 
 		const fullLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
-		expect(fullLock).toHaveLength(18);
+		expect(fullLock).toHaveLength(19);
 		const presentation = await composeUserFrontReleaseInput({
 			...releaseIdentifiers,
 			plugin_lock: fullLock,
@@ -196,7 +196,7 @@ describe("SuperBoard plugin lifecycle", () => {
 		});
 
 		const reducedCandidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
-		expect(reducedCandidateLock).toHaveLength(16);
+		expect(reducedCandidateLock).toHaveLength(17);
 		await activatePluginRelease(
 			env.DB,
 			scope,
@@ -205,8 +205,8 @@ describe("SuperBoard plugin lifecycle", () => {
 			"2026-09-02T09:15:00.000Z",
 		);
 		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
-		expect(reducedLock).toHaveLength(16);
-		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(18);
+		expect(reducedLock).toHaveLength(17);
+		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(19);
 		const presentation = await composeUserFrontReleaseInput({
 			...releaseIdentifiers,
 			plugin_lock: reducedLock,
@@ -374,8 +374,8 @@ describe("SuperBoard plugin lifecycle", () => {
 			checked_at: "2026-09-02T13:00:00.000Z",
 			expires_at: "2999-09-03T13:00:00.000Z",
 		});
-		expect(plan.plugin_count).toBe(16);
-		expect(await loadReleasableSuperBoardPluginLock(env.DB, targetScope)).toHaveLength(16);
+		expect(plan.plugin_count).toBe(17);
+		expect(await loadReleasableSuperBoardPluginLock(env.DB, targetScope)).toHaveLength(17);
 		const available = await env.DB.prepare(
 			`SELECT COUNT(*) count FROM superboard_plugin_lifecycle
 			 WHERE instance_id = ? AND target = ? AND state = 'available'`,
@@ -383,7 +383,7 @@ describe("SuperBoard plugin lifecycle", () => {
 			.bind(targetScope.instance_id, targetScope.target)
 			.first<{ count: number }>();
 		expect(available?.count).toBe(2);
-		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(18);
+		expect(superBoardRuntimePluginCatalog().plugins).toHaveLength(19);
 	});
 });
 

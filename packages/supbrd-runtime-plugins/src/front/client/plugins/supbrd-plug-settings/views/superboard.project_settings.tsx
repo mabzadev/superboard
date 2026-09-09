@@ -1,4 +1,10 @@
+import InstanceConfiguration from "../InstanceConfiguration.js";
 import Page from "../source/app/(protected)/project-settings/page.js";
 export default function View() {
-	return <Page />;
+	return (
+		<>
+			<InstanceConfiguration />
+			<Page />
+		</>
+	);
 }

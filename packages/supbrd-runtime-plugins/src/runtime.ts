@@ -1,8 +1,41 @@
+import { resolveLocale } from "@emdash-cms/admin/locales/config.js";
+import { setupI18n } from "@lingui/core";
+
 import topology from "../../../config/emdash-plugin-topology.json";
+import catalog from "../../../config/superboard-plugin-catalog.json";
 
 const multilineSettingPattern = /(?:origins|locales|content_types|scopes|json)$/u;
 const pluginPrefixPattern = /^supbrd-(?:plug|plugmod)-/u;
 const labelSeparatorPattern = /[_-]/u;
+
+interface AdminRequest {
+	url: string;
+	headers: HeadersInit;
+}
+
+const adminSummaryMessages = {
+	en: {
+		settings: "Settings",
+		stores: "Stores",
+		commands: "Commands",
+		data_sources: "Data sources",
+		renderers: "Renderers",
+	},
+	fr: {
+		settings: "Paramètres",
+		stores: "Stockages",
+		commands: "Commandes",
+		data_sources: "Sources de données",
+		renderers: "Moteurs de rendu",
+	},
+	ar: {
+		settings: "الإعدادات",
+		stores: "مخازن البيانات",
+		commands: "الأوامر",
+		data_sources: "مصادر البيانات",
+		renderers: "مكوّنات العرض",
+	},
+};
 
 interface JsonSetting {
 	type?: string;
@@ -39,7 +72,7 @@ interface RuntimeRouteContext {
 }
 
 const topologyManifests = new Map(
-	topology.plugins.map(({ manifest }) => [
+	[...topology.plugins, ...catalog.plugins].map(({ manifest }) => [
 		manifest.plugin_id,
 		// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- generated manifests are validated by the parity gate before these entries are built.
 		manifest as unknown as RuntimeManifest,
@@ -51,7 +84,10 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 	if (!manifest) throw new Error(`Unknown SuperBoard plugin manifest: ${pluginId}`);
 	const settingsSchema = toEmDashSettingsSchema(manifest.settings.schema.properties);
 	const storage = Object.fromEntries(
-		manifest.stores.map(({ store_id: storeId }) => [storeId.split(".").at(-1)!, { indexes: [] }]),
+		manifest.stores.map(({ store_id: storeId }) => [
+			storeId.replaceAll(".", "_").replaceAll("-", "_"),
+			{ indexes: [] },
+		]),
 	);
 
 	return {
@@ -62,7 +98,10 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 		storage,
 		hooks: {},
 		routes: {
-			admin: { handler: async () => adminBlocks(manifest) },
+			admin: {
+				handler: async (context?: { request?: AdminRequest }) =>
+					adminBlocks(manifest, context?.request),
+			},
 			contract: { handler: async () => manifest },
 			health: {
 				handler: async (routeContext: unknown, pluginContext?: RuntimeRouteContext) => ({
@@ -92,7 +131,12 @@ export function createConfiguredSuperBoardPlugin(pluginId: string) {
 		},
 		admin: {
 			settingsSchema,
-			pages: [{ path: "/", label: pluginLabel(manifest.plugin_id), icon: "settings" }],
+			pages: [
+				{ path: "/", label: pluginLabel(manifest.plugin_id), icon: "settings" },
+				...(manifest.plugin_id === "supbrd-core" || manifest.plugin_id === "supbrd-plug-settings"
+					? [{ path: "/configuration", label: "Configuration", icon: "settings" }]
+					: []),
+			],
 		},
 	};
 }
@@ -119,8 +163,13 @@ function routePluginContext(
 	throw new Error("Plugin execution context is unavailable");
 }
 
-function adminBlocks(manifest: RuntimeManifest) {
+function adminBlocks(manifest: RuntimeManifest, request?: AdminRequest) {
 	const settings = Object.keys(manifest.settings.schema.properties).toSorted();
+	const requestedLocale = request
+		? resolveLocale(new Request(request.url, { headers: request.headers }))
+		: "en";
+	const locale = requestedLocale === "fr" || requestedLocale === "ar" ? requestedLocale : "en";
+	const i18n = setupI18n({ locale, messages: { [locale]: adminSummaryMessages[locale] } });
 	return {
 		blocks: [
 			{ type: "header", text: pluginLabel(manifest.plugin_id) },
@@ -134,28 +183,28 @@ function adminBlocks(manifest: RuntimeManifest) {
 			{
 				type: "fields",
 				fields: [
-					{ label: "Settings", value: String(settings.length) },
-					{ label: "Stores", value: String(manifest.stores.length) },
-					{ label: "Commands", value: String(manifest.commands.length) },
-					{ label: "Data sources", value: String(manifest.data_sources.length) },
-					{ label: "Renderers", value: String(manifest.renderers.length) },
+					{ label: i18n._("settings"), value: String(settings.length) },
+					{ label: i18n._("stores"), value: String(manifest.stores.length) },
+					{ label: i18n._("commands"), value: String(manifest.commands.length) },
+					{ label: i18n._("data_sources"), value: String(manifest.data_sources.length) },
+					{ label: i18n._("renderers"), value: String(manifest.renderers.length) },
 				],
 			},
 			{
 				type: "section",
-				text: `**Settings**\n${settings.map((key) => `• \`${key}\``).join("\n")}`,
+				text: `**${i18n._("settings")}**\n${settings.map((key) => `• \`${key}\``).join("\n")}`,
 			},
 			{
 				type: "section",
-				text: `**Stores**\n${manifest.stores.map(({ store_id: storeId }) => `• \`${storeId}\``).join("\n")}`,
+				text: `**${i18n._("stores")}**\n${manifest.stores.map(({ store_id: storeId }) => `• \`${storeId}\``).join("\n")}`,
 			},
 			{
 				type: "section",
-				text: `**Commands**\n${manifest.commands.map(({ command_id: commandId }) => `• \`${commandId}\``).join("\n")}`,
+				text: `**${i18n._("commands")}**\n${manifest.commands.map(({ command_id: commandId }) => `• \`${commandId}\``).join("\n")}`,
 			},
 			{
 				type: "section",
-				text: `**Data sources**\n${manifest.data_sources.map(({ data_source_id: dataSourceId }) => `• \`${dataSourceId}\``).join("\n")}`,
+				text: `**${i18n._("data_sources")}**\n${manifest.data_sources.map(({ data_source_id: dataSourceId }) => `• \`${dataSourceId}\``).join("\n")}`,
 			},
 		],
 	};
@@ -204,11 +253,17 @@ function settingField(key: string, field: JsonSetting): RuntimeSettingField {
 	};
 }
 
-function pluginLabel(pluginId: string) {
+function pluginLabel(pluginId: string): string {
+	const entry = catalog.plugins.find(({ manifest }) => manifest.plugin_id === pluginId);
+	if (entry) return entry.label;
 	return pluginId.replace(pluginPrefixPattern, "").split("-").map(settingLabel).join(" ");
 }
 
-function settingLabel(value: string) {
+function settingLabel(value: string): string {
+	if (value.startsWith("supbrd-") && value.includes("__")) {
+		const [component = "", key = ""] = value.split("__");
+		return `${pluginLabel(component)} · ${settingLabel(key)}`;
+	}
 	return value
 		.split(labelSeparatorPattern)
 		.filter(Boolean)

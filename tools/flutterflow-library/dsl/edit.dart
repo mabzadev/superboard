@@ -210,6 +210,7 @@ void buildStarterEditFlow(App app) {
   }
 
   app.raw((project) {
+    project.name = 'SuperBoard';
     ensureLibraryParameter(project, projectKeyId, stringType);
     ensureLibraryParameter(project, uriSchemeId, stringType);
     ensureLibraryParameter(
@@ -507,12 +508,21 @@ void buildStarterEditFlow(App app) {
         custom_code_helpers.removeCustomAction(project, name: legacyAction);
       }
     }
-    project.customCode.pubspecPackageInfo.pubspecDependencies.removeWhere(
-      (dependency) => const {
-        'opengrow_flutterflow',
-        'opengrow_flutterflow_messaging',
-      }.contains(dependency.name),
-    );
+    for (final legacyDependency in [
+      'opengrow_flutterflow',
+      'opengrow_flutterflow_messaging',
+    ]) {
+      if (pub_dependency_helpers.findPubDependency(
+            project,
+            name: legacyDependency,
+          ) !=
+          null) {
+        pub_dependency_helpers.removePubDependency(
+          project,
+          name: legacyDependency,
+        );
+      }
+    }
     final sdkDependency =
         r'''
 git:
@@ -1768,7 +1778,13 @@ Future<String> superboardSupportGetContactJson() => support.superboardSupportGet
 
   app.customAction(
     'superboardSupportUpdateContactJson',
-    args: {'name': string, 'email': string, 'phone': string, 'customAttributesJson': string.withDefault('{}'), 'idempotencyKey': string},
+    args: {
+      'name': string,
+      'email': string,
+      'phone': string,
+      'customAttributesJson': string.withDefault('{}'),
+      'idempotencyKey': string,
+    },
     returns: string,
     description: 'Updates the authenticated Support contact profile.',
     code: r'''
@@ -1786,7 +1802,11 @@ Future<String> superboardSupportUpdateContactJson(String name, String email, Str
 
   app.customAction(
     'superboardSupportTrackEventJson',
-    args: {'name': string, 'propertiesJson': string.withDefault('{}'), 'idempotencyKey': string},
+    args: {
+      'name': string,
+      'propertiesJson': string.withDefault('{}'),
+      'idempotencyKey': string,
+    },
     returns: string,
     description: 'Tracks one idempotent Support context event.',
     code: r'''
@@ -1856,7 +1876,12 @@ Future<String> superboardSupportHelpCenterCategoriesJson(String portalSlug, Stri
 
   app.customAction(
     'superboardSupportSearchHelpCenterJson',
-    args: {'portalSlug': string, 'query': string, 'locale': string, 'limit': int_.withDefault(20)},
+    args: {
+      'portalSlug': string,
+      'query': string,
+      'locale': string,
+      'limit': int_.withDefault(20),
+    },
     returns: string,
     description: 'Searches published Help Center content.',
     code: r'''
@@ -1880,7 +1905,11 @@ Future<String> superboardSupportHelpCenterArticleJson(String portalSlug, String 
 
   app.customAction(
     'superboardSupportRecordHelpCenterViewJson',
-    args: {'portalSlug': string, 'articleSlug': string, 'idempotencyKey': string},
+    args: {
+      'portalSlug': string,
+      'articleSlug': string,
+      'idempotencyKey': string,
+    },
     returns: string,
     description: 'Records one idempotent Help Center article view.',
     code: r'''
@@ -1892,7 +1921,11 @@ Future<String> superboardSupportRecordHelpCenterViewJson(String portalSlug, Stri
 
   app.customAction(
     'superboardSupportJoinMeetingJson',
-    args: {'conversationId': string, 'meetingId': string, 'idempotencyKey': string},
+    args: {
+      'conversationId': string,
+      'meetingId': string,
+      'idempotencyKey': string,
+    },
     returns: string,
     description: 'Joins a configured Support meeting.',
     code: r'''

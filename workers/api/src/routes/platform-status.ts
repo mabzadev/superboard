@@ -817,7 +817,7 @@ type WorkerTopology = {
 	error?: string;
 };
 
-function workerTopology(env: Env): WorkerTopology {
+export function workerTopology(env: Env): WorkerTopology {
 	const failed = (error: string): WorkerTopology => ({
 		status: "misconfigured",
 		workers: new Map(),

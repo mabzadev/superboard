@@ -11,7 +11,7 @@ La migration EmDash doit préserver bien davantage qu’une liste d’écrans. A
 1. un Dashboard Next.js/OpenNext de **93 pages**, dont **84 sous la garde cliente protégée**, avec 10 sections et 60 destinations de navigation explicites ;
 2. un Worker API Hono qui conserve les contrats historiques et agit comme gateway vers huit Workers de domaine au moyen d’un contexte de projet signé ;
 3. un graphe Cloudflare déclaratif de Workers, D1, KV, R2, Queues, DLQ, Durable Objects, Workflows, Containers, Analytics Engine et Service Bindings ;
-4. des SDK et consommateurs dont la compatibilité repose encore sur des versions OpenGrow publiées pendant que les deux SDK SuperBoard 3.0 actifs restent en attente de release.
+4. des SDK et consommateurs dont la compatibilité repose encore sur des versions antérieures publiées pendant que les deux SDK SuperBoard 3.0 actifs restent en attente de release.
 
 Le commit contient une surface riche et testée, mais il ne constitue pas une production totalement convergée. Le target de développement MBZA est en routage public actif ; le target VocoStar est en routage privé `staged`, désactive Analytics et Messaging, n’a pas de reçu de convergence FlutterFlow, et son pont voix/média présente trois blocages explicites. Support reste en transition depuis Chatwoot/OpenChat et l’ancien Worker Messaging demeure une compatibilité historique. L’inventaire local calcule 320 routes Worker et 120 tables D1, mais la comparaison avec l’ancien upstream est indisponible et volontairement retirée comme gate de release. [Sources : gouvernance][adr-canonical], [inventaire][inventory-script], [target MBZA][target-mbza], [target VocoStar][target-vocostar], [plan de déploiement][deploy-plan].
 
@@ -235,7 +235,7 @@ Le catalogue affirme explicitement que seules les deux bibliothèques Dart sont 
 
 Le manifeste FlutterFlow décrit 11 Library Values, 64 actions, 5 widgets et 3 pages. Il couvre bootstrap, Identity, runtime App, Analytics/links, purchases, Files, custom jobs et Support. [Sources : manifeste][flutterflow-library], [gate][flutterflow-library-script].
 
-L’application `apps/reference` matérialise 16 parcours : bootstrap, auth, création de compte, reset, home, profile, notifications, Files, Products, Paywall, Dynamic Links, Support, Marketing consent, Onboarding, Custom extension et Diagnostics. Elle compile volontairement les tags OpenGrow publiés, pas le candidat 3.0 non publié. [Sources : baseline][reference-baseline], [projet][reference-project], [tests][reference-tests].
+L’application `apps/reference` matérialise 16 parcours : bootstrap, auth, création de compte, reset, home, profile, notifications, Files, Products, Paywall, Dynamic Links, Support, Marketing consent, Onboarding, Custom extension et Diagnostics. Elle compile volontairement les tags antérieurs publiés, pas le candidat 3.0 non publié. [Sources : baseline][reference-baseline], [projet][reference-project], [tests][reference-tests].
 
 État **partiel** au SHA : `platform:readiness` signale une incohérence `flutterflow_source_version` entre le contrat Reference et le catalogue candidat, et deux releases actives en attente. La Reference reste donc un consommateur de rollback utile, mais pas encore la preuve d’un frontend SuperBoard 3.0 entièrement promu. [Sources : readiness][platform-readiness-script], [catalogue][sdk-catalog].
 
@@ -360,11 +360,11 @@ La migration EmDash doit donc ajouter son propre rollback atomique de **Release 
 
 ### 7.2 Historique à conserver pendant la migration
 
-- aliases OpenGrow dans les headers, noms de packages et modèles de données ;
+- alias historiques dans les headers, noms de packages et modèles de données ;
 - Worker/D1/R2/Queue Messaging désactivés tant qu’un lecteur ou rollback en dépend ;
 - Chatwoot/OpenChat et son monitor jusqu’à fin de la preuve de Support ;
 - SDK FlutterFlow Support, JavaScript et React Native gelés ;
-- tags iOS/Android et tags OpenGrow 2.x utilisés par la Reference ;
+- tags iOS/Android et tags 2.x utilisés par la Reference ;
 - anciennes routes API et SDK v1/v2 ;
 - anciens noms physiques `opengrow` sur VocoStar et historiques de migrations SQL.
 
@@ -417,7 +417,7 @@ La migration est compatible uniquement si elle prouve les invariants suivants :
 
 ### SDK et consommateurs
 
-- les tags OpenGrow actuels restent le rollback client jusqu’à promotion réelle de Flutter/FlutterFlow 3.0 ;
+- les tags publiés actuels restent le rollback client jusqu’à promotion réelle de Flutter/FlutterFlow 3.0 ;
 - le Front EmDash ne doit pas imposer une release SDK non publiée ;
 - la Reference et VocoStar doivent être testées séparément, car la première est dans le repo et la seconde dépend d’un export externe ;
 - la famille Identity Melody hors catalogue doit recevoir une décision de lifecycle ;

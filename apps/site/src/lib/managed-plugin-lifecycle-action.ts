@@ -22,18 +22,31 @@ import {
 	requireReleaseOperator,
 	withLocalOperatorReauthentication,
 } from "./operator-guard.js";
+import {
+	migratePluginPackages,
+	packageActionComponents,
+	setPluginFeaturePreference,
+	syncPluginPackageRuntime,
+} from "./plugin-package-state.js";
 import { wakePendingPluginWorkflows } from "./plugin-task-wakeup.js";
 import { getSiteEnv } from "./site-env.js";
 import {
 	loadActiveSuperBoardPluginIdsRequiringValidation,
-	superBoardRuntimePluginCatalog,
 	resolveSuperBoardPluginTarget,
-	reconcileSuperBoardPluginStatus,
+	resolveSuperBoardTargetPluginIds,
 	stageSuperBoardPluginDependencyHealth,
 	transitionSuperBoardPluginLifecycle,
 } from "./superboard-plugin-catalog.js";
 
 const operationIdPattern = /^[A-Za-z0-9._:-]{8,200}$/u;
+const packageInputErrors = new Set([
+	"PLUGIN_NOT_FOUND",
+	"PLUGIN_FEATURE_NOT_FOUND",
+	"CORE_COMPONENT_REQUIRED",
+	"PLUGIN_FEATURE_NOT_IN_TARGET",
+	"PLUGIN_NO_ENABLED_FEATURES",
+	"PLUGIN_OPERATION_IN_PROGRESS",
+]);
 
 type ManagedPluginLifecycleAction = "enable" | "disable";
 
@@ -44,25 +57,38 @@ export async function runManagedPluginLifecycleAction(
 	const env = getSiteEnv();
 	const denied = requireReleaseOperator(context, env);
 	if (denied) return denied;
-	const pluginId = context.params.pluginId ?? "";
-	if (
-		!superBoardRuntimePluginCatalog().plugins.some(
-			({ manifest }) => manifest.plugin_id === pluginId,
-		)
-	) {
-		return jsonResponse({ error: { code: "PLUGIN_NOT_FOUND" } }, 404);
-	}
 	const target = resolveSuperBoardPluginTarget(env.SUPERBOARD_ENVIRONMENT);
+	const scope = { instance_id: env.SUPERBOARD_INSTANCE_ID, target };
+	const targetComponents = resolveSuperBoardTargetPluginIds(env.SUPERBOARD_PLUGIN_IDS);
+	if (!(await recoverExpiredManagedPluginOperation(context)))
+		return jsonResponse({ error: { code: "PLUGIN_RECOVERY_REQUIRED" } }, 503);
+	let selection: Awaited<ReturnType<typeof packageActionComponents>>;
+	try {
+		await migratePluginPackages(env.DB, scope, targetComponents);
+		selection = await packageActionComponents(env.DB, scope, {
+			packageId: context.params.pluginId ?? "",
+			action,
+			targetComponents,
+			featureId: context.params.featureId,
+		});
+	} catch (error) {
+		const code =
+			error instanceof Error && packageInputErrors.has(error.message)
+				? error.message
+				: "PLUGIN_PACKAGE_CONFIGURATION_UNAVAILABLE";
+		return jsonResponse({ error: { code } }, code === "PLUGIN_NOT_FOUND" ? 404 : 409);
+	}
+	const pluginId = selection.owner.id;
+	const componentIds = selection.components;
+	const selected = new Set(componentIds);
 	const operationId = context.request.headers.get("Idempotency-Key") ?? crypto.randomUUID();
 	if (!operationIdPattern.test(operationId))
 		return jsonResponse({ error: { code: "INVALID_IDEMPOTENCY_KEY" } }, 422);
-	if (!(await recoverExpiredManagedPluginOperation(context)))
-		return jsonResponse({ error: { code: "PLUGIN_RECOVERY_REQUIRED" } }, 503);
 	const started = await beginManagedPluginOperation(env.DB, {
 		operation_id: operationId,
 		instance_id: env.SUPERBOARD_INSTANCE_ID,
 		target,
-		plugin_id: pluginId,
+		plugin_id: context.params.featureId ?? pluginId,
 		action,
 	});
 	if ("response" in started) return started.response;
@@ -70,35 +96,33 @@ export async function runManagedPluginLifecycleAction(
 	const releaseId = localId();
 	let response: Response;
 	try {
-		const current = await env.DB.prepare(`SELECT state FROM superboard_plugin_lifecycle
-   WHERE instance_id = ? AND target = ? AND plugin_id = ?`)
-			.bind(operation.instance_id, target, pluginId)
-			.first<{ state: string }>();
+		const currentRows = await env.DB.prepare(
+			"SELECT plugin_id,state FROM superboard_plugin_lifecycle WHERE instance_id=? AND target=?",
+		)
+			.bind(operation.instance_id, target)
+			.all<{ plugin_id: string; state: string }>();
+		const current = new Map(currentRows.results.map((row) => [row.plugin_id, row.state]));
 		const stale = await loadActiveSuperBoardPluginIdsRequiringValidation(env.DB, {
 			...operation,
 			checked_at: new Date().toISOString(),
 			target_artifact_checksum: env.TARGET_ARTIFACT_CHECKSUM,
 		});
 		if (
-			(action === "enable" && current?.state === "active" && !stale.includes(pluginId)) ||
+			(action === "enable" &&
+				componentIds.every((id) => current.get(id) === "active" && !stale.includes(id))) ||
 			(action === "disable" &&
-				(!current || ["available", "installed", "disabled"].includes(current.state)))
+				componentIds.every(
+					(id) =>
+						!current.has(id) ||
+						["available", "installed", "disabled"].includes(current.get(id) ?? ""),
+				))
 		) {
 			const active = await env.DB.prepare(
 				"SELECT active_release_id FROM superboard_front_active_releases WHERE instance_id = ?",
 			)
 				.bind(operation.instance_id)
 				.first<{ active_release_id: string }>();
-			await reconcileSuperBoardPluginStatus(
-				env.DB,
-				pluginId,
-				action === "enable" ? "active" : "inactive",
-				new Date().toISOString(),
-			);
-			await context.locals.emdash.setPluginStatus(
-				pluginId,
-				action === "enable" ? "active" : "inactive",
-			);
+			await syncPluginPackageRuntime(env.DB, scope, context.locals.emdash);
 			response = jsonResponse(
 				{
 					plugin_id: pluginId,
@@ -108,12 +132,25 @@ export async function runManagedPluginLifecycleAction(
 				200,
 			);
 		} else {
-			await snapshotManagedPluginOperation(env.DB, operation, releaseId);
-			response = await executeManagedPluginLifecycleAction(context, action, operation, releaseId);
-			if (!response.ok) {
-				const restored = await restoreManagedPluginOperation(env.DB, operation);
-				for (const plugin of restored)
-					await context.locals.emdash.setPluginStatus(plugin.plugin_id, plugin.status);
+			const changingComponents =
+				action === "disable"
+					? componentIds.filter((id) => current.get(id) === "active")
+					: componentIds;
+			if (!changingComponents.length) {
+				response = jsonResponse({ error: { code: "PLUGIN_LIFECYCLE_STATE_CONFLICT" } }, 409);
+			} else {
+				await snapshotManagedPluginOperation(env.DB, operation, releaseId);
+				response = await executeManagedPluginLifecycleAction(
+					{ ...context, params: { ...context.params, pluginId } },
+					action,
+					operation,
+					releaseId,
+					changingComponents,
+				);
+				if (!response.ok) {
+					await restoreManagedPluginOperation(env.DB, operation);
+					await syncPluginPackageRuntime(env.DB, scope, context.locals.emdash);
+				}
 			}
 		}
 	} catch (error) {
@@ -136,11 +173,25 @@ export async function runManagedPluginLifecycleAction(
 				return jsonResponse({ error: { code: "PLUGIN_RECOVERY_REQUIRED" } }, 503);
 			}
 		} else {
-			const restored = await restoreManagedPluginOperation(env.DB, operation);
-			for (const plugin of restored)
-				await context.locals.emdash.setPluginStatus(plugin.plugin_id, plugin.status);
+			await restoreManagedPluginOperation(env.DB, operation);
+			await syncPluginPackageRuntime(env.DB, scope, context.locals.emdash);
 			response = jsonResponse({ error: { code: "PLUGIN_LIFECYCLE_ACTION_FAILED" } }, 500);
 		}
+	}
+	if (response.ok && context.params.featureId && selected.has(context.params.featureId))
+		await setPluginFeaturePreference(env.DB, scope, context.params.featureId, action === "enable");
+	if (response.ok) {
+		const body: unknown = await response.json();
+		if (body && typeof body === "object" && !Array.isArray(body))
+			response = jsonResponse(
+				{
+					...body,
+					plugin_id: context.params.pluginId ?? pluginId,
+					package_id: pluginId,
+					...(context.params.featureId ? { feature_id: context.params.featureId } : {}),
+				},
+				response.status,
+			);
 	}
 	await completeManagedPluginOperation(env.DB, operation, response);
 	await wakePendingPluginWorkflows();
@@ -152,6 +203,7 @@ async function executeManagedPluginLifecycleAction(
 	action: ManagedPluginLifecycleAction,
 	operation: ManagedPluginOperation,
 	releaseId: string,
+	componentIds: readonly string[],
 ): Promise<Response> {
 	const env = getSiteEnv();
 	const denied = requireReleaseOperator(context, env);
@@ -202,8 +254,8 @@ async function executeManagedPluginLifecycleAction(
 	});
 	const pluginIds = [
 		...new Set([
-			...stalePluginIds.filter((id) => action !== "disable" || id !== pluginId),
-			...(action === "enable" ? [pluginId] : []),
+			...stalePluginIds.filter((id) => action !== "disable" || !componentIds.includes(id)),
+			...(action === "enable" ? componentIds : []),
 		]),
 	];
 	if (pluginIds.length > 0) {
@@ -230,7 +282,7 @@ async function executeManagedPluginLifecycleAction(
 	await renewManagedPluginOperation(env.DB, operation);
 	const sliced = await invoke(createUserSlice, workflowContext, "releases/user-slice", {
 		...identifiers,
-		...(action === "enable" ? { plugin_ids: [pluginId] } : { excluded_plugin_ids: [pluginId] }),
+		...(action === "enable" ? { plugin_ids: componentIds } : { excluded_plugin_ids: componentIds }),
 	});
 	if (!sliced.ok) return sliced;
 	const slice = await sliced.clone().json<{
@@ -254,30 +306,38 @@ async function executeManagedPluginLifecycleAction(
 	if (!approved.ok) return approved;
 
 	if (action === "disable") {
-		await transitionSuperBoardPluginLifecycle(env.DB, {
-			instance_id: env.SUPERBOARD_INSTANCE_ID,
-			target,
-			plugin_id: pluginId,
-			to_state: "draining",
-			changed_at: new Date().toISOString(),
-			reason: "operator disable",
-		});
-		const busy = await env.DB.prepare(`SELECT
+		for (const componentId of componentIds) {
+			const state = await env.DB.prepare(
+				"SELECT state FROM superboard_plugin_lifecycle WHERE instance_id=? AND target=? AND plugin_id=?",
+			)
+				.bind(env.SUPERBOARD_INSTANCE_ID, target, componentId)
+				.first<{ state: string }>();
+			if (state?.state !== "active") continue;
+			await transitionSuperBoardPluginLifecycle(env.DB, {
+				instance_id: env.SUPERBOARD_INSTANCE_ID,
+				target,
+				plugin_id: componentId,
+				to_state: "draining",
+				changed_at: new Date().toISOString(),
+				reason: "operator disable",
+			});
+			const busy = await env.DB.prepare(`SELECT
    EXISTS(SELECT 1 FROM superboard_plugin_command_operations WHERE instance_id = ? AND plugin_id = ? AND state = 'accepted')
    OR EXISTS(SELECT 1 FROM superboard_worker_execution_leases WHERE plugin_id = ? AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at > ?)
    OR EXISTS(SELECT 1 FROM superboard_plugin_task_leases WHERE instance_id = ? AND target = ? AND plugin_id = ? AND state = 'running') AS busy`)
-			.bind(
-				env.SUPERBOARD_INSTANCE_ID,
-				pluginId,
-				pluginId,
-				new Date().toISOString(),
-				env.SUPERBOARD_INSTANCE_ID,
-				target,
-				pluginId,
-			)
-			.first<{ busy: number }>();
-		if (busy?.busy) return jsonResponse({ error: { code: "PLUGIN_OPERATIONS_IN_PROGRESS" } }, 409);
-		await workflowContext.locals.emdash.setPluginStatus(pluginId, "inactive");
+				.bind(
+					env.SUPERBOARD_INSTANCE_ID,
+					componentId,
+					componentId,
+					new Date().toISOString(),
+					env.SUPERBOARD_INSTANCE_ID,
+					target,
+					componentId,
+				)
+				.first<{ busy: number }>();
+			if (busy?.busy)
+				return jsonResponse({ error: { code: "PLUGIN_OPERATIONS_IN_PROGRESS" } }, 409);
+		}
 	}
 
 	await renewManagedPluginOperation(env.DB, operation);
@@ -287,6 +347,11 @@ async function executeManagedPluginLifecycleAction(
 		expected_active_release_id: slice.previous_release_id,
 	});
 	if (!activated.ok) return activated;
+	await syncPluginPackageRuntime(
+		env.DB,
+		{ instance_id: env.SUPERBOARD_INSTANCE_ID, target },
+		context.locals.emdash,
+	);
 	return jsonResponse(
 		{
 			plugin_id: pluginId,
@@ -323,7 +388,7 @@ function localId(): string {
 	return `0${crypto.randomUUID().replaceAll("-", "").slice(0, 25).toUpperCase()}`;
 }
 
-async function recoverExpiredManagedPluginOperation(context: APIContext) {
+export async function recoverExpiredManagedPluginOperation(context: APIContext) {
 	const env = getSiteEnv();
 	const operation = await claimExpiredManagedPluginOperation(env.DB, env.SUPERBOARD_INSTANCE_ID);
 	if (!operation) return true;
@@ -346,9 +411,12 @@ async function recoverExpiredManagedPluginOperation(context: APIContext) {
 			await compensateManagedPluginActivation(context, operation);
 			response = jsonResponse({ error: { code: "PLUGIN_ACTIVATION_COMPENSATED" } }, 500);
 		} else {
-			const restored = await restoreManagedPluginOperation(env.DB, operation);
-			for (const plugin of restored)
-				await context.locals.emdash.setPluginStatus(plugin.plugin_id, plugin.status);
+			await restoreManagedPluginOperation(env.DB, operation);
+			await syncPluginPackageRuntime(
+				env.DB,
+				{ instance_id: operation.instance_id, target: operation.target },
+				context.locals.emdash,
+			);
 			response = jsonResponse({ error: { code: "PLUGIN_OPERATION_INTERRUPTED" } }, 503);
 		}
 		await completeManagedPluginOperation(env.DB, operation, response);

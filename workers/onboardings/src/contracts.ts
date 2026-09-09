@@ -79,6 +79,23 @@ export function validateDefinition(value: unknown) {
     });
     return { ...screen, id, blocks: normalizedBlocks };
   });
+  for (const screen of normalized) {
+    for (const block of screen.blocks) {
+      if (block.type !== "question") continue;
+      const props = object(block.props);
+      if (!/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(String(props.attribute ?? ""))) throw new Error("question attribute is invalid");
+      if (!Array.isArray(props.options) || !props.options.length || props.options.length > 30) throw new Error("question needs 1 to 30 choices");
+      const values = new Set<string>();
+      for (const raw of props.options) {
+        const option = object(raw);
+        const value = text(option.value, "answer value");
+        text(option.label, "answer label");
+        if (values.has(value)) throw new Error("answer values must be unique");
+        values.add(value);
+        if (option.next_screen_id && !ids.has(String(option.next_screen_id))) throw new Error("answer destination is missing");
+      }
+    }
+  }
   return { ...definition, screens: normalized, theme: record(definition.theme) };
 }
 

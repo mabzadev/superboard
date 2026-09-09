@@ -151,6 +151,7 @@ test("OAuth and external-peer contracts fail closed", async () => {
 			"managed-medias-orchestrator": {
 				GATEWAY_INTERNAL_TOKEN: "coordinated-gateway-token",
 			},
+			custom: { VOCOSTAR_INTERNAL_CALLBACK_TOKEN: "coordinated-gateway-token" },
 		},
 	);
 });

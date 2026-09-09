@@ -117,6 +117,7 @@ import {
 	type AnalyticsSettings,
 	type AnalyticsView,
 } from "../../api/analytics/analyticsService.js";
+import { useAnalyticsI18n } from "./analytics-i18n.js";
 
 const range30Days = () => {
 	const to = new Date();
@@ -127,6 +128,7 @@ const range30Days = () => {
 };
 
 export function AnalyticsDashboardsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const [items, setItems] = useState<AnalyticsDashboard[]>([]);
 	const [selected, setSelected] = useState<AnalyticsDashboard | null>(null);
@@ -144,9 +146,9 @@ export function AnalyticsDashboardsPage() {
 			setSelected(wanted ? await getAnalyticsDashboard(selectedProject.id, wanted) : null);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [selected?.id, selectedProject]);
+	}, [selected?.id, selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 
 	const mutate = async (action: () => Promise<unknown>, message: string) => {
@@ -156,7 +158,7 @@ export function AnalyticsDashboardsPage() {
 			showSuccessNotification(message);
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
 		}
@@ -164,8 +166,10 @@ export function AnalyticsDashboardsPage() {
 
 	return (
 		<ModulePage
-			title="Dashboards"
-			description="Build project dashboards from reusable product, revenue, stability and audience widgets."
+			title={t("Dashboards")}
+			description={t(
+				"Build project dashboards from reusable product, revenue, stability and audience widgets.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -174,31 +178,31 @@ export function AnalyticsDashboardsPage() {
 				<div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
 					<Card className="h-fit">
 						<CardHeader>
-							<CardTitle className="text-base">Your dashboards</CardTitle>
-							<CardDescription>Private or shared with this project.</CardDescription>
+							<CardTitle className="text-base">{t("Your dashboards")}</CardTitle>
+							<CardDescription>{t("Private or shared with this project.")}</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
 							<div className="flex gap-2">
 								<Input
 									value={name}
 									onChange={(event) => setName(event.target.value)}
-									placeholder="Product pulse"
+									placeholder={t("Product pulse")}
 								/>
 								<Button
 									size="icon"
 									disabled={busy || !name.trim()}
-									aria-label="Create dashboard"
+									aria-label={t("Create dashboard")}
 									onClick={() =>
 										void mutate(async () => {
 											const created = await createAnalyticsDashboard(selectedProject.id, {
 												name: name.trim(),
 												visibility: "project",
-												description: "Shared analytics dashboard",
+												description: t("Shared analytics dashboard"),
 												layout: { columns: 12 },
 											});
 											setName("");
 											setSelected(created);
-										}, "Dashboard created")
+										}, t("Dashboard created"))
 									}
 								>
 									<Plus className="size-4" />
@@ -209,7 +213,7 @@ export function AnalyticsDashboardsPage() {
 									<button
 										type="button"
 										key={dashboard.id}
-										className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${
+										className={`w-full rounded-lg border px-3 py-2.5 text-start transition-colors ${
 											selected?.id === dashboard.id
 												? "border-primary bg-primary/5"
 												: "hover:bg-muted/60"
@@ -217,16 +221,21 @@ export function AnalyticsDashboardsPage() {
 										onClick={() =>
 											void getAnalyticsDashboard(selectedProject.id, dashboard.id)
 												.then(setSelected)
-												.catch((cause: unknown) => showErrorNotification(moduleErrorMessage(cause)))
+												.catch((cause: unknown) =>
+													showErrorNotification(moduleErrorMessage(cause, locale)),
+												)
 										}
 									>
 										<span className="block truncate font-medium">{dashboard.name}</span>
 										<span className="text-xs text-muted-foreground">
-											{dashboard.widget_count} widgets · {dashboard.visibility}
+											{t("Widget count", { count: dashboard.widget_count ?? 0 })} ·{" "}
+											{t(labelize(dashboard.visibility))}
 										</span>
 									</button>
 								))}
-								{!items.length && <EmptyState compact>Create your first dashboard.</EmptyState>}
+								{!items.length && (
+									<EmptyState compact>{t("Create your first dashboard.")}</EmptyState>
+								)}
 							</div>
 						</CardContent>
 					</Card>
@@ -238,19 +247,19 @@ export function AnalyticsDashboardsPage() {
 									<div>
 										<CardTitle>{selected.name}</CardTitle>
 										<CardDescription>
-											{selected.description || "Custom analytics workspace"}
+											{selected.description || t("Custom analytics workspace")}
 										</CardDescription>
 									</div>
 									<Button
 										variant="ghost"
 										size="icon"
-										aria-label="Delete dashboard"
+										aria-label={t("Delete dashboard")}
 										disabled={busy}
 										onClick={() =>
 											void mutate(async () => {
 												await deleteAnalyticsDashboard(selectedProject.id, selected.id);
 												setSelected(null);
-											}, "Dashboard deleted")
+											}, t("Dashboard deleted"))
 										}
 									>
 										<Trash2 className="size-4" />
@@ -263,7 +272,7 @@ export function AnalyticsDashboardsPage() {
 											setWidgetType(value as AnalyticsDashboardWidget["widget_type"])
 										}
 									>
-										<SelectTrigger aria-label="Widget type">
+										<SelectTrigger aria-label={t("Widget type")}>
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
@@ -281,7 +290,7 @@ export function AnalyticsDashboardsPage() {
 												"installations",
 											].map((type) => (
 												<SelectItem key={type} value={type}>
-													{labelize(type)}
+													{t(labelize(type))}
 												</SelectItem>
 											))}
 										</SelectContent>
@@ -289,7 +298,7 @@ export function AnalyticsDashboardsPage() {
 									<Input
 										value={widgetTitle}
 										onChange={(event) => setWidgetTitle(event.target.value)}
-										placeholder="Widget title"
+										placeholder={t("Widget title")}
 									/>
 									<Button
 										disabled={busy || !widgetTitle.trim()}
@@ -302,10 +311,11 @@ export function AnalyticsDashboardsPage() {
 													position: { width: 6, height: 3 },
 												});
 												setWidgetTitle("");
-											}, "Widget added")
+											}, t("Widget added"))
 										}
 									>
-										<Plus className="size-4" /> Add widget
+										<Plus className="size-4" />
+										{t("Add widget")}
 									</Button>
 								</CardContent>
 							</Card>
@@ -314,13 +324,13 @@ export function AnalyticsDashboardsPage() {
 									<Card key={widget.id} className="min-h-44">
 										<CardHeader className="flex-row items-start justify-between gap-3">
 											<div>
-												<Badge variant="outline">{labelize(widget.widget_type)}</Badge>
+												<Badge variant="outline">{t(labelize(widget.widget_type))}</Badge>
 												<CardTitle className="mt-3 text-base">{widget.title}</CardTitle>
 											</div>
 											<Button
 												variant="ghost"
 												size="icon"
-												aria-label={`Delete ${widget.title}`}
+												aria-label={t("Delete item", { name: widget.title })}
 												onClick={() =>
 													void mutate(
 														() =>
@@ -329,7 +339,7 @@ export function AnalyticsDashboardsPage() {
 																selected.id,
 																widget.id,
 															),
-														"Widget deleted",
+														t("Widget deleted"),
 													)
 												}
 											>
@@ -344,12 +354,12 @@ export function AnalyticsDashboardsPage() {
 							</div>
 							{!selected.widgets?.length && (
 								<EmptyState>
-									Add widgets above to reproduce the dashboard workflow with SuperBoard data.
+									{t("Add widgets above to reproduce the dashboard workflow with SuperBoard data.")}
 								</EmptyState>
 							)}
 						</div>
 					) : (
-						<EmptyState>Select or create a dashboard.</EmptyState>
+						<EmptyState>{t("Select or create a dashboard.")}</EmptyState>
 					)}
 				</div>
 			)}
@@ -358,6 +368,7 @@ export function AnalyticsDashboardsPage() {
 }
 
 export function AnalyticsUsersPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useMemo(() => range30Days(), []);
 	const [sessions, setSessions] = useState<AnalyticsSession[]>([]);
@@ -374,12 +385,14 @@ export function AnalyticsUsersPage() {
 				setProfiles(profileData.items);
 				setError(null);
 			})
-			.catch((cause: unknown) => setError(moduleErrorMessage(cause)));
-	}, [range, selectedProject]);
+			.catch((cause: unknown) => setError(moduleErrorMessage(cause, locale)));
+	}, [range, selectedProject, locale]);
 	return (
 		<ModulePage
-			title="Users & sessions"
-			description="Explore pseudonymized profiles and session timelines without exposing raw SDK identifiers."
+			title={t("Users & sessions")}
+			description={t(
+				"Explore pseudonymized profiles and session timelines without exposing raw SDK identifiers.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -387,29 +400,36 @@ export function AnalyticsUsersPage() {
 			) : (
 				<Tabs defaultValue="sessions" className="space-y-4">
 					<TabsList>
-						<TabsTrigger value="sessions">Sessions</TabsTrigger>
-						<TabsTrigger value="profiles">User profiles</TabsTrigger>
+						<TabsTrigger value="sessions">{t("Sessions")}</TabsTrigger>
+						<TabsTrigger value="profiles">{t("User profiles")}</TabsTrigger>
 					</TabsList>
 					<TabsContent value="sessions">
 						<Card>
 							<CardHeader>
-								<CardTitle>Recent sessions</CardTitle>
+								<CardTitle>{t("Recent sessions")}</CardTitle>
 								<CardDescription>
-									Session duration and event depth over the last 30 days.
+									{t("Session duration and event depth over the last 30 days.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<FeatureTable
-									columns={["Started", "Application", "Platform", "Events", "Duration", "Profile"]}
-									empty="No sessions in this period."
+									columns={[
+										t("Started"),
+										t("Application"),
+										t("Platform"),
+										t("Events"),
+										t("Duration"),
+										t("Profile"),
+									]}
+									empty={t("No sessions in this period.")}
 								>
 									{sessions.map((session) => (
 										<tr key={session.id} className="border-b last:border-0">
-											<Cell>{date(session.started_at)}</Cell>
+											<Cell>{date(session.started_at, locale)}</Cell>
 											<Cell>{session.application_id}</Cell>
 											<Cell>{session.platform || "—"}</Cell>
-											<Cell>{numberFormat(session.event_count)}</Cell>
-											<Cell>{duration(session.duration_seconds)}</Cell>
+											<Cell>{numberFormat(session.event_count, locale)}</Cell>
+											<Cell>{duration(session.duration_seconds, locale)}</Cell>
 											<Cell mono>{shortId(session.profile_id)}</Cell>
 										</tr>
 									))}
@@ -420,19 +440,19 @@ export function AnalyticsUsersPage() {
 					<TabsContent value="profiles">
 						<Card>
 							<CardHeader>
-								<CardTitle>Pseudonymized profiles</CardTitle>
+								<CardTitle>{t("Pseudonymized profiles")}</CardTitle>
 								<CardDescription>
-									Identity aliases are hashed before they reach Analytics.
+									{t("Identity aliases are hashed before they reach Analytics.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<FeatureTable
-									columns={["Last seen", "Application", "Profile", "Properties"]}
-									empty="No profiles have been resolved yet."
+									columns={[t("Last seen"), t("Application"), t("Profile"), t("Properties")]}
+									empty={t("No profiles have been resolved yet.")}
 								>
 									{profiles.map((profile) => (
 										<tr key={profile.id} className="border-b last:border-0">
-											<Cell>{date(profile.last_seen_at)}</Cell>
+											<Cell>{date(profile.last_seen_at, locale)}</Cell>
 											<Cell>{profile.application_id}</Cell>
 											<Cell mono>{shortId(profile.id)}</Cell>
 											<Cell>
@@ -453,6 +473,7 @@ export function AnalyticsUsersPage() {
 }
 
 export function AnalyticsViewsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useMemo(() => range30Days(), []);
 	const [items, setItems] = useState<AnalyticsView[]>([]);
@@ -464,13 +485,15 @@ export function AnalyticsViewsPage() {
 				setItems(result.items);
 				setError(null);
 			})
-			.catch((cause: unknown) => setError(moduleErrorMessage(cause)));
-	}, [range, selectedProject]);
+			.catch((cause: unknown) => setError(moduleErrorMessage(cause, locale)));
+	}, [range, selectedProject, locale]);
 	const total = items.reduce((sum, item) => sum + Number(item.views), 0);
 	return (
 		<ModulePage
-			title="Views"
-			description="Page and screen performance, visit depth and time spent across web and mobile applications."
+			title={t("Views")}
+			description={t(
+				"Page and screen performance, visit depth and time spent across web and mobile applications.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -478,37 +501,47 @@ export function AnalyticsViewsPage() {
 			) : (
 				<div className="space-y-5">
 					<div className="grid gap-4 md:grid-cols-3">
-						<FeatureMetric icon={AppWindow} label="Tracked views" value={total} />
-						<FeatureMetric icon={Globe2} label="Unique screens" value={items.length} />
+						<FeatureMetric icon={AppWindow} label={t("Tracked views")} value={total} />
+						<FeatureMetric icon={Globe2} label={t("Unique screens")} value={items.length} />
 						<FeatureMetric
 							icon={Clock3}
-							label="Average time"
+							label={t("Average time")}
 							text={duration(
 								Math.round(
 									items.reduce((sum, item) => sum + Number(item.average_duration_seconds), 0) /
 										Math.max(1, items.length),
 								),
+								locale,
 							)}
 						/>
 					</div>
 					<Card>
 						<CardHeader>
-							<CardTitle>Top views</CardTitle>
-							<CardDescription>Last 30 days, ordered by volume.</CardDescription>
+							<CardTitle>{t("Top views")}</CardTitle>
+							<CardDescription>{t("Last 30 days, ordered by volume.")}</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<FeatureTable
-								columns={["View", "URL", "Views", "Sessions", "Avg. time", "Last seen"]}
-								empty="Send view.opened, screen.viewed or [CLY]_view events to populate this report."
+								columns={[
+									t("View"),
+									t("URL"),
+									t("Views"),
+									t("Sessions"),
+									t("Avg. time"),
+									t("Last seen"),
+								]}
+								empty={t(
+									"Send view.opened, screen.viewed or [CLY]_view events to populate this report.",
+								)}
 							>
 								{items.map((item) => (
 									<tr key={item.view_name} className="border-b last:border-0">
 										<Cell strong>{item.view_name}</Cell>
 										<Cell mono>{item.view_url || "—"}</Cell>
-										<Cell>{numberFormat(item.views)}</Cell>
-										<Cell>{numberFormat(item.sessions)}</Cell>
-										<Cell>{duration(item.average_duration_seconds)}</Cell>
-										<Cell>{date(item.last_seen_at)}</Cell>
+										<Cell>{numberFormat(item.views, locale)}</Cell>
+										<Cell>{numberFormat(item.sessions, locale)}</Cell>
+										<Cell>{duration(item.average_duration_seconds, locale)}</Cell>
+										<Cell>{date(item.last_seen_at, locale)}</Cell>
 									</tr>
 								))}
 							</FeatureTable>
@@ -521,6 +554,7 @@ export function AnalyticsViewsPage() {
 }
 
 export function AnalyticsDimensionsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const range = useMemo(() => range30Days(), []);
 	const [dimensions, setDimensions] = useState<Record<string, AnalyticsDimensionValue[]>>({});
@@ -532,34 +566,36 @@ export function AnalyticsDimensionsPage() {
 				setDimensions(result.dimensions);
 				setError(null);
 			})
-			.catch((cause: unknown) => setError(moduleErrorMessage(cause)));
-	}, [range, selectedProject]);
+			.catch((cause: unknown) => setError(moduleErrorMessage(cause, locale)));
+	}, [range, selectedProject, locale]);
 	const groups = [
 		{
-			title: "Platforms & versions",
+			title: t("Platforms & versions"),
 			icon: MonitorSmartphone,
 			keys: ["platform", "app_version", "os_version", "device", "device_type"],
 		},
 		{
-			title: "Web technology",
+			title: t("Web technology"),
 			icon: Globe2,
 			keys: ["browser", "browser_version", "screen_resolution"],
 		},
 		{
-			title: "Locations",
+			title: t("Locations"),
 			icon: MapPin,
 			keys: ["country_code", "city", "carrier"],
 		},
 		{
-			title: "Acquisition & connection",
+			title: t("Acquisition & connection"),
 			icon: Wifi,
 			keys: ["connection_type", "campaign", "acquisition_source"],
 		},
 	];
 	return (
 		<ModulePage
-			title="Technology & location"
-			description="Compare application versions, devices, browsers, countries, carriers and acquisition context."
+			title={t("Technology & location")}
+			description={t(
+				"Compare application versions, devices, browsers, countries, carriers and acquisition context.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -572,14 +608,14 @@ export function AnalyticsDimensionsPage() {
 								<CardTitle className="flex items-center gap-2 text-base">
 									<Icon className="size-5 text-primary" /> {title}
 								</CardTitle>
-								<CardDescription>Top values over the last 30 days.</CardDescription>
+								<CardDescription>{t("Top values over the last 30 days.")}</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<Tabs defaultValue={keys[0]}>
 									<TabsList className="h-auto flex-wrap">
 										{keys.map((key) => (
 											<TabsTrigger key={key} value={key}>
-												{labelize(key)}
+												{t(labelize(key))}
 											</TabsTrigger>
 										))}
 									</TabsList>
@@ -591,14 +627,14 @@ export function AnalyticsDimensionsPage() {
 													<div key={item.value} className="space-y-1.5">
 														<div className="flex items-center justify-between gap-3 text-sm">
 															<span className="truncate">
-																<span className="mr-2 text-xs text-muted-foreground">
+																<span className="me-2 text-xs text-muted-foreground">
 																	{index + 1}
 																</span>
 																{item.value}
 															</span>
 															<span className="shrink-0 tabular-nums text-muted-foreground">
-																{numberFormat(item.users)} users · {numberFormat(item.events)}{" "}
-																events
+																{t("User count", { count: item.users })} ·{" "}
+																{t("Event count", { count: item.events })}
 															</span>
 														</div>
 														<div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -613,7 +649,9 @@ export function AnalyticsDimensionsPage() {
 												);
 											})}
 											{!dimensions[key]?.length && (
-												<EmptyState compact>No {labelize(key).toLowerCase()} data.</EmptyState>
+												<EmptyState compact>
+													{t("Dimension empty", { dimension: t(labelize(key)) })}
+												</EmptyState>
 											)}
 										</TabsContent>
 									))}
@@ -628,6 +666,7 @@ export function AnalyticsDimensionsPage() {
 }
 
 export function AnalyticsCrashesPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const [items, setItems] = useState<AnalyticsCrash[]>([]);
 	const [selected, setSelected] = useState<AnalyticsCrash | null>(null);
@@ -642,16 +681,16 @@ export function AnalyticsCrashesPage() {
 			setItems(result.items);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [selectedProject, status]);
+	}, [selectedProject, status, locale]);
 	useEffect(() => void load(), [load]);
 	const open = async (item: AnalyticsCrash) => {
 		if (!selectedProject) return;
 		try {
 			setSelected(await getAnalyticsCrash(selectedProject.id, item.fingerprint));
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 	const resolve = async (resolved: boolean) => {
@@ -660,17 +699,19 @@ export function AnalyticsCrashesPage() {
 			await updateAnalyticsCrash(selectedProject.id, selected.fingerprint, {
 				resolved,
 			});
-			showSuccessNotification(resolved ? "Crash resolved" : "Crash reopened");
+			showSuccessNotification(resolved ? t("Crash resolved") : t("Crash reopened"));
 			setSelected(null);
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		}
 	};
 	return (
 		<ModulePage
-			title="Crashes"
-			description="Group recurring errors by deterministic fingerprint, inspect occurrences and manage resolution."
+			title={t("Crashes")}
+			description={t(
+				"Group recurring errors by deterministic fingerprint, inspect occurrences and manage resolution.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -680,24 +721,24 @@ export function AnalyticsCrashesPage() {
 					<Card>
 						<CardHeader className="flex-row items-center justify-between gap-4">
 							<div>
-								<CardTitle>Crash groups</CardTitle>
-								<CardDescription>Fatal and non-fatal SDK reports.</CardDescription>
+								<CardTitle>{t("Crash groups")}</CardTitle>
+								<CardDescription>{t("Fatal and non-fatal SDK reports.")}</CardDescription>
 							</div>
 							<Select value={status} onValueChange={setStatus}>
-								<SelectTrigger className="w-36" aria-label="Crash status">
+								<SelectTrigger className="w-36" aria-label={t("Crash status")}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="open">Open</SelectItem>
-									<SelectItem value="resolved">Resolved</SelectItem>
-									<SelectItem value="all">All</SelectItem>
+									<SelectItem value="open">{t("Open")}</SelectItem>
+									<SelectItem value="resolved">{t("Resolved")}</SelectItem>
+									<SelectItem value="all">{t("All")}</SelectItem>
 								</SelectContent>
 							</Select>
 						</CardHeader>
 						<CardContent>
 							<FeatureTable
-								columns={["Crash", "Impact", "Version", "Last seen", "Status"]}
-								empty="No crash groups match this filter."
+								columns={[t("Crash"), t("Impact"), t("Version"), t("Last seen"), t("Status")]}
+								empty={t("No crash groups match this filter.")}
 							>
 								{items.map((item) => (
 									<tr
@@ -715,13 +756,13 @@ export function AnalyticsCrashesPage() {
 											</div>
 										</Cell>
 										<Cell>
-											{numberFormat(item.occurrence_count)} occurrences ·{" "}
-											{numberFormat(item.affected_profiles)} users
+											{t("Occurrences count", { count: item.occurrence_count })} ·{" "}
+											{t("User count", { count: item.affected_profiles })}
 										</Cell>
 										<Cell>{item.last_app_version || "—"}</Cell>
-										<Cell>{date(item.last_seen_at)}</Cell>
+										<Cell>{date(item.last_seen_at, locale)}</Cell>
 										<Cell>
-											<StatusBadge ok={item.resolved} okText="Resolved" badText="Open" />
+											<StatusBadge ok={item.resolved} okText={t("Resolved")} badText={t("Open")} />
 										</Cell>
 									</tr>
 								))}
@@ -730,27 +771,32 @@ export function AnalyticsCrashesPage() {
 					</Card>
 					<Card className="h-fit xl:sticky xl:top-5">
 						<CardHeader>
-							<CardTitle className="text-base">{selected?.title || "Crash details"}</CardTitle>
+							<CardTitle className="text-base">{selected?.title || t("Crash details")}</CardTitle>
 							<CardDescription>
 								{selected
-									? `${selected.occurrence_count} occurrences since ${date(selected.first_seen_at)}`
-									: "Select a group to inspect its latest stack traces."}
+									? t("Occurrences since", {
+											count: selected.occurrence_count,
+											date: date(selected.first_seen_at, locale),
+										})
+									: t("Select a group to inspect its latest stack traces.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							{selected ? (
 								<>
 									<div className="flex flex-wrap gap-2">
-										<Badge variant="outline">{selected.last_platform || "unknown platform"}</Badge>
 										<Badge variant="outline">
-											{selected.last_app_version || "unknown version"}
+											{selected.last_platform || t("unknown platform")}
 										</Badge>
-										{selected.fatal && <Badge variant="destructive">Fatal</Badge>}
+										<Badge variant="outline">
+											{selected.last_app_version || t("unknown version")}
+										</Badge>
+										{selected.fatal && <Badge variant="destructive">{t("Fatal")}</Badge>}
 									</div>
 									{(selected.occurrences ?? []).slice(0, 5).map((occurrence) => (
 										<div key={occurrence.id} className="rounded-lg border p-3">
 											<div className="text-xs text-muted-foreground">
-												{date(occurrence.occurred_at)}
+												{date(occurrence.occurred_at, locale)}
 											</div>
 											<div className="mt-1 text-sm">{occurrence.message || selected.title}</div>
 											{occurrence.stack && (
@@ -766,11 +812,11 @@ export function AnalyticsCrashesPage() {
 										) : (
 											<CheckCircle2 className="size-4" />
 										)}
-										{selected.resolved ? "Reopen group" : "Mark as resolved"}
+										{selected.resolved ? t("Reopen group") : t("Mark as resolved")}
 									</Button>
 								</>
 							) : (
-								<EmptyState compact>No crash selected.</EmptyState>
+								<EmptyState compact>{t("No crash selected.")}</EmptyState>
 							)}
 						</CardContent>
 					</Card>
@@ -781,6 +827,7 @@ export function AnalyticsCrashesPage() {
 }
 
 export function AnalyticsFeedbackPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const [items, setItems] = useState<AnalyticsFeedback[]>([]);
 	const [summary, setSummary] = useState({
@@ -798,12 +845,14 @@ export function AnalyticsFeedbackPage() {
 				setSummary(result.summary);
 				setError(null);
 			})
-			.catch((cause: unknown) => setError(moduleErrorMessage(cause)));
-	}, [selectedProject]);
+			.catch((cause: unknown) => setError(moduleErrorMessage(cause, locale)));
+	}, [selectedProject, locale]);
 	return (
 		<ModulePage
-			title="Feedback"
-			description="Review star ratings and written feedback captured from web and mobile experiences."
+			title={t("Feedback")}
+			description={t(
+				"Review star ratings and written feedback captured from web and mobile experiences.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -813,24 +862,26 @@ export function AnalyticsFeedbackPage() {
 					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 						<FeatureMetric
 							icon={Star}
-							label="Average rating"
+							label={t("Average rating")}
 							text={
-								summary.average_rating == null ? "—" : `${summary.average_rating.toFixed(1)} / 5`
+								summary.average_rating == null
+									? "—"
+									: `${numberFormat(summary.average_rating, locale)} / 5`
 							}
 						/>
-						<FeatureMetric icon={Activity} label="Responses" value={summary.responses} />
-						<FeatureMetric icon={CheckCircle2} label="Positive" value={summary.positive} />
-						<FeatureMetric icon={XCircle} label="Critical" value={summary.negative} />
+						<FeatureMetric icon={Activity} label={t("Responses")} value={summary.responses} />
+						<FeatureMetric icon={CheckCircle2} label={t("Positive")} value={summary.positive} />
+						<FeatureMetric icon={XCircle} label={t("Critical")} value={summary.negative} />
 					</div>
 					<Card>
 						<CardHeader>
-							<CardTitle>Recent responses</CardTitle>
+							<CardTitle>{t("Recent responses")}</CardTitle>
 							<CardDescription>Ratings of 4–5 are positive; 1–2 require attention.</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<FeatureTable
-								columns={["Rating", "Comment", "Application", "Widget", "Submitted"]}
-								empty="No feedback has been submitted yet."
+								columns={[t("Rating"), t("Comment"), t("Application"), t("Widget"), t("Submitted")]}
+								empty={t("No feedback has been submitted yet.")}
 							>
 								{items.map((item) => (
 									<tr key={item.id} className="border-b last:border-0">
@@ -840,10 +891,10 @@ export function AnalyticsFeedbackPage() {
 												{item.rating ?? "—"}
 											</span>
 										</Cell>
-										<Cell>{item.comment || "No comment"}</Cell>
+										<Cell>{item.comment || t("No comment")}</Cell>
 										<Cell>{item.application_id}</Cell>
 										<Cell mono>{item.widget_id || "—"}</Cell>
-										<Cell>{date(item.occurred_at)}</Cell>
+										<Cell>{date(item.occurred_at, locale)}</Cell>
 									</tr>
 								))}
 							</FeatureTable>
@@ -856,6 +907,7 @@ export function AnalyticsFeedbackPage() {
 }
 
 export function AnalyticsCohortsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const [items, setItems] = useState<AnalyticsCohort[]>([]);
 	const [name, setName] = useState("");
@@ -869,9 +921,9 @@ export function AnalyticsCohortsPage() {
 			setItems((await getAnalyticsCohorts(selectedProject.id)).items);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [selectedProject]);
+	}, [selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 	const run = async (action: () => Promise<unknown>, message: string) => {
 		setBusy(true);
@@ -880,15 +932,17 @@ export function AnalyticsCohortsPage() {
 			showSuccessNotification(message);
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
 		}
 	};
 	return (
 		<ModulePage
-			title="Cohorts"
-			description="Define reusable audiences from behavior and keep their estimated size current."
+			title={t("Cohorts")}
+			description={t(
+				"Define reusable audiences from behavior and keep their estimated size current.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -897,25 +951,27 @@ export function AnalyticsCohortsPage() {
 				<div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
 					<Card className="h-fit">
 						<CardHeader>
-							<CardTitle className="text-base">New behavioral cohort</CardTitle>
-							<CardDescription>Users who performed an event in a rolling window.</CardDescription>
+							<CardTitle className="text-base">{t("New behavioral cohort")}</CardTitle>
+							<CardDescription>
+								{t("Users who performed an event in a rolling window.")}
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
-							<Field label="Name">
+							<Field label={t("Name")}>
 								<Input
 									value={name}
 									onChange={(event) => setName(event.target.value)}
-									placeholder="Recently activated"
+									placeholder={t("Recently activated")}
 								/>
 							</Field>
-							<Field label="Event">
+							<Field label={t("Event")}>
 								<Input
 									value={eventName}
 									onChange={(event) => setEventName(event.target.value)}
-									placeholder="account.activated"
+									placeholder={t("account.activated")}
 								/>
 							</Field>
-							<Field label="Lookback days">
+							<Field label={t("Lookback days")}>
 								<Input
 									type="number"
 									min={1}
@@ -939,18 +995,19 @@ export function AnalyticsCohortsPage() {
 										});
 										setName("");
 										setEventName("");
-									}, "Cohort created")
+									}, t("Cohort created"))
 								}
 							>
-								<Plus className="size-4" /> Create cohort
+								<Plus className="size-4" />
+								{t("Create cohort")}
 							</Button>
 						</CardContent>
 					</Card>
 					<Card>
 						<CardHeader>
-							<CardTitle>Saved cohorts</CardTitle>
+							<CardTitle>{t("Saved cohorts")}</CardTitle>
 							<CardDescription>
-								Evaluate on demand before using a cohort in journeys or reports.
+								{t("Evaluate on demand before using a cohort in journeys or reports.")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
@@ -962,17 +1019,19 @@ export function AnalyticsCohortsPage() {
 									<div>
 										<div className="flex items-center gap-2">
 											<span className="font-medium">{cohort.name}</span>
-											<StatusBadge ok={cohort.enabled} okText="Active" badText="Paused" />
+											<StatusBadge ok={cohort.enabled} okText={t("Active")} badText={t("Paused")} />
 										</div>
 										<p className="mt-1 text-sm text-muted-foreground">
-											{numberFormat(cohort.estimated_size)} estimated users ·{" "}
-											{String(cohort.definition.event_name)} in {String(cohort.definition.days)}{" "}
-											days
+											{t("Cohort estimate", {
+												count: cohort.estimated_size,
+												event: String(cohort.definition.event_name),
+												days: Number(cohort.definition.days),
+											})}
 										</p>
 										<p className="mt-1 text-xs text-muted-foreground">
 											{cohort.last_evaluated_at
-												? `Evaluated ${date(cohort.last_evaluated_at)}`
-												: "Not evaluated yet"}
+												? t("Evaluated at", { date: date(cohort.last_evaluated_at, locale) })
+												: t("Not evaluated yet")}
 										</p>
 									</div>
 									<div className="flex gap-2">
@@ -983,21 +1042,22 @@ export function AnalyticsCohortsPage() {
 											onClick={() =>
 												void run(
 													() => evaluateAnalyticsCohort(selectedProject.id, cohort.id),
-													"Cohort evaluated",
+													t("Cohort evaluated"),
 												)
 											}
 										>
-											<RefreshCw className="size-4" /> Evaluate
+											<RefreshCw className="size-4" />
+											{t("Evaluate")}
 										</Button>
 										<Button
 											variant="ghost"
 											size="icon"
-											aria-label={`Delete ${cohort.name}`}
+											aria-label={t("Delete item", { name: cohort.name })}
 											disabled={busy}
 											onClick={() =>
 												void run(
 													() => deleteAnalyticsCohort(selectedProject.id, cohort.id),
-													"Cohort deleted",
+													t("Cohort deleted"),
 												)
 											}
 										>
@@ -1006,7 +1066,7 @@ export function AnalyticsCohortsPage() {
 									</div>
 								</div>
 							))}
-							{!items.length && <EmptyState compact>No cohorts yet.</EmptyState>}
+							{!items.length && <EmptyState compact>{t("No cohorts yet.")}</EmptyState>}
 						</CardContent>
 					</Card>
 				</div>
@@ -1016,6 +1076,7 @@ export function AnalyticsCohortsPage() {
 }
 
 export function AnalyticsRemoteConfigPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject, projectType } = useProjectSelection();
 	const environment = projectType.toLowerCase() === "test" ? "test" : "production";
 	const [items, setItems] = useState<AnalyticsRemoteConfig[]>([]);
@@ -1030,9 +1091,9 @@ export function AnalyticsRemoteConfigPage() {
 			setItems((await getAnalyticsRemoteConfig(selectedProject.id)).items);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [selectedProject]);
+	}, [selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 	const save = async () => {
 		if (!selectedProject) return;
@@ -1040,7 +1101,7 @@ export function AnalyticsRemoteConfigPage() {
 		try {
 			parsed = JSON.parse(value);
 		} catch {
-			showErrorNotification("The configuration value must be valid JSON.");
+			showErrorNotification(t("The configuration value must be valid JSON."));
 			return;
 		}
 		setBusy(true);
@@ -1051,19 +1112,21 @@ export function AnalyticsRemoteConfigPage() {
 				conditions: [{ rollout_percentage: Number(rollout) }],
 				enabled: true,
 			});
-			showSuccessNotification("Remote configuration published");
+			showSuccessNotification(t("Remote configuration published"));
 			setKey("");
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
 		}
 	};
 	return (
 		<ModulePage
-			title="Remote Config"
-			description="Publish versioned JSON values with deterministic rollouts for the selected environment."
+			title={t("Remote Config")}
+			description={t(
+				"Publish versioned JSON values with deterministic rollouts for the selected environment.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -1072,36 +1135,44 @@ export function AnalyticsRemoteConfigPage() {
 				<div className="space-y-5">
 					<Alert>
 						<ShieldCheck className="size-4" />
-						<AlertTitle>Stable assignments</AlertTitle>
+						<AlertTitle>{t("Stable assignments")}</AlertTitle>
 						<AlertDescription>
-							Rollout buckets are computed from a pseudonymous identity, project and key. The same
-							installation always receives the same result.
+							{t(
+								"Rollout buckets are computed from a pseudonymous identity, project and key. The same installation always receives the same result.",
+							)}
 						</AlertDescription>
 					</Alert>
 					<div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
 						<Card className="h-fit">
 							<CardHeader>
-								<CardTitle className="text-base">Publish parameter</CardTitle>
+								<CardTitle className="text-base">{t("Publish parameter")}</CardTitle>
 								<CardDescription>
-									Environment: <Badge variant="outline">{environment}</Badge>
+									{t("Environment:")}
+									<Badge variant="outline">{t(labelize(environment))}</Badge>
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
-								<Field label="Parameter key">
+								<Field label={t("Parameter key")}>
 									<Input
 										value={key}
 										onChange={(event) => setKey(event.target.value)}
-										placeholder="checkout_banner"
+										placeholder={t("checkout_banner")}
 									/>
 								</Field>
-								<Field label="JSON value">
+								<Field label={t("JSON value")}>
 									<textarea
 										className="min-h-36 w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
 										value={value}
 										onChange={(event) => setValue(event.target.value)}
 									/>
 								</Field>
-								<Field label={`Rollout · ${rollout}%`}>
+								<Field
+									label={t("Rollout percentage", {
+										percent: new Intl.NumberFormat(locale, { style: "percent" }).format(
+											Number(rollout) / 100,
+										),
+									})}
+								>
 									<Input
 										type="range"
 										min={0}
@@ -1115,15 +1186,16 @@ export function AnalyticsRemoteConfigPage() {
 									disabled={busy || !key.trim()}
 									onClick={() => void save()}
 								>
-									<Save className="size-4" /> Publish
+									<Save className="size-4" />
+									{t("Publish")}
 								</Button>
 							</CardContent>
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardTitle>Parameters</CardTitle>
+								<CardTitle>{t("Parameters")}</CardTitle>
 								<CardDescription>
-									Each update increments an immutable client-visible version.
+									{t("Each update increments an immutable client-visible version.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-3">
@@ -1134,8 +1206,12 @@ export function AnalyticsRemoteConfigPage() {
 												<div className="flex flex-wrap items-center gap-2">
 													<code className="font-semibold">{item.config_key}</code>
 													<Badge variant="outline">v{item.version}</Badge>
-													<Badge variant="secondary">{item.environment}</Badge>
-													<StatusBadge ok={item.enabled} okText="Live" badText="Disabled" />
+													<Badge variant="secondary">{t(labelize(item.environment))}</Badge>
+													<StatusBadge
+														ok={item.enabled}
+														okText={t("Live")}
+														badText={t("Disabled")}
+													/>
 												</div>
 												<pre className="mt-3 max-h-36 overflow-auto rounded-lg bg-muted/60 p-3 text-xs">
 													{JSON.stringify(item.value, null, 2)}
@@ -1144,7 +1220,7 @@ export function AnalyticsRemoteConfigPage() {
 											<Button
 												variant="ghost"
 												size="icon"
-												aria-label={`Delete ${item.config_key}`}
+												aria-label={t("Delete item", { name: item.config_key })}
 												onClick={() =>
 													void deleteAnalyticsRemoteConfig(
 														selectedProject.id,
@@ -1152,9 +1228,9 @@ export function AnalyticsRemoteConfigPage() {
 														item.environment,
 													)
 														.then(load)
-														.then(() => showSuccessNotification("Parameter deleted"))
+														.then(() => showSuccessNotification(t("Parameter deleted")))
 														.catch((cause: unknown) =>
-															showErrorNotification(moduleErrorMessage(cause)),
+															showErrorNotification(moduleErrorMessage(cause, locale)),
 														)
 												}
 											>
@@ -1163,7 +1239,9 @@ export function AnalyticsRemoteConfigPage() {
 										</div>
 									</div>
 								))}
-								{!items.length && <EmptyState compact>No remote parameters published.</EmptyState>}
+								{!items.length && (
+									<EmptyState compact>{t("No remote parameters published.")}</EmptyState>
+								)}
 							</CardContent>
 						</Card>
 					</div>
@@ -1174,6 +1252,7 @@ export function AnalyticsRemoteConfigPage() {
 }
 
 export function AnalyticsAlertsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const [items, setItems] = useState<AnalyticsAlert[]>([]);
 	const [incidents, setIncidents] = useState<AnalyticsAlertIncident[]>([]);
@@ -1191,9 +1270,9 @@ export function AnalyticsAlertsPage() {
 			setIncidents(result.incidents);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [selectedProject]);
+	}, [selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 	const run = async (action: () => Promise<unknown>, message: string) => {
 		setBusy(true);
@@ -1202,7 +1281,7 @@ export function AnalyticsAlertsPage() {
 			showSuccessNotification(message);
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
 		}
@@ -1219,8 +1298,10 @@ export function AnalyticsAlertsPage() {
 	};
 	return (
 		<ModulePage
-			title="Alerts"
-			description="Continuously evaluate product, crash, installation and verified-payment signals at the edge."
+			title={t("Alerts")}
+			description={t(
+				"Continuously evaluate product, crash, installation and verified-payment signals at the edge.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -1228,7 +1309,7 @@ export function AnalyticsAlertsPage() {
 			) : (
 				<Tabs defaultValue="rules" className="space-y-4">
 					<TabsList>
-						<TabsTrigger value="rules">Alert rules</TabsTrigger>
+						<TabsTrigger value="rules">{t("Alert rules")}</TabsTrigger>
 						<TabsTrigger value="incidents">
 							Incidents{" "}
 							<Badge className="ml-2" variant="secondary">
@@ -1239,18 +1320,20 @@ export function AnalyticsAlertsPage() {
 					<TabsContent value="rules" className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
 						<Card className="h-fit">
 							<CardHeader>
-								<CardTitle className="text-base">New alert</CardTitle>
-								<CardDescription>Evaluated every minute by the Analytics Worker.</CardDescription>
+								<CardTitle className="text-base">{t("New alert")}</CardTitle>
+								<CardDescription>
+									{t("Evaluated every minute by the Analytics Worker.")}
+								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
-								<Field label="Rule name">
+								<Field label={t("Rule name")}>
 									<Input
 										value={name}
 										onChange={(event) => setName(event.target.value)}
-										placeholder="Crash spike"
+										placeholder={t("Crash spike")}
 									/>
 								</Field>
-								<Field label="Signal">
+								<Field label={t("Signal")}>
 									<Select
 										value={type}
 										onValueChange={(value) => setType(value as AnalyticsAlert["alert_type"])}
@@ -1259,20 +1342,20 @@ export function AnalyticsAlertsPage() {
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="crash_spike">Crash spike</SelectItem>
-											<SelectItem value="no_data">No incoming data</SelectItem>
-											<SelectItem value="purchase_drop">Verified purchase drop</SelectItem>
-											<SelectItem value="installation_drop">Installation drop</SelectItem>
+											<SelectItem value="crash_spike">{t("Crash spike")}</SelectItem>
+											<SelectItem value="no_data">{t("No incoming data")}</SelectItem>
+											<SelectItem value="purchase_drop">{t("Verified purchase drop")}</SelectItem>
+											<SelectItem value="installation_drop">{t("Installation drop")}</SelectItem>
 										</SelectContent>
 									</Select>
 								</Field>
 								<Field
 									label={
 										type === "no_data"
-											? "No-data minutes"
+											? t("No-data minutes")
 											: type.endsWith("_drop")
-												? "Drop percentage"
-												: "Threshold"
+												? t("Drop percentage")
+												: t("Threshold")
 									}
 								>
 									<Input
@@ -1282,12 +1365,12 @@ export function AnalyticsAlertsPage() {
 										onChange={(event) => setThreshold(event.target.value)}
 									/>
 								</Field>
-								<Field label="AWS SES recipient (optional)">
+								<Field label={t("AWS SES recipient (optional)")}>
 									<Input
 										type="email"
 										value={email}
 										onChange={(event) => setEmail(event.target.value)}
-										placeholder="team@example.com"
+										placeholder={t("team@example.com")}
 									/>
 								</Field>
 								<Button
@@ -1304,18 +1387,19 @@ export function AnalyticsAlertsPage() {
 												cooldown_minutes: 60,
 											});
 											setName("");
-										}, "Alert created")
+										}, t("Alert created"))
 									}
 								>
-									<BellRing className="size-4" /> Create alert
+									<BellRing className="size-4" />
+									{t("Create alert")}
 								</Button>
 							</CardContent>
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardTitle>Active rules</CardTitle>
+								<CardTitle>{t("Active rules")}</CardTitle>
 								<CardDescription>
-									Notifications use the central AWS SES Email Worker.
+									{t("Notifications use the central AWS SES Email Worker.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-3">
@@ -1327,26 +1411,33 @@ export function AnalyticsAlertsPage() {
 										<div>
 											<div className="flex items-center gap-2">
 												<span className="font-medium">{item.name}</span>
-												<StatusBadge ok={item.enabled} okText="Enabled" badText="Paused" />
+												<StatusBadge
+													ok={item.enabled}
+													okText={t("Enabled")}
+													badText={t("Paused")}
+												/>
 											</div>
 											<p className="mt-1 text-sm text-muted-foreground">
-												{labelize(item.alert_type)} · {item.cooldown_minutes} min cooldown
+												{t("Alert cooldown", {
+													type: t(labelize(item.alert_type)),
+													minutes: item.cooldown_minutes,
+												})}
 											</p>
 											<p className="mt-1 text-xs text-muted-foreground">
 												{item.last_evaluated_at
-													? `Evaluated ${date(item.last_evaluated_at)}`
-													: "Awaiting first evaluation"}
+													? t("Evaluated at", { date: date(item.last_evaluated_at, locale) })
+													: t("Awaiting first evaluation")}
 											</p>
 										</div>
 										<Button
 											variant="ghost"
 											size="icon"
-											aria-label={`Delete ${item.name}`}
+											aria-label={t("Delete item", { name: item.name })}
 											disabled={busy}
 											onClick={() =>
 												void run(
 													() => deleteAnalyticsAlert(selectedProject.id, item.id),
-													"Alert deleted",
+													t("Alert deleted"),
 												)
 											}
 										>
@@ -1354,34 +1445,44 @@ export function AnalyticsAlertsPage() {
 										</Button>
 									</div>
 								))}
-								{!items.length && <EmptyState compact>No alert rules configured.</EmptyState>}
+								{!items.length && (
+									<EmptyState compact>{t("No alert rules configured.")}</EmptyState>
+								)}
 							</CardContent>
 						</Card>
 					</TabsContent>
 					<TabsContent value="incidents">
 						<Card>
 							<CardHeader>
-								<CardTitle>Incident history</CardTitle>
+								<CardTitle>{t("Incident history")}</CardTitle>
 								<CardDescription>
-									Acknowledge active incidents and resolve them after investigation.
+									{t("Acknowledge active incidents and resolve them after investigation.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
 								<FeatureTable
-									columns={["Triggered", "Summary", "Status", "Notification", "Actions"]}
-									empty="No incidents have been triggered."
+									columns={[
+										t("Triggered"),
+										t("Summary"),
+										t("Status"),
+										t("Notification"),
+										t("Actions"),
+									]}
+									empty={t("No incidents have been triggered.")}
 								>
 									{incidents.map((incident) => (
 										<tr key={incident.id} className="border-b last:border-0">
-											<Cell>{date(incident.triggered_at)}</Cell>
+											<Cell>{date(incident.triggered_at, locale)}</Cell>
 											<Cell strong>{incident.summary}</Cell>
 											<Cell>
 												<Badge variant={incident.status === "open" ? "destructive" : "outline"}>
-													{labelize(incident.status)}
+													{t(labelize(incident.status))}
 												</Badge>
 											</Cell>
 											<Cell>
-												<Badge variant="secondary">{labelize(incident.notification_status)}</Badge>
+												<Badge variant="secondary">
+													{t(labelize(incident.notification_status))}
+												</Badge>
 											</Cell>
 											<Cell>
 												<div className="flex gap-2">
@@ -1397,11 +1498,11 @@ export function AnalyticsAlertsPage() {
 																			incident.id,
 																			"acknowledge",
 																		),
-																	"Incident acknowledged",
+																	t("Incident acknowledged"),
 																)
 															}
 														>
-															Acknowledge
+															{t("Acknowledge")}
 														</Button>
 													)}
 													{incident.status !== "resolved" && (
@@ -1415,11 +1516,11 @@ export function AnalyticsAlertsPage() {
 																			incident.id,
 																			"resolve",
 																		),
-																	"Incident resolved",
+																	t("Incident resolved"),
 																)
 															}
 														>
-															Resolve
+															{t("Resolve")}
 														</Button>
 													)}
 												</div>
@@ -1437,6 +1538,7 @@ export function AnalyticsAlertsPage() {
 }
 
 export function AnalyticsSettingsPage() {
+	const { t, locale } = useAnalyticsI18n();
 	const { selectedProject } = useProjectSelection();
 	const [settings, setSettings] = useState<AnalyticsSettings | null>(null);
 	const [applications, setApplications] = useState<AnalyticsApplication[]>([]);
@@ -1464,9 +1566,9 @@ export function AnalyticsSettingsPage() {
 			setAnnotations(annotationData.items);
 			setError(null);
 		} catch (cause) {
-			setError(moduleErrorMessage(cause));
+			setError(moduleErrorMessage(cause, locale));
 		}
-	}, [selectedProject]);
+	}, [selectedProject, locale]);
 	useEffect(() => void load(), [load]);
 	const run = async (action: () => Promise<unknown>, message: string) => {
 		setBusy(true);
@@ -1475,15 +1577,17 @@ export function AnalyticsSettingsPage() {
 			showSuccessNotification(message);
 			await load();
 		} catch (cause) {
-			showErrorNotification(moduleErrorMessage(cause));
+			showErrorNotification(moduleErrorMessage(cause, locale));
 		} finally {
 			setBusy(false);
 		}
 	};
 	return (
 		<ModulePage
-			title="Analytics settings"
-			description="Manage applications, retention, collection, signed webhooks and timeline annotations."
+			title={t("Analytics settings")}
+			description={t(
+				"Manage applications, retention, collection, signed webhooks and timeline annotations.",
+			)}
 			error={error}
 		>
 			{!selectedProject ? (
@@ -1491,17 +1595,17 @@ export function AnalyticsSettingsPage() {
 			) : (
 				<Tabs defaultValue="applications" className="space-y-4">
 					<TabsList className="h-auto flex-wrap">
-						<TabsTrigger value="applications">Applications</TabsTrigger>
-						<TabsTrigger value="collection">Data collection</TabsTrigger>
-						<TabsTrigger value="hooks">Webhooks</TabsTrigger>
-						<TabsTrigger value="annotations">Annotations</TabsTrigger>
+						<TabsTrigger value="applications">{t("Applications")}</TabsTrigger>
+						<TabsTrigger value="collection">{t("Data collection")}</TabsTrigger>
+						<TabsTrigger value="hooks">{t("Webhooks")}</TabsTrigger>
+						<TabsTrigger value="annotations">{t("Annotations")}</TabsTrigger>
 					</TabsList>
 					<TabsContent value="applications">
 						<Card>
 							<CardHeader>
-								<CardTitle>Observed applications</CardTitle>
+								<CardTitle>{t("Observed applications")}</CardTitle>
 								<CardDescription>
-									Applications appear automatically after their first accepted event.
+									{t("Applications appear automatically after their first accepted event.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-3">
@@ -1513,18 +1617,18 @@ export function AnalyticsSettingsPage() {
 										<div>
 											<div className="flex items-center gap-2">
 												<span className="font-medium">{application.name}</span>
-												<Badge variant="outline">{application.platform || "unknown"}</Badge>
+												<Badge variant="outline">{application.platform || t("Unknown")}</Badge>
 											</div>
 											<p className="mt-1 font-mono text-xs text-muted-foreground">
 												{application.application_id}
 											</p>
 											<p className="mt-1 text-xs text-muted-foreground">
-												Last seen {date(application.last_seen_at)}
+												{t("Last seen at", { date: date(application.last_seen_at, locale) })}
 											</p>
 										</div>
 										<div className="flex items-center gap-3">
 											<Label htmlFor={`application-${application.application_id}`}>
-												Collect data
+												{t("Collect data")}
 											</Label>
 											<Switch
 												id={`application-${application.application_id}`}
@@ -1537,14 +1641,16 @@ export function AnalyticsSettingsPage() {
 																application.application_id,
 																{ active },
 															),
-														active ? "Application enabled" : "Application disabled",
+														active ? t("Application enabled") : t("Application disabled"),
 													)
 												}
 											/>
 										</div>
 									</div>
 								))}
-								{!applications.length && <EmptyState compact>No applications observed.</EmptyState>}
+								{!applications.length && (
+									<EmptyState compact>{t("No applications observed.")}</EmptyState>
+								)}
 							</CardContent>
 						</Card>
 					</TabsContent>
@@ -1552,7 +1658,7 @@ export function AnalyticsSettingsPage() {
 						{settings && (
 							<Card className="max-w-2xl">
 								<CardHeader>
-									<CardTitle>Collection & retention</CardTitle>
+									<CardTitle>{t("Collection & retention")}</CardTitle>
 									<CardDescription>
 										Raw hot events expire automatically; aggregated facts and R2 archives remain
 										available for reports and exports.
@@ -1561,9 +1667,9 @@ export function AnalyticsSettingsPage() {
 								<CardContent className="space-y-5">
 									<div className="flex items-center justify-between rounded-lg border p-4">
 										<div>
-											<div className="font-medium">Collect analytics events</div>
+											<div className="font-medium">{t("Collect analytics events")}</div>
 											<div className="text-sm text-muted-foreground">
-												Applies to the selected project.
+												{t("Applies to the selected project.")}
 											</div>
 										</div>
 										<Switch
@@ -1573,7 +1679,7 @@ export function AnalyticsSettingsPage() {
 											}
 										/>
 									</div>
-									<Field label="Hot-event retention (days)">
+									<Field label={t("Hot-event retention (days)")}>
 										<Input
 											type="number"
 											min={1}
@@ -1587,7 +1693,7 @@ export function AnalyticsSettingsPage() {
 											}
 										/>
 									</Field>
-									<Field label="Reporting timezone">
+									<Field label={t("Reporting timezone")}>
 										<Input
 											value={settings.timezone}
 											onChange={(event) =>
@@ -1603,11 +1709,12 @@ export function AnalyticsSettingsPage() {
 										onClick={() =>
 											void run(
 												() => updateAnalyticsSettings(selectedProject.id, settings),
-												"Analytics settings saved",
+												t("Analytics settings saved"),
 											)
 										}
 									>
-										<Save className="size-4" /> Save settings
+										<Save className="size-4" />
+										{t("Save settings")}
 									</Button>
 								</CardContent>
 							</Card>
@@ -1616,35 +1723,35 @@ export function AnalyticsSettingsPage() {
 					<TabsContent value="hooks" className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
 						<Card className="h-fit">
 							<CardHeader>
-								<CardTitle className="text-base">Signed webhook</CardTitle>
+								<CardTitle className="text-base">{t("Signed webhook")}</CardTitle>
 								<CardDescription>
-									Only public HTTPS endpoints are accepted. Secrets are encrypted at rest.
+									{t("Only public HTTPS endpoints are accepted. Secrets are encrypted at rest.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
-								<Field label="Name">
+								<Field label={t("Name")}>
 									<Input
 										value={hookName}
 										onChange={(event) => setHookName(event.target.value)}
-										placeholder="Data warehouse"
+										placeholder={t("Data warehouse")}
 									/>
 								</Field>
-								<Field label="Endpoint">
+								<Field label={t("Endpoint")}>
 									<Input
 										type="url"
 										value={hookUrl}
 										onChange={(event) => setHookUrl(event.target.value)}
-										placeholder="https://hooks.example.com/analytics"
+										placeholder={t("https://hooks.example.com/analytics")}
 									/>
 								</Field>
-								<Field label="Events">
+								<Field label={t("Events")}>
 									<Input
 										value={hookEvents}
 										onChange={(event) => setHookEvents(event.target.value)}
-										placeholder="*, alert.triggered"
+										placeholder={t("*, alert.triggered")}
 									/>
 								</Field>
-								<Field label="Signing secret">
+								<Field label={t("Signing secret")}>
 									<Input
 										type="password"
 										value={hookSecret}
@@ -1669,18 +1776,19 @@ export function AnalyticsSettingsPage() {
 											setHookName("");
 											setHookUrl("");
 											setHookSecret("");
-										}, "Webhook created")
+										}, t("Webhook created"))
 									}
 								>
-									<Webhook className="size-4" /> Add webhook
+									<Webhook className="size-4" />
+									{t("Add webhook")}
 								</Button>
 							</CardContent>
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardTitle>Destinations</CardTitle>
+								<CardTitle>{t("Destinations")}</CardTitle>
 								<CardDescription>
-									Deliveries are idempotent, signed and retried with backoff.
+									{t("Deliveries are idempotent, signed and retried with backoff.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-3">
@@ -1692,25 +1800,27 @@ export function AnalyticsSettingsPage() {
 										<div>
 											<div className="flex items-center gap-2">
 												<span className="font-medium">{hook.name}</span>
-												<StatusBadge ok={hook.enabled} okText="Active" badText="Paused" />
+												<StatusBadge ok={hook.enabled} okText={t("Active")} badText={t("Paused")} />
 											</div>
 											<p className="mt-1 break-all text-sm text-muted-foreground">
 												{hook.endpoint_url}
 											</p>
 											<p className="mt-2 text-xs text-muted-foreground">
 												{hook.event_types.join(", ")} ·{" "}
-												{hook.secret_configured ? "HMAC signed" : "unsigned"} ·{" "}
-												{hook.last_delivery_status || "no deliveries"}
+												{hook.secret_configured ? t("HMAC signed") : t("Unsigned")} ·{" "}
+												{hook.last_delivery_status
+													? t(labelize(hook.last_delivery_status))
+													: t("no deliveries")}
 											</p>
 										</div>
 										<Button
 											variant="ghost"
 											size="icon"
-											aria-label={`Delete ${hook.name}`}
+											aria-label={t("Delete item", { name: hook.name })}
 											onClick={() =>
 												void run(
 													() => deleteAnalyticsHook(selectedProject.id, hook.id),
-													"Webhook deleted",
+													t("Webhook deleted"),
 												)
 											}
 										>
@@ -1718,7 +1828,7 @@ export function AnalyticsSettingsPage() {
 										</Button>
 									</div>
 								))}
-								{!hooks.length && <EmptyState compact>No webhook destinations.</EmptyState>}
+								{!hooks.length && <EmptyState compact>{t("No webhook destinations.")}</EmptyState>}
 							</CardContent>
 						</Card>
 					</TabsContent>
@@ -1728,17 +1838,17 @@ export function AnalyticsSettingsPage() {
 					>
 						<Card className="h-fit">
 							<CardHeader>
-								<CardTitle className="text-base">Add annotation</CardTitle>
+								<CardTitle className="text-base">{t("Add annotation")}</CardTitle>
 								<CardDescription>
-									Mark releases or campaigns on the analytics timeline.
+									{t("Mark releases or campaigns on the analytics timeline.")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
-								<Field label="Title">
+								<Field label={t("Title")}>
 									<Input
 										value={annotation}
 										onChange={(event) => setAnnotation(event.target.value)}
-										placeholder="Version 3.2 released"
+										placeholder={t("Version 3.2 released")}
 									/>
 								</Field>
 								<Button
@@ -1752,16 +1862,17 @@ export function AnalyticsSettingsPage() {
 												color: "#6366f1",
 											});
 											setAnnotation("");
-										}, "Annotation added")
+										}, t("Annotation added"))
 									}
 								>
-									<Plus className="size-4" /> Add now
+									<Plus className="size-4" />
+									{t("Add now")}
 								</Button>
 							</CardContent>
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardTitle>Timeline</CardTitle>
+								<CardTitle>{t("Timeline")}</CardTitle>
 							</CardHeader>
 							<CardContent className="space-y-3">
 								{annotations.map((item) => (
@@ -1777,18 +1888,18 @@ export function AnalyticsSettingsPage() {
 											<div>
 												<div className="font-medium">{item.title}</div>
 												<div className="text-xs text-muted-foreground">
-													{date(item.annotation_at)}
+													{date(item.annotation_at, locale)}
 												</div>
 											</div>
 										</div>
 										<Button
 											variant="ghost"
 											size="icon"
-											aria-label={`Delete ${item.title}`}
+											aria-label={t("Delete item", { name: item.title })}
 											onClick={() =>
 												void run(
 													() => deleteAnalyticsAnnotation(selectedProject.id, item.id),
-													"Annotation deleted",
+													t("Annotation deleted"),
 												)
 											}
 										>
@@ -1796,7 +1907,9 @@ export function AnalyticsSettingsPage() {
 										</Button>
 									</div>
 								))}
-								{!annotations.length && <EmptyState compact>No timeline annotations.</EmptyState>}
+								{!annotations.length && (
+									<EmptyState compact>{t("No timeline annotations.")}</EmptyState>
+								)}
 							</CardContent>
 						</Card>
 					</TabsContent>
@@ -1807,6 +1920,7 @@ export function AnalyticsSettingsPage() {
 }
 
 function WidgetPreview({ type }: { type: AnalyticsDashboardWidget["widget_type"] }) {
+	const { t } = useAnalyticsI18n();
 	const icon =
 		type === "crashes"
 			? AlertTriangle
@@ -1824,9 +1938,9 @@ function WidgetPreview({ type }: { type: AnalyticsDashboardWidget["widget_type"]
 				<Icon className="size-5" />
 			</div>
 			<div>
-				<div className="font-medium">Live {labelize(type)} widget</div>
+				<div className="font-medium">{t("Live widget", { type: t(labelize(type)) })}</div>
 				<div className="text-xs text-muted-foreground">
-					Uses the selected dashboard range and project filters.
+					{t("Uses the selected dashboard range and project filters.")}
 				</div>
 			</div>
 		</div>
@@ -1844,6 +1958,7 @@ function FeatureMetric({
 	value?: number;
 	text?: string;
 }) {
+	const { locale } = useAnalyticsI18n();
 	return (
 		<Card>
 			<CardContent className="flex items-center gap-3 pt-6">
@@ -1852,7 +1967,9 @@ function FeatureMetric({
 				</div>
 				<div>
 					<p className="text-sm text-muted-foreground">{label}</p>
-					<p className="text-2xl font-semibold tabular-nums">{text ?? numberFormat(value ?? 0)}</p>
+					<p className="text-2xl font-semibold tabular-nums">
+						{text ?? numberFormat(value ?? 0, locale)}
+					</p>
 				</div>
 			</CardContent>
 		</Card>
@@ -1871,7 +1988,7 @@ function FeatureTable({
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
 		<div className="overflow-x-auto rounded-lg border">
-			<table className="w-full min-w-[720px] text-left text-sm">
+			<table className="w-full min-w-[720px] text-start text-sm">
 				<thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
 					<tr>
 						{columns.map((column) => (
@@ -1943,22 +2060,27 @@ function labelize(value: string) {
 	return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function date(value: string) {
-	return new Intl.DateTimeFormat(undefined, {
+function date(value: string, locale: string) {
+	return new Intl.DateTimeFormat(locale, {
 		dateStyle: "medium",
 		timeStyle: "short",
 	}).format(new Date(value));
 }
 
-function numberFormat(value: number) {
-	return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(Number(value) || 0);
+function numberFormat(value: number, locale: string) {
+	return new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Number(value) || 0);
 }
 
-function duration(value: number) {
+function duration(value: number, locale: string) {
 	const seconds = Math.max(0, Math.round(Number(value) || 0));
-	if (seconds < 60) return `${seconds}s`;
+	const secondsFormat = new Intl.NumberFormat(locale, {
+		style: "unit",
+		unit: "second",
+		unitDisplay: "narrow",
+	});
+	if (seconds < 60) return secondsFormat.format(seconds);
 	const minutes = Math.floor(seconds / 60);
-	return `${minutes}m ${seconds % 60}s`;
+	return `${new Intl.NumberFormat(locale, { style: "unit", unit: "minute", unitDisplay: "narrow" }).format(minutes)} ${secondsFormat.format(seconds % 60)}`;
 }
 
 function shortId(value?: string | null) {

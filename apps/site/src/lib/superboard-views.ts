@@ -1,11 +1,12 @@
 import { applySeed, SchemaRegistry, validateSeed, type SeedFile } from "emdash";
 
 import seedJson from "../../seed/seed.json";
+import { ensureNativeFrontMenus } from "./native-front-menu-bootstrap.js";
 import { nativeFrontPluginCatalog } from "./native-front-plugins.js";
 import { superBoardRuntimePluginCatalog } from "./superboard-plugin-catalog.js";
 
 const VIEWS_BOOTSTRAP_KEY = Symbol.for("superboard:views-bootstrap");
-const VIEWS_BOOTSTRAP_VERSION = "3.1.0";
+const VIEWS_BOOTSTRAP_VERSION = "5.0.0";
 const seed = readSeedFile(seedJson);
 
 interface ViewsBootstrapState {
@@ -86,22 +87,7 @@ async function bootstrapSuperBoardViews(db: Parameters<typeof applySeed>[0]): Pr
 	await upgradeViewRenderers(db);
 	await installPluginViews(db);
 
-	const menu = await db
-		.selectFrom("_emdash_menus")
-		.select("id")
-		.where("name", "=", "superboard-admin")
-		.executeTakeFirst();
-	if (!menu && seed.menus) {
-		await applySeed(
-			db,
-			{
-				version: seed.version,
-				defaultLocale: seed.defaultLocale,
-				menus: seed.menus,
-			},
-			{ onConflict: "skip" },
-		);
-	}
+	await ensureNativeFrontMenus(db, seed.menus ?? []);
 
 	for (const slug of ["pages", "posts"]) {
 		const collection = await registry.getCollection(slug);

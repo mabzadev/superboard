@@ -9,7 +9,7 @@
 
 <p align="center">
   Deep linking, attribution, and smart links for React Native.<br/>
-  Part of the <a href="https://github.com/mabzadev">OpenGrow</a> open-source mobile linking platform.
+  Part of the <a href="https://github.com/mabzadev">SuperBoard</a> open-source mobile linking platform.
 </p>
 
 <p align="center">
@@ -20,13 +20,13 @@
 
 ---
 
-The OpenGrow React Native SDK provides deep linking, universal links, app links, link generation, in-app messaging, revenue tracking, and attribution for your React Native apps.
+The SuperBoard React Native SDK provides deep linking, universal links, app links, link generation, in-app messaging, revenue tracking, and attribution for your React Native apps.
 
 ## Features
 
 - **Deep linking & universal links** — route users to the right in-app screen, even after install
 - **Smart link generation** — create trackable links with metadata, custom redirects, and UTM parameters
-- **In-app messaging** — display messages and announcements from the OpenGrow dashboard
+- **In-app messaging** — display messages and announcements from the SuperBoard dashboard
 - **Push notifications** — receive push notifications for dashboard-sent messages
 - **Revenue tracking** — log App Store, Google Play, and custom purchases with automatic attribution
 - **User identity** — attach user IDs and attributes for analytics and segmentation
@@ -39,7 +39,7 @@ The OpenGrow React Native SDK provides deep linking, universal links, app links,
 - iOS 13.0+
 - Android API 21+ (Android 5.0)
 
-<!-- opengrow-sdk-documentation:react-native:start -->
+<!-- superboard-sdk-documentation:react-native:start -->
 
 > **Lifecycle: archived.** This package is frozen for existing clients.
 > Its historical release remains available, but no new version may be
@@ -82,20 +82,20 @@ authenticated Maven registry. Add this contract to the React Native
 project `android/settings.gradle`:
 
 ```groovy
-def openGrowPackagesUser = System.getenv("OPENGROW_GITHUB_PACKAGES_USER")
-def openGrowPackagesToken = System.getenv("OPENGROW_GITHUB_PACKAGES_TOKEN")
-if (!openGrowPackagesUser || !openGrowPackagesToken) {
+def superBoardPackagesUser = System.getenv("OPENGROW_GITHUB_PACKAGES_USER")
+def superBoardPackagesToken = System.getenv("OPENGROW_GITHUB_PACKAGES_TOKEN")
+if (!superBoardPackagesUser || !superBoardPackagesToken) {
     throw new GradleException("OPENGROW_GITHUB_PACKAGES_USER and OPENGROW_GITHUB_PACKAGES_TOKEN are required")
 }
 
 dependencyResolutionManagement {
     repositories {
         maven {
-            name = "OpenGrowGitHubPackages"
+            name = "SuperBoardGitHubPackages"
             url = uri("https://maven.pkg.github.com/mabzadev/superboard-platform")
             credentials {
-                username = openGrowPackagesUser
-                password = openGrowPackagesToken
+                username = superBoardPackagesUser
+                password = superBoardPackagesToken
             }
         }
     }
@@ -103,7 +103,7 @@ dependencyResolutionManagement {
 ```
 
 Then keep the exact native dependency in `android/app/build.gradle`
-(the OpenGrow config plugin inserts the same coordinate):
+(the SuperBoard config plugin inserts the same coordinate):
 
 ```groovy
 implementation("io.opengrow:opengrow-android-sdk:1.0.3")
@@ -119,7 +119,7 @@ test -n "${OPENGROW_GITHUB_PACKAGES_USER:-}" \
 
 ### iOS dependency
 
-The React Native pod consumes the native OpenGrow podspec directly from its
+The React Native pod consumes the native SuperBoard podspec directly from its
 reviewed immutable Git tag; it does not claim a CocoaPods Trunk release:
 
 ```ruby
@@ -129,7 +129,7 @@ pod 'OpenGrow', :podspec => 'https://raw.githubusercontent.com/mabzadev/superboa
 The URL is pinned to `sdk-ios-v1.0.3`. Run `pod install` after updating
 the dependency.
 
-<!-- opengrow-sdk-documentation:react-native:end -->
+<!-- superboard-sdk-documentation:react-native:end -->
 
 ## Expo Integration
 
@@ -151,7 +151,7 @@ If you're using Expo with a development build, the config plugin automates all n
 
 | Property | Required | Description |
 |---|---|---|
-| `apiKey` | Yes | Your OpenGrow API key |
+| `apiKey` | Yes | Your SuperBoard API key |
 | `scheme` | Yes | Custom URL scheme for deep links |
 | `useTestEnvironment` | No | Use test environment (default: `false`) |
 | `associatedDomains` | No | Universal link domains for deep linking |
@@ -259,16 +259,16 @@ func application(_ app: UIApplication, open url: URL, options: [UIApplication.Op
 **4. Configure URL scheme:**
 
 1. In Xcode, select your target → **Info** tab
-2. Under **URL Types**, click **+** and add the URL scheme from your OpenGrow dashboard
+2. Under **URL Types**, click **+** and add the URL scheme from your SuperBoard dashboard
 
 ## Usage
 
 ### Handle deep links
 
 ```typescript
-import OpenGrow from '@mbzadev/opengrow-react-native-sdk';
+import SuperBoard from '@mbzadev/opengrow-react-native-sdk';
 
-const listener = OpenGrow.onDeeplinkReceived((response) => {
+const listener = SuperBoard.onDeeplinkReceived((response) => {
     console.log('Link:', response.link);
     console.log('Data:', response.data);
 
@@ -285,8 +285,8 @@ listener.remove();
 ### Set user identity
 
 ```typescript
-OpenGrow.setIdentifier('user-123');
-OpenGrow.setAttributes({
+SuperBoard.setIdentifier('user-123');
+SuperBoard.setAttributes({
     name: 'John Doe',
     plan: 'premium',
 });
@@ -298,7 +298,7 @@ Create smart links with metadata, payload data, and tracking parameters:
 
 ```typescript
 try {
-    const link = await OpenGrow.generateLink(
+    const link = await SuperBoard.generateLink(
         'Check out this product',           // title
         'Limited time offer',               // subtitle
         'https://example.com/image.jpg',    // imageURL
@@ -339,20 +339,20 @@ import messaging from '@react-native-firebase/messaging';
 
 const token = await messaging().getToken();
 if (token) {
-    OpenGrow.setPushToken(token);
+    SuperBoard.setPushToken(token);
 }
 ```
 
-Upload your Firebase or APNs credentials in the OpenGrow Dashboard deployed for the active application target.
+Upload your Firebase or APNs credentials in the SuperBoard Dashboard deployed for the active application target.
 
 ### Display messages
 
 ```typescript
 // Show the messages list as a modal
-await OpenGrow.displayMessages();
+await SuperBoard.displayMessages();
 
 // Get unread count for badges
-const count = await OpenGrow.numberOfUnreadMessages();
+const count = await SuperBoard.numberOfUnreadMessages();
 console.log(`Unread: ${count}`);
 ```
 
@@ -362,7 +362,7 @@ console.log(`Unread: ${count}`);
 
 ### Setup
 
-1. Enable revenue tracking in the OpenGrow Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
+1. Enable revenue tracking in the SuperBoard Dashboard deployed for the active application target, under **Settings → Revenue Tracking**
 2. Configure platform notifications:
    - **Android** — Set up Google Play Real-Time Developer Notifications
    - **iOS** — Configure App Store Server Notifications in App Store Connect
@@ -372,7 +372,7 @@ console.log(`Unread: ${count}`);
 ```typescript
 // iOS: pass the StoreKit 2 transaction ID as a string
 // Android: pass the Google Play purchase.originalJson string
-const success = await OpenGrow.logInAppPurchase(transactionId);
+const success = await SuperBoard.logInAppPurchase(transactionId);
 ```
 
 > The SDK automatically extracts price, currency, and product info. Duplicates are filtered.
@@ -380,7 +380,7 @@ const success = await OpenGrow.logInAppPurchase(transactionId);
 ### Custom purchases
 
 ```typescript
-const success = await OpenGrow.logCustomPurchase(
+const success = await SuperBoard.logCustomPurchase(
     'buy',              // type: 'buy' | 'cancel' | 'refund'
     999,                // priceInCents: $9.99
     'USD',              // currency code

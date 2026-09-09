@@ -193,6 +193,7 @@ test("generated Site config uses target resources and follows public routing act
 		assert.equal(config.worker_loaders[0].binding, target.siteRuntime.workerLoaderBinding);
 		assert.deepEqual(config.services, [
 			{ binding: "API_SERVICE", service: target.workers.api[environment] },
+			{ binding: "MCP_SERVICE", service: target.workers.mcp[environment] },
 		]);
 		assert.deepEqual(config.triggers, { crons: target.siteRuntime.crons });
 		assert.deepEqual(config.observability, target.siteRuntime.observability);
@@ -207,9 +208,14 @@ test("generated Site config uses target resources and follows public routing act
 			config.routes,
 			resources.publicRouting === "active"
 				? [
-						{ pattern: target.domains.site, custom_domain: true },
-						{ pattern: target.domains.dashboard, custom_domain: true },
-					]
+						...new Set([
+							target.domains.site,
+							target.domains.dashboard,
+							...(target.domainAliases ?? [])
+								.filter(({ surface }) => surface === "console")
+								.map(({ hostname }) => hostname),
+						]),
+					].map((pattern) => ({ pattern, custom_domain: true }))
 				: undefined,
 		);
 
@@ -247,7 +253,7 @@ test("generated Site config uses target resources and follows public routing act
 	}
 });
 
-test("development Site preview routing is explicit and cannot acquire the Dashboard domain", () => {
+test("development Site preview routing is explicit and only acquires the canonical console", () => {
 	execFileSync(
 		process.execPath,
 		[
@@ -268,8 +274,8 @@ test("development Site preview routing is explicit and cannot acquire the Dashbo
 			"utf8",
 		),
 	);
-	assert.deepEqual(config.routes, [{ pattern: "site.mbza.dev", custom_domain: true }]);
-	assert.equal(JSON.stringify(config.routes).includes("board.mbza.dev"), false);
+	assert.deepEqual(config.routes, [{ pattern: "board.mbza.dev", custom_domain: true }]);
+	assert.equal(JSON.stringify(config.routes).includes("site.mbza.dev"), false);
 
 	for (const extraArgs of [
 		["--target", "vocostar", "--environment", "production", "--allow-unprovisioned"],
@@ -1071,24 +1077,13 @@ test("staged production API stays private while exposing service bindings", asyn
 	assert.deepEqual(workerCatalog.customDependencies, []);
 	assert.deepEqual(JSON.parse(mbza.vars.CORS_ORIGINS_JSON), [
 		"https://board.mbza.dev",
-		"https://site.mbza.dev",
 		"https://auth.mbza.dev",
 		"https://reference.mbza.dev",
+		"https://site.mbza.dev",
 	]);
 	assert.deepEqual(
 		publicSurfaces.map(({ id }) => id),
-		[
-			"api",
-			"sdk",
-			"shortlinks",
-			"files",
-			"site",
-			"dashboard",
-			"mcp",
-			"mail-preview",
-			"site-preview",
-			"reference",
-		],
+		["api", "sdk", "shortlinks", "files", "site", "mcp", "site-preview", "reference"],
 	);
 	assert.deepEqual(
 		publicSurfaces.find(({ id }) => id === "reference"),
@@ -1193,8 +1188,8 @@ test("generated MCP config is public only on its target domain and uses a privat
 	assert.equal(config.main, "../../workers/mcp/src/index.ts");
 	assert.equal(config.workers_dev, false);
 	assert.equal(config.vars.PUBLIC_API_URL, "https://api.mbza.dev");
-	assert.equal(config.vars.PUBLIC_MCP_URL, "https://mcp.mbza.dev");
-	assert.equal(config.vars.MCP_DOMAIN, "mcp.mbza.dev");
+	assert.equal(config.vars.PUBLIC_MCP_URL, "https://board.mbza.dev/mcp");
+	assert.equal(config.vars.MCP_DOMAIN, "board.mbza.dev");
 	assert.deepEqual(config.services, [{ binding: "API_SERVICE", service: "superboard-api-dev" }]);
 	assert.deepEqual(config.routes, [{ pattern: "mcp.mbza.dev", custom_domain: true }]);
 	assert.deepEqual(config.tail_consumers, [{ service: "superboard-observability-dev" }]);

@@ -391,6 +391,7 @@ function PluginCard({
 							<h3 className="font-semibold truncate">{plugin.name}</h3>
 							<span className="text-xs text-kumo-subtle">v{plugin.version}</span>
 							{!plugin.enabled && <Badge variant="secondary">{t`Disabled`}</Badge>}
+							{plugin.lifecycleLocked && <Badge variant="secondary">{t`Required`}</Badge>}
 							{isMarketplace && <Badge variant="secondary">{t`Marketplace`}</Badge>}
 							{hasUpdate && (
 								<Badge variant="outline" className="border-kumo-brand text-kumo-link">
@@ -475,7 +476,7 @@ function PluginCard({
 							</RouterLinkButton>
 						)}
 
-						{plugin.hasSettings && plugin.enabled && (
+						{plugin.hasSettings && (plugin.enabled || plugin.configurationWhileDisabled) && (
 							<RouterLinkButton
 								to="/plugins-manager/$pluginId/settings"
 								params={{ pluginId: plugin.id }}
@@ -486,7 +487,7 @@ function PluginCard({
 							/>
 						)}
 
-						{plugin.hasAdminPages && plugin.enabled && (
+						{plugin.hasAdminPages && (plugin.enabled || plugin.configurationWhileDisabled) && (
 							<RouterLinkButton
 								to="/plugins/$pluginId/$"
 								params={{ pluginId: plugin.id, _splat: "" }}
@@ -500,7 +501,7 @@ function PluginCard({
 						<Switch
 							checked={plugin.enabled}
 							onCheckedChange={handleToggle}
-							disabled={isToggling}
+							disabled={isToggling || plugin.lifecycleLocked}
 							aria-label={plugin.enabled ? t`Disable plugin` : t`Enable plugin`}
 						/>
 

@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'experience_client.dart';
 import 'application_actions.dart'
@@ -35,6 +36,8 @@ class SuperBoardOnboarding extends StatefulWidget {
     this.onSkipped,
     this.onClosed,
     this.onUnavailable,
+    this.onAnswersChanged,
+    this.resumeProgress,
     this.fallbackTitle = '',
     this.fallbackBody = '',
     @visibleForTesting this.experienceClient,
@@ -53,6 +56,8 @@ class SuperBoardOnboarding extends StatefulWidget {
   final VoidCallback? onSkipped;
   final VoidCallback? onClosed;
   final VoidCallback? onUnavailable;
+  final ValueChanged<Map<String, String>>? onAnswersChanged;
+  final bool? resumeProgress;
   final String fallbackTitle;
   final String fallbackBody;
   final SuperBoardExperienceClient? experienceClient;
@@ -74,6 +79,11 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
   bool _savingMarketingConsent = false;
   String? _error;
   String? _marketingConsentError;
+  String? _questionError;
+  final Map<String, String> _answers = {};
+  final List<int> _routeHistory = [];
+  final FlutterSecureStorage _progressStorage = const FlutterSecureStorage();
+  Future<void> _progressWrite = Future<void>.value();
   final Map<String, bool> _marketingConsents = {};
   final Set<String> _persistedMarketingConsents = {};
 
@@ -116,6 +126,8 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
         widget.onUnavailable?.call();
         return;
       }
+      await _restoreProgress();
+      if (!mounted) return;
       await _track('impression');
       await _track('step_view', stepId: _screenId);
     } catch (error) {
@@ -150,26 +162,89 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
     );
   }
 
+  bool _validateQuestions() {
+    if (_screens.isEmpty) return false;
+    final blocks = _screens[_index]['blocks'];
+    if (blocks is List) {
+      for (final raw in blocks.whereType<Map>()) {
+        if (raw['type'] != 'question' || raw['props'] is! Map) continue;
+        final props = raw['props'] as Map;
+        final attribute =
+            props['attribute']?.toString() ?? raw['id'].toString();
+        if (props['required'] == true &&
+            (_answers[attribute]?.isEmpty ?? true)) {
+          setState(
+            () => _questionError =
+                props['required_message']?.toString() ??
+                ((widget.locale ?? '').startsWith('fr')
+                    ? 'Choisissez une réponse pour continuer.'
+                    : 'Choose an answer to continue.'),
+          );
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   Future<void> _next() async {
     if (_terminal || _screens.isEmpty) return;
+    if (!_validateQuestions()) return;
+    final blocks = _screens[_index]['blocks'];
     if (!await _persistMarketingConsent()) return;
     await _track(
       'progress',
       stepId: _screenId,
-      payload: {'screen_index': _index, 'screen_count': _screens.length},
+      payload: {
+        'screen_index': _index,
+        'screen_count': _screens.length,
+        'answers': Map<String, String>.from(_answers),
+      },
     );
     final current = _screens[_index];
-    final nextId = current['next_screen_id']?.toString();
+    String? nextId = current['next_screen_id']?.toString();
+    if (blocks is List) {
+      for (final raw in blocks.whereType<Map>()) {
+        if (raw['type'] != 'question' || raw['props'] is! Map) continue;
+        final props = raw['props'] as Map;
+        final options = props['options'];
+        if (options is! List) continue;
+        final answer =
+            _answers[props['attribute']?.toString() ?? raw['id'].toString()];
+        for (final option in options.whereType<Map>()) {
+          if (option['value'] == answer && option['next_screen_id'] is String) {
+            nextId = option['next_screen_id'] as String;
+            break;
+          }
+        }
+      }
+    }
     final explicitIndex = nextId == null
         ? -1
         : _screens.indexWhere((screen) => screen['id']?.toString() == nextId);
-    final nextIndex = explicitIndex >= 0 ? explicitIndex : _index + 1;
+    var nextIndex = explicitIndex >= 0 ? explicitIndex : _index + 1;
+    final visited = <int>{};
+    while (nextIndex < _screens.length &&
+        !_screenMatches(_screens[nextIndex]) &&
+        visited.add(nextIndex)) {
+      final next = _screens[nextIndex]['next_screen_id']?.toString();
+      final target = next == null
+          ? -1
+          : _screens.indexWhere((screen) => screen['id'] == next);
+      nextIndex = target >= 0 ? target : nextIndex + 1;
+    }
+    if (visited.contains(nextIndex)) nextIndex = _screens.length;
     if (nextIndex >= _screens.length) {
       await _complete(persistMarketingConsent: false);
       return;
     }
     if (!mounted) return;
-    setState(() => _index = nextIndex);
+    setState(() {
+      _routeHistory.add(_index);
+      _index = nextIndex;
+      _questionError = null;
+    });
+    await _persistProgress();
     await _track('step_view', stepId: _screenId);
   }
 
@@ -177,7 +252,12 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
     if (_index <= 0 || _terminal) return;
     await _track('back', stepId: _screenId);
     if (!mounted) return;
-    setState(() => _index--);
+    setState(
+      () => _index = _routeHistory.isNotEmpty
+          ? _routeHistory.removeLast()
+          : _index - 1,
+    );
+    await _persistProgress();
     await _track('step_view', stepId: _screenId);
   }
 
@@ -189,10 +269,15 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
   }
 
   Future<void> _complete({bool persistMarketingConsent = true}) async {
-    if (_terminal) return;
+    if (_terminal || !_validateQuestions()) return;
     if (persistMarketingConsent && !await _persistMarketingConsent()) return;
     _terminal = true;
-    await _track('complete', stepId: _screenId);
+    await _clearProgress();
+    await _track(
+      'complete',
+      stepId: _screenId,
+      payload: {'answers': Map<String, String>.from(_answers)},
+    );
     widget.onCompleted?.call();
   }
 
@@ -275,6 +360,135 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
       }
     }
   }
+
+  String? get _progressKey {
+    final subject = widget.customerId ?? widget.anonymousId;
+    final metadata = _resolved?.definition['metadata'];
+    final enabled =
+        widget.resumeProgress ??
+        (metadata is Map && metadata['resume_progress'] == true);
+    if (!enabled || subject == null || subject.isEmpty) return null;
+    return 'superboard.onboarding.' +
+        base64Url.encode(
+          utf8.encode(
+            [
+              _client.baseUrl,
+              _client.projectKey,
+              _client.environment,
+              widget.placement,
+              subject,
+            ].join(':'),
+          ),
+        );
+  }
+
+  Future<void> _persistProgress() async {
+    final key = _progressKey;
+    if (key == null || _resolved == null) return;
+    final value = jsonEncode({
+      'version': _resolved!.versionId,
+      'screen': _screenId,
+      'answers': _answers,
+      'history': _routeHistory,
+      'saved_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    _progressWrite = _progressWrite.then((_) async {
+      try {
+        await _progressStorage.write(key: key, value: value);
+      } catch (_) {
+        return;
+      }
+    });
+    await _progressWrite;
+  }
+
+  Future<void> _restoreProgress() async {
+    final key = _progressKey;
+    if (key == null) return;
+    try {
+      final raw = await _progressStorage.read(key: key);
+      if (raw == null) return;
+      final saved = jsonDecode(raw);
+      if (saved is! Map || saved['version'] != _resolved?.versionId) return;
+      final date = DateTime.tryParse(saved['saved_at']?.toString() ?? '');
+      if (date == null ||
+          DateTime.now().difference(date) > const Duration(days: 30))
+        return;
+      final index = _screens.indexWhere(
+        (screen) => screen['id'] == saved['screen'],
+      );
+      if (!mounted || index < 0) return;
+      setState(() {
+        _index = index;
+        final answers = saved['answers'];
+        if (answers is Map)
+          for (final entry in answers.entries) {
+            if (entry.key is String && entry.value is String)
+              _answers[entry.key as String] = entry.value as String;
+          }
+        final history = saved['history'];
+        if (history is List)
+          _routeHistory.addAll(
+            history.whereType<int>().where(
+              (item) => item >= 0 && item < _screens.length,
+            ),
+          );
+      });
+    } catch (_) {
+      return;
+    }
+  }
+
+  Future<void> _clearProgress() async {
+    final key = _progressKey;
+    if (key == null) return;
+    await _progressWrite;
+    try {
+      await _progressStorage.delete(key: key);
+    } catch (_) {
+      return;
+    }
+  }
+
+  bool _screenMatches(Map<String, dynamic> screen) {
+    final conditions = screen['conditions'];
+    if (conditions is! Map) return true;
+    if (conditions['platform'] != null &&
+        conditions['platform'] != _client.platform)
+      return false;
+    if (conditions['locale'] != null && conditions['locale'] != widget.locale)
+      return false;
+    final minimum = conditions['min_app_version']?.toString();
+    if (minimum != null) {
+      final expected = minimum
+          .split('.')
+          .map((part) => int.tryParse(part) ?? 0)
+          .toList();
+      final actual = (widget.appVersion ?? '0')
+          .split('.')
+          .map((part) => int.tryParse(part) ?? 0)
+          .toList();
+      for (
+        var index = 0;
+        index < max(expected.length, actual.length);
+        index++
+      ) {
+        final left = index < actual.length ? actual[index] : 0;
+        final right = index < expected.length ? expected[index] : 0;
+        if (left != right) return left > right;
+      }
+    }
+    return true;
+  }
+
+  String _interpolate(Object? value) =>
+      (value?.toString() ?? '').replaceAllMapped(
+        RegExp(r'\{\{\s*(\w+)\s*\}\}'),
+        (match) =>
+            _answers[match[1]] ??
+            widget.attributes[match[1]]?.toString() ??
+            match[0]!,
+      );
 
   String _marketingConsentBlockKey(
     Map<String, dynamic> block,
@@ -379,7 +593,7 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
     );
     final radius = (theme['corner_radius'] as num?)?.toDouble() ?? 14;
     final hasAction = blocks.any((block) => block['type'] == 'button');
-    return SizedBox(
+    final content = SizedBox(
       width: widget.width,
       height: widget.height,
       child: Material(
@@ -431,6 +645,13 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
                           ),
                           const SizedBox(height: 14),
                         ],
+                        if (_questionError != null)
+                          Text(
+                            _questionError!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
                         if (!hasAction)
                           FilledButton(
                             onPressed: _savingMarketingConsent ? null : _next,
@@ -457,6 +678,13 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
         ),
       ),
     );
+    return Directionality(
+      textDirection:
+          RegExp(r'^(ar|fa|he|ur)(-|$)').hasMatch(widget.locale ?? '')
+          ? TextDirection.rtl
+          : Directionality.of(context),
+      child: content,
+    );
   }
 
   Widget _block(
@@ -472,14 +700,14 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
     switch (type) {
       case 'heading':
         return Text(
-          props['text']?.toString() ?? '',
+          _interpolate(props['text']),
           textAlign: _alignment(props['align']),
           style: Theme.of(context).textTheme.headlineMedium,
         );
       case 'text':
       case 'legal':
         return Text(
-          props['text']?.toString() ?? '',
+          _interpolate(props['text']),
           textAlign: _alignment(props['align']),
           style: type == 'legal' ? Theme.of(context).textTheme.bodySmall : null,
         );
@@ -526,6 +754,46 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
           ),
           child: Text(props['text']?.toString() ?? 'Continue'),
         );
+      case 'question':
+        final attribute =
+            props['attribute']?.toString() ?? block['id'].toString();
+        final options = props['options'] is List
+            ? (props['options'] as List).whereType<Map>().toList()
+            : <Map>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _interpolate(props['text']),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            for (final option in options)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: _answers[attribute] == option['value']
+                        ? accent.withValues(alpha: 0.12)
+                        : null,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _answers[attribute] = option['value'].toString();
+                      _questionError = null;
+                    });
+                    widget.onAnswersChanged?.call(
+                      Map<String, String>.unmodifiable(_answers),
+                    );
+                    unawaited(_persistProgress());
+                  },
+                  child: Text(
+                    option['label']?.toString() ?? option['value'].toString(),
+                  ),
+                ),
+              ),
+          ],
+        );
       case 'marketing_consent':
         final blockKey = _marketingConsentBlockKey(block, blockIndex);
         return CheckboxListTile(
@@ -551,7 +819,7 @@ class _SuperBoardOnboardingState extends State<SuperBoardOnboarding> {
         return SizedBox(height: (props['height'] as num?)?.toDouble() ?? 24);
       case 'close':
         return Align(
-          alignment: Alignment.centerRight,
+          alignment: AlignmentDirectional.centerEnd,
           child: IconButton(onPressed: _close, icon: const Icon(Icons.close)),
         );
       default:

@@ -181,7 +181,7 @@ def call_modal(modal_url: str, endpoint: str, payload: dict, timeout: int = 480)
 
 
 # ── Gateway progress helper ───────────────────────────────────────────────────
-def update_progress(table: str, row_id: str, user_id: str, progress: float):
+def update_progress(table: str, row_id: str, user_id: str, progress: float, context: dict | None = None):
     """Met à jour progress via API Gateway (appelé dans un thread background)."""
     try:
         if table == 'users_medias':
@@ -190,6 +190,8 @@ def update_progress(table: str, row_id: str, user_id: str, progress: float):
         else:
             endpoint = f"{GATEWAY_URL}/ws/vocals/progress"
             payload  = {"vocal_id": row_id, "user_id": user_id, "progress": progress}
+        if context is not None:
+            payload.update({key: context[key] for key in ('project_ref', 'job_id', 'subject') if key in context})
         r = requests.post(
             endpoint,
             json=payload,
@@ -342,7 +344,7 @@ def run_modal():
         require_source_url(vocal_ref, "vocal reference")
         # Progress 0.6 avant Modal
         threading.Thread(
-            target=update_progress, args=("users_medias", media_id, user_id, 0.6), daemon=True,
+            target=update_progress, args=("users_medias", media_id, user_id, 0.6, payload), daemon=True,
         ).start()
 
         if media_type in ('video', 'audio'):
@@ -372,7 +374,7 @@ def run_modal():
 
         # Progress 0.9 après Modal + confirmation R2
         threading.Thread(
-            target=update_progress, args=("users_medias", media_id, user_id, 0.9), daemon=True,
+            target=update_progress, args=("users_medias", media_id, user_id, 0.9, payload), daemon=True,
         ).start()
 
         return {"audio_crv_url": audio_crv_url}

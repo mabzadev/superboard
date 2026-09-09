@@ -50,7 +50,7 @@ describe("EmDash plugin Store authority", () => {
 			checked_at: "2026-08-30T08:20:00.000Z",
 			expires_at: "2999-08-31T08:20:00.000Z",
 		});
-		expect(receipt.installed).toHaveLength(18);
+		expect(receipt.installed).toHaveLength(19);
 		expect(receipt.templates).toEqual(["supbrd-plugmod-custom-*"]);
 		expect(
 			receipt.installed.find(({ plugin_id }) => plugin_id === "supbrd-plug-user"),
@@ -65,14 +65,14 @@ describe("EmDash plugin Store authority", () => {
 		)
 			.bind(scope.instance_id, scope.target)
 			.first<{ count: number }>();
-		expect(states?.count).toBe(18);
+		expect(states?.count).toBe(19);
 		const health = await env.DB.prepare(
 			`SELECT COUNT(*) count FROM superboard_plugin_runtime_health
 			 WHERE instance_id = ? AND target = ? AND status = 'ready'`,
 		)
 			.bind(scope.instance_id, scope.target)
 			.first<{ count: number }>();
-		expect(health?.count).toBe(18);
+		expect(health?.count).toBe(19);
 		const candidateLock = await loadReleasableSuperBoardPluginLock(env.DB, scope);
 		await activatePluginRelease(
 			env.DB,
@@ -139,7 +139,7 @@ describe("EmDash plugin Store authority", () => {
 			.bind(scope.instance_id, scope.target)
 			.run();
 		const reducedLock = await loadActiveSuperBoardPluginLock(env.DB, scope);
-		expect(reducedLock).toHaveLength(17);
+		expect(reducedLock).toHaveLength(18);
 		expect(
 			reducedLock.some(({ plugin_id: pluginId }) => pluginId === "supbrd-plugmod-marketing"),
 		).toBe(false);

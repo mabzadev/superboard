@@ -2,6 +2,7 @@ import {
 	parseFrontNavigation,
 	resolveFrontRoute,
 	type FrontNavigationGroup,
+	type FrontNavigationItem,
 	type NativeRendererMountInput,
 	type PluginLockEntry,
 } from "@superboard/supbrd-core";
@@ -13,13 +14,33 @@ import {
 } from "./core-front-contract.js";
 import type { FrontPageModel } from "./front-page.js";
 import { groupNativeFrontNavigation } from "./native-front-plugins.js";
+import { canAccessOperatorConsole } from "./operator-access.js";
 import { USER_FRONT_CATALOGS, type UserFrontLocale } from "./user-front-i18n.js";
 
-export type NativeFrontNavigationGroup = FrontNavigationGroup;
+const nativeAdminPath = /^\/_emdash\/admin(?:\/|$)/u;
+
+export interface NativeFrontNavigationItem extends FrontNavigationItem {
+	children?: NativeFrontNavigationItem[];
+	target?: string;
+}
+export interface NativeFrontNavigationGroup extends Omit<FrontNavigationGroup, "items"> {
+	items: NativeFrontNavigationItem[];
+	icon?: string;
+	direct?: boolean;
+}
+export interface NativeFrontEditableNavigationItem {
+	label: string;
+	href: string;
+	children?: readonly NativeFrontEditableNavigationItem[];
+	target?: string;
+}
 
 export interface NativeFrontEditableNavigationGroup {
+	id?: string;
 	label: string;
-	items: readonly { label: string; href: string }[];
+	icon?: string;
+	direct?: boolean;
+	items: readonly NativeFrontEditableNavigationItem[];
 }
 
 export interface NativeFrontViewBindings {
@@ -44,6 +65,8 @@ export interface NativeFrontViewConfiguration {
 }
 
 export interface NativeFrontPresentationProjection {
+	deployment?: FrontPageModel["deployment"];
+	environments?: FrontPageModel["environments"];
 	public_endpoints?: FrontPageModel["public_endpoints"];
 	operator?: FrontPageModel["operator"];
 	project_scope?: import("@superboard/contracts/site-operator").OperatorProjectScope;
@@ -80,6 +103,8 @@ export function projectNativeFrontPresentation(
 		)!;
 		return {
 			public_endpoints: model.public_endpoints,
+			deployment: model.deployment,
+			environments: model.environments,
 			instance_id: model.instance_id,
 			release_id: null,
 			path: model.requested_path,
@@ -130,6 +155,7 @@ export function projectNativeFrontPresentation(
 				releaseNavigation,
 				payload.front_route_manifest,
 				model.permissions,
+				canAccessOperatorConsole(model.operator),
 			)
 		: releaseNavigation;
 	const theme = Object.fromEntries(
@@ -155,6 +181,8 @@ export function projectNativeFrontPresentation(
 		if (!stateRenderer) throw new Error(`State renderer is missing: ${stateRendererId}`);
 		return {
 			public_endpoints: model.public_endpoints,
+			deployment: model.deployment,
+			environments: model.environments,
 			instance_id: model.instance_id,
 			release_id: payload.release_id,
 			path: model.requested_path,
@@ -199,6 +227,8 @@ export function projectNativeFrontPresentation(
 	});
 	return {
 		public_endpoints: model.public_endpoints,
+		deployment: model.deployment,
+		environments: model.environments,
 		instance_id: model.instance_id,
 		release_id: payload.release_id,
 		path: model.requested_path,
@@ -257,53 +287,62 @@ function projectEditorialNavigation(
 	release: readonly NativeFrontNavigationGroup[],
 	manifest: Parameters<typeof resolveFrontRoute>[0],
 	permissions: readonly string[],
+	operatorAccess: boolean,
 ): NativeFrontNavigationGroup[] {
-	const releaseItemByHref = new Map(
+	const byHref = new Map(
 		release.flatMap((group) => group.items.map((item) => [item.href, item] as const)),
 	);
-	const groups = editorial.flatMap((group, groupOrder) => {
-		const items = group.items.flatMap((item, itemOrder) => {
-			const listedItem = releaseItemByHref.get(item.href);
-			if (listedItem) return [{ ...listedItem, label: item.label, order: itemOrder }];
+	const projectItems = (
+		source: readonly NativeFrontEditableNavigationItem[],
+	): NativeFrontNavigationItem[] =>
+		source.flatMap((item, order) => {
+			const children = projectItems(item.children ?? []);
+			const listed = byHref.get(item.href);
 			const resolution = resolveFrontRoute(manifest, item.href);
-			if (
-				resolution.result !== "matched" ||
-				resolution.route.audience !== "superboard_front" ||
-				resolution.route.route_kind !== "page" ||
-				resolution.route.page_id === null ||
-				(resolution.route.permission_expression !== "allow" &&
-					!permissions.includes(resolution.route.permission_expression))
-			) {
-				return [];
-			}
+			const coreLink =
+				operatorAccess &&
+				(item.href === "/superboard-system/home" || nativeAdminPath.test(item.href));
+			const route = resolution.result === "matched" ? resolution.route : undefined;
+			const allowed =
+				route &&
+				route.audience === "superboard_front" &&
+				route.route_kind === "page" &&
+				route.page_id !== null &&
+				(route.permission_expression === "allow" ||
+					permissions.includes(route.permission_expression));
+			const base =
+				listed ??
+				(allowed && route
+					? { route_id: route.route_id, href: item.href, permission: route.permission_expression }
+					: coreLink
+						? { route_id: item.href, href: item.href, permission: "allow" }
+						: children[0]);
+			if (!base) return [];
 			return [
 				{
-					route_id: resolution.route_id,
+					...base,
 					label: item.label,
-					permission: resolution.route.permission_expression,
-					order: itemOrder,
-					href: item.href,
+					order,
+					...(children.length ? { children } : {}),
+					...(item.target ? { target: item.target } : {}),
 				},
 			];
 		});
-		if (items.length === 0) return [];
-		return [
-			{
-				group_id: `emdash-${groupOrder}`,
-				label: group.label,
-				order: groupOrder,
-				items,
-			},
-		];
+	return editorial.flatMap((group, order) => {
+		const items = projectItems(group.items);
+		return items.length
+			? [
+					{
+						group_id: group.id ?? `emdash-${order}`,
+						label: group.label,
+						order,
+						items,
+						...(group.icon ? { icon: group.icon } : {}),
+						...(group.direct !== undefined ? { direct: group.direct } : {}),
+					},
+				]
+			: [];
 	});
-	const customized = new Set(groups.flatMap(({ items }) => items.map(({ href }) => href)));
-	return [
-		...groups,
-		...release.flatMap((group) => {
-			const items = group.items.filter(({ href }) => !customized.has(href));
-			return items.length ? [{ ...group, order: groups.length + group.order, items }] : [];
-		}),
-	];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

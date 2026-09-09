@@ -7,6 +7,7 @@ import emdash from "emdash/astro";
 
 import { dashboardViteAliases } from "./dashboard-vite-aliases.mjs";
 import { superboardReleaseOperatorApi } from "./release-operator-api.mjs";
+import { superboardRuntimeCache } from "./runtime-cache.mjs";
 import { superboardConfiguredPlugins } from "./superboard-emdash-plugins.mjs";
 
 function superboardApplicationApi() {
@@ -44,10 +45,12 @@ export default defineConfig({
 	output: "server",
 	adapter: cloudflare(),
 	integrations: [
+		superboardRuntimeCache(),
 		react(),
 		superboardApplicationApi(),
 		superboardReleaseOperatorApi(),
 		emdash({
+			middleware: { outer: new URL("./src/mcp-middleware.ts", import.meta.url) },
 			database: d1({ binding: "DB", session: "disabled" }),
 			storage: r2({ binding: "MEDIA" }),
 			plugins: [

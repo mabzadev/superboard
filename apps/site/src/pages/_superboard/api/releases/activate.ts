@@ -14,6 +14,7 @@ import {
 	recentOperatorReauthentication,
 	requireReleaseOperator,
 } from "../../../../lib/operator-guard.js";
+import { syncPluginPackageRuntime } from "../../../../lib/plugin-package-state.js";
 import {
 	createD1FrontReleaseRepository,
 	verifyActivationReceipts,
@@ -106,12 +107,11 @@ export const POST: APIRoute = async (context) => {
 		release_id: result.active_release_id,
 		finalized_at: activatedAt,
 	});
-	for (const pluginId of pluginLifecycle.activated_plugin_ids) {
-		await context.locals.emdash.setPluginStatus(pluginId, "active");
-	}
-	for (const pluginId of pluginLifecycle.disabled_plugin_ids) {
-		await context.locals.emdash.setPluginStatus(pluginId, "inactive");
-	}
+	await syncPluginPackageRuntime(
+		env.DB,
+		{ instance_id: env.SUPERBOARD_INSTANCE_ID, target: pluginTarget },
+		context.locals.emdash,
+	);
 	await env.RELEASE_CACHE.delete(`last_verified_release:${env.SUPERBOARD_INSTANCE_ID}`);
 	const loaded = await loadLastVerifiedFrontRelease(
 		env,

@@ -35,6 +35,7 @@ import {
 	root,
 	targetSelectionFromArgs,
 } from "./cloudflare-target.mjs";
+import { deploymentConfiguration, deploymentWebOrigins } from "./deployment-configuration.mjs";
 import { assertPublicRoutingReady } from "./public-routing-gate.mjs";
 import { superboardEnvironmentValue } from "./superboard-environment.mjs";
 import {
@@ -42,6 +43,7 @@ import {
 	compiledTargetFromArgs,
 	targetWithAbsentResources,
 } from "./target-compiler.mjs";
+import { targetForEnvironment, consoleEnvironmentCatalog } from "./target-environments.mjs";
 
 const args = parseArgs();
 const service = args.service ?? "api";
@@ -55,7 +57,10 @@ if (outputSuffix && !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(outputSuffix)) {
 	throw new Error("--output-suffix must be a safe lowercase name");
 }
 const { target: loadedTarget } = await loadTarget(targetName);
-const target = args.fresh ? targetWithAbsentResources(loadedTarget) : loadedTarget;
+const target = targetForEnvironment(
+	args.fresh ? targetWithAbsentResources(loadedTarget) : loadedTarget,
+	environment,
+);
 const compiledTarget = await compiledTargetFromArgs(target, environment, args);
 const sitePreviewRoute = resolveSitePreviewRoute({
 	requested: Boolean(args["site-preview-route"]),
@@ -235,10 +240,22 @@ function siteConfig() {
 		vars: {
 			SUPERBOARD_INSTANCE_ID: target.target,
 			SUPERBOARD_ENVIRONMENT: environment,
+			SUPERBOARD_CONSOLE_ENVIRONMENTS_JSON: JSON.stringify([
+				...consoleEnvironmentCatalog(loadedTarget, environment),
+				...(target.consoleEnvironments ?? []).filter(
+					({ id }) =>
+						!consoleEnvironmentCatalog(loadedTarget, environment).some((entry) => entry.id === id),
+				),
+			]),
+			SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON: JSON.stringify(
+				deploymentConfiguration(target, environment),
+			),
 			SUPERBOARD_PUBLIC_ENDPOINTS_JSON: JSON.stringify(
 				Object.fromEntries(
 					["api", "auth", "sdk", "shortlinks", "files", "mcp", "site"].flatMap((key) =>
-						target.domains[key] ? [[key, `https://${target.domains[key]}`]] : [],
+						target.domains[key]
+							? [[key, key === "mcp" ? publicMcpUrl(target) : `https://${target.domains[key]}`]]
+							: [],
 					),
 				),
 			),
@@ -269,7 +286,10 @@ function siteConfig() {
 			},
 		],
 		worker_loaders: [{ binding: target.siteRuntime.workerLoaderBinding }],
-		services: [{ binding: "API_SERVICE", service: target.workers.api[environment] }],
+		services: [
+			{ binding: "API_SERVICE", service: target.workers.api[environment] },
+			{ binding: "MCP_SERVICE", service: target.workers.mcp[environment] },
+		],
 		images: { binding: "IMAGES" },
 		send_email: [
 			{
@@ -283,7 +303,15 @@ function siteConfig() {
 			: publicRoutesEnabled
 				? {
 						routes: [
-							...new Set([target.domains.site, target.domains.dashboard].filter(Boolean)),
+							...new Set(
+								[
+									target.domains.site,
+									target.domains.dashboard,
+									...(target.domainAliases ?? [])
+										.filter((alias) => alias.surface === "console")
+										.map((alias) => alias.hostname),
+								].filter(Boolean),
+							),
 						].map((hostname) => ({ pattern: hostname, custom_domain: true })),
 					}
 				: {}),
@@ -315,15 +343,11 @@ function apiConfig() {
 			MCP_DOMAIN: target.domains.mcp,
 			PUBLIC_SURFACES_JSON: JSON.stringify(publicSurfaceMonitors(target)),
 			PLATFORM_WORKERS_JSON: JSON.stringify(platformWorkerTopology(target)),
+			SUPERBOARD_DEPLOYMENT_CONFIGURATION_JSON: JSON.stringify(
+				deploymentConfiguration(target, environment),
+			),
 			CORS_ORIGIN: publicDashboardUrl(target),
-			CORS_ORIGINS_JSON: JSON.stringify([
-				...new Set([
-					publicDashboardUrl(target),
-					`https://${target.domains.site}`,
-					publicAuthUrl(target),
-					...target.applicationIdentity.webOrigins,
-				]),
-			]),
+			CORS_ORIGINS_JSON: JSON.stringify(deploymentWebOrigins(target)),
 			APP_URL: appUrl,
 			...(target.oauth?.dashboardClientId
 				? { DASHBOARD_CLIENT_ID: target.oauth.dashboardClientId }
@@ -332,6 +356,7 @@ function apiConfig() {
 			REGISTRATION_REALM: `${target.target}:${environment}`,
 			SSO_ENABLED: String(target.ssoEnabled),
 			FEATURES_JSON: JSON.stringify(target.features),
+			CUSTOM_WORKER_PLUGIN_ID: target.customWorker?.pluginId ?? "",
 			BILLING_EXECUTION_MODE: resources.billingExecutionMode,
 			BILLING_RELEASE_STALE_MINUTES: "15",
 			BILLING_CATALOG_STALE_HOURS: "24",
@@ -445,6 +470,9 @@ function apiConfig() {
 				{ pattern: target.domains.shortlinks, custom_domain: true },
 				{ pattern: target.domains.sdk, custom_domain: true },
 				{ pattern: target.domains.files, custom_domain: true },
+				...(target.domainAliases ?? [])
+					.filter((alias) => alias.surface === "shortlinks")
+					.map((alias) => ({ pattern: alias.hostname, custom_domain: true })),
 			];
 		}
 	}
@@ -724,8 +752,14 @@ function emailConfig() {
 			queueConsumer(resources.queues.emailDlq, null, 10, 5, 100),
 		];
 	}
-	if (target.mail.transport === "capture" && target.domains.mailPreview && publicRoutesEnabled) {
-		config.routes = [{ pattern: target.domains.mailPreview, custom_domain: true }];
+	const previewHosts = [
+		target.domains.mailPreview,
+		...(target.domainAliases ?? [])
+			.filter((alias) => alias.surface === "mailPreview")
+			.map((alias) => alias.hostname),
+	].filter(Boolean);
+	if (target.mail.transport === "capture" && previewHosts.length && publicRoutesEnabled) {
+		config.routes = previewHosts.map((pattern) => ({ pattern, custom_domain: true }));
 	}
 	return config;
 }
@@ -937,6 +971,30 @@ function customConfig() {
 			service: workers[environment],
 		}));
 	}
+	const legacyGateway = target.customWorker.runtimeBridge?.legacyGateway;
+	if (legacyGateway) {
+		config.durable_objects = {
+			bindings: [
+				{
+					name: "VOCOSTAR_USER_VOCALS_ROOM",
+					class_name: "UserVocalsRoom",
+					script_name: legacyGateway.worker,
+				},
+				{
+					name: "VOCOSTAR_USER_MEDIAS_ROOM",
+					class_name: "UserMediasRoom",
+					script_name: legacyGateway.worker,
+				},
+			],
+		};
+		config.services = [
+			...(config.services ?? []),
+			{
+				binding: "VOCOSTAR_NOTIFICATION_DISPATCHER",
+				service: legacyGateway.notificationWorker,
+			},
+		];
+	}
 	if (!preflight && target.customWorker.crons?.length) {
 		config.triggers = { crons: [...target.customWorker.crons] };
 	}
@@ -1052,12 +1110,26 @@ function mcpConfig() {
 			SUPERBOARD_TARGET: targetName,
 			OPENGROW_TARGET: targetName,
 			MCP_DOMAIN: target.domains.mcp,
+			MCP_LEGACY_ORIGINS_JSON: JSON.stringify(
+				(target.domainAliases ?? [])
+					.filter((alias) => alias.surface === "mcp")
+					.map((alias) => `https://${alias.hostname}`),
+			),
 			PUBLIC_API_URL: publicApiUrl(target),
 			PUBLIC_MCP_URL: publicMcpUrl(target),
 		},
 		services: [{ binding: "API_SERVICE", service: target.workers.api[environment] }],
 		...(publicRoutesEnabled
-			? { routes: [{ pattern: target.domains.mcp, custom_domain: true }] }
+			? {
+					routes: [
+						...(target.domains.mcp !== target.domains.site
+							? [{ pattern: target.domains.mcp, custom_domain: true }]
+							: []),
+						...(target.domainAliases ?? [])
+							.filter((alias) => alias.surface === "mcp")
+							.map((alias) => ({ pattern: alias.hostname, custom_domain: true })),
+					],
+				}
 			: {}),
 	};
 }
@@ -1108,9 +1180,9 @@ function publicSurfaceMonitors(selectedTarget) {
 			: []),
 		{
 			id: "mcp",
-			url: origin(selectedTarget.domains.mcp),
-			healthUrl: `${origin(selectedTarget.domains.mcp)}/health`,
-			description: "Authenticated OpenGrow MCP operator endpoint",
+			url: publicMcpUrl(selectedTarget),
+			healthUrl: `${publicMcpUrl(selectedTarget)}/health`,
+			description: "Authenticated SuperBoard MCP operator endpoint",
 		},
 		...(selectedTarget.domains.mailPreview
 			? [

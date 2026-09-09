@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { ESLint } from "eslint";
 
+import { lintFrontMenuSource, lintFrontMenuProject } from "./superboard-front-menu-lint.mjs";
 import { classifyLintSources, normalizeEslintDiagnostics } from "./superboard-lint.mjs";
 
 test("new executable sources receive a linter without a manually maintained allowlist", () => {
@@ -122,4 +123,142 @@ test("standalone Front lint keeps TypeScript, hooks and accessibility checks wit
 	);
 	assert.equal(valid[0].errorCount, 0);
 	assert.equal(valid[0].warningCount, 0);
+});
+
+test("front menu lint rejects hardcoded destinations and label overrides", () => {
+	const path = "apps/site/src/lib/product-navigation.ts";
+	for (const source of [
+		'const items = [{label:"Sales",href:"/products"}];',
+		'page("/analytics", "statistics", ["Statistics", "Statistiques"]);',
+		'function replace(input) { return [{group_id:"stats",label:"Statistics",items:input}]; }',
+	])
+		assert.ok(lintFrontMenuSource(path, source).length > 0, source);
+	assert.deepEqual(
+		lintFrontMenuSource(
+			path,
+			"export const present = input => input.map(group => ({...group,items:group.items}));",
+		),
+		[],
+	);
+});
+
+test("front menu lint requires the native menu and the selected locale", () => {
+	const path = "apps/site/src/components/FrontPage.astro";
+	assert.ok(
+		lintFrontMenuSource(path, "---\nconst menu = [];\n---").some(({ code }) =>
+			code.includes("front-menu-source"),
+		),
+	);
+	assert.ok(
+		lintFrontMenuSource(path, '---\nconst menu = getMenu("superboard-admin");\n---').some(
+			({ code }) => code.includes("front-menu-locale"),
+		),
+	);
+	assert.deepEqual(
+		lintFrontMenuSource(
+			path,
+			'---\nconst locale = resolveUserFrontRequestLocale(Astro.request); const menu = getMenu("superboard-admin", {locale});\n---',
+		),
+		[],
+	);
+});
+
+test("front menu lint blocks restoring deleted editorial items from a release", () => {
+	const path = "apps/site/src/lib/native-front-presentation.ts";
+	assert.ok(
+		lintFrontMenuSource(
+			path,
+			"function projectEditorialNavigation(editorial, release) { return [...editorial,...release.flatMap(group=>group.items)]; }",
+		).some(({ code }) => code.includes("no-release-menu-append")),
+	);
+	assert.deepEqual(
+		lintFrontMenuSource(
+			path,
+			"function projectEditorialNavigation(editorial, release) { const allowed=release.map(group=>group.items); return editorial.filter(group=>allowed.includes(group)); }",
+		),
+		[],
+	);
+});
+
+test("front menu lint detects calculated destinations in arbitrarily named helpers", () => {
+	for (const source of [
+		'const section="reports"; export const entries=[{label:`Reports`,href:`/analytics/${section}`}];',
+		'function destination(id) { return "/analytics/" + id; } export const entries=[{label:"Reports",href:destination("reports")}];',
+		"export const entries=[{'label':'Sales','items':[]}];",
+	])
+		assert.ok(lintFrontMenuSource("apps/site/src/lib/helpers.ts", source).length > 0, source);
+});
+
+test("front menu lint rejects fixed or unrelated locales despite a locale property", () => {
+	for (const choice of ['"en"', '"ar"', "browserLocale"]) {
+		const source = `---\nconst selected = resolveUserFrontRequestLocale(Astro.request); const menu = getMenu("superboard-admin", {locale:${choice}});\n---`;
+		assert.ok(
+			lintFrontMenuSource("apps/site/src/components/FrontPage.astro", source).some((item) =>
+				item.code.includes("front-menu-locale"),
+			),
+			choice,
+		);
+	}
+});
+
+test("front menu lint detects release aliases after a helper is renamed", () => {
+	const source =
+		"function combine(editorial, release) { const extra = release.flatMap(group => group.items); return [...editorial,...extra]; }";
+	assert.ok(
+		lintFrontMenuSource("apps/site/src/lib/helpers.ts", source).some((item) =>
+			item.code.includes("no-release-menu-append"),
+		),
+	);
+});
+
+test("Astro template links and imported helpers are checked without filename conventions", async () => {
+	const files = new Map([
+		[
+			"apps/site/src/pages/example.astro",
+			'---\nimport { destination as target } from "../helpers/anything.js";\n---\n<nav><a href={target("reports")}>Reports</a></nav>',
+		],
+		[
+			"apps/site/src/helpers/anything.ts",
+			"export function destination(id) { return `/analytics/${id}`; }",
+		],
+	]);
+	const diagnostics = await lintFrontMenuProject(resolve(import.meta.dirname, ".."), files);
+	assert.ok(
+		diagnostics.some(
+			(item) =>
+				item.filename.endsWith("example.astro") && item.code.includes("no-hardcoded-front-menu"),
+		),
+	);
+});
+
+test("aliased native menu and request-locale imports are accepted", () => {
+	const source =
+		'---\nimport {getMenu as read} from "emdash"; import {resolveUserFrontRequestLocale as choose} from "../lib/user-front-i18n.js"; const selected=choose(Astro.request); const choice=selected; const options={locale:choice}; const menu=read("superboard-admin",options);\n---';
+	assert.deepEqual(lintFrontMenuSource("apps/site/src/components/FrontPage.astro", source), []);
+});
+
+test("front language restrictions do not disable Arabic in native EmDash", () => {
+	assert.ok(
+		lintFrontMenuSource(
+			"apps/site/src/lib/user-front-catalogs.ts",
+			"export const messages={en:{},fr:{},ar:{}};",
+		).some((item) => item.code.includes("front-languages")),
+	);
+	assert.deepEqual(
+		lintFrontMenuSource(
+			"packages/admin/src/locales/locales.ts",
+			'export const locales=[{code:"ar",enabled:true}];',
+		),
+		[],
+	);
+});
+
+test("an unused native lookup cannot authorize a separate rendered menu", () => {
+	const source =
+		'---\nconst locale=resolveUserFrontRequestLocale(Astro.request); const menu=getMenu("superboard-admin",{locale}); const configuration={navigation:[]}; const projection=projectNativeFrontPresentation(model,locale,configuration);\n---';
+	assert.ok(
+		lintFrontMenuSource("apps/site/src/components/FrontPage.astro", source).some((item) =>
+			item.code.includes("front-menu-source"),
+		),
+	);
 });

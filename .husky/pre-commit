@@ -1,3 +1,4 @@
+pnpm run check:front-menu
 pnpm exec lint-staged
 gitleaks git . --staged --no-banner --redact
 pnpm run typecheck

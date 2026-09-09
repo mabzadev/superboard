@@ -142,7 +142,7 @@ body {
 	--valid-green-light-2: rgb(18, 94, 43);
 }
 
-/* OpenFlow tokens are the source of truth; these aliases keep existing
+/* SuperBoard tokens are the source of truth; these aliases keep existing
    shadcn/Tailwind components on the exact same visual system. */
 :root {
 	--background: var(--color-main);
@@ -174,7 +174,7 @@ body {
 	--table-header: var(--color-muted);
 }
 
-/* Product-specific Button variants built only from the locked OpenFlow
+/* Product-specific Button variants built only from the locked SuperBoard
    semantic tokens. Core button geometry and states remain in the copied CSS. */
 .ds-button.ds-button-destructive {
 	background: color-mix(in srgb, var(--color-destructive) 12%, transparent);

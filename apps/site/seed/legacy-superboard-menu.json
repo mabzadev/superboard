@@ -1,0 +1,424 @@
+{
+	"name": "superboard-admin",
+	"label": "SuperBoard Admin",
+	"items": [
+		{
+			"type": "custom",
+			"label": "Dashboard",
+			"url": "/dashboard",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Dashboard",
+					"url": "/dashboard"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "App",
+			"url": "/app/customers",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Customers",
+					"url": "/app/customers"
+				},
+				{
+					"type": "custom",
+					"label": "Users",
+					"url": "/app/users"
+				},
+				{
+					"type": "custom",
+					"label": "Referrals",
+					"url": "/app/referrals"
+				},
+				{
+					"type": "custom",
+					"label": "Access Key",
+					"url": "/app/access-key"
+				},
+				{
+					"type": "custom",
+					"label": "Libraries",
+					"url": "/app/libraries"
+				},
+				{
+					"type": "custom",
+					"label": "Android Setup",
+					"url": "/app/android-setup"
+				},
+				{
+					"type": "custom",
+					"label": "iOS Setup",
+					"url": "/app/ios-setup"
+				},
+				{
+					"type": "custom",
+					"label": "Web Setup",
+					"url": "/app/web-setup"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "Identity",
+			"url": "/identity/en/dashboard",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Overview",
+					"url": "/identity/en/dashboard"
+				},
+				{
+					"type": "custom",
+					"label": "Users",
+					"url": "/identity/en/users"
+				},
+				{
+					"type": "custom",
+					"label": "User Attributes",
+					"url": "/identity/en/user-attributes"
+				},
+				{
+					"type": "custom",
+					"label": "Roles",
+					"url": "/identity/en/roles"
+				},
+				{
+					"type": "custom",
+					"label": "Applications",
+					"url": "/identity/en/apps"
+				},
+				{
+					"type": "custom",
+					"label": "Scopes",
+					"url": "/identity/en/scopes"
+				},
+				{
+					"type": "custom",
+					"label": "Organizations",
+					"url": "/identity/en/orgs"
+				},
+				{
+					"type": "custom",
+					"label": "Logs",
+					"url": "/identity/en/logs"
+				},
+				{
+					"type": "custom",
+					"label": "SAML SSO",
+					"url": "/identity/en/saml"
+				},
+				{
+					"type": "custom",
+					"label": "Account Policies",
+					"url": "/identity/en/account"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "Products",
+			"url": "/products/purchases",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Purchases",
+					"url": "/products/purchases"
+				},
+				{
+					"type": "custom",
+					"label": "Customers",
+					"url": "/products/customers"
+				},
+				{
+					"type": "custom",
+					"label": "Offerings",
+					"url": "/products/offerings"
+				},
+				{
+					"type": "custom",
+					"label": "Entitlements",
+					"url": "/products/entitlements"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "Flows",
+			"url": "/flows",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Overview",
+					"url": "/flows"
+				},
+				{
+					"type": "custom",
+					"label": "Workflows",
+					"url": "/flows/workflows"
+				},
+				{
+					"type": "custom",
+					"label": "Launchpad",
+					"url": "/flows/launchpad"
+				},
+				{
+					"type": "custom",
+					"label": "Users",
+					"url": "/flows/users"
+				},
+				{
+					"type": "custom",
+					"label": "Components",
+					"url": "/flows/components"
+				},
+				{
+					"type": "custom",
+					"label": "Environments",
+					"url": "/flows/settings/environments"
+				},
+				{
+					"type": "custom",
+					"label": "Localization",
+					"url": "/flows/settings/localization"
+				},
+				{
+					"type": "custom",
+					"label": "SDK",
+					"url": "/flows/settings/sdk"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "Dynamic Links",
+			"url": "/dynamic-links/links",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Links",
+					"url": "/dynamic-links/links"
+				},
+				{
+					"type": "custom",
+					"label": "Campaigns",
+					"url": "/dynamic-links/campaigns"
+				},
+				{
+					"type": "custom",
+					"label": "Redirect Rules",
+					"url": "/dynamic-links/redirect-rules"
+				},
+				{
+					"type": "custom",
+					"label": "Domain",
+					"url": "/dynamic-links/domain"
+				},
+				{
+					"type": "custom",
+					"label": "Social Media Preview",
+					"url": "/dynamic-links/social-media-preview"
+				},
+				{
+					"type": "custom",
+					"label": "Tracking",
+					"url": "/dynamic-links/tracking"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "Support",
+			"url": "/support/inbox",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Inbox",
+					"url": "/support/inbox"
+				},
+				{
+					"type": "custom",
+					"label": "Contacts",
+					"url": "/support/contacts"
+				},
+				{
+					"type": "custom",
+					"label": "Workforce",
+					"url": "/support/workforce"
+				},
+				{
+					"type": "custom",
+					"label": "Channels",
+					"url": "/support/channels"
+				},
+				{
+					"type": "custom",
+					"label": "Automations",
+					"url": "/support/automations"
+				},
+				{
+					"type": "custom",
+					"label": "Proactive Support",
+					"url": "/support/proactive-support"
+				},
+				{
+					"type": "custom",
+					"label": "Help Center",
+					"url": "/support/help-center"
+				},
+				{
+					"type": "custom",
+					"label": "Captain",
+					"url": "/support/captain"
+				},
+				{
+					"type": "custom",
+					"label": "Integrations",
+					"url": "/support/integrations"
+				},
+				{
+					"type": "custom",
+					"label": "Reports",
+					"url": "/support/reports"
+				},
+				{
+					"type": "custom",
+					"label": "Settings",
+					"url": "/support/settings"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "Marketing",
+			"url": "/marketing/in-app-messages",
+			"children": [
+				{
+					"type": "custom",
+					"label": "In-app Messages",
+					"url": "/marketing/in-app-messages"
+				},
+				{
+					"type": "custom",
+					"label": "Email",
+					"url": "/marketing/email"
+				},
+				{
+					"type": "custom",
+					"label": "Campaigns",
+					"url": "/marketing/campaigns"
+				},
+				{
+					"type": "custom",
+					"label": "Journeys",
+					"url": "/marketing/journeys"
+				},
+				{
+					"type": "custom",
+					"label": "Channels",
+					"url": "/marketing/channels"
+				},
+				{
+					"type": "custom",
+					"label": "Statistics",
+					"url": "/marketing/statistics"
+				},
+				{
+					"type": "custom",
+					"label": "Settings",
+					"url": "/marketing/settings"
+				}
+			]
+		},
+		{
+			"type": "custom",
+			"label": "Analytics",
+			"url": "/analytics",
+			"children": [
+				{
+					"type": "custom",
+					"label": "Overview",
+					"url": "/analytics"
+				},
+				{
+					"type": "custom",
+					"label": "Dashboards",
+					"url": "/analytics/dashboards"
+				},
+				{
+					"type": "custom",
+					"label": "Users & Sessions",
+					"url": "/analytics/users"
+				},
+				{
+					"type": "custom",
+					"label": "Events",
+					"url": "/analytics/events"
+				},
+				{
+					"type": "custom",
+					"label": "Technology & Location",
+					"url": "/analytics/dimensions"
+				},
+				{
+					"type": "custom",
+					"label": "Views",
+					"url": "/analytics/views"
+				},
+				{
+					"type": "custom",
+					"label": "Installations",
+					"url": "/analytics/installations"
+				},
+				{
+					"type": "custom",
+					"label": "Verified Purchases",
+					"url": "/analytics/purchases"
+				},
+				{
+					"type": "custom",
+					"label": "Funnels & Retention",
+					"url": "/analytics/insights"
+				},
+				{
+					"type": "custom",
+					"label": "Cohorts",
+					"url": "/analytics/cohorts"
+				},
+				{
+					"type": "custom",
+					"label": "Crashes",
+					"url": "/analytics/crashes"
+				},
+				{
+					"type": "custom",
+					"label": "Feedback",
+					"url": "/analytics/feedback"
+				},
+				{
+					"type": "custom",
+					"label": "Remote Config",
+					"url": "/analytics/remote-config"
+				},
+				{
+					"type": "custom",
+					"label": "Alerts",
+					"url": "/analytics/alerts"
+				},
+				{
+					"type": "custom",
+					"label": "Reports & Exports",
+					"url": "/analytics/reports"
+				},
+				{
+					"type": "custom",
+					"label": "Settings",
+					"url": "/analytics/settings"
+				}
+			]
+		}
+	]
+}

@@ -102,9 +102,10 @@ async function buildSettingsResponse(
 	optionsRepo: OptionsRepository,
 	pluginId: string,
 	schema: Record<string, SettingField>,
+	keyForSetting: (key: string) => string = (key) => settingsKey(pluginId, key),
 ): Promise<PluginSettingsResponse> {
 	const keys = Object.keys(schema);
-	const stored = await optionsRepo.getMany(keys.map((key) => settingsKey(pluginId, key)));
+	const stored = await optionsRepo.getMany(keys.map(keyForSetting));
 
 	const values: Record<string, unknown> = {};
 	const secretsSet: Record<string, boolean> = {};
@@ -112,7 +113,7 @@ async function buildSettingsResponse(
 	for (const key of keys) {
 		const field = schema[key];
 		if (!field) continue;
-		const storedValue = stored.get(settingsKey(pluginId, key));
+		const storedValue = stored.get(keyForSetting(key));
 
 		if (field.type === "secret") {
 			secretsSet[key] = typeof storedValue === "string" && storedValue.length > 0;
@@ -138,10 +139,14 @@ export async function handlePluginSettingsGet(
 	db: Kysely<Database>,
 	pluginId: string,
 	schema: Record<string, SettingField>,
+	keyForSetting?: (key: string) => string,
 ): Promise<ApiResult<PluginSettingsResponse>> {
 	try {
 		const optionsRepo = new OptionsRepository(db);
-		return { success: true, data: await buildSettingsResponse(optionsRepo, pluginId, schema) };
+		return {
+			success: true,
+			data: await buildSettingsResponse(optionsRepo, pluginId, schema, keyForSetting),
+		};
 	} catch {
 		return {
 			success: false,
@@ -166,6 +171,7 @@ export async function handlePluginSettingsUpdate(
 	pluginId: string,
 	schema: Record<string, SettingField>,
 	updates: Record<string, unknown>,
+	keyForSetting: (key: string) => string = (key) => settingsKey(pluginId, key),
 ): Promise<ApiResult<PluginSettingsResponse>> {
 	try {
 		// Validate everything before writing anything.
@@ -198,12 +204,12 @@ export async function handlePluginSettingsUpdate(
 			const txRepo = new OptionsRepository(trx);
 			for (const [key, value] of Object.entries(updates)) {
 				if (value === null) {
-					await txRepo.delete(settingsKey(pluginId, key));
+					await txRepo.delete(keyForSetting(key));
 				} else {
-					await txRepo.set(settingsKey(pluginId, key), value);
+					await txRepo.set(keyForSetting(key), value);
 				}
 			}
-			const snapshot = await buildSettingsResponse(txRepo, pluginId, schema);
+			const snapshot = await buildSettingsResponse(txRepo, pluginId, schema, keyForSetting);
 			await trx
 				.insertInto("_emdash_plugin_setting_versions")
 				.values({

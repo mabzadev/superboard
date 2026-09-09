@@ -658,8 +658,8 @@
             "renderer_id": "supbrd-plug-user.renderer.login_form",
             "plugin_id": "supbrd-plug-user",
             "plugin_version": "1.4.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -685,8 +685,8 @@
             "renderer_id": "supbrd-plug-user.renderer.profile_card",
             "plugin_id": "supbrd-plug-user",
             "plugin_version": "1.4.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -712,8 +712,8 @@
             "renderer_id": "supbrd-plug-user.renderer.members_table",
             "plugin_id": "supbrd-plug-user",
             "plugin_version": "1.4.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -739,8 +739,8 @@
             "renderer_id": "supbrd-plug-user.renderer.admin_surface",
             "plugin_id": "supbrd-plug-user",
             "plugin_version": "1.4.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -869,7 +869,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:9027f6de744067ed243f77c5de761970edfbcc19713940a6b52cf46d62b8177b"
+        "artifact_checksum": "sha256:cbf10c6a4a0e801147f2dc3b5dddebffa1289eaae0c5fc638f24346d27b0e613"
       },
       "repositories": [
         {
@@ -1195,8 +1195,8 @@
             "renderer_id": "supbrd-plug-settings.renderer.admin_surface",
             "plugin_id": "supbrd-plug-settings",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1295,7 +1295,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:1b7aa454f1da8b0937cfd02224a28e6e160ed63dc6821467e6263d3a79bb5268"
+        "artifact_checksum": "sha256:17ee6750bb8fe8016549f2dfa67280d99761bc9ba4d26b812462b0f3349ab025"
       },
       "repositories": [
         {
@@ -1655,8 +1655,8 @@
             "renderer_id": "supbrd-plug-content.renderer.admin_surface",
             "plugin_id": "supbrd-plug-content",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -1755,7 +1755,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:edbd2a25082957e7751bfc86474a28ba5e57c4720d2b3f24c72d4616120d6f34"
+        "artifact_checksum": "sha256:8b20386195a05dad0bf5764b48af176507d9e615600b86022680edbb91585f72"
       },
       "repositories": [
         {
@@ -2138,8 +2138,8 @@
             "renderer_id": "supbrd-plug-products.renderer.admin_surface",
             "plugin_id": "supbrd-plug-products",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2374,7 +2374,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:05a2bd04edfaf3eff329090e5300afc1639847317e25bca6122377d8cf3396b5"
+        "artifact_checksum": "sha256:260e36b9f44f273ffa7cae5f5e8d4db48b72c59a6ee6324979b0bd9081776f18"
       },
       "repositories": [
         {
@@ -2696,8 +2696,8 @@
             "renderer_id": "supbrd-plug-audit.renderer.admin_surface",
             "plugin_id": "supbrd-plug-audit",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -2786,7 +2786,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:4d1b050d3fe4cd68073ece02fbfd40c4a08e17fbcdfdebce6a98ad0ffe172d66"
+        "artifact_checksum": "sha256:0bf7e14d34b67459944f69b828ddc397f5913ec18971e8b7d70473fa823b3857"
       },
       "repositories": [
         {
@@ -3235,8 +3235,8 @@
             "renderer_id": "supbrd-plugmod-gateway.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-gateway",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3335,7 +3335,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:f1bfa61b15e01a72a17170adc5075717e6bbbee1dce615f1822e89e9780cd614"
+        "artifact_checksum": "sha256:706055c7ee1453d6a37a13808d4f298a03230e005f734d6a3ad0f7e8e54a153c"
       },
       "repositories": [
         {
@@ -3728,8 +3728,8 @@
             "renderer_id": "supbrd-plugmod-billing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-billing",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -3906,7 +3906,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:e885d432117d8c3911c0da8c39f509119f0895d18a846afd17c38fe506cb6247"
+        "artifact_checksum": "sha256:ca8463b4b60c13da2ddd957b3e3cb803bb38874a3d16604a2f3fd03fc6cf878f"
       },
       "repositories": [
         {
@@ -4395,8 +4395,8 @@
             "renderer_id": "supbrd-plugmod-support.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-support",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -4723,7 +4723,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:3772abc9d5941cd0bc9d634be0a846bb63fc17752650f49a26a39caa87d98635"
+        "artifact_checksum": "sha256:2d3634b785e5296e0d2aab7e7a15d75044a5a26dc0ebfb4a63ad86567a815ed9"
       },
       "repositories": [
         {
@@ -5085,8 +5085,8 @@
             "renderer_id": "supbrd-plugmod-flows.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-flows",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5285,7 +5285,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:39c2b84b5d0d525abf1ef75a1c87d18b0f4e307b1aeddcccfaf2a6aba43dc0a1"
+        "artifact_checksum": "sha256:0624d7b318c8bcf4979c2188a12033107c72be1e1df3d6436f2e8bae3cf72a6e"
       },
       "repositories": [
         {
@@ -5621,8 +5621,8 @@
             "renderer_id": "supbrd-plugmod-analytics.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-analytics",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -5991,7 +5991,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:9c1f946741b7e5ef2b6fdf0841131602f93fea798564c2e36bad371ed8e15a58"
+        "artifact_checksum": "sha256:840c1fd57147a0cf9cc90701435a07bee421e7acfeeff5c13cbc126864287e7f"
       },
       "repositories": [
         {
@@ -6410,8 +6410,8 @@
             "renderer_id": "supbrd-plugmod-marketing.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-marketing",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -6437,6 +6437,16 @@
           }
         ],
         "commands": [
+          {
+            "command_id": "supbrd-plugmod-marketing.command.create_notification",
+            "input_schema_id": "supbrd-plugmod-marketing.schema.command_input_v1",
+            "output_schema_id": "supbrd-plugmod-marketing.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-marketing.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:4f94d31680690f5ac060753024915f8863d3a79e6ce1904c9dc8abe1901fc7f2"
+          },
           {
             "command_id": "supbrd-plugmod-marketing.command.create_email_campaign",
             "input_schema_id": "supbrd-plugmod-marketing.schema.command_input_v1",
@@ -6539,6 +6549,18 @@
           }
         ],
         "data_sources": [
+          {
+            "data_source_id": "supbrd-plugmod-marketing.data_source.notifications",
+            "input_schema_id": "supbrd-plugmod-marketing.schema.data_source_query_v1",
+            "output_schema_id": "supbrd-plugmod-marketing.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-marketing.read",
+            "store_id": "supbrd-plugmod-marketing.store.campaigns",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:19f0f121ee9e13e119f2baec217d4da7e4d2db4efd2e7f198644d5cb5c79580f"
+          },
           {
             "data_source_id": "supbrd-plugmod-marketing.data_source.email_subscribers",
             "input_schema_id": "supbrd-plugmod-marketing.schema.data_source_query_v1",
@@ -6664,7 +6686,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c2fe1f6c7ddee2bec51066cd83847753b4ada11508632b4aa5e2aedaa9f95576"
+        "artifact_checksum": "sha256:8121163ae53eb042084196ec5e02d3c7da2e0a94e7c03782a078c55b9f802009"
       },
       "repositories": [
         {
@@ -7060,8 +7082,8 @@
             "renderer_id": "supbrd-plugmod-email.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-email",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7234,7 +7256,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:58c021288132d22ae452690cfde1fcf8149fa43b1faf8842bf07348e3b2fd9b2"
+        "artifact_checksum": "sha256:368575cd9c4a64a1b206ffecf0b7f43501791f55ac7987ebdda4cdc189612baa"
       },
       "repositories": [
         {
@@ -7583,8 +7605,8 @@
             "renderer_id": "supbrd-plugmod-dynamic-links.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-dynamic-links",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -7855,7 +7877,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:60a7af0f48c2a358cff65895537399a9ee86467529211d16115ea73c8953f6ee"
+        "artifact_checksum": "sha256:7b0c31f2a99cd7978dc20081dfce23556e2f060f8f8adba3121d5ae5ec647d72"
       },
       "repositories": [
         {
@@ -8192,8 +8214,8 @@
             "renderer_id": "supbrd-plugmod-files.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-files",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8314,7 +8336,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:58674c810cac2679d9129ecac30be86c1400b69026311d7e3c9ba1df6026f137"
+        "artifact_checksum": "sha256:a8a4fdec0f1f586ac28d84113c524155e1c4607d46e2fb704047984eaf4eaec8"
       },
       "repositories": [
         {
@@ -8656,8 +8678,8 @@
             "renderer_id": "supbrd-plugmod-paywalls.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-paywalls",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -8840,7 +8862,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:3db67468feb3e017733f29fda1ed70ce12c56fad99fc3bedbfd7bf0b3dcef778"
+        "artifact_checksum": "sha256:0a3a16ea269b594384a0cda57b501ca5fa9a5837e79eea81cc73ec91098b0d45"
       },
       "repositories": [
         {
@@ -9182,8 +9204,8 @@
             "renderer_id": "supbrd-plugmod-onboardings.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-onboardings",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9378,7 +9400,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:105154acb3d2f38b5589bf67e0a5617a51d245428782ef6804ae84cd01ce5683"
+        "artifact_checksum": "sha256:a89371a852ea74c28b2f3d89989ccd1ca6f3d60efc0010e87e69b0014484e043"
       },
       "repositories": [
         {
@@ -9664,8 +9686,8 @@
             "renderer_id": "supbrd-plugmod-observability.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-observability",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -9820,7 +9842,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:c8fa11430708384b072ab53b08c759113ed234f9ec72c2d9ea6b3826f1ecb7a4"
+        "artifact_checksum": "sha256:79ad1a5ece5f28aa3074122f9883d540686330cb1e0ee5406625f126119bcccb"
       },
       "repositories": [
         {
@@ -10138,8 +10160,8 @@
             "renderer_id": "supbrd-plugmod-mcp.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-mcp",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10238,7 +10260,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:2e7840093d1d88c8de5e809843e1fc2a92e7b4b3d2dd3039b58e868eb5b5a7c5"
+        "artifact_checksum": "sha256:c06aba3b8e1469e3e9dd5e2cc8858b0d57ec15bae99eb587d7ab9b18f1b74ba3"
       },
       "repositories": [
         {
@@ -10505,8 +10527,8 @@
             "renderer_id": "supbrd-plugmod-custom-*.renderer.admin_surface",
             "plugin_id": "supbrd-plugmod-custom-*",
             "plugin_version": "1.0.0",
-            "build_id": "6AEPHCCX4QAN8BQPYJ63YXJGE6",
-            "build_checksum": "sha256:de7b7cce59fea5741f5f76785f94d532b762c054cd1496ada99cefa1c4a610b9",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
             "abi_version": "1.0.0",
             "runtime_range": ">=0.1.0 <0.2.0",
             "props_schema": {
@@ -10561,7 +10583,7 @@
           "writes": "fail_closed",
           "reads": "unavailable"
         },
-        "artifact_checksum": "sha256:f496461b53e0dbc901790290621de7076f8b1192355db77ea7e8ea160b1154ab"
+        "artifact_checksum": "sha256:c7b2606372803934db43a8258c75e0e49419274bec83ec439621a781dc56d877"
       },
       "repositories": [
         {
@@ -10594,6 +10616,409 @@
           "supbrd-plugmod-custom-*.repository.operations"
         ],
         "checksum": "sha256:24f0d4391eb78accba1f6d7499e6db5e54fca838341742c8112300e51d39c0e6"
+      }
+    },
+    {
+      "manifest": {
+        "schema_version": "1.0.0",
+        "plugin_id": "supbrd-plugmod-vocostar",
+        "plugin_kind": "module",
+        "plugin_version": "1.0.0",
+        "artifact_id": "supbrd-plugmod-vocostar@1.0.0",
+        "publisher": "superboard",
+        "resources": [
+          "supbrd-plugmod-vocostar.store.operations",
+          "PLUGIN_PRIVATE_KV",
+          "WORKER:supbrd-plugmod-vocostar"
+        ],
+        "settings": {
+          "render_mode": "block_kit",
+          "storage": "plugin_kv",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "allowed_locales",
+              "display_name",
+              "media_conversion_enabled",
+              "media_credit_cost",
+              "text_max_characters",
+              "voice_cloning_enabled"
+            ],
+            "properties": {
+              "display_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "allowed_locales": {
+                "type": "string"
+              },
+              "text_max_characters": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10000
+              },
+              "media_credit_cost": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "voice_cloning_enabled": {
+                "type": "boolean"
+              },
+              "media_conversion_enabled": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "execution": {
+          "backend": "sandboxed",
+          "worker": "dedicated",
+          "renderer": "native_bundle"
+        },
+        "capabilities": [
+          "plugin.storage",
+          "worker.execute"
+        ],
+        "aliases": {},
+        "stores": [
+          {
+            "store_id": "supbrd-plugmod-vocostar.store.operations",
+            "kind": "d1",
+            "authority": "supbrd-plugmod-vocostar",
+            "schema_version": "1",
+            "migrations": [
+              "apps/site/migrations/0005_plugin_store_authority.sql",
+              "apps/site/migrations/0006_plugin_manifest_registry.sql",
+              "apps/site/migrations/0008_canonical_plugin_contracts.sql",
+              "apps/site/migrations/0009_sandboxed_plugin_runtime.sql",
+              "apps/site/migrations/0010_plugin_store_project_scope.sql",
+              "apps/site/migrations/0011_project_scoped_plugin_contracts.sql",
+              "apps/site/migrations/0012_functional_front_contracts.sql",
+              "workers/custom/vocostar/migrations/0001_opengrow_custom_jobs.sql",
+              "workers/custom/vocostar/migrations/0002_opengrow_custom_job_scope.sql",
+              "workers/custom/vocostar/migrations/0003_custom_job_cancellation.sql",
+              "workers/custom/vocostar/migrations/0004_owner_scoped_file_ids.sql"
+            ],
+            "availability": "required",
+            "classification": "restricted",
+            "encryption": "required",
+            "version": "1.0.0",
+            "checksum": "sha256:d7934b5684f1f8d1a96719ff50d325aaa5c03151e59a1173abdbf64bca3b52c6"
+          }
+        ],
+        "schemas": [
+          {
+            "schema_id": "supbrd-plugmod-vocostar.schema.operations_record.v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entity_id",
+                "revision",
+                "payload"
+              ],
+              "properties": {
+                "entity_id": {
+                  "type": "string"
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:810a8f1cd8525899ac2191bab1416d43c0a011bd3f2d18d74cfbe7c2f8bfd25c"
+          },
+          {
+            "schema_id": "supbrd-plugmod-vocostar.schema.admin_surface_props_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "route_id",
+                "path"
+              ],
+              "properties": {
+                "route_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:190e071c44c7b75cc050c397c805657bb0bda5421195e83adfefdcd4000e2651"
+          },
+          {
+            "schema_id": "supbrd-plugmod-vocostar.schema.command_input_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "payload"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "payload": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:2b6f8d312b0984e8c8036f4c90cbb9a5bcb188010c665d8868984fd1a8c52062"
+          },
+          {
+            "schema_id": "supbrd-plugmod-vocostar.schema.command_output_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_id",
+                "status",
+                "result"
+              ],
+              "properties": {
+                "operation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "completed",
+                    "failed"
+                  ]
+                },
+                "result": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:10ea8a5cf0536d8df1a194f99c023aa216aade9a710d8f2475693bbe79be56cc"
+          },
+          {
+            "schema_id": "supbrd-plugmod-vocostar.schema.data_source_query_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instance_id",
+                "query"
+              ],
+              "properties": {
+                "instance_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "query": {
+                  "type": "object"
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:f4b79be21347d94294867d793181f58af2378d4a77849b38e5b44aa887bb43dd"
+          },
+          {
+            "schema_id": "supbrd-plugmod-vocostar.schema.data_source_page_v1",
+            "closed": true,
+            "json_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "items",
+                "next_cursor"
+              ],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "next_cursor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "version": "1.0.0",
+            "checksum": "sha256:3ac2d30659465bfcee2369cbed7592e2a916554afb350e4c116b5d4e274a041e"
+          }
+        ],
+        "renderers": [
+          {
+            "renderer_id": "supbrd-plugmod-vocostar.renderer.admin_surface",
+            "plugin_id": "supbrd-plugmod-vocostar",
+            "plugin_version": "1.0.0",
+            "build_id": "37NT8MVGDB08BAFYE4YK0496GG",
+            "build_checksum": "sha256:1e4bb03e13a282e6f2fccd49c614ac89e18f42ca1740b4be1bcf4ac3f20da18f",
+            "abi_version": "1.0.0",
+            "runtime_range": ">=0.1.0 <0.2.0",
+            "props_schema": {
+              "schema_id": "supbrd-plugmod-vocostar.schema.admin_surface_props_v1",
+              "version": "1.0.0",
+              "checksum": "sha256:190e071c44c7b75cc050c397c805657bb0bda5421195e83adfefdcd4000e2651"
+            },
+            "capabilities": [
+              "renderer.mount",
+              "data_source.bind",
+              "action.bind"
+            ],
+            "slots": [],
+            "supported_states": [
+              "loading",
+              "empty",
+              "forbidden",
+              "not_found",
+              "error",
+              "unavailable",
+              "maintenance"
+            ]
+          }
+        ],
+        "commands": [
+          {
+            "command_id": "supbrd-plugmod-vocostar.command.retry_job",
+            "input_schema_id": "supbrd-plugmod-vocostar.schema.command_input_v1",
+            "output_schema_id": "supbrd-plugmod-vocostar.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-vocostar.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:f540dd5f497dd22e043fb126c3f2a5c07fb2b882a4a8ce6e7786c9e50a959d82"
+          },
+          {
+            "command_id": "supbrd-plugmod-vocostar.command.update_settings",
+            "input_schema_id": "supbrd-plugmod-vocostar.schema.command_input_v1",
+            "output_schema_id": "supbrd-plugmod-vocostar.schema.command_output_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-vocostar.write",
+            "failure_policy": "fail_closed",
+            "version": "1.0.0",
+            "checksum": "sha256:fc99d96fe3833be8aee0d7f3922fd9e51b0987b306472ed3f5cec6214f0bf9c9"
+          }
+        ],
+        "data_sources": [
+          {
+            "data_source_id": "supbrd-plugmod-vocostar.data_source.jobs",
+            "input_schema_id": "supbrd-plugmod-vocostar.schema.data_source_query_v1",
+            "output_schema_id": "supbrd-plugmod-vocostar.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-vocostar.read",
+            "store_id": "supbrd-plugmod-vocostar.store.operations",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:831abd6a25ed7ab3bea9fc209529ec89b2581d965ff4ac8aeac1499bea34b80d"
+          },
+          {
+            "data_source_id": "supbrd-plugmod-vocostar.data_source.voices",
+            "input_schema_id": "supbrd-plugmod-vocostar.schema.data_source_query_v1",
+            "output_schema_id": "supbrd-plugmod-vocostar.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-vocostar.read",
+            "store_id": "supbrd-plugmod-vocostar.store.operations",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:74933f9d3e7d12ad10fd48ea64b798706c75bba0b8e260392998106680ea820b"
+          },
+          {
+            "data_source_id": "supbrd-plugmod-vocostar.data_source.conversions",
+            "input_schema_id": "supbrd-plugmod-vocostar.schema.data_source_query_v1",
+            "output_schema_id": "supbrd-plugmod-vocostar.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-vocostar.read",
+            "store_id": "supbrd-plugmod-vocostar.store.operations",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:ca02bd26606718d23062826490f37993ed24f4e0be1d3410fe246ddef2df5912"
+          },
+          {
+            "data_source_id": "supbrd-plugmod-vocostar.data_source.outputs",
+            "input_schema_id": "supbrd-plugmod-vocostar.schema.data_source_query_v1",
+            "output_schema_id": "supbrd-plugmod-vocostar.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-vocostar.read",
+            "store_id": "supbrd-plugmod-vocostar.store.operations",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:21669b4ddb5fe61cf87387228bf7bbfaf32efa7ee6ce18219f7fe32dfbd2be56"
+          },
+          {
+            "data_source_id": "supbrd-plugmod-vocostar.data_source.settings",
+            "input_schema_id": "supbrd-plugmod-vocostar.schema.data_source_query_v1",
+            "output_schema_id": "supbrd-plugmod-vocostar.schema.data_source_page_v1",
+            "audience": "superboard_front",
+            "permission": "supbrd-plugmod-vocostar.read",
+            "store_id": "supbrd-plugmod-vocostar.store.operations",
+            "consistency": "strong",
+            "unavailable_state": "unavailable",
+            "version": "1.0.0",
+            "checksum": "sha256:2a6833ccf88a1974eacc64fee664bcc9e2c311470c67a280022ecceae8dc6b40"
+          }
+        ],
+        "failure_policies": {
+          "writes": "fail_closed",
+          "reads": "unavailable"
+        },
+        "artifact_checksum": "sha256:3fee74749566bf1b88120f4ccccad400e4140121c1facc77f1a064588896a6b0"
+      },
+      "repositories": [
+        {
+          "repository_id": "supbrd-plugmod-vocostar.repository.operations",
+          "store_id": "supbrd-plugmod-vocostar.store.operations",
+          "write_authority": "emdash",
+          "compatibility_aliases": [
+            "projectId",
+            "pid"
+          ],
+          "version": "1.0.0",
+          "checksum": "sha256:66bc3e3ab8b32c11cf996612aacc8265b022f8648b8b1d4c5be44288e22d230b"
+        }
+      ],
+      "worker_descriptor": {
+        "path": "workers/custom/vocostar",
+        "execution_mode": "asynchronous",
+        "authoritative_writes": false,
+        "lease": "attempt_scoped",
+        "idempotency": "required",
+        "outbox": "required",
+        "callback_verification": "not_applicable",
+        "deployment_status": "ready",
+        "evidence": "workers/custom/vocostar/runtime-tests/jobs.runtime.test.ts",
+        "evidence_sha256": "sha256:23ea28130267e4adc5acf284d0cc9ff1d282198e4dcbdcf71eee9f205b9b9042",
+        "store_ids": [
+          "supbrd-plugmod-vocostar.store.operations"
+        ],
+        "repository_ids": [
+          "supbrd-plugmod-vocostar.repository.operations"
+        ],
+        "checksum": "sha256:a8c85b7510c5b5478097e9d13f058dbb70002734ab1838d5ded3c8e3e36ffa61"
       }
     }
   ]

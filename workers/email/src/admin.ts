@@ -8,6 +8,7 @@ import { configuredSecrets, constantTimeEqual } from "@superboard/contracts/secr
 
 import { encryptJson, decryptJson, sha256 } from "./admin-secrets.js";
 import { verifyEmailAuthentication } from "./sender-authentication.js";
+import {readEmailAdminMessages}from"./admin-messages.js";
 import {
 	normalizeEmail,
 	parseEmailSmtpTransportRequest,
@@ -60,6 +61,8 @@ export async function handleEmailAdmin(
 	const url = new URL(request.url);
 	const path = url.pathname.slice(ADMIN_PREFIX.length) || "/";
 	try {
+		const messageRead=await readEmailAdminMessages(request,env,context.projectId);
+		if(messageRead)return messageRead;
 		const mutating = !["GET", "HEAD"].includes(request.method);
 		const operationKey = request.headers.get("Idempotency-Key") ?? "";
 		if (mutating && !TOKEN_PATTERN.test(operationKey))
@@ -613,12 +616,16 @@ export async function resolveOwnedDelegatedSender(
 	)
 		return value;
 	const row = await loadProfile(env, Number(input.projectId), input.profileId);
-	if (!row) return value;
+	if (!row) {
+		if(input.senderAuthority==="email")throw new EmailValidationError("smtp_profile_not_found");
+		return value;
+	}
 	if (row.enabled !== 1)
 		throw Object.assign(new Error("profile disabled"), {
 			status: 409,
 			code: "smtp_profile_disabled",
 		});
+	if(env.ENVIRONMENT==="production"&&row.authentication_status!=="verified")throw new EmailValidationError("smtp_profile_not_verified");
 	const snapshot = senderSnapshot(row);
 	return {
 		...input,

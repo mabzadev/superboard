@@ -48,6 +48,36 @@ test("Site deployment preserves only the explicitly approved development preview
 	);
 });
 
+test("Site deployment accepts its compiled target hosts and rejects foreign routes", () => {
+	const config = {
+		assets: { binding: "ASSETS", directory: "../../apps/site/dist/client" },
+		vars: { SUPERBOARD_RELEASE_OPERATIONS: "disabled" },
+		d1_databases: [],
+		routes: [
+			{ pattern: "board.mbza.dev", custom_domain: true },
+			{ pattern: "site.mbza.dev", custom_domain: true },
+		],
+	};
+	const options = { deploymentHostnames: ["board.mbza.dev", "site.mbza.dev"] };
+	assert.deepEqual(siteDeploymentArtifact(config, options).routes, config.routes);
+	assert.throws(
+		() =>
+			siteDeploymentArtifact(
+				{ ...config, routes: [{ pattern: "board.vocostar.com", custom_domain: true }] },
+				options,
+			),
+		/compiled target hostnames/u,
+	);
+	assert.throws(
+		() =>
+			siteDeploymentArtifact(
+				{ ...config, routes: [{ pattern: "board.mbza.dev", custom_domain: false }] },
+				options,
+			),
+		/compiled target hostnames/u,
+	);
+});
+
 test("Site email plugin build settings come from the selected target", async () => {
 	const development = (await loadTarget("mbza-development")).target;
 	const production = (await loadTarget("vocostar")).target;

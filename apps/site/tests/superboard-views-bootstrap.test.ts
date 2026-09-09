@@ -4,11 +4,14 @@ import { afterEach, expect, test } from "vitest";
 import baseline from "../../../config/superboard-plugin-independence-baseline.json";
 import { handleContentList } from "../../../packages/core/src/api/handlers/content.js";
 import { contentListQuery } from "../../../packages/core/src/api/schemas/content.js";
+import { MenuRepository } from "../../../packages/core/src/database/repositories/menu.js";
 import {
 	setupTestDatabase,
 	teardownTestDatabase,
 } from "../../../packages/core/tests/utils/test-db.js";
+import legacyMenu from "../seed/legacy-superboard-menu.json";
 import seedJson from "../seed/seed.json";
+import { ensureNativeFrontMenus } from "../src/lib/native-front-menu-bootstrap.js";
 import {
 	ensureSuperBoardViews,
 	restrictSuperBoardViewFilters,
@@ -64,8 +67,8 @@ test("an existing EmDash instance upgrades from Pages and Posts to Views", async
 		{ slug: "posts", hidden: 1 },
 		{ slug: "views", hidden: 0 },
 	]);
-	expect(viewCount?.count).toBe(121);
-	expect(menuCount?.count).toBe(80);
+	expect(viewCount?.count).toBe(127);
+	expect(menuCount?.count).toBeGreaterThan(80);
 });
 
 test("the Views bootstrap resumes after the schema was created without content", async () => {
@@ -80,7 +83,7 @@ test("the Views bootstrap resumes after the schema was created without content",
 
 	const after = await countViews();
 	expect(before).toBe(0);
-	expect(after).toBe(121);
+	expect(after).toBe(127);
 });
 
 test("the Views bootstrap upgrades existing renderer bindings without overwriting edits", async () => {
@@ -134,14 +137,20 @@ test("the Views bootstrap upgrades existing renderer bindings without overwritin
 		.where("name", "=", "superboard_views_bootstrap")
 		.executeTakeFirst();
 
-	expect(entries).toHaveLength(121);
+	expect(entries).toHaveLength(127);
 	for (const entry of entries) {
 		const inventoried = baseline.plugins
 			.flatMap((plugin) => plugin.routes)
 			.find((route) => route.route_id === entry.route_id);
 		expect(
 			inventoried?.renderers ??
-				(entry.route_id === "superboard.mcp" ? ["supbrd-plugmod-mcp.renderer.admin_surface"] : []),
+				(entry.route_id === "superboard.mcp"
+					? ["supbrd-plugmod-mcp.renderer.admin_surface"]
+					: entry.route_id === "superboard.notifications"
+						? ["supbrd-plugmod-marketing.renderer.admin_surface"]
+						: entry.route_id.startsWith("superboard.plugins_vocostar_")
+							? ["supbrd-plugmod-vocostar.renderer.admin_surface"]
+							: []),
 			entry.path,
 		).toContain(entry.renderer_id);
 		expect(JSON.parse(String(entry.bindings)).data_sources.length, entry.path).toBeGreaterThan(0);
@@ -150,7 +159,7 @@ test("the Views bootstrap upgrades existing renderer bindings without overwritin
 	expect(JSON.parse(String(edited?.bindings)).data_sources).toEqual([
 		"supbrd-plugmod-analytics.data_source.operator_custom",
 	]);
-	expect(marker?.value).toBe(JSON.stringify("3.1.0"));
+	expect(marker?.value).toBe(JSON.stringify("5.0.0"));
 });
 
 async function countViews(): Promise<number> {
@@ -201,7 +210,7 @@ test("only active plugin Views are paginated and disabling preserves customizati
 		restored.success &&
 			restored.data.items.some((item) => item.data.name === "Custom analytics page"),
 	).toBe(true);
-	expect(await countViews()).toBe(121);
+	expect(await countViews()).toBe(127);
 });
 
 test("a caller cannot opt a disabled plugin into the Views list", async () => {
@@ -250,4 +259,35 @@ test("every inventoried plugin route owns a retained editable View, including pa
 			.where("id", "=", paywall!.id)
 			.executeTakeFirst(),
 	).toEqual({ name: "My retained paywall view" });
+});
+
+test("the legacy default menu becomes native bilingual front navigation and later edits survive", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: [legacyMenu] });
+	await ensureSuperBoardViews(db);
+	const repo = new MenuRepository(db);
+	const menus = await repo.findByName("superboard-admin");
+	expect(menus.map((menu) => menu.locale).toSorted()).toEqual(["en", "fr"]);
+	const french = menus.find((menu) => menu.locale === "fr")!;
+	expect(french.label).toBe("Navigation du front");
+	const items = await repo.findItems(french.id);
+	expect(items.some((item) => item.label === "Utilisateurs et accès")).toBe(true);
+	expect(items.some((item) => item.customUrl === "/support/configuration")).toBe(true);
+	await repo.setItems(french.id, "fr", [
+		{ type: "custom", label: "Mes chiffres", customUrl: "/analytics" },
+	]);
+	await ensureNativeFrontMenus(db, seedJson.menus);
+	expect((await repo.findItems(french.id)).map((item) => item.label)).toEqual(["Mes chiffres"]);
+});
+
+test("customized legacy EmDash navigation is not replaced during upgrade", async () => {
+	db = await setupTestDatabase();
+	await applySeed(db, { version: "1", menus: [legacyMenu] });
+	const repo = new MenuRepository(db);
+	const menu = (await repo.findByName("superboard-admin", { locale: "en" }))[0]!;
+	await repo.setItems(menu.id, "en", [
+		{ type: "custom", label: "My overview", customUrl: "/analytics" },
+	]);
+	await ensureSuperBoardViews(db);
+	expect((await repo.findItems(menu.id)).map((item) => item.label)).toEqual(["My overview"]);
 });

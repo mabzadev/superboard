@@ -11,6 +11,7 @@ const nativePlugins = new Set([
 	"supbrd-plug-audit",
 ]);
 const bindings = {
+	"supbrd-plugmod-vocostar": ["CUSTOM_WORKER", "/health"],
 	"supbrd-plugmod-billing": ["BILLING", "/internal/v1/health"],
 	"supbrd-plugmod-support": ["SUPPORT_MODULE", "/internal/v1/health"],
 	"supbrd-plugmod-flows": ["FLOWS_MODULE", "/internal/v1/health"],
@@ -37,6 +38,8 @@ const nativeWorkerBindings: Record<
 
 export async function inspectSitePluginWorkerHealth(env: Env, pluginId: string): Promise<Response> {
 	try {
+		if (pluginId === "supbrd-plugmod-vocostar" && env.CUSTOM_WORKER_PLUGIN_ID !== pluginId)
+			throw new Error("PLUGIN_TARGET_MISMATCH");
 		let evidence: unknown;
 		if (nativePlugins.has(pluginId) || pluginId === "supbrd-plugmod-gateway") {
 			const schema = await inspectSqlDatabaseAndSchemaHealth(env.DB, env.D1_EXPECTED_MIGRATION);

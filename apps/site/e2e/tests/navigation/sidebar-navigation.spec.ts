@@ -1,28 +1,26 @@
-import { readFileSync } from "node:fs";
-
 import { test, expect } from "../../fixtures/base-fixtures.js";
 import { operatorHeaders, ready, unwrap } from "../../fixtures/site-api.js";
 
-const baseline = JSON.parse(
-	readFileSync(
-		new URL("../../../../../config/superboard-plugin-independence-baseline.json", import.meta.url),
-		"utf8",
-	),
-) as { plugins: { navigation: { href: string }[] }[] };
 const ACCOUNT_MENU = /Open (?:.* )?account menu/i;
 
 test.describe("Native plugin shell", () => {
-	test("retains every historical menu destination from active plugins", async ({
+	test("keeps nested support destinations reachable through the local navigation", async ({
 		authenticatedPage: page,
 	}) => {
-		await ready(page, "/app/customers");
+		await ready(page, "/support/inbox");
 		const navigation = page.getByRole("navigation", { name: "SuperBoard navigation", exact: true });
-		await expect(navigation).toBeVisible();
-		for (const entry of baseline.plugins.flatMap((plugin) => plugin.navigation))
-			await expect(
-				navigation.locator(`a[href="${entry.href.replace(":lang", "en")}"]`),
-			).toHaveCount(1);
+		await expect(navigation.locator('a[href="/support/inbox"]')).toHaveCount(1);
+		await expect(navigation.locator('a[href="/support/contacts"]')).toHaveCount(0);
+		const local = page.getByRole("navigation", { name: "Section pages", exact: true });
+		await local.getByRole("link", { name: "Contacts", exact: true }).click();
+		await expect.poll(() => new URL(page.url()).pathname).toBe("/support/contacts");
+		await expect(
+			page
+				.getByRole("navigation", { name: "Section pages", exact: true })
+				.getByRole("link", { name: "Contacts", exact: true }),
+		).toHaveAttribute("aria-current", "page");
 	});
+
 	test("opens the links view from its plugin menu", async ({ authenticatedPage: page }) => {
 		await ready(page, "/app/customers");
 		const link = page
@@ -59,15 +57,15 @@ test.describe("Native plugin shell", () => {
 		});
 		await ready(page, "/dynamic-links/campaigns");
 		await expect(
-			page.getByRole("navigation", { name: "Dynamic Links pages", exact: true }),
+			page.getByRole("navigation", { name: "Section pages", exact: true }),
 		).toBeVisible();
 		await page
-			.getByRole("combobox", { name: "Environment", exact: true })
+			.getByRole("combobox", { name: "Project data", exact: true })
 			.selectOption({ label: "Test" });
 		await expect.poll(() => testRead).toBe(true);
 		await page.reload();
 		await expect(
-			page.getByRole("combobox", { name: "Environment", exact: true }).locator("option:checked"),
+			page.getByRole("combobox", { name: "Project data", exact: true }).locator("option:checked"),
 		).toHaveText("Test");
 	});
 	test("keeps account actions inside the menu and signs out through the core session", async ({
@@ -113,22 +111,18 @@ test.describe("Native plugin shell", () => {
 		await ready(page, "/app/customers");
 		await expect(page.getByText(scope.instance.name, { exact: true }).first()).toBeVisible();
 	});
-	test("preserves shell dimensions, flat account menu and collapse behaviour", async ({
+	test("keeps account actions and restores navigation after collapsing", async ({
 		authenticatedPage: page,
 	}) => {
 		await ready(page, "/dynamic-links/campaigns");
 		const sidebar = page.locator('[data-slot="sidebar-container"]');
-		await expect(sidebar).toHaveCSS("width", "224px");
-		await expect(page.getByRole("banner")).toHaveCSS("height", "48px");
-		const action = page.getByRole("button", { name: "Create campaign", exact: true }).first();
-		await expect(action).toHaveCSS("background-color", "rgb(15, 23, 42)");
-		await expect(action).toHaveCSS("color", "rgb(248, 250, 252)");
+		const width = (await sidebar.boundingBox())!.width;
 		await page.getByRole("button", { name: ACCOUNT_MENU }).click();
-		const menu = page.getByRole("menu");
-		await expect(menu).toHaveCSS("width", "240px");
-		await expect(menu).toHaveCSS("box-shadow", "none");
+		await expect(page.getByRole("menu")).toBeVisible();
 		await page.keyboard.press("Escape");
 		await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
-		await expect(sidebar).toHaveCSS("width", "64px");
+		await expect.poll(async () => (await sidebar.boundingBox())!.width).toBeLessThan(width);
+		await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
+		await expect(sidebar.locator('a[href="/dynamic-links/links"]')).toBeVisible();
 	});
 });

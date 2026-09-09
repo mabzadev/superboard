@@ -65,3 +65,10 @@ describe('onboardings contracts v1', () => {
     }
   });
 });
+
+it('rejects ambiguous answers and branches to missing screens', () => {
+  for (const options of [
+    [{value:'same',label:'First'},{value:'same',label:'Second'}],
+    [{value:'start',label:'Start',next_screen_id:'missing'}],
+  ]) expect(()=>validateDefinition({screens:[{id:'question',blocks:[{id:'goal',type:'question',props:{attribute:'goal',options}}]}]})).toThrow();
+});

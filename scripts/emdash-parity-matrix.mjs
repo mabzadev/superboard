@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { buildPluginPackages } from "./superboard-plugin-packages.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const matrixPath = join(root, "config/emdash-parity-matrix.json");
 const topologyPath = join(root, "config/emdash-plugin-topology.json");
@@ -11,13 +13,15 @@ const receiptPath = join(root, "docs/evidence/issue-54/parity-matrix.receipt.jso
 const frontBundlePath = join(root, "config/superboard-front-bundle.json");
 const manifestMigrationPath = join(
 	root,
-	"apps/site/migrations/0020_revalidated_plugin_manifests.sql",
+	"apps/site/migrations/0027_reorganisation_plugin_manifests.sql",
 );
 const compatibilityPath = join(root, "config/superboard-plugin-compatibility.json");
 const compatibilitySourcePaths = [
 	join(root, "apps/site/migrations/0016_native_front_compatibility.sql"),
 	join(root, "apps/site/migrations/0017_native_front_presentation.sql"),
 	join(root, "apps/site/migrations/0020_revalidated_plugin_manifests.sql"),
+	join(root, "apps/site/migrations/0026_previous_plugin_manifests.sql"),
+	...(existsSync(manifestMigrationPath) ? [manifestMigrationPath] : []),
 ];
 const MANIFEST_ARTIFACT_PATTERN =
 	/VALUES \('(sha256:[a-f0-9]{64})', '([^']+)', '((?:[^']|'')*)', '[^']+'\)/gu;
@@ -48,6 +52,10 @@ const userManifestOverride = existsSync(frontCatalogPath)
 		).buildUserPluginManifest(frontBundleReceipt)
 	: null;
 
+const applicationPlugin = JSON.parse(
+	readFileSync(join(root, "plugins/vocostar/plugin.json"), "utf8"),
+);
+
 const fullPlugins = ["user", "settings", "content", "products", "audit"];
 const modulePlugins = [
 	["gateway", "api"],
@@ -64,8 +72,10 @@ const modulePlugins = [
 	["observability", "observability"],
 	["mcp", "mcp"],
 	["custom-*", null],
+	["vocostar", applicationPlugin.worker],
 ];
 const pluginStores = {
+	[applicationPlugin.id]: applicationPlugin.stores,
 	"supbrd-plug-user": ["user_directory", "user_credentials", "user_sessions"],
 	"supbrd-plug-settings": ["settings", "versions"],
 	"supbrd-plug-content": ["documents", "taxonomies", "revisions"],
@@ -88,6 +98,7 @@ const pluginStores = {
 };
 
 const pluginSettings = {
+	[applicationPlugin.id]: applicationPlugin.settings,
 	"supbrd-plug-user": {
 		mfa_policy: { type: "string", enum: ["optional", "required"] },
 		allow_anonymous_upgrade: { type: "boolean" },
@@ -199,6 +210,10 @@ const pluginSettings = {
 };
 
 const pluginOperations = {
+	[applicationPlugin.id]: {
+		commands: applicationPlugin.commands,
+		dataSources: applicationPlugin.dataSources,
+	},
 	"supbrd-plug-user": {
 		commands: [
 			"application_sign_in",
@@ -361,6 +376,7 @@ const pluginOperations = {
 	},
 	"supbrd-plugmod-marketing": {
 		commands: [
+			"create_notification",
 			"create_email_campaign",
 			"update_email_campaign",
 			"transition_email_campaign",
@@ -373,6 +389,7 @@ const pluginOperations = {
 			"delete_marketing_channel_connector",
 		],
 		dataSources: [
+			"notifications",
 			"email_subscribers",
 			"subscriber_lists",
 			"subscriber_segments",
@@ -884,7 +901,8 @@ export function validateArtifacts(matrix, topology, options = {}) {
 	const pluginIds = new Set(topology.plugins.map(({ manifest }) => manifest.plugin_id));
 	const errors = [];
 	if (requireRelease && !matrix.release) errors.push("PARITY_RELEASE_MISSING");
-	if (topology.plugins.length !== 19) errors.push("PLUGIN_TOPOLOGY_INCOMPLETE");
+	if (topology.plugins.length !== fullPlugins.length + modulePlugins.length)
+		errors.push("PLUGIN_TOPOLOGY_INCOMPLETE");
 	for (const plugin of topology.plugins) {
 		const { manifest, repositories, worker_descriptor: workerDescriptor } = plugin;
 		if (manifest.stores.length !== repositories.length || repositories.length === 0)
@@ -1238,6 +1256,7 @@ function workerRuntimeContract(name, worker) {
 		"marketing",
 		"email",
 		"custom-*",
+		"vocostar",
 	]).has(name);
 	const path = worker ? `workers/${worker}` : "deploy/targets";
 	const proof = worker
@@ -1492,6 +1511,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 				[frontBundlePath, frontBundleReceipt],
 				[compatibilityPath, compatibility],
 			];
+	generatedArtifacts.push([
+		join(root, "config/superboard-plugin-catalog.json"),
+		buildPluginPackages(topology),
+	]);
 	if (process.argv.includes("--write")) {
 		if (manageMigration) writeManifestMigration(topology);
 		for (const [path, value] of generatedArtifacts) writeJson(path, value);
