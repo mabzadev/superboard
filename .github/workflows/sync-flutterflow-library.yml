@@ -1,0 +1,68 @@
+name: Sync SuperBoard FlutterFlow library
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutterflow-library
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: flutterflow-library
+    env:
+      HUSKY: "0"
+      FF_API_KEY: ${{ secrets.FF_API_KEY }}
+      FF_LIBRARY_PROJECT_ID: ${{ vars.FF_LIBRARY_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260
+        with:
+          sdk: stable
+      - run: pnpm install --frozen-lockfile
+      - name: Validate the library contract and published SDK revisions
+        run: |
+          pnpm flutterflow-library:check
+          test -n "$FF_API_KEY"
+          test -n "$FF_LIBRARY_PROJECT_ID"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const manifest = JSON.parse(readFileSync('config/flutterflow-library.json', 'utf8'));
+          const catalog = JSON.parse(readFileSync('config/sdk-libraries.json', 'utf8'));
+          for (const dependency of manifest.dependencies) {
+            const library = catalog.libraries.find(({ id }) => id === dependency.catalogId);
+            if (library?.releaseStatus !== 'released' || library.releaseRef !== dependency.requiredRef) {
+              throw new Error(`SDK release is not published: ${dependency.catalogId}`);
+            }
+            const sha = execFileSync('git', ['rev-parse', `${dependency.requiredRef}^{commit}`], { encoding: 'utf8' }).trim();
+            if (sha !== library.releaseSha) throw new Error(`SDK release mismatch: ${dependency.catalogId}`);
+          }
+          NODE
+      - name: Install the FlutterFlow CLI
+        run: dart pub global activate flutterflow_cli 0.0.39
+      - name: Prepare an isolated FlutterFlow workspace
+        run: |
+          flutterflow ai init "$RUNNER_TEMP/superboard-flutterflow" --project "$FF_LIBRARY_PROJECT_ID" --base-url https://api.flutterflow.io/v2 --no-save
+          cp tools/flutterflow-library/dsl/edit.dart "$RUNNER_TEMP/superboard-flutterflow/dsl/edit.dart"
+          cp tools/flutterflow-library/test/app_test.dart "$RUNNER_TEMP/superboard-flutterflow/test/app_test.dart"
+      - name: Test the compiled library
+        run: flutterflow ai test test/app_test.dart
+        working-directory: ${{ runner.temp }}/superboard-flutterflow
+      - name: Synchronize SuperBoard
+        run: flutterflow ai run dsl/edit.dart --project-id "$FF_LIBRARY_PROJECT_ID" --commit-message "Sync SuperBoard library from $GITHUB_SHA"
+        working-directory: ${{ runner.temp }}/superboard-flutterflow
